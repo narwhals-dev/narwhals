@@ -128,3 +128,23 @@ def parse_exprs(df, *exprs, **named_exprs) -> dict[str, Any]:
         _series = validate_comparand(df, expr)
         new_cols[name] = _series
     return new_cols
+
+
+def register_expression_call(expr: ColumnExpr, attr: str, *args, **kwargs) -> ColumnExpr:  # type: ignore[override]
+    plx = expr.__column_expr_namespace__()
+    def func(df: DataFrame) -> list[Column]:
+        out = []
+        for column in expr.call(df):
+            _out = getattr(column, attr)(  # type: ignore[no-any-return]
+                *[validate_comparand(df, arg) for arg in args],
+                **{
+                    arg_name: validate_comparand(df, arg_value)
+                    for arg_name, arg_value in kwargs.items()
+                },
+            )
+            if not hasattr(_out, "__column_namespace__"):
+                out.append(plx.create_column_from_scalar(_out, column))
+            else:
+                out.append(_out)
+        return out
+    return plx.create_column_expr(func)

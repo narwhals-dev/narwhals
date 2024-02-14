@@ -1,4 +1,5 @@
 from __future__ import annotations
+from polars_api_compat.utils import register_expression_call
 
 import datetime as dt
 import re
@@ -190,6 +191,7 @@ def convert_to_standard_compliant_dataframe(
 
 
 class Namespace(NamespaceT):
+
     def __init__(self, *, api_version: str) -> None:
         self.__dataframe_api_version__ = api_version
         self._api_version = api_version
@@ -515,6 +517,11 @@ class Namespace(NamespaceT):
         return ColumnExpr.from_column_name(column_name).mean()
     def len(self) -> ColumnExpr:
         return ColumnExpr(lambda df: Column(pd.Series([len(df.dataframe)], name="len", index=[0]), api_version=df._api_version))
+    
+    def create_column_expr(self, call: Callable[[DataFrame], list[Column]]) -> ColumnExpr:
+        return ColumnExpr(call)
+    def create_column_from_scalar(self, value: Any, column: Column) -> Column:
+        return Column(pd.Series([value], name=column.column.name, index=column.column.index[0:1]), api_version=self._api_version)
 
 class ColumnExpr:
     def __init__(self, call: Callable[[DataFrame], list[Column]]) -> None:
@@ -529,11 +536,11 @@ class ColumnExpr:
             )],
         )
 
-    def __column_expr_namespace____(self) -> Namespace:
+    def __column_expr_namespace__(self) -> Namespace:
         return Namespace(api_version="2023.11-beta")
 
     def __getattribute__(self, attr: str) -> Any:
-        if attr in ("call", "sum", "mean"):
+        if attr in ("call", "sum", "mean", "__column_expr_namespace__"):
             return super().__getattribute__(attr)
         if attr in (
             "dtype",
@@ -597,18 +604,13 @@ class ColumnExpr:
         return self.__or__(other)
 
     def __add__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
-        def func(df: DataFrame) -> list[Column]:
-            out = []
-            for column in  self.call(df):
-                out.append(column.__add__(validate_comparand(df, other)))
-            return out
-        return ColumnExpr(func)
+        return register_expression_call(self, "__add__", other)
 
     def __radd__(self, other: Column | Any) -> Column:
         return self.__add__(other)
 
     def __sub__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__sub__(validate_comparand(df, other)))
+        return register_expression_call(self, "__sub__", other)
 
     def __rsub__(self, other: Column | Any) -> Column:
         return ColumnExpr(
@@ -667,6 +669,4 @@ class ColumnExpr:
         return ColumnExpr(lambda df: func(self.call(df)))
 
     def mean(self) -> ColumnExpr:
-        def func(s):
-            return Column(pd.Series([s.column.mean()], name=s.name, index=s.column.index[0:1]), api_version=s._api_version)
-        return ColumnExpr(lambda df: func(self.call(df)))
+        return register_expression_call(self, "mean")

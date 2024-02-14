@@ -9,12 +9,12 @@ dfx, plx = polars_api_compat.convert(df, api_version='0.20')
 
 print(dfx.with_columns((plx.col('a') + plx.col('b')).alias('c')).dataframe)
 print(dfx.with_columns((plx.col('a') - plx.col('a').mean()).alias('c')).dataframe)
-# print(dfx.with_columns(
-#     (plx.col('a') - plx.col('a').mean()).alias('c'),
-#     (plx.col('a') + plx.col('a').mean()).alias('d'),
-# ).dataframe)
-# print(dfx.with_columns([
-#     (plx.col('a') - plx.col('a').mean()).alias('c'),
-#     (plx.col('a') + plx.col('a').mean()).alias('d'),
-# ]).dataframe)
-# print(dfx.select(e=plx.col('a') - plx.col('a').mean()).dataframe)
+print(dfx.with_columns(
+    (plx.col('a') - plx.col('a').mean()).alias('c'),
+    (plx.col('a') + plx.col('a').mean()).alias('d'),
+).dataframe)
+print(dfx.with_columns([
+    (plx.col('a') - plx.col('a').mean()).alias('c'),
+    (plx.col('a') + plx.col('a').mean()).alias('d'),
+]).dataframe)
+print(dfx.select(e=plx.col('a') - plx.col('a').mean()).dataframe)

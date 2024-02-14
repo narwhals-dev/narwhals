@@ -283,7 +283,7 @@ class Column(ColumnT):
 
     def mean(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column
-        return self._to_scalar(ser.mean())
+        return ser.mean()
 
     def std(
         self,
