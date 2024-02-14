@@ -539,134 +539,92 @@ class ColumnExpr:
     def __column_expr_namespace__(self) -> Namespace:
         return Namespace(api_version="2023.11-beta")
 
-    def __getattribute__(self, attr: str) -> Any:
-        if attr in ("call", "sum", "mean", "__column_expr_namespace__"):
-            return super().__getattribute__(attr)
-        if attr in (
-            "dtype",
-            "__dataframe_namespace__",
-            "__column_namespace__",
-            "__scalar_namespace__",
-        ):
-            raise AttributeError
-
-        def func(*args: Any, **kwargs: Any) -> ColumnExpr:
-            def call(df: DataFrame) -> list[Column]:
-                out = []
-                for column in self.call(df):
-                    _out = getattr(column, attr)(  # type: ignore[no-any-return]
-                        *[validate_comparand(df, arg) for arg in args],
-                        **{
-                            arg_name: validate_comparand(df, arg_value)
-                            for arg_name, arg_value in kwargs.items()
-                        },
-                    )
-                    out.append(_out)
-                return out
-
-            return ColumnExpr(call=call)
-
-        return func
-
     def __eq__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
-        def func(df: DataFrame) -> list[Column]:
-            out = []
-            for column in  self.call(df):
-                out.append(column.__eq__(validate_comparand(df, other)))
-            return out
-        return ColumnExpr(func)
+        return register_expression_call(self, "__eq__", other)
 
     def __ne__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
-        return ColumnExpr(lambda df: self.call(df).__ne__(validate_comparand(df, other)))
+        return register_expression_call(self, "__ne__", other)
 
     def __ge__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__ge__(validate_comparand(df, other)))
+        return register_expression_call(self, "__ge__", other)
 
     def __gt__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__gt__(validate_comparand(df, other)))
+        return register_expression_call(self, "__gt__", other)
 
     def __le__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__le__(validate_comparand(df, other)))
+        return register_expression_call(self, "__le__", other)
 
     def __lt__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__lt__(validate_comparand(df, other)))
+        return register_expression_call(self, "__lt__", other)
 
     def __and__(self, other: ColumnExpr | bool | Scalar) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__and__(validate_comparand(df, other)))
+        return register_expression_call(self, "__and__", other)
 
     def __rand__(self, other: Column | Any) -> Column:
-        return self.__and__(other)
+        return register_expression_call(self, "__rand__", other)
 
     def __or__(self, other: ColumnExpr | bool | Scalar) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__or__(validate_comparand(df, other)))
+        return register_expression_call(self, "__or__", other)
 
     def __ror__(self, other: Column | Any) -> Column:
-        return self.__or__(other)
+        return register_expression_call(self, "__ror__", other)
 
     def __add__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
         return register_expression_call(self, "__add__", other)
 
     def __radd__(self, other: Column | Any) -> Column:
-        return self.__add__(other)
+        return register_expression_call(self, "__radd__", other)
 
     def __sub__(self, other: ColumnExpr | Any) -> ColumnExpr:
         return register_expression_call(self, "__sub__", other)
 
     def __rsub__(self, other: Column | Any) -> Column:
-        return ColumnExpr(
-            lambda df: self.call(df).__rsub__(validate_comparand(df, other)),
-        )
+        return register_expression_call(self, "__rsub__", other)
 
     def __mul__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__mul__(validate_comparand(df, other)))
+        return register_expression_call(self, "__mul__", other)
 
     def __rmul__(self, other: Column | Any) -> Column:
-        return self.__mul__(other)
+        return self.__mul__(other, other)
 
     def __truediv__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(
-            lambda df: self.call(df).__truediv__(validate_comparand(df, other)),
-        )
+        return register_expression_call(self, "__truediv__", other)
 
     def __rtruediv__(self, other: Column | Any) -> Column:
         raise NotImplementedError
 
     def __floordiv__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(
-            lambda df: self.call(df).__floordiv__(validate_comparand(df, other)),
-        )
+        return register_expression_call(self, "__floordiv__", other)
 
     def __rfloordiv__(self, other: Column | Any) -> Column:
         raise NotImplementedError
 
     def __pow__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__pow__(validate_comparand(df, other)))
+        return register_expression_call(self, "__pow__", other)
 
     def __rpow__(self, other: Column | Any) -> Column:  # pragma: no cover
         raise NotImplementedError
 
     def __mod__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__mod__(validate_comparand(df, other)))
+        return register_expression_call(self, "__mod__", other)
 
     def __rmod__(self, other: Column | Any) -> Column:  # pragma: no cover
         raise NotImplementedError
 
-    def __divmod__(self, other: ColumnExpr | Any) -> tuple[ColumnExpr, Column]:
-        return ColumnExpr(
-            lambda df: self.call(df).__divmod__(validate_comparand(df, other)),
-        )
-
     # Unary
 
     def __invert__(self: Column) -> Column:
-        return ColumnExpr(lambda df: self.call(df).__invert__())
+        return register_expression_call(self, "__invert__")
 
     # Reductions
 
     def sum(self) -> ColumnExpr:
-        def func(s):
-            return Column(pd.Series([s.column.sum()], name=s.name, index=s.column.index[0:1]), api_version=s._api_version)
-        return ColumnExpr(lambda df: func(self.call(df)))
+        return register_expression_call(self, "sum")
 
     def mean(self) -> ColumnExpr:
         return register_expression_call(self, "mean")
+    
+    # Other
+
+    def alias(self, name: str) -> ColumnExpr:
+        return register_expression_call(self, "alias", name)
