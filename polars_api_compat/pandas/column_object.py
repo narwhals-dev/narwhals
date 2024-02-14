@@ -245,19 +245,19 @@ class Column(ColumnT):
 
     def any(self, *, skip_nulls: bool | Scalar = True) -> Scalar:
         ser = self.column
-        return self._to_scalar(ser.any())
+        return ser.any()
 
     def all(self, *, skip_nulls: bool | Scalar = True) -> Scalar:
         ser = self.column
-        return self._to_scalar(ser.all())
+        return ser.all()
 
     def min(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column
-        return self._to_scalar(ser.min())
+        return ser.min()
 
     def max(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column
-        return self._to_scalar(ser.max())
+        return ser.max()
 
     def sum(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column
@@ -265,11 +265,11 @@ class Column(ColumnT):
 
     def prod(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column
-        return self._to_scalar(ser.prod())
+        return ser.prod()
 
     def median(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column
-        return self._to_scalar(ser.median())
+        return ser.median()
 
     def mean(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column

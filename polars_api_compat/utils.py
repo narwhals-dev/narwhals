@@ -19,14 +19,6 @@ def validate_comparand(left: Any, right: Any) -> Any:
         return validate_comparand(left, called[0])
     if hasattr(left, "__dataframe_namespace__") and hasattr(
         right,
-        "__scalar_expr_namespace__",
-    ):
-        called = right.call(left)
-        if len(called) > 1:
-            raise ValueError("Multi-output expressions are not supported in this context")
-        return validate_comparand(left, called[0])
-    if hasattr(left, "__dataframe_namespace__") and hasattr(
-        right,
         "__dataframe_namespace__",
     ):  # pragma: no cover
         # Technically, currently unreachable - but, keeping this in case it
