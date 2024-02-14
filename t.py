@@ -18,3 +18,4 @@ print(dfx.with_columns([
     (plx.col('a') + plx.col('a').mean()).alias('d'),
 ]).dataframe)
 print(dfx.select(e=plx.col('a') - plx.col('a').mean()).dataframe)
+print(dfx.select(plx.all() + 1).dataframe)

@@ -522,6 +522,14 @@ class Namespace(NamespaceT):
         return ColumnExpr(call)
     def create_column_from_scalar(self, value: Any, column: Column) -> Column:
         return Column(pd.Series([value], name=column.column.name, index=column.column.index[0:1]), api_version=self._api_version)
+    
+    def all(self) -> ColumnExpr:
+        return ColumnExpr(
+            lambda df: [Column(
+                df.dataframe.loc[:, column_name],
+                api_version=df._api_version,
+            ) for column_name in df.column_names],
+        )
 
 class ColumnExpr:
     def __init__(self, call: Callable[[DataFrame], list[Column]]) -> None:
