@@ -163,7 +163,7 @@ class DataFrame(DataFrameT):
         from polars_api_compat.pandas import ColumnExpr
         from polars_api_compat.utils import parse_exprs
         new_cols = parse_exprs(self, *exprs, **named_exprs)
-        df = pd.concat(new_cols, axis=1, copy=False)
+        df = pd.concat({key: value.column for key, value in new_cols.items()}, axis=1, copy=False)
         return self._from_dataframe(df)
 
     def take(
@@ -199,7 +199,7 @@ class DataFrame(DataFrameT):
     ) -> DataFrame:
         from polars_api_compat.utils import parse_exprs
         new_cols = parse_exprs(self, *exprs, **named_exprs)
-        df = self.dataframe.assign(**new_cols)
+        df = self.dataframe.assign(**{key: value.column for key, value in new_cols.items()})
         return self._from_dataframe(df)
 
     def drop(self, *labels: str) -> DataFrame:

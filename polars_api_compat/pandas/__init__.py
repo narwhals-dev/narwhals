@@ -369,6 +369,8 @@ class Namespace(NamespaceT):
         )
 
     # --- horizontal reductions
+    def sum_horizontal(self, *columns: ColumnT, skip_nulls: bool = True) -> ColumnT:
+        return reduce(lambda x, y: x + y, columns)
 
     def all_horizontal(self, *columns: ColumnT, skip_nulls: bool = True) -> ColumnT:
         return reduce(lambda x, y: x & y, columns)

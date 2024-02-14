@@ -271,7 +271,7 @@ class Column(ColumnT):
 
     def sum(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column
-        return self._to_scalar(ser.sum())
+        return ser.sum()
 
     def prod(self, *, skip_nulls: bool | Scalar = True) -> Any:
         ser = self.column

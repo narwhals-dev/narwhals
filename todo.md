@@ -19,3 +19,9 @@ eventually:
 if I can get this to work for pandas, then it should be fairly
 straightforward to get it to run for cudf too?
 then, that would rip. like, seriously, RIP.
+
+so, when comparing two things...
+well, now what?
+
+how about: an expression should always evaluate to a 1-row column
+in binary operations, handle broadcasting

@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any
 
-
 # Technically, it would be possible to correctly type hint this function
 # with a tonne of overloads, but for now, it' not worth it, just use Any
 def validate_comparand(left: Any, right: Any) -> Any:
@@ -66,6 +65,9 @@ def validate_comparand(left: Any, right: Any) -> Any:
     ):
         return NotImplemented
     if hasattr(left, "__column_namespace__") and hasattr(right, "__column_namespace__"):
+        if right.len() == 1:
+            # broadcast
+            return right.get_value(0)
         if (
             hasattr(left.column, "index")
             and hasattr(right.column, "index")
@@ -93,6 +95,12 @@ def validate_comparand(left: Any, right: Any) -> Any:
 
     return right
 
+def evaluate_expr(df, expr):
+    if hasattr(expr, '__column_expr_namespace__'):
+        return expr.call(df)
+    assert hasattr(expr, '__column_namespace__')
+    return expr
+
 def parse_expr(df, expr):
     """
     Return list of raw columns.
@@ -117,16 +125,20 @@ def parse_exprs(df, *exprs, **named_exprs) -> dict[str, Any]:
     
     Returns dict of output name to raw column object.
     """
-    exprs = [parse_expr(df, expr) for expr in exprs]
-    exprs = [item for sublist in exprs for item in sublist]
-    named_exprs = {name: parse_expr(df, expr)[0] for name, expr in named_exprs.items()}
-    new_cols = {}
-    for expr in exprs:
-        _series = validate_comparand(df, expr)
-        new_cols[_series.name] = _series
+    parsed_exprs = [item for sublist in [parse_expr(df, expr) for expr in exprs] for item in sublist]
+    parsed_named_exprs = {}
     for name, expr in named_exprs.items():
-        _series = validate_comparand(df, expr)
-        new_cols[name] = _series
+        parsed_expr = parse_expr(df, expr)
+        if len(parsed_expr) > 1:
+            raise ValueError("Named expressions must return a single column")
+        parsed_named_exprs[name] = parsed_expr[0]
+    new_cols = {}
+    for expr in parsed_exprs:
+        _column = evaluate_expr(df, expr)
+        new_cols[_column.name] = _column
+    for name, expr in parsed_named_exprs.items():
+        _column = evaluate_expr(df, expr)
+        new_cols[name] = _column
     return new_cols
 
 
@@ -142,9 +154,9 @@ def register_expression_call(expr: ColumnExpr, attr: str, *args, **kwargs) -> Co
                     for arg_name, arg_value in kwargs.items()
                 },
             )
-            if not hasattr(_out, "__column_namespace__"):
-                out.append(plx.create_column_from_scalar(_out, column))
-            else:
+            if hasattr(_out, "__column_namespace__"):
                 out.append(_out)
+            else:
+                out.append(plx.create_column_from_scalar(_out, column))
         return out
     return plx.create_column_expr(func)
