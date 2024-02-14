@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any
 
 
@@ -31,6 +32,9 @@ def validate_comparand(left: Any, right: Any) -> Any:
         right,
         "__column_namespace__",
     ):
+        if right.len().scalar == 1:
+            # broadcast
+            return right.get_value(0).scalar
         if (
             hasattr(left.dataframe, "index")
             and hasattr(right.column, "index")
@@ -82,3 +86,39 @@ def validate_comparand(left: Any, right: Any) -> Any:
         return right.scalar
 
     return right
+
+def parse_expr(df, expr):
+    """
+    Return list of raw columns.
+    """
+    pdx = df.__dataframe_namespace__()
+    if isinstance(expr, str):
+        return [pdx.col(expr).call(df)]
+    if hasattr(expr, '__column_expr_namespace__'):
+        return [expr.call(df)]
+    if isinstance(expr, (list, tuple)):
+        out = []
+        for _expr in expr:
+            out.extend(parse_expr(df, _expr))
+        return out
+    raise TypeError(f"Expected str, ColumnExpr, or list/tuple of str/ColumnExpr, got {type(expr)}")
+
+
+
+def parse_exprs(df, *exprs, **named_exprs) -> dict[str, Any]:
+    """
+    Take exprs and evaluate Series underneath them.
+    
+    Returns dict of output name to raw column object.
+    """
+    exprs = [parse_expr(df, expr) for expr in exprs]
+    exprs = [item for sublist in exprs for item in sublist]
+    named_exprs = {name: parse_expr(df, expr)[0] for name, expr in named_exprs.items()}
+    new_cols = {}
+    for expr in exprs:
+        _series = validate_comparand(df, expr)
+        new_cols[_series.name] = _series
+    for name, expr in named_exprs.items():
+        _series = validate_comparand(df, expr)
+        new_cols[name] = _series
+    return new_cols

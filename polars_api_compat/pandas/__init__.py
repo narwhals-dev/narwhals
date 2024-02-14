@@ -511,6 +511,10 @@ class Namespace(NamespaceT):
     
     def sum(self, column_name: str) -> ColumnExpr:
         return ColumnExpr.from_column_name(column_name).sum()
+    def mean(self, column_name: str) -> ColumnExpr:
+        return ColumnExpr.from_column_name(column_name).mean()
+    def len(self) -> ColumnExpr:
+        return ColumnExpr(lambda df: Column(pd.Series([len(df.dataframe)], name="len", index=[0]), api_version=df._api_version))
 
 class ColumnExpr:
     def __init__(self, call: Callable[[DataFrame], Column]) -> None:
@@ -529,7 +533,7 @@ class ColumnExpr:
         return Namespace(api_version="2023.11-beta")
 
     def __getattribute__(self, attr: str) -> Any:
-        if attr in ("call", "sum"):
+        if attr in ("call", "sum", "mean"):
             return super().__getattribute__(attr)
         if attr in (
             "dtype",
@@ -646,4 +650,9 @@ class ColumnExpr:
     def sum(self) -> ColumnExpr:
         def func(s):
             return Column(pd.Series([s.column.sum()], name=s.name, index=s.column.index[0:1]), api_version=s._api_version)
+        return ColumnExpr(lambda df: func(self.call(df)))
+
+    def mean(self) -> ColumnExpr:
+        def func(s):
+            return Column(pd.Series([s.column.mean()], name=s.name, index=s.column.index[0:1]), api_version=s._api_version)
         return ColumnExpr(lambda df: func(self.call(df)))

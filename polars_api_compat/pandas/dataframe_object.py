@@ -155,22 +155,14 @@ class DataFrame(DataFrameT):
                 raise KeyError(msg)
         return GroupBy(self, out, api_version=self._api_version)
 
-    def select(self, *columns: str | ColumnExpr) -> DataFrame:
+    def select(
+            self,
+            *exprs: str | ColumnExpr,
+            **named_exprs,
+        ) -> DataFrame:
         from polars_api_compat.pandas import ColumnExpr
-
-        cols = list(columns)
-        if cols and isinstance(cols[0], (list, tuple)):
-            msg = f"Expected iterable of column names, but the first element is: {type(cols[0])}"
-            raise TypeError(msg)
-        if not cols:
-            msg = "Can't select no columns"
-            raise ValueError(msg)
-        new_cols = [
-            col.call(self).column
-            if isinstance(col, ColumnExpr)
-            else self.dataframe.loc[:, col]
-            for col in columns
-        ]
+        from polars_api_compat.utils import parse_exprs
+        new_cols = parse_exprs(self, *exprs, **named_exprs)
         df = pd.concat(new_cols, axis=1, copy=False)
         return self._from_dataframe(df)
 
@@ -200,21 +192,13 @@ class DataFrame(DataFrameT):
         df = df.loc[_mask]
         return self._from_dataframe(df)
 
-    def assign(
+    def with_columns(
         self,
-        *columns: Column,
+        *exprs,
+        **named_exprs,
     ) -> DataFrame:
-        if not columns:
-            msg = "Can't assign no columns"
-            raise ValueError(msg)
-        if isinstance(columns[0], list):
-            msg = "Expected iterable of Column or ColumnExpr, but got list"
-            raise TypeError(msg)
-
-        new_cols = {}
-        for column in columns:
-            _series = validate_comparand(self, column)
-            new_cols[_series.name] = _series
+        from polars_api_compat.utils import parse_exprs
+        new_cols = parse_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(**new_cols)
         return self._from_dataframe(df)
 
@@ -450,7 +434,7 @@ class DataFrame(DataFrameT):
 
     def is_nan(self) -> DataFrame:
         pdx = self.__dataframe_namespace__()
-        return self.assign(*[pdx.col(col).is_nan() for col in self.column_names])
+        return self.with_columns(*[pdx.col(col).is_nan() for col in self.column_names])
 
     def fill_nan(self, value: float | Scalar | NullType) -> DataFrame:
         _value = validate_comparand(self, value)
@@ -482,7 +466,7 @@ class DataFrame(DataFrameT):
             column_names = self.dataframe.columns.tolist()
         assert isinstance(column_names, list)  # help type checkers
         pdx = self.__dataframe_namespace__()
-        return self.assign(
+        return self.with_columns(
             *[pdx.col(col).fill_null(value) for col in column_names],
         )
 

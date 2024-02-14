@@ -127,11 +127,11 @@ class GroupBy(GroupByT):
         import collections
         out = collections.defaultdict(list)
         for key, _df in self._grouped:
+            for _key, _name in zip(key, self._keys):
+                out[_name].append(_key)
             for aggregation in aggregations:
                 result = aggregation.call(DataFrame(_df, api_version=self._api_version, is_persisted=self._is_persisted))
                 out[result.name].append(result.column.item())
-                for _key, _name in zip(key, self._keys):
-                    out[_name].append(_key)
         return self._to_dataframe(pd.DataFrame(out))
 
 
