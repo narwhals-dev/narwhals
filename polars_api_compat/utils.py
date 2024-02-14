@@ -37,9 +37,9 @@ def validate_comparand(left: Any, right: Any) -> Any:
         right,
         "__column_namespace__",
     ):
-        if right.len().scalar == 1:
+        if right.len() == 1:
             # broadcast
-            return right.get_value(0).scalar
+            return right.get_value(0)
         if (
             hasattr(left.dataframe, "index")
             and hasattr(right.column, "index")

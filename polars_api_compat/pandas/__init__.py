@@ -14,8 +14,6 @@ import pandas as pd
 
 from polars_api_compat.pandas.column_object import Column
 from polars_api_compat.pandas.dataframe_object import DataFrame
-from polars_api_compat.pandas.scalar_object import Scalar
-from polars_api_compat.utils import validate_comparand
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

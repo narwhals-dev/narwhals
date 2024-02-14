@@ -57,14 +57,6 @@ class Column(ColumnT):
         self._series = series
         self._api_version = api_version
 
-    def _to_scalar(self, value: Any) -> Scalar:
-        from polars_api_compat.pandas.scalar_object import Scalar
-
-        return Scalar(
-            value,
-            api_version=self._api_version,
-        )
-
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard Column (api_version={self._api_version}) "
         length = len(header)
@@ -124,9 +116,7 @@ class Column(ColumnT):
 
     def get_value(self, row_number: int) -> Any:
         ser = self.column
-        return self._to_scalar(
-            ser.iloc[row_number],
-        )
+        return ser.iloc[row_number]
 
     def slice_rows(
         self,
@@ -308,7 +298,7 @@ class Column(ColumnT):
         )
 
     def len(self) -> Scalar:
-        return self._to_scalar(len(self._series))
+        return len(self._series)
 
     def n_unique(
         self,
