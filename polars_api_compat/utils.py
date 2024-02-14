@@ -14,12 +14,18 @@ def validate_comparand(left: Any, right: Any) -> Any:
         right,
         "__column_expr_namespace__",
     ):
-        return validate_comparand(left, right.call(left))
+        called = right.call(left)
+        if len(called) > 1:
+            raise ValueError("Multi-output expressions are not supported in this context")
+        return validate_comparand(left, called[0])
     if hasattr(left, "__dataframe_namespace__") and hasattr(
         right,
         "__scalar_expr_namespace__",
     ):
-        return validate_comparand(left, right.call(left))
+        called = right.call(left)
+        if len(called) > 1:
+            raise ValueError("Multi-output expressions are not supported in this context")
+        return validate_comparand(left, called[0])
     if hasattr(left, "__dataframe_namespace__") and hasattr(
         right,
         "__dataframe_namespace__",
@@ -93,9 +99,9 @@ def parse_expr(df, expr):
     """
     pdx = df.__dataframe_namespace__()
     if isinstance(expr, str):
-        return [pdx.col(expr).call(df)]
+        return pdx.col(expr).call(df)
     if hasattr(expr, '__column_expr_namespace__'):
-        return [expr.call(df)]
+        return expr.call(df)
     if isinstance(expr, (list, tuple)):
         out = []
         for _expr in expr:

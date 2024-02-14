@@ -517,16 +517,16 @@ class Namespace(NamespaceT):
         return ColumnExpr(lambda df: Column(pd.Series([len(df.dataframe)], name="len", index=[0]), api_version=df._api_version))
 
 class ColumnExpr:
-    def __init__(self, call: Callable[[DataFrame], Column]) -> None:
+    def __init__(self, call: Callable[[DataFrame], list[Column]]) -> None:
         self.call = call
 
     @classmethod
     def from_column_name(cls: type[ColumnExpr], column_name: str) -> ColumnExpr:
         return cls(
-            lambda df: Column(
+            lambda df: [Column(
                 df.dataframe.loc[:, column_name],
                 api_version=df._api_version,
-            ),
+            )],
         )
 
     def __column_expr_namespace____(self) -> Namespace:
@@ -544,21 +544,30 @@ class ColumnExpr:
             raise AttributeError
 
         def func(*args: Any, **kwargs: Any) -> ColumnExpr:
-            def call(df: DataFrame) -> Column:
-                return getattr(self.call(df), attr)(  # type: ignore[no-any-return]
-                    *[validate_comparand(df, arg) for arg in args],
-                    **{
-                        arg_name: validate_comparand(df, arg_value)
-                        for arg_name, arg_value in kwargs.items()
-                    },
-                )
+            def call(df: DataFrame) -> list[Column]:
+                out = []
+                for column in self.call(df):
+                    _out = getattr(column, attr)(  # type: ignore[no-any-return]
+                        *[validate_comparand(df, arg) for arg in args],
+                        **{
+                            arg_name: validate_comparand(df, arg_value)
+                            for arg_name, arg_value in kwargs.items()
+                        },
+                    )
+                    out.append(_out)
+                return out
 
             return ColumnExpr(call=call)
 
         return func
 
     def __eq__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
-        return ColumnExpr(lambda df: self.call(df).__eq__(validate_comparand(df, other)))
+        def func(df: DataFrame) -> list[Column]:
+            out = []
+            for column in  self.call(df):
+                out.append(column.__eq__(validate_comparand(df, other)))
+            return out
+        return ColumnExpr(func)
 
     def __ne__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
         return ColumnExpr(lambda df: self.call(df).__ne__(validate_comparand(df, other)))
@@ -587,8 +596,13 @@ class ColumnExpr:
     def __ror__(self, other: Column | Any) -> Column:
         return self.__or__(other)
 
-    def __add__(self, other: ColumnExpr | Any) -> ColumnExpr:
-        return ColumnExpr(lambda df: self.call(df).__add__(validate_comparand(df, other)))
+    def __add__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
+        def func(df: DataFrame) -> list[Column]:
+            out = []
+            for column in  self.call(df):
+                out.append(column.__add__(validate_comparand(df, other)))
+            return out
+        return ColumnExpr(func)
 
     def __radd__(self, other: Column | Any) -> Column:
         return self.__add__(other)
