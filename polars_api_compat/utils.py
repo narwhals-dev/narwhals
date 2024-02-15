@@ -43,6 +43,41 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
         return other.column
     return other
 
+def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
+    """Validate RHS of binary operation.
+
+    If the comparison isn't supported, return `NotImplemented` so that the
+    "right-hand-side" operation (e.g. `__radd__`) can be tried.
+    """
+    if isinstance(other, list) and len(other) > 1:
+        # e.g. `plx.all() + plx.all()`
+        raise ValueError("Multi-output expressions are not supported in this context")
+    elif isinstance(other, list) and len(other) == 1:
+        other = other[0]
+    if hasattr(
+        other,
+        "__dataframe_namespace__",
+    ):
+        return NotImplemented
+    if hasattr(other, "__column_namespace__"):
+        if other.len() == 1:
+            # broadcast
+            return other.get_value(0)
+        if (
+            hasattr(dataframe.dataframe, "index")
+            and hasattr(other.column, "index")
+            and dataframe.dataframe.index is not other.column.index
+        ):
+            msg = (
+                "Left index is not right index. "
+                "You were probably trying to compare different dataframes "
+                "without first having joined them. Either join them, or "
+                "consider using expressions."
+            )
+            raise ValueError(msg)
+        return other.column
+    return other
+
 def evaluate_expr(df, expr):
     if hasattr(expr, '__column_expr_namespace__'):
         return expr.call(df)

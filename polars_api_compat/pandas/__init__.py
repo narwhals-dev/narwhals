@@ -524,7 +524,7 @@ class Namespace(NamespaceT):
     def mean(self, column_name: str) -> ColumnExpr:
         return ColumnExpr.from_column_names(column_name).mean()
     def len(self) -> ColumnExpr:
-        return ColumnExpr(lambda df: Column(pd.Series([len(df.dataframe)], name="len", index=[0]), api_version=df._api_version))
+        return ColumnExpr(lambda df: [Column(pd.Series([len(df.dataframe)], name="len", index=[0]), api_version=df._api_version)])
     
     def create_column_expr(self, call: Callable[[DataFrame], list[Column]]) -> ColumnExpr:
         return ColumnExpr(call)

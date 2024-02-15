@@ -6,6 +6,11 @@ from datetime import datetime
 df = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
 dfx, plx = polars_api_compat.convert(df, api_version='0.20')
 
+result = dfx.filter(
+    plx.col('a') > 1
+)
+print(result.dataframe)
+
 result = dfx.with_columns(
     c = plx.col('a') + plx.col('b'),
     d = plx.col('a') - plx.col('a').mean(),

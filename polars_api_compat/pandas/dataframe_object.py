@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from polars_api_compat.utils import parse_exprs
 import collections
 import warnings
 from typing import TYPE_CHECKING
@@ -14,6 +15,7 @@ from pandas.api.types import is_extension_array_dtype
 
 import polars_api_compat
 from polars_api_compat.utils import validate_column_comparand
+from polars_api_compat.utils import validate_dataframe_comparand
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -44,7 +46,7 @@ class DataFrame(DataFrameT):
     ) -> None:
         self._is_persisted = is_persisted
         self._validate_columns(dataframe.columns)
-        self._dataframe = dataframe.reset_index(drop=True)
+        self._dataframe = dataframe
         self._api_version = api_version
 
     # Validation helper methods
@@ -185,9 +187,12 @@ class DataFrame(DataFrameT):
 
     def filter(
         self,
-        mask: Column,
+        *mask: Column,
     ) -> DataFrame:
-        _mask = validate_column_comparand(self, mask)
+        filters = parse_exprs(self, *mask)
+        plx = self.__dataframe_namespace__()
+        filter = plx.all_horizontal(*[col for col in filters.values()])
+        _mask = validate_dataframe_comparand(self, filter)
         df = self.dataframe
         df = df.loc[_mask]
         return self._from_dataframe(df)
@@ -197,7 +202,6 @@ class DataFrame(DataFrameT):
         *exprs,
         **named_exprs,
     ) -> DataFrame:
-        from polars_api_compat.utils import parse_exprs
         new_cols = parse_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(**{key: value.column for key, value in new_cols.items()})
         return self._from_dataframe(df)
@@ -227,11 +231,17 @@ class DataFrame(DataFrameT):
         ascending: Sequence[bool] | bool = True,
         nulls_position: Literal["first", "last"] = "last",
     ) -> DataFrame:
-        if not keys:
-            keys = self.dataframe.columns.tolist()
+        flat_keys = []
+        for key in keys:
+            if isinstance(key, (list, tuple)):
+                flat_keys.extend(key)
+            else:
+                flat_keys.append(key)
+        if not flat_keys:
+            flat_keys = self.dataframe.columns.tolist()
         df = self.dataframe
         return self._from_dataframe(
-            df.sort_values(list(keys), ascending=ascending),
+            df.sort_values(flat_keys, ascending=ascending),
         )
 
     # Binary operations
