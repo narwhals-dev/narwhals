@@ -11,7 +11,7 @@ import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
 import polars_api_compat.pandas
-from polars_api_compat.utils import validate_comparand
+from polars_api_compat.utils import validate_column_comparand
 
 if TYPE_CHECKING:
     from dataframe_api import Column as ColumnT
@@ -108,11 +108,11 @@ class Column(ColumnT):
         return self._df
 
     def take(self, indices: Column) -> Column:
-        return self._from_series(self.column.iloc[validate_comparand(self, indices)])
+        return self._from_series(self.column.iloc[validate_column_comparand(self, indices)])
 
     def filter(self, mask: Column) -> Column:
         ser = self.column
-        return self._from_series(ser.loc[validate_comparand(self, mask)])
+        return self._from_series(ser.loc[validate_column_comparand(self, mask)])
 
     def get_value(self, row_number: int) -> Any:
         ser = self.column
@@ -129,38 +129,38 @@ class Column(ColumnT):
     # Binary comparisons
 
     def __eq__(self, other: Column | Any) -> Column:  # type: ignore[override]
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser == other).rename(ser.name, copy=False))
 
     def __ne__(self, other: Column | Any) -> Column:  # type: ignore[override]
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser != other).rename(ser.name, copy=False))
 
     def __ge__(self, other: Column | Any) -> Column:
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser >= other).rename(ser.name, copy=False))
 
     def __gt__(self, other: Column | Any) -> Column:
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser > other).rename(ser.name, copy=False))
 
     def __le__(self, other: Column | Any) -> Column:
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser <= other).rename(ser.name, copy=False))
 
     def __lt__(self, other: Column | Any) -> Column:
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser < other).rename(ser.name, copy=False))
 
     def __and__(self, other: Column | bool | Scalar) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser & other).rename(ser.name, copy=False))
 
     def __rand__(self, other: Column | Any) -> Column:
@@ -168,7 +168,7 @@ class Column(ColumnT):
 
     def __or__(self, other: Column | bool | Scalar) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser | other).rename(ser.name, copy=False))
 
     def __ror__(self, other: Column | Any) -> Column:
@@ -176,7 +176,7 @@ class Column(ColumnT):
 
     def __add__(self, other: Column | Any) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser + other).rename(ser.name, copy=False))
 
     def __radd__(self, other: Column | Any) -> Column:
@@ -184,7 +184,7 @@ class Column(ColumnT):
 
     def __sub__(self, other: Column | Any) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser - other).rename(ser.name, copy=False))
 
     def __rsub__(self, other: Column | Any) -> Column:
@@ -192,7 +192,7 @@ class Column(ColumnT):
 
     def __mul__(self, other: Column | Any) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser * other).rename(ser.name, copy=False))
 
     def __rmul__(self, other: Column | Any) -> Column:
@@ -200,7 +200,7 @@ class Column(ColumnT):
 
     def __truediv__(self, other: Column | Any) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser / other).rename(ser.name, copy=False))
 
     def __rtruediv__(self, other: Column | Any) -> Column:
@@ -208,7 +208,7 @@ class Column(ColumnT):
 
     def __floordiv__(self, other: Column | Any) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser // other).rename(ser.name, copy=False))
 
     def __rfloordiv__(self, other: Column | Any) -> Column:
@@ -216,7 +216,7 @@ class Column(ColumnT):
 
     def __pow__(self, other: Column | Any) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser**other).rename(ser.name, copy=False))
 
     def __rpow__(self, other: Column | Any) -> Column:  # pragma: no cover
@@ -224,7 +224,7 @@ class Column(ColumnT):
 
     def __mod__(self, other: Column | Any) -> Column:
         ser = self.column
-        other = validate_comparand(self, other)
+        other = validate_column_comparand(self, other)
         return self._from_series((ser % other).rename(ser.name, copy=False))
 
     def __rmod__(self, other: Column | Any) -> Column:  # pragma: no cover
@@ -335,7 +335,7 @@ class Column(ColumnT):
 
     def is_in(self, values: Column) -> Column:
         ser = self.column
-        return self._from_series(ser.isin(validate_comparand(self, values)))
+        return self._from_series(ser.isin(validate_column_comparand(self, values)))
 
     def sorted_indices(
         self,
@@ -376,7 +376,7 @@ class Column(ColumnT):
         self,
         value: Any,
     ) -> Column:
-        value = validate_comparand(self, value)
+        value = validate_column_comparand(self, value)
         idx = self.column.index
         ser = self.column.copy()
         if is_extension_array_dtype(ser.dtype):

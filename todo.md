@@ -25,3 +25,9 @@ well, now what?
 
 how about: an expression should always evaluate to a 1-row column
 in binary operations, handle broadcasting
+
+does it make sense to sum one column to multiple others?
+no, no way, lhs rule would invalidate
+
+this is...kinda cool. kinda interesting! yeah, keep going, no matter
+what, this will be quite cool.

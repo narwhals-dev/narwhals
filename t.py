@@ -24,3 +24,12 @@ result = dfx.select(
     plx.all().sum()
 )
 print(result.dataframe)
+
+# i mean, could well have something that takes multiples, right?
+# i think, just need to splat them?
+
+# when should index validation happen?
+# - in validate_comparand: yeah, probably
+# - in select and with_columns: yeah, if they're the same length
+
+# really take your time here. utils should do everything!
