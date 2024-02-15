@@ -15,6 +15,7 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
     if isinstance(other, list) and len(other) > 1:
+        # e.g. `plx.all() + plx.all()`
         raise ValueError("Multi-output expressions are not supported in this context")
     elif isinstance(other, list) and len(other) == 1:
         other = other[0]

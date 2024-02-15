@@ -508,13 +508,21 @@ class Namespace(NamespaceT):
         ) -> AggregationT:
             return Namespace.Aggregation("__placeholder__", "size", "size")
 
-    def col(self, column_name: str) -> ColumnExpr:
-        return ColumnExpr.from_column_name(column_name)
+    def col(self, *column_names: str) -> ColumnExpr:
+        names = []
+        for name in column_names:
+            if isinstance(name, str):
+                names.append(name)
+            elif isinstance(name, (list, tuple)):
+                names.extend(name)
+            else:
+                raise TypeError(f"Expected str or list/tuple of str, got {type(name)}")
+        return ColumnExpr.from_column_names(*names)
     
     def sum(self, column_name: str) -> ColumnExpr:
-        return ColumnExpr.from_column_name(column_name).sum()
+        return ColumnExpr.from_column_names(column_name).sum()
     def mean(self, column_name: str) -> ColumnExpr:
-        return ColumnExpr.from_column_name(column_name).mean()
+        return ColumnExpr.from_column_names(column_name).mean()
     def len(self) -> ColumnExpr:
         return ColumnExpr(lambda df: Column(pd.Series([len(df.dataframe)], name="len", index=[0]), api_version=df._api_version))
     
@@ -536,12 +544,12 @@ class ColumnExpr:
         self.call = call
 
     @classmethod
-    def from_column_name(cls: type[ColumnExpr], column_name: str) -> ColumnExpr:
+    def from_column_names(cls: type[ColumnExpr], *column_names: str) -> ColumnExpr:
         return cls(
             lambda df: [Column(
                 df.dataframe.loc[:, column_name],
                 api_version=df._api_version,
-            )],
+            ) for column_name in column_names],
         )
 
     def __column_expr_namespace__(self) -> Namespace:

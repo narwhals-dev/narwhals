@@ -24,6 +24,10 @@ result = dfx.select(
     plx.all().sum()
 )
 print(result.dataframe)
+result = dfx.select(
+    plx.col('a', 'b') * 2
+)
+print(result.dataframe)
 
 # i mean, could well have something that takes multiples, right?
 # i think, just need to splat them?
