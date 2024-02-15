@@ -9,9 +9,8 @@ def convert(df: Any, api_version: str) -> Any:
         pass
     else:
         if isinstance(df, pl.DataFrame):
-            # can't be this simple...because, you need the `.dataframe`
-            # thing to work at the end
-            return df, pl
+            from polars_api_compat.polars import convert
+            return convert(df)
     try:
         import pandas as pd
     except ModuleNotFoundError:

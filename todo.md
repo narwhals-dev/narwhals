@@ -31,3 +31,6 @@ no, no way, lhs rule would invalidate
 
 this is...kinda cool. kinda interesting! yeah, keep going, no matter
 what, this will be quite cool.
+
+so, I think the basics are there?
+remove useless shit. only keep the bare minimum to run tpch?
