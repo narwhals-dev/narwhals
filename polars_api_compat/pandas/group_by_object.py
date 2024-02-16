@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Iterable
 
 import pandas as pd
 
-from polars_api_compat.pandas.dataframe_object import DataFrame
+from polars_api_compat.pandas.dataframe_object import DataFrame, LazyFrame
 from polars_api_compat.spec import (
     DataFrame as DataFrameT,
     LazyFrame as LazyFrameT,
@@ -87,8 +87,8 @@ class LazyGroupBy(GroupByT):
                 msg,
             )
 
-    def _to_dataframe(self, result: pd.DataFrame) -> DataFrame:
-        return DataFrame(
+    def _to_dataframe(self, result: pd.DataFrame) -> LazyFrameT:
+        return LazyFrame(
             result,
             api_version=self.api_version,
         )
