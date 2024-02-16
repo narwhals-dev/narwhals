@@ -130,11 +130,7 @@ class DataFrame(DataFrameT):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> DataFrame:
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        df = self.dataframe.assign(
-            **{series.name: series.series for series in new_series}
-        )
-        return self._from_dataframe(df)
+        return self.lazy().with_columns(*exprs, **named_exprs).collect()
 
     def sort(
         self,
@@ -287,10 +283,14 @@ class LazyFrame(LazyFrameT):
 
     def with_columns(
         self,
-        *exprs,
-        **named_exprs,
+        *exprs: IntoExpr | Iterable[IntoExpr],
+        **named_exprs: IntoExpr,
     ) -> DataFrame:
-        ...
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        df = self.dataframe.assign(
+            **{series.name: series.series for series in new_series}
+        )
+        return self._from_dataframe(df)
 
     def sort(
         self,
