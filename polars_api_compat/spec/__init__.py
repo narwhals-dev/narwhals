@@ -8,7 +8,7 @@ class Expr(Protocol):
     call: Callable[[DataFrame | LazyFrame], list[Series]]
     api_version: str
 
-    def alias(self, name: str) -> Self:
+    def alias(self, name: str) -> Expr:
         ...
 
     def __expr_namespace__(self) -> Namespace:
@@ -108,15 +108,15 @@ class LazyFrame(Protocol):
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> Self:
+    ) -> LazyFrame:
         ...
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> LazyFrame:
         ...
 
     def select(
         self, *exprs: Expr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> Self:
+    ) -> LazyFrame:
         ...
 
     def collect(self) -> DataFrame:

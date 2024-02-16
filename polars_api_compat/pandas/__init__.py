@@ -201,13 +201,13 @@ class Expr(ExprT):
 
     # Reductions
 
-    def sum(self) -> Expr:
+    def sum(self) -> ExprT:
         return register_expression_call(self, "sum")
 
-    def mean(self) -> Expr:
+    def mean(self) -> ExprT:
         return register_expression_call(self, "mean")
 
     # Other
 
-    def alias(self, name: str) -> Expr:
+    def alias(self, name: str) -> ExprT:
         return register_expression_call(self, "alias", name)

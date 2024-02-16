@@ -129,7 +129,7 @@ class DataFrame(DataFrameT):
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
-    ) -> DataFrame:
+    ) -> DataFrameT:
         return self.lazy().with_columns(*exprs, **named_exprs).collect()
 
     def sort(
@@ -264,7 +264,7 @@ class LazyFrame(LazyFrameT):
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
-    ) -> DataFrame:
+    ) -> LazyFrameT:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = pd.concat(
             {series.name: series.series for series in new_series}, axis=1, copy=False
@@ -274,7 +274,7 @@ class LazyFrame(LazyFrameT):
     def filter(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> Self:
+    ) -> LazyFrameT:
         plx = self.__dataframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
         filter = plx.all_horizontal(*predicates).call(self)[0]
@@ -285,7 +285,7 @@ class LazyFrame(LazyFrameT):
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
-    ) -> DataFrame:
+    ) -> LazyFrameT:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(
             **{series.name: series.series for series in new_series}
@@ -296,7 +296,7 @@ class LazyFrame(LazyFrameT):
         self,
         *keys: str,
         ascending: Sequence[bool] | bool = True,
-    ) -> DataFrame:
+    ) -> LazyFrameT:
         flat_keys = flatten_str(*keys)
         if not flat_keys:
             flat_keys = self.dataframe.columns.tolist()
@@ -308,12 +308,12 @@ class LazyFrame(LazyFrameT):
     # Other
     def join(
         self,
-        other: DataFrame,
+        other: LazyFrameT,
         *,
         how: Literal["left", "inner", "outer"],
         left_on: str | list[str],
         right_on: str | list[str],
-    ) -> DataFrame:
+    ) -> LazyFrameT:
         if how not in ["left", "inner", "outer"]:
             msg = f"Expected 'left', 'inner', 'outer', got: {how}"
             raise ValueError(msg)
