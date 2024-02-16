@@ -3,8 +3,11 @@ import polars_api_compat
 import polars as pl
 from datetime import datetime
 
-df = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
-dfx, plx = polars_api_compat.convert(df, api_version='0.20')
+df = pd.DataFrame({'a': [1,3,2], 'b': [4,5,6]})
+dfx, plx = polars_api_compat.convert(df, version='0.20')
+
+result = dfx.sort('a', 'b')
+print(result.dataframe)
 
 result = dfx.filter(
     plx.col('a') > 1

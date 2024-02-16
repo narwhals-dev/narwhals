@@ -536,7 +536,7 @@ class Namespace(NamespaceT):
             lambda df: [Column(
                 df.dataframe.loc[:, column_name],
                 api_version=df._api_version,
-            ) for column_name in df.column_names],
+            ) for column_name in df.columns],
         )
 
 class ColumnExpr:

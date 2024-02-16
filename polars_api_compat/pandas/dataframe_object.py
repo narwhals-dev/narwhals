@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from polars_api_compat.utils import parse_exprs
+from polars_api_compat.utils import flatten_strings
 import collections
 import warnings
 from typing import TYPE_CHECKING
@@ -113,7 +114,7 @@ class DataFrame(DataFrameT):
         return self._dataframe
 
     @property
-    def column_names(self) -> list[str]:
+    def columns(self) -> list[str]:
         return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
 
     # In the Standard
@@ -168,7 +169,7 @@ class DataFrame(DataFrameT):
         df = pd.concat({key: value.column for key, value in new_cols.items()}, axis=1, copy=False)
         return self._from_dataframe(df)
 
-    def take(
+    def gather(
         self,
         indices: Column,
     ) -> DataFrame:
@@ -190,10 +191,9 @@ class DataFrame(DataFrameT):
         *mask: Column,
     ) -> DataFrame:
         plx = self.__dataframe_namespace__()
-        filter = list(parse_exprs(self, plx.all_horizontal(*mask)).values())
-        if len(filter) > 1:
-            raise ValueError("Multi-output expression not allowed in this context")
-        _mask = validate_dataframe_comparand(self, filter[0])
+        # Safety: all_horizontal's expression only returns a single column.
+        filter = list(parse_exprs(self, plx.all_horizontal(*mask)).values())[0]
+        _mask = validate_dataframe_comparand(self, filter)
         df = self.dataframe
         df = df.loc[_mask]
         return self._from_dataframe(df)
@@ -220,29 +220,17 @@ class DataFrame(DataFrameT):
             self.dataframe.rename(columns=mapping),
         )
 
-    def get_column_names(self) -> list[str]:
-        # DO NOT REMOVE
-        # This one is used in upstream tests - even if deprecated,
-        # just leave it in for backwards compatibility
-        return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
-
     def sort(
         self,
         *keys: str,
         ascending: Sequence[bool] | bool = True,
-        nulls_position: Literal["first", "last"] = "last",
     ) -> DataFrame:
-        flat_keys = []
-        for key in keys:
-            if isinstance(key, (list, tuple)):
-                flat_keys.extend(key)
-            else:
-                flat_keys.append(key)
-        if not flat_keys:
-            flat_keys = self.dataframe.columns.tolist()
+        keys = flatten_strings(*keys)
+        if not keys:
+            keys = self.dataframe.columns.tolist()
         df = self.dataframe
         return self._from_dataframe(
-            df.sort_values(flat_keys, ascending=ascending),
+            df.sort_values(keys, ascending=ascending),
         )
 
     # Binary operations

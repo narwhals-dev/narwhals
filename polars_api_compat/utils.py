@@ -101,6 +101,16 @@ def parse_expr(df, expr):
         return out
     raise TypeError(f"Expected str, ColumnExpr, or list/tuple of str/ColumnExpr, got {type(expr)}")
 
+def flatten_strings(*args: str):
+    out = []
+    for arg in args:
+        if isinstance(arg, (list, tuple)):
+            out.extend(flatten_strings(*arg))
+        elif isinstance(arg, str):
+            out.append(arg)
+        else:
+            raise TypeError(f"Expected str, got {type(arg)}")
+    return out
 
 
 def parse_exprs(df, *exprs, **named_exprs) -> dict[str, Any]:
