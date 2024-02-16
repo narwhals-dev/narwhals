@@ -94,10 +94,11 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
     return other
 
 
-def evaluate_expr(df: DataFrame | LazyFrame, expr: Expr | Any) -> list[Series]:
-    if hasattr(expr, "__expr_namespace__"):
-        return expr.call(df)
-    return expr
+def maybe_evaluate_expr(df: DataFrame | LazyFrame, arg: Any) -> Any:
+    """Evaluate expression if it's an expression, otherwise return it as is."""
+    if hasattr(arg, "__expr_namespace__"):
+        return arg.call(df)
+    return arg
 
 
 def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
@@ -107,33 +108,31 @@ def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
         return df.__lazyframe_namespace__()
     raise TypeError(f"Expected DataFrame or LazyFrame, got {type(df)}")
 
+def parse_into_exprs(plx: Namespace, *exprs: IntoExpr | Iterable[IntoExpr]) -> list[Expr]:
+    return [parse_into_expr(plx, into_expr) for into_expr in flatten_args(*exprs)]
 
-def parse_expr(
-    df: DataFrame | LazyFrame, expr: IntoExpr | Iterable[IntoExpr]
+def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
+    if isinstance(into_expr, str):
+        return plx.col(into_expr)
+    if hasattr(into_expr, "__expr_namespace__"):
+        return cast(Expr, into_expr)  # help mypy
+    if hasattr(into_expr, "__series_namespace__"):
+        into_expr = cast(Series, into_expr)  # help mypy
+        return plx._create_expr_from_series(into_expr)
+    raise TypeError(f"Expected IntoExpr, got {type(into_expr)}")
+
+def evaluate_into_expr(
+    df: DataFrame | LazyFrame, into_expr: IntoExpr
 ) -> list[Series]:
     """
     Return list of raw columns.
     """
-    pdx = get_namespace(df)
-    if isinstance(expr, str):
-        return pdx.col(expr).call(df)
-    if hasattr(expr, "__series_namespace__"):
-        expr = cast(Series, expr)  # help mypy
-        return [expr]
-    if hasattr(expr, "__expr_namespace__"):
-        expr = cast(Expr, expr)  # help mypy
-        return expr.call(df)
-    if isinstance(expr, (list, tuple)):
-        out = []
-        for _expr in expr:
-            out.extend(parse_expr(df, _expr))
-        return out
-    raise TypeError(
-        f"Expected str, ColumnExpr, or list/tuple of str/ColumnExpr, got {type(expr)}"
-    )
+    expr = parse_into_expr(df, into_expr)
+    return expr.call(df)
+
 
 def flatten_args(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
-    out = []
+    out: list[IntoExpr] = []
     for arg in args:
         if isinstance(arg, (list, tuple)):
             out.extend(arg)
@@ -141,43 +140,44 @@ def flatten_args(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
             out.append(arg)
     return out
 
-def evaluate_exprs(
+# in filter, I want to:
+# - flatten the into exprs
+# - convert all to exprs
+# - pass these to all_horizontal
+
+def evaluate_into_exprs(
     df: DataFrame | LazyFrame,
     *exprs: IntoExpr | Iterable[IntoExpr],
     **named_exprs: IntoExpr,
 ) -> list[Series]:
-    """Take exprs and evaluate Series underneath them.
+    """Evaluate each expr into Series.
     """
-    parsed_exprs = [
-        item for sublist in [parse_expr(df, expr) for expr in exprs] for item in sublist
-    ]
-    parsed_named_exprs: dict[str, Series] = {}
+    series: list[Series] = [item for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten_args(*exprs)] for item in sublist]
     for name, expr in named_exprs.items():
-        parsed_expr = parse_expr(df, expr)
-        if len(parsed_expr) > 1:
+        evaluated_expr = evaluate_into_expr(df, expr)
+        if len(evaluated_expr) > 1:
             raise ValueError("Named expressions must return a single column")
-        parsed_named_exprs[name] = parsed_expr[0]
-    for name, series in parsed_named_exprs.items():
-        parsed_exprs.append(series.alias(name))
-    return parsed_exprs
+        series.append(evaluated_expr[0].alias(name))
+    return series
 
 
-def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:  # type: ignore[override]
+def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
     plx = expr.__expr_namespace__()
 
     def func(df: DataFrame) -> list[Series]:
-        out = []
+        out: list[Series] = []
         for column in expr.call(df):
             # should be enough to just evaluate?
             # validation should happen within column methods?
             _out = getattr(column, attr)(  # type: ignore[no-any-return]
-                *[evaluate_expr(df, arg) for arg in args],
+                *[maybe_evaluate_expr(df, arg) for arg in args],
                 **{
-                    arg_name: evaluate_expr(df, arg_value)
+                    arg_name: maybe_evaluate_expr(df, arg_value)
                     for arg_name, arg_value in kwargs.items()
                 },
             )
             if hasattr(_out, "__series_namespace__"):
+                _out = cast(Series, _out)  # help mypy
                 out.append(_out)
             else:
                 out.append(plx._create_series_from_scalar(_out, column))

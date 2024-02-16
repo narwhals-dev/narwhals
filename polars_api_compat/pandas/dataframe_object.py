@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from polars_api_compat.utils import evaluate_exprs
+from polars_api_compat.utils import evaluate_into_exprs, parse_into_expr, parse_into_exprs
 
 from polars_api_compat.utils import flatten_args
 import collections
@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from polars_api_compat.spec import (
         DataFrame as DataFrameT,
         IntoExpr,
+        Namespace as NamespaceT,
     )
 else:
     DataFrameT = object
@@ -95,7 +96,7 @@ class DataFrame(DataFrameT):
 
     def __dataframe_namespace__(
         self,
-    ) -> polars_api_compat.pandas.Namespace:
+    ) -> NamespaceT:
         return polars_api_compat.pandas.Namespace(
             api_version=self.api_version,
         )
@@ -123,30 +124,28 @@ class DataFrame(DataFrameT):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> DataFrame:
-        new_cols = evaluate_exprs(self, *exprs, **named_exprs)
-        df = pd.concat({column.name: column.column for column in new_cols}, axis=1, copy=False)
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        df = pd.concat({series.name: series.series for series in new_series}, axis=1, copy=False)
         return self._from_dataframe(df)
 
     def filter(
         self,
-        *mask: Column,
+        *predicates: IntoExpr | Iterable[IntoExpr],
     ) -> DataFrame:
         plx = self.__dataframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
-        filter = evaluate_exprs(self, plx.all_horizontal(*mask))[0]
+        filter = plx.all_horizontal(*predicates).call(self)[0]
         _mask = validate_dataframe_comparand(self, filter)
-        df = self.dataframe
-        df = df.loc[_mask]
-        return self._from_dataframe(df)
+        return self._from_dataframe(self.dataframe.loc[_mask])
 
     def with_columns(
         self,
-        *exprs,
-        **named_exprs,
+        *exprs: IntoExpr | Iterable[IntoExpr],
+        **named_exprs: IntoExpr,
     ) -> DataFrame:
-        new_cols = evaluate_exprs(self, *exprs, **named_exprs)
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(
-            **{column.name: column.column for column in new_cols}
+            **{series.name: series.series for series in new_series}
         )
         return self._from_dataframe(df)
 

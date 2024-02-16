@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing_extensions import Self
-from polars_api_compat.utils import register_expression_call, flatten_args, evaluate_exprs
+from polars_api_compat.utils import register_expression_call, flatten_args, parse_into_exprs
 
 import re
 from functools import reduce
@@ -347,15 +347,14 @@ class Namespace(NamespaceT):
 
     # --- horizontal reductions
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
-        return reduce(lambda x, y: x + y, flatten_args(exprs))
+        return reduce(lambda x, y: x + y, flatten_args(*exprs))
 
     def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
-        return reduce(lambda x, y: x & y, flatten_args(exprs))
+        return reduce(lambda x, y: x & y, parse_into_exprs(self, *exprs))
 
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
         # this is wrong, we need to parse them
-        cols = evaluate_exprs(self, *exprs)
-        return reduce(lambda x, y: x | y, cols)
+        return reduce(lambda x, y: x | y, exprs)
 
     def col(self, *column_names: str) -> Expr:
         names = []
@@ -387,11 +386,14 @@ class Namespace(NamespaceT):
     def _create_expr_from_callable(self, call: Callable[[DataFrameT|LazyFrameT], list[SeriesT]]) -> ExprT:
         return Expr(call)
 
-    def _create_series_from_scalar(self, value: Any, column: Series) -> Series:
+    def _create_series_from_scalar(self, value: Any, series: Series) -> Series:
         return Series(
-            pd.Series([value], name=column.column.name, index=column.column.index[0:1]),
+            pd.Series([value], name=series.column.name, index=series.column.index[0:1]),
             api_version=self.api_version,
         )
+
+    def _create_expr_from_series(self, series: Series) -> Expr:
+        return Expr(lambda df: [series])
 
     def all(self) -> Expr:
         return Expr(

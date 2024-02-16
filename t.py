@@ -20,6 +20,10 @@ print(result.dataframe)
 
 result = dfx.with_columns(horizonal_sum=plx.sum_horizontal(plx.col("a"), plx.col("b")))
 print(result.dataframe)
+result = dfx.with_columns(horizonal_sum=plx.sum_horizontal('a', plx.col("b")))
+print(result.dataframe)
+
+
 result = dfx.select(plx.all().sum())
 print(result.dataframe)
 result = dfx.select(plx.col("a", "b") * 2)

@@ -13,7 +13,9 @@ class Expr(Protocol):
     
     def __expr_namespace__(self) -> Namespace:
         ...
-
+    
+    def __and__(self, other: IntoExpr) -> Expr:
+        ...
 
 class Namespace(Protocol):
     def col(self, *names: str | Iterable[str]) -> Expr:
@@ -22,12 +24,37 @@ class Namespace(Protocol):
     def _create_series_from_scalar(self, value: Any, series: Series) -> Series:
         ...
 
+    def _create_expr_from_series(self, series: Series) -> Expr:
+        ...
+
     def _create_expr_from_callable(self, func: Callable[[DataFrame], list[Series]]) -> Expr:
+        ...
+    
+    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+        ...
+    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+        ...
+    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...
 
 
 class Series(Protocol):
+    def __series_namespace__(self) -> Namespace:
+        ...
+    
     def alias(self, name: str) -> Self:
+        ...
+    @property
+    def series(self) -> Any:
+        """
+        Return the underlying Series.
+
+        This is typically what you'll want to return at the end
+        of a series-agnostic function.
+        """
+        ...
+    @property
+    def name(self) -> str:
         ...
 
 

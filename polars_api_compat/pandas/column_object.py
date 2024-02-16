@@ -13,15 +13,9 @@ from pandas.api.types import is_extension_array_dtype
 
 from polars_api_compat.utils import validate_column_comparand
 
-if TYPE_CHECKING:
-    from dataframe_api import Column as ColumnT
-    from dataframe_api.typing import DType
-    from dataframe_api.typing import NullType
-    from dataframe_api.typing import Scalar
-
-    from polars_api_compat.pandas.dataframe_object import DataFrame
-else:
-    ColumnT = object
+from polars_api_compat.spec import (
+    Series as SeriesT,
+)
 
 
 NUMPY_MAPPING = {
@@ -39,7 +33,7 @@ NUMPY_MAPPING = {
 }
 
 
-class Series(ColumnT):
+class Series(SeriesT):
     def __init__(
         self,
         series: pd.Series[Any],
