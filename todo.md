@@ -42,3 +42,12 @@ need to simplify flattening logic here!
 really, let's get the scope down. get enough to run tpch!
 
 reuse as much as possible, nothing complicated!
+
+---
+
+fastpath for groupby is probably really important...
+so, let's:
+- sort out typing in Series
+- get fastpaths in groupby
+- sort out join
+that would already be...amazing???
