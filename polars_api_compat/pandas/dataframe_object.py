@@ -93,8 +93,8 @@ class DataFrame(DataFrameT):
     def shape(self) -> tuple[int, int]:
         return self.dataframe.shape  # type: ignore[no-any-return]
 
-    def group_by(self, *keys: str) -> GroupByT:
-        return self.lazy().group_by(*keys)
+    def group_by(self, *keys: str | Iterable[str]) -> GroupByT:
+        return self.group_by(*keys)
 
     def select(
         self,
@@ -223,10 +223,10 @@ class LazyFrame(LazyFrameT):
             api_version=self.api_version,
         )
 
-    def group_by(self, *keys: str) -> LazyGroupByT:
+    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupByT:
         from polars_api_compat.pandas.group_by_object import LazyGroupBy
 
-        return LazyGroupBy(self, flatten_str(keys), api_version=self.api_version)
+        return LazyGroupBy(self, flatten_str(*keys), api_version=self.api_version)
 
     def select(
         self,
