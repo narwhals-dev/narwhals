@@ -144,6 +144,16 @@ def flatten_str(*args: str | Iterable[str]) -> list[str]:
     return out
 
 
+def flatten_bool(*args: bool | Iterable[bool]) -> list[bool]:
+    out: list[IntoExpr] = []
+    for arg in args:
+        if isinstance(arg, (list, tuple)):
+            out.extend(arg)
+        else:
+            out.append(arg)
+    return out
+
+
 def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
     out: list[IntoExpr] = []
     for arg in args:

@@ -94,6 +94,11 @@ class DataFrame(Protocol):
     ) -> Self:
         ...
 
+    def sort(
+        self, *keys: str | Iterable[str], descending: bool | Iterable[bool]
+    ) -> DataFrame:
+        ...
+
     @property
     def dataframe(self) -> Any:
         """
@@ -125,6 +130,11 @@ class LazyFrame(Protocol):
     ) -> LazyFrame:
         ...
 
+    def sort(
+        self, *keys: str | Iterable[str], descending: bool | Iterable[bool]
+    ) -> LazyFrame:
+        ...
+
     def collect(self) -> DataFrame:
         ...
 
@@ -139,6 +149,17 @@ class LazyFrame(Protocol):
         ...
 
     def __lazyframe_namespace__(self) -> Namespace:
+        ...
+
+
+class GroupBy(Protocol):
+    def size(self) -> DataFrame:
+        ...
+
+    def any(self) -> DataFrame:
+        ...
+
+    def all(self) -> DataFrame:
         ...
 
 

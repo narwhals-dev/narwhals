@@ -5,7 +5,7 @@ from polars_api_compat.utils import (
     evaluate_into_exprs,
 )
 
-from polars_api_compat.utils import flatten_into_expr, flatten_str
+from polars_api_compat.utils import flatten_str, flatten_bool
 import collections
 from typing import TYPE_CHECKING, Iterable, Any
 from typing import Literal
@@ -134,16 +134,10 @@ class DataFrame(DataFrameT):
 
     def sort(
         self,
-        *keys: str,
-        ascending: Sequence[bool] | bool = True,
-    ) -> DataFrame:
-        keys = flatten_into_expr(*keys)
-        if not keys:
-            keys = self.dataframe.columns.tolist()
-        df = self.dataframe
-        return self._from_dataframe(
-            df.sort_values(keys, ascending=ascending),
-        )
+        *keys: str | Iterable[str],
+        descending: bool | Iterable[bool] = True,
+    ) -> DataFrameT:
+        return self.lazy().sort(*keys, descending=descending).collect()
 
     # Other
     def join(
@@ -238,9 +232,9 @@ class LazyFrame(LazyFrameT):
     def dataframe(self) -> Any:
         return self._df
 
-    def __dataframe_namespace__(
+    def __lazyframe_namespace__(
         self,
-    ) -> polars_api_compat.pandas.Namespace:
+    ) -> NamespaceT:
         return polars_api_compat.pandas.Namespace(
             api_version=self.api_version,
         )
@@ -275,7 +269,7 @@ class LazyFrame(LazyFrameT):
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
     ) -> LazyFrameT:
-        plx = self.__dataframe_namespace__()
+        plx = self.__lazyframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
         filter = plx.all_horizontal(*predicates).call(self)[0]
         _mask = validate_dataframe_comparand(self, filter)
@@ -294,15 +288,16 @@ class LazyFrame(LazyFrameT):
 
     def sort(
         self,
-        *keys: str,
-        ascending: Sequence[bool] | bool = True,
+        *keys: str | Iterable[str],
+        descending: bool | Iterable[bool] = True,
     ) -> LazyFrameT:
         flat_keys = flatten_str(*keys)
         if not flat_keys:
             flat_keys = self.dataframe.columns.tolist()
+        flat_descending = flatten_bool(descending)
         df = self.dataframe
         return self._from_dataframe(
-            df.sort_values(keys, ascending=ascending),
+            df.sort_values(keys, ascending=[not d for d in flat_descending]),
         )
 
     # Other

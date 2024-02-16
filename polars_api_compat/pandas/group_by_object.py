@@ -1,21 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import cast
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from polars_api_compat.pandas import Namespace
 from polars_api_compat.pandas.dataframe_object import DataFrame
+from polars_api_compat.spec import (
+    DataFrame as DataFrameT,
+    LazyFrame as LazyFrameT,
+    GroupBy as GroupByT,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-else:
-    GroupByT = object
 
 
 class GroupBy(GroupByT):
-    def __init__(self, df: DataFrame, keys: Sequence[str], api_version: str) -> None:
+    def __init__(
+        self, df: DataFrameT | LazyFrameT, keys: Sequence[str], api_version: str
+    ) -> None:
         self._df = df.dataframe
         self._grouped = self._df.groupby(list(keys), sort=False, as_index=False)
         self._keys = list(keys)
@@ -51,44 +54,44 @@ class GroupBy(GroupByT):
     def size(self) -> DataFrame:
         return self._to_dataframe(self._grouped.size())
 
-    def any(self, *, skip_nulls: bool | Scalar = True) -> DataFrame:
+    def any(self) -> DataFrame:
         self._validate_booleanness()
         result = self._grouped.any()
         self._validate_result(result)
         return self._to_dataframe(result)
 
-    def all(self, *, skip_nulls: bool | Scalar = True) -> DataFrame:
+    def all(self) -> DataFrame:
         self._validate_booleanness()
         result = self._grouped.all()
         self._validate_result(result)
         return self._to_dataframe(result)
 
-    def min(self, *, skip_nulls: bool | Scalar = True) -> DataFrame:
+    def min(self) -> DataFrame:
         result = self._grouped.min()
         self._validate_result(result)
         return self._to_dataframe(result)
 
-    def max(self, *, skip_nulls: bool | Scalar = True) -> DataFrame:
+    def max(self) -> DataFrame:
         result = self._grouped.max()
         self._validate_result(result)
         return self._to_dataframe(result)
 
-    def sum(self, *, skip_nulls: bool | Scalar = True) -> DataFrame:
+    def sum(self) -> DataFrame:
         result = self._grouped.sum()
         self._validate_result(result)
         return self._to_dataframe(result)
 
-    def prod(self, *, skip_nulls: bool | Scalar = True) -> DataFrame:
+    def prod(self) -> DataFrame:
         result = self._grouped.prod()
         self._validate_result(result)
         return self._to_dataframe(result)
 
-    def median(self, *, skip_nulls: bool | Scalar = True) -> DataFrame:
+    def median(self) -> DataFrame:
         result = self._grouped.median()
         self._validate_result(result)
         return self._to_dataframe(result)
 
-    def mean(self, *, skip_nulls: bool | Scalar = True) -> DataFrame:
+    def mean(self) -> DataFrame:
         result = self._grouped.mean()
         self._validate_result(result)
         return self._to_dataframe(result)
@@ -96,8 +99,7 @@ class GroupBy(GroupByT):
     def std(
         self,
         *,
-        correction: float | Scalar | NullType = 1.0,
-        skip_nulls: bool | Scalar = True,
+        correction: float = 1.0,
     ) -> DataFrame:
         result = self._grouped.std()
         self._validate_result(result)
@@ -106,8 +108,7 @@ class GroupBy(GroupByT):
     def var(
         self,
         *,
-        correction: float | Scalar | NullType = 1.0,
-        skip_nulls: bool | Scalar = True,
+        correction: float = 1.0,
     ) -> DataFrame:
         result = self._grouped.var()
         self._validate_result(result)
@@ -115,7 +116,7 @@ class GroupBy(GroupByT):
 
     def agg(
         self,
-        *aggregations: AggregationT,
+        *aggregations: Any,  # todo
     ) -> DataFrame:
         import collections
 
@@ -140,23 +141,3 @@ class GroupBy(GroupByT):
                 for _result in result:
                     out[_result.name].append(_result.column.item())
         return self._to_dataframe(pd.DataFrame(out))
-
-
-def validate_aggregations(
-    *aggregations: AggregationT,
-    keys: Sequence[str],
-) -> tuple[AggregationT, ...]:
-    return tuple(
-        aggregation
-        if aggregation.aggregation != "size"  # type: ignore[attr-defined]
-        else aggregation._replace(column_name=keys[0])  # type: ignore[attr-defined]
-        for aggregation in aggregations
-    )
-
-
-def resolve_aggregation(aggregation: AggregationT) -> pd.NamedAgg:
-    aggregation = cast(Namespace.Aggregation, aggregation)
-    return pd.NamedAgg(
-        column=aggregation.column_name,
-        aggfunc=aggregation.aggregation,
-    )
