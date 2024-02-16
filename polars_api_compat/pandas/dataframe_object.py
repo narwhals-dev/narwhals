@@ -18,12 +18,12 @@ from polars_api_compat.spec import (
     LazyFrame as LazyFrameT,
     IntoExpr,
     Namespace as NamespaceT,
+    GroupBy as GroupByT,
+    LazyGroupBy as LazyGroupByT,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from polars_api_compat.pandas.group_by_object import GroupBy
 
 
 class DataFrame(DataFrameT):
@@ -93,20 +93,8 @@ class DataFrame(DataFrameT):
     def shape(self) -> tuple[int, int]:
         return self.dataframe.shape  # type: ignore[no-any-return]
 
-    def group_by(self, *keys: str) -> GroupBy:
-        from polars_api_compat.pandas.group_by_object import GroupBy
-
-        # todo: do this properly
-        out = []
-        for key in keys:
-            if isinstance(key, str):
-                out.append(key)
-            elif isinstance(key, (list, tuple)):
-                out.extend(key)
-            elif key not in self.columns:
-                msg = f"key {key} not present in DataFrame's columns"
-                raise KeyError(msg)
-        return GroupBy(self, out, api_version=self.api_version)
+    def group_by(self, *keys: str) -> GroupByT:
+        return self.lazy().group_by(*keys)
 
     def select(
         self,
@@ -235,10 +223,10 @@ class LazyFrame(LazyFrameT):
             api_version=self.api_version,
         )
 
-    def group_by(self, *keys: str) -> GroupBy:
-        from polars_api_compat.pandas.group_by_object import GroupBy
+    def group_by(self, *keys: str) -> LazyGroupByT:
+        from polars_api_compat.pandas.group_by_object import LazyGroupBy
 
-        return GroupBy(self, flatten_str(keys), api_version=self.api_version)
+        return LazyGroupBy(self, flatten_str(keys), api_version=self.api_version)
 
     def select(
         self,

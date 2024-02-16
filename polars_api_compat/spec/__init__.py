@@ -109,6 +109,9 @@ class DataFrame(Protocol):
         """
         ...
 
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+        ...
+
     def __dataframe_namespace__(self) -> Namespace:
         ...
 
@@ -148,18 +151,24 @@ class LazyFrame(Protocol):
         """
         ...
 
+    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
+        ...
+
     def __lazyframe_namespace__(self) -> Namespace:
         ...
 
 
 class GroupBy(Protocol):
-    def size(self) -> DataFrame:
+    def agg(
+        self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
+    ) -> DataFrame:
         ...
 
-    def any(self) -> DataFrame:
-        ...
 
-    def all(self) -> DataFrame:
+class LazyGroupBy(Protocol):
+    def agg(
+        self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
+    ) -> DataFrame:
         ...
 
 
