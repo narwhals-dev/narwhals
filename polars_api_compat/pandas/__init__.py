@@ -347,14 +347,13 @@ class Namespace(NamespaceT):
 
     # --- horizontal reductions
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
-        return reduce(lambda x, y: x + y, flatten_args(*exprs))
+        return reduce(lambda x, y: x + y, parse_into_exprs(self, *exprs))
 
     def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
         return reduce(lambda x, y: x & y, parse_into_exprs(self, *exprs))
 
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
-        # this is wrong, we need to parse them
-        return reduce(lambda x, y: x | y, exprs)
+        return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
 
     def col(self, *column_names: str) -> Expr:
         names = []
@@ -458,7 +457,6 @@ class Expr(ExprT):
         return register_expression_call(self, "__ror__", other)
 
     def __add__(self, other: Expr | Any) -> Self:  # type: ignore[override]
-        breakpoint()
         return register_expression_call(self, "__add__", other)
 
     def __radd__(self, other: Series | Any) -> Self:

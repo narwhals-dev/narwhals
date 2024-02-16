@@ -16,6 +16,10 @@ class Expr(Protocol):
     
     def __and__(self, other: IntoExpr) -> Expr:
         ...
+    def __or__(self, other: IntoExpr) -> Expr:
+        ...
+    def __sum__(self, other: IntoExpr) -> Expr:
+        ...
 
 class Namespace(Protocol):
     def col(self, *names: str | Iterable[str]) -> Expr:

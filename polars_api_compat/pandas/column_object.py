@@ -173,7 +173,6 @@ class Series(SeriesT):
     def __add__(self, other: Series | Any) -> Series:
         ser = self.series
         other = validate_column_comparand(self, other)
-        breakpoint()
         return self._from_series((ser + other).rename(ser.name, copy=False))
 
     def __radd__(self, other: Series | Any) -> Series:
