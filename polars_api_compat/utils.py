@@ -94,7 +94,7 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
     return other
 
 
-def evaluate_expr(df, expr):
+def evaluate_expr(df: DataFrame | LazyFrame, expr: Expr | Any) -> list[Series]:
     if hasattr(expr, "__expr_namespace__"):
         return expr.call(df)
     return expr
@@ -132,7 +132,7 @@ def parse_expr(
         f"Expected str, ColumnExpr, or list/tuple of str/ColumnExpr, got {type(expr)}"
     )
 
-def flatten_args(*args: T | Iterable[T]) -> list[T]:
+def flatten_args(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
     out = []
     for arg in args:
         if isinstance(arg, (list, tuple)):
@@ -141,34 +141,25 @@ def flatten_args(*args: T | Iterable[T]) -> list[T]:
             out.append(arg)
     return out
 
-
-def parse_exprs(
+def evaluate_exprs(
     df: DataFrame | LazyFrame,
     *exprs: IntoExpr | Iterable[IntoExpr],
     **named_exprs: IntoExpr,
 ) -> list[Series]:
-    """
-    Take exprs and evaluate Series underneath them.
-
-    Returns dict of output name to raw column object.
+    """Take exprs and evaluate Series underneath them.
     """
     parsed_exprs = [
         item for sublist in [parse_expr(df, expr) for expr in exprs] for item in sublist
     ]
-    parsed_named_exprs = {}
+    parsed_named_exprs: dict[str, Series] = {}
     for name, expr in named_exprs.items():
         parsed_expr = parse_expr(df, expr)
         if len(parsed_expr) > 1:
             raise ValueError("Named expressions must return a single column")
         parsed_named_exprs[name] = parsed_expr[0]
-    new_cols = []
-    for expr in parsed_exprs:
-        _column = evaluate_expr(df, expr)
-        new_cols.append(_column)
-    for name, expr in parsed_named_exprs.items():
-        _column = evaluate_expr(df, expr)
-        new_cols.append(_column.alias(name))
-    return new_cols
+    for name, series in parsed_named_exprs.items():
+        parsed_exprs.append(series.alias(name))
+    return parsed_exprs
 
 
 def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:  # type: ignore[override]

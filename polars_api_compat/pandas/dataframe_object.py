@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from polars_api_compat.utils import parse_exprs
+from polars_api_compat.utils import evaluate_exprs
 
 from polars_api_compat.utils import flatten_args
 import collections
@@ -123,7 +123,7 @@ class DataFrame(DataFrameT):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> DataFrame:
-        new_cols = parse_exprs(self, *exprs, **named_exprs)
+        new_cols = evaluate_exprs(self, *exprs, **named_exprs)
         df = pd.concat({column.name: column.column for column in new_cols}, axis=1, copy=False)
         return self._from_dataframe(df)
 
@@ -133,7 +133,7 @@ class DataFrame(DataFrameT):
     ) -> DataFrame:
         plx = self.__dataframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
-        filter = parse_exprs(self, plx.all_horizontal(*mask))[0]
+        filter = evaluate_exprs(self, plx.all_horizontal(*mask))[0]
         _mask = validate_dataframe_comparand(self, filter)
         df = self.dataframe
         df = df.loc[_mask]
@@ -144,7 +144,7 @@ class DataFrame(DataFrameT):
         *exprs,
         **named_exprs,
     ) -> DataFrame:
-        new_cols = parse_exprs(self, *exprs, **named_exprs)
+        new_cols = evaluate_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(
             **{column.name: column.column for column in new_cols}
         )
@@ -286,7 +286,7 @@ class LazyFrame(DataFrameT):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> DataFrame:
-        new_cols = parse_exprs(self, *exprs, **named_exprs)
+        new_cols = evaluate_exprs(self, *exprs, **named_exprs)
         df = pd.concat(
             {column.name: column.column for column in new_cols}, axis=1, copy=False
         )
@@ -298,7 +298,7 @@ class LazyFrame(DataFrameT):
     ) -> DataFrame:
         plx = self.__dataframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
-        filter = parse_exprs(self, plx.all_horizontal(*mask))[0]
+        filter = evaluate_exprs(self, plx.all_horizontal(*mask))[0]
         _mask = validate_dataframe_comparand(self, filter)
         df = self.dataframe
         df = df.loc[_mask]
@@ -309,7 +309,7 @@ class LazyFrame(DataFrameT):
         *exprs,
         **named_exprs,
     ) -> DataFrame:
-        new_cols = parse_exprs(self, *exprs, **named_exprs)
+        new_cols = evaluate_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(
             **{column.name: column.column for column in new_cols}
         )

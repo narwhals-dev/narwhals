@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing_extensions import Self
-from polars_api_compat.utils import register_expression_call, flatten_args
+from polars_api_compat.utils import register_expression_call, flatten_args, evaluate_exprs
 
 import re
 from functools import reduce
@@ -353,7 +353,9 @@ class Namespace(NamespaceT):
         return reduce(lambda x, y: x & y, flatten_args(exprs))
 
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
-        return reduce(lambda x, y: x | y, flatten_args(exprs))
+        # this is wrong, we need to parse them
+        cols = evaluate_exprs(self, *exprs)
+        return reduce(lambda x, y: x | y, cols)
 
     def col(self, *column_names: str) -> Expr:
         names = []
