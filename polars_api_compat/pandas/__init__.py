@@ -347,7 +347,7 @@ class Namespace(NamespaceT):
 
     # --- horizontal reductions
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
-        return reduce(lambda x, y: x + y, flatten_args(exprs))
+        return reduce(lambda x, y: x + y, flatten_args(*exprs))
 
     def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
         return reduce(lambda x, y: x & y, flatten_args(exprs))
