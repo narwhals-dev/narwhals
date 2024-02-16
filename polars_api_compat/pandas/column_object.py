@@ -39,7 +39,7 @@ NUMPY_MAPPING = {
 }
 
 
-class Column(ColumnT):
+class Series(ColumnT):
     def __init__(
         self,
         series: pd.Series[Any],
@@ -75,8 +75,8 @@ class Column(ColumnT):
         msg = ""
         raise NotImplementedError(msg)
 
-    def _from_series(self, series: pd.Series) -> Column:
-        return Column(
+    def _from_series(self, series: pd.Series) -> Series:
+        return Series(
             series.rename(series.name, copy=False),
             api_version=self._api_version,
         )
@@ -107,12 +107,12 @@ class Column(ColumnT):
     def parent_dataframe(self) -> DataFrame | None:
         return self._df
 
-    def take(self, indices: Column) -> Column:
+    def take(self, indices: Series) -> Series:
         return self._from_series(
             self.column.iloc[validate_column_comparand(self, indices)]
         )
 
-    def filter(self, mask: Column) -> Column:
+    def filter(self, mask: Series) -> Series:
         ser = self.column
         return self._from_series(ser.loc[validate_column_comparand(self, mask)])
 
@@ -125,121 +125,121 @@ class Column(ColumnT):
         start: int | None,
         stop: int | None,
         step: int | None,
-    ) -> Column:
+    ) -> Series:
         return self._from_series(self.column.iloc[start:stop:step])
 
     # Binary comparisons
 
-    def __eq__(self, other: Column | Any) -> Column:  # type: ignore[override]
+    def __eq__(self, other: Series | Any) -> Series:  # type: ignore[override]
         other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser == other).rename(ser.name, copy=False))
 
-    def __ne__(self, other: Column | Any) -> Column:  # type: ignore[override]
+    def __ne__(self, other: Series | Any) -> Series:  # type: ignore[override]
         other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser != other).rename(ser.name, copy=False))
 
-    def __ge__(self, other: Column | Any) -> Column:
+    def __ge__(self, other: Series | Any) -> Series:
         other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser >= other).rename(ser.name, copy=False))
 
-    def __gt__(self, other: Column | Any) -> Column:
+    def __gt__(self, other: Series | Any) -> Series:
         other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser > other).rename(ser.name, copy=False))
 
-    def __le__(self, other: Column | Any) -> Column:
+    def __le__(self, other: Series | Any) -> Series:
         other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser <= other).rename(ser.name, copy=False))
 
-    def __lt__(self, other: Column | Any) -> Column:
+    def __lt__(self, other: Series | Any) -> Series:
         other = validate_column_comparand(self, other)
         ser = self.column
         return self._from_series((ser < other).rename(ser.name, copy=False))
 
-    def __and__(self, other: Column | bool | Scalar) -> Column:
+    def __and__(self, other: Series | bool | Scalar) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser & other).rename(ser.name, copy=False))
 
-    def __rand__(self, other: Column | Any) -> Column:
+    def __rand__(self, other: Series | Any) -> Series:
         return self.__and__(other)
 
-    def __or__(self, other: Column | bool | Scalar) -> Column:
+    def __or__(self, other: Series | bool | Scalar) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser | other).rename(ser.name, copy=False))
 
-    def __ror__(self, other: Column | Any) -> Column:
+    def __ror__(self, other: Series | Any) -> Series:
         return self.__or__(other)
 
-    def __add__(self, other: Column | Any) -> Column:
+    def __add__(self, other: Series | Any) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser + other).rename(ser.name, copy=False))
 
-    def __radd__(self, other: Column | Any) -> Column:
+    def __radd__(self, other: Series | Any) -> Series:
         return self.__add__(other)
 
-    def __sub__(self, other: Column | Any) -> Column:
+    def __sub__(self, other: Series | Any) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser - other).rename(ser.name, copy=False))
 
-    def __rsub__(self, other: Column | Any) -> Column:
+    def __rsub__(self, other: Series | Any) -> Series:
         return -1 * self.__sub__(other)
 
-    def __mul__(self, other: Column | Any) -> Column:
+    def __mul__(self, other: Series | Any) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser * other).rename(ser.name, copy=False))
 
-    def __rmul__(self, other: Column | Any) -> Column:
+    def __rmul__(self, other: Series | Any) -> Series:
         return self.__mul__(other)
 
-    def __truediv__(self, other: Column | Any) -> Column:
+    def __truediv__(self, other: Series | Any) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser / other).rename(ser.name, copy=False))
 
-    def __rtruediv__(self, other: Column | Any) -> Column:
+    def __rtruediv__(self, other: Series | Any) -> Series:
         raise NotImplementedError
 
-    def __floordiv__(self, other: Column | Any) -> Column:
+    def __floordiv__(self, other: Series | Any) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser // other).rename(ser.name, copy=False))
 
-    def __rfloordiv__(self, other: Column | Any) -> Column:
+    def __rfloordiv__(self, other: Series | Any) -> Series:
         raise NotImplementedError
 
-    def __pow__(self, other: Column | Any) -> Column:
+    def __pow__(self, other: Series | Any) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser**other).rename(ser.name, copy=False))
 
-    def __rpow__(self, other: Column | Any) -> Column:  # pragma: no cover
+    def __rpow__(self, other: Series | Any) -> Series:  # pragma: no cover
         raise NotImplementedError
 
-    def __mod__(self, other: Column | Any) -> Column:
+    def __mod__(self, other: Series | Any) -> Series:
         ser = self.column
         other = validate_column_comparand(self, other)
         return self._from_series((ser % other).rename(ser.name, copy=False))
 
-    def __rmod__(self, other: Column | Any) -> Column:  # pragma: no cover
+    def __rmod__(self, other: Series | Any) -> Series:  # pragma: no cover
         raise NotImplementedError
 
-    def __divmod__(self, other: Column | Any) -> tuple[Column, Column]:
+    def __divmod__(self, other: Series | Any) -> tuple[Series, Series]:
         quotient = self // other
         remainder = self - quotient * other
         return quotient, remainder
 
     # Unary
 
-    def __invert__(self: Column) -> Column:
+    def __invert__(self: Series) -> Series:
         ser = self.column
         return self._from_series(~ser)
 
@@ -314,11 +314,11 @@ class Column(ColumnT):
 
     # Transformations
 
-    def is_null(self) -> Column:
+    def is_null(self) -> Series:
         ser = self.column
         return self._from_series(ser.isna())
 
-    def is_nan(self) -> Column:
+    def is_nan(self) -> Series:
         ser = self.column
         if is_extension_array_dtype(ser.dtype):
             return self._from_series((ser != ser).fillna(False))  # noqa: PLR0124
@@ -329,13 +329,13 @@ class Column(ColumnT):
         *,
         ascending: bool = True,
         nulls_position: Literal["first", "last"] = "last",
-    ) -> Column:
+    ) -> Series:
         ser = self.column
         if ascending:
             return self._from_series(ser.sort_values().rename(self.name))
         return self._from_series(ser.sort_values().rename(self.name)[::-1])
 
-    def is_in(self, values: Column) -> Column:
+    def is_in(self, values: Series) -> Series:
         ser = self.column
         return self._from_series(ser.isin(validate_column_comparand(self, values)))
 
@@ -344,7 +344,7 @@ class Column(ColumnT):
         *,
         ascending: bool = True,
         nulls_position: Literal["first", "last"] = "last",
-    ) -> Column:
+    ) -> Series:
         ser = self.column
         if ascending:
             return self._from_series(ser.sort_values().index.to_series(name=self.name))
@@ -356,11 +356,11 @@ class Column(ColumnT):
         self,
         *,
         skip_nulls: bool | Scalar = True,
-    ) -> Column:  # pragma: no cover
+    ) -> Series:  # pragma: no cover
         msg = "not yet supported"
         raise NotImplementedError(msg)
 
-    def fill_nan(self, value: float | NullType | Scalar) -> Column:
+    def fill_nan(self, value: float | NullType | Scalar) -> Series:
         idx = self.column.index
         ser = self.column.copy()
         if is_extension_array_dtype(ser.dtype):
@@ -379,7 +379,7 @@ class Column(ColumnT):
     def fill_null(
         self,
         value: Any,
-    ) -> Column:
+    ) -> Series:
         value = validate_column_comparand(self, value)
         idx = self.column.index
         ser = self.column.copy()
@@ -392,27 +392,27 @@ class Column(ColumnT):
         ser.index = idx
         return self._from_series(ser.rename(self.name, copy=False))
 
-    def cumulative_sum(self, *, skip_nulls: bool | Scalar = True) -> Column:
+    def cumulative_sum(self, *, skip_nulls: bool | Scalar = True) -> Series:
         ser = self.column
         return self._from_series(ser.cumsum())
 
-    def cumulative_prod(self, *, skip_nulls: bool | Scalar = True) -> Column:
+    def cumulative_prod(self, *, skip_nulls: bool | Scalar = True) -> Series:
         ser = self.column
         return self._from_series(ser.cumprod())
 
-    def cumulative_max(self, *, skip_nulls: bool | Scalar = True) -> Column:
+    def cumulative_max(self, *, skip_nulls: bool | Scalar = True) -> Series:
         ser = self.column
         return self._from_series(ser.cummax())
 
-    def cumulative_min(self, *, skip_nulls: bool | Scalar = True) -> Column:
+    def cumulative_min(self, *, skip_nulls: bool | Scalar = True) -> Series:
         ser = self.column
         return self._from_series(ser.cummin())
 
-    def alias(self, name: str | Scalar) -> Column:
+    def alias(self, name: str | Scalar) -> Series:
         ser = self.column
         return self._from_series(ser.rename(name, copy=False))
 
-    def shift(self, offset: int | Scalar) -> Column:
+    def shift(self, offset: int | Scalar) -> Series:
         ser = self.column
         return self._from_series(ser.shift(offset))
 
@@ -424,7 +424,7 @@ class Column(ColumnT):
             dtype=NUMPY_MAPPING.get(self.column.dtype.name, self.column.dtype.name),
         )
 
-    def cast(self, dtype: DType) -> Column:
+    def cast(self, dtype: DType) -> Series:
         ser = self.column
         pandas_dtype = (
             polars_api_compat.pandas.map_standard_dtype_to_pandas_dtype(
@@ -435,43 +435,43 @@ class Column(ColumnT):
 
     # --- temporal methods ---
 
-    def year(self) -> Column:
+    def year(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.year)
 
-    def month(self) -> Column:
+    def month(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.month)
 
-    def day(self) -> Column:
+    def day(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.day)
 
-    def hour(self) -> Column:
+    def hour(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.hour)
 
-    def minute(self) -> Column:
+    def minute(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.minute)
 
-    def second(self) -> Column:
+    def second(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.second)
 
-    def microsecond(self) -> Column:
+    def microsecond(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.microsecond)
 
-    def nanosecond(self) -> Column:
+    def nanosecond(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.microsecond * 1000 + ser.dt.nanosecond)
 
-    def iso_weekday(self) -> Column:
+    def iso_weekday(self) -> Series:
         ser = self.column
         return self._from_series(ser.dt.weekday + 1)
 
-    def floor(self, frequency: str) -> Column:
+    def floor(self, frequency: str) -> Series:
         frequency = (
             frequency.replace("day", "D")
             .replace("hour", "H")
@@ -488,7 +488,7 @@ class Column(ColumnT):
         self,
         *,
         time_unit: str | Scalar = "s",
-    ) -> Column:
+    ) -> Series:
         ser = self.column
         if ser.dt.tz is None:
             result = ser - datetime(1970, 1, 1)

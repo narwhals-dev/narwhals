@@ -11,7 +11,7 @@ from typing import cast
 
 import pandas as pd
 
-from polars_api_compat.pandas.column_object import Column
+from polars_api_compat.pandas.column_object import Series
 from polars_api_compat.pandas.dataframe_object import DataFrame
 
 if TYPE_CHECKING:
@@ -166,13 +166,13 @@ def map_standard_dtype_to_pandas_dtype(dtype: DType) -> Any:
 def convert_to_standard_compliant_column(
     ser: pd.Series[Any],
     api_version: str | None = None,
-) -> Column:
+) -> Series:
     if ser.name is not None and not isinstance(ser.name, str):
         msg = f"Expected column with string name, got: {ser.name}"
         raise ValueError(msg)
     if ser.name is None:
         ser = ser.rename("")
-    return Column(
+    return Series(
         ser,
         api_version=api_version or "2023.11-beta",
     )
@@ -266,9 +266,9 @@ class Namespace(NamespaceT):
         data: Any,
         *,
         name: str | None = None,
-    ) -> Column:
+    ) -> Series:
         ser = pd.Series(data, name=name)
-        return Column(ser, api_version=self._api_version)
+        return Series(ser, api_version=self._api_version)
 
     def column_from_sequence(
         self,
@@ -276,7 +276,7 @@ class Namespace(NamespaceT):
         *,
         dtype: DType | None = None,
         name: str = "",
-    ) -> Column:
+    ) -> Series:
         if dtype is not None:
             ser = pd.Series(
                 sequence,
@@ -285,7 +285,7 @@ class Namespace(NamespaceT):
             )
         else:
             ser = pd.Series(sequence, name=name)
-        return Column(ser, api_version=self._api_version)
+        return Series(ser, api_version=self._api_version)
 
     def concat(
         self,
@@ -372,14 +372,14 @@ class Namespace(NamespaceT):
         *columns: ColumnT,
         ascending: Sequence[bool] | bool = True,
         nulls_position: Literal["first", "last"] = "last",
-    ) -> Column:
+    ) -> Series:
         raise NotImplementedError
 
     def unique_indices(
         self,
         *columns: ColumnT,
         skip_nulls: bool | ScalarT = True,
-    ) -> Column:
+    ) -> Series:
         raise NotImplementedError
 
     class Aggregation(AggregationT):
@@ -501,7 +501,7 @@ class Namespace(NamespaceT):
         ) -> AggregationT:
             return Namespace.Aggregation("__placeholder__", "size", "size")
 
-    def col(self, *column_names: str) -> ColumnExpr:
+    def col(self, *column_names: str) -> Expr:
         names = []
         for name in column_names:
             if isinstance(name, str):
@@ -510,18 +510,18 @@ class Namespace(NamespaceT):
                 names.extend(name)
             else:
                 raise TypeError(f"Expected str or list/tuple of str, got {type(name)}")
-        return ColumnExpr.from_column_names(*names)
+        return Expr.from_column_names(*names)
 
-    def sum(self, column_name: str) -> ColumnExpr:
-        return ColumnExpr.from_column_names(column_name).sum()
+    def sum(self, column_name: str) -> Expr:
+        return Expr.from_column_names(column_name).sum()
 
-    def mean(self, column_name: str) -> ColumnExpr:
-        return ColumnExpr.from_column_names(column_name).mean()
+    def mean(self, column_name: str) -> Expr:
+        return Expr.from_column_names(column_name).mean()
 
-    def len(self) -> ColumnExpr:
-        return ColumnExpr(
+    def len(self) -> Expr:
+        return Expr(
             lambda df: [
-                Column(
+                Series(
                     pd.Series([len(df.dataframe)], name="len", index=[0]),
                     api_version=df._api_version,
                 )
@@ -529,20 +529,20 @@ class Namespace(NamespaceT):
         )
 
     def create_column_expr(
-        self, call: Callable[[DataFrame], list[Column]]
-    ) -> ColumnExpr:
-        return ColumnExpr(call)
+        self, call: Callable[[DataFrame], list[Series]]
+    ) -> Expr:
+        return Expr(call)
 
-    def create_column_from_scalar(self, value: Any, column: Column) -> Column:
-        return Column(
+    def create_column_from_scalar(self, value: Any, column: Series) -> Series:
+        return Series(
             pd.Series([value], name=column.column.name, index=column.column.index[0:1]),
             api_version=self._api_version,
         )
 
-    def all(self) -> ColumnExpr:
-        return ColumnExpr(
+    def all(self) -> Expr:
+        return Expr(
             lambda df: [
-                Column(
+                Series(
                     df.dataframe.loc[:, column_name],
                     api_version=df._api_version,
                 )
@@ -551,15 +551,15 @@ class Namespace(NamespaceT):
         )
 
 
-class ColumnExpr:
-    def __init__(self, call: Callable[[DataFrame], list[Column]]) -> None:
+class Expr:
+    def __init__(self, call: Callable[[DataFrame], list[Series]]) -> None:
         self.call = call
 
     @classmethod
-    def from_column_names(cls: type[ColumnExpr], *column_names: str) -> ColumnExpr:
+    def from_column_names(cls: type[Expr], *column_names: str) -> Expr:
         return cls(
             lambda df: [
-                Column(
+                Series(
                     df.dataframe.loc[:, column_name],
                     api_version=df._api_version,
                 )
@@ -570,92 +570,92 @@ class ColumnExpr:
     def __column_expr_namespace__(self) -> Namespace:
         return Namespace(api_version="2023.11-beta")
 
-    def __eq__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
+    def __eq__(self, other: Expr | Any) -> Expr:  # type: ignore[override]
         return register_expression_call(self, "__eq__", other)
 
-    def __ne__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
+    def __ne__(self, other: Expr | Any) -> Expr:  # type: ignore[override]
         return register_expression_call(self, "__ne__", other)
 
-    def __ge__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __ge__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__ge__", other)
 
-    def __gt__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __gt__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__gt__", other)
 
-    def __le__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __le__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__le__", other)
 
-    def __lt__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __lt__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__lt__", other)
 
-    def __and__(self, other: ColumnExpr | bool | Any) -> ColumnExpr:
+    def __and__(self, other: Expr | bool | Any) -> Expr:
         return register_expression_call(self, "__and__", other)
 
-    def __rand__(self, other: Column | Any) -> Column:
+    def __rand__(self, other: Series | Any) -> Series:
         return register_expression_call(self, "__rand__", other)
 
-    def __or__(self, other: ColumnExpr | bool | Any) -> ColumnExpr:
+    def __or__(self, other: Expr | bool | Any) -> Expr:
         return register_expression_call(self, "__or__", other)
 
-    def __ror__(self, other: Column | Any) -> Column:
+    def __ror__(self, other: Series | Any) -> Series:
         return register_expression_call(self, "__ror__", other)
 
-    def __add__(self, other: ColumnExpr | Any) -> ColumnExpr:  # type: ignore[override]
+    def __add__(self, other: Expr | Any) -> Expr:  # type: ignore[override]
         return register_expression_call(self, "__add__", other)
 
-    def __radd__(self, other: Column | Any) -> Column:
+    def __radd__(self, other: Series | Any) -> Series:
         return register_expression_call(self, "__radd__", other)
 
-    def __sub__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __sub__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__sub__", other)
 
-    def __rsub__(self, other: Column | Any) -> Column:
+    def __rsub__(self, other: Series | Any) -> Series:
         return register_expression_call(self, "__rsub__", other)
 
-    def __mul__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __mul__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__mul__", other)
 
-    def __rmul__(self, other: Column | Any) -> Column:
+    def __rmul__(self, other: Series | Any) -> Series:
         return self.__mul__(other, other)
 
-    def __truediv__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __truediv__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__truediv__", other)
 
-    def __rtruediv__(self, other: Column | Any) -> Column:
+    def __rtruediv__(self, other: Series | Any) -> Series:
         raise NotImplementedError
 
-    def __floordiv__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __floordiv__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__floordiv__", other)
 
-    def __rfloordiv__(self, other: Column | Any) -> Column:
+    def __rfloordiv__(self, other: Series | Any) -> Series:
         raise NotImplementedError
 
-    def __pow__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __pow__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__pow__", other)
 
-    def __rpow__(self, other: Column | Any) -> Column:  # pragma: no cover
+    def __rpow__(self, other: Series | Any) -> Series:  # pragma: no cover
         raise NotImplementedError
 
-    def __mod__(self, other: ColumnExpr | Any) -> ColumnExpr:
+    def __mod__(self, other: Expr | Any) -> Expr:
         return register_expression_call(self, "__mod__", other)
 
-    def __rmod__(self, other: Column | Any) -> Column:  # pragma: no cover
+    def __rmod__(self, other: Series | Any) -> Series:  # pragma: no cover
         raise NotImplementedError
 
     # Unary
 
-    def __invert__(self: Column) -> Column:
+    def __invert__(self: Series) -> Series:
         return register_expression_call(self, "__invert__")
 
     # Reductions
 
-    def sum(self) -> ColumnExpr:
+    def sum(self) -> Expr:
         return register_expression_call(self, "sum")
 
-    def mean(self) -> ColumnExpr:
+    def mean(self) -> Expr:
         return register_expression_call(self, "mean")
 
     # Other
 
-    def alias(self, name: str) -> ColumnExpr:
+    def alias(self, name: str) -> Expr:
         return register_expression_call(self, "alias", name)

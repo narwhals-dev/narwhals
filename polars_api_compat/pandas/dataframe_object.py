@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from polars_api_compat.pandas import ColumnExpr
 from polars_api_compat.utils import parse_exprs
 
 from polars_api_compat.utils import flatten_strings
@@ -31,7 +30,7 @@ if TYPE_CHECKING:
     from dataframe_api.typing import NullType
     from dataframe_api.typing import Scalar
 
-    from polars_api_compat.pandas import ColumnExpr
+    from polars_api_compat.pandas import Expr
     from polars_api_compat.pandas.group_by_object import GroupBy
 else:
     DataFrameT = object
@@ -135,9 +134,9 @@ class DataFrame(DataFrameT):
         if not self._is_persisted:
             msg = "`get_column` can only be called on persisted DataFrame."
             raise ValueError(msg)
-        from polars_api_compat.pandas.column_object import Column
+        from polars_api_compat.pandas.column_object import Series
 
-        return Column(
+        return Series(
             self.dataframe.loc[:, name],
             api_version=self._api_version,
         )
@@ -163,7 +162,7 @@ class DataFrame(DataFrameT):
 
     def select(
         self,
-        *exprs: str | ColumnExpr,
+        *exprs: str | Expr,
         **named_exprs,
     ) -> DataFrame:
         new_cols = parse_exprs(self, *exprs, **named_exprs)
