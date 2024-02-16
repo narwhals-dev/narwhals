@@ -1,8 +1,10 @@
 from __future__ import annotations
+import collections
 
 from typing import TYPE_CHECKING, Any, Iterable
 
 import pandas as pd
+from polars_api_compat.utils import parse_into_exprs
 
 from polars_api_compat.pandas.dataframe_object import DataFrame, LazyFrame
 from polars_api_compat.spec import (
@@ -44,8 +46,6 @@ class GroupBy(GroupByT):
         self,
         *aggregations: Any,  # todo
     ) -> DataFrame:
-        import collections
-
         aggs = []
         for aggregation in aggregations:
             if isinstance(aggregation, (list, tuple)):
@@ -70,16 +70,16 @@ class GroupBy(GroupByT):
 
 
 class LazyGroupBy(GroupByT):
-    def __init__(
-        self, df: DataFrameT | LazyFrameT, keys: list[str], api_version: str
-    ) -> None:
-        self._df = df.dataframe
-        self._grouped = self._df.groupby(list(keys), sort=False, as_index=False)
+    def __init__(self, df: LazyFrameT, keys: list[str], api_version: str) -> None:
+        self._df = df
+        self._grouped = self._df.dataframe.groupby(
+            list(keys), sort=False, as_index=False
+        )
         self._keys = list(keys)
         self.api_version = api_version
 
     def _validate_result(self, result: pd.DataFrame) -> None:
-        failed_columns = self._df.columns.difference(result.columns)
+        failed_columns = self._df.dataframe.columns.difference(result.columns)
         if len(failed_columns) > 0:  # pragma: no cover
             msg = "Groupby operation could not be performed on columns "
             f"{failed_columns}. Please drop them before calling group_by."
@@ -97,27 +97,16 @@ class LazyGroupBy(GroupByT):
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
-    ) -> DataFrame:
-        import collections
-
-        aggs = []
-        for aggregation in aggs:
-            if isinstance(aggregation, (list, tuple)):
-                aggs.extend(aggregation)
-            else:
-                aggs.append(aggregation)
-
-        out = collections.defaultdict(list)
+    ) -> LazyFrameT:
+        exprs = parse_into_exprs(
+            self._df.__lazyframe_namespace__(), *aggs, **named_aggs
+        )
+        out: dict[str, list[Any]] = collections.defaultdict(list)
         for key, _df in self._grouped:
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
-            for aggregation in aggs:
-                result = aggregation.call(
-                    DataFrame(
-                        _df,
-                        api_version=self.api_version,
-                    )
-                )
+            for expr in exprs:
+                result = expr.call(LazyFrame(_df, api_version=self.api_version))
                 for _result in result:
                     out[_result.name].append(_result.series.item())
         return self._to_dataframe(pd.DataFrame(out))
