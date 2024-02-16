@@ -1,11 +1,11 @@
 from __future__ import annotations
 from typing_extensions import Self
-from polars_api_compat.utils import register_expression_call
+from polars_api_compat.utils import register_expression_call, flatten_args
 
 import re
 from functools import reduce
 from typing import TYPE_CHECKING
-from typing import Any
+from typing import Any, Iterable
 from typing import Callable
 from typing import Literal
 from typing import cast
@@ -18,6 +18,7 @@ from polars_api_compat.spec import (
     DataFrame as DataFrameT,
     LazyFrame as LazyFrameT,
     Series as SeriesT,
+    IntoExpr,
 )
 
 if TYPE_CHECKING:
@@ -237,7 +238,7 @@ class Namespace(NamespaceT):
 
     def dataframe_from_columns(
         self,
-        *columns: ColumnT,
+        *exprs: IntoExpr | Iterable[IntoExpr],
     ) -> DataFrame:
         data = {}
         api_versions: set[str] = set()
@@ -344,14 +345,14 @@ class Namespace(NamespaceT):
         return isinstance(dtype, tuple(dtypes))
 
     # --- horizontal reductions
-    def sum_horizontal(self, *columns: ColumnT, skip_nulls: bool = True) -> ColumnT:
-        return reduce(lambda x, y: x + y, columns)
+    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
+        return reduce(lambda x, y: x + y, flatten_args(exprs))
 
-    def all_horizontal(self, *columns: ColumnT, skip_nulls: bool = True) -> ColumnT:
-        return reduce(lambda x, y: x & y, columns)
+    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
+        return reduce(lambda x, y: x & y, flatten_args(exprs))
 
-    def any_horizontal(self, *columns: ColumnT, skip_nulls: bool = True) -> ColumnT:
-        return reduce(lambda x, y: x | y, columns)
+    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
+        return reduce(lambda x, y: x | y, flatten_args(exprs))
 
     def col(self, *column_names: str) -> Expr:
         names = []

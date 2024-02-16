@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from polars_api_compat.utils import parse_exprs
 
-from polars_api_compat.utils import flatten_strings
+from polars_api_compat.utils import flatten_args
 import collections
 import warnings
 from typing import TYPE_CHECKING, Iterable
@@ -201,7 +201,7 @@ class DataFrame(DataFrameT):
         *keys: str,
         ascending: Sequence[bool] | bool = True,
     ) -> DataFrame:
-        keys = flatten_strings(*keys)
+        keys = flatten_args(*keys)
         if not keys:
             keys = self.dataframe.columns.tolist()
         df = self.dataframe

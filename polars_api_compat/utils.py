@@ -12,6 +12,8 @@ from polars_api_compat.spec import (
 
 ExprT = TypeVar("ExprT", bound=Expr)
 
+T = TypeVar('T')
+
 
 # TODO: split this up!
 # Have a validate_column_comparand and validate_dataframe_comparand
@@ -130,16 +132,13 @@ def parse_expr(
         f"Expected str, ColumnExpr, or list/tuple of str/ColumnExpr, got {type(expr)}"
     )
 
-
-def flatten_strings(*args: str):
+def flatten_args(*args: T | Iterable[T]) -> list[T]:
     out = []
     for arg in args:
         if isinstance(arg, (list, tuple)):
-            out.extend(flatten_strings(*arg))
-        elif isinstance(arg, str):
-            out.append(arg)
+            out.extend(arg)
         else:
-            raise TypeError(f"Expected str, got {type(arg)}")
+            out.append(arg)
     return out
 
 
