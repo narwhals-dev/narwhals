@@ -114,7 +114,7 @@ class DataFrame(DataFrameT):
                 out.append(key)
             elif isinstance(key, (list, tuple)):
                 out.extend(key)
-            elif key not in self.column_names:
+            elif key not in self.columns:
                 msg = f"key {key} not present in DataFrame's columns"
                 raise KeyError(msg)
         return GroupBy(self, out, api_version=self.api_version)
@@ -180,8 +180,8 @@ class DataFrame(DataFrameT):
         if isinstance(right_on, str):
             right_on = [right_on]
 
-        if overlap := (set(self.column_names) - set(left_on)).intersection(
-            set(other.column_names) - set(right_on),
+        if overlap := (set(self.columns) - set(left_on)).intersection(
+            set(other.columns) - set(right_on),
         ):
             msg = f"Found overlapping columns in join: {overlap}. Please rename columns to avoid this."
             raise ValueError(msg)
@@ -275,7 +275,7 @@ class LazyFrame(DataFrameT):
                 out.append(key)
             elif isinstance(key, (list, tuple)):
                 out.extend(key)
-            elif key not in self.column_names:
+            elif key not in self.columns:
                 msg = f"key {key} not present in DataFrame's columns"
                 raise KeyError(msg)
         return GroupBy(self, out, api_version=self.api_version)
@@ -345,8 +345,8 @@ class LazyFrame(DataFrameT):
         if isinstance(right_on, str):
             right_on = [right_on]
 
-        if overlap := (set(self.column_names) - set(left_on)).intersection(
-            set(other.column_names) - set(right_on),
+        if overlap := (set(self.columns) - set(left_on)).intersection(
+            set(other.columns) - set(right_on),
         ):
             msg = f"Found overlapping columns in join: {overlap}. Please rename columns to avoid this."
             raise ValueError(msg)
@@ -360,10 +360,6 @@ class LazyFrame(DataFrameT):
             ),
         )
     # Conversion
-
-    def to_numpy(self, dtype: DType | None = None) -> Any:
-        return self.dataframe.to_numpy()
-
     def collect(self) -> DataFrameT:
         return DataFrame(
             self.dataframe,
