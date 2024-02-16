@@ -388,7 +388,7 @@ class Namespace(NamespaceT):
 
     def _create_series_from_scalar(self, value: Any, series: Series) -> Series:
         return Series(
-            pd.Series([value], name=series.column.name, index=series.column.index[0:1]),
+            pd.Series([value], name=series.series.name, index=series.series.index[0:1]),
             api_version=self.api_version,
         )
 
@@ -458,6 +458,7 @@ class Expr(ExprT):
         return register_expression_call(self, "__ror__", other)
 
     def __add__(self, other: Expr | Any) -> Self:  # type: ignore[override]
+        breakpoint()
         return register_expression_call(self, "__add__", other)
 
     def __radd__(self, other: Series | Any) -> Self:

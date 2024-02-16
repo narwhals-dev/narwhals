@@ -143,6 +143,7 @@ class DataFrame(DataFrameT):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> DataFrame:
+        breakpoint()
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(
             **{series.name: series.series for series in new_series}

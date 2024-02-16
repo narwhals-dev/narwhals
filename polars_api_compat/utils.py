@@ -43,9 +43,9 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
             # broadcast
             return other.get_value(0)
         if (
-            hasattr(column.column, "index")
-            and hasattr(other.column, "index")
-            and column.column.index is not other.column.index
+            hasattr(column.series, "index")
+            and hasattr(other.series, "index")
+            and column.series.index is not other.series.index
         ):
             msg = (
                 "Left index is not right index. "
@@ -54,7 +54,7 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
                 "consider using expressions."
             )
             raise ValueError(msg)
-        return other.column
+        return other.series
     return other
 
 
@@ -80,8 +80,8 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
             return other.get_value(0)
         if (
             hasattr(dataframe.dataframe, "index")
-            and hasattr(other.column, "index")
-            and dataframe.dataframe.index is not other.column.index
+            and hasattr(other.series, "index")
+            and dataframe.dataframe.index is not other.series.index
         ):
             msg = (
                 "Left index is not right index. "
@@ -90,7 +90,7 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
                 "consider using expressions."
             )
             raise ValueError(msg)
-        return other.column
+        return other.series
     return other
 
 
@@ -127,7 +127,7 @@ def evaluate_into_expr(
     """
     Return list of raw columns.
     """
-    expr = parse_into_expr(df, into_expr)
+    expr = parse_into_expr(get_namespace(df), into_expr)
     return expr.call(df)
 
 

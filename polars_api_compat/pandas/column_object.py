@@ -88,7 +88,7 @@ class Series(SeriesT):
         return self._name  # type: ignore[no-any-return]
 
     @property
-    def column(self) -> pd.Series[Any]:
+    def series(self) -> pd.Series[Any]:
         return self._series
 
     @property
@@ -103,15 +103,15 @@ class Series(SeriesT):
 
     def take(self, indices: Series) -> Series:
         return self._from_series(
-            self.column.iloc[validate_column_comparand(self, indices)]
+            self.series.iloc[validate_column_comparand(self, indices)]
         )
 
     def filter(self, mask: Series) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.loc[validate_column_comparand(self, mask)])
 
     def get_value(self, row_number: int) -> Any:
-        ser = self.column
+        ser = self.series
         return ser.iloc[row_number]
 
     def slice_rows(
@@ -120,42 +120,42 @@ class Series(SeriesT):
         stop: int | None,
         step: int | None,
     ) -> Series:
-        return self._from_series(self.column.iloc[start:stop:step])
+        return self._from_series(self.series.iloc[start:stop:step])
 
     # Binary comparisons
 
     def __eq__(self, other: Series | Any) -> Series:  # type: ignore[override]
         other = validate_column_comparand(self, other)
-        ser = self.column
+        ser = self.series
         return self._from_series((ser == other).rename(ser.name, copy=False))
 
     def __ne__(self, other: Series | Any) -> Series:  # type: ignore[override]
         other = validate_column_comparand(self, other)
-        ser = self.column
+        ser = self.series
         return self._from_series((ser != other).rename(ser.name, copy=False))
 
     def __ge__(self, other: Series | Any) -> Series:
         other = validate_column_comparand(self, other)
-        ser = self.column
+        ser = self.series
         return self._from_series((ser >= other).rename(ser.name, copy=False))
 
     def __gt__(self, other: Series | Any) -> Series:
         other = validate_column_comparand(self, other)
-        ser = self.column
+        ser = self.series
         return self._from_series((ser > other).rename(ser.name, copy=False))
 
     def __le__(self, other: Series | Any) -> Series:
         other = validate_column_comparand(self, other)
-        ser = self.column
+        ser = self.series
         return self._from_series((ser <= other).rename(ser.name, copy=False))
 
     def __lt__(self, other: Series | Any) -> Series:
         other = validate_column_comparand(self, other)
-        ser = self.column
+        ser = self.series
         return self._from_series((ser < other).rename(ser.name, copy=False))
 
     def __and__(self, other: Series | bool | Scalar) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
         return self._from_series((ser & other).rename(ser.name, copy=False))
 
@@ -163,7 +163,7 @@ class Series(SeriesT):
         return self.__and__(other)
 
     def __or__(self, other: Series | bool | Scalar) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
         return self._from_series((ser | other).rename(ser.name, copy=False))
 
@@ -171,15 +171,16 @@ class Series(SeriesT):
         return self.__or__(other)
 
     def __add__(self, other: Series | Any) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
+        breakpoint()
         return self._from_series((ser + other).rename(ser.name, copy=False))
 
     def __radd__(self, other: Series | Any) -> Series:
         return self.__add__(other)
 
     def __sub__(self, other: Series | Any) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
         return self._from_series((ser - other).rename(ser.name, copy=False))
 
@@ -187,7 +188,7 @@ class Series(SeriesT):
         return -1 * self.__sub__(other)
 
     def __mul__(self, other: Series | Any) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
         return self._from_series((ser * other).rename(ser.name, copy=False))
 
@@ -195,7 +196,7 @@ class Series(SeriesT):
         return self.__mul__(other)
 
     def __truediv__(self, other: Series | Any) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
         return self._from_series((ser / other).rename(ser.name, copy=False))
 
@@ -203,7 +204,7 @@ class Series(SeriesT):
         raise NotImplementedError
 
     def __floordiv__(self, other: Series | Any) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
         return self._from_series((ser // other).rename(ser.name, copy=False))
 
@@ -211,7 +212,7 @@ class Series(SeriesT):
         raise NotImplementedError
 
     def __pow__(self, other: Series | Any) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
         return self._from_series((ser**other).rename(ser.name, copy=False))
 
@@ -219,7 +220,7 @@ class Series(SeriesT):
         raise NotImplementedError
 
     def __mod__(self, other: Series | Any) -> Series:
-        ser = self.column
+        ser = self.series
         other = validate_column_comparand(self, other)
         return self._from_series((ser % other).rename(ser.name, copy=False))
 
@@ -234,41 +235,41 @@ class Series(SeriesT):
     # Unary
 
     def __invert__(self: Series) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(~ser)
 
     # Reductions
 
     def any(self, *, skip_nulls: bool | Scalar = True) -> Scalar:
-        ser = self.column
+        ser = self.series
         return ser.any()
 
     def all(self, *, skip_nulls: bool | Scalar = True) -> Scalar:
-        ser = self.column
+        ser = self.series
         return ser.all()
 
     def min(self, *, skip_nulls: bool | Scalar = True) -> Any:
-        ser = self.column
+        ser = self.series
         return ser.min()
 
     def max(self, *, skip_nulls: bool | Scalar = True) -> Any:
-        ser = self.column
+        ser = self.series
         return ser.max()
 
     def sum(self, *, skip_nulls: bool | Scalar = True) -> Any:
-        ser = self.column
+        ser = self.series
         return ser.sum()
 
     def prod(self, *, skip_nulls: bool | Scalar = True) -> Any:
-        ser = self.column
+        ser = self.series
         return ser.prod()
 
     def median(self, *, skip_nulls: bool | Scalar = True) -> Any:
-        ser = self.column
+        ser = self.series
         return ser.median()
 
     def mean(self, *, skip_nulls: bool | Scalar = True) -> Any:
-        ser = self.column
+        ser = self.series
         return ser.mean()
 
     def std(
@@ -277,7 +278,7 @@ class Series(SeriesT):
         correction: float | Scalar | NullType = 1.0,
         skip_nulls: bool | Scalar = True,
     ) -> Any:
-        ser = self.column
+        ser = self.series
         return self._to_scalar(
             ser.std(ddof=correction),
         )
@@ -288,7 +289,7 @@ class Series(SeriesT):
         correction: float | Scalar | NullType = 1.0,
         skip_nulls: bool | Scalar = True,
     ) -> Any:
-        ser = self.column
+        ser = self.series
         return self._to_scalar(
             ser.var(ddof=correction),
         )
@@ -301,7 +302,7 @@ class Series(SeriesT):
         *,
         skip_nulls: bool = True,
     ) -> Scalar:
-        ser = self.column
+        ser = self.series
         return self._to_scalar(
             ser.nunique(),
         )
@@ -309,11 +310,11 @@ class Series(SeriesT):
     # Transformations
 
     def is_null(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.isna())
 
     def is_nan(self) -> Series:
-        ser = self.column
+        ser = self.series
         if is_extension_array_dtype(ser.dtype):
             return self._from_series((ser != ser).fillna(False))  # noqa: PLR0124
         return self._from_series(ser.isna())
@@ -324,13 +325,13 @@ class Series(SeriesT):
         ascending: bool = True,
         nulls_position: Literal["first", "last"] = "last",
     ) -> Series:
-        ser = self.column
+        ser = self.series
         if ascending:
             return self._from_series(ser.sort_values().rename(self.name))
         return self._from_series(ser.sort_values().rename(self.name)[::-1])
 
     def is_in(self, values: Series) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.isin(validate_column_comparand(self, values)))
 
     def sorted_indices(
@@ -339,7 +340,7 @@ class Series(SeriesT):
         ascending: bool = True,
         nulls_position: Literal["first", "last"] = "last",
     ) -> Series:
-        ser = self.column
+        ser = self.series
         if ascending:
             return self._from_series(ser.sort_values().index.to_series(name=self.name))
         return self._from_series(
@@ -355,8 +356,8 @@ class Series(SeriesT):
         raise NotImplementedError(msg)
 
     def fill_nan(self, value: float | NullType | Scalar) -> Series:
-        idx = self.column.index
-        ser = self.column.copy()
+        idx = self.series.index
+        ser = self.series.copy()
         if is_extension_array_dtype(ser.dtype):
             if self.__series_namespace__().is_null(value):
                 ser[np.isnan(ser).fillna(False).to_numpy(bool)] = pd.NA
@@ -375,8 +376,8 @@ class Series(SeriesT):
         value: Any,
     ) -> Series:
         value = validate_column_comparand(self, value)
-        idx = self.column.index
-        ser = self.column.copy()
+        idx = self.series.index
+        ser = self.series.copy()
         if is_extension_array_dtype(ser.dtype):
             # Mask should include NA values, but not NaN ones
             mask = ser.isna() & (~(ser != ser).fillna(False))  # noqa: PLR0124
@@ -387,39 +388,39 @@ class Series(SeriesT):
         return self._from_series(ser.rename(self.name, copy=False))
 
     def cumulative_sum(self, *, skip_nulls: bool | Scalar = True) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.cumsum())
 
     def cumulative_prod(self, *, skip_nulls: bool | Scalar = True) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.cumprod())
 
     def cumulative_max(self, *, skip_nulls: bool | Scalar = True) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.cummax())
 
     def cumulative_min(self, *, skip_nulls: bool | Scalar = True) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.cummin())
 
     def alias(self, name: str | Scalar) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.rename(name, copy=False))
 
     def shift(self, offset: int | Scalar) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.shift(offset))
 
     # Conversions
 
     def to_array(self) -> Any:
-        ser = self.column
+        ser = self.series
         return ser.to_numpy(
-            dtype=NUMPY_MAPPING.get(self.column.dtype.name, self.column.dtype.name),
+            dtype=NUMPY_MAPPING.get(self.series.dtype.name, self.series.dtype.name),
         )
 
     def cast(self, dtype: DType) -> Series:
-        ser = self.column
+        ser = self.series
         pandas_dtype = polars_api_compat.pandas.map_standard_dtype_to_pandas_dtype(
             dtype,
         )
@@ -428,39 +429,39 @@ class Series(SeriesT):
     # --- temporal methods ---
 
     def year(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.year)
 
     def month(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.month)
 
     def day(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.day)
 
     def hour(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.hour)
 
     def minute(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.minute)
 
     def second(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.second)
 
     def microsecond(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.microsecond)
 
     def nanosecond(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.microsecond * 1000 + ser.dt.nanosecond)
 
     def iso_weekday(self) -> Series:
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.weekday + 1)
 
     def floor(self, frequency: str) -> Series:
@@ -473,7 +474,7 @@ class Series(SeriesT):
             .replace("microsecond", "us")
             .replace("nanosecond", "ns")
         )
-        ser = self.column
+        ser = self.series
         return self._from_series(ser.dt.floor(frequency))
 
     def unix_timestamp(
@@ -481,7 +482,7 @@ class Series(SeriesT):
         *,
         time_unit: str | Scalar = "s",
     ) -> Series:
-        ser = self.column
+        ser = self.series
         if ser.dt.tz is None:
             result = ser - datetime(1970, 1, 1)
         else:  # pragma: no cover (todo: tz-awareness)
