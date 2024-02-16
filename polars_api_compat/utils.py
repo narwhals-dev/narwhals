@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any
 
+
 # TODO: split this up!
 # Have a validate_column_comparand and validate_dataframe_comparand
 # for the column one:
@@ -43,6 +44,7 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
         return other.column
     return other
 
+
 def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
@@ -78,10 +80,12 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
         return other.column
     return other
 
+
 def evaluate_expr(df, expr):
-    if hasattr(expr, '__column_expr_namespace__'):
+    if hasattr(expr, "__column_expr_namespace__"):
         return expr.call(df)
     return expr
+
 
 def parse_expr(df, expr):
     """
@@ -90,16 +94,19 @@ def parse_expr(df, expr):
     pdx = df.__dataframe_namespace__()
     if isinstance(expr, str):
         return pdx.col(expr).call(df)
-    if hasattr(expr, '__column_namespace__'):
+    if hasattr(expr, "__column_namespace__"):
         return [expr]
-    if hasattr(expr, '__column_expr_namespace__'):
+    if hasattr(expr, "__column_expr_namespace__"):
         return expr.call(df)
     if isinstance(expr, (list, tuple)):
         out = []
         for _expr in expr:
             out.extend(parse_expr(df, _expr))
         return out
-    raise TypeError(f"Expected str, ColumnExpr, or list/tuple of str/ColumnExpr, got {type(expr)}")
+    raise TypeError(
+        f"Expected str, ColumnExpr, or list/tuple of str/ColumnExpr, got {type(expr)}"
+    )
+
 
 def flatten_strings(*args: str):
     out = []
@@ -113,13 +120,15 @@ def flatten_strings(*args: str):
     return out
 
 
-def parse_exprs(df, *exprs, **named_exprs) -> "RawSeries":
+def parse_exprs(df, *exprs, **named_exprs) -> Column:
     """
     Take exprs and evaluate Series underneath them.
-    
+
     Returns dict of output name to raw column object.
     """
-    parsed_exprs = [item for sublist in [parse_expr(df, expr) for expr in exprs] for item in sublist]
+    parsed_exprs = [
+        item for sublist in [parse_expr(df, expr) for expr in exprs] for item in sublist
+    ]
     parsed_named_exprs = {}
     for name, expr in named_exprs.items():
         parsed_expr = parse_expr(df, expr)
@@ -136,8 +145,11 @@ def parse_exprs(df, *exprs, **named_exprs) -> "RawSeries":
     return new_cols
 
 
-def register_expression_call(expr: ColumnExpr, attr: str, *args, **kwargs) -> ColumnExpr:  # type: ignore[override]
+def register_expression_call(
+    expr: ColumnExpr, attr: str, *args, **kwargs
+) -> ColumnExpr:  # type: ignore[override]
     plx = expr.__column_expr_namespace__()
+
     def func(df: DataFrame) -> list[Column]:
         out = []
         for column in expr.call(df):
@@ -155,4 +167,5 @@ def register_expression_call(expr: ColumnExpr, attr: str, *args, **kwargs) -> Co
             else:
                 out.append(plx.create_column_from_scalar(_out, column))
         return out
+
     return plx.create_column_expr(func)

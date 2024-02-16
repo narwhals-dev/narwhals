@@ -1,7 +1,6 @@
 from __future__ import annotations
 from polars_api_compat.utils import register_expression_call
 
-import datetime as dt
 import re
 from functools import reduce
 from typing import TYPE_CHECKING
@@ -19,7 +18,6 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from dataframe_api.groupby_object import Aggregation as AggregationT
-    from dataframe_api.typing import AnyScalar
     from dataframe_api.typing import Column as ColumnT
     from dataframe_api.typing import DataFrame as DataFrameT
     from dataframe_api.typing import DType
@@ -189,7 +187,6 @@ def convert_to_standard_compliant_dataframe(
 
 
 class Namespace(NamespaceT):
-
     def __init__(self, *, api_version: str) -> None:
         self.__dataframe_api_version__ = api_version
         self._api_version = api_version
@@ -360,12 +357,6 @@ class Namespace(NamespaceT):
                 dtypes.add(Namespace.String)
         return isinstance(dtype, tuple(dtypes))
 
-    def date(self, year: int, month: int, day: int) -> Scalar:
-        return Scalar(
-            pd.Timestamp(dt.date(year, month, day)),
-            api_version=self._api_version,
-        )
-
     # --- horizontal reductions
     def sum_horizontal(self, *columns: ColumnT, skip_nulls: bool = True) -> ColumnT:
         return reduce(lambda x, y: x + y, columns)
@@ -392,7 +383,9 @@ class Namespace(NamespaceT):
         raise NotImplementedError
 
     class Aggregation(AggregationT):
-        def __init__(self, column_name: str, output_name: str, aggregation: str) -> None:
+        def __init__(
+            self, column_name: str, output_name: str, aggregation: str
+        ) -> None:
             self.column_name = column_name
             self.output_name = output_name
             self.aggregation = aggregation
@@ -518,26 +511,45 @@ class Namespace(NamespaceT):
             else:
                 raise TypeError(f"Expected str or list/tuple of str, got {type(name)}")
         return ColumnExpr.from_column_names(*names)
-    
+
     def sum(self, column_name: str) -> ColumnExpr:
         return ColumnExpr.from_column_names(column_name).sum()
+
     def mean(self, column_name: str) -> ColumnExpr:
         return ColumnExpr.from_column_names(column_name).mean()
+
     def len(self) -> ColumnExpr:
-        return ColumnExpr(lambda df: [Column(pd.Series([len(df.dataframe)], name="len", index=[0]), api_version=df._api_version)])
-    
-    def create_column_expr(self, call: Callable[[DataFrame], list[Column]]) -> ColumnExpr:
+        return ColumnExpr(
+            lambda df: [
+                Column(
+                    pd.Series([len(df.dataframe)], name="len", index=[0]),
+                    api_version=df._api_version,
+                )
+            ]
+        )
+
+    def create_column_expr(
+        self, call: Callable[[DataFrame], list[Column]]
+    ) -> ColumnExpr:
         return ColumnExpr(call)
+
     def create_column_from_scalar(self, value: Any, column: Column) -> Column:
-        return Column(pd.Series([value], name=column.column.name, index=column.column.index[0:1]), api_version=self._api_version)
-    
+        return Column(
+            pd.Series([value], name=column.column.name, index=column.column.index[0:1]),
+            api_version=self._api_version,
+        )
+
     def all(self) -> ColumnExpr:
         return ColumnExpr(
-            lambda df: [Column(
-                df.dataframe.loc[:, column_name],
-                api_version=df._api_version,
-            ) for column_name in df.columns],
+            lambda df: [
+                Column(
+                    df.dataframe.loc[:, column_name],
+                    api_version=df._api_version,
+                )
+                for column_name in df.columns
+            ],
         )
+
 
 class ColumnExpr:
     def __init__(self, call: Callable[[DataFrame], list[Column]]) -> None:
@@ -546,10 +558,13 @@ class ColumnExpr:
     @classmethod
     def from_column_names(cls: type[ColumnExpr], *column_names: str) -> ColumnExpr:
         return cls(
-            lambda df: [Column(
-                df.dataframe.loc[:, column_name],
-                api_version=df._api_version,
-            ) for column_name in column_names],
+            lambda df: [
+                Column(
+                    df.dataframe.loc[:, column_name],
+                    api_version=df._api_version,
+                )
+                for column_name in column_names
+            ],
         )
 
     def __column_expr_namespace__(self) -> Namespace:
@@ -573,13 +588,13 @@ class ColumnExpr:
     def __lt__(self, other: ColumnExpr | Any) -> ColumnExpr:
         return register_expression_call(self, "__lt__", other)
 
-    def __and__(self, other: ColumnExpr | bool | Scalar) -> ColumnExpr:
+    def __and__(self, other: ColumnExpr | bool | Any) -> ColumnExpr:
         return register_expression_call(self, "__and__", other)
 
     def __rand__(self, other: Column | Any) -> Column:
         return register_expression_call(self, "__rand__", other)
 
-    def __or__(self, other: ColumnExpr | bool | Scalar) -> ColumnExpr:
+    def __or__(self, other: ColumnExpr | bool | Any) -> ColumnExpr:
         return register_expression_call(self, "__or__", other)
 
     def __ror__(self, other: Column | Any) -> Column:
@@ -639,7 +654,7 @@ class ColumnExpr:
 
     def mean(self) -> ColumnExpr:
         return register_expression_call(self, "mean")
-    
+
     # Other
 
     def alias(self, name: str) -> ColumnExpr:

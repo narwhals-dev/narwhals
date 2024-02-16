@@ -1,4 +1,5 @@
 from __future__ import annotations
+import polars_api_compat
 
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -10,7 +11,6 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
-import polars_api_compat.pandas
 from polars_api_compat.utils import validate_column_comparand
 
 if TYPE_CHECKING:
@@ -84,8 +84,8 @@ class Column(ColumnT):
     # In the standard
     def __column_namespace__(
         self,
-    ) -> dataframe_api_compat.pandas_standard.Namespace:
-        return dataframe_api_compat.pandas_standard.Namespace(
+    ) -> polars_api_compat.pandas.Namespace:
+        return polars_api_compat.pandas.Namespace(
             api_version=self._api_version,
         )
 
@@ -99,7 +99,7 @@ class Column(ColumnT):
 
     @property
     def dtype(self) -> DType:
-        return dataframe_api_compat.pandas_standard.map_pandas_dtype_to_standard_dtype(
+        return polars_api_compat.pandas.map_pandas_dtype_to_standard_dtype(
             self._series.dtype,
         )
 
@@ -108,7 +108,9 @@ class Column(ColumnT):
         return self._df
 
     def take(self, indices: Column) -> Column:
-        return self._from_series(self.column.iloc[validate_column_comparand(self, indices)])
+        return self._from_series(
+            self.column.iloc[validate_column_comparand(self, indices)]
+        )
 
     def filter(self, mask: Column) -> Column:
         ser = self.column
@@ -346,7 +348,9 @@ class Column(ColumnT):
         ser = self.column
         if ascending:
             return self._from_series(ser.sort_values().index.to_series(name=self.name))
-        return self._from_series(ser.sort_values().index.to_series(name=self.name)[::-1])
+        return self._from_series(
+            ser.sort_values().index.to_series(name=self.name)[::-1]
+        )
 
     def unique_indices(
         self,
@@ -423,7 +427,7 @@ class Column(ColumnT):
     def cast(self, dtype: DType) -> Column:
         ser = self.column
         pandas_dtype = (
-            dataframe_api_compat.pandas_standard.map_standard_dtype_to_pandas_dtype(
+            polars_api_compat.pandas.map_standard_dtype_to_pandas_dtype(
                 dtype,
             )
         )
@@ -489,7 +493,9 @@ class Column(ColumnT):
         if ser.dt.tz is None:
             result = ser - datetime(1970, 1, 1)
         else:  # pragma: no cover (todo: tz-awareness)
-            result = ser.dt.tz_convert("UTC").dt.tz_localize(None) - datetime(1970, 1, 1)
+            result = ser.dt.tz_convert("UTC").dt.tz_localize(None) - datetime(
+                1970, 1, 1
+            )
         if time_unit == "s":
             result = pd.Series(
                 np.floor(result.dt.total_seconds().astype("float64")),
@@ -505,7 +511,8 @@ class Column(ColumnT):
             )
         elif time_unit == "us":
             result = pd.Series(
-                np.floor(result.dt.total_seconds()) * 1_000_000 + result.dt.microseconds,
+                np.floor(result.dt.total_seconds()) * 1_000_000
+                + result.dt.microseconds,
                 name=ser.name,
             )
         elif time_unit == "ns":

@@ -43,7 +43,9 @@ class GroupBy(GroupByT):
             (self._df.drop(columns=self._keys).dtypes == "bool")
             | (self._df.drop(columns=self._keys).dtypes == "boolean")
         ).all():
-            msg = "'function' can only be called on DataFrame where all dtypes are 'bool'"
+            msg = (
+                "'function' can only be called on DataFrame where all dtypes are 'bool'"
+            )
             raise TypeError(
                 msg,
             )
@@ -125,6 +127,7 @@ class GroupBy(GroupByT):
         *aggregations: AggregationT,
     ) -> DataFrame:
         import collections
+
         aggs = []
         for aggregation in aggregations:
             if isinstance(aggregation, (list, tuple)):
@@ -137,7 +140,13 @@ class GroupBy(GroupByT):
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
             for aggregation in aggs:
-                result = aggregation.call(DataFrame(_df, api_version=self._api_version, is_persisted=self._is_persisted))
+                result = aggregation.call(
+                    DataFrame(
+                        _df,
+                        api_version=self._api_version,
+                        is_persisted=self._is_persisted,
+                    )
+                )
                 for _result in result:
                     out[_result.name].append(_result.column.item())
         return self._to_dataframe(pd.DataFrame(out))

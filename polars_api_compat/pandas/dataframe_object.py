@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from polars_api_compat.pandas import ColumnExpr
 from polars_api_compat.utils import parse_exprs
+
 from polars_api_compat.utils import flatten_strings
 import collections
 import warnings
@@ -146,6 +148,7 @@ class DataFrame(DataFrameT):
 
     def group_by(self, *keys: str) -> GroupBy:
         from polars_api_compat.pandas.group_by_object import GroupBy
+
         # todo: do this properly
         out = []
         for key in keys:
@@ -159,14 +162,14 @@ class DataFrame(DataFrameT):
         return GroupBy(self, out, api_version=self._api_version)
 
     def select(
-            self,
-            *exprs: str | ColumnExpr,
-            **named_exprs,
-        ) -> DataFrame:
-        from polars_api_compat.pandas import ColumnExpr
-        from polars_api_compat.utils import parse_exprs
+        self,
+        *exprs: str | ColumnExpr,
+        **named_exprs,
+    ) -> DataFrame:
         new_cols = parse_exprs(self, *exprs, **named_exprs)
-        df = pd.concat({column.name: column.column for column in new_cols}, axis=1, copy=False)
+        df = pd.concat(
+            {column.name: column.column for column in new_cols}, axis=1, copy=False
+        )
         return self._from_dataframe(df)
 
     def gather(
@@ -204,7 +207,9 @@ class DataFrame(DataFrameT):
         **named_exprs,
     ) -> DataFrame:
         new_cols = parse_exprs(self, *exprs, **named_exprs)
-        df = self.dataframe.assign(**{column.name: column.column for column in new_cols})
+        df = self.dataframe.assign(
+            **{column.name: column.column for column in new_cols}
+        )
         return self._from_dataframe(df)
 
     def drop(self, *labels: str) -> DataFrame:
