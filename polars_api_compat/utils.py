@@ -135,22 +135,22 @@ def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[S
 
 
 def flatten_str(*args: str | Iterable[str]) -> list[str]:
-    out: list[IntoExpr] = []
+    out: list[str] = []
     for arg in args:
-        if isinstance(arg, (list, tuple)):
-            out.extend(arg)
-        else:
+        if isinstance(arg, str):
             out.append(arg)
+        else:
+            out.extend(arg)
     return out
 
 
 def flatten_bool(*args: bool | Iterable[bool]) -> list[bool]:
-    out: list[IntoExpr] = []
+    out: list[bool] = []
     for arg in args:
-        if isinstance(arg, (list, tuple)):
-            out.extend(arg)
-        else:
+        if isinstance(arg, bool):
             out.append(arg)
+        else:
+            out.extend(arg)
     return out
 
 
@@ -160,7 +160,7 @@ def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
         if isinstance(arg, (list, tuple)):
             out.extend(arg)
         else:
-            out.append(arg)
+            out.append(arg)  # type: ignore[arg-type]
     return out
 
 
@@ -191,9 +191,7 @@ def evaluate_into_exprs(
     return series
 
 
-def register_expression_call(
-    expr: ExprT, attr: str, *args: Any, **kwargs: Any
-) -> ExprT:
+def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -> Expr:
     plx = expr.__expr_namespace__()
 
     def func(df: DataFrame | LazyFrame) -> list[Series]:
