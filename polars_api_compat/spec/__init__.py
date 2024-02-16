@@ -168,7 +168,7 @@ class GroupBy(Protocol):
 class LazyGroupBy(Protocol):
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> DataFrame:
+    ) -> LazyFrame:
         ...
 
 

@@ -20,9 +20,7 @@ if TYPE_CHECKING:
 
 
 class GroupBy(GroupByT):
-    def __init__(
-        self, df: DataFrameT | LazyFrameT, keys: list[str], api_version: str
-    ) -> None:
+    def __init__(self, df: DataFrameT, keys: list[str], api_version: str) -> None:
         self._df = df.dataframe
         self._grouped = self._df.groupby(list(keys), sort=False, as_index=False)
         self._keys = list(keys)
@@ -45,26 +43,19 @@ class GroupBy(GroupByT):
 
     def agg(
         self,
-        *aggregations: Any,  # todo
+        *aggs: IntoExpr | Iterable[IntoExpr],
+        **named_aggs: IntoExpr,
     ) -> DataFrame:
-        aggs = []
-        for aggregation in aggregations:
-            if isinstance(aggregation, (list, tuple)):
-                aggs.extend(aggregation)
-            else:
-                aggs.append(aggregation)
-
-        out = collections.defaultdict(list)
+        # todo: dedupe logic with LazyGroupBy.agg
+        exprs = parse_into_exprs(
+            self._df.__dataframe_namespace__(), *aggs, **named_aggs
+        )
+        out: dict[str, list[Any]] = collections.defaultdict(list)
         for key, _df in self._grouped:
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
-            for aggregation in aggs:
-                result = aggregation.call(
-                    DataFrame(
-                        _df,
-                        api_version=self.api_version,
-                    )
-                )
+            for expr in exprs:
+                result = expr.call(LazyFrame(_df, api_version=self.api_version))
                 for _result in result:
                     out[_result.name].append(_result.series.item())
         return self._to_dataframe(pd.DataFrame(out))
