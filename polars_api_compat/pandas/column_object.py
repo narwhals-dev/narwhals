@@ -55,10 +55,10 @@ class Series(ColumnT):
         self._name = series.name
         assert self._name is not None
         self._series = series
-        self._api_version = api_version
+        self.api_version = api_version
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = f" Standard Column (api_version={self._api_version}) "
+        header = f" Standard Column (api_version={self.api_version}) "
         length = len(header)
         return (
             "┌"
@@ -78,7 +78,7 @@ class Series(ColumnT):
     def _from_series(self, series: pd.Series) -> Series:
         return Series(
             series.rename(series.name, copy=False),
-            api_version=self._api_version,
+            api_version=self.api_version,
         )
 
     # In the standard
@@ -86,7 +86,7 @@ class Series(ColumnT):
         self,
     ) -> polars_api_compat.pandas.Namespace:
         return polars_api_compat.pandas.Namespace(
-            api_version=self._api_version,
+            api_version=self.api_version,
         )
 
     @property

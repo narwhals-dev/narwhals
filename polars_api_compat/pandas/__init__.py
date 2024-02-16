@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing_extensions import Self
 from polars_api_compat.utils import register_expression_call
 
 import re
@@ -12,34 +13,19 @@ from typing import cast
 import pandas as pd
 
 from polars_api_compat.pandas.column_object import Series
-from polars_api_compat.pandas.dataframe_object import DataFrame
+from polars_api_compat.pandas.dataframe_object import DataFrame, LazyFrame
+from polars_api_compat.spec import (
+    DataFrame as DataFrameT,
+    LazyFrame as LazyFrameT,
+    Series as SeriesT,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from dataframe_api.groupby_object import Aggregation as AggregationT
-    from dataframe_api.typing import Column as ColumnT
-    from dataframe_api.typing import DataFrame as DataFrameT
-    from dataframe_api.typing import DType
-    from dataframe_api.typing import Namespace as NamespaceT
-    from dataframe_api.typing import Scalar as ScalarT
-
-    BoolT = NamespaceT.Bool
-    DateT = NamespaceT.Date
-    DatetimeT = NamespaceT.Datetime
-    DurationT = NamespaceT.Duration
-    Float32T = NamespaceT.Float32
-    Float64T = NamespaceT.Float64
-    Int8T = NamespaceT.Int8
-    Int16T = NamespaceT.Int16
-    Int32T = NamespaceT.Int32
-    Int64T = NamespaceT.Int64
-    StringT = NamespaceT.String
-    UInt8T = NamespaceT.UInt8
-    UInt16T = NamespaceT.UInt16
-    UInt32T = NamespaceT.UInt32
-    UInt64T = NamespaceT.UInt64
-    NullTypeT = NamespaceT.NullType
+    from polars_api_compat.spec import (
+        Expr as ExprT,
+    )
 else:
     NamespaceT = object
     BoolT = object
@@ -188,8 +174,8 @@ def convert_to_standard_compliant_dataframe(
 
 class Namespace(NamespaceT):
     def __init__(self, *, api_version: str) -> None:
-        self.__dataframe_api_version__ = api_version
-        self._api_version = api_version
+        self.__dataframeapi_version__ = api_version
+        self.api_version = api_version
 
     class Int64(Int64T):
         ...
@@ -258,7 +244,7 @@ class Namespace(NamespaceT):
         for col in columns:
             ser = col.column  # type: ignore[attr-defined]
             data[ser.name] = ser
-            api_versions.add(col._api_version)  # type: ignore[attr-defined]
+            api_versions.add(col.api_version)  # type: ignore[attr-defined]
         return DataFrame(pd.DataFrame(data), api_version=list(api_versions)[0])
 
     def column_from_1d_array(  # type: ignore[override]
@@ -268,7 +254,7 @@ class Namespace(NamespaceT):
         name: str | None = None,
     ) -> Series:
         ser = pd.Series(data, name=name)
-        return Series(ser, api_version=self._api_version)
+        return Series(ser, api_version=self.api_version)
 
     def column_from_sequence(
         self,
@@ -285,7 +271,7 @@ class Namespace(NamespaceT):
             )
         else:
             ser = pd.Series(sequence, name=name)
-        return Series(ser, api_version=self._api_version)
+        return Series(ser, api_version=self.api_version)
 
     def concat(
         self,
@@ -305,7 +291,7 @@ class Namespace(NamespaceT):
                 msg = "Expected matching columns"
                 raise ValueError(msg) from exc
             dfs.append(df.dataframe)
-            api_versions.add(df._api_version)
+            api_versions.add(df.api_version)
         if len(api_versions) > 1:  # pragma: no cover
             msg = f"Multiple api versions found: {api_versions}"
             raise ValueError(msg)
@@ -325,7 +311,7 @@ class Namespace(NamespaceT):
         names: Sequence[str],
     ) -> DataFrame:
         df = pd.DataFrame(data, columns=list(names))
-        return DataFrame(df, api_version=self._api_version)
+        return DataFrame(df, api_version=self.api_version)
 
     def is_null(self, value: Any) -> bool:
         return value is self.null
@@ -367,140 +353,6 @@ class Namespace(NamespaceT):
     def any_horizontal(self, *columns: ColumnT, skip_nulls: bool = True) -> ColumnT:
         return reduce(lambda x, y: x | y, columns)
 
-    def sorted_indices(
-        self,
-        *columns: ColumnT,
-        ascending: Sequence[bool] | bool = True,
-        nulls_position: Literal["first", "last"] = "last",
-    ) -> Series:
-        raise NotImplementedError
-
-    def unique_indices(
-        self,
-        *columns: ColumnT,
-        skip_nulls: bool | ScalarT = True,
-    ) -> Series:
-        raise NotImplementedError
-
-    class Aggregation(AggregationT):
-        def __init__(
-            self, column_name: str, output_name: str, aggregation: str
-        ) -> None:
-            self.column_name = column_name
-            self.output_name = output_name
-            self.aggregation = aggregation
-
-        def __repr__(self) -> str:  # pragma: no cover
-            return f"{self.__class__.__name__}({self.column_name!r}, {self.output_name!r}, {self.aggregation!r})"
-
-        def _replace(self, **kwargs: str) -> AggregationT:
-            return self.__class__(
-                column_name=kwargs.get("column_name", self.column_name),
-                output_name=kwargs.get("output_name", self.output_name),
-                aggregation=kwargs.get("aggregation", self.aggregation),
-            )
-
-        def rename(self, name: str | ScalarT) -> AggregationT:
-            return self.__class__(self.column_name, name, self.aggregation)  # type: ignore[arg-type]
-
-        @classmethod
-        def any(
-            cls: AggregationT,
-            column: str,
-            *,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "any")
-
-        @classmethod
-        def all(
-            cls: AggregationT,
-            column: str,
-            *,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "all")
-
-        @classmethod
-        def min(
-            cls: AggregationT,
-            column: str,
-            *,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "min")
-
-        @classmethod
-        def max(
-            cls: AggregationT,
-            column: str,
-            *,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "max")
-
-        @classmethod
-        def sum(
-            cls: AggregationT,
-            column: str,
-            *,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "sum")
-
-        @classmethod
-        def prod(
-            cls: AggregationT,
-            column: str,
-            *,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "prod")
-
-        @classmethod
-        def median(
-            cls: AggregationT,
-            column: str,
-            *,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "median")
-
-        @classmethod
-        def mean(
-            cls: AggregationT,
-            column: str,
-            *,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "mean")
-
-        @classmethod
-        def std(
-            cls: AggregationT,
-            column: str,
-            *,
-            correction: float | ScalarT | NullTypeT = 1,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "std")
-
-        @classmethod
-        def var(
-            cls: AggregationT,
-            column: str,
-            *,
-            correction: float | ScalarT | NullTypeT = 1,
-            skip_nulls: bool | ScalarT = True,
-        ) -> AggregationT:
-            return Namespace.Aggregation(column, column, "var")
-
-        @classmethod
-        def size(
-            cls: AggregationT,
-        ) -> AggregationT:
-            return Namespace.Aggregation("__placeholder__", "size", "size")
-
     def col(self, *column_names: str) -> Expr:
         names = []
         for name in column_names:
@@ -523,18 +375,18 @@ class Namespace(NamespaceT):
             lambda df: [
                 Series(
                     pd.Series([len(df.dataframe)], name="len", index=[0]),
-                    api_version=df._api_version,
+                    api_version=df.api_version,
                 )
             ]
         )
 
-    def _create_expr_from_callable(self, call: Callable[[DataFrame], list[Series]]) -> Expr:
+    def _create_expr_from_callable(self, call: Callable[[DataFrameT|LazyFrameT], list[SeriesT]]) -> ExprT:
         return Expr(call)
 
     def _create_series_from_scalar(self, value: Any, column: Series) -> Series:
         return Series(
             pd.Series([value], name=column.column.name, index=column.column.index[0:1]),
-            api_version=self._api_version,
+            api_version=self.api_version,
         )
 
     def all(self) -> Expr:
@@ -542,16 +394,17 @@ class Namespace(NamespaceT):
             lambda df: [
                 Series(
                     df.dataframe.loc[:, column_name],
-                    api_version=df._api_version,
+                    api_version=df.api_version,
                 )
                 for column_name in df.columns
             ],
         )
 
 
-class Expr:
-    def __init__(self, call: Callable[[DataFrame], list[Series]]) -> None:
+class Expr(ExprT):
+    def __init__(self, call: Callable[[DataFrameT|LazyFrameT], list[SeriesT]]) -> None:
         self.call = call
+        self.api_version = '0.20.0'  # todo
 
     @classmethod
     def from_column_names(cls: type[Expr], *column_names: str) -> Expr:
@@ -559,90 +412,90 @@ class Expr:
             lambda df: [
                 Series(
                     df.dataframe.loc[:, column_name],
-                    api_version=df._api_version,
+                    api_version=df.api_version,
                 )
                 for column_name in column_names
             ],
         )
 
-    def __column_expr_namespace__(self) -> Namespace:
+    def __expr_namespace__(self) -> Namespace:
         return Namespace(api_version="2023.11-beta")
 
-    def __eq__(self, other: Expr | Any) -> Expr:  # type: ignore[override]
+    def __eq__(self, other: Expr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__eq__", other)
 
-    def __ne__(self, other: Expr | Any) -> Expr:  # type: ignore[override]
+    def __ne__(self, other: Expr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__ne__", other)
 
-    def __ge__(self, other: Expr | Any) -> Expr:
+    def __ge__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__ge__", other)
 
-    def __gt__(self, other: Expr | Any) -> Expr:
+    def __gt__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__gt__", other)
 
-    def __le__(self, other: Expr | Any) -> Expr:
+    def __le__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__le__", other)
 
-    def __lt__(self, other: Expr | Any) -> Expr:
+    def __lt__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__lt__", other)
 
-    def __and__(self, other: Expr | bool | Any) -> Expr:
+    def __and__(self, other: Expr | bool | Any) -> Self:
         return register_expression_call(self, "__and__", other)
 
-    def __rand__(self, other: Series | Any) -> Series:
+    def __rand__(self, other: Series | Any) -> Self:
         return register_expression_call(self, "__rand__", other)
 
-    def __or__(self, other: Expr | bool | Any) -> Expr:
+    def __or__(self, other: Expr | bool | Any) -> Self:
         return register_expression_call(self, "__or__", other)
 
-    def __ror__(self, other: Series | Any) -> Series:
+    def __ror__(self, other: Series | Any) -> Self:
         return register_expression_call(self, "__ror__", other)
 
-    def __add__(self, other: Expr | Any) -> Expr:  # type: ignore[override]
+    def __add__(self, other: Expr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__add__", other)
 
-    def __radd__(self, other: Series | Any) -> Series:
+    def __radd__(self, other: Series | Any) -> Self:
         return register_expression_call(self, "__radd__", other)
 
-    def __sub__(self, other: Expr | Any) -> Expr:
+    def __sub__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__sub__", other)
 
-    def __rsub__(self, other: Series | Any) -> Series:
+    def __rsub__(self, other: Series | Any) -> Self:
         return register_expression_call(self, "__rsub__", other)
 
-    def __mul__(self, other: Expr | Any) -> Expr:
+    def __mul__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__mul__", other)
 
-    def __rmul__(self, other: Series | Any) -> Series:
-        return self.__mul__(other, other)
+    def __rmul__(self, other: Series | Any) -> Self:
+        return self.__mul__(other)
 
-    def __truediv__(self, other: Expr | Any) -> Expr:
+    def __truediv__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__truediv__", other)
 
-    def __rtruediv__(self, other: Series | Any) -> Series:
+    def __rtruediv__(self, other: Series | Any) -> Self:
         raise NotImplementedError
 
-    def __floordiv__(self, other: Expr | Any) -> Expr:
+    def __floordiv__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__floordiv__", other)
 
-    def __rfloordiv__(self, other: Series | Any) -> Series:
+    def __rfloordiv__(self, other: Series | Any) -> Self:
         raise NotImplementedError
 
-    def __pow__(self, other: Expr | Any) -> Expr:
+    def __pow__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__pow__", other)
 
-    def __rpow__(self, other: Series | Any) -> Series:  # pragma: no cover
+    def __rpow__(self, other: Series | Any) -> Self:  # pragma: no cover
         raise NotImplementedError
 
-    def __mod__(self, other: Expr | Any) -> Expr:
+    def __mod__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__mod__", other)
 
-    def __rmod__(self, other: Series | Any) -> Series:  # pragma: no cover
+    def __rmod__(self, other: Series | Any) -> Self:  # pragma: no cover
         raise NotImplementedError
 
     # Unary
 
-    def __invert__(self: Series) -> Series:
+    def __invert__(self) -> Self:
         return register_expression_call(self, "__invert__")
 
     # Reductions

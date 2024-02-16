@@ -5,7 +5,7 @@ from polars_api_compat.utils import parse_exprs
 from polars_api_compat.utils import flatten_strings
 import collections
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 from typing import Any
 from typing import Iterator
 from typing import Literal
@@ -23,15 +23,13 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from collections.abc import Sequence
 
-    from dataframe_api import DataFrame as DataFrameT
-    from dataframe_api.typing import AnyScalar
-    from dataframe_api.typing import Column
-    from dataframe_api.typing import DType
-    from dataframe_api.typing import NullType
-    from dataframe_api.typing import Scalar
-
     from polars_api_compat.pandas import Expr
     from polars_api_compat.pandas.group_by_object import GroupBy
+
+    from polars_api_compat.spec import (
+        DataFrame as DataFrameT,
+        IntoExpr,
+    )
 else:
     DataFrameT = object
 
@@ -49,7 +47,7 @@ class DataFrame(DataFrameT):
         self._is_persisted = is_persisted
         self._validate_columns(dataframe.columns)
         self._dataframe = dataframe
-        self._api_version = api_version
+        self.api_version = api_version
 
     # Validation helper methods
 
@@ -62,7 +60,7 @@ class DataFrame(DataFrameT):
         return self.dataframe
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = f" Standard DataFrame (api_version={self._api_version}) "
+        header = f" Standard DataFrame (api_version={self.api_version}) "
         length = len(header)
         return (
             "┌"
@@ -96,19 +94,9 @@ class DataFrame(DataFrameT):
     def _from_dataframe(self, df: pd.DataFrame) -> DataFrame:
         return DataFrame(
             df,
-            api_version=self._api_version,
+            api_version=self.api_version,
             is_persisted=self._is_persisted,
         )
-
-    # Properties
-    @property
-    def schema(self) -> dict[str, DType]:
-        return {
-            column_name: polars_api_compat.pandas.map_pandas_dtype_to_standard_dtype(
-                dtype.name,
-            )
-            for column_name, dtype in self.dataframe.dtypes.items()
-        }
 
     @property
     def dataframe(self) -> pd.DataFrame:
@@ -118,27 +106,11 @@ class DataFrame(DataFrameT):
     def columns(self) -> list[str]:
         return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
 
-    # In the Standard
-
     def __dataframe_namespace__(
         self,
     ) -> polars_api_compat.pandas.Namespace:
         return polars_api_compat.pandas.Namespace(
-            api_version=self._api_version,
-        )
-
-    def iter_columns(self) -> Iterator[Column]:
-        return (self.get_column(col_name) for col_name in self.column_names)
-
-    def get_column(self, name: str) -> Column:
-        if not self._is_persisted:
-            msg = "`get_column` can only be called on persisted DataFrame."
-            raise ValueError(msg)
-        from polars_api_compat.pandas.column_object import Series
-
-        return Series(
-            self.dataframe.loc[:, name],
-            api_version=self._api_version,
+            api_version=self.api_version,
         )
 
     def shape(self) -> tuple[int, int]:
@@ -158,12 +130,12 @@ class DataFrame(DataFrameT):
             elif key not in self.column_names:
                 msg = f"key {key} not present in DataFrame's columns"
                 raise KeyError(msg)
-        return GroupBy(self, out, api_version=self._api_version)
+        return GroupBy(self, out, api_version=self.api_version)
 
     def select(
         self,
-        *exprs: str | Expr,
-        **named_exprs,
+        *exprs: IntoExpr | Iterable[IntoExpr],
+        **named_exprs: IntoExpr,
     ) -> DataFrame:
         new_cols = parse_exprs(self, *exprs, **named_exprs)
         df = pd.concat(
@@ -530,7 +502,7 @@ class DataFrame(DataFrameT):
             )
         return DataFrame(
             self.dataframe,
-            api_version=self._api_version,
+            api_version=self.api_version,
             is_persisted=True,
         )
 

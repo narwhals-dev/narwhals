@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Iterable, cast
+from typing import Any, Iterable, cast, TypeVar
 
 from polars_api_compat.spec import (
     DataFrame,
@@ -9,6 +9,8 @@ from polars_api_compat.spec import (
     IntoExpr,
     Namespace,
 )
+
+ExprT = TypeVar("ExprT", bound=Expr)
 
 
 # TODO: split this up!
@@ -170,7 +172,7 @@ def parse_exprs(
     return new_cols
 
 
-def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -> Expr:  # type: ignore[override]
+def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:  # type: ignore[override]
     plx = expr.__expr_namespace__()
 
     def func(df: DataFrame) -> list[Series]:

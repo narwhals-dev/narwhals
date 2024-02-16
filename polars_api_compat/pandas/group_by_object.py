@@ -10,13 +10,6 @@ from polars_api_compat.pandas.dataframe_object import DataFrame
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from dataframe_api import Aggregation as AggregationT
-    from dataframe_api import GroupBy as GroupByT
-    from dataframe_api.typing import NullType
-    from dataframe_api.typing import Scalar
-
-
 else:
     GroupByT = object
 
@@ -27,7 +20,7 @@ class GroupBy(GroupByT):
         self._is_persisted = df._is_persisted
         self._grouped = self._df.groupby(list(keys), sort=False, as_index=False)
         self._keys = list(keys)
-        self._api_version = api_version
+        self.api_version = api_version
 
     def _validate_result(self, result: pd.DataFrame) -> None:
         failed_columns = self._df.columns.difference(result.columns)
@@ -53,7 +46,7 @@ class GroupBy(GroupByT):
     def _to_dataframe(self, result: pd.DataFrame) -> DataFrame:
         return DataFrame(
             result,
-            api_version=self._api_version,
+            api_version=self.api_version,
             is_persisted=self._is_persisted,
         )
 
@@ -143,7 +136,7 @@ class GroupBy(GroupByT):
                 result = aggregation.call(
                     DataFrame(
                         _df,
-                        api_version=self._api_version,
+                        api_version=self.api_version,
                         is_persisted=self._is_persisted,
                     )
                 )
