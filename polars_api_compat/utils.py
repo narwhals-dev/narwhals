@@ -12,7 +12,7 @@ from polars_api_compat.spec import (
 
 ExprT = TypeVar("ExprT", bound=Expr)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 # TODO: split this up!
@@ -108,8 +108,12 @@ def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
         return df.__lazyframe_namespace__()
     raise TypeError(f"Expected DataFrame or LazyFrame, got {type(df)}")
 
-def parse_into_exprs(plx: Namespace, *exprs: IntoExpr | Iterable[IntoExpr]) -> list[Expr]:
+
+def parse_into_exprs(
+    plx: Namespace, *exprs: IntoExpr | Iterable[IntoExpr]
+) -> list[Expr]:
     return [parse_into_expr(plx, into_expr) for into_expr in flatten_into_expr(*exprs)]
+
 
 def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
     if isinstance(into_expr, str):
@@ -121,14 +125,14 @@ def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
         return plx._create_expr_from_series(into_expr)
     raise TypeError(f"Expected IntoExpr, got {type(into_expr)}")
 
-def evaluate_into_expr(
-    df: DataFrame | LazyFrame, into_expr: IntoExpr
-) -> list[Series]:
+
+def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[Series]:
     """
     Return list of raw columns.
     """
     expr = parse_into_expr(get_namespace(df), into_expr)
     return expr.call(df)
+
 
 def flatten_str(*args: str | Iterable[str]) -> list[str]:
     out: list[IntoExpr] = []
@@ -139,6 +143,7 @@ def flatten_str(*args: str | Iterable[str]) -> list[str]:
             out.append(arg)
     return out
 
+
 def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
     out: list[IntoExpr] = []
     for arg in args:
@@ -148,19 +153,26 @@ def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
             out.append(arg)
     return out
 
+
 # in filter, I want to:
 # - flatten the into exprs
 # - convert all to exprs
 # - pass these to all_horizontal
+
 
 def evaluate_into_exprs(
     df: DataFrame | LazyFrame,
     *exprs: IntoExpr | Iterable[IntoExpr],
     **named_exprs: IntoExpr,
 ) -> list[Series]:
-    """Evaluate each expr into Series.
-    """
-    series: list[Series] = [item for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten_into_expr(*exprs)] for item in sublist]
+    """Evaluate each expr into Series."""
+    series: list[Series] = [
+        item
+        for sublist in [
+            evaluate_into_expr(df, into_expr) for into_expr in flatten_into_expr(*exprs)
+        ]
+        for item in sublist
+    ]
     for name, expr in named_exprs.items():
         evaluated_expr = evaluate_into_expr(df, expr)
         if len(evaluated_expr) > 1:
@@ -169,7 +181,9 @@ def evaluate_into_exprs(
     return series
 
 
-def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
+def register_expression_call(
+    expr: ExprT, attr: str, *args: Any, **kwargs: Any
+) -> ExprT:
     plx = expr.__expr_namespace__()
 
     def func(df: DataFrame) -> list[Series]:

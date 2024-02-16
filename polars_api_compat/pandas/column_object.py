@@ -2,7 +2,6 @@ from __future__ import annotations
 import polars_api_compat
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 from typing import NoReturn

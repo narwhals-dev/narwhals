@@ -1,29 +1,23 @@
 from __future__ import annotations
 
-from polars_api_compat.utils import evaluate_into_exprs, parse_into_expr, parse_into_exprs
+from polars_api_compat.utils import (
+    evaluate_into_exprs,
+)
 
 from polars_api_compat.utils import flatten_into_expr, flatten_str
 import collections
-import warnings
 from typing import TYPE_CHECKING, Iterable
 from typing import Any
-from typing import Iterator
 from typing import Literal
-from typing import NoReturn
 
-import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 
 import polars_api_compat
-from polars_api_compat.utils import validate_column_comparand
 from polars_api_compat.utils import validate_dataframe_comparand
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from collections.abc import Sequence
 
-    from polars_api_compat.pandas import Expr
     from polars_api_compat.pandas.group_by_object import GroupBy
 
     from polars_api_compat.spec import (
@@ -125,7 +119,9 @@ class DataFrame(DataFrameT):
         **named_exprs: IntoExpr,
     ) -> DataFrame:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        df = pd.concat({series.name: series.series for series in new_series}, axis=1, copy=False)
+        df = pd.concat(
+            {series.name: series.series for series in new_series}, axis=1, copy=False
+        )
         return self._from_dataframe(df)
 
     def filter(
@@ -194,10 +190,12 @@ class DataFrame(DataFrameT):
                 how=how,
             ),
         )
+
     # Conversion
 
     def to_numpy(self, dtype: DType | None = None) -> Any:
         return self.dataframe.to_numpy()
+
 
 class LazyFrame(DataFrameT):
     """dataframe object"""
@@ -359,6 +357,7 @@ class LazyFrame(DataFrameT):
                 how=how,
             ),
         )
+
     # Conversion
     def collect(self) -> DataFrameT:
         return DataFrame(

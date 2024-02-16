@@ -1,19 +1,20 @@
 from __future__ import annotations
 from typing_extensions import Self
-from polars_api_compat.utils import register_expression_call, flatten_into_expr, flatten_str, parse_into_exprs
+from polars_api_compat.utils import (
+    register_expression_call,
+    flatten_str,
+    parse_into_exprs,
+)
 
-import re
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any, Iterable
 from typing import Callable
-from typing import Literal
-from typing import cast
 
 import pandas as pd
 
 from polars_api_compat.pandas.column_object import Series
-from polars_api_compat.pandas.dataframe_object import DataFrame, LazyFrame
+from polars_api_compat.pandas.dataframe_object import DataFrame
 from polars_api_compat.spec import (
     DataFrame as DataFrameT,
     LazyFrame as LazyFrameT,
@@ -24,8 +25,6 @@ from polars_api_compat.spec import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from polars_api_compat.spec import (
         Expr as ExprT,
     )
@@ -75,7 +74,9 @@ class Namespace(NamespaceT):
             ]
         )
 
-    def _create_expr_from_callable(self, call: Callable[[DataFrameT|LazyFrameT], list[SeriesT]]) -> ExprT:
+    def _create_expr_from_callable(
+        self, call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]]
+    ) -> ExprT:
         return Expr(call)
 
     def _create_series_from_scalar(self, value: Any, series: SeriesT) -> SeriesT:
@@ -100,9 +101,11 @@ class Namespace(NamespaceT):
 
 
 class Expr(ExprT):
-    def __init__(self, call: Callable[[DataFrameT|LazyFrameT], list[SeriesT]]) -> None:
+    def __init__(
+        self, call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]]
+    ) -> None:
         self.call = call
-        self.api_version = '0.20.0'  # todo
+        self.api_version = "0.20.0"  # todo
 
     @classmethod
     def from_column_names(cls: type[Expr], *column_names: str) -> Expr:
