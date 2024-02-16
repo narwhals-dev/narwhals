@@ -1,7 +1,7 @@
 from typing import Any
 
 
-def convert(df: Any, version: str) -> Any:
+def translate(df: Any, version: str) -> Any:
     if hasattr(df, "__polars_api_compat__"):
         return df.__polars_api_compat__()
     try:
@@ -10,17 +10,15 @@ def convert(df: Any, version: str) -> Any:
         pass
     else:
         if isinstance(df, pl.DataFrame):
-            from polars_api_compat.polars import convert
+            from polars_api_compat.polars import translate
 
-            return convert(df)
+            return translate(df)
     try:
         import pandas as pd
     except ModuleNotFoundError:
         pass
     else:
         if isinstance(df, pd.DataFrame):
-            from polars_api_compat.pandas import (
-                convert_to_standard_compliant_dataframe as convert,
-            )
+            from polars_api_compat.pandas import translate
 
-            return convert(df)
+            return translate(df)

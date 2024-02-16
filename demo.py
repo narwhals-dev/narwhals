@@ -1,5 +1,5 @@
 from great_tables.data import sp500
-from polars_api_compat import convert
+from polars_api_compat import translate
 
 # Define the start and end dates for the data range
 start_date = "2010-06-07"
@@ -11,7 +11,7 @@ end_date = "2010-06-14"
 
 def dataframe_agnostic_filter(df, start_date, end_date):
     # opt-in to Polars API
-    dfx, plx = convert(df, version="0.20")
+    dfx, plx = translate(df, version="0.20")
 
     # Use (supported subset of) Polars API
     dfx = dfx.filter(

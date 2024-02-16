@@ -238,17 +238,7 @@ class LazyFrame(LazyFrameT):
     def group_by(self, *keys: str) -> GroupBy:
         from polars_api_compat.pandas.group_by_object import GroupBy
 
-        # todo: do this properly
-        out = []
-        for key in keys:
-            if isinstance(key, str):
-                out.append(key)
-            elif isinstance(key, (list, tuple)):
-                out.extend(key)
-            elif key not in self.columns:
-                msg = f"key {key} not present in DataFrame's columns"
-                raise KeyError(msg)
-        return GroupBy(self, out, api_version=self.api_version)
+        return GroupBy(self, flatten_str(keys), api_version=self.api_version)
 
     def select(
         self,

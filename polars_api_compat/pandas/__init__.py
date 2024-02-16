@@ -13,7 +13,7 @@ from typing import Callable
 import pandas as pd
 
 from polars_api_compat.pandas.column_object import Series
-from polars_api_compat.pandas.dataframe_object import DataFrame
+from polars_api_compat.pandas.dataframe_object import LazyFrame
 from polars_api_compat.spec import (
     DataFrame as DataFrameT,
     LazyFrame as LazyFrameT,
@@ -31,12 +31,12 @@ if TYPE_CHECKING:
 SUPPORTED_VERSIONS = frozenset({"2023.11-beta"})
 
 
-def convert_to_standard_compliant_dataframe(
+def translate(
     df: pd.DataFrame,
     api_version: str | None = None,
-) -> tuple[DataFrame, NamespaceT]:
-    df = DataFrame(df, api_version=api_version or "2023.11-beta")
-    return df, df.__dataframe_namespace__()
+) -> tuple[LazyFrameT, NamespaceT]:
+    df = LazyFrame(df, api_version=api_version or "2023.11-beta")
+    return df, df.__lazyframe_namespace__()
 
 
 class Namespace(NamespaceT):

@@ -1,12 +1,12 @@
 from datetime import datetime
-from polars_api_compat import convert
+from polars_api_compat import translate
 import polars
 
 
 def q():
     var_1 = datetime(1998, 9, 2)
     q = polars.scan_parquet("../tpch-data/lineitem.parquet").collect().to_pandas()
-    q, pl = convert(q, version="0.20")
+    q, pl = translate(q, version="0.20")
     q_final = (
         q.filter(pl.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])
