@@ -4,7 +4,7 @@ from polars_api_compat.utils import (
     evaluate_into_exprs,
 )
 
-from polars_api_compat.utils import flatten_str, flatten_bool
+from polars_api_compat.utils import flatten_str
 import collections
 from typing import TYPE_CHECKING, Iterable, Any
 from typing import Literal
@@ -290,10 +290,13 @@ class LazyFrame(LazyFrameT):
         flat_keys = flatten_str(*keys)
         if not flat_keys:
             flat_keys = self.dataframe.columns.tolist()
-        flat_descending = flatten_bool(descending)
         df = self.dataframe
+        if isinstance(descending, bool):
+            ascending: bool | list[bool] = not descending
+        else:
+            ascending = [not d for d in descending]
         return self._from_dataframe(
-            df.sort_values(keys, ascending=[not d for d in flat_descending]),
+            df.sort_values(flat_keys, ascending=ascending),
         )
 
     # Other
