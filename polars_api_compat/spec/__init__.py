@@ -83,15 +83,15 @@ class DataFrame(Protocol):
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> Self:
+    ) -> DataFrame:
         ...
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> DataFrame:
         ...
 
     def select(
         self, *exprs: Expr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> Self:
+    ) -> DataFrame:
         ...
 
     def sort(

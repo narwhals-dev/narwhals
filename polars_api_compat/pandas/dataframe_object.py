@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing_extensions import Self
 
 from polars_api_compat.utils import (
     evaluate_into_exprs,
@@ -116,13 +115,13 @@ class DataFrame(DataFrameT):
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
-    ) -> DataFrame:
+    ) -> DataFrameT:
         return self.lazy().select(*exprs, **named_exprs).collect()
 
     def filter(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> Self:
+    ) -> DataFrameT:
         return self.lazy().filter(*predicates).collect()
 
     def with_columns(
