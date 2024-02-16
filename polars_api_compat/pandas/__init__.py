@@ -528,10 +528,10 @@ class Namespace(NamespaceT):
             ]
         )
 
-    def create_column_expr(self, call: Callable[[DataFrame], list[Series]]) -> Expr:
+    def _create_expr_from_callable(self, call: Callable[[DataFrame], list[Series]]) -> Expr:
         return Expr(call)
 
-    def create_column_from_scalar(self, value: Any, column: Series) -> Series:
+    def _create_series_from_scalar(self, value: Any, column: Series) -> Series:
         return Series(
             pd.Series([value], name=column.column.name, index=column.column.index[0:1]),
             api_version=self._api_version,

@@ -171,7 +171,7 @@ def parse_exprs(
 
 
 def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -> Expr:  # type: ignore[override]
-    plx = expr.__column_expr_namespace__()
+    plx = expr.__expr_namespace__()
 
     def func(df: DataFrame) -> list[Series]:
         out = []
@@ -188,7 +188,7 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
             if hasattr(_out, "__column_namespace__"):
                 out.append(_out)
             else:
-                out.append(plx.create_column_from_scalar(_out, column))
+                out.append(plx._create_series_from_scalar(_out, column))
         return out
 
-    return plx.create_column_expr(func)
+    return plx._create_expr_from_callable(func)

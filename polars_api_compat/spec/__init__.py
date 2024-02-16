@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Protocol, Iterable, Any
+from typing import Protocol, Iterable, Any, Callable
 
 from typing_extensions import Self
 
@@ -10,10 +10,19 @@ class Expr(Protocol):
 
     def call(self, df: DataFrame | LazyFrame) -> list[Series]:
         ...
+    
+    def __expr_namespace__(self) -> Namespace:
+        ...
 
 
 class Namespace(Protocol):
     def col(self, *names: str | Iterable[str]) -> Expr:
+        ...
+    
+    def _create_series_from_scalar(self, value: Any, series: Series) -> Series:
+        ...
+
+    def _create_expr_from_callable(self, func: Callable[[DataFrame], list[Series]]) -> Expr:
         ...
 
 
