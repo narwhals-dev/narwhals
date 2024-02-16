@@ -55,16 +55,16 @@ class Namespace(NamespaceT):
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
         return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
 
-    def col(self, *column_names: str | Iterable[str]) -> Expr:
+    def col(self, *column_names: str | Iterable[str]) -> ExprT:
         return Expr.from_column_names(*flatten_str(*column_names))
 
-    def sum(self, column_name: str) -> Expr:
+    def sum(self, column_name: str) -> ExprT:
         return Expr.from_column_names(column_name).sum()
 
-    def mean(self, column_name: str) -> Expr:
+    def mean(self, column_name: str) -> ExprT:
         return Expr.from_column_names(column_name).mean()
 
-    def len(self) -> Expr:
+    def len(self) -> ExprT:
         return Expr(
             lambda df: [
                 Series(
@@ -88,7 +88,7 @@ class Namespace(NamespaceT):
     def _create_expr_from_series(self, series: SeriesT) -> ExprT:
         return Expr(lambda df: [series])
 
-    def all(self) -> Expr:
+    def all(self) -> ExprT:
         return Expr(
             lambda df: [
                 Series(
@@ -108,7 +108,7 @@ class Expr(ExprT):
         self.api_version = "0.20.0"  # todo
 
     @classmethod
-    def from_column_names(cls: type[Expr], *column_names: str) -> Expr:
+    def from_column_names(cls: type[Expr], *column_names: str) -> ExprT:
         return cls(
             lambda df: [
                 Series(

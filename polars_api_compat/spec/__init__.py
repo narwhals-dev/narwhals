@@ -23,6 +23,12 @@ class Expr(Protocol):
     def __add__(self, other: IntoExpr) -> Expr:
         ...
 
+    def mean(self) -> Expr:
+        ...
+
+    def sum(self) -> Expr:
+        ...
+
 
 class Namespace(Protocol):
     def col(self, *names: str | Iterable[str]) -> Expr:
