@@ -11,6 +11,7 @@ from polars_api_compat.spec import (
     DataFrame as DataFrameT,
     LazyFrame as LazyFrameT,
     GroupBy as GroupByT,
+    LazyGroupBy as LazyGroupByT,
     IntoExpr,
 )
 
@@ -69,7 +70,7 @@ class GroupBy(GroupByT):
         return self._to_dataframe(pd.DataFrame(out))
 
 
-class LazyGroupBy(GroupByT):
+class LazyGroupBy(LazyGroupByT):
     def __init__(self, df: LazyFrameT, keys: list[str], api_version: str) -> None:
         self._df = df
         self._grouped = self._df.dataframe.groupby(
