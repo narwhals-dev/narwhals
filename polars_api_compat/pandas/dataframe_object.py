@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing_extensions import Self
 
 from polars_api_compat.utils import (
     evaluate_into_exprs,
@@ -6,27 +7,24 @@ from polars_api_compat.utils import (
 
 from polars_api_compat.utils import flatten_into_expr, flatten_str
 import collections
-from typing import TYPE_CHECKING, Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Iterable, Any
 from typing import Literal
 
 import pandas as pd
 
 import polars_api_compat
 from polars_api_compat.utils import validate_dataframe_comparand
+from polars_api_compat.spec import (
+    DataFrame as DataFrameT,
+    LazyFrame as LazyFrameT,
+    IntoExpr,
+    Namespace as NamespaceT,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from polars_api_compat.pandas.group_by_object import GroupBy
-
-    from polars_api_compat.spec import (
-        DataFrame as DataFrameT,
-        IntoExpr,
-        Namespace as NamespaceT,
-    )
-else:
-    DataFrameT = object
 
 
 class DataFrame(DataFrameT):
@@ -95,8 +93,9 @@ class DataFrame(DataFrameT):
             api_version=self.api_version,
         )
 
+    @property
     def shape(self) -> tuple[int, int]:
-        return df.shape  # type: ignore[no-any-return]
+        return self.dataframe.shape  # type: ignore[no-any-return]
 
     def group_by(self, *keys: str) -> GroupBy:
         from polars_api_compat.pandas.group_by_object import GroupBy
@@ -118,21 +117,13 @@ class DataFrame(DataFrameT):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> DataFrame:
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        df = pd.concat(
-            {series.name: series.series for series in new_series}, axis=1, copy=False
-        )
-        return self._from_dataframe(df)
+        return self.lazy().select(*exprs, **named_exprs).collect()
 
     def filter(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> DataFrame:
-        plx = self.__dataframe_namespace__()
-        # Safety: all_horizontal's expression only returns a single column.
-        filter = plx.all_horizontal(*predicates).call(self)[0]
-        _mask = validate_dataframe_comparand(self, filter)
-        return self._from_dataframe(self.dataframe.loc[_mask])
+    ) -> Self:
+        return self.lazy().filter(*predicates).collect()
 
     def with_columns(
         self,
@@ -191,13 +182,11 @@ class DataFrame(DataFrameT):
             ),
         )
 
-    # Conversion
-
-    def to_numpy(self, dtype: DType | None = None) -> Any:
-        return self.dataframe.to_numpy()
+    def lazy(self) -> LazyFrameT:
+        return LazyFrame(self.dataframe, api_version=self.api_version)
 
 
-class LazyFrame(DataFrameT):
+class LazyFrame(LazyFrameT):
     """dataframe object"""
 
     def __init__(
@@ -207,8 +196,9 @@ class LazyFrame(DataFrameT):
         api_version: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._dataframe = dataframe
+        self._df = dataframe
         self.api_version = api_version
+        self.columns = self.dataframe.columns.tolist()
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self.api_version}) "
@@ -242,19 +232,15 @@ class LazyFrame(DataFrameT):
                 msg,
             )
 
-    def _from_dataframe(self, df: pd.DataFrame) -> DataFrame:
-        return DataFrame(
+    def _from_dataframe(self, df: pd.DataFrame) -> LazyFrameT:
+        return LazyFrame(
             df,
             api_version=self.api_version,
         )
 
     @property
-    def dataframe(self) -> pd.DataFrame:
-        return self._dataframe
-
-    @property
-    def columns(self) -> list[str]:
-        return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
+    def dataframe(self) -> Any:
+        return self._df
 
     def __dataframe_namespace__(
         self,
@@ -283,43 +269,37 @@ class LazyFrame(DataFrameT):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> DataFrame:
-        new_cols = evaluate_exprs(self, *exprs, **named_exprs)
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = pd.concat(
-            {column.name: column.column for column in new_cols}, axis=1, copy=False
+            {series.name: series.series for series in new_series}, axis=1, copy=False
         )
         return self._from_dataframe(df)
 
     def filter(
         self,
-        *mask: Column,
-    ) -> DataFrame:
+        *predicates: IntoExpr | Iterable[IntoExpr],
+    ) -> Self:
         plx = self.__dataframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
-        filter = evaluate_exprs(self, plx.all_horizontal(*mask))[0]
+        filter = plx.all_horizontal(*predicates).call(self)[0]
         _mask = validate_dataframe_comparand(self, filter)
-        df = self.dataframe
-        df = df.loc[_mask]
-        return self._from_dataframe(df)
+        return self._from_dataframe(self.dataframe.loc[_mask])
 
     def with_columns(
         self,
         *exprs,
         **named_exprs,
     ) -> DataFrame:
-        new_cols = evaluate_exprs(self, *exprs, **named_exprs)
-        df = self.dataframe.assign(
-            **{column.name: column.column for column in new_cols}
-        )
-        return self._from_dataframe(df)
+        ...
 
     def sort(
         self,
         *keys: str,
         ascending: Sequence[bool] | bool = True,
     ) -> DataFrame:
-        keys = flatten_str(*keys)
-        if not keys:
-            keys = self.dataframe.columns.tolist()
+        flat_keys = flatten_str(*keys)
+        if not flat_keys:
+            flat_keys = self.dataframe.columns.tolist()
         df = self.dataframe
         return self._from_dataframe(
             df.sort_values(keys, ascending=ascending),
