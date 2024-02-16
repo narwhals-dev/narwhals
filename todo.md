@@ -34,3 +34,11 @@ what, this will be quite cool.
 
 so, I think the basics are there?
 remove useless shit. only keep the bare minimum to run tpch?
+
+---
+
+fix filter with multiple conditions!
+
+    dfx = dfx.filter(
+        (plx.col("date") >= start_date) & (plx.col("date") <= end_date)
+    )

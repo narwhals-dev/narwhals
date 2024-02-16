@@ -189,10 +189,11 @@ class DataFrame(DataFrameT):
         self,
         *mask: Column,
     ) -> DataFrame:
-        filters = parse_exprs(self, *mask)
         plx = self.__dataframe_namespace__()
-        filter = plx.all_horizontal(*[col for col in filters.values()])
-        _mask = validate_dataframe_comparand(self, filter)
+        filter = list(parse_exprs(self, plx.all_horizontal(*mask)).values())
+        if len(filter) > 1:
+            raise ValueError("Multi-output expression not allowed in this context")
+        _mask = validate_dataframe_comparand(self, filter[0])
         df = self.dataframe
         df = df.loc[_mask]
         return self._from_dataframe(df)

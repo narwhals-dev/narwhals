@@ -90,6 +90,8 @@ def parse_expr(df, expr):
     pdx = df.__dataframe_namespace__()
     if isinstance(expr, str):
         return pdx.col(expr).call(df)
+    if hasattr(expr, '__column_namespace__'):
+        return [expr]
     if hasattr(expr, '__column_expr_namespace__'):
         return expr.call(df)
     if isinstance(expr, (list, tuple)):

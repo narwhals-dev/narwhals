@@ -1,6 +1,6 @@
 from typing import Any
 
-def convert(df: Any, api_version: str) -> Any:
+def convert(df: Any, version: str) -> Any:
     if hasattr(df, '__polars_api_compat__'):
         return df.__polars_api_compat__()
     try:
