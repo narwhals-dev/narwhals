@@ -113,7 +113,7 @@ def flatten_strings(*args: str):
     return out
 
 
-def parse_exprs(df, *exprs, **named_exprs) -> dict[str, Any]:
+def parse_exprs(df, *exprs, **named_exprs) -> "RawSeries":
     """
     Take exprs and evaluate Series underneath them.
     
@@ -126,13 +126,13 @@ def parse_exprs(df, *exprs, **named_exprs) -> dict[str, Any]:
         if len(parsed_expr) > 1:
             raise ValueError("Named expressions must return a single column")
         parsed_named_exprs[name] = parsed_expr[0]
-    new_cols = {}
+    new_cols = []
     for expr in parsed_exprs:
         _column = evaluate_expr(df, expr)
-        new_cols[_column.name] = _column
+        new_cols.append(_column)
     for name, expr in parsed_named_exprs.items():
         _column = evaluate_expr(df, expr)
-        new_cols[name] = _column
+        new_cols.append(_column.alias(name))
     return new_cols
 
 

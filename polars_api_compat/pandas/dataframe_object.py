@@ -166,7 +166,7 @@ class DataFrame(DataFrameT):
         from polars_api_compat.pandas import ColumnExpr
         from polars_api_compat.utils import parse_exprs
         new_cols = parse_exprs(self, *exprs, **named_exprs)
-        df = pd.concat({key: value.column for key, value in new_cols.items()}, axis=1, copy=False)
+        df = pd.concat({column.name: column.column for column in new_cols}, axis=1, copy=False)
         return self._from_dataframe(df)
 
     def gather(
@@ -192,7 +192,7 @@ class DataFrame(DataFrameT):
     ) -> DataFrame:
         plx = self.__dataframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
-        filter = list(parse_exprs(self, plx.all_horizontal(*mask)).values())[0]
+        filter = parse_exprs(self, plx.all_horizontal(*mask))[0]
         _mask = validate_dataframe_comparand(self, filter)
         df = self.dataframe
         df = df.loc[_mask]
@@ -204,7 +204,7 @@ class DataFrame(DataFrameT):
         **named_exprs,
     ) -> DataFrame:
         new_cols = parse_exprs(self, *exprs, **named_exprs)
-        df = self.dataframe.assign(**{key: value.column for key, value in new_cols.items()})
+        df = self.dataframe.assign(**{column.name: column.column for column in new_cols})
         return self._from_dataframe(df)
 
     def drop(self, *labels: str) -> DataFrame:

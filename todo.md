@@ -37,8 +37,8 @@ remove useless shit. only keep the bare minimum to run tpch?
 
 ---
 
-fix filter with multiple conditions!
+need to simplify flattening logic here!
 
-    dfx = dfx.filter(
-        (plx.col("date") >= start_date) & (plx.col("date") <= end_date)
-    )
+really, let's get the scope down. get enough to run tpch!
+
+reuse as much as possible, nothing complicated!
