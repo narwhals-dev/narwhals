@@ -109,7 +109,7 @@ def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
     raise TypeError(f"Expected DataFrame or LazyFrame, got {type(df)}")
 
 def parse_into_exprs(plx: Namespace, *exprs: IntoExpr | Iterable[IntoExpr]) -> list[Expr]:
-    return [parse_into_expr(plx, into_expr) for into_expr in flatten_args(*exprs)]
+    return [parse_into_expr(plx, into_expr) for into_expr in flatten_into_expr(*exprs)]
 
 def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
     if isinstance(into_expr, str):
@@ -131,7 +131,7 @@ def evaluate_into_expr(
     return expr.call(df)
 
 
-def flatten_args(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
+def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
     out: list[IntoExpr] = []
     for arg in args:
         if isinstance(arg, (list, tuple)):
@@ -152,7 +152,7 @@ def evaluate_into_exprs(
 ) -> list[Series]:
     """Evaluate each expr into Series.
     """
-    series: list[Series] = [item for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten_args(*exprs)] for item in sublist]
+    series: list[Series] = [item for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten_into_expr(*exprs)] for item in sublist]
     for name, expr in named_exprs.items():
         evaluated_expr = evaluate_into_expr(df, expr)
         if len(evaluated_expr) > 1:

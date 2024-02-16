@@ -18,7 +18,7 @@ class Expr(Protocol):
         ...
     def __or__(self, other: IntoExpr) -> Expr:
         ...
-    def __sum__(self, other: IntoExpr) -> Expr:
+    def __add__(self, other: IntoExpr) -> Expr:
         ...
 
 class Namespace(Protocol):
@@ -31,7 +31,7 @@ class Namespace(Protocol):
     def _create_expr_from_series(self, series: Series) -> Expr:
         ...
 
-    def _create_expr_from_callable(self, func: Callable[[DataFrame], list[Series]]) -> Expr:
+    def _create_expr_from_callable(self, func: Callable[[DataFrame|LazyFrame], list[Series]]) -> Expr:
         ...
     
     def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

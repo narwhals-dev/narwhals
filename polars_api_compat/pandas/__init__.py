@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing_extensions import Self
-from polars_api_compat.utils import register_expression_call, flatten_args, parse_into_exprs
+from polars_api_compat.utils import register_expression_call, flatten_into_expr, parse_into_exprs
 
 import re
 from functools import reduce
@@ -20,6 +20,7 @@ from polars_api_compat.spec import (
     Series as SeriesT,
     IntoExpr,
     Expr as ExprT,
+    Namespace as NamespaceT,
 )
 
 if TYPE_CHECKING:
@@ -179,172 +180,6 @@ class Namespace(NamespaceT):
         self.__dataframeapi_version__ = api_version
         self.api_version = api_version
 
-    class Int64(Int64T):
-        ...
-
-    class Int32(Int32T):
-        ...
-
-    class Int16(Int16T):
-        ...
-
-    class Int8(Int8T):
-        ...
-
-    class UInt64(UInt64T):
-        ...
-
-    class UInt32(UInt32T):
-        ...
-
-    class UInt16(UInt16T):
-        ...
-
-    class UInt8(UInt8T):
-        ...
-
-    class Float64(Float64T):
-        ...
-
-    class Float32(Float32T):
-        ...
-
-    class Bool(BoolT):
-        ...
-
-    class String(StringT):
-        ...
-
-    class Date(DateT):
-        ...
-
-    class Datetime(DatetimeT):
-        def __init__(
-            self,
-            time_unit: Literal["ms", "us"],
-            time_zone: str | None = None,
-        ) -> None:
-            self.time_unit = time_unit
-            # TODO validate time zone
-            self.time_zone = time_zone
-
-    class Duration(DurationT):
-        def __init__(self, time_unit: Literal["ms", "us"]) -> None:
-            self.time_unit = time_unit
-
-    class NullType(NullTypeT):
-        ...
-
-    null = NullType()
-
-    def dataframe_from_columns(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-    ) -> DataFrame:
-        data = {}
-        api_versions: set[str] = set()
-        for col in columns:
-            ser = col.column  # type: ignore[attr-defined]
-            data[ser.name] = ser
-            api_versions.add(col.api_version)  # type: ignore[attr-defined]
-        return DataFrame(pd.DataFrame(data), api_version=list(api_versions)[0])
-
-    def column_from_1d_array(  # type: ignore[override]
-        self,
-        data: Any,
-        *,
-        name: str | None = None,
-    ) -> Series:
-        ser = pd.Series(data, name=name)
-        return Series(ser, api_version=self.api_version)
-
-    def column_from_sequence(
-        self,
-        sequence: Sequence[Any],
-        *,
-        dtype: DType | None = None,
-        name: str = "",
-    ) -> Series:
-        if dtype is not None:
-            ser = pd.Series(
-                sequence,
-                dtype=map_standard_dtype_to_pandas_dtype(dtype),
-                name=name,
-            )
-        else:
-            ser = pd.Series(sequence, name=name)
-        return Series(ser, api_version=self.api_version)
-
-    def concat(
-        self,
-        dataframes: Sequence[DataFrameT],
-    ) -> DataFrame:
-        dataframes = cast("Sequence[DataFrame]", dataframes)
-        dtypes = dataframes[0].dataframe.dtypes
-        dfs: list[pd.DataFrame] = []
-        api_versions: set[str] = set()
-        for df in dataframes:
-            try:
-                pd.testing.assert_series_equal(
-                    df.dataframe.dtypes,
-                    dtypes,
-                )
-            except AssertionError as exc:
-                msg = "Expected matching columns"
-                raise ValueError(msg) from exc
-            dfs.append(df.dataframe)
-            api_versions.add(df.api_version)
-        if len(api_versions) > 1:  # pragma: no cover
-            msg = f"Multiple api versions found: {api_versions}"
-            raise ValueError(msg)
-        return DataFrame(
-            pd.concat(
-                dfs,
-                axis=0,
-                ignore_index=True,
-            ),
-            api_version=api_versions.pop(),
-        )
-
-    def dataframe_from_2d_array(
-        self,
-        data: Any,
-        *,
-        names: Sequence[str],
-    ) -> DataFrame:
-        df = pd.DataFrame(data, columns=list(names))
-        return DataFrame(df, api_version=self.api_version)
-
-    def is_null(self, value: Any) -> bool:
-        return value is self.null
-
-    def is_dtype(self, dtype: DType, kind: str | tuple[str, ...]) -> bool:
-        if isinstance(kind, str):
-            kind = (kind,)
-        dtypes: set[Any] = set()
-        for _kind in kind:
-            if _kind == "bool":
-                dtypes.add(Namespace.Bool)
-            if _kind == "signed integer" or _kind == "integral" or _kind == "numeric":
-                dtypes |= {
-                    Namespace.Int64,
-                    Namespace.Int32,
-                    Namespace.Int16,
-                    Namespace.Int8,
-                }
-            if _kind == "unsigned integer" or _kind == "integral" or _kind == "numeric":
-                dtypes |= {
-                    Namespace.UInt64,
-                    Namespace.UInt32,
-                    Namespace.UInt16,
-                    Namespace.UInt8,
-                }
-            if _kind == "floating" or _kind == "numeric":
-                dtypes |= {Namespace.Float64, Namespace.Float32}
-            if _kind == "string":
-                dtypes.add(Namespace.String)
-        return isinstance(dtype, tuple(dtypes))
-
     # --- horizontal reductions
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
         return reduce(lambda x, y: x + y, parse_into_exprs(self, *exprs))
@@ -355,16 +190,8 @@ class Namespace(NamespaceT):
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
         return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
 
-    def col(self, *column_names: str) -> Expr:
-        names = []
-        for name in column_names:
-            if isinstance(name, str):
-                names.append(name)
-            elif isinstance(name, (list, tuple)):
-                names.extend(name)
-            else:
-                raise TypeError(f"Expected str or list/tuple of str, got {type(name)}")
-        return Expr.from_column_names(*names)
+    def col(self, *column_names: str | Iterable[str]) -> Expr:
+        return Expr.from_column_names(flatten_into_expr(*column_names))
 
     def sum(self, column_name: str) -> Expr:
         return Expr.from_column_names(column_name).sum()
@@ -385,13 +212,13 @@ class Namespace(NamespaceT):
     def _create_expr_from_callable(self, call: Callable[[DataFrameT|LazyFrameT], list[SeriesT]]) -> ExprT:
         return Expr(call)
 
-    def _create_series_from_scalar(self, value: Any, series: Series) -> Series:
+    def _create_series_from_scalar(self, value: Any, series: SeriesT) -> SeriesT:
         return Series(
             pd.Series([value], name=series.series.name, index=series.series.index[0:1]),
             api_version=self.api_version,
         )
 
-    def _create_expr_from_series(self, series: Series) -> Expr:
+    def _create_expr_from_series(self, series: SeriesT) -> ExprT:
         return Expr(lambda df: [series])
 
     def all(self) -> Expr:
