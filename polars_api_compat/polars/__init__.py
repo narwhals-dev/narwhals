@@ -1,11 +1,16 @@
 import polars as pl
+from polars_api_compat.spec import (
+    DataFrame as DataFrameT,
+    LazyFrame as LazyFrameT,
+    Expr as ExprT,
+)
 
 
 def convert(df):
     return DataFrame(df), pl
 
 
-class DataFrame:
+class DataFrame(DataFrameT):
     def __init__(self, df):
         self.df = df
 

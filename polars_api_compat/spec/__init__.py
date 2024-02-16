@@ -1,14 +1,22 @@
+from __future__ import annotations
 from typing import Protocol, Iterable, Any
 
 from typing_extensions import Self
 
 class Expr(Protocol):
-    ...
+    def alias(self, name: str) -> Self:
+        ...
 
-IntoExpr = Expr | str | int | float
+    def call(self, df: DataFrame | LazyFrame) -> list[Series]:
+        ...
+
 
 class Namespace(Protocol):
     def col(self, *names: str | Iterable[str]) -> Expr:
+        ...
+
+class Series(Protocol):
+    def alias(self, name: str) -> Self:
         ...
 
 class DataFrame(Protocol):
@@ -30,6 +38,9 @@ class DataFrame(Protocol):
         of a dataframe-agnostic function.
         """
         ...
+    
+    def __dataframe_namespace__(self) -> Namespace:
+        ...
 
 class LazyFrame(Protocol):
     def with_columns(self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr) -> Self:
@@ -43,3 +54,8 @@ class LazyFrame(Protocol):
 
     def collect(self) -> DataFrame:
         ...
+
+    def __lazyframe_namespace__(self) -> Namespace:
+        ...
+
+IntoExpr = Expr | str | int | float | Series
