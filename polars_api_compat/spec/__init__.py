@@ -90,7 +90,7 @@ class DataFrame(Protocol):
         ...
 
     def select(
-        self, *exprs: Expr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> DataFrame:
         ...
 
@@ -126,7 +126,7 @@ class LazyFrame(Protocol):
         ...
 
     def select(
-        self, *exprs: Expr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> LazyFrame:
         ...
 

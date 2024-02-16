@@ -196,7 +196,7 @@ def register_expression_call(
 ) -> ExprT:
     plx = expr.__expr_namespace__()
 
-    def func(df: DataFrame) -> list[Series]:
+    def func(df: DataFrame | LazyFrame) -> list[Series]:
         out: list[Series] = []
         for column in expr.call(df):
             # should be enough to just evaluate?

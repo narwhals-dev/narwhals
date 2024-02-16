@@ -75,9 +75,9 @@ class Namespace(NamespaceT):
         )
 
     def _create_expr_from_callable(
-        self, call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]]
+        self, func: Callable[[DataFrameT | LazyFrameT], list[SeriesT]]
     ) -> ExprT:
-        return Expr(call)
+        return Expr(func)
 
     def _create_series_from_scalar(self, value: Any, series: SeriesT) -> SeriesT:
         return Series(

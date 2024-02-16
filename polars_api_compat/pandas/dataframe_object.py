@@ -38,6 +38,7 @@ class DataFrame(DataFrameT):
         self._validate_columns(dataframe.columns)
         self._dataframe = dataframe
         self.api_version = api_version
+        self.columns = dataframe.columns.to_list()
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self.api_version}) "
@@ -80,10 +81,6 @@ class DataFrame(DataFrameT):
     @property
     def dataframe(self) -> pd.DataFrame:
         return self._dataframe
-
-    @property
-    def columns(self) -> list[str]:
-        return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
 
     def __dataframe_namespace__(
         self,
