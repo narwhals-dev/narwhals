@@ -38,7 +38,7 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
         "__dataframe_namespace__",
     ):
         return NotImplemented
-    if hasattr(other, "__column_namespace__"):
+    if hasattr(other, "__series_namespace__"):
         if other.len() == 1:
             # broadcast
             return other.get_value(0)
@@ -74,7 +74,7 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
         "__dataframe_namespace__",
     ):
         return NotImplemented
-    if hasattr(other, "__column_namespace__"):
+    if hasattr(other, "__series_namespace__"):
         if other.len() == 1:
             # broadcast
             return other.get_value(0)
@@ -117,10 +117,10 @@ def parse_expr(
     pdx = get_namespace(df)
     if isinstance(expr, str):
         return pdx.col(expr).call(df)
-    if hasattr(expr, "__column_namespace__"):
+    if hasattr(expr, "__series_namespace__"):
         expr = cast(Series, expr)  # help mypy
         return [expr]
-    if hasattr(expr, "__column_expr_namespace__"):
+    if hasattr(expr, "__expr_namespace__"):
         expr = cast(Expr, expr)  # help mypy
         return expr.call(df)
     if isinstance(expr, (list, tuple)):
@@ -186,7 +186,7 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                     for arg_name, arg_value in kwargs.items()
                 },
             )
-            if hasattr(_out, "__column_namespace__"):
+            if hasattr(_out, "__series_namespace__"):
                 out.append(_out)
             else:
                 out.append(plx._create_series_from_scalar(_out, column))

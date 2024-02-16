@@ -82,7 +82,7 @@ class Series(ColumnT):
         )
 
     # In the standard
-    def __column_namespace__(
+    def __series_namespace__(
         self,
     ) -> polars_api_compat.pandas.Namespace:
         return polars_api_compat.pandas.Namespace(
@@ -364,12 +364,12 @@ class Series(ColumnT):
         idx = self.column.index
         ser = self.column.copy()
         if is_extension_array_dtype(ser.dtype):
-            if self.__column_namespace__().is_null(value):
+            if self.__series_namespace__().is_null(value):
                 ser[np.isnan(ser).fillna(False).to_numpy(bool)] = pd.NA
             else:
                 ser[np.isnan(ser).fillna(False).to_numpy(bool)] = value
         else:
-            if self.__column_namespace__().is_null(value):
+            if self.__series_namespace__().is_null(value):
                 ser[np.isnan(ser).fillna(False).to_numpy(bool)] = np.nan
             else:
                 ser[np.isnan(ser).fillna(False).to_numpy(bool)] = value

@@ -17,7 +17,6 @@ else:
 class GroupBy(GroupByT):
     def __init__(self, df: DataFrame, keys: Sequence[str], api_version: str) -> None:
         self._df = df.dataframe
-        self._is_persisted = df._is_persisted
         self._grouped = self._df.groupby(list(keys), sort=False, as_index=False)
         self._keys = list(keys)
         self.api_version = api_version
@@ -47,7 +46,6 @@ class GroupBy(GroupByT):
         return DataFrame(
             result,
             api_version=self.api_version,
-            is_persisted=self._is_persisted,
         )
 
     def size(self) -> DataFrame:
@@ -137,7 +135,6 @@ class GroupBy(GroupByT):
                     DataFrame(
                         _df,
                         api_version=self.api_version,
-                        is_persisted=self._is_persisted,
                     )
                 )
                 for _result in result:

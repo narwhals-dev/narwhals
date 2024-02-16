@@ -19,6 +19,7 @@ from polars_api_compat.spec import (
     LazyFrame as LazyFrameT,
     Series as SeriesT,
     IntoExpr,
+    Expr as ExprT,
 )
 
 if TYPE_CHECKING:
@@ -352,7 +353,7 @@ class Namespace(NamespaceT):
         return reduce(lambda x, y: x & y, flatten_args(exprs))
 
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
-        return reduce(lambda x, y: x | y, flatten_args(exprs))
+        return reduce(lambda x, y: x | y, flatten_args(*exprs))
 
     def col(self, *column_names: str) -> Expr:
         names = []
