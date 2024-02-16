@@ -346,14 +346,14 @@ class Namespace(NamespaceT):
         return isinstance(dtype, tuple(dtypes))
 
     # --- horizontal reductions
-    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
-        return reduce(lambda x, y: x + y, flatten_args(*exprs))
+    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
+        return reduce(lambda x, y: x + y, flatten_args(exprs))
 
-    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
+    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
         return reduce(lambda x, y: x & y, flatten_args(exprs))
 
-    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> SeriesT:
-        return reduce(lambda x, y: x | y, flatten_args(*exprs))
+    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
+        return reduce(lambda x, y: x | y, flatten_args(exprs))
 
     def col(self, *column_names: str) -> Expr:
         names = []

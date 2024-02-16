@@ -95,7 +95,7 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
 
 
 def evaluate_expr(df, expr):
-    if hasattr(expr, "__column_expr_namespace__"):
+    if hasattr(expr, "__expr_namespace__"):
         return expr.call(df)
     return expr
 

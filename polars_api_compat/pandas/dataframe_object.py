@@ -124,9 +124,7 @@ class DataFrame(DataFrameT):
         **named_exprs: IntoExpr,
     ) -> DataFrame:
         new_cols = parse_exprs(self, *exprs, **named_exprs)
-        df = pd.concat(
-            {column.name: column.column for column in new_cols}, axis=1, copy=False
-        )
+        df = pd.concat({column.name: column.column for column in new_cols}, axis=1, copy=False)
         return self._from_dataframe(df)
 
     def filter(
