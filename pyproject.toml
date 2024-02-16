@@ -1,0 +1,2 @@
+[tool.mypy]
+exclude = ["polars_api_compat/pandas"]
