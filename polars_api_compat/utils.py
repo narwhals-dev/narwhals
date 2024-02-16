@@ -130,6 +130,14 @@ def evaluate_into_expr(
     expr = parse_into_expr(get_namespace(df), into_expr)
     return expr.call(df)
 
+def flatten_str(*args: str | Iterable[str]) -> list[str]:
+    out: list[IntoExpr] = []
+    for arg in args:
+        if isinstance(arg, (list, tuple)):
+            out.extend(arg)
+        else:
+            out.append(arg)
+    return out
 
 def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
     out: list[IntoExpr] = []

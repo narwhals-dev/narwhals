@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing_extensions import Self
-from polars_api_compat.utils import register_expression_call, flatten_into_expr, parse_into_exprs
+from polars_api_compat.utils import register_expression_call, flatten_into_expr, flatten_str, parse_into_exprs
 
 import re
 from functools import reduce
@@ -57,7 +57,7 @@ class Namespace(NamespaceT):
         return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
 
     def col(self, *column_names: str | Iterable[str]) -> Expr:
-        return Expr.from_column_names(*flatten_into_expr(*column_names))
+        return Expr.from_column_names(*flatten_str(*column_names))
 
     def sum(self, column_name: str) -> Expr:
         return Expr.from_column_names(column_name).sum()

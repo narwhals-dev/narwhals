@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from polars_api_compat.utils import evaluate_into_exprs, parse_into_expr, parse_into_exprs
 
-from polars_api_compat.utils import flatten_into_expr
+from polars_api_compat.utils import flatten_into_expr, flatten_str
 import collections
 import warnings
 from typing import TYPE_CHECKING, Iterable
@@ -319,7 +319,7 @@ class LazyFrame(DataFrameT):
         *keys: str,
         ascending: Sequence[bool] | bool = True,
     ) -> DataFrame:
-        keys = flatten_into_expr(*keys)
+        keys = flatten_str(*keys)
         if not keys:
             keys = self.dataframe.columns.tolist()
         df = self.dataframe
