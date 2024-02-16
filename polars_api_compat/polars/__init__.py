@@ -1,8 +1,6 @@
 import polars as pl
 from polars_api_compat.spec import (
     DataFrame as DataFrameT,
-    LazyFrame as LazyFrameT,
-    Expr as ExprT,
 )
 
 

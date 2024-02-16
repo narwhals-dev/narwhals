@@ -1,7 +1,14 @@
 from __future__ import annotations
 from typing import Any, Iterable, cast
 
-from polars_api_compat.spec import DataFrame, LazyFrame, Series, Expr, IntoExpr, Namespace
+from polars_api_compat.spec import (
+    DataFrame,
+    LazyFrame,
+    Series,
+    Expr,
+    IntoExpr,
+    Namespace,
+)
 
 
 # TODO: split this up!
@@ -88,6 +95,7 @@ def evaluate_expr(df, expr):
         return expr.call(df)
     return expr
 
+
 def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
     if hasattr(df, "__dataframe_namespace__"):
         return df.__dataframe_namespace__()
@@ -95,7 +103,10 @@ def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
         return df.__lazyframe_namespace__()
     raise TypeError(f"Expected DataFrame or LazyFrame, got {type(df)}")
 
-def parse_expr(df: DataFrame | LazyFrame, expr: IntoExpr | Iterable[IntoExpr]) -> list[Series]:
+
+def parse_expr(
+    df: DataFrame | LazyFrame, expr: IntoExpr | Iterable[IntoExpr]
+) -> list[Series]:
     """
     Return list of raw columns.
     """
@@ -130,7 +141,11 @@ def flatten_strings(*args: str):
     return out
 
 
-def parse_exprs(df: DataFrame|LazyFrame, *exprs: IntoExpr|Iterable[IntoExpr], **named_exprs: IntoExpr) -> list[Series]:
+def parse_exprs(
+    df: DataFrame | LazyFrame,
+    *exprs: IntoExpr | Iterable[IntoExpr],
+    **named_exprs: IntoExpr,
+) -> list[Series]:
     """
     Take exprs and evaluate Series underneath them.
 
@@ -155,9 +170,7 @@ def parse_exprs(df: DataFrame|LazyFrame, *exprs: IntoExpr|Iterable[IntoExpr], **
     return new_cols
 
 
-def register_expression_call(
-    expr: Expr, attr: str, *args: Any, **kwargs: Any
-) -> Expr:  # type: ignore[override]
+def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -> Expr:  # type: ignore[override]
     plx = expr.__column_expr_namespace__()
 
     def func(df: DataFrame) -> list[Series]:

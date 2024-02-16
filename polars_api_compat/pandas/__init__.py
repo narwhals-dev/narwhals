@@ -528,9 +528,7 @@ class Namespace(NamespaceT):
             ]
         )
 
-    def create_column_expr(
-        self, call: Callable[[DataFrame], list[Series]]
-    ) -> Expr:
+    def create_column_expr(self, call: Callable[[DataFrame], list[Series]]) -> Expr:
         return Expr(call)
 
     def create_column_from_scalar(self, value: Any, column: Series) -> Series:

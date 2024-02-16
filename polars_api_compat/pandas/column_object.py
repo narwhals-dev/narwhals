@@ -426,10 +426,8 @@ class Series(ColumnT):
 
     def cast(self, dtype: DType) -> Series:
         ser = self.column
-        pandas_dtype = (
-            polars_api_compat.pandas.map_standard_dtype_to_pandas_dtype(
-                dtype,
-            )
+        pandas_dtype = polars_api_compat.pandas.map_standard_dtype_to_pandas_dtype(
+            dtype,
         )
         return self._from_series(ser.astype(pandas_dtype))
 
