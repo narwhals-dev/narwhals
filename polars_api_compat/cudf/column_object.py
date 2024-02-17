@@ -78,7 +78,8 @@ class Series(SeriesT):
         return self._from_series(ser.loc[validate_column_comparand(self, mask)])
 
     def item(self) -> Any:
-        return self.series.item()
+        assert len(self.series) == 1
+        return self.series.iloc[0]
 
     # Binary comparisons
 

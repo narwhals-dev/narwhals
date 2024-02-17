@@ -97,7 +97,9 @@ class LazyGroupBy(LazyGroupByT):
             for expr in exprs:
                 result = expr.call(LazyFrame(_df, api_version=self.api_version))
                 for _result in result:
-                    out[_result.name].append(_result.series.item())
+                    _series = _result.series
+                    assert len(_series) == 1
+                    out[_result.name].append(_series.iloc[0])
         result = pd.DataFrame(out)
         result = pd.concat([result, *new_cols], axis=1)
         return LazyFrame(result, api_version=self.api_version)
