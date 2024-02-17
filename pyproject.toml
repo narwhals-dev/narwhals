@@ -29,21 +29,23 @@ line-length = 90
 fix = true
 target-version = "py38"
 
-select = [
+lint.select = [
   "ALL",
 ]
-ignore = [
+lint.ignore = [
   'A003',
   'ANN101',
   'ANN401',
   'ARG002',  # todo: enable
   'ARG003',  # todo: enable
   'C901',
+  'COM812',
   'D',
   'DTZ',
   'E501',
   'FBT003',  # todo: enable
   'FIX',
+  'ISC001',
   'PD',
   'PLR0911',
   'PLR0912',
@@ -58,7 +60,7 @@ ignore = [
   'TRY004'
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 force-single-line = true
 
 [tool.black]

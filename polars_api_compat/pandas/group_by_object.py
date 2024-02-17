@@ -1,22 +1,18 @@
 from __future__ import annotations
-import collections
 
-from typing import TYPE_CHECKING, Any, Iterable
+import collections
+from typing import Any
+from typing import Iterable
 
 import pandas as pd
-from polars_api_compat.utils import parse_into_exprs
 
 from polars_api_compat.pandas.dataframe_object import LazyFrame
-from polars_api_compat.spec import (
-    DataFrame as DataFrameT,
-    LazyFrame as LazyFrameT,
-    GroupBy as GroupByT,
-    LazyGroupBy as LazyGroupByT,
-    IntoExpr,
-)
-
-if TYPE_CHECKING:
-    pass
+from polars_api_compat.spec import DataFrame as DataFrameT
+from polars_api_compat.spec import GroupBy as GroupByT
+from polars_api_compat.spec import IntoExpr
+from polars_api_compat.spec import LazyFrame as LazyFrameT
+from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
+from polars_api_compat.utils import parse_into_exprs
 
 
 class GroupBy(GroupByT):
@@ -49,10 +45,14 @@ class LazyGroupBy(LazyGroupByT):
         **named_aggs: IntoExpr,
     ) -> LazyFrameT:
         exprs = parse_into_exprs(
-            self._df.__lazyframe_namespace__(), *aggs, **named_aggs
+            self._df.__lazyframe_namespace__(),
+            *aggs,
+            **named_aggs,
         )
         grouped = self._df.dataframe.groupby(
-            list(self._keys), sort=False, as_index=False
+            list(self._keys),
+            sort=False,
+            as_index=False,
         )
 
         # Do some fastpaths, if possible
@@ -63,25 +63,25 @@ class LazyGroupBy(LazyGroupByT):
                 expr.function_name is not None
                 and expr.depth is not None
                 and expr.depth <= 2
+                # todo: this one shouldn't be necessary?
+                and expr.root_names is not None
             ):
                 # We must have a simple aggregation, such as
                 #     .agg(mean=pl.col('a').mean())
                 # or
                 #     .agg(pl.col('a').mean())
                 if expr.root_names is None or expr.output_names is None:
-                    raise AssertionError("Unreachable code, please report a bug")
+                    msg = "Unreachable code, please report a bug"
+                    raise AssertionError(msg)
                 if len(expr.root_names) != len(expr.output_names):
-                    raise AssertionError("Unreachable code, please report a bug")
-                new_names = {
-                    root: output
-                    for root, output in zip(expr.root_names, expr.output_names)
-                }
+                    msg = "Unreachable code, please report a bug"
+                    raise AssertionError(msg)
+                new_names = dict(zip(expr.root_names, expr.output_names))
                 new_cols.append(
                     getattr(grouped[expr.root_names], expr.function_name)()[
                         expr.root_names
-                    ].rename(columns=new_names)
+                    ].rename(columns=new_names),
                 )
-                print(f"fastpath for {expr}")
                 to_remove.append(i)
         exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
 
@@ -94,5 +94,5 @@ class LazyGroupBy(LazyGroupByT):
                 for _result in result:
                     out[_result.name].append(_result.series.item())
         result = pd.DataFrame(out)
-        result = pd.concat([result] + new_cols, axis=1, copy=False)
+        result = pd.concat([result, *new_cols], axis=1, copy=False)
         return LazyFrame(result, api_version=self.api_version)
