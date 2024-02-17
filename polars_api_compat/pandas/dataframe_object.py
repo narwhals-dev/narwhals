@@ -127,7 +127,7 @@ class DataFrame(DataFrameT):
 
     def join(
         self,
-        other: DataFrame,
+        other: DataFrameT,
         *,
         how: Literal["left", "inner", "outer"] = "inner",
         left_on: str | list[str],

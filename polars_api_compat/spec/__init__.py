@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Protocol, Iterable, Any, Callable
+from typing import Protocol, Iterable, Any, Callable, Literal
 
 from typing_extensions import Self
 
@@ -127,6 +127,16 @@ class DataFrame(Protocol):
     def lazy(self) -> LazyFrame:
         ...
 
+    def join(
+        self,
+        other: DataFrame,
+        *,
+        how: Literal["left", "inner", "outer"] = "inner",
+        left_on: str | list[str],
+        right_on: str | list[str],
+    ) -> DataFrame:
+        ...
+
 
 class LazyFrame(Protocol):
     api_version: str
@@ -167,6 +177,16 @@ class LazyFrame(Protocol):
         ...
 
     def __lazyframe_namespace__(self) -> Namespace:
+        ...
+
+    def join(
+        self,
+        other: LazyFrame,
+        *,
+        how: Literal["left", "inner", "outer"] = "inner",
+        left_on: str | list[str],
+        right_on: str | list[str],
+    ) -> LazyFrame:
         ...
 
 
