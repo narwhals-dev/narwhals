@@ -214,9 +214,7 @@ class LazyFrame(LazyFrameT):
         **named_exprs: IntoExpr,
     ) -> LazyFrameT:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        df = pd.concat(
-            {series.name: series.series for series in new_series}, axis=1, copy=False
-        )
+        df = pd.concat({series.name: series.series for series in new_series}, axis=1)
         return self._from_dataframe(df)
 
     def filter(
