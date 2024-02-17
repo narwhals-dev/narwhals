@@ -128,7 +128,7 @@ class Expr(ExprT):
     def __init__(
         self,
         call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
-        depth: int,
+        depth: int | None,
         function_name: str | None,
         root_names: list[str] | None,
         output_names: list[str] | None,
@@ -138,10 +138,10 @@ class Expr(ExprT):
         if depth == 1 and function_name is not None:
             # Set name to Some if it's a simple expression (e.g. col('a').sum()), so that
             # fast paths can be used in some cases.
-            self._function_name = function_name
+            self._function_name: str | None = function_name
         else:
             self._function_name = None
-        self._root_names = root_names
+        self.root_names = root_names
         self._depth = depth
         self._output_names = output_names
 
@@ -256,8 +256,8 @@ class Expr(ExprT):
         # so that `depth` and `name` aren't modified.
         return Expr(
             lambda df: [series.alias(name) for series in self.call(df)],
-            depth=self._depth,
-            function_name=self._function_name,
-            root_names=self._root_names,
+            depth=self.depth,
+            function_name=self.function_name,
+            root_names=self.root_names,
             output_names=[name],
         )

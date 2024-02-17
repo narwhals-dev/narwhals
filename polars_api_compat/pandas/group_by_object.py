@@ -100,11 +100,11 @@ class LazyGroupBy(LazyGroupByT):
                 # Need the root names too, right?
                 new_names = {
                     root: output
-                    for root, output in zip(expr._root_names, expr._output_names)
+                    for root, output in zip(expr.root_names, expr._output_names)
                 }
                 new_cols.append(
-                    getattr(self._grouped[expr._root_names], expr._function_name)()[
-                        expr._root_names
+                    getattr(self._grouped[expr.root_names], expr._function_name)()[
+                        expr.root_names
                     ].rename(columns=new_names)
                 )
                 exprs.remove(expr)

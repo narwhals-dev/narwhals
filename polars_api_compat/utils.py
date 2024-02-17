@@ -218,6 +218,6 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
         func,
         depth=expr._depth + 1,
         name=attr,
-        root_names=expr._root_names,
+        root_names=expr.root_names,
         output_names=expr._output_names,
     )

@@ -7,6 +7,10 @@ from typing_extensions import Self
 class Expr(Protocol):
     call: Callable[[DataFrame | LazyFrame], list[Series]]
     api_version: str
+    depth: int | None
+    root_names: list[str] | None
+    output_names: list[str] | None
+    function_name: str | None
 
     def alias(self, name: str) -> Expr:
         ...
@@ -44,8 +48,9 @@ class Namespace(Protocol):
         self,
         func: Callable[[DataFrame | LazyFrame], list[Series]],
         depth: int,
-        name: str | None = None,
-        root_names: list[str] | None = None,
+        name: str | None,
+        root_names: list[str] | None,
+        output_names: list[str] | None,
     ) -> Expr:
         ...
 
