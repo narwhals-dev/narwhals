@@ -2,9 +2,9 @@ import pandas as pd
 import polars_api_compat
 
 df_raw = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6]})
-df, pl = polars_api_compat.translate(df_raw, version="0.20")
+df, pl = polars_api_compat.to_polars_api(df_raw, version="0.20")
 df_raw_2 = pd.DataFrame({"a": [1, 3], "c": [7, 9]})
-df2, pl = polars_api_compat.translate(df_raw_2, version="0.20")
+df2, pl = polars_api_compat.to_polars_api(df_raw_2, version="0.20")
 
 result = df.sort("a", "b")
 print(result.dataframe)
