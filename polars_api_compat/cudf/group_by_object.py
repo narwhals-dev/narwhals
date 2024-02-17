@@ -6,7 +6,7 @@ from typing import Iterable
 
 import cudf as pd
 
-from polars_api_compat.pandas.dataframe_object import LazyFrame
+from polars_api_compat.cudf.dataframe_object import LazyFrame
 from polars_api_compat.spec import DataFrame as DataFrameT
 from polars_api_compat.spec import GroupBy as GroupByT
 from polars_api_compat.spec import IntoExpr

@@ -60,8 +60,8 @@ class Series(SeriesT):
     # In the standard
     def __series_namespace__(
         self,
-    ) -> polars_api_compat.pandas.Namespace:
-        return polars_api_compat.pandas.Namespace(
+    ) -> polars_api_compat.cudf.Namespace:
+        return polars_api_compat.cudf.Namespace(
             api_version=self.api_version,
         )
 

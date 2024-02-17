@@ -82,7 +82,7 @@ class DataFrame(DataFrameT):
     def __dataframe_namespace__(
         self,
     ) -> NamespaceT:
-        return polars_api_compat.pandas.Namespace(
+        return polars_api_compat.cudf.Namespace(
             api_version=self.api_version,
         )
 
@@ -91,7 +91,7 @@ class DataFrame(DataFrameT):
         return self.dataframe.shape  # type: ignore[no-any-return]
 
     def group_by(self, *keys: str | Iterable[str]) -> GroupByT:
-        from polars_api_compat.pandas.group_by_object import GroupBy
+        from polars_api_compat.cudf.group_by_object import GroupBy
 
         return GroupBy(self, flatten_str(*keys), api_version=self.api_version)
 
@@ -199,12 +199,12 @@ class LazyFrame(LazyFrameT):
     def __lazyframe_namespace__(
         self,
     ) -> NamespaceT:
-        return polars_api_compat.pandas.Namespace(
+        return polars_api_compat.cudf.Namespace(
             api_version=self.api_version,
         )
 
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupByT:
-        from polars_api_compat.pandas.group_by_object import LazyGroupBy
+        from polars_api_compat.cudf.group_by_object import LazyGroupBy
 
         return LazyGroupBy(self, flatten_str(*keys), api_version=self.api_version)
 

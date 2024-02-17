@@ -7,8 +7,8 @@ from typing import Iterable
 
 import cudf as pd
 
-from polars_api_compat.pandas.column_object import Series
-from polars_api_compat.pandas.dataframe_object import LazyFrame
+from polars_api_compat.cudf.column_object import Series
+from polars_api_compat.cudf.dataframe_object import LazyFrame
 from polars_api_compat.spec import DataFrame as DataFrameT
 from polars_api_compat.spec import Expr as ExprT
 from polars_api_compat.spec import IntoExpr
