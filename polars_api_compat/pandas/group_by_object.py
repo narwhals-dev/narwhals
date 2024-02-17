@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Iterable
 import pandas as pd
 from polars_api_compat.utils import parse_into_exprs
 
-from polars_api_compat.pandas.dataframe_object import DataFrame, LazyFrame
+from polars_api_compat.pandas.dataframe_object import LazyFrame
 from polars_api_compat.spec import (
     DataFrame as DataFrameT,
     LazyFrame as LazyFrameT,
@@ -25,12 +25,6 @@ class GroupBy(GroupByT):
         self._keys = list(keys)
         self.api_version = api_version
 
-    def _to_dataframe(self, result: pd.DataFrame) -> DataFrame:
-        return DataFrame(
-            result,
-            api_version=self.api_version,
-        )
-
     def agg(
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
@@ -48,12 +42,6 @@ class LazyGroupBy(LazyGroupByT):
         self._df = df
         self._keys = list(keys)
         self.api_version = api_version
-
-    def _to_dataframe(self, result: pd.DataFrame) -> LazyFrameT:
-        return LazyFrame(
-            result,
-            api_version=self.api_version,
-        )
 
     def agg(
         self,
@@ -107,4 +95,4 @@ class LazyGroupBy(LazyGroupByT):
                     out[_result.name].append(_result.series.item())
         result = pd.DataFrame(out)
         result = pd.concat([result] + new_cols, axis=1, copy=False)
-        return self._to_dataframe(result)
+        return LazyFrame(result, api_version=self.api_version)
