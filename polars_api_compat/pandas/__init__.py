@@ -72,7 +72,7 @@ class Namespace(NamespaceT):
                 )
             ],
             depth=0,
-            function_name=None,
+            function_name="len",
             root_names=None,
             output_names=["len"],  # todo: check this
         )
@@ -81,14 +81,14 @@ class Namespace(NamespaceT):
         self,
         func: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
         depth: int,
-        name: str | None,
+        function_name: str | None,
         root_names: list[str] | None,
         output_names: list[str] | None,
     ) -> ExprT:
         return Expr(
             func,
             depth=depth,
-            function_name=name,
+            function_name=function_name,
             root_names=root_names,
             output_names=output_names,
         )
@@ -103,7 +103,7 @@ class Namespace(NamespaceT):
         return Expr(
             lambda df: [series],
             depth=0,
-            function_name=None,
+            function_name="from_series",
             root_names=None,
             output_names=None,
         )
@@ -118,7 +118,7 @@ class Namespace(NamespaceT):
                 for column_name in df.columns
             ],
             depth=0,
-            function_name=None,
+            function_name="all",
             root_names=None,
             output_names=None,
         )
@@ -140,6 +140,15 @@ class Expr(ExprT):
         self.root_names = root_names
         self.depth = depth
         self.output_names = output_names
+
+    def __repr__(self) -> str:
+        return (
+            f"Expr("
+            f"depth={self.depth}, "
+            f"function_name={self.function_name}, "
+            f"root_names={self.root_names}, "
+            f"output_names={self.output_names}"
+        )
 
     @classmethod
     def from_column_names(cls: type[Expr], *column_names: str) -> ExprT:

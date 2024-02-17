@@ -48,7 +48,7 @@ class Namespace(Protocol):
         self,
         func: Callable[[DataFrame | LazyFrame], list[Series]],
         depth: int,
-        name: str | None,
+        function_name: str | None,
         root_names: list[str] | None,
         output_names: list[str] | None,
     ) -> Expr:
