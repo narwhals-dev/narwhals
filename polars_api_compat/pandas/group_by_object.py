@@ -93,8 +93,9 @@ class LazyGroupBy(LazyGroupByT):
         exprs = parse_into_exprs(
             self._df.__lazyframe_namespace__(), *aggs, **named_aggs
         )
-        new_cols = []
-        for expr in exprs:
+        new_cols: list[pd.DataFrame] = []
+        to_remove: list[int] = []
+        for i, expr in enumerate(exprs):
             if (
                 expr.function_name is not None
                 and expr.depth is not None
@@ -115,7 +116,9 @@ class LazyGroupBy(LazyGroupByT):
                         expr.root_names
                     ].rename(columns=new_names)
                 )
-                exprs.remove(expr)
+                print(f"fastpath for {expr}")
+                to_remove.append(i)
+        exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
 
         out: dict[str, list[Any]] = collections.defaultdict(list)
         for key, _df in self._grouped:

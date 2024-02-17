@@ -31,7 +31,6 @@ dfx, plx = polars_api_compat.translate(df, version="0.20")
 
 
 result = dfx.group_by("b").agg(
-    simple=plx.col("a").sum(),
-    complex=(plx.col("a") + 1).sum(),
+    simple=plx.col("a").sum(), complex=(plx.col("a") + 1).sum(), other=plx.sum("a")
 )
 print(result.dataframe)
