@@ -15,23 +15,21 @@ ExprT = TypeVar("ExprT", bound=Expr)
 T = TypeVar("T")
 
 
-# TODO: split this up!
-# Have a validate_column_comparand and validate_dataframe_comparand
-# for the column one:
-# - if it's a 1-row column, return the value
-# - if it's a multi-row column, return the raw column if it's the same
-#   length
-# - if it's a scalar, return it
 def validate_column_comparand(column: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
+
+    If RHS is length 1, return the scalar value, so that the underlying
+    library can broadcast it.
     """
-    if isinstance(other, list) and len(other) > 1:
-        # e.g. `plx.all() + plx.all()`
-        raise ValueError("Multi-output expressions are not supported in this context")
-    elif isinstance(other, list) and len(other) == 1:
+    if isinstance(other, list):
+        if len(other) > 1:
+            # e.g. `plx.all() + plx.all()`
+            raise ValueError(
+                "Multi-output expressions are not supported in this context"
+            )
         other = other[0]
     if hasattr(
         other,
