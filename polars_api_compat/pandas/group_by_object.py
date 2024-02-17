@@ -95,15 +95,23 @@ class LazyGroupBy(LazyGroupByT):
         )
         new_cols = []
         for expr in exprs:
-            if expr._function_name is not None:
+            if (
+                expr.function_name is not None
+                and expr.depth is not None
+                and expr.depth == 2
+            ):
                 # Must be a simple aggregation! Fastpath!
                 # Need the root names too, right?
+                if expr.root_names is None or expr.output_names is None:
+                    raise AssertionError("Unreachable code, please report a bug")
+                if len(expr.root_names) != len(expr.output_names):
+                    raise AssertionError("Unreachable code, please report a bug")
                 new_names = {
                     root: output
-                    for root, output in zip(expr.root_names, expr._output_names)
+                    for root, output in zip(expr.root_names, expr.output_names)
                 }
                 new_cols.append(
-                    getattr(self._grouped[expr.root_names], expr._function_name)()[
+                    getattr(self._grouped[expr.root_names], expr.function_name)()[
                         expr.root_names
                     ].rename(columns=new_names)
                 )

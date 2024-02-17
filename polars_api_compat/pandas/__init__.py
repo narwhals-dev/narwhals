@@ -135,15 +135,11 @@ class Expr(ExprT):
     ) -> None:
         self.call = call
         self.api_version = "0.20.0"  # todo
-        if depth == 1 and function_name is not None:
-            # Set name to Some if it's a simple expression (e.g. col('a').sum()), so that
-            # fast paths can be used in some cases.
-            self._function_name: str | None = function_name
-        else:
-            self._function_name = None
+        self.depth = depth
+        self.function_name = function_name
         self.root_names = root_names
-        self._depth = depth
-        self._output_names = output_names
+        self.depth = depth
+        self.output_names = output_names
 
     @classmethod
     def from_column_names(cls: type[Expr], *column_names: str) -> ExprT:
@@ -252,11 +248,15 @@ class Expr(ExprT):
     # Other
 
     def alias(self, name: str) -> ExprT:
-        # Define this one manually,
-        # so that `depth` and `name` aren't modified.
+        # Define this one manually, so that we can
+        # override `output_names`
+        if self.root_names is None or len(self.root_names) > 1:
+            raise ValueError("Can only alias a single column")
+        if self.depth is None:
+            raise AssertionError("Unreachable code, please report a bug")
         return Expr(
             lambda df: [series.alias(name) for series in self.call(df)],
-            depth=self.depth,
+            depth=self.depth + 1,
             function_name=self.function_name,
             root_names=self.root_names,
             output_names=[name],

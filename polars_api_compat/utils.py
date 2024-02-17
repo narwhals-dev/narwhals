@@ -214,10 +214,12 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
                 out.append(plx._create_series_from_scalar(_out, column))
         return out
 
+    if expr.depth is None:
+        raise AssertionError("Unreachable code, please report a bug")
     return plx._create_expr_from_callable(
         func,
-        depth=expr._depth + 1,
+        depth=expr.depth + 1,
         name=attr,
         root_names=expr.root_names,
-        output_names=expr._output_names,
+        output_names=expr.output_names,
     )
