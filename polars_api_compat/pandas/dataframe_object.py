@@ -125,37 +125,18 @@ class DataFrame(DataFrameT):
     ) -> DataFrameT:
         return self.lazy().sort(*keys, descending=descending).collect()
 
-    # Other
     def join(
         self,
         other: DataFrame,
         *,
-        how: Literal["left", "inner", "outer"],
+        how: Literal["left", "inner", "outer"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
-    ) -> DataFrame:
-        if how not in ["left", "inner", "outer"]:
-            msg = f"Expected 'left', 'inner', 'outer', got: {how}"
-            raise ValueError(msg)
-
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
-
-        if overlap := (set(self.columns) - set(left_on)).intersection(
-            set(other.columns) - set(right_on),
-        ):
-            msg = f"Found overlapping columns in join: {overlap}. Please rename columns to avoid this."
-            raise ValueError(msg)
-
-        return self._from_dataframe(
-            self.dataframe.merge(
-                other.dataframe,
-                left_on=left_on,
-                right_on=right_on,
-                how=how,
-            ),
+    ) -> DataFrameT:
+        return (
+            self.lazy()
+            .join(other.lazy(), how=how, left_on=left_on, right_on=right_on)
+            .collect()
         )
 
     def lazy(self) -> LazyFrameT:
@@ -284,12 +265,12 @@ class LazyFrame(LazyFrameT):
         self,
         other: LazyFrameT,
         *,
-        how: Literal["left", "inner", "outer"],
+        how: Literal["left", "inner", "outer"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> LazyFrameT:
-        if how not in ["left", "inner", "outer"]:
-            msg = f"Expected 'left', 'inner', 'outer', got: {how}"
+        if how not in ["inner"]:
+            msg = "Only inner join supported for now, others coming soon"
             raise ValueError(msg)
 
         if isinstance(left_on, str):
