@@ -48,6 +48,7 @@ reuse as much as possible, nothing complicated!
 fastpath for groupby is probably really important...
 so, let's:
 - sort out typing in Series [done]
-- get fastpaths in groupby
-- sort out join
+- get fastpaths in groupby [done]
+- sort out join [say, only allow inner?]
+- check what skrub and great tables are using?
 that would already be...amazing???
