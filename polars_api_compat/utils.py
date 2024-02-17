@@ -45,6 +45,7 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
             hasattr(column.series, "index")
             and hasattr(other.series, "index")
             and column.series.index is not other.series.index
+            and not (column.series.index == other.series.index).all()
         ):
             msg = (
                 "Left index is not right index. "
@@ -82,6 +83,7 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
             hasattr(dataframe.dataframe, "index")
             and hasattr(other.series, "index")
             and dataframe.dataframe.index is not other.series.index
+            and not (dataframe.dataframe.index == other.series.index).all()
         ):
             msg = (
                 "Left index is not right index. "
