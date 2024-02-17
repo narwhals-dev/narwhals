@@ -250,8 +250,6 @@ class Expr(ExprT):
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
         # override `output_names`
-        if self.root_names is None or len(self.root_names) > 1:
-            raise ValueError("Can only alias a single column")
         if self.depth is None:
             raise AssertionError("Unreachable code, please report a bug")
         return Expr(
