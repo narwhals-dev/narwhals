@@ -21,19 +21,12 @@ if TYPE_CHECKING:
 
 class GroupBy(GroupByT):
     def __init__(self, df: DataFrameT, keys: list[str], api_version: str) -> None:
-        self._df = df.dataframe
-        self._grouped = self._df.groupby(list(keys), sort=False, as_index=False)
+        self._df = df
+        self._grouped = self._df.dataframe.groupby(
+            list(keys), sort=False, as_index=False
+        )
         self._keys = list(keys)
         self.api_version = api_version
-
-    def _validate_result(self, result: pd.DataFrame) -> None:
-        failed_columns = self._df.columns.difference(result.columns)
-        if len(failed_columns) > 0:  # pragma: no cover
-            msg = "Groupby operation could not be performed on columns "
-            f"{failed_columns}. Please drop them before calling group_by."
-            raise AssertionError(
-                msg,
-            )
 
     def _to_dataframe(self, result: pd.DataFrame) -> DataFrame:
         return DataFrame(
@@ -70,15 +63,6 @@ class LazyGroupBy(LazyGroupByT):
         self._keys = list(keys)
         self.api_version = api_version
 
-    def _validate_result(self, result: pd.DataFrame) -> None:
-        failed_columns = self._df.dataframe.columns.difference(result.columns)
-        if len(failed_columns) > 0:  # pragma: no cover
-            msg = "Groupby operation could not be performed on columns "
-            f"{failed_columns}. Please drop them before calling group_by."
-            raise AssertionError(
-                msg,
-            )
-
     def _to_dataframe(self, result: pd.DataFrame) -> LazyFrameT:
         return LazyFrame(
             result,
@@ -93,6 +77,8 @@ class LazyGroupBy(LazyGroupByT):
         exprs = parse_into_exprs(
             self._df.__lazyframe_namespace__(), *aggs, **named_aggs
         )
+
+        # Do some fastpaths, if possible
         new_cols: list[pd.DataFrame] = []
         to_remove: list[int] = []
         for i, expr in enumerate(exprs):
@@ -101,8 +87,8 @@ class LazyGroupBy(LazyGroupByT):
                 and expr.depth is not None
                 and expr.depth == 2
             ):
-                # Must be a simple aggregation! Fastpath!
-                # Need the root names too, right?
+                # We must have a simple aggregation, such as
+                # .agg(mean=pl.col('a').mean())
                 if expr.root_names is None or expr.output_names is None:
                     raise AssertionError("Unreachable code, please report a bug")
                 if len(expr.root_names) != len(expr.output_names):
