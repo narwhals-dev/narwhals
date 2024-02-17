@@ -142,55 +142,55 @@ class Expr(ExprT):
     def __and__(self, other: Expr | bool | Any) -> ExprT:
         return register_expression_call(self, "__and__", other)
 
-    def __rand__(self, other: Series | Any) -> ExprT:
+    def __rand__(self, other: Any) -> ExprT:
         return register_expression_call(self, "__rand__", other)
 
     def __or__(self, other: Expr | bool | Any) -> ExprT:
         return register_expression_call(self, "__or__", other)
 
-    def __ror__(self, other: Series | Any) -> ExprT:
+    def __ror__(self, other: Any) -> ExprT:
         return register_expression_call(self, "__ror__", other)
 
     def __add__(self, other: Expr | Any) -> ExprT:  # type: ignore[override]
         return register_expression_call(self, "__add__", other)
 
-    def __radd__(self, other: Series | Any) -> ExprT:
+    def __radd__(self, other: Any) -> ExprT:
         return register_expression_call(self, "__radd__", other)
 
     def __sub__(self, other: Expr | Any) -> ExprT:
         return register_expression_call(self, "__sub__", other)
 
-    def __rsub__(self, other: Series | Any) -> ExprT:
+    def __rsub__(self, other: Any) -> ExprT:
         return register_expression_call(self, "__rsub__", other)
 
     def __mul__(self, other: Expr | Any) -> ExprT:
         return register_expression_call(self, "__mul__", other)
 
-    def __rmul__(self, other: Series | Any) -> ExprT:
+    def __rmul__(self, other: Any) -> ExprT:
         return self.__mul__(other)
 
     def __truediv__(self, other: Expr | Any) -> ExprT:
         return register_expression_call(self, "__truediv__", other)
 
-    def __rtruediv__(self, other: Series | Any) -> ExprT:
+    def __rtruediv__(self, other: Any) -> ExprT:
         raise NotImplementedError
 
     def __floordiv__(self, other: Expr | Any) -> ExprT:
         return register_expression_call(self, "__floordiv__", other)
 
-    def __rfloordiv__(self, other: Series | Any) -> ExprT:
+    def __rfloordiv__(self, other: Any) -> ExprT:
         raise NotImplementedError
 
     def __pow__(self, other: Expr | Any) -> ExprT:
         return register_expression_call(self, "__pow__", other)
 
-    def __rpow__(self, other: Series | Any) -> ExprT:  # pragma: no cover
+    def __rpow__(self, other: Any) -> ExprT:  # pragma: no cover
         raise NotImplementedError
 
     def __mod__(self, other: Expr | Any) -> ExprT:
         return register_expression_call(self, "__mod__", other)
 
-    def __rmod__(self, other: Series | Any) -> ExprT:  # pragma: no cover
+    def __rmod__(self, other: Any) -> ExprT:  # pragma: no cover
         raise NotImplementedError
 
     # Unary

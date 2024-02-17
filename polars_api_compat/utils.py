@@ -41,7 +41,7 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
     if hasattr(other, "__series_namespace__"):
         if other.len() == 1:
             # broadcast
-            return other.get_value(0)
+            return other.item()
         if (
             hasattr(column.series, "index")
             and hasattr(other.series, "index")
