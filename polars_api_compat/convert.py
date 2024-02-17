@@ -1,7 +1,9 @@
 from typing import Any
 
+from polars_api_compat.spec import LazyFrame, Namespace
 
-def translate(df: Any, version: str) -> Any:
+
+def translate(df: Any, version: str) -> tuple[LazyFrame, Namespace]:
     if hasattr(df, "__polars_api_compat__"):
         return df.__polars_api_compat__()
     try:
@@ -22,3 +24,6 @@ def translate(df: Any, version: str) -> Any:
             from polars_api_compat.pandas import translate
 
             return translate(df)
+    raise TypeError(
+        f"Could not translate DataFrame {type(df)}, please open a feature request."
+    )
