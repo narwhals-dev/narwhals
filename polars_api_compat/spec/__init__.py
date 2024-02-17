@@ -18,13 +18,31 @@ class Expr(Protocol):
     def __expr_namespace__(self) -> Namespace:
         ...
 
-    def __and__(self, other: IntoExpr) -> Expr:
+    def __and__(self, other: Any) -> Expr:
         ...
 
-    def __or__(self, other: IntoExpr) -> Expr:
+    def __or__(self, other: Any) -> Expr:
         ...
 
-    def __add__(self, other: IntoExpr) -> Expr:
+    def __add__(self, other: Any) -> Expr:
+        ...
+
+    def __radd__(self, other: Any) -> Expr:
+        ...
+
+    def __sub__(self, other: Any) -> Expr:
+        ...
+
+    def __rsub__(self, other: Any) -> Expr:
+        ...
+
+    def __mul__(self, other: Any) -> Expr:
+        ...
+
+    def __rmul__(self, other: Any) -> Expr:
+        ...
+
+    def __le__(self, other: Any) -> Expr:
         ...
 
     def mean(self) -> Expr:
