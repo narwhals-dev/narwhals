@@ -1,14 +1,16 @@
 from __future__ import annotations
-from typing import Any, Iterable, cast, TypeVar
 
-from polars_api_compat.spec import (
-    DataFrame,
-    LazyFrame,
-    Series,
-    Expr,
-    IntoExpr,
-    Namespace,
-)
+from typing import Any
+from typing import Iterable
+from typing import TypeVar
+from typing import cast
+
+from polars_api_compat.spec import DataFrame
+from polars_api_compat.spec import Expr
+from polars_api_compat.spec import IntoExpr
+from polars_api_compat.spec import LazyFrame
+from polars_api_compat.spec import Namespace
+from polars_api_compat.spec import Series
 
 ExprT = TypeVar("ExprT", bound=Expr)
 
@@ -27,9 +29,8 @@ def validate_column_comparand(column: Any, other: Any) -> Any:
     if isinstance(other, list):
         if len(other) > 1:
             # e.g. `plx.all() + plx.all()`
-            raise ValueError(
-                "Multi-output expressions are not supported in this context"
-            )
+            msg = "Multi-output expressions are not supported in this context"
+            raise ValueError(msg)
         other = other[0]
     if hasattr(
         other,
@@ -64,8 +65,9 @@ def validate_dataframe_comparand(dataframe: Any, other: Any) -> Any:
     """
     if isinstance(other, list) and len(other) > 1:
         # e.g. `plx.all() + plx.all()`
-        raise ValueError("Multi-output expressions are not supported in this context")
-    elif isinstance(other, list) and len(other) == 1:
+        msg = "Multi-output expressions are not supported in this context"
+        raise ValueError(msg)
+    if isinstance(other, list):
         other = other[0]
     if hasattr(
         other,
@@ -104,7 +106,8 @@ def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
         return df.__dataframe_namespace__()
     if hasattr(df, "__lazyframe_namespace__"):
         return df.__lazyframe_namespace__()
-    raise TypeError(f"Expected DataFrame or LazyFrame, got {type(df)}")
+    msg = f"Expected DataFrame or LazyFrame, got {type(df)}"
+    raise TypeError(msg)
 
 
 def parse_into_exprs(
@@ -124,7 +127,8 @@ def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
     if hasattr(into_expr, "__series_namespace__"):
         into_expr = cast(Series, into_expr)  # help mypy
         return plx._create_expr_from_series(into_expr)
-    raise TypeError(f"Expected IntoExpr, got {type(into_expr)}")
+    msg = f"Expected IntoExpr, got {type(into_expr)}"
+    raise TypeError(msg)
 
 
 def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[Series]:
@@ -187,7 +191,8 @@ def evaluate_into_exprs(
     for name, expr in named_exprs.items():
         evaluated_expr = evaluate_into_expr(df, expr)
         if len(evaluated_expr) > 1:
-            raise ValueError("Named expressions must return a single column")
+            msg = "Named expressions must return a single column"
+            raise ValueError(msg)
         series.append(evaluated_expr[0].alias(name))
     return series
 
@@ -215,7 +220,8 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
         return out
 
     if expr.depth is None:
-        raise AssertionError("Unreachable code, please report a bug")
+        msg = "Unreachable code, please report a bug"
+        raise AssertionError(msg)
     if expr.function_name is not None:
         function_name: str = f"{expr.function_name}->{attr}"
     else:

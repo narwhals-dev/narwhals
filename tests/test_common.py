@@ -1,4 +1,6 @@
+# ruff: noqa
 import pandas as pd
+
 import polars_api_compat
 
 

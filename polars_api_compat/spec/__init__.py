@@ -1,5 +1,10 @@
 from __future__ import annotations
-from typing import Protocol, Iterable, Any, Callable, Literal
+
+from typing import Any
+from typing import Callable
+from typing import Iterable
+from typing import Literal
+from typing import Protocol
 
 from typing_extensions import Self
 
@@ -74,7 +79,7 @@ class Namespace(Protocol):
     def _create_expr_from_series(self, series: Series) -> Expr:
         ...
 
-    def _create_expr_from_callable(
+    def _create_expr_from_callable(  # noqa: PLR0913
         self,
         func: Callable[[DataFrame | LazyFrame], list[Series]],
         depth: int,

@@ -1,6 +1,9 @@
-from great_tables.data import sp500
+# ruff: noqa
 import polars as pl
-from polars_api_compat import to_polars_api, to_native
+from great_tables.data import sp500
+
+from polars_api_compat import to_native
+from polars_api_compat import to_polars_api
 
 # Define the start and end dates for the data range
 start_date = "2010-06-07"

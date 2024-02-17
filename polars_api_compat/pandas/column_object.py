@@ -1,32 +1,18 @@
 from __future__ import annotations
-import polars_api_compat
 
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
 import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
+import polars_api_compat
+from polars_api_compat.spec import Series as SeriesT
 from polars_api_compat.utils import validate_column_comparand
 
-from polars_api_compat.spec import (
-    Series as SeriesT,
-)
-
-
-NUMPY_MAPPING = {
-    "Int64": "int64",
-    "Int32": "int32",
-    "Int16": "int16",
-    "Int8": "int8",
-    "UInt64": "uint64",
-    "UInt32": "uint32",
-    "UInt16": "uint16",
-    "UInt8": "uint8",
-    "boolean": "bool",
-    "Float64": "float64",
-    "Float32": "float32",
-}
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class Series(SeriesT):
@@ -96,12 +82,12 @@ class Series(SeriesT):
 
     # Binary comparisons
 
-    def __eq__(self, other: Any) -> Series:  # type: ignore[override]
+    def __eq__(self, other: object) -> Series:  # type: ignore[override]
         other = validate_column_comparand(self, other)
         ser = self.series
         return self._from_series((ser == other).rename(ser.name, copy=False))
 
-    def __ne__(self, other: Any) -> Series:  # type: ignore[override]
+    def __ne__(self, other: object) -> Series:  # type: ignore[override]
         other = validate_column_comparand(self, other)
         ser = self.series
         return self._from_series((ser != other).rename(ser.name, copy=False))

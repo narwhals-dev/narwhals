@@ -1,3 +1,4 @@
+# ruff: noqa
 from datetime import datetime
 from polars_api_compat import to_polars_api, to_native
 import polars

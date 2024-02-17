@@ -1,32 +1,23 @@
 from __future__ import annotations
-from polars_api_compat.utils import (
-    register_expression_call,
-    flatten_str,
-    parse_into_exprs,
-)
 
 from functools import reduce
-from typing import TYPE_CHECKING
-from typing import Any, Iterable
+from typing import Any
 from typing import Callable
+from typing import Iterable
 
 import pandas as pd
 
 from polars_api_compat.pandas.column_object import Series
 from polars_api_compat.pandas.dataframe_object import LazyFrame
-from polars_api_compat.spec import (
-    DataFrame as DataFrameT,
-    LazyFrame as LazyFrameT,
-    Series as SeriesT,
-    IntoExpr,
-    Expr as ExprT,
-    Namespace as NamespaceT,
-)
-
-if TYPE_CHECKING:
-    from polars_api_compat.spec import (
-        Expr as ExprT,
-    )
+from polars_api_compat.spec import DataFrame as DataFrameT
+from polars_api_compat.spec import Expr as ExprT
+from polars_api_compat.spec import IntoExpr
+from polars_api_compat.spec import LazyFrame as LazyFrameT
+from polars_api_compat.spec import Namespace as NamespaceT
+from polars_api_compat.spec import Series as SeriesT
+from polars_api_compat.utils import flatten_str
+from polars_api_compat.utils import parse_into_exprs
+from polars_api_compat.utils import register_expression_call
 
 SUPPORTED_VERSIONS = frozenset({"2023.11-beta"})
 
@@ -77,9 +68,10 @@ class Namespace(NamespaceT):
             output_names=["len"],  # todo: check this
         )
 
-    def _create_expr_from_callable(
+    def _create_expr_from_callable(  # noqa: PLR0913
         self,
         func: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
+        *,
         depth: int,
         function_name: str | None,
         root_names: list[str] | None,
@@ -101,7 +93,7 @@ class Namespace(NamespaceT):
 
     def _create_expr_from_series(self, series: SeriesT) -> ExprT:
         return Expr(
-            lambda df: [series],
+            lambda _df: [series],
             depth=0,
             function_name="from_series",
             root_names=None,
@@ -125,7 +117,7 @@ class Namespace(NamespaceT):
 
 
 class Expr(ExprT):
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
         depth: int | None,
@@ -260,7 +252,8 @@ class Expr(ExprT):
         # Define this one manually, so that we can
         # override `output_names`
         if self.depth is None:
-            raise AssertionError("Unreachable code, please report a bug")
+            msg = "Unreachable code, please report a bug"
+            raise AssertionError(msg)
         return Expr(
             lambda df: [series.alias(name) for series in self.call(df)],
             depth=self.depth + 1,

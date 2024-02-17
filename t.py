@@ -1,4 +1,6 @@
+# ruff: noqa
 import pandas as pd
+
 import polars_api_compat
 
 df_raw = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6]})
