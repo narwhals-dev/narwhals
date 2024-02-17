@@ -57,11 +57,11 @@ class Namespace(NamespaceT):
     def col(self, *column_names: str | Iterable[str]) -> ExprT:
         return Expr.from_column_names(*flatten_str(*column_names))
 
-    def sum(self, column_name: str) -> ExprT:
-        return Expr.from_column_names(column_name).sum()
+    def sum(self, *column_names: str) -> ExprT:
+        return Expr.from_column_names(*column_names).sum()
 
-    def mean(self, column_name: str) -> ExprT:
-        return Expr.from_column_names(column_name).mean()
+    def mean(self, *column_names: str) -> ExprT:
+        return Expr.from_column_names(*column_names).mean()
 
     def len(self) -> ExprT:
         return Expr(

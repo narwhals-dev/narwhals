@@ -38,7 +38,7 @@ class Namespace(Protocol):
     def col(self, *names: str | Iterable[str]) -> Expr:
         ...
 
-    def all(self, *columns: str) -> Expr:
+    def all(self) -> Expr:
         ...
 
     def sum(self, *columns: str) -> Expr:
