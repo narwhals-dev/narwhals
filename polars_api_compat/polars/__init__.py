@@ -99,7 +99,7 @@ class Namespace(NamespaceT):
         self.api_version = api_version
 
     def col(self, *column_names: str | Iterable[str]) -> ExprT:
-        return Expr(pl.col(*column_names))
+        return Expr(pl.col(list(*column_names)))
 
 
 class Expr(ExprT):
