@@ -3,7 +3,7 @@ from polars_api_compat import translate
 import polars
 
 
-def q():
+def q() -> None:
     var_1 = datetime(1998, 9, 2)
     q = polars.scan_parquet("../tpch-data/lineitem.parquet").collect().to_pandas()
     q, pl = translate(q, version="0.20")
