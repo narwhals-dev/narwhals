@@ -104,7 +104,7 @@ class DataFrame(Protocol):
         ...
 
     def sort(
-        self, *keys: str | Iterable[str], descending: bool | Iterable[bool]
+        self, *keys: str | Iterable[str], descending: bool | Iterable[bool] = False
     ) -> DataFrame:
         ...
 
@@ -156,7 +156,7 @@ class LazyFrame(Protocol):
         ...
 
     def sort(
-        self, *keys: str | Iterable[str], descending: bool | Iterable[bool]
+        self, *keys: str | Iterable[str], descending: bool | Iterable[bool] = False
     ) -> LazyFrame:
         ...
 
