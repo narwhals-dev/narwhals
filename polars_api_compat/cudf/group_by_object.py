@@ -77,12 +77,17 @@ class LazyGroupBy(LazyGroupByT):
                     msg = "Unreachable code, please report a bug"
                     raise AssertionError(msg)
                 new_names = dict(zip(expr.root_names, expr.output_names))
-                new_cols.append(
-                    getattr(grouped[expr.root_names], expr.function_name)()[
-                        expr.root_names
-                    ].rename(columns=new_names),
-                )
-                to_remove.append(i)
+                try:
+                    new_cols.append(
+                        getattr(grouped[expr.root_names], expr.function_name)()[
+                            expr.root_names
+                        ].rename(columns=new_names),
+                    )
+                except Exception as exp:  # noqa: BLE001
+                    msg = f"Failed to apply fastpath for {expr}: {exp}"
+                    print(msg)  # noqa: T201
+                else:
+                    to_remove.append(i)
         exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
 
         out: dict[str, list[Any]] = collections.defaultdict(list)
