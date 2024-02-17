@@ -93,6 +93,22 @@ class LazyGroupBy(LazyGroupByT):
         exprs = parse_into_exprs(
             self._df.__lazyframe_namespace__(), *aggs, **named_aggs
         )
+        new_cols = []
+        for expr in exprs:
+            if expr._function_name is not None:
+                # Must be a simple aggregation! Fastpath!
+                # Need the root names too, right?
+                new_names = {
+                    root: output
+                    for root, output in zip(expr._root_names, expr._output_names)
+                }
+                new_cols.append(
+                    getattr(self._grouped[expr._root_names], expr._function_name)()[
+                        expr._root_names
+                    ].rename(columns=new_names)
+                )
+                exprs.remove(expr)
+
         out: dict[str, list[Any]] = collections.defaultdict(list)
         for key, _df in self._grouped:
             for _key, _name in zip(key, self._keys):
@@ -101,4 +117,6 @@ class LazyGroupBy(LazyGroupByT):
                 result = expr.call(LazyFrame(_df, api_version=self.api_version))
                 for _result in result:
                     out[_result.name].append(_result.series.item())
-        return self._to_dataframe(pd.DataFrame(out))
+        result = pd.DataFrame(out)
+        result = pd.concat([result] + new_cols, axis=1, copy=False)
+        return self._to_dataframe(result)

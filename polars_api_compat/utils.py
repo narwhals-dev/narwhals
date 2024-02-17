@@ -108,9 +108,12 @@ def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
 
 
 def parse_into_exprs(
-    plx: Namespace, *exprs: IntoExpr | Iterable[IntoExpr]
+    plx: Namespace, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
 ) -> list[Expr]:
-    return [parse_into_expr(plx, into_expr) for into_expr in flatten_into_expr(*exprs)]
+    out = [parse_into_expr(plx, into_expr) for into_expr in flatten_into_expr(*exprs)]
+    for name, expr in named_exprs.items():
+        out.append(parse_into_expr(plx, expr).alias(name))
+    return out
 
 
 def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
@@ -211,4 +214,10 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
                 out.append(plx._create_series_from_scalar(_out, column))
         return out
 
-    return plx._create_expr_from_callable(func)
+    return plx._create_expr_from_callable(
+        func,
+        depth=expr._depth + 1,
+        name=attr,
+        root_names=expr._root_names,
+        output_names=expr._output_names,
+    )

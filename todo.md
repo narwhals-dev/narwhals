@@ -47,7 +47,7 @@ reuse as much as possible, nothing complicated!
 
 fastpath for groupby is probably really important...
 so, let's:
-- sort out typing in Series
+- sort out typing in Series [done]
 - get fastpaths in groupby
 - sort out join
 that would already be...amazing???

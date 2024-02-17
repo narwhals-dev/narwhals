@@ -41,7 +41,11 @@ class Namespace(Protocol):
         ...
 
     def _create_expr_from_callable(
-        self, func: Callable[[DataFrame | LazyFrame], list[Series]]
+        self,
+        func: Callable[[DataFrame | LazyFrame], list[Series]],
+        depth: int,
+        name: str | None = None,
+        root_names: list[str] | None = None,
     ) -> Expr:
         ...
 

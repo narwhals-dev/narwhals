@@ -70,13 +70,28 @@ class Namespace(NamespaceT):
                     pd.Series([len(df.dataframe)], name="len", index=[0]),
                     api_version=df.api_version,
                 )
-            ]
+            ],
+            depth=0,
+            function_name=None,
+            root_names=None,
+            output_names=["len"],  # todo: check this
         )
 
     def _create_expr_from_callable(
-        self, func: Callable[[DataFrameT | LazyFrameT], list[SeriesT]]
+        self,
+        func: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
+        depth: int,
+        name: str | None,
+        root_names: list[str] | None,
+        output_names: list[str] | None,
     ) -> ExprT:
-        return Expr(func)
+        return Expr(
+            func,
+            depth=depth,
+            function_name=name,
+            root_names=root_names,
+            output_names=output_names,
+        )
 
     def _create_series_from_scalar(self, value: Any, series: SeriesT) -> SeriesT:
         return Series(
@@ -85,7 +100,13 @@ class Namespace(NamespaceT):
         )
 
     def _create_expr_from_series(self, series: SeriesT) -> ExprT:
-        return Expr(lambda df: [series])
+        return Expr(
+            lambda df: [series],
+            depth=0,
+            function_name=None,
+            root_names=None,
+            output_names=None,
+        )
 
     def all(self) -> ExprT:
         return Expr(
@@ -96,15 +117,33 @@ class Namespace(NamespaceT):
                 )
                 for column_name in df.columns
             ],
+            depth=0,
+            function_name=None,
+            root_names=None,
+            output_names=None,
         )
 
 
 class Expr(ExprT):
     def __init__(
-        self, call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]]
+        self,
+        call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
+        depth: int,
+        function_name: str | None,
+        root_names: list[str] | None,
+        output_names: list[str] | None,
     ) -> None:
         self.call = call
         self.api_version = "0.20.0"  # todo
+        if depth == 1 and function_name is not None:
+            # Set name to Some if it's a simple expression (e.g. col('a').sum()), so that
+            # fast paths can be used in some cases.
+            self._function_name = function_name
+        else:
+            self._function_name = None
+        self._root_names = root_names
+        self._depth = depth
+        self._output_names = output_names
 
     @classmethod
     def from_column_names(cls: type[Expr], *column_names: str) -> ExprT:
@@ -116,6 +155,10 @@ class Expr(ExprT):
                 )
                 for column_name in column_names
             ],
+            depth=0,
+            function_name=None,
+            root_names=list(column_names),
+            output_names=list(column_names),
         )
 
     def __expr_namespace__(self) -> Namespace:
@@ -209,4 +252,12 @@ class Expr(ExprT):
     # Other
 
     def alias(self, name: str) -> ExprT:
-        return register_expression_call(self, "alias", name)
+        # Define this one manually,
+        # so that `depth` and `name` aren't modified.
+        return Expr(
+            lambda df: [series.alias(name) for series in self.call(df)],
+            depth=self._depth,
+            function_name=self._function_name,
+            root_names=self._root_names,
+            output_names=[name],
+        )
