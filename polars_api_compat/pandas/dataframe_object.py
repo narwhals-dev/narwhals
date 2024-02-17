@@ -1,26 +1,23 @@
 from __future__ import annotations
 
-from polars_api_compat.utils import (
-    evaluate_into_exprs,
-)
-
-from polars_api_compat.utils import flatten_str
 import collections
-from typing import TYPE_CHECKING, Iterable, Any
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Iterable
 from typing import Literal
 
 import pandas as pd
 
 import polars_api_compat
+from polars_api_compat.spec import DataFrame as DataFrameT
+from polars_api_compat.spec import GroupBy as GroupByT
+from polars_api_compat.spec import IntoExpr
+from polars_api_compat.spec import LazyFrame as LazyFrameT
+from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
+from polars_api_compat.spec import Namespace as NamespaceT
+from polars_api_compat.utils import evaluate_into_exprs
+from polars_api_compat.utils import flatten_str
 from polars_api_compat.utils import validate_dataframe_comparand
-from polars_api_compat.spec import (
-    DataFrame as DataFrameT,
-    LazyFrame as LazyFrameT,
-    IntoExpr,
-    Namespace as NamespaceT,
-    GroupBy as GroupByT,
-    LazyGroupBy as LazyGroupByT,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -121,7 +118,7 @@ class DataFrame(DataFrameT):
     def sort(
         self,
         *keys: str | Iterable[str],
-        descending: bool | Iterable[bool] = True,
+        descending: bool | Iterable[bool] = False,
     ) -> DataFrameT:
         return self.lazy().sort(*keys, descending=descending).collect()
 
@@ -228,8 +225,8 @@ class LazyFrame(LazyFrameT):
     ) -> LazyFrameT:
         plx = self.__lazyframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
-        filter = plx.all_horizontal(*predicates).call(self)[0]
-        _mask = validate_dataframe_comparand(self, filter)
+        mask = plx.all_horizontal(*predicates).call(self)[0]
+        _mask = validate_dataframe_comparand(self, mask)
         return self._from_dataframe(self.dataframe.loc[_mask])
 
     def with_columns(
@@ -246,7 +243,7 @@ class LazyFrame(LazyFrameT):
     def sort(
         self,
         *keys: str | Iterable[str],
-        descending: bool | Iterable[bool] = True,
+        descending: bool | Iterable[bool] = False,
     ) -> LazyFrameT:
         flat_keys = flatten_str(*keys)
         if not flat_keys:
