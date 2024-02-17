@@ -124,6 +124,9 @@ class DataFrame(Protocol):
     def __dataframe_namespace__(self) -> Namespace:
         ...
 
+    def lazy(self) -> LazyFrame:
+        ...
+
 
 class LazyFrame(Protocol):
     api_version: str
