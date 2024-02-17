@@ -18,7 +18,7 @@ def to_polars_api(df: Any, version: str) -> tuple[LazyFrame, Namespace]:  # noqa
         pass
     else:
         if isinstance(df, pl.DataFrame):
-            return df.collect(), pl  # type: ignore[return-value]
+            return df.lazy(), pl  # type: ignore[return-value]
         if isinstance(df, pl.LazyFrame):
             return df, pl  # type: ignore[return-value]
     try:
