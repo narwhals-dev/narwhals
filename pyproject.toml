@@ -1,2 +1,81 @@
-[tool.mypy]
-exclude = ["polars_api_compat/pandas"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "polars_api_compat"
+version = "0.1.0"
+authors = [
+  { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
+]
+description = "Implementation of the DataFrame Standard for pandas and Polars"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "packaging; python_version < '3.9'",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/data-apis/dataframe-api-compat"
+"Bug Tracker" = "https://github.com/data-apis/dataframe-api-compat"
+
+[tool.ruff]
+line-length = 90
+fix = true
+target-version = "py38"
+
+select = [
+  "ALL",
+]
+ignore = [
+  'A003',
+  'ANN101',
+  'ANN401',
+  'ARG002',  # todo: enable
+  'ARG003',  # todo: enable
+  'C901',
+  'D',
+  'DTZ',
+  'E501',
+  'FBT003',  # todo: enable
+  'FIX',
+  'PD',
+  'PLR0911',
+  'PLR0912',
+  'PLR5501',
+  'PLR2004',
+  'PT011',
+  'PTH',
+  'RET505',
+  'S',
+  'SLF001',
+  'TD',
+  'TRY004'
+]
+
+[tool.ruff.isort]
+force-single-line = true
+
+[tool.black]
+line-length = 90
+
+[tool.pytest.ini_options]
+filterwarnings = [
+  "error",
+  'ignore:distutils Version classes are deprecated:DeprecationWarning',
+]
+xfail_strict = true
+
+[tool.coverage.run]
+plugins = ["covdefaults"]
+
+[tool.coverage.report]
+exclude_also = [
+  "> POLARS_VERSION",
+  "if sys.version_info() <",
+]
