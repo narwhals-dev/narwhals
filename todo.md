@@ -55,3 +55,5 @@ that would already be...amazing???
 then (tomorrow?)
 - make same wrapper for Polars
 - try out cudf?
+
+add lots of logging. find out where it's going wrong?

@@ -235,3 +235,11 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
         root_names=expr.root_names,
         output_names=expr.output_names,
     )
+
+
+def item(s: Any) -> Any:
+    # cuDF doesn't have Series.item().
+    if len(s) != 1:
+        msg = "Can only convert a Series of length 1 to a scalar"
+        raise ValueError(msg)
+    return s.iloc[0]

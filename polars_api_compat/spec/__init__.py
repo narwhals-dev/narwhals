@@ -120,6 +120,9 @@ class Series(Protocol):
     def name(self) -> str:
         ...
 
+    def item(self) -> Any:
+        ...
+
 
 class DataFrame(Protocol):
     api_version: str
