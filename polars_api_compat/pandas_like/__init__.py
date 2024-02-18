@@ -316,6 +316,9 @@ class Expr(ExprT):
     def drop_nulls(self) -> ExprT:
         return register_expression_call(self, "drop_nulls")
 
+    def n_unique(self) -> ExprT:
+        return register_expression_call(self, "n_unique")
+
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
         # override `output_names`

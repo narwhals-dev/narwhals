@@ -65,6 +65,9 @@ class Expr(Protocol):
     def drop_nulls(self) -> Expr:
         ...
 
+    def n_unique(self) -> Expr:
+        ...
+
 
 class ExprStringNamespace(Protocol):
     def ends_with(self, other: str) -> Expr:
@@ -125,6 +128,9 @@ class Series(Protocol):
         ...
 
     def drop_nulls(self) -> Series:
+        ...
+
+    def n_unique(self) -> int:
         ...
 
 
