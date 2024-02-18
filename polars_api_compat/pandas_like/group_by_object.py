@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import functools
 from typing import Any
 from typing import Iterable
 
@@ -71,15 +72,22 @@ class LazyGroupBy(LazyGroupByT):
         for expr in exprs:
 
             def func(df: Any, expr: ExprT) -> DataFrameT:
-                return expr.call(
-                    quick_translate(
-                        df,
-                        version=self.api_version,
-                        implementation=implementation,
-                    )
+                return horizontal_concat(
+                    [
+                        i.series
+                        for i in expr.call(
+                            quick_translate(
+                                df,
+                                version=self.api_version,
+                                implementation=implementation,
+                            )
+                        )
+                    ]
                 )
 
-            result_expr = grouped.apply(lambda df, expr: func(df, expr))
+            inner_func = functools.partial(func, expr=expr)
+
+            result_expr = grouped.apply(inner_func)
             dfs.append(result_expr.reset_index(drop=True))
 
         out: dict[str, list[Any]] = collections.defaultdict(list)
