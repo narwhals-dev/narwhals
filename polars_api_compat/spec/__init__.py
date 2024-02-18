@@ -62,6 +62,9 @@ class Expr(Protocol):
     def is_null(self) -> Expr:
         ...
 
+    def drop_nulls(self) -> Expr:
+        ...
+
 
 class ExprStringNamespace(Protocol):
     def ends_with(self, other: str) -> Expr:

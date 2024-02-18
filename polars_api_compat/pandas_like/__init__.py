@@ -313,6 +313,9 @@ class Expr(ExprT):
     def is_in(self, other: Any) -> ExprT:
         return register_expression_call(self, "is_in", other)
 
+    def drop_nulls(self) -> ExprT:
+        return register_expression_call(self, "drop_nulls")
+
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
         # override `output_names`

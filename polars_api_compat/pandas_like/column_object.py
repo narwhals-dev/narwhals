@@ -253,6 +253,10 @@ class Series(SeriesT):
         ser = self.series
         return self._from_series(ser.isna())
 
+    def drop_nulls(self) -> Series:
+        ser = self.series
+        return self._from_series(ser.dropna())
+
     def is_nan(self) -> Series:
         ser = self.series
         if is_extension_array_dtype(ser.dtype):
