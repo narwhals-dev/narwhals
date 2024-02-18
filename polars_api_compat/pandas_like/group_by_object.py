@@ -12,11 +12,11 @@ from polars_api_compat.spec import GroupBy as GroupByT
 from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
-from polars_api_compat.translate import to_polars_api
 from polars_api_compat.utils import evaluate_simple_aggregation
 from polars_api_compat.utils import horizontal_concat
 from polars_api_compat.utils import is_simple_aggregation
 from polars_api_compat.utils import parse_into_exprs
+from polars_api_compat.utils import quick_translate
 
 
 class GroupBy(GroupByT):
@@ -58,6 +58,7 @@ class LazyGroupBy(LazyGroupByT):
             sort=False,
             as_index=False,
         )
+        implementation: str = self._df._implementation  # type: ignore[attr-defined]
 
         dfs: list[pd.DataFrame] = []
         to_remove: list[int] = []
@@ -72,9 +73,15 @@ class LazyGroupBy(LazyGroupByT):
                 lambda df, expr=expr: horizontal_concat(
                     [
                         i.series
-                        for i in expr.call(to_polars_api(df, version=self.api_version)[0])
+                        for i in expr.call(
+                            quick_translate(
+                                df,
+                                version=self.api_version,
+                                implementation=implementation,
+                            )
+                        )
                     ],
-                    implementation=self._df._implementation,  # type: ignore[attr-defined]
+                    implementation=implementation,  # type: ignore[attr-defined]
                 ),
             )
             dfs.append(result_expr.reset_index(drop=True))
@@ -84,10 +91,7 @@ class LazyGroupBy(LazyGroupByT):
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
         result = pd.DataFrame(out)
-        result = horizontal_concat(
-            [result, *dfs],
-            implementation=self._df._implementation,  # type: ignore[attr-defined]
-        )
+        result = horizontal_concat([result, *dfs], implementation=implementation)
         return LazyFrame(
             result,
             api_version=self.api_version,
