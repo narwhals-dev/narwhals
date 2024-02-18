@@ -49,13 +49,19 @@ class Namespace(NamespaceT):
         return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
 
     def col(self, *column_names: str | Iterable[str]) -> ExprT:
-        return Expr.from_column_names(*flatten_str(*column_names))
+        return Expr.from_column_names(
+            *flatten_str(*column_names), implementation=self._implementation
+        )
 
     def sum(self, *column_names: str) -> ExprT:
-        return Expr.from_column_names(*column_names).sum()
+        return Expr.from_column_names(
+            *column_names, implementation=self._implementation
+        ).sum()
 
     def mean(self, *column_names: str) -> ExprT:
-        return Expr.from_column_names(*column_names).mean()
+        return Expr.from_column_names(
+            *column_names, implementation=self._implementation
+        ).mean()
 
     def len(self) -> ExprT:
         return Expr(
@@ -74,6 +80,7 @@ class Namespace(NamespaceT):
             function_name="len",
             root_names=None,
             output_names=["len"],  # todo: check this
+            implementation=self._implementation,
         )
 
     def _create_expr_from_callable(  # noqa: PLR0913
@@ -91,6 +98,7 @@ class Namespace(NamespaceT):
             function_name=function_name,
             root_names=root_names,
             output_names=output_names,
+            implementation=self._implementation,
         )
 
     def _create_series_from_scalar(self, value: Any, series: SeriesT) -> SeriesT:
@@ -126,6 +134,7 @@ class Namespace(NamespaceT):
             function_name="all",
             root_names=None,
             output_names=None,
+            implementation=self._implementation,
         )
 
 
@@ -133,10 +142,12 @@ class Expr(ExprT):
     def __init__(  # noqa: PLR0913
         self,
         call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
+        *,
         depth: int | None,
         function_name: str | None,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        implementation: str,
     ) -> None:
         self.call = call
         self.api_version = "0.20.0"  # todo
@@ -145,6 +156,7 @@ class Expr(ExprT):
         self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
+        self._implementation = implementation
 
     def __repr__(self) -> str:
         return (
@@ -156,7 +168,9 @@ class Expr(ExprT):
         )
 
     @classmethod
-    def from_column_names(cls: type[Expr], *column_names: str) -> ExprT:
+    def from_column_names(
+        cls: type[Expr], *column_names: str, implementation: str
+    ) -> ExprT:
         return cls(
             lambda df: [
                 Series(
@@ -169,10 +183,14 @@ class Expr(ExprT):
             function_name=None,
             root_names=list(column_names),
             output_names=list(column_names),
+            implementation=implementation,
         )
 
     def __expr_namespace__(self) -> Namespace:
-        return Namespace(api_version="2023.11-beta")
+        return Namespace(
+            api_version="todo",
+            implementation=self._implementation,  # type: ignore[attr-defined]
+        )
 
     def __eq__(self, other: Expr | Any) -> ExprT:  # type: ignore[override]
         return register_expression_call(self, "__eq__", other)
@@ -273,4 +291,5 @@ class Expr(ExprT):
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=[name],
+            implementation=self._implementation,
         )
