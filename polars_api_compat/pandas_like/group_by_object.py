@@ -10,8 +10,8 @@ from polars_api_compat.spec import GroupBy as GroupByT
 from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
+from polars_api_compat.utils import dataframe_from_dict
 from polars_api_compat.utils import evaluate_simple_aggregation
-from polars_api_compat.utils import from_dict
 from polars_api_compat.utils import horizontal_concat
 from polars_api_compat.utils import is_simple_aggregation
 from polars_api_compat.utils import parse_into_exprs
@@ -89,7 +89,7 @@ class LazyGroupBy(LazyGroupByT):
         for key, _df in grouped:
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
-        result = from_dict(out, implementation=implementation)
+        result = dataframe_from_dict(out, implementation=implementation)
         result = horizontal_concat([result, *dfs], implementation=implementation)
         return LazyFrame(
             result,

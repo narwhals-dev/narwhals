@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
-import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
 import polars_api_compat
@@ -12,14 +10,11 @@ from polars_api_compat.spec import Series as SeriesT
 from polars_api_compat.utils import item
 from polars_api_compat.utils import validate_column_comparand
 
-if TYPE_CHECKING:
-    import pandas as pd
-
 
 class Series(SeriesT):
     def __init__(
         self,
-        series: pd.Series[Any],
+        series: Any,
         *,
         api_version: str,
     ) -> None:
@@ -52,7 +47,7 @@ class Series(SeriesT):
         msg = ""
         raise NotImplementedError(msg)
 
-    def _from_series(self, series: pd.Series) -> Series:
+    def _from_series(self, series: Any) -> Series:
         return Series(
             series.rename(series.name, copy=False),
             api_version=self.api_version,
@@ -71,7 +66,7 @@ class Series(SeriesT):
         return self._name  # type: ignore[no-any-return]
 
     @property
-    def series(self) -> pd.Series[Any]:
+    def series(self) -> Any:
         return self._series
 
     def filter(self, mask: Series) -> Series:

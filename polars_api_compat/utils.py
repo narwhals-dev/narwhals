@@ -299,7 +299,7 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     raise TypeError(msg)
 
 
-def from_dict(data: dict[str, Any], implementation: str) -> Any:
+def dataframe_from_dict(data: dict[str, Any], implementation: str) -> Any:
     """Return native dataframe."""
     if implementation == "pandas":
         import pandas as pd
@@ -309,6 +309,22 @@ def from_dict(data: dict[str, Any], implementation: str) -> Any:
         import cudf
 
         return cudf.DataFrame(data)
+    msg = f"Unknown implementation: {implementation}"
+    raise TypeError(msg)
+
+
+def series_from_iterable(
+    data: Iterable[Any], name: str, index: Any, implementation: str
+) -> Any:
+    """Return native series."""
+    if implementation == "pandas":
+        import pandas as pd
+
+        return pd.Series(data, name=name, index=index, copy=False)
+    if implementation == "cudf":
+        import cudf
+
+        return cudf.Series(data, name=name, index=index)
     msg = f"Unknown implementation: {implementation}"
     raise TypeError(msg)
 

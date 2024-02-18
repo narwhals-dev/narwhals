@@ -5,8 +5,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
-import pandas as pd
-
 from polars_api_compat.pandas_like.column_object import Series
 from polars_api_compat.pandas_like.dataframe_object import LazyFrame
 from polars_api_compat.spec import DataFrame as DataFrameT
@@ -18,10 +16,11 @@ from polars_api_compat.spec import Series as SeriesT
 from polars_api_compat.utils import flatten_str
 from polars_api_compat.utils import parse_into_exprs
 from polars_api_compat.utils import register_expression_call
+from polars_api_compat.utils import series_from_iterable
 
 
 def translate(
-    df: pd.DataFrame,
+    df: Any,
     implementation: str,
     api_version: str,
 ) -> tuple[LazyFrameT, NamespaceT]:
@@ -34,9 +33,10 @@ def translate(
 
 
 class Namespace(NamespaceT):
-    def __init__(self, *, api_version: str) -> None:
+    def __init__(self, *, api_version: str, implementation: str) -> None:
         self.__dataframeapi_version__ = api_version
         self.api_version = api_version
+        self._implementation = implementation
 
     # --- horizontal reductions
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
@@ -61,7 +61,12 @@ class Namespace(NamespaceT):
         return Expr(
             lambda df: [
                 Series(
-                    pd.Series([len(df.dataframe)], name="len", index=[0]),
+                    series_from_iterable(
+                        [len(df.dataframe)],
+                        name="len",
+                        index=[0],
+                        implementation=self._implementation,
+                    ),
                     api_version=df.api_version,
                 )
             ],
@@ -90,7 +95,12 @@ class Namespace(NamespaceT):
 
     def _create_series_from_scalar(self, value: Any, series: SeriesT) -> SeriesT:
         return Series(
-            pd.Series([value], name=series.series.name, index=series.series.index[0:1]),
+            series_from_iterable(
+                [value],
+                name=series.series.name,
+                index=series.series.index[0:1],
+                implementation=self._implementation,
+            ),
             api_version=self.api_version,
         )
 
