@@ -34,14 +34,15 @@ print(result.dataframe)
 result = df.select(pl.col("a", "b") * 2)
 print(result.dataframe)
 
-result = (
-    df.collect()
-    .group_by("b")
-    .agg(
-        pl.all().sum(),
-    )
-)
-print(result.dataframe)
+# TODO!
+# result = (
+#     df.collect()
+#     .group_by("b")
+#     .agg(
+#         pl.all().sum(),
+#     )
+# )
+# print(result.dataframe)
 
 result = (
     df.collect()

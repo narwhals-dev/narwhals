@@ -104,7 +104,10 @@ class DataFrame(Protocol):
         ...
 
     def sort(
-        self, *keys: str | Iterable[str], descending: bool | Iterable[bool] = False
+        self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Iterable[bool] = False,
     ) -> DataFrame:
         ...
 
@@ -128,6 +131,12 @@ class DataFrame(Protocol):
     def columns(self) -> list[str]:
         ...
 
+    def head(self, n: int) -> DataFrame:
+        ...
+
+    def limit(self, n: int) -> DataFrame:
+        ...
+
 
 class LazyFrame(Protocol):
     @property
@@ -148,7 +157,10 @@ class LazyFrame(Protocol):
         ...
 
     def sort(
-        self, *keys: str | Iterable[str], descending: bool | Iterable[bool] = False
+        self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Iterable[bool] = False,
     ) -> LazyFrame:
         ...
 
@@ -166,6 +178,15 @@ class LazyFrame(Protocol):
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> LazyFrame:
+        ...
+
+    def cache(self) -> LazyFrame:
+        ...
+
+    def head(self, n: int) -> LazyFrame:
+        ...
+
+    def limit(self, n: int) -> LazyFrame:
         ...
 
 

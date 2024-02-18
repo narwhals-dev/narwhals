@@ -64,6 +64,16 @@ class Namespace(NamespaceT):
             *column_names, implementation=self._implementation
         ).mean()
 
+    def max(self, *column_names: str) -> ExprT:
+        return Expr.from_column_names(
+            *column_names, implementation=self._implementation
+        ).max()
+
+    def min(self, *column_names: str) -> ExprT:
+        return Expr.from_column_names(
+            *column_names, implementation=self._implementation
+        ).min()
+
     def len(self) -> ExprT:
         return Expr(
             lambda df: [
@@ -283,6 +293,9 @@ class Expr(ExprT):
     def mean(self) -> ExprT:
         return register_expression_call(self, "mean")
 
+    def min(self) -> ExprT:
+        return register_expression_call(self, "min")
+
     # Other
 
     def alias(self, name: str) -> ExprT:
@@ -300,6 +313,7 @@ class Expr(ExprT):
             implementation=self._implementation,
         )
 
+    @property
     def str(self) -> ExprStringNamespaceT:
         return ExprStringNamespace(self)
 
@@ -312,15 +326,15 @@ class ExprStringNamespace(ExprStringNamespaceT):
         return Expr(
             lambda df: [
                 Series(
-                    series.str().ends_with(other),
+                    series.series.str.endswith(other),
                     api_version=df.api_version,  # type: ignore[union-attr]
                     implementation=df._implementation,  # type: ignore[attr-defined]
                 )
-                for series in self.call(df)
+                for series in self._expr.call(df)
             ],
-            depth=self._depth + 1,
-            function_name=self._function_name,
-            root_names=self._root_names,
-            output_names=self._output_names,
-            implementation=self._implementation,
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=self._expr._root_names,
+            output_names=self._expr._output_names,
+            implementation=self._expr._implementation,
         )

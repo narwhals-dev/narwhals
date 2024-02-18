@@ -116,10 +116,11 @@ class DataFrame(DataFrameT):
 
     def sort(
         self,
-        *keys: str | Iterable[str],
+        by: str | Iterable[str],
+        *more_by: str,
         descending: bool | Iterable[bool] = False,
     ) -> DataFrameT:
-        return self.lazy().sort(*keys, descending=descending).collect()
+        return self.lazy().sort(by, *more_by, descending=descending).collect()
 
     def join(
         self,
@@ -141,6 +142,12 @@ class DataFrame(DataFrameT):
             api_version=self.api_version,
             implementation=self._implementation,
         )
+
+    def head(self, n: int) -> DataFrameT:
+        return self.lazy().head(n).collect()
+
+    def limit(self, n: int) -> DataFrameT:
+        return self.lazy().limit(n).collect()
 
 
 class LazyFrame(LazyFrameT):
@@ -257,10 +264,11 @@ class LazyFrame(LazyFrameT):
 
     def sort(
         self,
-        *keys: str | Iterable[str],
+        by: str | Iterable[str],
+        *more_by: str,
         descending: bool | Iterable[bool] = False,
     ) -> LazyFrameT:
-        flat_keys = flatten_str(*keys)
+        flat_keys = flatten_str([*flatten_str(by), *more_by])
         if not flat_keys:
             flat_keys = self.dataframe.columns.tolist()
         df = self.dataframe
@@ -312,3 +320,12 @@ class LazyFrame(LazyFrameT):
             api_version=self.api_version,
             implementation=self._implementation,
         )
+
+    def cache(self) -> LazyFrameT:
+        return self
+
+    def head(self, n: int) -> LazyFrameT:
+        return self._from_dataframe(self.dataframe.head(n))
+
+    def limit(self, n: int) -> LazyFrameT:
+        return self._from_dataframe(self.dataframe.head(n))
