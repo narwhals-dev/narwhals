@@ -46,6 +46,11 @@ class Expr(Protocol):
         ...
 
 
+class ExprStringNamespace(Protocol):
+    def ends_with(self, other: str) -> Expr:
+        ...
+
+
 class Namespace(Protocol):
     def col(self, *names: str | Iterable[str]) -> Expr:
         ...

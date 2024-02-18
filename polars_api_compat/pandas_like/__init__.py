@@ -9,6 +9,7 @@ from polars_api_compat.pandas_like.column_object import Series
 from polars_api_compat.pandas_like.dataframe_object import LazyFrame
 from polars_api_compat.spec import DataFrame as DataFrameT
 from polars_api_compat.spec import Expr as ExprT
+from polars_api_compat.spec import ExprStringNamespace as ExprStringNamespaceT
 from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import Namespace as NamespaceT
@@ -296,5 +297,23 @@ class Expr(ExprT):
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=[name],
+            implementation=self._implementation,
+        )
+
+    def str(self) -> ExprStringNamespaceT:
+        return ExprStringNamespace(self)
+
+
+class ExprStringNamespace(ExprStringNamespaceT):
+    def __init__(self, expr: ExprT) -> None:
+        self._expr = expr
+
+    def ends_with(self, other: str) -> ExprT:
+        return Expr(
+            lambda df: [series.str().ends_with(other) for series in self.call(df)],
+            depth=self._depth + 1,
+            function_name=self._function_name,
+            root_names=self._root_names,
+            output_names=self._output_names,
             implementation=self._implementation,
         )
