@@ -261,7 +261,11 @@ class Series(SeriesT):
         ser = self.series
         return ser.nunique()
 
-    def unique(self) -> Series:
+    def zip_with(self, mask: SeriesT, other: SeriesT) -> SeriesT:
+        ser = self.series
+        return self._from_series(ser.where(mask, other))
+
+    def unique(self) -> SeriesT:
         ser = self.series
         return ser.unique()
 

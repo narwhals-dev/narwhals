@@ -133,6 +133,9 @@ class Series(Protocol):
     def n_unique(self) -> int:
         ...
 
+    def zip_with(self, mask: Series, other: Series) -> Series:
+        ...
+
 
 class DataFrame(Protocol):
     def with_columns(
