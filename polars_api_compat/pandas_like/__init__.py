@@ -310,7 +310,14 @@ class ExprStringNamespace(ExprStringNamespaceT):
 
     def ends_with(self, other: str) -> ExprT:
         return Expr(
-            lambda df: [series.str().ends_with(other) for series in self.call(df)],
+            lambda df: [
+                Series(
+                    series.str().ends_with(other),
+                    api_version=df.api_version,  # type: ignore[union-attr]
+                    implementation=df._implementation,  # type: ignore[attr-defined]
+                )
+                for series in self.call(df)
+            ],
             depth=self._depth + 1,
             function_name=self._function_name,
             root_names=self._root_names,
