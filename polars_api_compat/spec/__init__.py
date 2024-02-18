@@ -12,10 +12,6 @@ from typing_extensions import Self
 class Expr(Protocol):
     call: Callable[[DataFrame | LazyFrame], list[Series]]
     api_version: str
-    depth: int | None
-    root_names: list[str] | None
-    output_names: list[str] | None
-    function_name: str | None
 
     def alias(self, name: str) -> Expr:
         ...
