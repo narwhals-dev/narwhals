@@ -23,9 +23,13 @@ from polars_api_compat.utils import register_expression_call
 def translate(
     df: pd.DataFrame,
     implementation: str,
-    api_version: str | None = None,
+    api_version: str,
 ) -> tuple[LazyFrameT, NamespaceT]:
-    df = LazyFrame(df, api_version=api_version, implementation=implementation)
+    df = LazyFrame(
+        df,
+        api_version=api_version,
+        implementation=implementation,
+    )
     return df, df.__lazyframe_namespace__()
 
 

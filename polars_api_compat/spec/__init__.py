@@ -73,22 +73,6 @@ class Namespace(Protocol):
     def len(self) -> Expr:
         ...
 
-    def _create_series_from_scalar(self, value: Any, series: Series) -> Series:
-        ...
-
-    def _create_expr_from_series(self, series: Series) -> Expr:
-        ...
-
-    def _create_expr_from_callable(  # noqa: PLR0913
-        self,
-        func: Callable[[DataFrame | LazyFrame], list[Series]],
-        depth: int,
-        function_name: str | None,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
-    ) -> Expr:
-        ...
-
     def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...
 

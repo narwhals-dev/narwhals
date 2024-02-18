@@ -102,5 +102,7 @@ class LazyGroupBy(LazyGroupByT):
         result = pd.DataFrame(out)
         result = pd.concat([result, *new_cols], axis=1, copy=False)
         return LazyFrame(
-            result, api_version=self.api_version, implementation=self._df._implementation
+            result,
+            api_version=self.api_version,
+            implementation=self._df._implementation,  # type: ignore[attr-defined]
         )

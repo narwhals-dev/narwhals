@@ -125,10 +125,10 @@ def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
     if isinstance(into_expr, str):
         return plx.col(into_expr)
     if hasattr(into_expr, "__expr_namespace__"):
-        return cast(Expr, into_expr)  # help mypy
+        return cast(Expr, into_expr)
     if hasattr(into_expr, "__series_namespace__"):
-        into_expr = cast(Series, into_expr)  # help mypy
-        return plx._create_expr_from_series(into_expr)
+        into_expr = cast(Series, into_expr)
+        return plx._create_expr_from_series(into_expr)  # type: ignore[attr-defined]
     msg = f"Expected IntoExpr, got {type(into_expr)}"
     raise TypeError(msg)
 
@@ -218,7 +218,9 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
                 _out = cast(Series, _out)  # help mypy
                 out.append(_out)
             else:
-                out.append(plx._create_series_from_scalar(_out, column))
+                out.append(
+                    plx._create_series_from_scalar(_out, column)  # type: ignore[attr-defined]
+                )
         return out
 
     if expr.depth is None:
@@ -228,7 +230,7 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
         function_name: str = f"{expr.function_name}->{attr}"
     else:
         function_name = attr
-    return plx._create_expr_from_callable(
+    return plx._create_expr_from_callable(  # type: ignore[attr-defined]
         func,
         depth=expr.depth + 1,
         function_name=function_name,

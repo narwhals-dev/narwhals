@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from polars_api_compat.spec import Namespace
 
 
-def to_polars_api(df: Any, version: str) -> tuple[LazyFrame, Namespace]:  # noqa: ARG001
+def to_polars_api(df: Any, version: str) -> tuple[LazyFrame, Namespace]:
     if hasattr(df, "__polars_api_compat__"):
         return df.__polars_api_compat__()
     try:
@@ -29,7 +29,7 @@ def to_polars_api(df: Any, version: str) -> tuple[LazyFrame, Namespace]:  # noqa
         if isinstance(df, pd.DataFrame):
             from polars_api_compat.pandas_like import translate
 
-            return translate(df, implementation="pandas")
+            return translate(df, api_version=version, implementation="pandas")
     try:
         import cudf
     except ModuleNotFoundError:
@@ -38,7 +38,7 @@ def to_polars_api(df: Any, version: str) -> tuple[LazyFrame, Namespace]:  # noqa
         if isinstance(df, cudf.DataFrame):
             from polars_api_compat.pandas_like import translate
 
-            return translate(df, implementation="cudf")
+            return translate(df, api_version=version, implementation="cudf")
     msg = f"Could not translate DataFrame {type(df)}, please open a feature request."
     raise TypeError(msg)
 
