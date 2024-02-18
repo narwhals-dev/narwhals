@@ -4,7 +4,7 @@ from typing import Any
 
 import polars
 
-from polars_api_compat import to_original_api
+from polars_api_compat import to_original_object
 from polars_api_compat import to_polars_api
 
 Q_NUM = 4
@@ -34,7 +34,7 @@ def q4(
         )
     )
 
-    return to_original_api(result.collect())
+    return to_original_object(result.collect())
 
 
 lineitem_ds = polars.scan_parquet("../tpch-data/lineitem.parquet")

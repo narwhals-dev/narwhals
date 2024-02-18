@@ -1,7 +1,7 @@
 # ruff: noqa
 from typing import Any
 from datetime import datetime
-from polars_api_compat import to_polars_api, to_original_api
+from polars_api_compat import to_polars_api, to_original_object
 import pandas as pd
 import polars
 
@@ -34,7 +34,7 @@ def q1(df_raw: Any) -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    return to_original_api(result.collect())
+    return to_original_object(result.collect())
 
 
 df = pd.read_parquet("../tpch-data/lineitem.parquet")

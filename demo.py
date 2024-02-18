@@ -2,7 +2,7 @@
 import polars as pl
 from great_tables.data import sp500
 
-from polars_api_compat import to_original_api
+from polars_api_compat import to_original_object
 from polars_api_compat import to_polars_api
 
 # Define the start and end dates for the data range
@@ -24,7 +24,7 @@ def dataframe_agnostic_filter(df_raw, start_date, end_date):
     )
 
     # Return underlying dataframe (same class passed by user)
-    return to_original_api(df)
+    return to_original_object(df)
 
 
 sp500_mini = dataframe_agnostic_filter(sp500, start_date, end_date)

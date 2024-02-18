@@ -4,7 +4,7 @@ from typing import Any
 
 import polars
 
-from polars_api_compat import to_original_api
+from polars_api_compat import to_original_object
 from polars_api_compat import to_polars_api
 
 
@@ -47,7 +47,7 @@ def q5(
         .sort(by="revenue", descending=True)
     )
 
-    return to_original_api(result.collect())
+    return to_original_object(result.collect())
 
 
 region_ds = polars.scan_parquet("../tpch-data/region.parquet")

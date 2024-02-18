@@ -54,7 +54,7 @@ def quick_translate(df: Any, version: str, implementation: str) -> DataFrame:
     raise TypeError(msg)
 
 
-def to_original_api(df: DataFrame | LazyFrame) -> Any:
+def to_original_object(df: DataFrame | LazyFrame) -> Any:
     try:
         import polars as pl
     except ModuleNotFoundError:

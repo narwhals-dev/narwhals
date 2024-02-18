@@ -6,7 +6,7 @@ from datetime import datetime
 import polars
 import pandas as pd
 
-from polars_api_compat import to_original_api
+from polars_api_compat import to_original_object
 from polars_api_compat import to_polars_api
 import polars
 
@@ -49,7 +49,7 @@ def q3(
         .head(10)
     )
 
-    return to_original_api(q_final.collect())
+    return to_original_object(q_final.collect())
 
 
 customer_ds = polars.scan_parquet("../tpch-data/customer.parquet")
