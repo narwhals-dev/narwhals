@@ -293,6 +293,9 @@ class Expr(ExprT):
     def mean(self) -> ExprT:
         return register_expression_call(self, "mean")
 
+    def max(self) -> ExprT:
+        return register_expression_call(self, "max")
+
     def min(self) -> ExprT:
         return register_expression_call(self, "min")
 
@@ -323,35 +326,36 @@ class ExprStringNamespace(ExprStringNamespaceT):
         self._expr = expr
 
     def ends_with(self, suffix: str) -> ExprT:
+        # TODO make a register_expression_call for namespaces
         return Expr(
             lambda df: [
                 Series(
                     series.series.str.endswith(suffix),
                     api_version=df.api_version,  # type: ignore[union-attr]
-                    implementation=df._implementation,  # type: ignore[attr-defined]
+                    implementation=df._implementation,  # type: ignore[union-attr]
                 )
-                for series in self._expr.call(df)
+                for series in self._expr.call(df)  # type: ignore[attr-defined]
             ],
-            depth=self._expr._depth + 1,
-            function_name=self._expr._function_name,
-            root_names=self._expr._root_names,
-            output_names=self._expr._output_names,
-            implementation=self._expr._implementation,
+            depth=self._expr._depth + 1,  # type: ignore[attr-defined]
+            function_name=self._expr._function_name,  # type: ignore[attr-defined]
+            root_names=self._expr._root_names,  # type: ignore[attr-defined]
+            output_names=self._expr._output_names,  # type: ignore[attr-defined]
+            implementation=self._expr._implementation,  # type: ignore[attr-defined]
         )
 
     def strip_chars(self, characters: str = " ") -> ExprT:
         return Expr(
             lambda df: [
                 Series(
-                    series.series.str.strip(characters),
+                    series.series.str.strip(characters),  # type: ignore[attr-defined]
                     api_version=df.api_version,  # type: ignore[union-attr]
-                    implementation=df._implementation,  # type: ignore[attr-defined]
+                    implementation=df._implementation,  # type: ignore[union-attr]
                 )
-                for series in self._expr.call(df)
+                for series in self._expr.call(df)  # type: ignore[attr-defined]
             ],
-            depth=self._expr._depth + 1,
-            function_name=self._expr._function_name,
-            root_names=self._expr._root_names,
-            output_names=self._expr._output_names,
-            implementation=self._expr._implementation,
+            depth=self._expr._depth + 1,  # type: ignore[attr-defined]
+            function_name=self._expr._function_name,  # type: ignore[attr-defined]
+            root_names=self._expr._root_names,  # type: ignore[attr-defined]
+            output_names=self._expr._output_names,  # type: ignore[attr-defined]
+            implementation=self._expr._implementation,  # type: ignore[attr-defined]
         )

@@ -45,9 +45,20 @@ class Expr(Protocol):
     def sum(self) -> Expr:
         ...
 
+    def min(self) -> Expr:
+        ...
+
+    def max(self) -> Expr:
+        ...
+
 
 class ExprStringNamespace(Protocol):
     def ends_with(self, other: str) -> Expr:
+        ...
+
+
+class ExprNameNamespace(Protocol):
+    def keep(self) -> Expr:
         ...
 
 
