@@ -217,7 +217,7 @@ class LazyFrame(LazyFrameT):
     ) -> LazyFrameT:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = horizontal_concat(
-            {series.name: series.series for series in new_series},
+            [series.series for series in new_series],
             implementation=self._implementation,
         )
         return self._from_dataframe(df)
