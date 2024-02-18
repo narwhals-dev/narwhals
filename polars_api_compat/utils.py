@@ -371,7 +371,7 @@ def is_series(obj: Any) -> bool:
     return False
 
 
-def get_implementation(obj: Any) -> bool:
+def get_implementation(obj: Any) -> str:
     if POLARS_AVAILABLE and isinstance(
         obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
     ):
