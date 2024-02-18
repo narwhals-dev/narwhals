@@ -6,6 +6,7 @@ from typing import Iterable
 
 from polars_api_compat.pandas_like.dataframe_object import LazyFrame
 from polars_api_compat.spec import DataFrame as DataFrameT
+from polars_api_compat.spec import Expr as ExprT
 from polars_api_compat.spec import GroupBy as GroupByT
 from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
@@ -68,21 +69,17 @@ class LazyGroupBy(LazyGroupByT):
         exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
 
         for expr in exprs:
-            result_expr = grouped.apply(
-                lambda df, expr=expr: horizontal_concat(
-                    [
-                        i.series
-                        for i in expr.call(
-                            quick_translate(
-                                df,
-                                version=self.api_version,
-                                implementation=implementation,
-                            )
-                        )
-                    ],
-                    implementation=implementation,  # type: ignore[attr-defined]
-                ),
-            )
+
+            def func(df: Any, expr: ExprT) -> DataFrameT:
+                return expr.call(
+                    quick_translate(
+                        df,
+                        version=self.api_version,
+                        implementation=implementation,
+                    )
+                )
+
+            result_expr = grouped.apply(lambda df, expr: func(df, expr))
             dfs.append(result_expr.reset_index(drop=True))
 
         out: dict[str, list[Any]] = collections.defaultdict(list)
