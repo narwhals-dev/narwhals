@@ -71,9 +71,6 @@ class Expr(Protocol):
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Expr:
         ...
 
-    def replace(self, old: Any, new: Any) -> Expr:
-        ...
-
 
 class ExprStringNamespace(Protocol):
     def ends_with(self, other: str) -> Expr:
@@ -143,9 +140,6 @@ class Series(Protocol):
         ...
 
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Series:
-        ...
-
-    def replace(self, old: Any, new: Any) -> Series:
         ...
 
 

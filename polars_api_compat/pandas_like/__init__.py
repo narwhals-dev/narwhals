@@ -325,9 +325,6 @@ class Expr(ExprT):
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> ExprT:
         return register_expression_call(self, "sample", n, fraction, with_replacement)
 
-    def replace(self, old: Any, new: Any) -> ExprT:
-        return register_expression_call(self, "replace", old, new)
-
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
         # override `output_names`
