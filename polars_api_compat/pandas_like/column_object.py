@@ -297,3 +297,11 @@ class Series(SeriesT):
 
     def to_numpy(self) -> Any:
         return self.series.to_numpy()
+
+    def to_pandas(self) -> Any:
+        if self._implementation == "pandas":
+            return self.series
+        elif self._implementation == "cudf":
+            return self.series.to_pandas()
+        msg = f"Unknown implementation: {self._implementation}"
+        raise TypeError(msg)

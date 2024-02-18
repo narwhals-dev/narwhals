@@ -71,9 +71,6 @@ class Expr(Protocol):
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Expr:
         ...
 
-    def to_numpy(self) -> Any:
-        ...
-
 
 class ExprStringNamespace(Protocol):
     def ends_with(self, other: str) -> Expr:
@@ -145,6 +142,12 @@ class Series(Protocol):
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Series:
         ...
 
+    def to_numpy(self) -> Any:
+        ...
+
+    def to_pandas(self) -> Any:
+        ...
+
 
 class DataFrame(Protocol):
     def with_columns(
@@ -201,6 +204,9 @@ class DataFrame(Protocol):
         ...
 
     def to_numpy(self) -> Any:
+        ...
+
+    def to_pandas(self) -> Any:
         ...
 
 

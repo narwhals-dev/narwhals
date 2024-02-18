@@ -338,3 +338,11 @@ class LazyFrame(LazyFrameT):
 
     def to_numpy(self) -> Any:
         return self.dataframe.to_numpy()
+
+    def to_pandas(self) -> Any:
+        if self._implementation == "pandas":
+            return self.dataframe
+        elif self._implementation == "cudf":
+            return self.dataframe.to_pandas()
+        msg = f"Unknown implementation: {self._implementation}"
+        raise TypeError(msg)
