@@ -149,6 +149,9 @@ class DataFrame(DataFrameT):
     def unique(self, subset: list[str]) -> DataFrameT:
         return self.lazy().unique(subset).collect()
 
+    def rename(self, mapping: dict[str, str]) -> DataFrameT:
+        return self.lazy().rename(mapping).collect()
+
 
 class LazyFrame(LazyFrameT):
     """dataframe object"""
@@ -329,3 +332,6 @@ class LazyFrame(LazyFrameT):
 
     def unique(self, subset: list[str]) -> LazyFrameT:
         return self._from_dataframe(self.dataframe.drop_duplicates(subset=subset))
+
+    def rename(self, mapping: dict[str, str]) -> DataFrameT:
+        return self._from_dataframe(self.dataframe.rename(columns=mapping))

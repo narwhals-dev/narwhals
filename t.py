@@ -64,3 +64,7 @@ print(polars_api_compat.containers.is_pandas(df_raw))
 print(polars_api_compat.containers.is_pandas(polars.from_pandas(df_raw)))
 print(polars_api_compat.containers.is_polars(df_raw))
 print(polars_api_compat.containers.is_polars(polars.from_pandas(df_raw)))
+
+
+result = df.rename({"a": "a_new", "b": "b_new"})
+print(result.dataframe)
