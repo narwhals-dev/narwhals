@@ -2,9 +2,13 @@
 from typing import Any
 
 import polars
+import pandas as pd
 
 from polars_api_compat import to_original_api
 from polars_api_compat import to_polars_api
+
+polars.Config.set_tbl_cols(10)
+pd.set_option("display.max_columns", 10)
 
 
 def q2(
@@ -64,9 +68,26 @@ def q2(
     return to_original_api(q_final.collect())
 
 
-region_ds = polars.read_parquet("../tpch-data/region.parquet").to_pandas()
-ration_ds = polars.read_parquet("../tpch-data/nation.parquet").to_pandas()
-supplier_ds = polars.read_parquet("../tpch-data/supplier.parquet").to_pandas()
-part_ds = polars.read_parquet("../tpch-data/part.parquet").to_pandas()
-part_supp_ds = polars.read_parquet("../tpch-data/partsupp.parquet").to_pandas()
-print(q2(region_ds, ration_ds, supplier_ds, part_ds, part_supp_ds))
+region_ds = polars.scan_parquet("../tpch-data/region.parquet")
+ration_ds = polars.scan_parquet("../tpch-data/nation.parquet")
+supplier_ds = polars.scan_parquet("../tpch-data/supplier.parquet")
+part_ds = polars.scan_parquet("../tpch-data/part.parquet")
+part_supp_ds = polars.scan_parquet("../tpch-data/partsupp.parquet")
+print(
+    q2(
+        region_ds.collect().to_pandas(),
+        ration_ds.collect().to_pandas(),
+        supplier_ds.collect().to_pandas(),
+        part_ds.collect().to_pandas(),
+        part_supp_ds.collect().to_pandas(),
+    )
+)
+print(
+    q2(
+        region_ds,
+        ration_ds,
+        supplier_ds,
+        part_ds,
+        part_supp_ds,
+    )
+)
