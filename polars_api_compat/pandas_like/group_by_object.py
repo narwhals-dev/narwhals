@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 import collections
-import functools
 from typing import Any
 from typing import Iterable
 
 from polars_api_compat.pandas_like.dataframe_object import LazyFrame
 from polars_api_compat.spec import DataFrame as DataFrameT
-from polars_api_compat.spec import Expr as ExprT
 from polars_api_compat.spec import GroupBy as GroupByT
 from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
-from polars_api_compat.translate import quick_translate
 from polars_api_compat.utils import dataframe_from_dict
 from polars_api_compat.utils import evaluate_simple_aggregation
 from polars_api_compat.utils import horizontal_concat
@@ -69,32 +66,24 @@ class LazyGroupBy(LazyGroupByT):
                 to_remove.append(i)
         exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
 
-        for expr in exprs:
-
-            def func(df: Any, expr: ExprT) -> DataFrameT:
-                return horizontal_concat(
-                    [
-                        i.series
-                        for i in expr.call(
-                            quick_translate(
-                                df,
-                                version=self.api_version,
-                                implementation=implementation,
-                            )
-                        )
-                    ],
-                    implementation=implementation,
-                )
-
-            inner_func = functools.partial(func, expr=expr)
-
-            result_expr = grouped.apply(inner_func)
-            dfs.append(result_expr.reset_index(drop=True))
-
         out: dict[str, list[Any]] = collections.defaultdict(list)
         for key, _df in grouped:
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
+            for expr in exprs:
+                # TODO: it might be better to use groupby(...).apply
+                # in this case, but I couldn't get the multi-output
+                # case to work for cuDF.
+                result = expr.call(
+                    LazyFrame(
+                        _df,
+                        api_version=self.api_version,
+                        implementation=implementation,
+                    )
+                )
+                for _result in result:
+                    out[_result.name].append(_result.item())
+
         result = dataframe_from_dict(out, implementation=implementation)
         result = horizontal_concat([result, *dfs], implementation=implementation)
         return LazyFrame(
