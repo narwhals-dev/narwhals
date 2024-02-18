@@ -58,8 +58,7 @@ def q2(
             by=["s_acctbal", "n_name", "s_name", "p_partkey"],
             descending=[True, False, False, False],
         )
-        .limit(100)
-        .with_columns(pl.col(pl.datatypes.Utf8).str.strip_chars().name.keep())
+        .head(100)
     )
 
     return to_original_api(q_final.collect())

@@ -146,9 +146,6 @@ class DataFrame(DataFrameT):
     def head(self, n: int) -> DataFrameT:
         return self.lazy().head(n).collect()
 
-    def limit(self, n: int) -> DataFrameT:
-        return self.lazy().limit(n).collect()
-
 
 class LazyFrame(LazyFrameT):
     """dataframe object"""
@@ -325,7 +322,4 @@ class LazyFrame(LazyFrameT):
         return self
 
     def head(self, n: int) -> LazyFrameT:
-        return self._from_dataframe(self.dataframe.head(n))
-
-    def limit(self, n: int) -> LazyFrameT:
         return self._from_dataframe(self.dataframe.head(n))

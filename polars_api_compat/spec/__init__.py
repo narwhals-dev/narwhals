@@ -134,9 +134,6 @@ class DataFrame(Protocol):
     def head(self, n: int) -> DataFrame:
         ...
 
-    def limit(self, n: int) -> DataFrame:
-        ...
-
 
 class LazyFrame(Protocol):
     @property
@@ -184,9 +181,6 @@ class LazyFrame(Protocol):
         ...
 
     def head(self, n: int) -> LazyFrame:
-        ...
-
-    def limit(self, n: int) -> LazyFrame:
         ...
 
 

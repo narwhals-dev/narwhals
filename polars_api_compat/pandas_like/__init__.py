@@ -322,11 +322,28 @@ class ExprStringNamespace(ExprStringNamespaceT):
     def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def ends_with(self, other: str) -> ExprT:
+    def ends_with(self, suffix: str) -> ExprT:
         return Expr(
             lambda df: [
                 Series(
-                    series.series.str.endswith(other),
+                    series.series.str.endswith(suffix),
+                    api_version=df.api_version,  # type: ignore[union-attr]
+                    implementation=df._implementation,  # type: ignore[attr-defined]
+                )
+                for series in self._expr.call(df)
+            ],
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=self._expr._root_names,
+            output_names=self._expr._output_names,
+            implementation=self._expr._implementation,
+        )
+
+    def strip_chars(self, characters: str = " ") -> ExprT:
+        return Expr(
+            lambda df: [
+                Series(
+                    series.series.str.strip(characters),
                     api_version=df.api_version,  # type: ignore[union-attr]
                     implementation=df._implementation,  # type: ignore[attr-defined]
                 )
