@@ -16,6 +16,28 @@ ExprT = TypeVar("ExprT", bound=Expr)
 
 T = TypeVar("T")
 
+try:
+    import polars as pl
+except ModuleNotFoundError:
+    POLARS_AVAILABLE = False
+    pl = object  # type: ignore[assignment]
+else:
+    POLARS_AVAILABLE = True
+try:
+    import pandas as pd
+except ModuleNotFoundError:
+    PANDAS_AVAILABLE = False
+    pd = object
+else:
+    PANDAS_AVAILABLE = True
+try:
+    import cudf
+except ModuleNotFoundError:
+    CUDF_AVAILABLE = False
+    cudf = object
+else:
+    CUDF_AVAILABLE = True
+
 
 def validate_column_comparand(other: Any) -> Any:
     """Validate RHS of binary operation.
@@ -264,6 +286,8 @@ def evaluate_simple_aggregation(expr: Expr, grouped: Any) -> Any:
 def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     """
     Concatenate (native) DataFrames.
+
+    Should be in namespace.
     """
     if implementation == "pandas":
         import pandas as pd
@@ -305,3 +329,68 @@ def series_from_iterable(
         return cudf.Series(data, name=name, index=index)
     msg = f"Unknown implementation: {implementation}"
     raise TypeError(msg)
+
+
+def is_lazyframe(obj: Any) -> bool:
+    if hasattr(obj, "__lazyframe_namespace__"):
+        return True
+    if POLARS_AVAILABLE and isinstance(
+        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
+    ):
+        return isinstance(obj, pl.LazyFrame)
+    return False
+
+
+def is_dataframe(obj: Any) -> bool:
+    if hasattr(obj, "__dataframe_namespace__"):
+        return True
+    if POLARS_AVAILABLE and isinstance(
+        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
+    ):
+        return isinstance(obj, pl.DataFrame)
+    return False
+
+
+def is_expr(obj: Any) -> bool:
+    if hasattr(obj, "__expr_namespace__"):
+        return True
+    if POLARS_AVAILABLE and isinstance(
+        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
+    ):
+        return isinstance(obj, pl.Expr)
+    return False
+
+
+def is_series(obj: Any) -> bool:
+    if hasattr(obj, "__series_namespace__"):
+        return True
+    if POLARS_AVAILABLE and isinstance(
+        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
+    ):
+        return isinstance(obj, pl.Series)
+    return False
+
+
+def get_implementation(obj: Any) -> bool:
+    if POLARS_AVAILABLE and isinstance(
+        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
+    ):
+        return "polars"
+    if PANDAS_AVAILABLE and isinstance(obj, (pd.DataFrame, pd.Series)):
+        return "pandas"
+    if CUDF_AVAILABLE and isinstance(obj, (cudf.DataFrame, cudf.Series)):
+        return "cudf"
+    msg = f"Unknown implementation: {obj}"
+    raise TypeError(msg)
+
+
+def is_pandas(obj: Any) -> bool:
+    return get_implementation(obj) == "pandas"
+
+
+def is_polars(obj: Any) -> bool:
+    return get_implementation(obj) == "polars"
+
+
+def is_cudf(obj: Any) -> bool:
+    return get_implementation(obj) == "cudf"

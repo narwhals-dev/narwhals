@@ -1,4 +1,5 @@
 # ruff: noqa
+import polars
 import pandas as pd
 
 import polars_api_compat
@@ -48,3 +49,9 @@ print(result.dataframe)
 
 result = df.join(df2, left_on="a", right_on="a")
 print(result.dataframe)
+
+
+print(polars_api_compat.is_pandas(df_raw))
+print(polars_api_compat.is_pandas(polars.from_pandas(df_raw)))
+print(polars_api_compat.is_polars(df_raw))
+print(polars_api_compat.is_polars(polars.from_pandas(df_raw)))
