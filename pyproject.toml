@@ -8,7 +8,7 @@ version = "0.1.0"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
-description = "Implementation of the DataFrame Standard for pandas and Polars"
+description = "Extremely lightweight compatibility layer between pandas, Polars, and cuDF"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -21,8 +21,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/data-apis/dataframe-api-compat"
-"Bug Tracker" = "https://github.com/data-apis/dataframe-api-compat"
+"Homepage" = "https://github.com/MarcoGorelli/polars-api-compat"
+"Bug Tracker" = "https://github.com/MarcoGorelli/polars-api-compat"
 
 [tool.ruff]
 line-length = 90
