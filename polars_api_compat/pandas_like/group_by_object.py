@@ -12,6 +12,8 @@ from polars_api_compat.spec import GroupBy as GroupByT
 from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
+from polars_api_compat.utils import evaluate_simple_aggregation
+from polars_api_compat.utils import is_simple_aggregation
 from polars_api_compat.utils import parse_into_exprs
 
 
@@ -59,29 +61,8 @@ class LazyGroupBy(LazyGroupByT):
         new_cols: list[pd.DataFrame] = []
         to_remove: list[int] = []
         for i, expr in enumerate(exprs):
-            if (
-                expr._function_name is not None  # type: ignore[attr-defined]
-                and expr._depth is not None  # type: ignore[attr-defined]
-                and expr._depth <= 2  # type: ignore[attr-defined]
-                # todo: avoid this one?
-                and expr._root_names is not None  # type: ignore[attr-defined]
-            ):
-                # We must have a simple aggregation, such as
-                #     .agg(mean=pl.col('a').mean())
-                # or
-                #     .agg(pl.col('a').mean())
-                if expr._root_names is None or expr.output_names is None:  # type: ignore[attr-defined]
-                    msg = "Unreachable code, please report a bug"
-                    raise AssertionError(msg)
-                if len(expr._root_names) != len(expr.output_names):  # type: ignore[attr-defined]
-                    msg = "Unreachable code, please report a bug"
-                    raise AssertionError(msg)
-                new_names = dict(zip(expr._root_names, expr.output_names))  # type: ignore[attr-defined]
-                new_cols.append(
-                    getattr(grouped[expr._root_names], expr._function_name)()[  # type: ignore[attr-defined]
-                        expr._root_names  # type: ignore[attr-defined]
-                    ].rename(columns=new_names),
-                )
+            if is_simple_aggregation(expr):
+                new_cols.append(evaluate_simple_aggregation(grouped, expr))
                 to_remove.append(i)
         exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
 
