@@ -82,7 +82,8 @@ class LazyGroupBy(LazyGroupByT):
                                 implementation=implementation,
                             )
                         )
-                    ]
+                    ],
+                    implementation=implementation,
                 )
 
             inner_func = functools.partial(func, expr=expr)
