@@ -301,14 +301,3 @@ def series_from_iterable(
         return cudf.Series(data, name=name, index=index)
     msg = f"Unknown implementation: {implementation}"
     raise TypeError(msg)
-
-
-def quick_translate(df: Any, version: str, implementation: str) -> DataFrame:
-    """Translate to Polars API, if implementation is already known."""
-    if implementation in ("pandas", "cudf"):
-        from polars_api_compat.pandas_like import translate
-
-        df, _pl = translate(df, api_version=version, implementation=implementation)
-        return df
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)

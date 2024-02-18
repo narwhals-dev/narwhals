@@ -12,12 +12,12 @@ from polars_api_compat.spec import GroupBy as GroupByT
 from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
+from polars_api_compat.translate import quick_translate
 from polars_api_compat.utils import dataframe_from_dict
 from polars_api_compat.utils import evaluate_simple_aggregation
 from polars_api_compat.utils import horizontal_concat
 from polars_api_compat.utils import is_simple_aggregation
 from polars_api_compat.utils import parse_into_exprs
-from polars_api_compat.utils import quick_translate
 
 
 class GroupBy(GroupByT):
