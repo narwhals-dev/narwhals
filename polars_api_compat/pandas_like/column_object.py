@@ -17,6 +17,7 @@ class Series(SeriesT):
         series: Any,
         *,
         api_version: str,
+        implementation: str,
     ) -> None:
         """Parameters
         ----------
@@ -28,6 +29,7 @@ class Series(SeriesT):
         assert self._name is not None
         self._series = series
         self.api_version = api_version
+        self._implementation = implementation
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard Column (api_version={self.api_version}) "
@@ -51,6 +53,7 @@ class Series(SeriesT):
         return Series(
             series.rename(series.name, copy=False),
             api_version=self.api_version,
+            implementation=self._implementation,
         )
 
     # In the standard
@@ -59,6 +62,7 @@ class Series(SeriesT):
     ) -> polars_api_compat.pandas_like.Namespace:
         return polars_api_compat.pandas_like.Namespace(
             api_version=self.api_version,
+            implementation=self._implementation,
         )
 
     @property

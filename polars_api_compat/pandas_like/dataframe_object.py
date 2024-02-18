@@ -79,6 +79,7 @@ class DataFrame(DataFrameT):
     ) -> NamespaceT:
         return polars_api_compat.pandas_like.Namespace(
             api_version=self.api_version,
+            implementation=self._implementation,  # type: ignore[attr-defined]
         )
 
     @property

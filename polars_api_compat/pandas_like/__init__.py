@@ -74,7 +74,8 @@ class Namespace(NamespaceT):
                         implementation=self._implementation,
                     ),
                     api_version=df.api_version,
-                )
+                    implementation=self._implementation,
+                ),
             ],
             depth=0,
             function_name="len",
@@ -110,6 +111,7 @@ class Namespace(NamespaceT):
                 implementation=self._implementation,
             ),
             api_version=self.api_version,
+            implementation=self._implementation,
         )
 
     def _create_expr_from_series(self, series: SeriesT) -> ExprT:
@@ -119,6 +121,7 @@ class Namespace(NamespaceT):
             function_name="from_series",
             root_names=None,
             output_names=None,
+            implementation=self._implementation,
         )
 
     def all(self) -> ExprT:
@@ -127,6 +130,7 @@ class Namespace(NamespaceT):
                 Series(
                     df.dataframe.loc[:, column_name],
                     api_version=df.api_version,
+                    implementation=self._implementation,
                 )
                 for column_name in df.columns
             ],
@@ -176,6 +180,7 @@ class Expr(ExprT):
                 Series(
                     df.dataframe.loc[:, column_name],
                     api_version=df.api_version,
+                    implementation=implementation,
                 )
                 for column_name in column_names
             ],
