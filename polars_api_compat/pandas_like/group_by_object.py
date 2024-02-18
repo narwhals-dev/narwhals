@@ -59,6 +59,17 @@ class LazyGroupBy(LazyGroupByT):
             as_index=False,
         )
         implementation: str = self._df._implementation  # type: ignore[attr-defined]
+        output_names: list[str] = self._keys
+        for expr in exprs:
+            expr_output_names = expr._output_names  # type: ignore[attr-defined]
+            if expr_output_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in group_by.agg.\n"
+                    "Instead of `pl.all()`, try using a named expression, such as "
+                    "`pl.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+            output_names.extend(expr_output_names)
 
         dfs: list[Any] = []
         to_remove: list[int] = []
@@ -89,7 +100,7 @@ class LazyGroupBy(LazyGroupByT):
         results_keys = dataframe_from_dict(out, implementation=implementation)
         results_keys = horizontal_concat(
             [results_keys, *dfs], implementation=implementation
-        )
+        ).loc[:, output_names]
         return LazyFrame(
             results_keys,
             api_version=self.api_version,

@@ -1,15 +1,16 @@
 # ruff: noqa
+from typing import Any
 from datetime import datetime
 from polars_api_compat import to_polars_api, to_original_api
+import pandas as pd
 import polars
 
 
-def q() -> None:
+def q1(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)
-    q = polars.scan_parquet("../tpch-data/lineitem.parquet").collect().to_pandas()
-    q, pl = to_polars_api(q, version="0.20")
-    q_final = (
-        q.filter(pl.col("l_shipdate") <= var_1)
+    df, pl = to_polars_api(df_raw, version="0.20")
+    result = (
+        df.filter(pl.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
             [
@@ -33,9 +34,14 @@ def q() -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
+    return to_original_api(result.collect())
 
-    print(to_original_api(q_final.collect()))
 
-
-if __name__ == "__main__":
-    q()
+df = pd.read_parquet("../tpch-data/lineitem.parquet")
+df[["l_quantity", "l_extendedprice", "l_discount", "l_tax"]] = df[
+    ["l_quantity", "l_extendedprice", "l_discount", "l_tax"]
+].astype("float64")
+df["l_shipdate"] = pd.to_datetime(df["l_shipdate"])
+print(q1(df))
+df = polars.scan_parquet("../tpch-data/lineitem.parquet")
+print(q1(df))
