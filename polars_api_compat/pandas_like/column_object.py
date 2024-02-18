@@ -261,6 +261,10 @@ class Series(SeriesT):
         ser = self.series
         return ser.nunique()
 
+    def unique(self) -> Series:
+        ser = self.series
+        return ser.unique()
+
     def is_nan(self) -> Series:
         ser = self.series
         if is_extension_array_dtype(ser.dtype):

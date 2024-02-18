@@ -319,6 +319,9 @@ class Expr(ExprT):
     def n_unique(self) -> ExprT:
         return register_expression_call(self, "n_unique")
 
+    def unique(self) -> ExprT:
+        return register_expression_call(self, "unique")
+
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
         # override `output_names`
