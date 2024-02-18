@@ -152,6 +152,17 @@ class DataFrame(DataFrameT):
     def rename(self, mapping: dict[str, str]) -> DataFrameT:
         return self.lazy().rename(mapping).collect()
 
+    def to_numpy(self) -> Any:
+        return self.dataframe.to_numpy()
+
+    def to_pandas(self) -> Any:
+        if self._implementation == "pandas":
+            return self.dataframe
+        elif self._implementation == "cudf":
+            return self.dataframe.to_pandas()
+        msg = f"Unknown implementation: {self._implementation}"
+        raise TypeError(msg)
+
 
 class LazyFrame(LazyFrameT):
     """dataframe object"""
@@ -333,16 +344,5 @@ class LazyFrame(LazyFrameT):
     def unique(self, subset: list[str]) -> LazyFrameT:
         return self._from_dataframe(self.dataframe.drop_duplicates(subset=subset))
 
-    def rename(self, mapping: dict[str, str]) -> DataFrameT:
+    def rename(self, mapping: dict[str, str]) -> LazyFrameT:
         return self._from_dataframe(self.dataframe.rename(columns=mapping))
-
-    def to_numpy(self) -> Any:
-        return self.dataframe.to_numpy()
-
-    def to_pandas(self) -> Any:
-        if self._implementation == "pandas":
-            return self.dataframe
-        elif self._implementation == "cudf":
-            return self.dataframe.to_pandas()
-        msg = f"Unknown implementation: {self._implementation}"
-        raise TypeError(msg)

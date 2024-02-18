@@ -201,6 +201,7 @@ class DataFrame(Protocol):
     def unique(self, subset: list[str]) -> DataFrame:
         ...
 
+    @property
     def shape(self) -> tuple[int, int]:
         ...
 
@@ -265,7 +266,7 @@ class LazyFrame(Protocol):
     def unique(self, subset: list[str]) -> LazyFrame:
         ...
 
-    def rename(self, mapping: dict[str, str]) -> DataFrame:
+    def rename(self, mapping: dict[str, str]) -> LazyFrame:
         ...
 
 

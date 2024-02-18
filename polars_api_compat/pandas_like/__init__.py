@@ -52,11 +52,11 @@ class Namespace(NamespaceT):
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
         return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
 
-    def concat(self, items: AnyDataFrame, *, how: str) -> AnyDataFrame:
+    def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:
         dfs: list[Any] = []
-        kind = {}
+        kind: Any = {}
         for df in items:
-            dfs.append(df.dataframe)
+            dfs.append(df.dataframe)  # type: ignore[union-attr, attr-defined]
             kind.append(type(df))
         if len(kind) > 1:
             msg = "Can only concat DataFrames or LazyFrames, not mixtures of the two"
@@ -65,15 +65,15 @@ class Namespace(NamespaceT):
             msg = "Only horizontal concatenation is supported for now"
             raise TypeError(msg)
         if kind[0] is DataFrame:
-            return DataFrame(
-                horizontal_concat(dfs),
-                api_version=dfs[0].api_version,
-                implementation=dfs[0]._implementation,
+            return DataFrame(  # type: ignore[return-value]
+                horizontal_concat(dfs, implementation=self._implementation),
+                api_version=self.api_version,
+                implementation=self._implementation,
             )
-        return LazyFrame(
-            horizontal_concat(dfs),
-            api_version=dfs[0].api_version,
-            implementation=dfs[0]._implementation,
+        return LazyFrame(  # type: ignore[return-value]
+            horizontal_concat(dfs, implementation=self._implementation),
+            api_version=self.api_version,
+            implementation=self._implementation,
         )
 
     def col(self, *column_names: str | Iterable[str]) -> ExprT:
