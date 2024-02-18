@@ -335,3 +335,6 @@ class LazyFrame(LazyFrameT):
 
     def rename(self, mapping: dict[str, str]) -> DataFrameT:
         return self._from_dataframe(self.dataframe.rename(columns=mapping))
+
+    def to_numpy(self) -> Any:
+        return self.dataframe.to_numpy()

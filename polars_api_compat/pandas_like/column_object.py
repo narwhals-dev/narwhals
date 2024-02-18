@@ -294,3 +294,6 @@ class Series(SeriesT):
     def alias(self, name: str) -> Series:
         ser = self.series
         return self._from_series(ser.rename(name, copy=False))
+
+    def to_numpy(self) -> Any:
+        return self.series.to_numpy()
