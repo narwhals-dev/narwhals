@@ -155,6 +155,9 @@ class DataFrame(Protocol):
     def head(self, n: int) -> DataFrame:
         ...
 
+    def unique(self, subset: list[str]) -> DataFrame:
+        ...
+
 
 class LazyFrame(Protocol):
     @property
@@ -202,6 +205,9 @@ class LazyFrame(Protocol):
         ...
 
     def head(self, n: int) -> LazyFrame:
+        ...
+
+    def unique(self, subset: list[str]) -> LazyFrame:
         ...
 
 

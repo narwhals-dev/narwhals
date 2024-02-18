@@ -146,6 +146,9 @@ class DataFrame(DataFrameT):
     def head(self, n: int) -> DataFrameT:
         return self.lazy().head(n).collect()
 
+    def unique(self, subset: list[str]) -> DataFrameT:
+        return self.lazy().unique(subset).collect()
+
 
 class LazyFrame(LazyFrameT):
     """dataframe object"""
@@ -323,3 +326,6 @@ class LazyFrame(LazyFrameT):
 
     def head(self, n: int) -> LazyFrameT:
         return self._from_dataframe(self.dataframe.head(n))
+
+    def unique(self, subset: list[str]) -> LazyFrameT:
+        return self._from_dataframe(self.dataframe.drop_duplicates(subset=subset))
