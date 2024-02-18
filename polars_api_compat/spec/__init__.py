@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Protocol
@@ -10,13 +9,7 @@ from typing_extensions import Self
 
 
 class Expr(Protocol):
-    call: Callable[[DataFrame | LazyFrame], list[Series]]
-    api_version: str
-
     def alias(self, name: str) -> Expr:
-        ...
-
-    def __expr_namespace__(self) -> Namespace:
         ...
 
     def __and__(self, other: Any) -> Expr:
@@ -80,20 +73,7 @@ class Namespace(Protocol):
 
 
 class Series(Protocol):
-    def __series_namespace__(self) -> Namespace:
-        ...
-
     def alias(self, name: str) -> Self:
-        ...
-
-    @property
-    def series(self) -> Any:
-        """
-        Return the underlying Series.
-
-        This is typically what you'll want to return at the end
-        of a series-agnostic function.
-        """
         ...
 
     @property
@@ -105,9 +85,6 @@ class Series(Protocol):
 
 
 class DataFrame(Protocol):
-    api_version: str
-    columns: list[str]
-
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> DataFrame:
@@ -126,20 +103,7 @@ class DataFrame(Protocol):
     ) -> DataFrame:
         ...
 
-    @property
-    def dataframe(self) -> Any:
-        """
-        Return the underlying DataFrame.
-
-        This is typically what you'll want to return at the end
-        of a dataframe-agnostic function.
-        """
-        ...
-
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        ...
-
-    def __dataframe_namespace__(self) -> Namespace:
         ...
 
     def lazy(self) -> LazyFrame:
@@ -149,16 +113,21 @@ class DataFrame(Protocol):
         self,
         other: DataFrame,
         *,
-        how: Literal["left", "inner", "outer"] = "inner",
+        how: Literal["inner"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> DataFrame:
         ...
 
+    @property
+    def columns(self) -> list[str]:
+        ...
+
 
 class LazyFrame(Protocol):
-    api_version: str
-    columns: list[str]
+    @property
+    def columns(self) -> list[str]:
+        ...
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
@@ -181,20 +150,7 @@ class LazyFrame(Protocol):
     def collect(self) -> DataFrame:
         ...
 
-    @property
-    def dataframe(self) -> Any:
-        """
-        Return the underlying DataFrame.
-
-        This is typically what you'll want to return at the end
-        of a dataframe-agnostic function.
-        """
-        ...
-
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
-        ...
-
-    def __lazyframe_namespace__(self) -> Namespace:
         ...
 
     def join(

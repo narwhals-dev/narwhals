@@ -62,21 +62,21 @@ def to_original_api(df: DataFrame | LazyFrame) -> Any:
     else:
         if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
             return df
-    return df.dataframe
+    return df.dataframe  # type: ignore[union-attr]
 
 
 def get_namespace(obj: Any, implementation: str | None = None) -> Namespace:
     if implementation == "polars":
         import polars as pl
 
-        return pl
+        return pl  # type: ignore[return-value]
     try:
         import polars as pl
     except ModuleNotFoundError:
         pass
     else:
         if isinstance(obj, (pl.DataFrame, pl.LazyFrame, pl.Series)):
-            return pl
+            return pl  # type: ignore[return-value]
     if hasattr(obj, "__dataframe_namespace__"):
         return obj.__dataframe_namespace__()
     if hasattr(obj, "__series_namespace__"):

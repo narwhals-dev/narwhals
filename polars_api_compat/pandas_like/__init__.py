@@ -68,12 +68,12 @@ class Namespace(NamespaceT):
             lambda df: [
                 Series(
                     series_from_iterable(
-                        [len(df.dataframe)],
+                        [len(df.dataframe)],  # type: ignore[union-attr]
                         name="len",
                         index=[0],
                         implementation=self._implementation,
                     ),
-                    api_version=df.api_version,
+                    api_version=df.api_version,  # type: ignore[union-attr]
                     implementation=self._implementation,
                 ),
             ],
@@ -106,8 +106,8 @@ class Namespace(NamespaceT):
         return Series(
             series_from_iterable(
                 [value],
-                name=series.series.name,
-                index=series.series.index[0:1],
+                name=series.series.name,  # type: ignore[attr-defined]
+                index=series.series.index[0:1],  # type: ignore[attr-defined]
                 implementation=self._implementation,
             ),
             api_version=self.api_version,
@@ -128,8 +128,8 @@ class Namespace(NamespaceT):
         return Expr(
             lambda df: [
                 Series(
-                    df.dataframe.loc[:, column_name],
-                    api_version=df.api_version,
+                    df.dataframe.loc[:, column_name],  # type: ignore[union-attr]
+                    api_version=df.api_version,  # type: ignore[union-attr]
                     implementation=self._implementation,
                 )
                 for column_name in df.columns
@@ -178,8 +178,8 @@ class Expr(ExprT):
         return cls(
             lambda df: [
                 Series(
-                    df.dataframe.loc[:, column_name],
-                    api_version=df.api_version,
+                    df.dataframe.loc[:, column_name],  # type: ignore[union-attr]
+                    api_version=df.api_version,  # type: ignore[union-attr]  # type: ignore[union-attr]
                     implementation=implementation,
                 )
                 for column_name in column_names

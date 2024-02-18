@@ -35,8 +35,11 @@ class DataFrame(DataFrameT):
         self._validate_columns(dataframe.columns)
         self._dataframe = dataframe.reset_index(drop=True)
         self.api_version = api_version
-        self.columns = dataframe.columns.to_list()
         self._implementation = implementation
+
+    @property
+    def columns(self) -> list[str]:
+        return self.dataframe.columns.tolist()
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self.api_version}) "
@@ -153,8 +156,11 @@ class LazyFrame(LazyFrameT):
         self._validate_columns(dataframe.columns)
         self._df = dataframe.reset_index(drop=True)
         self.api_version = api_version
-        self.columns = self.dataframe.columns.tolist()
         self._implementation = implementation
+
+    @property
+    def columns(self) -> list[str]:
+        return self.dataframe.columns.tolist()
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self.api_version}) "
@@ -219,7 +225,7 @@ class LazyFrame(LazyFrameT):
     ) -> LazyFrameT:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = horizontal_concat(
-            [series.series for series in new_series],
+            [series.series for series in new_series],  # type: ignore[attr-defined]
             implementation=self._implementation,
         )
         return self._from_dataframe(df)
@@ -229,8 +235,9 @@ class LazyFrame(LazyFrameT):
         *predicates: IntoExpr | Iterable[IntoExpr],
     ) -> LazyFrameT:
         plx = self.__lazyframe_namespace__()
+        expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
-        mask = plx.all_horizontal(*predicates).call(self)[0]
+        mask = expr.call(self)[0]  # type: ignore[attr-defined]
         _mask = validate_dataframe_comparand(mask)
         return self._from_dataframe(self.dataframe.loc[_mask])
 
@@ -241,7 +248,10 @@ class LazyFrame(LazyFrameT):
     ) -> LazyFrameT:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(
-            **{series.name: series.series for series in new_series}
+            **{
+                series.name: series.series  # type: ignore[attr-defined]
+                for series in new_series
+            }
         )
         return self._from_dataframe(df)
 
@@ -288,7 +298,7 @@ class LazyFrame(LazyFrameT):
 
         return self._from_dataframe(
             self.dataframe.merge(
-                other.dataframe,
+                other.dataframe,  # type: ignore[attr-defined]
                 left_on=left_on,
                 right_on=right_on,
                 how=how,

@@ -77,12 +77,16 @@ def maybe_evaluate_expr(df: DataFrame | LazyFrame, arg: Any) -> Any:
     return arg
 
 
-def get_namespace(df: DataFrame | LazyFrame) -> Namespace:
-    if hasattr(df, "__dataframe_namespace__"):
-        return df.__dataframe_namespace__()
-    if hasattr(df, "__lazyframe_namespace__"):
-        return df.__lazyframe_namespace__()
-    msg = f"Expected DataFrame or LazyFrame, got {type(df)}"
+def get_namespace(obj: Any) -> Namespace:
+    if hasattr(obj, "__dataframe_namespace__"):
+        return obj.__dataframe_namespace__()
+    if hasattr(obj, "__lazyframe_namespace__"):
+        return obj.__lazyframe_namespace__()
+    if hasattr(obj, "__series_namespace__"):
+        return obj.__series_namespace__()
+    if hasattr(obj, "__expr_namespace__"):
+        return obj.__expr_namespace__()
+    msg = f"Expected DataFrame or LazyFrame, got {type(obj)}"
     raise TypeError(msg)
 
 
@@ -112,7 +116,7 @@ def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[S
     Return list of raw columns.
     """
     expr = parse_into_expr(get_namespace(df), into_expr)
-    return expr.call(df)
+    return expr.call(df)  # type: ignore[attr-defined]
 
 
 def flatten_str(*args: str | Iterable[str]) -> list[str]:
@@ -174,11 +178,11 @@ def evaluate_into_exprs(
 
 
 def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -> Expr:
-    plx = expr.__expr_namespace__()
+    plx = get_namespace(expr)
 
     def func(df: DataFrame | LazyFrame) -> list[Series]:
         out: list[Series] = []
-        for column in expr.call(df):
+        for column in expr.call(df):  # type: ignore[attr-defined]
             # should be enough to just evaluate?
             # validation should happen within column methods?
             _out = getattr(column, attr)(  # type: ignore[no-any-return]

@@ -12,6 +12,7 @@ from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
 from polars_api_compat.utils import dataframe_from_dict
 from polars_api_compat.utils import evaluate_simple_aggregation
+from polars_api_compat.utils import get_namespace
 from polars_api_compat.utils import horizontal_concat
 from polars_api_compat.utils import is_simple_aggregation
 from polars_api_compat.utils import parse_into_exprs
@@ -46,12 +47,13 @@ class LazyGroupBy(LazyGroupByT):
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
     ) -> LazyFrameT:
+        df = self._df.dataframe  # type: ignore[attr-defined]
         exprs = parse_into_exprs(
-            self._df.__lazyframe_namespace__(),
+            get_namespace(self._df),
             *aggs,
             **named_aggs,
         )
-        grouped = self._df.dataframe.groupby(
+        grouped = df.groupby(
             list(self._keys),
             sort=False,
             as_index=False,
@@ -67,27 +69,29 @@ class LazyGroupBy(LazyGroupByT):
         exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
 
         out: dict[str, list[Any]] = collections.defaultdict(list)
-        for key, _df in grouped:
-            for _key, _name in zip(key, self._keys):
-                out[_name].append(_key)
+        for keys, df_keys in grouped:
+            for key, name in zip(keys, self._keys):
+                out[name].append(key)
             for expr in exprs:
                 # TODO: it might be better to use groupby(...).apply
                 # in this case, but I couldn't get the multi-output
                 # case to work for cuDF.
-                result = expr.call(
+                results_keys = expr.call(  # type: ignore[attr-defined]
                     LazyFrame(
-                        _df,
+                        df_keys,
                         api_version=self.api_version,
                         implementation=implementation,
                     )
                 )
-                for _result in result:
-                    out[_result.name].append(_result.item())
+                for result_keys in results_keys:
+                    out[result_keys.name].append(result_keys.item())
 
-        result = dataframe_from_dict(out, implementation=implementation)
-        result = horizontal_concat([result, *dfs], implementation=implementation)
+        results_keys = dataframe_from_dict(out, implementation=implementation)
+        results_keys = horizontal_concat(
+            [results_keys, *dfs], implementation=implementation
+        )
         return LazyFrame(
-            result,
+            results_keys,
             api_version=self.api_version,
             implementation=self._df._implementation,  # type: ignore[attr-defined]
         )
