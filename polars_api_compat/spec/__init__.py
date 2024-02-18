@@ -4,6 +4,7 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Protocol
+from typing import TypeVar
 
 from typing_extensions import Self
 
@@ -105,6 +106,9 @@ class Namespace(Protocol):
         ...
 
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+        ...
+
+    def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:
         ...
 
 
@@ -280,3 +284,5 @@ class LazyGroupBy(Protocol):
 
 
 IntoExpr = Expr | str | int | float | Series
+
+AnyDataFrame = TypeVar("AnyDataFrame", DataFrame, LazyFrame)

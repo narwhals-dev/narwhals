@@ -6,7 +6,9 @@ from typing import Callable
 from typing import Iterable
 
 from polars_api_compat.pandas_like.column_object import Series
+from polars_api_compat.pandas_like.dataframe_object import DataFrame
 from polars_api_compat.pandas_like.dataframe_object import LazyFrame
+from polars_api_compat.spec import AnyDataFrame
 from polars_api_compat.spec import DataFrame as DataFrameT
 from polars_api_compat.spec import Expr as ExprT
 from polars_api_compat.spec import ExprStringNamespace as ExprStringNamespaceT
@@ -15,6 +17,7 @@ from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import Namespace as NamespaceT
 from polars_api_compat.spec import Series as SeriesT
 from polars_api_compat.utils import flatten_str
+from polars_api_compat.utils import horizontal_concat
 from polars_api_compat.utils import parse_into_exprs
 from polars_api_compat.utils import register_expression_call
 from polars_api_compat.utils import series_from_iterable
@@ -48,6 +51,30 @@ class Namespace(NamespaceT):
 
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
         return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
+
+    def concat(self, items: AnyDataFrame, *, how: str) -> AnyDataFrame:
+        dfs: list[Any] = []
+        kind = {}
+        for df in items:
+            dfs.append(df.dataframe)
+            kind.append(type(df))
+        if len(kind) > 1:
+            msg = "Can only concat DataFrames or LazyFrames, not mixtures of the two"
+            raise TypeError(msg)
+        if how != "horizontal":
+            msg = "Only horizontal concatenation is supported for now"
+            raise TypeError(msg)
+        if kind[0] is DataFrame:
+            return DataFrame(
+                horizontal_concat(dfs),
+                api_version=dfs[0].api_version,
+                implementation=dfs[0]._implementation,
+            )
+        return LazyFrame(
+            horizontal_concat(dfs),
+            api_version=dfs[0].api_version,
+            implementation=dfs[0]._implementation,
+        )
 
     def col(self, *column_names: str | Iterable[str]) -> ExprT:
         return Expr.from_column_names(
