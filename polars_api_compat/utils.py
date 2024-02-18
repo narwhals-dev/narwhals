@@ -223,19 +223,19 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
                 )
         return out
 
-    if expr.depth is None:
+    if expr._depth is None:  # type: ignore[attr-defined]
         msg = "Unreachable code, please report a bug"
         raise AssertionError(msg)
-    if expr.function_name is not None:
-        function_name: str = f"{expr.function_name}->{attr}"
+    if expr._function_name is not None:  # type: ignore[attr-defined]
+        function_name: str = f"{expr._function_name}->{attr}"  # type: ignore[attr-defined]
     else:
         function_name = attr
     return plx._create_expr_from_callable(  # type: ignore[attr-defined]
         func,
-        depth=expr.depth + 1,
+        depth=expr._depth + 1,  # type: ignore[attr-defined]
         function_name=function_name,
-        root_names=expr.root_names,
-        output_names=expr.output_names,
+        root_names=expr._root_names,  # type: ignore[attr-defined]
+        output_names=expr.output_names,  # type: ignore[attr-defined]
     )
 
 

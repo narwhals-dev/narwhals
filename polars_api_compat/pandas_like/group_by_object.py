@@ -60,26 +60,26 @@ class LazyGroupBy(LazyGroupByT):
         to_remove: list[int] = []
         for i, expr in enumerate(exprs):
             if (
-                expr.function_name is not None
-                and expr.depth is not None
-                and expr.depth <= 2
-                # todo: this one shouldn't be necessary?
-                and expr.root_names is not None
+                expr._function_name is not None  # type: ignore[attr-defined]
+                and expr._depth is not None  # type: ignore[attr-defined]
+                and expr._depth <= 2  # type: ignore[attr-defined]
+                # todo: avoid this one?
+                and expr._root_names is not None  # type: ignore[attr-defined]
             ):
                 # We must have a simple aggregation, such as
                 #     .agg(mean=pl.col('a').mean())
                 # or
                 #     .agg(pl.col('a').mean())
-                if expr.root_names is None or expr.output_names is None:
+                if expr._root_names is None or expr.output_names is None:  # type: ignore[attr-defined]
                     msg = "Unreachable code, please report a bug"
                     raise AssertionError(msg)
-                if len(expr.root_names) != len(expr.output_names):
+                if len(expr._root_names) != len(expr.output_names):  # type: ignore[attr-defined]
                     msg = "Unreachable code, please report a bug"
                     raise AssertionError(msg)
-                new_names = dict(zip(expr.root_names, expr.output_names))
+                new_names = dict(zip(expr._root_names, expr.output_names))  # type: ignore[attr-defined]
                 new_cols.append(
-                    getattr(grouped[expr.root_names], expr.function_name)()[
-                        expr.root_names
+                    getattr(grouped[expr._root_names], expr._function_name)()[  # type: ignore[attr-defined]
+                        expr._root_names  # type: ignore[attr-defined]
                     ].rename(columns=new_names),
                 )
                 to_remove.append(i)

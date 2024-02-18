@@ -130,19 +130,19 @@ class Expr(ExprT):
     ) -> None:
         self.call = call
         self.api_version = "0.20.0"  # todo
-        self.depth = depth
-        self.function_name = function_name
-        self.root_names = root_names
-        self.depth = depth
-        self.output_names = output_names
+        self._depth = depth
+        self._function_name = function_name
+        self._root_names = root_names
+        self._depth = depth
+        self._output_names = output_names
 
     def __repr__(self) -> str:
         return (
             f"Expr("
-            f"depth={self.depth}, "
-            f"function_name={self.function_name}, "
-            f"root_names={self.root_names}, "
-            f"output_names={self.output_names}"
+            f"depth={self._depth}, "
+            f"function_name={self._function_name}, "
+            f"root_names={self._root_names}, "
+            f"output_names={self._output_names}"
         )
 
     @classmethod
@@ -254,13 +254,13 @@ class Expr(ExprT):
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
         # override `output_names`
-        if self.depth is None:
+        if self._depth is None:
             msg = "Unreachable code, please report a bug"
             raise AssertionError(msg)
         return Expr(
             lambda df: [series.alias(name) for series in self.call(df)],
-            depth=self.depth + 1,
-            function_name=self.function_name,
-            root_names=self.root_names,
+            depth=self._depth + 1,
+            function_name=self._function_name,
+            root_names=self._root_names,
             output_names=[name],
         )
