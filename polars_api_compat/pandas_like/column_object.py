@@ -80,6 +80,10 @@ class Series(SeriesT):
         ser = self.series
         return self._from_series(ser.between(lower_bound, upper_bound, inclusive=closed))
 
+    def is_in(self, other: Any) -> Series:
+        ser = self.series
+        return self._from_series(ser.isin(other))
+
     # Binary comparisons
 
     def __eq__(self, other: object) -> Series:  # type: ignore[override]
