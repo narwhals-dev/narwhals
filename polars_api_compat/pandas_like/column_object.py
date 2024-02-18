@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Any
-from typing import NoReturn
 
 from pandas.api.types import is_extension_array_dtype
 
@@ -27,7 +26,7 @@ class Series(SeriesT):
 
         self._name = series.name
         assert self._name is not None
-        self._series = series
+        self._series = series.reset_index(drop=True)
         self.api_version = api_version
         self._implementation = implementation
 
@@ -45,10 +44,6 @@ class Series(SeriesT):
             + "┘\n"
         )
 
-    def __iter__(self) -> NoReturn:
-        msg = ""
-        raise NotImplementedError(msg)
-
     def _from_series(self, series: Any) -> Series:
         return Series(
             series.rename(series.name, copy=False),
@@ -56,7 +51,6 @@ class Series(SeriesT):
             implementation=self._implementation,
         )
 
-    # In the standard
     def __series_namespace__(
         self,
     ) -> polars_api_compat.pandas_like.Namespace:
@@ -75,7 +69,7 @@ class Series(SeriesT):
 
     def filter(self, mask: Series) -> Series:
         ser = self.series
-        return self._from_series(ser.loc[validate_column_comparand(self, mask)])
+        return self._from_series(ser.loc[validate_column_comparand(mask)])
 
     def item(self) -> Any:
         return item(self.series)
@@ -83,38 +77,38 @@ class Series(SeriesT):
     # Binary comparisons
 
     def __eq__(self, other: object) -> Series:  # type: ignore[override]
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser == other).rename(ser.name, copy=False))
 
     def __ne__(self, other: object) -> Series:  # type: ignore[override]
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser != other).rename(ser.name, copy=False))
 
     def __ge__(self, other: Any) -> Series:
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser >= other).rename(ser.name, copy=False))
 
     def __gt__(self, other: Any) -> Series:
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser > other).rename(ser.name, copy=False))
 
     def __le__(self, other: Any) -> Series:
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser <= other).rename(ser.name, copy=False))
 
     def __lt__(self, other: Any) -> Series:
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser < other).rename(ser.name, copy=False))
 
     def __and__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser & other).rename(ser.name, copy=False))
 
     def __rand__(self, other: Any) -> Series:
@@ -122,7 +116,7 @@ class Series(SeriesT):
 
     def __or__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser | other).rename(ser.name, copy=False))
 
     def __ror__(self, other: Any) -> Series:
@@ -130,7 +124,7 @@ class Series(SeriesT):
 
     def __add__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser + other).rename(ser.name, copy=False))
 
     def __radd__(self, other: Any) -> Series:
@@ -138,7 +132,7 @@ class Series(SeriesT):
 
     def __sub__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser - other).rename(ser.name, copy=False))
 
     def __rsub__(self, other: Any) -> Series:
@@ -146,7 +140,7 @@ class Series(SeriesT):
 
     def __mul__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser * other).rename(ser.name, copy=False))
 
     def __rmul__(self, other: Any) -> Series:
@@ -154,7 +148,7 @@ class Series(SeriesT):
 
     def __truediv__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser / other).rename(ser.name, copy=False))
 
     def __rtruediv__(self, other: Any) -> Series:
@@ -162,7 +156,7 @@ class Series(SeriesT):
 
     def __floordiv__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser // other).rename(ser.name, copy=False))
 
     def __rfloordiv__(self, other: Any) -> Series:
@@ -170,7 +164,7 @@ class Series(SeriesT):
 
     def __pow__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser**other).rename(ser.name, copy=False))
 
     def __rpow__(self, other: Any) -> Series:  # pragma: no cover
@@ -178,7 +172,7 @@ class Series(SeriesT):
 
     def __mod__(self, other: Any) -> Series:
         ser = self.series
-        other = validate_column_comparand(self, other)
+        other = validate_column_comparand(other)
         return self._from_series((ser % other).rename(ser.name, copy=False))
 
     def __rmod__(self, other: Any) -> Series:  # pragma: no cover

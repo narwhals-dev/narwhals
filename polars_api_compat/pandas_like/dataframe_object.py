@@ -33,7 +33,7 @@ class DataFrame(DataFrameT):
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._dataframe = dataframe
+        self._dataframe = dataframe.reset_index(drop=True)
         self.api_version = api_version
         self.columns = dataframe.columns.to_list()
         self._implementation = implementation
@@ -151,7 +151,7 @@ class LazyFrame(LazyFrameT):
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._df = dataframe
+        self._df = dataframe.reset_index(drop=True)
         self.api_version = api_version
         self.columns = self.dataframe.columns.tolist()
         self._implementation = implementation

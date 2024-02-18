@@ -57,3 +57,17 @@ then (tomorrow?)
 - try out cudf?
 
 add lots of logging. find out where it's going wrong?
+
+need a "get_namespace" function. None of this `__dataframe_namespace__`
+stuff!
+
+ok, enough of this. let's do what skrub needs.
+
+next up: go through skrub's code, and give them _everything_ they need.
+
+get them to start using this. that would already be a win.
+
+---
+
+we should...probably just drop the index completely.
+slightly poorer perf in some cases, but whatever...
