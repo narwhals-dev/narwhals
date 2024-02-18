@@ -6,8 +6,6 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 
-import pandas as pd
-
 import polars_api_compat
 from polars_api_compat.spec import DataFrame as DataFrameT
 from polars_api_compat.spec import GroupBy as GroupByT
@@ -17,6 +15,7 @@ from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
 from polars_api_compat.spec import Namespace as NamespaceT
 from polars_api_compat.utils import evaluate_into_exprs
 from polars_api_compat.utils import flatten_str
+from polars_api_compat.utils import horizontal_concat
 from polars_api_compat.utils import validate_dataframe_comparand
 
 if TYPE_CHECKING:
@@ -28,7 +27,7 @@ class DataFrame(DataFrameT):
 
     def __init__(
         self,
-        dataframe: pd.DataFrame,
+        dataframe: Any,
         *,
         api_version: str,
         implementation: str,
@@ -72,7 +71,7 @@ class DataFrame(DataFrameT):
             )
 
     @property
-    def dataframe(self) -> pd.DataFrame:
+    def dataframe(self) -> Any:
         return self._dataframe
 
     def __dataframe_namespace__(
@@ -145,7 +144,7 @@ class LazyFrame(LazyFrameT):
 
     def __init__(
         self,
-        dataframe: pd.DataFrame,
+        dataframe: Any,
         *,
         api_version: str,
         implementation: str,
@@ -188,7 +187,7 @@ class LazyFrame(LazyFrameT):
                 msg,
             )
 
-    def _from_dataframe(self, df: pd.DataFrame) -> LazyFrameT:
+    def _from_dataframe(self, df: Any) -> LazyFrameT:
         return LazyFrame(
             df,
             api_version=self.api_version,
@@ -217,8 +216,9 @@ class LazyFrame(LazyFrameT):
         **named_exprs: IntoExpr,
     ) -> LazyFrameT:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        df = pd.concat(
-            {series.name: series.series for series in new_series}, axis=1, copy=False
+        df = horizontal_concat(
+            {series.name: series.series for series in new_series},
+            implementation=self._implementation,
         )
         return self._from_dataframe(df)
 

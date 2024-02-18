@@ -281,3 +281,19 @@ def evaluate_simple_aggregation(expr: Expr, grouped: Any) -> Any:
     return getattr(grouped[expr._root_names], expr._function_name)()[  # type: ignore[attr-defined]
         expr._root_names  # type: ignore[attr-defined]
     ].rename(columns=new_names)
+
+
+def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
+    """
+    Concatenate (native) DataFrames.
+    """
+    if implementation == "pandas":
+        import pandas as pd
+
+        return pd.concat(dfs, axis=1, copy=False)
+    if implementation == "cudf":
+        import cudf
+
+        return cudf.concat(dfs, axis=1)
+    msg = f"Unknown implementation: {implementation}"
+    raise TypeError(msg)

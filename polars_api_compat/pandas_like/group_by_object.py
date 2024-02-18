@@ -14,6 +14,7 @@ from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
 from polars_api_compat.translate import to_polars_api
 from polars_api_compat.utils import evaluate_simple_aggregation
+from polars_api_compat.utils import horizontal_concat
 from polars_api_compat.utils import is_simple_aggregation
 from polars_api_compat.utils import parse_into_exprs
 
@@ -68,14 +69,13 @@ class LazyGroupBy(LazyGroupByT):
 
         for expr in exprs:
             result_expr = grouped.apply(
-                lambda df, expr=expr: pd.concat(
+                lambda df, expr=expr: horizontal_concat(
                     [
                         i.series
                         for i in expr.call(to_polars_api(df, version=self.api_version)[0])
                     ],
-                    axis=1,
-                    copy=False,
-                )
+                    implementation=self._df._implementation,  # type: ignore[attr-defined]
+                ),
             )
             dfs.append(result_expr.reset_index(drop=True))
 
@@ -84,7 +84,10 @@ class LazyGroupBy(LazyGroupByT):
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
         result = pd.DataFrame(out)
-        result = pd.concat([result, *dfs], axis=1, copy=False)
+        result = horizontal_concat(
+            [result, *dfs],
+            implementation=self._df._implementation,  # type: ignore[attr-defined]
+        )
         return LazyFrame(
             result,
             api_version=self.api_version,
