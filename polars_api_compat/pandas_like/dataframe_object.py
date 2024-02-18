@@ -231,7 +231,7 @@ class LazyFrame(LazyFrameT):
         plx = self.__lazyframe_namespace__()
         # Safety: all_horizontal's expression only returns a single column.
         mask = plx.all_horizontal(*predicates).call(self)[0]
-        _mask = validate_dataframe_comparand(self, mask)
+        _mask = validate_dataframe_comparand(mask)
         return self._from_dataframe(self.dataframe.loc[_mask])
 
     def with_columns(
