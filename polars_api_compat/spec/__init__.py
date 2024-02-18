@@ -68,6 +68,9 @@ class Expr(Protocol):
     def n_unique(self) -> Expr:
         ...
 
+    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Expr:
+        ...
+
 
 class ExprStringNamespace(Protocol):
     def ends_with(self, other: str) -> Expr:
@@ -134,6 +137,9 @@ class Series(Protocol):
         ...
 
     def zip_with(self, mask: Series, other: Series) -> Series:
+        ...
+
+    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Series:
         ...
 
 

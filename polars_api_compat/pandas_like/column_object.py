@@ -265,6 +265,12 @@ class Series(SeriesT):
         ser = self.series
         return self._from_series(ser.where(mask, other))
 
+    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Series:
+        ser = self.series
+        return self._from_series(
+            ser.sample(n=n, frac=fraction, with_replacement=with_replacement)
+        )
+
     def unique(self) -> SeriesT:
         ser = self.series
         return ser.unique()

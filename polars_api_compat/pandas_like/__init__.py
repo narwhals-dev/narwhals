@@ -322,6 +322,9 @@ class Expr(ExprT):
     def unique(self) -> ExprT:
         return register_expression_call(self, "unique")
 
+    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> ExprT:
+        return register_expression_call(self, "sample", n, fraction, with_replacement)
+
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
         # override `output_names`
