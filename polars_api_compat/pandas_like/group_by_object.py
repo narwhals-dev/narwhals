@@ -4,8 +4,6 @@ import collections
 from typing import Any
 from typing import Iterable
 
-import pandas as pd
-
 from polars_api_compat.pandas_like.dataframe_object import LazyFrame
 from polars_api_compat.spec import DataFrame as DataFrameT
 from polars_api_compat.spec import GroupBy as GroupByT
@@ -13,6 +11,7 @@ from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
 from polars_api_compat.utils import evaluate_simple_aggregation
+from polars_api_compat.utils import from_dict
 from polars_api_compat.utils import horizontal_concat
 from polars_api_compat.utils import is_simple_aggregation
 from polars_api_compat.utils import parse_into_exprs
@@ -60,7 +59,7 @@ class LazyGroupBy(LazyGroupByT):
         )
         implementation: str = self._df._implementation  # type: ignore[attr-defined]
 
-        dfs: list[pd.DataFrame] = []
+        dfs: list[Any] = []
         to_remove: list[int] = []
         for i, expr in enumerate(exprs):
             if is_simple_aggregation(expr):
@@ -90,7 +89,7 @@ class LazyGroupBy(LazyGroupByT):
         for key, _df in grouped:
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
-        result = pd.DataFrame(out)
+        result = from_dict(out, implementation=implementation)
         result = horizontal_concat([result, *dfs], implementation=implementation)
         return LazyFrame(
             result,

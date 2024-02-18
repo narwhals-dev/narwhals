@@ -299,6 +299,20 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     raise TypeError(msg)
 
 
+def from_dict(data: dict[str, Any], implementation: str) -> Any:
+    """Return native dataframe."""
+    if implementation == "pandas":
+        import pandas as pd
+
+        return pd.DataFrame(data, copy=False)
+    if implementation == "cudf":
+        import cudf
+
+        return cudf.DataFrame(data)
+    msg = f"Unknown implementation: {implementation}"
+    raise TypeError(msg)
+
+
 def quick_translate(df: Any, version: str, implementation: str) -> DataFrame:
     """Translate to Polars API, if implementation is already known."""
     if implementation in ("pandas", "cudf"):
