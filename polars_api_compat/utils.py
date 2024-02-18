@@ -271,13 +271,13 @@ def evaluate_simple_aggregation(expr: Expr, grouped: Any) -> Any:
 
     Returns naive DataFrame.
     """
-    if expr._root_names is None or expr.output_names is None:  # type: ignore[attr-defined]
+    if expr._root_names is None or expr._output_names is None:  # type: ignore[attr-defined]
         msg = "Expected expr to have root_names and output_names set, but they are None. Please report a bug."
         raise AssertionError(msg)
-    if len(expr._root_names) != len(expr.output_names):  # type: ignore[attr-defined]
+    if len(expr._root_names) != len(expr._output_names):  # type: ignore[attr-defined]
         msg = "Expected expr to have same number of root_names and output_names, but they are different. Please report a bug."
         raise AssertionError(msg)
-    new_names = dict(zip(expr._root_names, expr.output_names))  # type: ignore[attr-defined]
+    new_names = dict(zip(expr._root_names, expr._output_names))  # type: ignore[attr-defined]
     return (
         getattr(grouped[expr._root_names], expr._function_name)()[  # type: ignore[attr-defined]
             expr._root_names  # type: ignore[attr-defined]
