@@ -307,6 +307,12 @@ class Expr(ExprT):
             self, "is_between", lower_bound, upper_bound, closed
         )
 
+    def is_null(self) -> ExprT:
+        return register_expression_call(self, "is_null")
+
+    def is_in(self, other: Any) -> ExprT:
+        return register_expression_call(self, "is_in", other)
+
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
         # override `output_names`
