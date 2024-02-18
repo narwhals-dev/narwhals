@@ -51,6 +51,11 @@ class Expr(Protocol):
     def max(self) -> Expr:
         ...
 
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> Expr:
+        ...
+
 
 class ExprStringNamespace(Protocol):
     def ends_with(self, other: str) -> Expr:
@@ -97,6 +102,11 @@ class Series(Protocol):
         ...
 
     def item(self) -> Any:
+        ...
+
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> Series:
         ...
 
 

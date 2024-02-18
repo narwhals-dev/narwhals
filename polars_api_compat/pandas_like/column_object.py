@@ -74,6 +74,12 @@ class Series(SeriesT):
     def item(self) -> Any:
         return item(self.series)
 
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> Series:
+        ser = self.series
+        return self._from_series(ser.between(lower_bound, upper_bound, inclusive=closed))
+
     # Binary comparisons
 
     def __eq__(self, other: object) -> Series:  # type: ignore[override]

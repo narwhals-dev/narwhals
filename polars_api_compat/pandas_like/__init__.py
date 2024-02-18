@@ -300,6 +300,12 @@ class Expr(ExprT):
         return register_expression_call(self, "min")
 
     # Other
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> ExprT:
+        return register_expression_call(
+            self, "is_between", lower_bound, upper_bound, closed
+        )
 
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
