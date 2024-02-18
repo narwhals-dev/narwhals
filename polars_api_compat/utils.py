@@ -235,7 +235,7 @@ def register_expression_call(expr: Expr, attr: str, *args: Any, **kwargs: Any) -
         depth=expr._depth + 1,  # type: ignore[attr-defined]
         function_name=function_name,
         root_names=expr._root_names,  # type: ignore[attr-defined]
-        output_names=expr.output_names,  # type: ignore[attr-defined]
+        output_names=expr._output_names,  # type: ignore[attr-defined]
     )
 
 
@@ -278,8 +278,6 @@ def evaluate_simple_aggregation(expr: Expr, grouped: Any) -> Any:
         msg = "Expected expr to have same number of root_names and output_names, but they are different. Please report a bug."
         raise AssertionError(msg)
     new_names = dict(zip(expr._root_names, expr._output_names))  # type: ignore[attr-defined]
-    return (
-        getattr(grouped[expr._root_names], expr._function_name)()[  # type: ignore[attr-defined]
-            expr._root_names  # type: ignore[attr-defined]
-        ].rename(columns=new_names),
-    )
+    return getattr(grouped[expr._root_names], expr._function_name)()[  # type: ignore[attr-defined]
+        expr._root_names  # type: ignore[attr-defined]
+    ].rename(columns=new_names)

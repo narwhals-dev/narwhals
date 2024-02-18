@@ -12,6 +12,7 @@ from polars_api_compat.spec import GroupBy as GroupByT
 from polars_api_compat.spec import IntoExpr
 from polars_api_compat.spec import LazyFrame as LazyFrameT
 from polars_api_compat.spec import LazyGroupBy as LazyGroupByT
+from polars_api_compat.translate import to_polars_api
 from polars_api_compat.utils import evaluate_simple_aggregation
 from polars_api_compat.utils import is_simple_aggregation
 from polars_api_compat.utils import parse_into_exprs
@@ -57,31 +58,33 @@ class LazyGroupBy(LazyGroupByT):
             as_index=False,
         )
 
-        # Do some fastpaths, if possible
-        new_cols: list[pd.DataFrame] = []
+        dfs: list[pd.DataFrame] = []
         to_remove: list[int] = []
         for i, expr in enumerate(exprs):
             if is_simple_aggregation(expr):
-                new_cols.append(evaluate_simple_aggregation(grouped, expr))
+                dfs.append(evaluate_simple_aggregation(expr, grouped))
                 to_remove.append(i)
         exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
+
+        for expr in exprs:
+            result_expr = grouped.apply(
+                lambda df, expr=expr: pd.concat(
+                    [
+                        i.series
+                        for i in expr.call(to_polars_api(df, version=self.api_version)[0])
+                    ],
+                    axis=1,
+                    copy=False,
+                )
+            )
+            dfs.append(result_expr.reset_index(drop=True))
 
         out: dict[str, list[Any]] = collections.defaultdict(list)
         for key, _df in grouped:
             for _key, _name in zip(key, self._keys):
                 out[_name].append(_key)
-            for expr in exprs:
-                result = expr.call(
-                    LazyFrame(
-                        _df,
-                        api_version=self.api_version,
-                        implementation=self._df._implementation,  # type: ignore[attr-defined]
-                    )
-                )
-                for _result in result:
-                    out[_result.name].append(_result.item())
         result = pd.DataFrame(out)
-        result = pd.concat([result, *new_cols], axis=1, copy=False)
+        result = pd.concat([result, *dfs], axis=1, copy=False)
         return LazyFrame(
             result,
             api_version=self.api_version,
