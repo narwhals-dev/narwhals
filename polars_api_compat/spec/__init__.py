@@ -112,6 +112,9 @@ class Series(Protocol):
     def is_in(self, other: Any) -> Series:
         ...
 
+    def is_null(self) -> Series:
+        ...
+
 
 class DataFrame(Protocol):
     def with_columns(
