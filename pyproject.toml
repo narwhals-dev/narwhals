@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "polars_api_compat"
+name = "puffin"
 version = "0.1.4"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
@@ -21,8 +21,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/MarcoGorelli/polars-api-compat"
-"Bug Tracker" = "https://github.com/MarcoGorelli/polars-api-compat"
+"Homepage" = "https://github.com/MarcoGorelli/Puffin"
+"Bug Tracker" = "https://github.com/MarcoGorelli/Puffin"
 
 [tool.ruff]
 line-length = 90

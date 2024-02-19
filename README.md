@@ -1,4 +1,4 @@
-# Polars-API-Compat
+# Puffin
 
 Extremely lightweight compatibility layer between Polars, pandas, cuDF, and Modin.
 
@@ -14,17 +14,17 @@ More supported libraries to come (probably starting with Modin)!
 ## Installation
 
 ```
-pip install polars-api-compat
+pip install Puffin
 ```
 
 ## Usage
 
-There are three steps to writing dataframe-agnostic code using Polars-API-Compat:
+There are three steps to writing dataframe-agnostic code using Puffin:
 
-1. use `polars_api_compat.to_polars_api` to translate a pandas, Polars, cuDF, or Modin dataframe
+1. use `puffin.to_polars_api` to translate a pandas, Polars, cuDF, or Modin dataframe
    with the Polars API
-2. use the subset of the Polars API defined in https://github.com/MarcoGorelli/polars-api-compat/blob/main/polars_api_compat/spec/__init__.py.
-3. use `polars_api_compat.to_original_object` to return an object to the user in their original
+2. use the subset of the Polars API defined in https://github.com/MarcoGorelli/Puffin/blob/main/puffin/spec/__init__.py.
+3. use `puffin.to_original_object` to return an object to the user in their original
    dataframe flavour. For example:
 
    - if you started with pandas, you'll get pandas back
@@ -41,7 +41,7 @@ from typing import TypeVar
 import pandas as pd
 import polars as pl
 
-from polars_api_compat import to_polars_api, to_original_object
+from puffin import to_polars_api, to_original_object
 
 AnyDataFrame = TypeVar("AnyDataFrame")
 
@@ -132,7 +132,7 @@ Feature requests are more than welcome!
 
 ## Related Projects
 
-This is not Ibis. Polars-API-Compat lets each backend do its own optimisations, and only provides
+This is not Ibis. Puffin lets each backend do its own optimisations, and only provides
 a lightweight (~30 kilobytes) compatibility layer with the Polars API.
 Ibis applies its own optimisations to different backends, is a heavyweight
 dependency (~400 MB), and defines its own API.
