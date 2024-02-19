@@ -4,6 +4,7 @@ from datetime import datetime
 from polars_api_compat import to_polars_api, to_original_object
 import pandas as pd
 import polars
+import modin.pandas as mpd
 
 
 def q1(df_raw: Any) -> None:
@@ -37,11 +38,11 @@ def q1(df_raw: Any) -> None:
     return to_original_object(result.collect())
 
 
-df = pd.read_parquet("../tpch-data/lineitem.parquet")
+df = mpd.read_parquet("../tpch-data/lineitem.parquet")
 df[["l_quantity", "l_extendedprice", "l_discount", "l_tax"]] = df[
     ["l_quantity", "l_extendedprice", "l_discount", "l_tax"]
 ].astype("float64")
-df["l_shipdate"] = pd.to_datetime(df["l_shipdate"])
+df["l_shipdate"] = mpd.to_datetime(df["l_shipdate"])
 print(q1(df))
 df = polars.scan_parquet("../tpch-data/lineitem.parquet")
 print(q1(df))

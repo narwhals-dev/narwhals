@@ -303,5 +303,7 @@ class Series(SeriesT):
             return self.series
         elif self._implementation == "cudf":
             return self.series.to_pandas()
+        elif self._implementation == "modin":
+            return self.series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"
         raise TypeError(msg)

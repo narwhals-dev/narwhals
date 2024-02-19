@@ -1,12 +1,13 @@
 # ruff: noqa
 import polars
 import pandas as pd
+import modin.pandas as mpd
 
 import polars_api_compat
 
-df_raw = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6]})
+df_raw = mpd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6]})
 df, pl = polars_api_compat.to_polars_api(df_raw, version="0.20")
-df_raw_2 = pd.DataFrame({"a": [1, 3], "c": [7, 9]})
+df_raw_2 = mpd.DataFrame({"a": [1, 3], "c": [7, 9]})
 df2, pl = polars_api_compat.to_polars_api(df_raw_2, version="0.20")
 
 result = df.sort("a", "b")
@@ -61,9 +62,9 @@ print(result.dataframe)
 
 
 print(polars_api_compat.containers.is_pandas(df_raw))
-print(polars_api_compat.containers.is_pandas(polars.from_pandas(df_raw)))
+# print(polars_api_compat.containers.is_pandas(polars.from_pandas(df_raw)))
 print(polars_api_compat.containers.is_polars(df_raw))
-print(polars_api_compat.containers.is_polars(polars.from_pandas(df_raw)))
+# print(polars_api_compat.containers.is_polars(polars.from_pandas(df_raw)))
 
 
 result = df.rename({"a": "a_new", "b": "b_new"})

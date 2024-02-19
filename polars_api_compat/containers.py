@@ -19,6 +19,13 @@ except ModuleNotFoundError:
     cudf = object
 else:
     CUDF_AVAILABLE = True
+try:
+    import modin.pandas as mpd
+except ModuleNotFoundError:
+    MODIN_AVAILABLE = False
+    mpd = object
+else:
+    MODIN_AVAILABLE = True
 
 
 from typing import Any
@@ -73,6 +80,8 @@ def get_implementation(obj: Any) -> str:
         return "pandas"
     if CUDF_AVAILABLE and isinstance(obj, (cudf.DataFrame, cudf.Series)):
         return "cudf"
+    if MODIN_AVAILABLE and isinstance(obj, mpd.DataFrame):
+        return "modin"
     msg = f"Unknown implementation: {obj}"
     raise TypeError(msg)
 
@@ -87,3 +96,7 @@ def is_polars(obj: Any) -> bool:
 
 def is_cudf(obj: Any) -> bool:
     return get_implementation(obj) == "cudf"
+
+
+def is_modin(obj: Any) -> bool:
+    return get_implementation(obj) == "modin"

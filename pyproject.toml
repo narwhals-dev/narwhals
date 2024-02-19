@@ -8,7 +8,7 @@ version = "0.1.4"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
-description = "Extremely lightweight compatibility layer between pandas, Polars, and cuDF"
+description = "Extremely lightweight compatibility layer between pandas, Polars, cuDF, and Modin"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [

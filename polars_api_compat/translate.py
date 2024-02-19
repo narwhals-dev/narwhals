@@ -39,6 +39,15 @@ def to_polars_api(df: Any, version: str) -> tuple[LazyFrame, Namespace]:
             from polars_api_compat.pandas_like import translate
 
             return translate(df, api_version=version, implementation="cudf")
+    try:
+        import modin.pandas as mpd
+    except ModuleNotFoundError:
+        pass
+    else:
+        if isinstance(df, mpd.DataFrame):
+            from polars_api_compat.pandas_like import translate
+
+            return translate(df, api_version=version, implementation="modin")
     msg = f"Could not translate DataFrame {type(df)}, please open a feature request."
     raise TypeError(msg)
 

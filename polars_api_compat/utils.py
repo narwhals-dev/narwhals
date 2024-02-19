@@ -275,6 +275,10 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
         import cudf
 
         return cudf.concat(dfs, axis=1)
+    if implementation == "modin":
+        import modin.pandas as mpd
+
+        return mpd.concat(dfs, axis=1)
     msg = f"Unknown implementation: {implementation}"
     raise TypeError(msg)
 
@@ -289,6 +293,10 @@ def dataframe_from_dict(data: dict[str, Any], implementation: str) -> Any:
         import cudf
 
         return cudf.DataFrame(data)
+    if implementation == "modin":
+        import modin.pandas as mpd
+
+        return mpd.DataFrame(data)
     msg = f"Unknown implementation: {implementation}"
     raise TypeError(msg)
 
@@ -305,5 +313,9 @@ def series_from_iterable(
         import cudf
 
         return cudf.Series(data, name=name, index=index)
+    if implementation == "modin":
+        import modin.pandas as mpd
+
+        return mpd.Series(data, name=name, index=index)
     msg = f"Unknown implementation: {implementation}"
     raise TypeError(msg)

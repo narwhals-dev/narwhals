@@ -160,6 +160,8 @@ class DataFrame(DataFrameT):
             return self.dataframe
         elif self._implementation == "cudf":
             return self.dataframe.to_pandas()
+        elif self._implementation == "modin":
+            return self.dataframe._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"
         raise TypeError(msg)
 

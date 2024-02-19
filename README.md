@@ -1,6 +1,6 @@
 # Polars-API-Compat
 
-Extremely lightweight compatibility layer between Polars, pandas, and cuDF.
+Extremely lightweight compatibility layer between Polars, pandas, cuDF, and Modin.
 
 Seamlessly support all three, without depending on any of them!
 
@@ -21,7 +21,7 @@ pip install polars-api-compat
 
 There are three steps to writing dataframe-agnostic code using Polars-API-Compat:
 
-1. use `polars_api_compat.to_polars_api` to translate a pandas, Polars, or cuDF dataframe
+1. use `polars_api_compat.to_polars_api` to translate a pandas, Polars, cuDF, or Modin dataframe
    with the Polars API
 2. use the subset of the Polars API defined in https://github.com/MarcoGorelli/polars-api-compat/blob/main/polars_api_compat/spec/__init__.py.
 3. use `polars_api_compat.to_original_object` to return an object to the user in their original
@@ -29,6 +29,7 @@ There are three steps to writing dataframe-agnostic code using Polars-API-Compat
 
    - if you started with pandas, you'll get pandas back
    - if you started with Polars, you'll get Polars back
+   - if you started with Modin, you'll get Modin back
    - if you started with cuDF, you'll get cuDF back (and computation will happen natively on the GPU!)
    
 ## Example
@@ -65,7 +66,7 @@ def my_agnostic_function(
     )
     return to_original_object(result.collect())
 ```
-By which I mean, if you pass in a pandas, Polars, or cuDF dataframe, the output will be the same!
+By which I mean, if you pass in a pandas, Polars, cuDF, or Modin dataframe, the output will be the same!
 
 Let's try it out:
 ```python
@@ -125,7 +126,7 @@ Magic! 🪄
 
 If you maintain a dataframe-consuming library, then any function from the Polars API which you'd
 like to be able to use is in-scope, so long as it can be supported without too much difficulty
-for at least pandas and cuDF.
+for at least pandas, cuDF, and Modin.
 
 Feature requests are more than welcome!
 
