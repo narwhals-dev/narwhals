@@ -1,13 +1,12 @@
 # ruff: noqa
 import polars
 import pandas as pd
-import modin.pandas as mpd
 
 import puffin
 
-df_raw = mpd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6]})
+df_raw = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6]})
 df, pl = puffin.to_polars_api(df_raw, version="0.20")
-df_raw_2 = mpd.DataFrame({"a": [1, 3], "c": [7, 9]})
+df_raw_2 = pd.DataFrame({"a": [1, 3], "c": [7, 9]})
 df2, pl = puffin.to_polars_api(df_raw_2, version="0.20")
 
 result = df.sort("a", "b")
