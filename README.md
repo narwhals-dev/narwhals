@@ -11,6 +11,8 @@ Seamlessly support all four, without depending on any of them!
 
 More supported libraries to come (probably starting with Modin)!
 
+**Note: this is work-in-progress, and a bit of an experiment, don't take it too seriously**.
+
 ## Installation
 
 For now:
