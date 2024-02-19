@@ -4,8 +4,8 @@ from typing import Any
 
 import polars
 
-from polars_api_compat import to_original_object
-from polars_api_compat import to_polars_api
+from puffin import to_original_object
+from puffin import to_polars_api
 
 Q_NUM = 4
 

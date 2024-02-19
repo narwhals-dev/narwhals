@@ -1,12 +1,12 @@
 # ruff: noqa
 import pandas as pd
 
-import polars_api_compat
+import puffin
 
 
 def test_common():
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-    dfx, plx = polars_api_compat.to_polars_api(df, api_version="0.20")
+    dfx, plx = puffin.to_polars_api(df, api_version="0.20")
 
     result = dfx.with_columns(
         c=plx.col("a") + plx.col("b"),

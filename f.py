@@ -3,7 +3,7 @@ from typing import TypeVar
 import pandas as pd
 import polars as pl
 
-from polars_api_compat import to_polars_api, to_original_object
+from puffin import to_polars_api, to_original_object
 
 AnyDataFrame = TypeVar("AnyDataFrame")
 

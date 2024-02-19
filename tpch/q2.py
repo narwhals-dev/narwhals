@@ -4,8 +4,8 @@ from typing import Any
 import polars
 import pandas as pd
 
-from polars_api_compat import to_original_object
-from polars_api_compat import to_polars_api
+from puffin import to_original_object
+from puffin import to_polars_api
 
 polars.Config.set_tbl_cols(10)
 pd.set_option("display.max_columns", 10)

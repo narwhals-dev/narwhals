@@ -2,8 +2,8 @@
 import polars as pl
 from great_tables.data import sp500
 
-from polars_api_compat import to_original_object
-from polars_api_compat import to_polars_api
+from puffin import to_original_object
+from puffin import to_polars_api
 
 # Define the start and end dates for the data range
 start_date = "2010-06-07"
