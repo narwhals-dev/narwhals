@@ -13,9 +13,8 @@ More supported libraries to come (probably starting with Modin)!
 
 ## Installation
 
-For now, just
 ```
-pip install git+https://github.com/MarcoGorelli/polars-api-compat
+pip install polars-api-compat
 ```
 
 ## Usage
