@@ -13,9 +13,7 @@ More supported libraries to come (probably starting with Modin)!
 
 ## Installation
 
-```
-pip install Puffin
-```
+Coming soon. This is just a draft project, to try something out.
 
 ## Usage
 
