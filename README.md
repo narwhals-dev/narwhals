@@ -2,7 +2,7 @@
 
 Extremely lightweight compatibility layer between Polars, pandas, cuDF, and Modin.
 
-Seamlessly support all three, without depending on any of them!
+Seamlessly support all four, without depending on any of them!
 
 - ✅ Just use a subset of the Polars API, no need to learn anything new
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
@@ -13,14 +13,19 @@ More supported libraries to come (probably starting with Modin)!
 
 ## Installation
 
-Coming soon. This is just a draft project, to try something out.
+For now:
+```
+pip install git+https://github.com/MarcoGorelli/puffin.git
+```
+If I can get https://github.com/pypi/support/issues/3658 though, then hopefully
+this can get onto PyPI!
 
 ## Usage
 
 There are three steps to writing dataframe-agnostic code using Puffin:
 
-1. use `puffin.to_polars_api` to translate a pandas, Polars, cuDF, or Modin dataframe
-   with the Polars API
+1. use `puffin.to_polars_api` to wrap a pandas, Polars, cuDF, or Modin dataframe
+   in the Polars API
 2. use the subset of the Polars API defined in https://github.com/MarcoGorelli/Puffin/blob/main/puffin/spec/__init__.py.
 3. use `puffin.to_original_object` to return an object to the user in their original
    dataframe flavour. For example:
@@ -130,10 +135,12 @@ Feature requests are more than welcome!
 
 ## Related Projects
 
-This is not Ibis. Puffin lets each backend do its own optimisations, and only provides
-a lightweight (~30 kilobytes) compatibility layer with the Polars API.
-Ibis applies its own optimisations to different backends, is a heavyweight
-dependency (~400 MB), and defines its own API.
+- This is not Ibis. Puffin lets each backend do its own optimisations, and only provides
+  a lightweight (~30 kilobytes) compatibility layer with the Polars API.
+  Ibis applies its own optimisations to different backends, is a heavyweight
+  dependency (~400 MB), and defines its own API.
 
-This is not intended as a DataFrame Standard. Please see the Consortium for Python Data API Standards
-for such work. This is only intended to be a subset of the Polars API and does not aim to be a Standard.
+- This is not intended as a DataFrame Standard. See the Consortium for Python Data API Standards
+  for a more general and more ambitious project. Please only consider using Puffin if you only
+  need to support Polars and pandas-like dataframes, and specifically want to tap into Polars'
+  lazy and expressions features (which are out of scope for the Consortium's Standard).
