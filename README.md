@@ -9,8 +9,6 @@ Seamlessly support all four, without depending on any of them!
 - ✅ Separate Lazy and Eager APIs
 - ✅ Use the Polars Expressions API
 
-More supported libraries to come (probably starting with Modin)!
-
 **Note: this is work-in-progress, and a bit of an experiment, don't take it too seriously**.
 
 ## Installation
