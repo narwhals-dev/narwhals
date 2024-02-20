@@ -6,17 +6,17 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 
-import puffin
-from puffin.spec import DataFrame as DataFrameT
-from puffin.spec import GroupBy as GroupByT
-from puffin.spec import IntoExpr
-from puffin.spec import LazyFrame as LazyFrameT
-from puffin.spec import LazyGroupBy as LazyGroupByT
-from puffin.spec import Namespace as NamespaceT
-from puffin.utils import evaluate_into_exprs
-from puffin.utils import flatten_str
-from puffin.utils import horizontal_concat
-from puffin.utils import validate_dataframe_comparand
+import narwhals
+from narwhals.spec import DataFrame as DataFrameT
+from narwhals.spec import GroupBy as GroupByT
+from narwhals.spec import IntoExpr
+from narwhals.spec import LazyFrame as LazyFrameT
+from narwhals.spec import LazyGroupBy as LazyGroupByT
+from narwhals.spec import Namespace as NamespaceT
+from narwhals.utils import evaluate_into_exprs
+from narwhals.utils import flatten_str
+from narwhals.utils import horizontal_concat
+from narwhals.utils import validate_dataframe_comparand
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -80,7 +80,7 @@ class DataFrame(DataFrameT):
     def __dataframe_namespace__(
         self,
     ) -> NamespaceT:
-        return puffin.pandas_like.Namespace(
+        return narwhals.pandas_like.Namespace(
             api_version=self.api_version,
             implementation=self._implementation,  # type: ignore[attr-defined]
         )
@@ -90,7 +90,7 @@ class DataFrame(DataFrameT):
         return self.dataframe.shape  # type: ignore[no-any-return]
 
     def group_by(self, *keys: str | Iterable[str]) -> GroupByT:
-        from puffin.pandas_like.group_by_object import GroupBy
+        from narwhals.pandas_like.group_by_object import GroupBy
 
         return GroupBy(self, flatten_str(*keys), api_version=self.api_version)
 
@@ -231,13 +231,13 @@ class LazyFrame(LazyFrameT):
     def __lazyframe_namespace__(
         self,
     ) -> NamespaceT:
-        return puffin.pandas_like.Namespace(
+        return narwhals.pandas_like.Namespace(
             api_version=self.api_version,
             implementation=self._implementation,  # type: ignore[attr-defined]
         )
 
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupByT:
-        from puffin.pandas_like.group_by_object import LazyGroupBy
+        from narwhals.pandas_like.group_by_object import LazyGroupBy
 
         return LazyGroupBy(self, flatten_str(*keys), api_version=self.api_version)
 

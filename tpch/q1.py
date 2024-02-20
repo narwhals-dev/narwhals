@@ -1,7 +1,7 @@
 # ruff: noqa
 from typing import Any
 from datetime import datetime
-from puffin import to_polars_api, to_original_object
+from narwhals import to_polars_api, to_original_object
 import pandas as pd
 import polars
 import modin.pandas as mpd

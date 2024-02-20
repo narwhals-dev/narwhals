@@ -4,10 +4,10 @@ from typing import Any
 
 from pandas.api.types import is_extension_array_dtype
 
-import puffin
-from puffin.spec import Series as SeriesT
-from puffin.utils import item
-from puffin.utils import validate_column_comparand
+import narwhals
+from narwhals.spec import Series as SeriesT
+from narwhals.utils import item
+from narwhals.utils import validate_column_comparand
 
 
 class Series(SeriesT):
@@ -53,8 +53,8 @@ class Series(SeriesT):
 
     def __series_namespace__(
         self,
-    ) -> puffin.pandas_like.Namespace:
-        return puffin.pandas_like.Namespace(
+    ) -> narwhals.pandas_like.Namespace:
+        return narwhals.pandas_like.Namespace(
             api_version=self.api_version,
             implementation=self._implementation,
         )

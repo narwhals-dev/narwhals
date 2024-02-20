@@ -4,18 +4,18 @@ import collections
 from typing import Any
 from typing import Iterable
 
-from puffin.pandas_like.dataframe_object import LazyFrame
-from puffin.spec import DataFrame as DataFrameT
-from puffin.spec import GroupBy as GroupByT
-from puffin.spec import IntoExpr
-from puffin.spec import LazyFrame as LazyFrameT
-from puffin.spec import LazyGroupBy as LazyGroupByT
-from puffin.utils import dataframe_from_dict
-from puffin.utils import evaluate_simple_aggregation
-from puffin.utils import get_namespace
-from puffin.utils import horizontal_concat
-from puffin.utils import is_simple_aggregation
-from puffin.utils import parse_into_exprs
+from narwhals.pandas_like.dataframe_object import LazyFrame
+from narwhals.spec import DataFrame as DataFrameT
+from narwhals.spec import GroupBy as GroupByT
+from narwhals.spec import IntoExpr
+from narwhals.spec import LazyFrame as LazyFrameT
+from narwhals.spec import LazyGroupBy as LazyGroupByT
+from narwhals.utils import dataframe_from_dict
+from narwhals.utils import evaluate_simple_aggregation
+from narwhals.utils import get_namespace
+from narwhals.utils import horizontal_concat
+from narwhals.utils import is_simple_aggregation
+from narwhals.utils import parse_into_exprs
 
 
 class GroupBy(GroupByT):

@@ -5,12 +5,12 @@ from typing import Iterable
 from typing import TypeVar
 from typing import cast
 
-from puffin.spec import DataFrame
-from puffin.spec import Expr
-from puffin.spec import IntoExpr
-from puffin.spec import LazyFrame
-from puffin.spec import Namespace
-from puffin.spec import Series
+from narwhals.spec import DataFrame
+from narwhals.spec import Expr
+from narwhals.spec import IntoExpr
+from narwhals.spec import LazyFrame
+from narwhals.spec import Namespace
+from narwhals.spec import Series
 
 ExprT = TypeVar("ExprT", bound=Expr)
 

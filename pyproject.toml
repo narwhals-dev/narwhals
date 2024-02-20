@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "puffin"
+name = "narwhals"
 version = "0.1.4"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
@@ -21,8 +21,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/MarcoGorelli/Puffin"
-"Bug Tracker" = "https://github.com/MarcoGorelli/Puffin"
+"Homepage" = "https://github.com/MarcoGorelli/narwhals"
+"Bug Tracker" = "https://github.com/MarcoGorelli/narwhals"
 
 [tool.ruff]
 line-length = 90

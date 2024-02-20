@@ -6,8 +6,8 @@ from datetime import datetime
 import polars
 import pandas as pd
 
-from puffin import to_original_object
-from puffin import to_polars_api
+from narwhals import to_original_object
+from narwhals import to_polars_api
 import polars
 
 polars.Config.set_tbl_cols(10)

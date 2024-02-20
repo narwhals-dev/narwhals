@@ -5,22 +5,22 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
-from puffin.pandas_like.column_object import Series
-from puffin.pandas_like.dataframe_object import DataFrame
-from puffin.pandas_like.dataframe_object import LazyFrame
-from puffin.spec import AnyDataFrame
-from puffin.spec import DataFrame as DataFrameT
-from puffin.spec import Expr as ExprT
-from puffin.spec import ExprStringNamespace as ExprStringNamespaceT
-from puffin.spec import IntoExpr
-from puffin.spec import LazyFrame as LazyFrameT
-from puffin.spec import Namespace as NamespaceT
-from puffin.spec import Series as SeriesT
-from puffin.utils import flatten_str
-from puffin.utils import horizontal_concat
-from puffin.utils import parse_into_exprs
-from puffin.utils import register_expression_call
-from puffin.utils import series_from_iterable
+from narwhals.pandas_like.column_object import Series
+from narwhals.pandas_like.dataframe_object import DataFrame
+from narwhals.pandas_like.dataframe_object import LazyFrame
+from narwhals.spec import AnyDataFrame
+from narwhals.spec import DataFrame as DataFrameT
+from narwhals.spec import Expr as ExprT
+from narwhals.spec import ExprStringNamespace as ExprStringNamespaceT
+from narwhals.spec import IntoExpr
+from narwhals.spec import LazyFrame as LazyFrameT
+from narwhals.spec import Namespace as NamespaceT
+from narwhals.spec import Series as SeriesT
+from narwhals.utils import flatten_str
+from narwhals.utils import horizontal_concat
+from narwhals.utils import parse_into_exprs
+from narwhals.utils import register_expression_call
+from narwhals.utils import series_from_iterable
 
 
 def translate(
