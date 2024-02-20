@@ -130,18 +130,6 @@ for at least pandas, cuDF, and Modin.
 
 Feature requests are more than welcome!
 
-## Related Projects
-
-- This is not Ibis. Narwhals lets each backend do its own optimisations, and only provides
-  a lightweight (~30 kilobytes) compatibility layer with the Polars API.
-  Ibis applies its own optimisations to different backends, is a heavyweight
-  dependency (~400 MB), and defines its own API.
-
-- This is not intended as a DataFrame Standard. See the Consortium for Python Data API Standards
-  for a more general and more ambitious project. Please only consider using Narwhals if you only
-  need to support Polars and pandas-like dataframes, and specifically want to tap into Polars'
-  lazy and expressions features (which are out of scope for the Consortium's Standard).
-
 ## Why "Narwhals"?
 
 Because they are so awesome.
