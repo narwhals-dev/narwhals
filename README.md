@@ -69,8 +69,7 @@ def my_agnostic_function(
     )
     return to_original_object(result.collect())
 ```
-By which I mean, if you pass in a pandas, Polars, cuDF, or Modin dataframe, the output will be the same!
-
+You can pass in a pandas, Polars, cuDF, or Modin dataframe, the output will be the same!
 Let's try it out:
 ```python
 suppliers = {
