@@ -1,4 +1,4 @@
-# narwhals
+# Narwhals
 
 Extremely lightweight compatibility layer between Polars, pandas, cuDF, and Modin.
 
@@ -20,7 +20,7 @@ Or just vendor it, it's only a bunch of pure-Python files.
 
 ## Usage
 
-There are three steps to writing dataframe-agnostic code using narwhals:
+There are three steps to writing dataframe-agnostic code using Narwhals:
 
 1. use `narwhals.to_polars_api` to wrap a pandas, Polars, cuDF, or Modin dataframe
    in the Polars API
@@ -132,13 +132,13 @@ Feature requests are more than welcome!
 
 ## Related Projects
 
-- This is not Ibis. narwhals lets each backend do its own optimisations, and only provides
+- This is not Ibis. Narwhals lets each backend do its own optimisations, and only provides
   a lightweight (~30 kilobytes) compatibility layer with the Polars API.
   Ibis applies its own optimisations to different backends, is a heavyweight
   dependency (~400 MB), and defines its own API.
 
 - This is not intended as a DataFrame Standard. See the Consortium for Python Data API Standards
-  for a more general and more ambitious project. Please only consider using narwhals if you only
+  for a more general and more ambitious project. Please only consider using Narwhals if you only
   need to support Polars and pandas-like dataframes, and specifically want to tap into Polars'
   lazy and expressions features (which are out of scope for the Consortium's Standard).
 
