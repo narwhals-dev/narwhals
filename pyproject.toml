@@ -84,11 +84,11 @@ exclude_also = [
 
 [tool.mypy]
 
-[tool.mypy.pandas.*]
-ignore_missing_imports = true
-
-[tool.mypy.cudf.*]
-ignore_missing_imports = true
-
-[tool.mypy.modin.*]
+[[tool.mypy.overrides]]
+# the pandas API is just too inconsistent for type hinting to be useful.
+module = [
+    "pandas.*",
+    "cudf.*",
+    "modin.*",
+]
 ignore_missing_imports = true
