@@ -13,12 +13,10 @@ Seamlessly support all four, without depending on any of them!
 
 ## Installation
 
-For now:
 ```
-pip install git+https://github.com/MarcoGorelli/narwhals.git
+pip install narwhals
 ```
-If I can get https://github.com/pypi/support/issues/3658 though, then hopefully
-this can get onto PyPI!
+Or just vendor it, it's only a bunch of pure-Python files.
 
 ## Usage
 
