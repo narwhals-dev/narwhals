@@ -4,10 +4,10 @@ Extremely lightweight compatibility layer between Polars, pandas, cuDF, and Modi
 
 Seamlessly support all four, without depending on any of them!
 
-- ✅ Just use a subset of the Polars API, no need to learn anything new
+- ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
-- ✅ Separate Lazy and Eager APIs
-- ✅ Use the Polars Expressions API
+- ✅ Separate **Lazy** and Eager APIs
+- ✅ Use Polars **Expressions** API
 
 **Note: this is work-in-progress, and a bit of an experiment, don't take it too seriously**.
 
