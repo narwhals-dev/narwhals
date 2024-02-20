@@ -124,11 +124,10 @@ Magic! 🪄
 
 ## Scope
 
-If you maintain a dataframe-consuming library, then any function from the Polars API which you'd
-like to be able to use is in-scope, so long as it can be supported without too much difficulty
-for at least pandas, cuDF, and Modin.
+- Do you maintain a dataframe-consuming library?
+- Is there a Polars function which you'd like Narwhals to have, which would make your job easier?
 
-Feature requests are more than welcome!
+If, I'd love to hear from you!
 
 ## Why "Narwhals"?
 
