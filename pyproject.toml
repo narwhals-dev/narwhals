@@ -81,3 +81,14 @@ exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
 ]
+
+[tool.mypy]
+
+[tool.mypy.pandas.*]
+ignore_missing_imports = true
+
+[tool.mypy.cudf.*]
+ignore_missing_imports = true
+
+[tool.mypy.modin.*]
+ignore_missing_imports = true
