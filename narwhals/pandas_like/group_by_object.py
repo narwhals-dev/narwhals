@@ -4,7 +4,7 @@ import collections
 from typing import Any
 from typing import Iterable
 
-from narwhals.pandas_like.dataframe_object import LazyFrame
+from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.spec import DataFrame as DataFrameT
 from narwhals.spec import GroupBy as GroupByT
 from narwhals.spec import IntoExpr

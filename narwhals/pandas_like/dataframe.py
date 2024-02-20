@@ -231,7 +231,7 @@ class LazyFrame(LazyFrameT):
     def __lazyframe_namespace__(
         self,
     ) -> NamespaceT:
-        return narwhals.pandas_like.Namespace(
+        return narwhals.pandas_like.namespace.Namespace(
             api_version=self.api_version,
             implementation=self._implementation,  # type: ignore[attr-defined]
         )

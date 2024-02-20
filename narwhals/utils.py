@@ -125,7 +125,11 @@ def flatten_str(*args: str | Iterable[str]) -> list[str]:
         if isinstance(arg, str):
             out.append(arg)
         else:
-            out.extend(arg)
+            for item in arg:
+                if not isinstance(item, str):
+                    msg = f"Expected str, got {type(item)}"
+                    raise TypeError(msg)
+                out.append(item)
     return out
 
 
@@ -135,7 +139,11 @@ def flatten_bool(*args: bool | Iterable[bool]) -> list[bool]:
         if isinstance(arg, bool):
             out.append(arg)
         else:
-            out.extend(arg)
+            for item in arg:
+                if not isinstance(item, bool):
+                    msg = f"Expected str, got {type(item)}"
+                    raise TypeError(msg)
+                out.append(item)
     return out
 
 
@@ -147,12 +155,6 @@ def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
         else:
             out.append(arg)  # type: ignore[arg-type]
     return out
-
-
-# in filter, I want to:
-# - flatten the into exprs
-# - convert all to exprs
-# - pass these to all_horizontal
 
 
 def evaluate_into_exprs(
