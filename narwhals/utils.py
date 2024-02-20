@@ -229,7 +229,7 @@ def is_simple_aggregation(expr: Expr) -> bool:
     return (
         expr._function_name is not None  # type: ignore[attr-defined]
         and expr._depth is not None  # type: ignore[attr-defined]
-        and expr._depth <= 2  # type: ignore[attr-defined]
+        and expr._depth < 2  # type: ignore[attr-defined]
         # todo: avoid this one?
         and expr._root_names is not None  # type: ignore[attr-defined]
     )

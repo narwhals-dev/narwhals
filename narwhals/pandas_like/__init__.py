@@ -354,13 +354,13 @@ class Expr(ExprT):
 
     def alias(self, name: str) -> ExprT:
         # Define this one manually, so that we can
-        # override `output_names`
+        # override `output_names` and not increase depth
         if self._depth is None:
             msg = "Unreachable code, please report a bug"
             raise AssertionError(msg)
         return Expr(
             lambda df: [series.alias(name) for series in self.call(df)],
-            depth=self._depth + 1,
+            depth=self._depth,
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=[name],
