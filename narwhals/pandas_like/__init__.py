@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.pandas_like.dataframe import LazyFrame
+from narwhals.pandas_like.namespace import Namespace  # noqa: F401
 
 if TYPE_CHECKING:
     from narwhals.spec import LazyFrame as LazyFrameT

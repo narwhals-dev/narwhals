@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
@@ -12,9 +11,6 @@ from narwhals.spec import LazyFrame as LazyFrameT
 from narwhals.spec import Namespace as NamespaceT
 from narwhals.spec import Series as SeriesT
 from narwhals.utils import register_expression_call
-
-if TYPE_CHECKING:
-    from narwhals.pandas_like.namespace import Namespace as NamespaceT
 
 
 class Expr(ExprT):
