@@ -5,6 +5,8 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
+from narwhals.utils import remove_prefix
+
 T = TypeVar("T")
 
 if TYPE_CHECKING:
@@ -199,10 +201,8 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                 out.append(plx._create_series_from_scalar(_out, column))
         return out
 
-    if expr._function_name is not None:
-        function_name: str = f"{expr._function_name}->{attr}"
-    else:
-        function_name = attr
+    # todo: _function_name should never be None?
+    function_name: str = f"{expr._function_name}->{attr}"
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,
         depth=expr._depth + 1,
@@ -251,10 +251,10 @@ def evaluate_simple_aggregation(expr: Expr, grouped: Any) -> Any:
         msg = "Expected expr to have same number of root_names and output_names, but they are different. Please report a bug."
         raise AssertionError(msg)
     new_names = dict(zip(expr._root_names, expr._output_names))
-    assert expr._function_name is not None
-    return getattr(grouped[expr._root_names], expr._function_name)()[
-        expr._root_names
-    ].rename(columns=new_names)
+    function_name = remove_prefix(expr._function_name, "col->")
+    return getattr(grouped[expr._root_names], function_name)()[expr._root_names].rename(
+        columns=new_names
+    )
 
 
 def horizontal_concat(dfs: list[Any], implementation: str) -> Any:

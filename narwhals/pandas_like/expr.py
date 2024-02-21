@@ -22,7 +22,7 @@ class Expr(ExprProtocol):
         call: Callable[[DataFrame | LazyFrame], list[Series]],
         *,
         depth: int,
-        function_name: str | None,
+        function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
         implementation: str,
@@ -59,7 +59,7 @@ class Expr(ExprProtocol):
                 for column_name in column_names
             ],
             depth=0,
-            function_name=None,
+            function_name="col",
             root_names=list(column_names),
             output_names=list(column_names),
             implementation=implementation,

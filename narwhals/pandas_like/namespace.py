@@ -113,7 +113,7 @@ class Namespace(NamespaceProtocol):
         func: Callable[[DataFrame | LazyFrame], list[Series]],
         *,
         depth: int,
-        function_name: str | None,
+        function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
     ) -> Expr:
