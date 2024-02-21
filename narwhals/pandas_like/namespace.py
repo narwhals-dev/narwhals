@@ -15,7 +15,7 @@ from narwhals.spec import Expr as ExprT
 from narwhals.spec import IntoExpr
 from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import Namespace as NamespaceProtocol
-from narwhals.spec import Series as SeriesT
+from narwhals.spec import Series as SeriesProtocol
 from narwhals.utils import flatten_str
 from narwhals.utils import horizontal_concat
 from narwhals.utils import parse_into_exprs
@@ -110,7 +110,7 @@ class Namespace(NamespaceProtocol):
 
     def _create_expr_from_callable(  # noqa: PLR0913
         self,
-        func: Callable[[DataFrameT | LazyFrameProtocol], list[SeriesT]],
+        func: Callable[[DataFrameT | LazyFrameProtocol], list[SeriesProtocol]],
         *,
         depth: int,
         function_name: str | None,
@@ -126,7 +126,9 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def _create_series_from_scalar(self, value: Any, series: SeriesT) -> SeriesT:
+    def _create_series_from_scalar(
+        self, value: Any, series: SeriesProtocol
+    ) -> SeriesProtocol:
         return Series(
             series_from_iterable(
                 [value],
@@ -138,7 +140,7 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def _create_expr_from_series(self, series: SeriesT) -> ExprT:
+    def _create_expr_from_series(self, series: SeriesProtocol) -> ExprT:
         return Expr(
             lambda _df: [series],
             depth=0,

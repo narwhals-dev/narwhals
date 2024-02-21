@@ -5,7 +5,7 @@ from typing import Any
 
 from pandas.api.types import is_extension_array_dtype
 
-from narwhals.spec import Series as SeriesT
+from narwhals.spec import Series as SeriesProtocol
 from narwhals.utils import item
 from narwhals.utils import validate_column_comparand
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.namespace import Namespace
 
 
-class Series(SeriesT):
+class Series(SeriesProtocol):
     def __init__(
         self,
         series: Any,
@@ -266,7 +266,7 @@ class Series(SeriesT):
         ser = self.series
         return ser.nunique()
 
-    def zip_with(self, mask: SeriesT, other: SeriesT) -> SeriesT:
+    def zip_with(self, mask: SeriesProtocol, other: SeriesProtocol) -> SeriesProtocol:
         ser = self.series
         return self._from_series(ser.where(mask, other))
 
@@ -276,7 +276,7 @@ class Series(SeriesT):
             ser.sample(n=n, frac=fraction, with_replacement=with_replacement)
         )
 
-    def unique(self) -> SeriesT:
+    def unique(self) -> SeriesProtocol:
         ser = self.series
         return ser.unique()
 

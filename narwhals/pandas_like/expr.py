@@ -9,14 +9,14 @@ from narwhals.spec import Expr as ExprT
 from narwhals.spec import ExprStringNamespace as ExprStringNamespaceT
 from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import Namespace as NamespaceProtocol
-from narwhals.spec import Series as SeriesT
+from narwhals.spec import Series as SeriesProtocol
 from narwhals.utils import register_expression_call
 
 
 class Expr(ExprT):
     def __init__(  # noqa: PLR0913
         self,
-        call: Callable[[DataFrameT | LazyFrameProtocol], list[SeriesT]],
+        call: Callable[[DataFrameT | LazyFrameProtocol], list[SeriesProtocol]],
         *,
         depth: int | None,
         function_name: str | None,
