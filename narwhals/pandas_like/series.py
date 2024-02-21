@@ -268,7 +268,7 @@ class Series(SeriesProtocol):
         ser = self.series
         return ser.nunique()  # type: ignore[no-any-return]
 
-    def zip_with(self, mask: SeriesProtocol, other: SeriesProtocol) -> SeriesProtocol:
+    def zip_with(self, mask: SeriesProtocol, other: SeriesProtocol) -> Series:
         ser = self.series
         return self._from_series(ser.where(mask, other))
 
@@ -278,7 +278,7 @@ class Series(SeriesProtocol):
             ser.sample(n=n, frac=fraction, with_replacement=with_replacement)
         )
 
-    def unique(self) -> SeriesProtocol:
+    def unique(self) -> Series:
         ser = self.series
         return ser.unique()  # type: ignore[no-any-return]
 

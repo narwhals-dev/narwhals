@@ -207,7 +207,7 @@ class Expr(ExprProtocol):
         )
 
     @property
-    def str(self) -> ExprStringNamespaceProtocol:
+    def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
 
 
