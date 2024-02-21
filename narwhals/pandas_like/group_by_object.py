@@ -6,7 +6,7 @@ from typing import Iterable
 
 from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.spec import DataFrame as DataFrameT
-from narwhals.spec import GroupBy as GroupByT
+from narwhals.spec import GroupBy as GroupByProtocol
 from narwhals.spec import IntoExpr
 from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import LazyGroupBy as LazyGroupByT
@@ -18,7 +18,7 @@ from narwhals.utils import is_simple_aggregation
 from narwhals.utils import parse_into_exprs
 
 
-class GroupBy(GroupByT):
+class GroupBy(GroupByProtocol):
     def __init__(self, df: DataFrameT, keys: list[str], api_version: str) -> None:
         self._df = df
         self._keys = list(keys)

@@ -7,10 +7,8 @@ from typing import Iterable
 from typing import Literal
 
 from narwhals.spec import DataFrame as DataFrameT
-from narwhals.spec import GroupBy as GroupByT
 from narwhals.spec import IntoExpr
 from narwhals.spec import LazyFrame as LazyFrameProtocol
-from narwhals.spec import LazyGroupBy as LazyGroupByT
 from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.utils import evaluate_into_exprs
 from narwhals.utils import flatten_str
@@ -22,6 +20,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals.pandas_like.group_by_object import GroupBy
+    from narwhals.pandas_like.group_by_object import LazyGroupBy
     from narwhals.pandas_like.namespace import Namespace
 
 
@@ -97,7 +97,7 @@ class DataFrame(DataFrameT):
     def shape(self) -> tuple[int, int]:
         return self.dataframe.shape  # type: ignore[no-any-return]
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupByT:
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
         from narwhals.pandas_like.group_by_object import GroupBy
 
         return GroupBy(self, flatten_str(*keys), api_version=self.api_version)
@@ -244,7 +244,7 @@ class LazyFrame(LazyFrameProtocol):
             implementation=self._implementation,  # type: ignore[attr-defined]
         )
 
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupByT:
+    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
         from narwhals.pandas_like.group_by_object import LazyGroupBy
 
         return LazyGroupBy(self, flatten_str(*keys), api_version=self.api_version)
