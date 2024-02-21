@@ -52,7 +52,7 @@ class LazyGroupBy(LazyGroupByT):
     ) -> LazyFrame:
         from narwhals.pandas_like.dataframe import LazyFrame
 
-        df = self._df.dataframe  # type: ignore[attr-defined]
+        df = self._df.dataframe
         exprs = parse_into_exprs(
             get_namespace(self._df),
             *aggs,
@@ -63,7 +63,7 @@ class LazyGroupBy(LazyGroupByT):
             sort=False,
             as_index=False,
         )
-        implementation: str = self._df._implementation  # type: ignore[attr-defined]
+        implementation: str = self._df._implementation
         output_names: list[str] = self._keys
         for expr in exprs:
             expr_output_names = expr._output_names
@@ -109,5 +109,5 @@ class LazyGroupBy(LazyGroupByT):
         return LazyFrame(
             results_keys,
             api_version=self.api_version,
-            implementation=self._df._implementation,  # type: ignore[attr-defined]
+            implementation=self._df._implementation,
         )
