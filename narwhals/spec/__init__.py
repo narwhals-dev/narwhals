@@ -162,15 +162,15 @@ class Series(Protocol):
 class DataFrame(Protocol):
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> DataFrame:
+    ) -> Self:
         ...
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> DataFrame:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         ...
 
     def select(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> DataFrame:
+    ) -> Self:
         ...
 
     def sort(
@@ -178,7 +178,7 @@ class DataFrame(Protocol):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Iterable[bool] = False,
-    ) -> DataFrame:
+    ) -> Self:
         ...
 
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
@@ -194,24 +194,24 @@ class DataFrame(Protocol):
         how: Literal["inner"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
-    ) -> DataFrame:
+    ) -> Self:
         ...
 
     @property
     def columns(self) -> list[str]:
         ...
 
-    def head(self, n: int) -> DataFrame:
+    def head(self, n: int) -> Self:
         ...
 
-    def unique(self, subset: list[str]) -> DataFrame:
+    def unique(self, subset: list[str]) -> Self:
         ...
 
     @property
     def shape(self) -> tuple[int, int]:
         ...
 
-    def rename(self, mapping: dict[str, str]) -> DataFrame:
+    def rename(self, mapping: dict[str, str]) -> Self:
         ...
 
     def to_numpy(self) -> Any:
