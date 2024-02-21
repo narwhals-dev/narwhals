@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 
@@ -11,15 +12,17 @@ from narwhals.pandas_like.utils import get_namespace
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import is_simple_aggregation
 from narwhals.pandas_like.utils import parse_into_exprs
-from narwhals.spec import DataFrame as DataFrameProtocol
 from narwhals.spec import GroupBy as GroupByProtocol
 from narwhals.spec import IntoExpr
-from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import LazyGroupBy as LazyGroupByT
+
+if TYPE_CHECKING:
+    from narwhals.pandas_like.dataframe import DataFrame
+    from narwhals.pandas_like.dataframe import LazyFrame
 
 
 class GroupBy(GroupByProtocol):
-    def __init__(self, df: DataFrameProtocol, keys: list[str], api_version: str) -> None:
+    def __init__(self, df: DataFrame, keys: list[str], api_version: str) -> None:
         self._df = df
         self._keys = list(keys)
         self.api_version = api_version
@@ -28,7 +31,7 @@ class GroupBy(GroupByProtocol):
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
-    ) -> DataFrameProtocol:
+    ) -> DataFrame:
         return (
             LazyGroupBy(self._df.lazy(), self._keys, self.api_version)
             .agg(*aggs, **named_aggs)
@@ -37,7 +40,7 @@ class GroupBy(GroupByProtocol):
 
 
 class LazyGroupBy(LazyGroupByT):
-    def __init__(self, df: LazyFrameProtocol, keys: list[str], api_version: str) -> None:
+    def __init__(self, df: LazyFrame, keys: list[str], api_version: str) -> None:
         self._df = df
         self._keys = list(keys)
         self.api_version = api_version
@@ -46,7 +49,9 @@ class LazyGroupBy(LazyGroupByT):
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
-    ) -> LazyFrameProtocol:
+    ) -> LazyFrame:
+        from narwhals.pandas_like.dataframe import LazyFrame
+
         df = self._df.dataframe  # type: ignore[attr-defined]
         exprs = parse_into_exprs(
             get_namespace(self._df),
