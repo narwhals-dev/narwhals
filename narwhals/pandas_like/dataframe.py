@@ -156,6 +156,11 @@ class DataFrame(DataFrameProtocol):
         msg = f"Unknown implementation: {self._implementation}"
         raise TypeError(msg)
 
+    def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
+        if as_series:
+            return {col: self._dataframe[col] for col in self._dataframe.columns}
+        return self._dataframe.to_dict(orient="list")
+
 
 class LazyFrame(LazyFrameProtocol):
     """dataframe object"""

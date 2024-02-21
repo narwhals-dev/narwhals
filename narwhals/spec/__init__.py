@@ -220,6 +220,9 @@ class DataFrame(Protocol):
     def to_pandas(self) -> Any:
         ...
 
+    def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
+        ...
+
 
 class LazyFrame(Protocol):
     @property
