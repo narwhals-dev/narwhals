@@ -216,7 +216,7 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
                 for series in self._expr._call(df)
             ],
             depth=self._expr._depth + 1,
-            function_name=self._expr._function_name,
+            function_name=f"{self._expr._function_name}->str.ends_with",
             root_names=self._expr._root_names,
             output_names=self._expr._output_names,
             implementation=self._expr._implementation,
@@ -233,7 +233,7 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
                 for series in self._expr._call(df)
             ],
             depth=self._expr._depth + 1,
-            function_name=self._expr._function_name,
+            function_name=f"{self._expr._function_name}->str.strip_chars",
             root_names=self._expr._root_names,
             output_names=self._expr._output_names,
             implementation=self._expr._implementation,

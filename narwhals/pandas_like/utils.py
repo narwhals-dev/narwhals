@@ -201,12 +201,10 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                 out.append(plx._create_series_from_scalar(_out, column))
         return out
 
-    # todo: _function_name should never be None?
-    function_name: str = f"{expr._function_name}->{attr}"
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,
         depth=expr._depth + 1,
-        function_name=function_name,
+        function_name=f"{expr._function_name}->{attr}",
         root_names=expr._root_names,
         output_names=expr._output_names,
     )

@@ -104,7 +104,7 @@ class Namespace(NamespaceProtocol):
             depth=0,
             function_name="len",
             root_names=None,
-            output_names=["len"],  # todo: check this
+            output_names=["len"],
             implementation=self._implementation,
         )
 
@@ -142,7 +142,7 @@ class Namespace(NamespaceProtocol):
         return Expr(
             lambda _df: [series],
             depth=0,
-            function_name="from_series",
+            function_name="series",
             root_names=None,
             output_names=None,
             implementation=self._implementation,
