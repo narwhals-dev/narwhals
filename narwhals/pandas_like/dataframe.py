@@ -78,10 +78,6 @@ class DataFrame(DataFrameProtocol):
                 msg,
             )
 
-    @property
-    def dataframe(self) -> Any:
-        return self._dataframe
-
     def __dataframe_namespace__(
         self,
     ) -> Namespace:
@@ -182,7 +178,7 @@ class LazyFrame(LazyFrameProtocol):
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._df = dataframe.reset_index(drop=True)
+        self._dataframe = dataframe.reset_index(drop=True)
         self._api_version = api_version
         self._implementation = implementation
 
@@ -228,10 +224,6 @@ class LazyFrame(LazyFrameProtocol):
             api_version=self._api_version,
             implementation=self._implementation,
         )
-
-    @property
-    def dataframe(self) -> Any:
-        return self._df
 
     def __lazyframe_namespace__(
         self,
