@@ -75,13 +75,6 @@ def get_namespace(obj: Any, implementation: str | None = None) -> Namespace:
     else:
         if isinstance(obj, (pl.DataFrame, pl.LazyFrame, pl.Series)):
             return pl  # type: ignore[return-value]
-    if hasattr(obj, "__dataframe_namespace__"):
-        return obj.__dataframe_namespace__()  # type: ignore[no-any-return]
-    if hasattr(obj, "__series_namespace__"):
-        return obj.__series_namespace__()  # type: ignore[no-any-return]
-    if hasattr(obj, "__lazyframe_namespace__"):
-        return obj.__lazyframe_namespace__()  # type: ignore[no-any-return]
-    if hasattr(obj, "__expr_namespace__"):
-        return obj.__expr_namespace__()  # type: ignore[no-any-return]
-    msg = f"Could not find namespace for object {obj}"
-    raise TypeError(msg)
+    from narwhals.pandas_like.namespace import Namespace
+
+    return Namespace(api_version="0.20.0", implementation=obj._implementation)

@@ -32,43 +32,43 @@ from typing import Any
 
 
 def is_lazyframe(obj: Any) -> bool:
-    if hasattr(obj, "__lazyframe_namespace__"):
-        return True
     if POLARS_AVAILABLE and isinstance(
         obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
     ):
         return isinstance(obj, pl.LazyFrame)
-    return False
+    from narwhals.pandas_like.dataframe import LazyFrame
+
+    return isinstance(obj, LazyFrame)
 
 
 def is_dataframe(obj: Any) -> bool:
-    if hasattr(obj, "__dataframe_namespace__"):
-        return True
     if POLARS_AVAILABLE and isinstance(
         obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
     ):
         return isinstance(obj, pl.DataFrame)
-    return False
+    from narwhals.pandas_like.dataframe import DataFrame
+
+    return isinstance(obj, DataFrame)
 
 
 def is_expr(obj: Any) -> bool:
-    if hasattr(obj, "__expr_namespace__"):
-        return True
     if POLARS_AVAILABLE and isinstance(
         obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
     ):
         return isinstance(obj, pl.Expr)
-    return False
+    from narwhals.pandas_like.expr import Expr
+
+    return isinstance(obj, Expr)
 
 
 def is_series(obj: Any) -> bool:
-    if hasattr(obj, "__series_namespace__"):
-        return True
     if POLARS_AVAILABLE and isinstance(
         obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
     ):
         return isinstance(obj, pl.Series)
-    return False
+    from narwhals.pandas_like.series import Series
+
+    return isinstance(obj, Series)
 
 
 def get_implementation(obj: Any) -> str:

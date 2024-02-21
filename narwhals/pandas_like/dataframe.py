@@ -8,6 +8,7 @@ from typing import Literal
 
 from narwhals.pandas_like.utils import evaluate_into_exprs
 from narwhals.pandas_like.utils import flatten_str
+from narwhals.pandas_like.utils import get_namespace
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import validate_dataframe_comparand
 from narwhals.spec import DataFrame as DataFrameProtocol
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
 
     from narwhals.pandas_like.group_by_object import GroupBy
     from narwhals.pandas_like.group_by_object import LazyGroupBy
-    from narwhals.pandas_like.namespace import Namespace
     from narwhals.spec import IntoExpr
 
 
@@ -77,16 +77,6 @@ class DataFrame(DataFrameProtocol):
             raise TypeError(
                 msg,
             )
-
-    def __dataframe_namespace__(
-        self,
-    ) -> Namespace:
-        from narwhals.pandas_like.namespace import Namespace
-
-        return Namespace(
-            api_version=self._api_version,
-            implementation=self._implementation,
-        )
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -225,16 +215,6 @@ class LazyFrame(LazyFrameProtocol):
             implementation=self._implementation,
         )
 
-    def __lazyframe_namespace__(
-        self,
-    ) -> Namespace:
-        from narwhals.pandas_like.namespace import Namespace
-
-        return Namespace(
-            api_version=self._api_version,
-            implementation=self._implementation,
-        )
-
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
         from narwhals.pandas_like.group_by_object import LazyGroupBy
 
@@ -256,10 +236,10 @@ class LazyFrame(LazyFrameProtocol):
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
     ) -> Self:
-        plx = self.__lazyframe_namespace__()
+        plx = get_namespace(self)
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
-        mask = expr.call(self)[0]
+        mask = expr._call(self)[0]
         _mask = validate_dataframe_comparand(mask)
         return self._from_dataframe(self._dataframe.loc[_mask])
 

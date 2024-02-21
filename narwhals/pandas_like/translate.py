@@ -14,10 +14,11 @@ def translate(
     api_version: str,
 ) -> tuple[LazyFrame, Namespace]:
     from narwhals.pandas_like.dataframe import LazyFrame
+    from narwhals.pandas_like.utils import get_namespace
 
     df = LazyFrame(
         df,
         api_version=api_version,
         implementation=implementation,
     )
-    return df, df.__lazyframe_namespace__()
+    return df, get_namespace(df)

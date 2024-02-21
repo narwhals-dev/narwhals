@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import TypeVar
-from typing import cast
 
 T = TypeVar("T")
 
@@ -29,18 +28,18 @@ def validate_column_comparand(other: Any) -> Any:
     If RHS is length 1, return the scalar value, so that the underlying
     library can broadcast it.
     """
+    from narwhals.pandas_like.dataframe import DataFrame
+    from narwhals.pandas_like.series import Series
+
     if isinstance(other, list):
         if len(other) > 1:
             # e.g. `plx.all() + plx.all()`
             msg = "Multi-output expressions are not supported in this context"
             raise ValueError(msg)
         other = other[0]
-    if hasattr(
-        other,
-        "__dataframe_namespace__",
-    ):
+    if isinstance(other, DataFrame):
         return NotImplemented
-    if hasattr(other, "__series_namespace__"):
+    if isinstance(other, Series):
         if other.len() == 1:
             # broadcast
             return other.item()
@@ -54,43 +53,38 @@ def validate_dataframe_comparand(other: Any) -> Any:
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
+    from narwhals.pandas_like.dataframe import DataFrame
+    from narwhals.pandas_like.series import Series
+
     if isinstance(other, list) and len(other) > 1:
         # e.g. `plx.all() + plx.all()`
         msg = "Multi-output expressions are not supported in this context"
         raise ValueError(msg)
     if isinstance(other, list):
         other = other[0]
-    if hasattr(
-        other,
-        "__dataframe_namespace__",
-    ):
+    if isinstance(other, DataFrame):
         return NotImplemented
-    if hasattr(other, "__series_namespace__"):
+    if isinstance(other, Series):
         if other.len() == 1:
             # broadcast
-            return other.get_value(0)
+            return item(other)
         return other.series
     return other
 
 
 def maybe_evaluate_expr(df: DataFrame | LazyFrame, arg: Any) -> Any:
     """Evaluate expression if it's an expression, otherwise return it as is."""
-    if hasattr(arg, "__expr_namespace__"):
-        return arg.call(df)
+    from narwhals.pandas_like.expr import Expr
+
+    if isinstance(arg, Expr):
+        return arg._call(df)
     return arg
 
 
 def get_namespace(obj: Any) -> Namespace:
-    if hasattr(obj, "__dataframe_namespace__"):
-        return obj.__dataframe_namespace__()  # type: ignore[no-any-return]
-    if hasattr(obj, "__lazyframe_namespace__"):
-        return obj.__lazyframe_namespace__()  # type: ignore[no-any-return]
-    if hasattr(obj, "__series_namespace__"):
-        return obj.__series_namespace__()  # type: ignore[no-any-return]
-    if hasattr(obj, "__expr_namespace__"):
-        return obj.__expr_namespace__()  # type: ignore[no-any-return]
-    msg = f"Expected DataFrame or LazyFrame, got {type(obj)}"
-    raise TypeError(msg)
+    from narwhals.pandas_like.namespace import Namespace
+
+    return Namespace(api_version="0.20.0", implementation=obj._implementation)
 
 
 def parse_into_exprs(
@@ -103,12 +97,14 @@ def parse_into_exprs(
 
 
 def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
+    from narwhals.pandas_like.expr import Expr
+    from narwhals.pandas_like.series import Series
+
     if isinstance(into_expr, str):
         return plx.col(into_expr)
-    if hasattr(into_expr, "__expr_namespace__"):
-        return cast("Expr", into_expr)
-    if hasattr(into_expr, "__series_namespace__"):
-        into_expr = cast("Series", into_expr)
+    if isinstance(into_expr, Expr):
+        return into_expr
+    if isinstance(into_expr, Series):
         return plx._create_expr_from_series(into_expr)
     msg = f"Expected IntoExpr, got {type(into_expr)}"
     raise TypeError(msg)
@@ -119,7 +115,7 @@ def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[S
     Return list of raw columns.
     """
     expr = parse_into_expr(get_namespace(df), into_expr)
-    return expr.call(df)
+    return expr._call(df)
 
 
 def flatten_str(*args: str | Iterable[str]) -> list[str]:
@@ -189,7 +185,7 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
 
     def func(df: DataFrame | LazyFrame) -> list[Series]:
         out: list[Series] = []
-        for column in expr.call(df):
+        for column in expr._call(df):
             # should be enough to just evaluate?
             # validation should happen within column methods?
             _out = getattr(column, attr)(
@@ -199,8 +195,7 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                     for arg_name, arg_value in kwargs.items()
                 },
             )
-            if hasattr(_out, "__series_namespace__"):
-                _out = cast(Series, _out)  # help mypy
+            if isinstance(_out, Series):
                 out.append(_out)
             else:
                 out.append(plx._create_series_from_scalar(_out, column))

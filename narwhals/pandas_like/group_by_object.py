@@ -92,7 +92,7 @@ class LazyGroupBy(LazyGroupByProtocol):
                 # TODO: it might be better to use groupby(...).apply
                 # in this case, but I couldn't get the multi-output
                 # case to work for cuDF.
-                results_keys = expr.call(
+                results_keys = expr._call(
                     LazyFrame(
                         df_keys,
                         api_version=self.api_version,

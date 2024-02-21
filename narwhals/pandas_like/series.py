@@ -12,8 +12,6 @@ from narwhals.spec import Series as SeriesProtocol
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals.pandas_like.namespace import Namespace
-
 
 class Series(SeriesProtocol):
     def __init__(
@@ -52,16 +50,6 @@ class Series(SeriesProtocol):
     def _from_series(self, series: Any) -> Self:
         return self.__class__(
             series.rename(series.name, copy=False),
-            api_version=self.api_version,
-            implementation=self._implementation,
-        )
-
-    def __series_namespace__(
-        self,
-    ) -> Namespace:
-        from narwhals.pandas_like.namespace import Namespace
-
-        return Namespace(
             api_version=self.api_version,
             implementation=self._implementation,
         )

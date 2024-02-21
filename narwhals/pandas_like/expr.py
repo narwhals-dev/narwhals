@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dataframe import LazyFrame
-    from narwhals.pandas_like.namespace import Namespace
 
 
 class Expr(ExprProtocol):
@@ -28,8 +27,8 @@ class Expr(ExprProtocol):
         output_names: list[str] | None,
         implementation: str,
     ) -> None:
-        self.call = call
-        self.api_version = "0.20.0"  # todo
+        self._call = call
+        self._api_version = "0.20.0"  # todo
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
@@ -64,14 +63,6 @@ class Expr(ExprProtocol):
             root_names=list(column_names),
             output_names=list(column_names),
             implementation=implementation,
-        )
-
-    def __expr_namespace__(self) -> Namespace:
-        from narwhals.pandas_like.namespace import Namespace
-
-        return Namespace(
-            api_version="todo",
-            implementation=self._implementation,
         )
 
     def __eq__(self, other: Expr | Any) -> Self:  # type: ignore[override]
@@ -194,11 +185,8 @@ class Expr(ExprProtocol):
     def alias(self, name: str) -> Self:
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
-        if self._depth is None:
-            msg = "Unreachable code, please report a bug"
-            raise AssertionError(msg)
         return self.__class__(
-            lambda df: [series.alias(name) for series in self.call(df)],
+            lambda df: [series.alias(name) for series in self._call(df)],
             depth=self._depth,
             function_name=self._function_name,
             root_names=self._root_names,
@@ -225,7 +213,7 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
                     api_version=df._api_version,
                     implementation=df._implementation,
                 )
-                for series in self._expr.call(df)
+                for series in self._expr._call(df)
             ],
             depth=self._expr._depth + 1,
             function_name=self._expr._function_name,
@@ -242,7 +230,7 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
                     api_version=df._api_version,
                     implementation=df._implementation,
                 )
-                for series in self._expr.call(df)
+                for series in self._expr._call(df)
             ],
             depth=self._expr._depth + 1,
             function_name=self._expr._function_name,
