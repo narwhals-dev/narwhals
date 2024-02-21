@@ -6,7 +6,7 @@ from typing import Callable
 
 from narwhals.pandas_like.series import Series
 from narwhals.pandas_like.utils import register_expression_call
-from narwhals.spec import Expr as ExprT
+from narwhals.spec import Expr as ExprProtocol
 from narwhals.spec import ExprStringNamespace as ExprStringNamespaceProtocol
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.namespace import Namespace
 
 
-class Expr(ExprT):
+class Expr(ExprProtocol):
     def __init__(  # noqa: PLR0913
         self,
         call: Callable[[DataFrame | LazyFrame], list[Series]],
