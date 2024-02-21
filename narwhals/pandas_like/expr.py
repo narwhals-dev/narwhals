@@ -50,8 +50,6 @@ class Expr(ExprT):
     def from_column_names(
         cls: type[Self], *column_names: str, implementation: str
     ) -> Self:
-        from narwhals.pandas_like.series import Series
-
         return cls(
             lambda df: [
                 Series(
@@ -237,8 +235,6 @@ class ExprStringNamespace(ExprStringNamespaceT):
         )
 
     def strip_chars(self, characters: str = " ") -> Expr:
-        from narwhals.pandas_like.series import Series
-
         return Expr(
             lambda df: [
                 Series(
