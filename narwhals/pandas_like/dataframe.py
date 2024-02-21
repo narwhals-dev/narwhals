@@ -43,6 +43,9 @@ class DataFrame(DataFrameT):
     def columns(self) -> list[str]:
         return self.dataframe.columns.tolist()
 
+    def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
+        return getattr(self.lazy(), method)(*args, **kwargs).collect()
+
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self.api_version}) "
         length = len(header)
@@ -100,42 +103,40 @@ class DataFrame(DataFrameT):
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
-    ) -> DataFrameT:
-        return self.lazy().select(*exprs, **named_exprs).collect()
+    ) -> Self:
+        return self._dispatch_to_lazy("select", *exprs, **named_exprs)
 
     def filter(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> DataFrameT:
-        return self.lazy().filter(*predicates).collect()
+    ) -> Self:
+        return self._dispatch_to_lazy("filter", *predicates)
 
     def with_columns(
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
-    ) -> DataFrameT:
-        return self.lazy().with_columns(*exprs, **named_exprs).collect()
+    ) -> Self:
+        return self._dispatch_to_lazy("with_columns", *exprs, **named_exprs)
 
     def sort(
         self,
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Iterable[bool] = False,
-    ) -> DataFrameT:
-        return self.lazy().sort(by, *more_by, descending=descending).collect()
+    ) -> Self:
+        return self._dispatch_to_lazy("sort", by, *more_by, descending=descending)
 
     def join(
         self,
-        other: DataFrameT,
+        other: Self,
         *,
         how: Literal["left", "inner", "outer"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
-    ) -> DataFrameT:
-        return (
-            self.lazy()
-            .join(other.lazy(), how=how, left_on=left_on, right_on=right_on)
-            .collect()
+    ) -> Self:
+        return self._dispatch_to_lazy(
+            "join", other.lazy(), how=how, left_on=left_on, right_on=right_on
         )
 
     def lazy(self) -> LazyFrame:
@@ -145,14 +146,14 @@ class DataFrame(DataFrameT):
             implementation=self._implementation,
         )
 
-    def head(self, n: int) -> DataFrameT:
-        return self.lazy().head(n).collect()
+    def head(self, n: int) -> Self:
+        return self._dispatch_to_lazy("head", n)
 
-    def unique(self, subset: list[str]) -> DataFrameT:
-        return self.lazy().unique(subset).collect()
+    def unique(self, subset: list[str]) -> Self:
+        return self._dispatch_to_lazy("unique", subset)
 
-    def rename(self, mapping: dict[str, str]) -> DataFrameT:
-        return self.lazy().rename(mapping).collect()
+    def rename(self, mapping: dict[str, str]) -> Self:
+        return self._dispatch_to_lazy("rename", mapping)
 
     def to_numpy(self) -> Any:
         return self.dataframe.to_numpy()
@@ -301,7 +302,7 @@ class LazyFrame(LazyFrameT):
     # Other
     def join(
         self,
-        other: LazyFrameT,
+        other: Self,
         *,
         how: Literal["left", "inner", "outer"] = "inner",
         left_on: str | list[str],
@@ -332,7 +333,7 @@ class LazyFrame(LazyFrameT):
         )
 
     # Conversion
-    def collect(self) -> DataFrameT:
+    def collect(self) -> DataFrame:
         return DataFrame(
             self.dataframe,
             api_version=self.api_version,

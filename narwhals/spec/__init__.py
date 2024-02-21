@@ -189,7 +189,7 @@ class DataFrame(Protocol):
 
     def join(
         self,
-        other: DataFrame,
+        other: Self,
         *,
         how: Literal["inner"] = "inner",
         left_on: str | list[str],
@@ -255,7 +255,7 @@ class LazyFrame(Protocol):
 
     def join(
         self,
-        other: LazyFrame,
+        other: Self,
         *,
         how: Literal["left", "inner", "outer"] = "inner",
         left_on: str | list[str],
