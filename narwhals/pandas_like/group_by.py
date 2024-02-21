@@ -90,6 +90,7 @@ class LazyGroupBy(LazyGroupByProtocol):
             for key, name in zip(keys, self._keys):
                 out[name].append(key)
         for expr in exprs:
+            assert expr._output_names is not None
             if len(expr._output_names) != 1:
                 msg = (
                     "Multi-output non-elementary aggregations are not supported in group_by.agg.\n"

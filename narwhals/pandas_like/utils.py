@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -202,13 +203,13 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                 out.append(plx._create_series_from_scalar(_out, column))
         return out
 
-    root_names = expr._root_names
-    for arg in args:
-        if isinstance(arg, Expr):
-            root_names.extend(arg._root_names)
-    for arg in kwargs.values():
-        if isinstance(arg, Expr):
-            root_names.extend(arg._root_names)
+    root_names = copy(expr._root_names)
+    for arg in list(args) + list(kwargs.values()):
+        if root_names is not None and isinstance(arg, Expr):
+            if arg._root_names is not None:
+                root_names.extend(arg._root_names)
+            else:
+                root_names = None
 
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,
