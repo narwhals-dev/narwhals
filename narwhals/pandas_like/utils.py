@@ -181,6 +181,7 @@ def evaluate_into_exprs(
 
 
 def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
+    from narwhals.pandas_like.expr import Expr
     from narwhals.pandas_like.series import Series
 
     plx = get_namespace(expr)
@@ -201,11 +202,19 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                 out.append(plx._create_series_from_scalar(_out, column))
         return out
 
+    root_names = expr._root_names
+    for arg in args:
+        if isinstance(arg, Expr):
+            root_names.extend(arg._root_names)
+    for arg in kwargs.values():
+        if isinstance(arg, Expr):
+            root_names.extend(arg._root_names)
+
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
-        root_names=expr._root_names,
+        root_names=root_names,
         output_names=expr._output_names,
     )
 
