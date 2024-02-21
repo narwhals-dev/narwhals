@@ -38,7 +38,7 @@ class Namespace(NamespaceProtocol):
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
 
-    def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:
+    def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:  # type: ignore[override]
         dfs: list[Any] = []
         kind: Any = {}
         for df in items:
