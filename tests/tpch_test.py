@@ -7,15 +7,7 @@ import polars
 import pytest
 
 from narwhals import to_polars_api
-
-
-def compare_dicts(result: dict[str, Any], expected: dict[str, Any]) -> None:
-    for key in result:
-        for lhs, rhs in zip(result[key], expected[key]):
-            if isinstance(lhs, float):
-                assert abs(lhs - rhs) < 1e-6
-            else:
-                assert lhs == rhs
+from tests.utils import compare_dicts
 
 
 @pytest.mark.parametrize(
