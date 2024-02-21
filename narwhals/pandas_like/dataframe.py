@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.group_by_object import GroupBy
     from narwhals.pandas_like.group_by_object import LazyGroupBy
     from narwhals.pandas_like.namespace import Namespace
-    from narwhals.pandas_like.utils import IntoExpr
+    from narwhals.spec import IntoExpr
 
 
 class DataFrame(DataFrameT):
@@ -42,10 +42,10 @@ class DataFrame(DataFrameT):
 
     @property
     def columns(self) -> list[str]:
-        return self.dataframe.columns.tolist()
+        return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
 
     def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
-        return getattr(self.lazy(), method)(*args, **kwargs).collect()
+        return getattr(self.lazy(), method)(*args, **kwargs).collect()  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self._api_version}) "
@@ -90,7 +90,7 @@ class DataFrame(DataFrameT):
 
         return Namespace(
             api_version=self._api_version,
-            implementation=self._implementation,  # type: ignore[attr-defined]
+            implementation=self._implementation,
         )
 
     @property
@@ -189,7 +189,7 @@ class LazyFrame(LazyFrameProtocol):
 
     @property
     def columns(self) -> list[str]:
-        return self.dataframe.columns.tolist()
+        return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self._api_version}) "
@@ -241,7 +241,7 @@ class LazyFrame(LazyFrameProtocol):
 
         return Namespace(
             api_version=self._api_version,
-            implementation=self._implementation,  # type: ignore[attr-defined]
+            implementation=self._implementation,
         )
 
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
@@ -256,7 +256,7 @@ class LazyFrame(LazyFrameProtocol):
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = horizontal_concat(
-            [series.series for series in new_series],  # type: ignore[attr-defined]
+            [series.series for series in new_series],
             implementation=self._implementation,
         )
         return self._from_dataframe(df)
@@ -279,10 +279,7 @@ class LazyFrame(LazyFrameProtocol):
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(
-            **{
-                series.name: series.series  # type: ignore[attr-defined]
-                for series in new_series
-            }
+            **{series.name: series.series for series in new_series}
         )
         return self._from_dataframe(df)
 
@@ -330,7 +327,7 @@ class LazyFrame(LazyFrameProtocol):
 
         return self._from_dataframe(
             self.dataframe.merge(
-                other.dataframe,  # type: ignore[attr-defined]
+                other.dataframe,
                 left_on=left_on,
                 right_on=right_on,
                 how=how,

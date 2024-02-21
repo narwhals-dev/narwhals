@@ -61,7 +61,7 @@ class LazyGroupBy(LazyGroupByT):
         implementation: str = self._df._implementation  # type: ignore[attr-defined]
         output_names: list[str] = self._keys
         for expr in exprs:
-            expr_output_names = expr._output_names  # type: ignore[attr-defined]
+            expr_output_names = expr._output_names
             if expr_output_names is None:
                 msg = (
                     "Anonymous expressions are not supported in group_by.agg.\n"
@@ -87,7 +87,7 @@ class LazyGroupBy(LazyGroupByT):
                 # TODO: it might be better to use groupby(...).apply
                 # in this case, but I couldn't get the multi-output
                 # case to work for cuDF.
-                results_keys = expr.call(  # type: ignore[attr-defined]
+                results_keys = expr.call(
                     LazyFrame(
                         df_keys,
                         api_version=self.api_version,

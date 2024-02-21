@@ -10,8 +10,8 @@ if TYPE_CHECKING:
 
 
 def to_polars_api(df: Any, version: str) -> tuple[LazyFrame, Namespace]:
-    if hasattr(df, "__narwhals__"):
-        return df.__narwhals__()
+    if hasattr(df, "__narwhals_dataframe__"):
+        return df.__narwhals_dataframe__()  # type: ignore[no-any-return]
     try:
         import polars as pl
     except ModuleNotFoundError:
@@ -76,12 +76,12 @@ def get_namespace(obj: Any, implementation: str | None = None) -> Namespace:
         if isinstance(obj, (pl.DataFrame, pl.LazyFrame, pl.Series)):
             return pl  # type: ignore[return-value]
     if hasattr(obj, "__dataframe_namespace__"):
-        return obj.__dataframe_namespace__()
+        return obj.__dataframe_namespace__()  # type: ignore[no-any-return]
     if hasattr(obj, "__series_namespace__"):
-        return obj.__series_namespace__()
+        return obj.__series_namespace__()  # type: ignore[no-any-return]
     if hasattr(obj, "__lazyframe_namespace__"):
-        return obj.__lazyframe_namespace__()
+        return obj.__lazyframe_namespace__()  # type: ignore[no-any-return]
     if hasattr(obj, "__expr_namespace__"):
-        return obj.__expr_namespace__()
+        return obj.__expr_namespace__()  # type: ignore[no-any-return]
     msg = f"Could not find namespace for object {obj}"
     raise TypeError(msg)

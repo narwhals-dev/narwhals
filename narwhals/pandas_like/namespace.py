@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from functools import reduce
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import TypeVar
 
 from narwhals.pandas_like.dataframe import DataFrame
 from narwhals.pandas_like.dataframe import LazyFrame
@@ -13,9 +15,11 @@ from narwhals.pandas_like.utils import flatten_str
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.pandas_like.utils import series_from_iterable
-from narwhals.spec import AnyDataFrame
 from narwhals.spec import IntoExpr
 from narwhals.spec import Namespace as NamespaceProtocol
+
+if TYPE_CHECKING:
+    AnyDataFrame = TypeVar("AnyDataFrame", DataFrame, LazyFrame)
 
 
 class Namespace(NamespaceProtocol):
@@ -38,7 +42,7 @@ class Namespace(NamespaceProtocol):
         dfs: list[Any] = []
         kind: Any = {}
         for df in items:
-            dfs.append(df.dataframe)  # type: ignore[union-attr, attr-defined]
+            dfs.append(df.dataframe)
             kind.append(type(df))
         if len(kind) > 1:
             msg = "Can only concat DataFrames or LazyFrames, not mixtures of the two"
@@ -88,12 +92,12 @@ class Namespace(NamespaceProtocol):
             lambda df: [
                 Series(
                     series_from_iterable(
-                        [len(df.dataframe)],  # type: ignore[union-attr]
+                        [len(df.dataframe)],
                         name="len",
                         index=[0],
                         implementation=self._implementation,
                     ),
-                    api_version=df._api_version,  # type: ignore[union-attr]
+                    api_version=df._api_version,
                     implementation=self._implementation,
                 ),
             ],
@@ -126,8 +130,8 @@ class Namespace(NamespaceProtocol):
         return Series(
             series_from_iterable(
                 [value],
-                name=series.series.name,  # type: ignore[attr-defined]
-                index=series.series.index[0:1],  # type: ignore[attr-defined]
+                name=series.series.name,
+                index=series.series.index[0:1],
                 implementation=self._implementation,
             ),
             api_version=self.api_version,
@@ -148,8 +152,8 @@ class Namespace(NamespaceProtocol):
         return Expr(
             lambda df: [
                 Series(
-                    df.dataframe.loc[:, column_name],  # type: ignore[union-attr]
-                    api_version=df._api_version,  # type: ignore[union-attr]
+                    df.dataframe.loc[:, column_name],
+                    api_version=df._api_version,
                     implementation=self._implementation,
                 )
                 for column_name in df.columns

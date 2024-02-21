@@ -83,6 +83,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
+strict = true
 
 [[tool.mypy.overrides]]
 # the pandas API is just too inconsistent for type hinting to be useful.

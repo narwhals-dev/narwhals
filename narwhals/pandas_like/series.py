@@ -266,7 +266,7 @@ class Series(SeriesProtocol):
 
     def n_unique(self) -> int:
         ser = self.series
-        return ser.nunique()
+        return ser.nunique()  # type: ignore[no-any-return]
 
     def zip_with(self, mask: SeriesProtocol, other: SeriesProtocol) -> SeriesProtocol:
         ser = self.series
@@ -280,7 +280,7 @@ class Series(SeriesProtocol):
 
     def unique(self) -> SeriesProtocol:
         ser = self.series
-        return ser.unique()
+        return ser.unique()  # type: ignore[no-any-return]
 
     def is_nan(self) -> Series:
         ser = self.series

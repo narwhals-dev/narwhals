@@ -53,8 +53,8 @@ class Expr(ExprT):
         return cls(
             lambda df: [
                 Series(
-                    df.dataframe.loc[:, column_name],  # type: ignore[union-attr]
-                    api_version=df._api_version,  # type: ignore[union-attr]  # type: ignore[union-attr]
+                    df.dataframe.loc[:, column_name],
+                    api_version=df._api_version,
                     implementation=implementation,
                 )
                 for column_name in column_names
@@ -71,7 +71,7 @@ class Expr(ExprT):
 
         return Namespace(
             api_version="todo",
-            implementation=self._implementation,  # type: ignore[attr-defined]
+            implementation=self._implementation,
         )
 
     def __eq__(self, other: Expr | Any) -> Self:  # type: ignore[override]
@@ -104,7 +104,7 @@ class Expr(ExprT):
     def __ror__(self, other: Any) -> Self:
         return register_expression_call(self, "__ror__", other)
 
-    def __add__(self, other: Expr | Any) -> Self:  # type: ignore[override]
+    def __add__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__add__", other)
 
     def __radd__(self, other: Any) -> Self:
@@ -222,31 +222,31 @@ class ExprStringNamespace(ExprStringNamespaceT):
             lambda df: [
                 Series(
                     series.series.str.endswith(suffix),
-                    api_version=df._api_version,  # type: ignore[union-attr]
-                    implementation=df._implementation,  # type: ignore[union-attr]
+                    api_version=df._api_version,
+                    implementation=df._implementation,
                 )
-                for series in self._expr.call(df)  # type: ignore[attr-defined]
+                for series in self._expr.call(df)
             ],
-            depth=self._expr._depth + 1,  # type: ignore[attr-defined]
-            function_name=self._expr._function_name,  # type: ignore[attr-defined]
-            root_names=self._expr._root_names,  # type: ignore[attr-defined]
-            output_names=self._expr._output_names,  # type: ignore[attr-defined]
-            implementation=self._expr._implementation,  # type: ignore[attr-defined]
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=self._expr._root_names,
+            output_names=self._expr._output_names,
+            implementation=self._expr._implementation,
         )
 
     def strip_chars(self, characters: str = " ") -> Expr:
         return Expr(
             lambda df: [
                 Series(
-                    series.series.str.strip(characters),  # type: ignore[attr-defined]
-                    api_version=df._api_version,  # type: ignore[union-attr]
-                    implementation=df._implementation,  # type: ignore[union-attr]
+                    series.series.str.strip(characters),
+                    api_version=df._api_version,
+                    implementation=df._implementation,
                 )
-                for series in self._expr.call(df)  # type: ignore[attr-defined]
+                for series in self._expr.call(df)
             ],
-            depth=self._expr._depth + 1,  # type: ignore[attr-defined]
-            function_name=self._expr._function_name,  # type: ignore[attr-defined]
-            root_names=self._expr._root_names,  # type: ignore[attr-defined]
-            output_names=self._expr._output_names,  # type: ignore[attr-defined]
-            implementation=self._expr._implementation,  # type: ignore[attr-defined]
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=self._expr._root_names,
+            output_names=self._expr._output_names,
+            implementation=self._expr._implementation,
         )
