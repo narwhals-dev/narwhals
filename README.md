@@ -129,6 +129,9 @@ Magic! 🪄
 
 If, I'd love to hear from you!
 
+**Note**: this is **not** a "Dataframe Standard" project. It just translates a subset of the Polars
+API to pandas-like libraries.
+
 ## Why "Narwhals"?
 
 Because they are so awesome.
