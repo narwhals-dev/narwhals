@@ -45,6 +45,7 @@ lint.ignore = [
   'E501',
   'FBT003',  # todo: enable
   'FIX',
+  'ICN001',
   'ISC001',
   'PD',
   'PLR0911',
