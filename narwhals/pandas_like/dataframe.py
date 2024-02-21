@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals.pandas_like.group_by_object import GroupBy
-    from narwhals.pandas_like.group_by_object import LazyGroupBy
+    from narwhals.pandas_like.group_by import GroupBy
+    from narwhals.pandas_like.group_by import LazyGroupBy
     from narwhals.spec import IntoExpr
 
 
@@ -83,7 +83,7 @@ class DataFrame(DataFrameProtocol):
         return self._dataframe.shape  # type: ignore[no-any-return]
 
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        from narwhals.pandas_like.group_by_object import GroupBy
+        from narwhals.pandas_like.group_by import GroupBy
 
         return GroupBy(self, flatten_str(*keys), api_version=self._api_version)
 
@@ -216,7 +216,7 @@ class LazyFrame(LazyFrameProtocol):
         )
 
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
-        from narwhals.pandas_like.group_by_object import LazyGroupBy
+        from narwhals.pandas_like.group_by import LazyGroupBy
 
         return LazyGroupBy(self, flatten_str(*keys), api_version=self._api_version)
 
