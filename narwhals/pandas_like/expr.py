@@ -7,8 +7,8 @@ from narwhals.pandas_like.series import Series
 from narwhals.spec import DataFrame as DataFrameT
 from narwhals.spec import Expr as ExprT
 from narwhals.spec import ExprStringNamespace as ExprStringNamespaceT
-from narwhals.spec import LazyFrame as LazyFrameT
-from narwhals.spec import Namespace as NamespaceT
+from narwhals.spec import LazyFrame as LazyFrameProtocol
+from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.spec import Series as SeriesT
 from narwhals.utils import register_expression_call
 
@@ -16,7 +16,7 @@ from narwhals.utils import register_expression_call
 class Expr(ExprT):
     def __init__(  # noqa: PLR0913
         self,
-        call: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
+        call: Callable[[DataFrameT | LazyFrameProtocol], list[SeriesT]],
         *,
         depth: int | None,
         function_name: str | None,
@@ -62,7 +62,7 @@ class Expr(ExprT):
             implementation=implementation,
         )
 
-    def __expr_namespace__(self) -> NamespaceT:
+    def __expr_namespace__(self) -> NamespaceProtocol:
         from narwhals.pandas_like.namespace import Namespace
 
         return Namespace(

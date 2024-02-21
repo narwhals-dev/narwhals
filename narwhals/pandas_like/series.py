@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from pandas.api.types import is_extension_array_dtype
 
-import narwhals
 from narwhals.spec import Series as SeriesT
 from narwhals.utils import item
 from narwhals.utils import validate_column_comparand
+
+if TYPE_CHECKING:
+    from narwhals.pandas_like.namespace import Namespace
 
 
 class Series(SeriesT):
@@ -53,8 +56,10 @@ class Series(SeriesT):
 
     def __series_namespace__(
         self,
-    ) -> narwhals.pandas_like.Namespace:
-        return narwhals.pandas_like.Namespace(
+    ) -> Namespace:
+        from narwhals.pandas_like.namespace import Namespace
+
+        return Namespace(
             api_version=self.api_version,
             implementation=self._implementation,
         )

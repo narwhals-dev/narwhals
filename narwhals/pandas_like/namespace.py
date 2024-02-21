@@ -13,8 +13,8 @@ from narwhals.spec import AnyDataFrame
 from narwhals.spec import DataFrame as DataFrameT
 from narwhals.spec import Expr as ExprT
 from narwhals.spec import IntoExpr
-from narwhals.spec import LazyFrame as LazyFrameT
-from narwhals.spec import Namespace as NamespaceT
+from narwhals.spec import LazyFrame as LazyFrameProtocol
+from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.spec import Series as SeriesT
 from narwhals.utils import flatten_str
 from narwhals.utils import horizontal_concat
@@ -22,7 +22,7 @@ from narwhals.utils import parse_into_exprs
 from narwhals.utils import series_from_iterable
 
 
-class Namespace(NamespaceT):
+class Namespace(NamespaceProtocol):
     def __init__(self, *, api_version: str, implementation: str) -> None:
         self.__dataframeapi_version__ = api_version
         self.api_version = api_version
@@ -110,7 +110,7 @@ class Namespace(NamespaceT):
 
     def _create_expr_from_callable(  # noqa: PLR0913
         self,
-        func: Callable[[DataFrameT | LazyFrameT], list[SeriesT]],
+        func: Callable[[DataFrameT | LazyFrameProtocol], list[SeriesT]],
         *,
         depth: int,
         function_name: str | None,

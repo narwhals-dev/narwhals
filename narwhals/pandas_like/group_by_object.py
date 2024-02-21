@@ -8,7 +8,7 @@ from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.spec import DataFrame as DataFrameT
 from narwhals.spec import GroupBy as GroupByT
 from narwhals.spec import IntoExpr
-from narwhals.spec import LazyFrame as LazyFrameT
+from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import LazyGroupBy as LazyGroupByT
 from narwhals.utils import dataframe_from_dict
 from narwhals.utils import evaluate_simple_aggregation
@@ -37,7 +37,7 @@ class GroupBy(GroupByT):
 
 
 class LazyGroupBy(LazyGroupByT):
-    def __init__(self, df: LazyFrameT, keys: list[str], api_version: str) -> None:
+    def __init__(self, df: LazyFrameProtocol, keys: list[str], api_version: str) -> None:
         self._df = df
         self._keys = list(keys)
         self.api_version = api_version
@@ -46,7 +46,7 @@ class LazyGroupBy(LazyGroupByT):
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
-    ) -> LazyFrameT:
+    ) -> LazyFrameProtocol:
         df = self._df.dataframe  # type: ignore[attr-defined]
         exprs = parse_into_exprs(
             get_namespace(self._df),

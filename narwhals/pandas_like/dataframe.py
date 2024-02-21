@@ -6,13 +6,12 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 
-import narwhals
 from narwhals.spec import DataFrame as DataFrameT
 from narwhals.spec import GroupBy as GroupByT
 from narwhals.spec import IntoExpr
-from narwhals.spec import LazyFrame as LazyFrameT
+from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import LazyGroupBy as LazyGroupByT
-from narwhals.spec import Namespace as NamespaceT
+from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.utils import evaluate_into_exprs
 from narwhals.utils import flatten_str
 from narwhals.utils import horizontal_concat
@@ -22,6 +21,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from typing_extensions import Self
+
+    from narwhals.pandas_like.namespace import Namespace
 
 
 class DataFrame(DataFrameT):
@@ -84,8 +85,10 @@ class DataFrame(DataFrameT):
 
     def __dataframe_namespace__(
         self,
-    ) -> NamespaceT:
-        return narwhals.pandas_like.namespace.Namespace(
+    ) -> Namespace:
+        from narwhals.pandas_like.namespace import Namespace
+
+        return Namespace(
             api_version=self.api_version,
             implementation=self._implementation,  # type: ignore[attr-defined]
         )
@@ -169,7 +172,7 @@ class DataFrame(DataFrameT):
         raise TypeError(msg)
 
 
-class LazyFrame(LazyFrameT):
+class LazyFrame(LazyFrameProtocol):
     """dataframe object"""
 
     def __init__(
@@ -233,8 +236,10 @@ class LazyFrame(LazyFrameT):
 
     def __lazyframe_namespace__(
         self,
-    ) -> NamespaceT:
-        return narwhals.pandas_like.namespace.Namespace(
+    ) -> NamespaceProtocol:
+        from narwhals.pandas_like.namespace import Namespace
+
+        return Namespace(
             api_version=self.api_version,
             implementation=self._implementation,  # type: ignore[attr-defined]
         )
