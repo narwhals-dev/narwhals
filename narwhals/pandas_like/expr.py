@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
 from narwhals.pandas_like.series import Series
+from narwhals.pandas_like.utils import register_expression_call
 from narwhals.spec import DataFrame as DataFrameT
 from narwhals.spec import Expr as ExprT
 from narwhals.spec import ExprStringNamespace as ExprStringNamespaceT
 from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.spec import Series as SeriesProtocol
-from narwhals.utils import register_expression_call
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 class Expr(ExprT):
@@ -44,8 +48,8 @@ class Expr(ExprT):
 
     @classmethod
     def from_column_names(
-        cls: type[Expr], *column_names: str, implementation: str
-    ) -> ExprT:
+        cls: type[Self], *column_names: str, implementation: str
+    ) -> Self:
         return cls(
             lambda df: [
                 Series(
@@ -70,124 +74,124 @@ class Expr(ExprT):
             implementation=self._implementation,  # type: ignore[attr-defined]
         )
 
-    def __eq__(self, other: Expr | Any) -> ExprT:  # type: ignore[override]
+    def __eq__(self, other: Expr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__eq__", other)
 
-    def __ne__(self, other: Expr | Any) -> ExprT:  # type: ignore[override]
+    def __ne__(self, other: Expr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__ne__", other)
 
-    def __ge__(self, other: Expr | Any) -> ExprT:
+    def __ge__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__ge__", other)
 
-    def __gt__(self, other: Expr | Any) -> ExprT:
+    def __gt__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__gt__", other)
 
-    def __le__(self, other: Expr | Any) -> ExprT:
+    def __le__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__le__", other)
 
-    def __lt__(self, other: Expr | Any) -> ExprT:
+    def __lt__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__lt__", other)
 
-    def __and__(self, other: Expr | bool | Any) -> ExprT:
+    def __and__(self, other: Expr | bool | Any) -> Self:
         return register_expression_call(self, "__and__", other)
 
-    def __rand__(self, other: Any) -> ExprT:
+    def __rand__(self, other: Any) -> Self:
         return register_expression_call(self, "__rand__", other)
 
-    def __or__(self, other: Expr | bool | Any) -> ExprT:
+    def __or__(self, other: Expr | bool | Any) -> Self:
         return register_expression_call(self, "__or__", other)
 
-    def __ror__(self, other: Any) -> ExprT:
+    def __ror__(self, other: Any) -> Self:
         return register_expression_call(self, "__ror__", other)
 
-    def __add__(self, other: Expr | Any) -> ExprT:  # type: ignore[override]
+    def __add__(self, other: Expr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__add__", other)
 
-    def __radd__(self, other: Any) -> ExprT:
+    def __radd__(self, other: Any) -> Self:
         return register_expression_call(self, "__radd__", other)
 
-    def __sub__(self, other: Expr | Any) -> ExprT:
+    def __sub__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__sub__", other)
 
-    def __rsub__(self, other: Any) -> ExprT:
+    def __rsub__(self, other: Any) -> Self:
         return register_expression_call(self, "__rsub__", other)
 
-    def __mul__(self, other: Expr | Any) -> ExprT:
+    def __mul__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__mul__", other)
 
-    def __rmul__(self, other: Any) -> ExprT:
+    def __rmul__(self, other: Any) -> Self:
         return self.__mul__(other)
 
-    def __truediv__(self, other: Expr | Any) -> ExprT:
+    def __truediv__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__truediv__", other)
 
-    def __rtruediv__(self, other: Any) -> ExprT:
+    def __rtruediv__(self, other: Any) -> Self:
         raise NotImplementedError
 
-    def __floordiv__(self, other: Expr | Any) -> ExprT:
+    def __floordiv__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__floordiv__", other)
 
-    def __rfloordiv__(self, other: Any) -> ExprT:
+    def __rfloordiv__(self, other: Any) -> Self:
         raise NotImplementedError
 
-    def __pow__(self, other: Expr | Any) -> ExprT:
+    def __pow__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__pow__", other)
 
-    def __rpow__(self, other: Any) -> ExprT:  # pragma: no cover
+    def __rpow__(self, other: Any) -> Self:  # pragma: no cover
         raise NotImplementedError
 
-    def __mod__(self, other: Expr | Any) -> ExprT:
+    def __mod__(self, other: Expr | Any) -> Self:
         return register_expression_call(self, "__mod__", other)
 
-    def __rmod__(self, other: Any) -> ExprT:  # pragma: no cover
+    def __rmod__(self, other: Any) -> Self:  # pragma: no cover
         raise NotImplementedError
 
     # Unary
 
-    def __invert__(self) -> ExprT:
+    def __invert__(self) -> Self:
         return register_expression_call(self, "__invert__")
 
     # Reductions
 
-    def sum(self) -> ExprT:
+    def sum(self) -> Self:
         return register_expression_call(self, "sum")
 
-    def mean(self) -> ExprT:
+    def mean(self) -> Self:
         return register_expression_call(self, "mean")
 
-    def max(self) -> ExprT:
+    def max(self) -> Self:
         return register_expression_call(self, "max")
 
-    def min(self) -> ExprT:
+    def min(self) -> Self:
         return register_expression_call(self, "min")
 
     # Other
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
-    ) -> ExprT:
+    ) -> Self:
         return register_expression_call(
             self, "is_between", lower_bound, upper_bound, closed
         )
 
-    def is_null(self) -> ExprT:
+    def is_null(self) -> Self:
         return register_expression_call(self, "is_null")
 
-    def is_in(self, other: Any) -> ExprT:
+    def is_in(self, other: Any) -> Self:
         return register_expression_call(self, "is_in", other)
 
-    def drop_nulls(self) -> ExprT:
+    def drop_nulls(self) -> Self:
         return register_expression_call(self, "drop_nulls")
 
-    def n_unique(self) -> ExprT:
+    def n_unique(self) -> Self:
         return register_expression_call(self, "n_unique")
 
-    def unique(self) -> ExprT:
+    def unique(self) -> Self:
         return register_expression_call(self, "unique")
 
-    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> ExprT:
+    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Self:
         return register_expression_call(self, "sample", n, fraction, with_replacement)
 
-    def alias(self, name: str) -> ExprT:
+    def alias(self, name: str) -> Self:
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
         if self._depth is None:
@@ -211,7 +215,7 @@ class ExprStringNamespace(ExprStringNamespaceT):
     def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def ends_with(self, suffix: str) -> ExprT:
+    def ends_with(self, suffix: str) -> Expr:
         # TODO make a register_expression_call for namespaces
         return Expr(
             lambda df: [
@@ -229,7 +233,7 @@ class ExprStringNamespace(ExprStringNamespaceT):
             implementation=self._expr._implementation,  # type: ignore[attr-defined]
         )
 
-    def strip_chars(self, characters: str = " ") -> ExprT:
+    def strip_chars(self, characters: str = " ") -> Expr:
         return Expr(
             lambda df: [
                 Series(

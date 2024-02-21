@@ -9,17 +9,16 @@ from narwhals.pandas_like.dataframe import DataFrame
 from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.pandas_like.expr import Expr
 from narwhals.pandas_like.series import Series
+from narwhals.pandas_like.utils import flatten_str
+from narwhals.pandas_like.utils import horizontal_concat
+from narwhals.pandas_like.utils import parse_into_exprs
+from narwhals.pandas_like.utils import series_from_iterable
 from narwhals.spec import AnyDataFrame
 from narwhals.spec import DataFrame as DataFrameT
-from narwhals.spec import Expr as ExprT
 from narwhals.spec import IntoExpr
 from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.spec import Series as SeriesProtocol
-from narwhals.utils import flatten_str
-from narwhals.utils import horizontal_concat
-from narwhals.utils import parse_into_exprs
-from narwhals.utils import series_from_iterable
 
 
 class Namespace(NamespaceProtocol):
@@ -29,13 +28,13 @@ class Namespace(NamespaceProtocol):
         self._implementation = implementation
 
     # --- horizontal reductions
-    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
+    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         return reduce(lambda x, y: x + y, parse_into_exprs(self, *exprs))
 
-    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
+    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         return reduce(lambda x, y: x & y, parse_into_exprs(self, *exprs))
 
-    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> ExprT:
+    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
 
     def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:
@@ -62,32 +61,32 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def col(self, *column_names: str | Iterable[str]) -> ExprT:
+    def col(self, *column_names: str | Iterable[str]) -> Expr:
         return Expr.from_column_names(
             *flatten_str(*column_names), implementation=self._implementation
         )
 
-    def sum(self, *column_names: str) -> ExprT:
+    def sum(self, *column_names: str) -> Expr:
         return Expr.from_column_names(
             *column_names, implementation=self._implementation
         ).sum()
 
-    def mean(self, *column_names: str) -> ExprT:
+    def mean(self, *column_names: str) -> Expr:
         return Expr.from_column_names(
             *column_names, implementation=self._implementation
         ).mean()
 
-    def max(self, *column_names: str) -> ExprT:
+    def max(self, *column_names: str) -> Expr:
         return Expr.from_column_names(
             *column_names, implementation=self._implementation
         ).max()
 
-    def min(self, *column_names: str) -> ExprT:
+    def min(self, *column_names: str) -> Expr:
         return Expr.from_column_names(
             *column_names, implementation=self._implementation
         ).min()
 
-    def len(self) -> ExprT:
+    def len(self) -> Expr:
         return Expr(
             lambda df: [
                 Series(
@@ -116,7 +115,7 @@ class Namespace(NamespaceProtocol):
         function_name: str | None,
         root_names: list[str] | None,
         output_names: list[str] | None,
-    ) -> ExprT:
+    ) -> Expr:
         return Expr(
             func,
             depth=depth,
@@ -140,7 +139,7 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def _create_expr_from_series(self, series: SeriesProtocol) -> ExprT:
+    def _create_expr_from_series(self, series: SeriesProtocol) -> Expr:
         return Expr(
             lambda _df: [series],
             depth=0,
@@ -150,7 +149,7 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def all(self) -> ExprT:
+    def all(self) -> Expr:
         return Expr(
             lambda df: [
                 Series(

@@ -5,17 +5,17 @@ from typing import Any
 from typing import Iterable
 
 from narwhals.pandas_like.dataframe import LazyFrame
+from narwhals.pandas_like.utils import dataframe_from_dict
+from narwhals.pandas_like.utils import evaluate_simple_aggregation
+from narwhals.pandas_like.utils import get_namespace
+from narwhals.pandas_like.utils import horizontal_concat
+from narwhals.pandas_like.utils import is_simple_aggregation
+from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.spec import DataFrame as DataFrameT
 from narwhals.spec import GroupBy as GroupByProtocol
 from narwhals.spec import IntoExpr
 from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import LazyGroupBy as LazyGroupByT
-from narwhals.utils import dataframe_from_dict
-from narwhals.utils import evaluate_simple_aggregation
-from narwhals.utils import get_namespace
-from narwhals.utils import horizontal_concat
-from narwhals.utils import is_simple_aggregation
-from narwhals.utils import parse_into_exprs
 
 
 class GroupBy(GroupByProtocol):

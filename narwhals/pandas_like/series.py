@@ -5,11 +5,13 @@ from typing import Any
 
 from pandas.api.types import is_extension_array_dtype
 
+from narwhals.pandas_like.utils import item
+from narwhals.pandas_like.utils import validate_column_comparand
 from narwhals.spec import Series as SeriesProtocol
-from narwhals.utils import item
-from narwhals.utils import validate_column_comparand
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.pandas_like.namespace import Namespace
 
 
@@ -296,7 +298,7 @@ class Series(SeriesProtocol):
             ser.sort_values(ascending=not descending).rename(self.name)
         )
 
-    def alias(self, name: str) -> Series:
+    def alias(self, name: str) -> Self:
         ser = self.series
         return self._from_series(ser.rename(name, copy=False))
 

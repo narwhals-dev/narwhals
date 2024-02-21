@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class Expr(Protocol):
-    def alias(self, name: str) -> Expr:
+    def alias(self, name: str) -> Self:
         ...
 
     def __and__(self, other: Any) -> Expr:
