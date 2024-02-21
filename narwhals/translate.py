@@ -52,17 +52,6 @@ def to_polars_api(df: Any, version: str) -> tuple[LazyFrame, Namespace]:
     raise TypeError(msg)
 
 
-def quick_translate(df: Any, version: str, implementation: str) -> DataFrame:
-    """Translate to Polars API, if implementation is already known."""
-    if implementation in ("pandas", "cudf"):
-        from narwhals.pandas_like.translate import translate
-
-        df, _pl = translate(df, api_version=version, implementation=implementation)
-        return df
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
-
-
 def to_original_object(df: DataFrame | LazyFrame) -> Any:
     try:
         import polars as pl
@@ -96,18 +85,3 @@ def get_namespace(obj: Any, implementation: str | None = None) -> Namespace:
         return obj.__expr_namespace__()
     msg = f"Could not find namespace for object {obj}"
     raise TypeError(msg)
-
-
-def translate(
-    df: Any,
-    implementation: str,
-    api_version: str,
-) -> tuple[LazyFrame, Namespace]:
-    from narwhals.pandas_like.dataframe import LazyFrame
-
-    df = LazyFrame(
-        df,
-        api_version=api_version,
-        implementation=implementation,
-    )
-    return df, df.__lazyframe_namespace__()
