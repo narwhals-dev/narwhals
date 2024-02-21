@@ -186,8 +186,6 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
     def func(df: DataFrame | LazyFrame) -> list[Series]:
         out: list[Series] = []
         for column in expr._call(df):
-            # should be enough to just evaluate?
-            # validation should happen within column methods?
             _out = getattr(column, attr)(
                 *[maybe_evaluate_expr(df, arg) for arg in args],
                 **{
@@ -201,9 +199,6 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                 out.append(plx._create_series_from_scalar(_out, column))
         return out
 
-    if expr._depth is None:
-        msg = "Unreachable code, please report a bug"
-        raise AssertionError(msg)
     if expr._function_name is not None:
         function_name: str = f"{expr._function_name}->{attr}"
     else:
