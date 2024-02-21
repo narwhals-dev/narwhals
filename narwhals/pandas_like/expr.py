@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
+from narwhals.pandas_like.series import Series
 from narwhals.pandas_like.utils import register_expression_call
 from narwhals.spec import Expr as ExprT
 from narwhals.spec import ExprStringNamespace as ExprStringNamespaceT
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
 
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dataframe import LazyFrame
-    from narwhals.pandas_like.series import Series
 
 
 class Expr(ExprT):
@@ -219,7 +219,6 @@ class ExprStringNamespace(ExprStringNamespaceT):
 
     def ends_with(self, suffix: str) -> Expr:
         # TODO make a register_expression_call for namespaces
-        from narwhals.pandas_like.series import Series
 
         return Expr(
             lambda df: [
