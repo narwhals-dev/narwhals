@@ -7,14 +7,14 @@ from typing import Callable
 from narwhals.pandas_like.series import Series
 from narwhals.pandas_like.utils import register_expression_call
 from narwhals.spec import Expr as ExprT
-from narwhals.spec import ExprStringNamespace as ExprStringNamespaceT
-from narwhals.spec import Namespace as NamespaceProtocol
+from narwhals.spec import ExprStringNamespace as ExprStringNamespaceProtocol
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dataframe import LazyFrame
+    from narwhals.pandas_like.namespace import Namespace
 
 
 class Expr(ExprT):
@@ -66,7 +66,7 @@ class Expr(ExprT):
             implementation=implementation,
         )
 
-    def __expr_namespace__(self) -> NamespaceProtocol:
+    def __expr_namespace__(self) -> Namespace:
         from narwhals.pandas_like.namespace import Namespace
 
         return Namespace(
@@ -207,11 +207,11 @@ class Expr(ExprT):
         )
 
     @property
-    def str(self) -> ExprStringNamespaceT:
+    def str(self) -> ExprStringNamespaceProtocol:
         return ExprStringNamespace(self)
 
 
-class ExprStringNamespace(ExprStringNamespaceT):
+class ExprStringNamespace(ExprStringNamespaceProtocol):
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
