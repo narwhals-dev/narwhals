@@ -93,7 +93,7 @@ class Namespace(NamespaceProtocol):
                         index=[0],
                         implementation=self._implementation,
                     ),
-                    api_version=df.api_version,  # type: ignore[union-attr]
+                    api_version=df._api_version,  # type: ignore[union-attr]
                     implementation=self._implementation,
                 ),
             ],
@@ -149,7 +149,7 @@ class Namespace(NamespaceProtocol):
             lambda df: [
                 Series(
                     df.dataframe.loc[:, column_name],  # type: ignore[union-attr]
-                    api_version=df.api_version,  # type: ignore[union-attr]
+                    api_version=df._api_version,  # type: ignore[union-attr]
                     implementation=self._implementation,
                 )
                 for column_name in df.columns

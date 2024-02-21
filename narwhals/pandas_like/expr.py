@@ -22,7 +22,7 @@ class Expr(ExprT):
         self,
         call: Callable[[DataFrame | LazyFrame], list[Series]],
         *,
-        depth: int | None,
+        depth: int,
         function_name: str | None,
         root_names: list[str] | None,
         output_names: list[str] | None,
@@ -56,7 +56,7 @@ class Expr(ExprT):
             lambda df: [
                 Series(
                     df.dataframe.loc[:, column_name],  # type: ignore[union-attr]
-                    api_version=df.api_version,  # type: ignore[union-attr]  # type: ignore[union-attr]
+                    api_version=df._api_version,  # type: ignore[union-attr]  # type: ignore[union-attr]
                     implementation=implementation,
                 )
                 for column_name in column_names
@@ -214,7 +214,7 @@ class Expr(ExprT):
 
 
 class ExprStringNamespace(ExprStringNamespaceT):
-    def __init__(self, expr: ExprT) -> None:
+    def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
     def ends_with(self, suffix: str) -> Expr:
@@ -224,7 +224,7 @@ class ExprStringNamespace(ExprStringNamespaceT):
             lambda df: [
                 Series(
                     series.series.str.endswith(suffix),
-                    api_version=df.api_version,  # type: ignore[union-attr]
+                    api_version=df._api_version,  # type: ignore[union-attr]
                     implementation=df._implementation,  # type: ignore[union-attr]
                 )
                 for series in self._expr.call(df)  # type: ignore[attr-defined]
@@ -243,7 +243,7 @@ class ExprStringNamespace(ExprStringNamespaceT):
             lambda df: [
                 Series(
                     series.series.str.strip(characters),  # type: ignore[attr-defined]
-                    api_version=df.api_version,  # type: ignore[union-attr]
+                    api_version=df._api_version,  # type: ignore[union-attr]
                     implementation=df._implementation,  # type: ignore[union-attr]
                 )
                 for series in self._expr.call(df)  # type: ignore[attr-defined]

@@ -85,7 +85,7 @@ class Expr(Protocol):
 
 
 class ExprStringNamespace(Protocol):
-    def ends_with(self, other: str) -> Expr:
+    def ends_with(self, suffix: str) -> Expr:
         ...
 
 
