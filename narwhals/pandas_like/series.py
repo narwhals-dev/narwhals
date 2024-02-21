@@ -49,8 +49,8 @@ class Series(SeriesProtocol):
             + "┘\n"
         )
 
-    def _from_series(self, series: Any) -> Series:
-        return Series(
+    def _from_series(self, series: Any) -> Self:
+        return self.__class__(
             series.rename(series.name, copy=False),
             api_version=self.api_version,
             implementation=self._implementation,

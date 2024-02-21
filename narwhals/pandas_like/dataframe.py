@@ -11,7 +11,6 @@ from narwhals.pandas_like.utils import flatten_str
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import validate_dataframe_comparand
 from narwhals.spec import DataFrame as DataFrameT
-from narwhals.spec import IntoExpr
 from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import Namespace as NamespaceProtocol
 
@@ -23,6 +22,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.group_by_object import GroupBy
     from narwhals.pandas_like.group_by_object import LazyGroupBy
     from narwhals.pandas_like.namespace import Namespace
+    from narwhals.pandas_like.utils import IntoExpr
 
 
 class DataFrame(DataFrameT):

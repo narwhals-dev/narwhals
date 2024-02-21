@@ -4,23 +4,23 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
-from narwhals.pandas_like.series import Series
 from narwhals.pandas_like.utils import register_expression_call
-from narwhals.spec import DataFrame as DataFrameT
 from narwhals.spec import Expr as ExprT
 from narwhals.spec import ExprStringNamespace as ExprStringNamespaceT
-from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.spec import Namespace as NamespaceProtocol
-from narwhals.spec import Series as SeriesProtocol
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
+    from narwhals.pandas_like.dataframe import DataFrame
+    from narwhals.pandas_like.dataframe import LazyFrame
+    from narwhals.pandas_like.series import Series
 
 
 class Expr(ExprT):
     def __init__(  # noqa: PLR0913
         self,
-        call: Callable[[DataFrameT | LazyFrameProtocol], list[SeriesProtocol]],
+        call: Callable[[DataFrame | LazyFrame], list[Series]],
         *,
         depth: int | None,
         function_name: str | None,
@@ -50,6 +50,8 @@ class Expr(ExprT):
     def from_column_names(
         cls: type[Self], *column_names: str, implementation: str
     ) -> Self:
+        from narwhals.pandas_like.series import Series
+
         return cls(
             lambda df: [
                 Series(
@@ -197,7 +199,7 @@ class Expr(ExprT):
         if self._depth is None:
             msg = "Unreachable code, please report a bug"
             raise AssertionError(msg)
-        return Expr(
+        return self.__class__(
             lambda df: [series.alias(name) for series in self.call(df)],
             depth=self._depth,
             function_name=self._function_name,
@@ -217,6 +219,8 @@ class ExprStringNamespace(ExprStringNamespaceT):
 
     def ends_with(self, suffix: str) -> Expr:
         # TODO make a register_expression_call for namespaces
+        from narwhals.pandas_like.series import Series
+
         return Expr(
             lambda df: [
                 Series(
@@ -234,6 +238,8 @@ class ExprStringNamespace(ExprStringNamespaceT):
         )
 
     def strip_chars(self, characters: str = " ") -> Expr:
+        from narwhals.pandas_like.series import Series
+
         return Expr(
             lambda df: [
                 Series(
