@@ -11,7 +11,7 @@ from narwhals.pandas_like.utils import get_namespace
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import is_simple_aggregation
 from narwhals.pandas_like.utils import parse_into_exprs
-from narwhals.spec import DataFrame as DataFrameT
+from narwhals.spec import DataFrame as DataFrameProtocol
 from narwhals.spec import GroupBy as GroupByProtocol
 from narwhals.spec import IntoExpr
 from narwhals.spec import LazyFrame as LazyFrameProtocol
@@ -19,7 +19,7 @@ from narwhals.spec import LazyGroupBy as LazyGroupByT
 
 
 class GroupBy(GroupByProtocol):
-    def __init__(self, df: DataFrameT, keys: list[str], api_version: str) -> None:
+    def __init__(self, df: DataFrameProtocol, keys: list[str], api_version: str) -> None:
         self._df = df
         self._keys = list(keys)
         self.api_version = api_version
@@ -28,7 +28,7 @@ class GroupBy(GroupByProtocol):
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
-    ) -> DataFrameT:
+    ) -> DataFrameProtocol:
         return (
             LazyGroupBy(self._df.lazy(), self._keys, self.api_version)
             .agg(*aggs, **named_aggs)

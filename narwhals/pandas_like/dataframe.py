@@ -10,9 +10,8 @@ from narwhals.pandas_like.utils import evaluate_into_exprs
 from narwhals.pandas_like.utils import flatten_str
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import validate_dataframe_comparand
-from narwhals.spec import DataFrame as DataFrameT
+from narwhals.spec import DataFrame as DataFrameProtocol
 from narwhals.spec import LazyFrame as LazyFrameProtocol
-from narwhals.spec import Namespace as NamespaceProtocol
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -25,7 +24,7 @@ if TYPE_CHECKING:
     from narwhals.spec import IntoExpr
 
 
-class DataFrame(DataFrameT):
+class DataFrame(DataFrameProtocol):
     """dataframe object"""
 
     def __init__(
@@ -236,7 +235,7 @@ class LazyFrame(LazyFrameProtocol):
 
     def __lazyframe_namespace__(
         self,
-    ) -> NamespaceProtocol:
+    ) -> Namespace:
         from narwhals.pandas_like.namespace import Namespace
 
         return Namespace(
@@ -268,7 +267,7 @@ class LazyFrame(LazyFrameProtocol):
         plx = self.__lazyframe_namespace__()
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
-        mask = expr.call(self)[0]  # type: ignore[attr-defined]
+        mask = expr.call(self)[0]
         _mask = validate_dataframe_comparand(mask)
         return self._from_dataframe(self.dataframe.loc[_mask])
 
