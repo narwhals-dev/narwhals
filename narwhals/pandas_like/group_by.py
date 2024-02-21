@@ -105,7 +105,7 @@ class LazyGroupBy(LazyGroupByProtocol):
             for key in self._keys:
                 if key in res.columns:
                     res = res.drop(columns=[key])
-            res = res.set_axis(expr._output_names, axis=1)
+            res.columns = expr._output_names
             dfs.append(res)
 
         results_keys = dataframe_from_dict(out, implementation=implementation)
