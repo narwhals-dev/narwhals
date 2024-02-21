@@ -89,11 +89,6 @@ class ExprStringNamespace(Protocol):
         ...
 
 
-class ExprNameNamespace(Protocol):
-    def keep(self) -> Expr:
-        ...
-
-
 class Namespace(Protocol):
     def col(self, *names: str | Iterable[str]) -> Expr:
         ...
@@ -233,15 +228,15 @@ class LazyFrame(Protocol):
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> LazyFrame:
+    ) -> Self:
         ...
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> LazyFrame:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         ...
 
     def select(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> LazyFrame:
+    ) -> Self:
         ...
 
     def sort(
@@ -249,7 +244,7 @@ class LazyFrame(Protocol):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Iterable[bool] = False,
-    ) -> LazyFrame:
+    ) -> Self:
         ...
 
     def collect(self) -> DataFrame:
@@ -265,19 +260,19 @@ class LazyFrame(Protocol):
         how: Literal["left", "inner", "outer"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
-    ) -> LazyFrame:
+    ) -> Self:
         ...
 
-    def cache(self) -> LazyFrame:
+    def cache(self) -> Self:
         ...
 
-    def head(self, n: int) -> LazyFrame:
+    def head(self, n: int) -> Self:
         ...
 
-    def unique(self, subset: list[str]) -> LazyFrame:
+    def unique(self, subset: list[str]) -> Self:
         ...
 
-    def rename(self, mapping: dict[str, str]) -> LazyFrame:
+    def rename(self, mapping: dict[str, str]) -> Self:
         ...
 
 

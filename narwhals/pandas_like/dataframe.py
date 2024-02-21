@@ -21,6 +21,8 @@ from narwhals.utils import validate_dataframe_comparand
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from typing_extensions import Self
+
 
 class DataFrame(DataFrameT):
     """dataframe object"""
@@ -136,7 +138,7 @@ class DataFrame(DataFrameT):
             .collect()
         )
 
-    def lazy(self) -> LazyFrameT:
+    def lazy(self) -> LazyFrame:
         return LazyFrame(
             self.dataframe,
             api_version=self.api_version,
@@ -217,8 +219,8 @@ class LazyFrame(LazyFrameT):
                 msg,
             )
 
-    def _from_dataframe(self, df: Any) -> LazyFrameT:
-        return LazyFrame(
+    def _from_dataframe(self, df: Any) -> Self:
+        return self.__class__(
             df,
             api_version=self.api_version,
             implementation=self._implementation,
@@ -245,7 +247,7 @@ class LazyFrame(LazyFrameT):
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
-    ) -> LazyFrameT:
+    ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = horizontal_concat(
             [series.series for series in new_series],  # type: ignore[attr-defined]
@@ -256,7 +258,7 @@ class LazyFrame(LazyFrameT):
     def filter(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> LazyFrameT:
+    ) -> Self:
         plx = self.__lazyframe_namespace__()
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
@@ -268,7 +270,7 @@ class LazyFrame(LazyFrameT):
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
-    ) -> LazyFrameT:
+    ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self.dataframe.assign(
             **{
@@ -283,7 +285,7 @@ class LazyFrame(LazyFrameT):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Iterable[bool] = False,
-    ) -> LazyFrameT:
+    ) -> Self:
         flat_keys = flatten_str([*flatten_str(by), *more_by])
         if not flat_keys:
             flat_keys = self.dataframe.columns.tolist()
@@ -304,7 +306,7 @@ class LazyFrame(LazyFrameT):
         how: Literal["left", "inner", "outer"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
-    ) -> LazyFrameT:
+    ) -> Self:
         if how not in ["inner"]:
             msg = "Only inner join supported for now, others coming soon"
             raise ValueError(msg)
@@ -337,14 +339,14 @@ class LazyFrame(LazyFrameT):
             implementation=self._implementation,
         )
 
-    def cache(self) -> LazyFrameT:
+    def cache(self) -> Self:
         return self
 
-    def head(self, n: int) -> LazyFrameT:
+    def head(self, n: int) -> Self:
         return self._from_dataframe(self.dataframe.head(n))
 
-    def unique(self, subset: list[str]) -> LazyFrameT:
+    def unique(self, subset: list[str]) -> Self:
         return self._from_dataframe(self.dataframe.drop_duplicates(subset=subset))
 
-    def rename(self, mapping: dict[str, str]) -> LazyFrameT:
+    def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_dataframe(self.dataframe.rename(columns=mapping))
