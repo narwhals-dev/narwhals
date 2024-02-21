@@ -14,7 +14,7 @@ from narwhals.pandas_like.utils import is_simple_aggregation
 from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.spec import GroupBy as GroupByProtocol
 from narwhals.spec import IntoExpr
-from narwhals.spec import LazyGroupBy as LazyGroupByT
+from narwhals.spec import LazyGroupBy as LazyGroupByProtocol
 
 if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import DataFrame
@@ -39,7 +39,7 @@ class GroupBy(GroupByProtocol):
         )
 
 
-class LazyGroupBy(LazyGroupByT):
+class LazyGroupBy(LazyGroupByProtocol):
     def __init__(self, df: LazyFrame, keys: list[str], api_version: str) -> None:
         self._df = df
         self._keys = list(keys)
