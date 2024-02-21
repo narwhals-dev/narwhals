@@ -52,7 +52,7 @@ class LazyGroupBy(LazyGroupByT):
     ) -> LazyFrame:
         from narwhals.pandas_like.dataframe import LazyFrame
 
-        df = self._df.dataframe
+        df = self._df._dataframe
         exprs = parse_into_exprs(
             get_namespace(self._df),
             *aggs,

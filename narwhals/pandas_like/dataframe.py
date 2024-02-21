@@ -41,7 +41,7 @@ class DataFrame(DataFrameProtocol):
 
     @property
     def columns(self) -> list[str]:
-        return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
+        return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
 
     def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
         return getattr(self.lazy(), method)(*args, **kwargs).collect()  # type: ignore[no-any-return]
@@ -71,7 +71,7 @@ class DataFrame(DataFrameProtocol):
 
     def _validate_booleanness(self) -> None:
         if not (
-            (self.dataframe.dtypes == "bool") | (self.dataframe.dtypes == "boolean")
+            (self._dataframe.dtypes == "bool") | (self._dataframe.dtypes == "boolean")
         ).all():
             msg = "'any' can only be called on DataFrame where all dtypes are 'bool'"
             raise TypeError(
@@ -90,7 +90,7 @@ class DataFrame(DataFrameProtocol):
 
     @property
     def shape(self) -> tuple[int, int]:
-        return self.dataframe.shape  # type: ignore[no-any-return]
+        return self._dataframe.shape  # type: ignore[no-any-return]
 
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
         from narwhals.pandas_like.group_by_object import GroupBy
@@ -139,7 +139,7 @@ class DataFrame(DataFrameProtocol):
 
     def lazy(self) -> LazyFrame:
         return LazyFrame(
-            self.dataframe,
+            self._dataframe,
             api_version=self._api_version,
             implementation=self._implementation,
         )
@@ -154,15 +154,15 @@ class DataFrame(DataFrameProtocol):
         return self._dispatch_to_lazy("rename", mapping)
 
     def to_numpy(self) -> Any:
-        return self.dataframe.to_numpy()
+        return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
         if self._implementation == "pandas":
-            return self.dataframe
+            return self._dataframe
         elif self._implementation == "cudf":
-            return self.dataframe.to_pandas()
+            return self._dataframe.to_pandas()
         elif self._implementation == "modin":
-            return self.dataframe._to_pandas()
+            return self._dataframe._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"
         raise TypeError(msg)
 
@@ -184,7 +184,7 @@ class LazyFrame(LazyFrameProtocol):
 
     @property
     def columns(self) -> list[str]:
-        return self.dataframe.columns.tolist()  # type: ignore[no-any-return]
+        return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self._api_version}) "
@@ -211,7 +211,7 @@ class LazyFrame(LazyFrameProtocol):
 
     def _validate_booleanness(self) -> None:
         if not (
-            (self.dataframe.dtypes == "bool") | (self.dataframe.dtypes == "boolean")
+            (self._dataframe.dtypes == "bool") | (self._dataframe.dtypes == "boolean")
         ).all():
             msg = "'any' can only be called on DataFrame where all dtypes are 'bool'"
             raise TypeError(
@@ -261,7 +261,7 @@ class LazyFrame(LazyFrameProtocol):
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr.call(self)[0]
         _mask = validate_dataframe_comparand(mask)
-        return self._from_dataframe(self.dataframe.loc[_mask])
+        return self._from_dataframe(self._dataframe.loc[_mask])
 
     def with_columns(
         self,
@@ -269,7 +269,7 @@ class LazyFrame(LazyFrameProtocol):
         **named_exprs: IntoExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        df = self.dataframe.assign(
+        df = self._dataframe.assign(
             **{series.name: series.series for series in new_series}
         )
         return self._from_dataframe(df)
@@ -282,8 +282,8 @@ class LazyFrame(LazyFrameProtocol):
     ) -> Self:
         flat_keys = flatten_str([*flatten_str(by), *more_by])
         if not flat_keys:
-            flat_keys = self.dataframe.columns.tolist()
-        df = self.dataframe
+            flat_keys = self._dataframe.columns.tolist()
+        df = self._dataframe
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
         else:
@@ -317,8 +317,8 @@ class LazyFrame(LazyFrameProtocol):
             raise ValueError(msg)
 
         return self._from_dataframe(
-            self.dataframe.merge(
-                other.dataframe,
+            self._dataframe.merge(
+                other._dataframe,
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
@@ -328,7 +328,7 @@ class LazyFrame(LazyFrameProtocol):
     # Conversion
     def collect(self) -> DataFrame:
         return DataFrame(
-            self.dataframe,
+            self._dataframe,
             api_version=self._api_version,
             implementation=self._implementation,
         )
@@ -337,10 +337,10 @@ class LazyFrame(LazyFrameProtocol):
         return self
 
     def head(self, n: int) -> Self:
-        return self._from_dataframe(self.dataframe.head(n))
+        return self._from_dataframe(self._dataframe.head(n))
 
     def unique(self, subset: list[str]) -> Self:
-        return self._from_dataframe(self.dataframe.drop_duplicates(subset=subset))
+        return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        return self._from_dataframe(self.dataframe.rename(columns=mapping))
+        return self._from_dataframe(self._dataframe.rename(columns=mapping))

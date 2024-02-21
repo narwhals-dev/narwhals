@@ -60,7 +60,7 @@ def to_original_object(df: DataFrame | LazyFrame) -> Any:
     else:
         if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
             return df
-    return df.dataframe  # type: ignore[union-attr]
+    return df._dataframe  # type: ignore[union-attr]
 
 
 def get_namespace(obj: Any, implementation: str | None = None) -> Namespace:

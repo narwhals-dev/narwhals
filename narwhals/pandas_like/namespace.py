@@ -42,7 +42,7 @@ class Namespace(NamespaceProtocol):
         dfs: list[Any] = []
         kind: Any = {}
         for df in items:
-            dfs.append(df.dataframe)
+            dfs.append(df._dataframe)
             kind.append(type(df))
         if len(kind) > 1:
             msg = "Can only concat DataFrames or LazyFrames, not mixtures of the two"
@@ -92,7 +92,7 @@ class Namespace(NamespaceProtocol):
             lambda df: [
                 Series(
                     series_from_iterable(
-                        [len(df.dataframe)],
+                        [len(df._dataframe)],
                         name="len",
                         index=[0],
                         implementation=self._implementation,
@@ -152,7 +152,7 @@ class Namespace(NamespaceProtocol):
         return Expr(
             lambda df: [
                 Series(
-                    df.dataframe.loc[:, column_name],
+                    df._dataframe.loc[:, column_name],
                     api_version=df._api_version,
                     implementation=self._implementation,
                 )

@@ -53,7 +53,7 @@ class Expr(ExprProtocol):
         return cls(
             lambda df: [
                 Series(
-                    df.dataframe.loc[:, column_name],
+                    df._dataframe.loc[:, column_name],
                     api_version=df._api_version,
                     implementation=implementation,
                 )
