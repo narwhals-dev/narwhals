@@ -28,7 +28,7 @@ def compare_dicts(result: dict[str, Any], expected: dict[str, Any]) -> None:
 def test_q1(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)
     df, pl = to_polars_api(df_raw, version="0.20")
-    result = (
+    query_result = (
         df.filter(pl.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
@@ -53,7 +53,7 @@ def test_q1(df_raw: Any) -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = result.collect().to_dict(as_series=False)
+    result = query_result.collect().to_dict(as_series=False)
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],

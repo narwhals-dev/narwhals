@@ -159,7 +159,7 @@ class DataFrame(DataFrameProtocol):
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
         if as_series:
             return {col: self._dataframe[col] for col in self._dataframe.columns}
-        return self._dataframe.to_dict(orient="list")
+        return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
 
 class LazyFrame(LazyFrameProtocol):

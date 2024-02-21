@@ -96,10 +96,10 @@ class LazyGroupBy(LazyGroupByProtocol):
                     out[result_keys.name].append(result_keys.item())
 
         results_keys = dataframe_from_dict(out, implementation=implementation)
-        results_keys = horizontal_concat(
+        results_df = horizontal_concat(
             [results_keys, *dfs], implementation=implementation
         ).loc[:, output_names]
-        return self._from_dataframe(results_keys)
+        return self._from_dataframe(results_df)
 
     def _from_dataframe(self, df: DataFrame) -> LazyFrame:
         from narwhals.pandas_like.dataframe import LazyFrame
