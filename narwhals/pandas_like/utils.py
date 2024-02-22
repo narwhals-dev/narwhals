@@ -333,5 +333,23 @@ def translate_dtype(dtype: Any) -> DType:
 
     if dtype == "int64":
         return dtypes.Int64()
+    if dtype == "int32":
+        return dtypes.Int32()
+    if dtype == "int16":
+        return dtypes.Int16()
+    if dtype == "int8":
+        return dtypes.Int8()
+    if dtype == "uint64":
+        return dtypes.Int64()
+    if dtype == "uint32":
+        return dtypes.UInt32()
+    if dtype == "uint16":
+        return dtypes.UInt16()
+    if dtype == "uint8":
+        return dtypes.UInt8()
+    if dtype == "float64":
+        return dtypes.Float64()
+    if dtype == "float32":
+        return dtypes.Float32()
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
