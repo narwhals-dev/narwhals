@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import os
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -78,7 +79,7 @@ class LazyGroupBy(LazyGroupByProtocol):
                 raise ValueError(msg)
             output_names.extend(expr._output_names)
 
-        if implementation == "pandas":
+        if implementation == "pandas" and not os.environ.get("NARWHALS_FORCE_GENERIC"):
             return agg_pandas(
                 grouped,
                 exprs,
@@ -109,7 +110,7 @@ def agg_pandas(
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], LazyFrame],
-) -> Any:
+) -> LazyFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
 
@@ -127,6 +128,8 @@ def agg_pandas(
             complex_aggs.append(expr)
     simple_aggregations = {}
     for expr in simple_aggs:
+        assert expr._root_names is not None
+        assert expr._output_names is not None
         for root_name, output_name in zip(expr._root_names, expr._output_names):
             name = remove_prefix(expr._function_name, "col->")
             simple_aggregations[output_name] = pd.NamedAgg(column=root_name, aggfunc=name)
@@ -150,7 +153,7 @@ def agg_pandas(
         )
     else:
         result = result_complex
-    return result.loc[:, output_names]
+    return from_dataframe(result.loc[:, output_names])
 
 
 def agg_generic(  # noqa: PLR0913
