@@ -201,6 +201,10 @@ class DataFrame(Protocol):
     def columns(self) -> list[str]:
         ...
 
+    @property
+    def schema(self) -> dict[str, DType]:
+        ...
+
     def head(self, n: int) -> Self:
         ...
 
@@ -227,6 +231,10 @@ class DataFrame(Protocol):
 class LazyFrame(Protocol):
     @property
     def columns(self) -> list[str]:
+        ...
+
+    @property
+    def schema(self) -> dict[str, DType]:
         ...
 
     def with_columns(
@@ -277,6 +285,10 @@ class LazyFrame(Protocol):
 
     def rename(self, mapping: dict[str, str]) -> Self:
         ...
+
+
+class DType(Protocol):
+    ...
 
 
 class GroupBy(Protocol):

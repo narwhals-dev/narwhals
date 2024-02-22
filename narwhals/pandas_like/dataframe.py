@@ -10,6 +10,7 @@ from narwhals.pandas_like.utils import evaluate_into_exprs
 from narwhals.pandas_like.utils import flatten_str
 from narwhals.pandas_like.utils import get_namespace
 from narwhals.pandas_like.utils import horizontal_concat
+from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_dataframe_comparand
 from narwhals.spec import DataFrame as DataFrameProtocol
 from narwhals.spec import LazyFrame as LazyFrameProtocol
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 
     from narwhals.pandas_like.group_by import GroupBy
     from narwhals.pandas_like.group_by import LazyGroupBy
+    from narwhals.spec import DType
     from narwhals.spec import IntoExpr
 
 
@@ -42,6 +44,12 @@ class DataFrame(DataFrameProtocol):
     @property
     def columns(self) -> list[str]:
         return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
+
+    @property
+    def schema(self) -> dict[str, DType]:
+        return {
+            col: translate_dtype(dtype) for col, dtype in self._dataframe.dtypes.items()
+        }
 
     def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
         return getattr(self.lazy(), method)(*args, **kwargs).collect()  # type: ignore[no-any-return]
@@ -180,6 +188,12 @@ class LazyFrame(LazyFrameProtocol):
     @property
     def columns(self) -> list[str]:
         return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
+
+    @property
+    def schema(self) -> dict[str, DType]:
+        return {
+            col: translate_dtype(dtype) for col, dtype in self._dataframe.dtypes.items()
+        }
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self._api_version}) "

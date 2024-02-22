@@ -13,6 +13,7 @@ T = TypeVar("T")
 if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dataframe import LazyFrame
+    from narwhals.pandas_like.dtypes import DType
     from narwhals.pandas_like.expr import Expr
     from narwhals.pandas_like.namespace import Namespace
     from narwhals.pandas_like.series import Series
@@ -324,4 +325,13 @@ def series_from_iterable(
 
         return mpd.Series(data, name=name, index=index)
     msg = f"Unknown implementation: {implementation}"
+    raise TypeError(msg)
+
+
+def translate_dtype(dtype: Any) -> DType:
+    from narwhals.pandas_like import dtypes
+
+    if dtype == "int64":
+        return dtypes.Int64()
+    msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
