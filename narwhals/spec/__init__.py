@@ -288,7 +288,8 @@ class LazyFrame(Protocol):
 
 
 class DType(Protocol):
-    def is_numeric(self) -> bool:
+    @classmethod
+    def is_numeric(cls: type[Self]) -> bool:
         ...
 
 
