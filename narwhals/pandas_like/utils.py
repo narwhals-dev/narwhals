@@ -201,6 +201,8 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                 out.append(_out)
             else:
                 out.append(plx._create_series_from_scalar(_out, column))
+        if expr._output_names is not None:
+            assert [s._series.name for s in out] == expr._output_names
         return out
 
     root_names = copy(expr._root_names)
