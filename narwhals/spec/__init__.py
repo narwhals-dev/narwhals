@@ -288,7 +288,8 @@ class LazyFrame(Protocol):
 
 
 class DType(Protocol):
-    ...
+    def is_numeric(self) -> bool:
+        ...
 
 
 class GroupBy(Protocol):
