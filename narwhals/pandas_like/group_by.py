@@ -159,7 +159,7 @@ def agg_pandas(
 def agg_generic(  # noqa: PLR0913
     grouped: Any,
     exprs: list[Expr],
-    keys: list[str],
+    group_by_keys: list[str],
     output_names: list[str],
     implementation: str,
     from_dataframe: Callable[[Any], LazyFrame],
@@ -174,7 +174,7 @@ def agg_generic(  # noqa: PLR0913
 
     out: dict[str, list[Any]] = collections.defaultdict(list)
     for keys, df_keys in grouped:
-        for key, name in zip(keys, keys):
+        for key, name in zip(keys, group_by_keys):
             out[name].append(key)
         for expr in exprs:
             results_keys = expr._call(from_dataframe(df_keys))
