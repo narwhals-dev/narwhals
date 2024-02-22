@@ -5,6 +5,8 @@ from narwhals import to_polars_api, to_original_object
 import pandas as pd
 import polars
 
+polars.Config.set_tbl_cols(10)
+
 
 def q1(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)

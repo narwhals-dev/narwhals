@@ -199,7 +199,7 @@ class LazyFrame(LazyFrameProtocol):
         counter = collections.Counter(columns)
         for col, count in counter.items():
             if count > 1:
-                msg = f"Expected unique column names, got {col} {count} time(s)"
+                msg = f"Expected unique column names, got {col!r} {count} time(s)"
                 raise ValueError(
                     msg,
                 )
