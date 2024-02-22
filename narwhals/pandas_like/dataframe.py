@@ -47,9 +47,7 @@ class DataFrame(DataFrameProtocol):
 
     @property
     def schema(self) -> dict[str, DType]:
-        return {
-            col: translate_dtype(dtype) for col, dtype in self._dataframe.dtypes.items()
-        }
+        return self.lazy().schema
 
     def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
         return getattr(self.lazy(), method)(*args, **kwargs).collect()  # type: ignore[no-any-return]
