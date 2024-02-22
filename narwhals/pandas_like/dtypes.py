@@ -13,7 +13,7 @@ class DType(DTypeProtocol):
         return self.__class__.__qualname__
 
     @classmethod
-    def is_numeric(cls: Self) -> bool:
+    def is_numeric(cls: type[Self]) -> bool:
         return issubclass(cls, NumericType)
 
 
