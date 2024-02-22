@@ -351,5 +351,9 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.Float64()
     if dtype == "float32":
         return dtypes.Float32()
+    if dtype == "object":
+        return dtypes.String()
+    if dtype == "bool":
+        return dtypes.Bool()
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
