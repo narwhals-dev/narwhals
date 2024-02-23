@@ -112,7 +112,7 @@ class DataFrame(DataFrameProtocol):
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._dispatch_to_lazy("rename", mapping)
 
-    # --- transform ---
+    # --- transforms ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -165,7 +165,7 @@ class DataFrame(DataFrameProtocol):
             "join", other.lazy(), how=how, left_on=left_on, right_on=right_on
         )
 
-    # --- reductions ---
+    # --- partial reductions ---
     def head(self, n: int) -> Self:
         return self._dispatch_to_lazy("head", n)
 
@@ -275,7 +275,7 @@ class LazyFrame(LazyFrameProtocol):
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_dataframe(self._dataframe.rename(columns=mapping))
 
-    # --- transform ---
+    # --- transforms ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -340,7 +340,7 @@ class LazyFrame(LazyFrameProtocol):
             ),
         )
 
-    # --- reductions ---
+    # --- partial reductions ---
 
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))

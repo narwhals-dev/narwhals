@@ -12,12 +12,14 @@ if TYPE_CHECKING:
 
 
 class Expr(Protocol):
+    # --- convert ---
     def alias(self, name: str) -> Self:
         ...
 
     def cast(self, dtype: DType) -> Self:
         ...
 
+    # --- binary ---
     def __eq__(self, other: object) -> Expr:  # type: ignore[override]
         ...
 
@@ -57,6 +59,7 @@ class Expr(Protocol):
     def __ge__(self, other: Any) -> Expr:
         ...
 
+    # --- unary ---
     def mean(self) -> Expr:
         ...
 
@@ -69,6 +72,10 @@ class Expr(Protocol):
     def max(self) -> Expr:
         ...
 
+    def n_unique(self) -> Expr:
+        ...
+
+    # --- transforms ---
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Expr:
@@ -80,10 +87,8 @@ class Expr(Protocol):
     def is_null(self) -> Expr:
         ...
 
+    # --- partial reductions ---
     def drop_nulls(self) -> Expr:
-        ...
-
-    def n_unique(self) -> Expr:
         ...
 
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Expr:
@@ -120,12 +125,14 @@ class Namespace(Protocol):
     Bool: DType
     String: DType
 
+    # --- selection ---
     def col(self, *names: str | Iterable[str]) -> Expr:
         ...
 
     def all(self) -> Expr:
         ...
 
+    # --- reductions ---
     def sum(self, *columns: str) -> Expr:
         ...
 
@@ -141,6 +148,7 @@ class Namespace(Protocol):
     def len(self) -> Expr:
         ...
 
+    # --- horizontal ---
     def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...
 
@@ -229,7 +237,7 @@ class DataFrame(Protocol):
     def rename(self, mapping: dict[str, str]) -> Self:
         ...
 
-    # --- transform ---
+    # --- transforms ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -265,7 +273,7 @@ class DataFrame(Protocol):
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
         ...
 
-    # --- reductions ---
+    # --- partial reductions ---
     def head(self, n: int) -> Self:
         ...
 
@@ -297,7 +305,7 @@ class LazyFrame(Protocol):
     ) -> Self:
         ...
 
-    # --- transform ---
+    # --- transforms ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -324,7 +332,7 @@ class LazyFrame(Protocol):
     ) -> Self:
         ...
 
-    # --- reductions ---
+    # --- partial reductions ---
     def head(self, n: int) -> Self:
         ...
 
