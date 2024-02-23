@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Iterable
 from typing import TypeVar
 
+from narwhals.pandas_like import dtypes
 from narwhals.pandas_like.dataframe import DataFrame
 from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.pandas_like.expr import Expr
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
 
 
 class Namespace(NamespaceProtocol):
+    Float32 = dtypes.Float32
+
     def __init__(self, *, api_version: str, implementation: str) -> None:
         self.__dataframeapi_version__ = api_version
         self.api_version = api_version

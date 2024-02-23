@@ -126,6 +126,9 @@ class Series(Protocol):
     def name(self) -> str:
         ...
 
+    def cast(self, dtype: DType) -> Self:
+        ...
+
     def item(self) -> Any:
         ...
 

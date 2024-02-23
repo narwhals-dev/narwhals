@@ -6,11 +6,14 @@ from typing import Any
 from pandas.api.types import is_extension_array_dtype
 
 from narwhals.pandas_like.utils import item
+from narwhals.pandas_like.utils import reverse_translate_dtype
 from narwhals.pandas_like.utils import validate_column_comparand
 from narwhals.spec import Series as SeriesProtocol
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
+    from narwhals.pandas_like.dtypes import DType
 
 
 class Series(SeriesProtocol):
@@ -62,7 +65,15 @@ class Series(SeriesProtocol):
     def series(self) -> Any:
         return self._series
 
-    def filter(self, mask: Series) -> Series:
+    def cast(
+        self,
+        dtype: DType,  # type: ignore[override]
+    ) -> Self:
+        ser = self.series
+        dtype = reverse_translate_dtype(dtype)
+        return self._from_series(ser.astype(dtype))
+
+    def filter(self, mask: Self) -> Self:
         ser = self.series
         return self._from_series(ser.loc[validate_column_comparand(mask)])
 

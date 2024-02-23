@@ -357,3 +357,14 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.Bool()
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
+
+
+def reverse_translate_dtype(dtype: DType) -> Any:
+    from narwhals.pandas_like import dtypes
+
+    if isinstance(dtype, dtypes.Int64):
+        return "int64"
+    if isinstance(dtype, dtypes.Float32) or issubclass(dtype, dtypes.Float32):
+        return "float32"
+    msg = f"Unknown dtype: {dtype}"
+    raise TypeError(msg)

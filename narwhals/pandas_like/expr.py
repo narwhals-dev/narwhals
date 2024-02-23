@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dataframe import LazyFrame
+    from narwhals.pandas_like.dtypes import DType
 
 
 class Expr(ExprProtocol):
@@ -64,6 +65,9 @@ class Expr(ExprProtocol):
             output_names=list(column_names),
             implementation=implementation,
         )
+
+    def cast(self, dtype: DType) -> Self:  # type: ignore[override]
+        return register_expression_call(self, "cast", dtype)
 
     def __eq__(self, other: Expr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__eq__", other)
