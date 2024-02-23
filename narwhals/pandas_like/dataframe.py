@@ -44,14 +44,14 @@ class DataFrame(DataFrameProtocol):
         return getattr(self.lazy(), method)(*args, **kwargs).collect()  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = f" Standard DataFrame (api_version={self._api_version}) "
+        header = f" Narwhals DataFrame (api_version={self._api_version}) "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Add `.dataframe` to see native output         |\n"
+            + "| Add `._dataframe` to see native output|\n"
             + "└"
             + "─" * length
             + "┘\n"
@@ -188,14 +188,14 @@ class LazyFrame(LazyFrameProtocol):
         self._implementation = implementation
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = f" Standard DataFrame (api_version={self._api_version}) "
+        header = f" Narwhals DataFrame (api_version={self._api_version}) "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Add `.dataframe` to see native output         |\n"
+            + "| Add `._dataframe` to see native output|\n"
             + "└"
             + "─" * length
             + "┘\n"
