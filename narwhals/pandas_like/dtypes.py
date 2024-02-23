@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals.pandas_like.utils import isinstance_or_issubclass
 from narwhals.spec import DType as DTypeProtocol
 
 if TYPE_CHECKING:
@@ -15,6 +16,9 @@ class DType(DTypeProtocol):
     @classmethod
     def is_numeric(cls: type[Self]) -> bool:
         return issubclass(cls, NumericType)
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        return isinstance_or_issubclass(other, type(self))
 
 
 class NumericType(DType):

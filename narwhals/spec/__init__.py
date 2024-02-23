@@ -92,7 +92,15 @@ class ExprStringNamespace(Protocol):
         ...
 
 
+class DType(Protocol):
+    @classmethod
+    def is_numeric(cls: type[Self]) -> bool:
+        ...
+
+
 class Namespace(Protocol):
+    Float64: DType
+
     def col(self, *names: str | Iterable[str]) -> Expr:
         ...
 
@@ -290,12 +298,6 @@ class LazyFrame(Protocol):
         ...
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        ...
-
-
-class DType(Protocol):
-    @classmethod
-    def is_numeric(cls: type[Self]) -> bool:
         ...
 
 

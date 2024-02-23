@@ -24,7 +24,18 @@ if TYPE_CHECKING:
 
 
 class Namespace(NamespaceProtocol):
+    Int64 = dtypes.Int64
+    Int32 = dtypes.Int32
+    Int16 = dtypes.Int16
+    Int8 = dtypes.Int8
+    UInt64 = dtypes.UInt64
+    UInt32 = dtypes.UInt32
+    UInt16 = dtypes.UInt16
+    UInt8 = dtypes.UInt8
+    Float64 = dtypes.Float64
     Float32 = dtypes.Float32
+    Bool = dtypes.Bool
+    String = dtypes.String
 
     def __init__(self, *, api_version: str, implementation: str) -> None:
         self.__dataframeapi_version__ = api_version
