@@ -27,8 +27,7 @@ if TYPE_CHECKING:
 
 
 class DataFrame(DataFrameProtocol):
-    """dataframe object"""
-
+    # --- not in the spec ---
     def __init__(
         self,
         dataframe: Any,
@@ -40,14 +39,6 @@ class DataFrame(DataFrameProtocol):
         self._dataframe = dataframe.reset_index(drop=True)
         self._api_version = api_version
         self._implementation = implementation
-
-    @property
-    def columns(self) -> list[str]:
-        return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
-
-    @property
-    def schema(self) -> dict[str, DType]:
-        return self.lazy().schema
 
     def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
         return getattr(self.lazy(), method)(*args, **kwargs).collect()  # type: ignore[no-any-return]
@@ -84,14 +75,26 @@ class DataFrame(DataFrameProtocol):
                 msg,
             )
 
+    # --- properties ---
+    @property
+    def columns(self) -> list[str]:
+        return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
+
+    @property
+    def schema(self) -> dict[str, DType]:
+        return self.lazy().schema
+
     @property
     def shape(self) -> tuple[int, int]:
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        from narwhals.pandas_like.group_by import GroupBy
-
-        return GroupBy(self, flatten_str(*keys), api_version=self._api_version)
+    # --- reshaping ---
+    def with_columns(
+        self,
+        *exprs: IntoExpr | Iterable[IntoExpr],
+        **named_exprs: IntoExpr,
+    ) -> Self:
+        return self._dispatch_to_lazy("with_columns", *exprs, **named_exprs)
 
     def select(
         self,
@@ -106,13 +109,10 @@ class DataFrame(DataFrameProtocol):
     ) -> Self:
         return self._dispatch_to_lazy("filter", *predicates)
 
-    def with_columns(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
-    ) -> Self:
-        return self._dispatch_to_lazy("with_columns", *exprs, **named_exprs)
+    def rename(self, mapping: dict[str, str]) -> Self:
+        return self._dispatch_to_lazy("rename", mapping)
 
+    # --- transform ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -121,33 +121,13 @@ class DataFrame(DataFrameProtocol):
     ) -> Self:
         return self._dispatch_to_lazy("sort", by, *more_by, descending=descending)
 
-    def join(
-        self,
-        other: Self,
-        *,
-        how: Literal["left", "inner", "outer"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
-    ) -> Self:
-        return self._dispatch_to_lazy(
-            "join", other.lazy(), how=how, left_on=left_on, right_on=right_on
-        )
-
+    # --- convert ---
     def lazy(self) -> LazyFrame:
         return LazyFrame(
             self._dataframe,
             api_version=self._api_version,
             implementation=self._implementation,
         )
-
-    def head(self, n: int) -> Self:
-        return self._dispatch_to_lazy("head", n)
-
-    def unique(self, subset: list[str]) -> Self:
-        return self._dispatch_to_lazy("unique", subset)
-
-    def rename(self, mapping: dict[str, str]) -> Self:
-        return self._dispatch_to_lazy("rename", mapping)
 
     def to_numpy(self) -> Any:
         return self._dataframe.to_numpy()
@@ -166,6 +146,31 @@ class DataFrame(DataFrameProtocol):
         if as_series:
             return {col: self._dataframe[col] for col in self._dataframe.columns}
         return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
+
+    # --- actions ---
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+        from narwhals.pandas_like.group_by import GroupBy
+
+        return GroupBy(self, flatten_str(*keys), api_version=self._api_version)
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: Literal["left", "inner", "outer"] = "inner",
+        left_on: str | list[str],
+        right_on: str | list[str],
+    ) -> Self:
+        return self._dispatch_to_lazy(
+            "join", other.lazy(), how=how, left_on=left_on, right_on=right_on
+        )
+
+    # --- reductions ---
+    def head(self, n: int) -> Self:
+        return self._dispatch_to_lazy("head", n)
+
+    def unique(self, subset: list[str]) -> Self:
+        return self._dispatch_to_lazy("unique", subset)
 
 
 class LazyFrame(LazyFrameProtocol):

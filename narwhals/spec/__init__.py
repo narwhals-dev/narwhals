@@ -89,6 +89,7 @@ class Expr(Protocol):
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Expr:
         ...
 
+    # --- namespaces ---
     @property
     def str(self) -> ExprStringNamespace:
         ...
@@ -198,6 +199,20 @@ class Series(Protocol):
 
 
 class DataFrame(Protocol):
+    # --- properties ---
+    @property
+    def columns(self) -> list[str]:
+        ...
+
+    @property
+    def schema(self) -> dict[str, DType]:
+        ...
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        ...
+
+    # --- reshaping ---
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -211,6 +226,10 @@ class DataFrame(Protocol):
     ) -> Self:
         ...
 
+    def rename(self, mapping: dict[str, str]) -> Self:
+        ...
+
+    # --- transform ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -219,41 +238,8 @@ class DataFrame(Protocol):
     ) -> Self:
         ...
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        ...
-
+    # --- convert ---
     def lazy(self) -> LazyFrame:
-        ...
-
-    def join(
-        self,
-        other: Self,
-        *,
-        how: Literal["inner"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
-    ) -> Self:
-        ...
-
-    @property
-    def columns(self) -> list[str]:
-        ...
-
-    @property
-    def schema(self) -> dict[str, DType]:
-        ...
-
-    def head(self, n: int) -> Self:
-        ...
-
-    def unique(self, subset: list[str]) -> Self:
-        ...
-
-    @property
-    def shape(self) -> tuple[int, int]:
-        ...
-
-    def rename(self, mapping: dict[str, str]) -> Self:
         ...
 
     def to_numpy(self) -> Any:
@@ -265,8 +251,30 @@ class DataFrame(Protocol):
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
         ...
 
+    # --- actions ---
+    def join(
+        self,
+        other: Self,
+        *,
+        how: Literal["inner"] = "inner",
+        left_on: str | list[str],
+        right_on: str | list[str],
+    ) -> Self:
+        ...
+
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+        ...
+
+    # --- reductions ---
+    def head(self, n: int) -> Self:
+        ...
+
+    def unique(self, subset: list[str]) -> Self:
+        ...
+
 
 class LazyFrame(Protocol):
+    # --- properties ---
     @property
     def columns(self) -> list[str]:
         ...
