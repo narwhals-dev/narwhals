@@ -106,7 +106,7 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    # --- reductions ---
+    # --- reduction ---
     def sum(self, *column_names: str) -> Expr:
         return Expr.from_column_names(
             *column_names, implementation=self._implementation

@@ -75,7 +75,7 @@ class Expr(Protocol):
     def n_unique(self) -> Expr:
         ...
 
-    # --- transforms ---
+    # --- transform ---
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Expr:
@@ -87,7 +87,7 @@ class Expr(Protocol):
     def is_null(self) -> Expr:
         ...
 
-    # --- partial reductions ---
+    # --- partial reduction ---
     def drop_nulls(self) -> Expr:
         ...
 
@@ -132,7 +132,7 @@ class Namespace(Protocol):
     def all(self) -> Expr:
         ...
 
-    # --- reductions ---
+    # --- reduction ---
     def sum(self, *columns: str) -> Expr:
         ...
 
@@ -220,7 +220,7 @@ class DataFrame(Protocol):
     def shape(self) -> tuple[int, int]:
         ...
 
-    # --- reshaping ---
+    # --- reshape ---
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -237,7 +237,7 @@ class DataFrame(Protocol):
     def rename(self, mapping: dict[str, str]) -> Self:
         ...
 
-    # --- transforms ---
+    # --- transform ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -273,7 +273,7 @@ class DataFrame(Protocol):
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
         ...
 
-    # --- partial reductions ---
+    # --- partial reduction ---
     def head(self, n: int) -> Self:
         ...
 
@@ -291,7 +291,7 @@ class LazyFrame(Protocol):
     def schema(self) -> dict[str, DType]:
         ...
 
-    # --- reshaping ---
+    # --- reshape ---
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -305,7 +305,7 @@ class LazyFrame(Protocol):
     ) -> Self:
         ...
 
-    # --- transforms ---
+    # --- transform ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -332,7 +332,7 @@ class LazyFrame(Protocol):
     ) -> Self:
         ...
 
-    # --- partial reductions ---
+    # --- partial reduction ---
     def head(self, n: int) -> Self:
         ...
 

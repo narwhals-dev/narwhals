@@ -88,7 +88,7 @@ class DataFrame(DataFrameProtocol):
     def shape(self) -> tuple[int, int]:
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    # --- reshaping ---
+    # --- reshape ---
     def with_columns(
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
@@ -112,7 +112,7 @@ class DataFrame(DataFrameProtocol):
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._dispatch_to_lazy("rename", mapping)
 
-    # --- transforms ---
+    # --- transform ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -165,7 +165,7 @@ class DataFrame(DataFrameProtocol):
             "join", other.lazy(), how=how, left_on=left_on, right_on=right_on
         )
 
-    # --- partial reductions ---
+    # --- partial reduction ---
     def head(self, n: int) -> Self:
         return self._dispatch_to_lazy("head", n)
 
@@ -237,7 +237,7 @@ class LazyFrame(LazyFrameProtocol):
             col: translate_dtype(dtype) for col, dtype in self._dataframe.dtypes.items()
         }
 
-    # --- reshaping ---
+    # --- reshape ---
     def select(
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
@@ -275,7 +275,7 @@ class LazyFrame(LazyFrameProtocol):
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_dataframe(self._dataframe.rename(columns=mapping))
 
-    # --- transforms ---
+    # --- transform ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -340,7 +340,7 @@ class LazyFrame(LazyFrameProtocol):
             ),
         )
 
-    # --- partial reductions ---
+    # --- partial reduction ---
 
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))
