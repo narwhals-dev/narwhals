@@ -15,6 +15,9 @@ class Expr(Protocol):
     def alias(self, name: str) -> Self:
         ...
 
+    def cast(self, dtype: DType) -> Self:
+        ...
+
     def __and__(self, other: Any) -> Expr:
         ...
 

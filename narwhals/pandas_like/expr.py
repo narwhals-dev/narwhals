@@ -66,7 +66,10 @@ class Expr(ExprProtocol):
             implementation=implementation,
         )
 
-    def cast(self, dtype: DType) -> Self:  # type: ignore[override]
+    def cast(
+        self,
+        dtype: DType,  # type: ignore[override]
+    ) -> Self:
         return register_expression_call(self, "cast", dtype)
 
     def __eq__(self, other: Expr | Any) -> Self:  # type: ignore[override]

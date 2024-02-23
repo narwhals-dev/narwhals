@@ -359,12 +359,36 @@ def translate_dtype(dtype: Any) -> DType:
     raise TypeError(msg)
 
 
-def reverse_translate_dtype(dtype: DType) -> Any:
+def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
+    return isinstance(obj, cls) or issubclass(obj, cls)
+
+
+def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     from narwhals.pandas_like import dtypes
 
-    if isinstance(dtype, dtypes.Int64):
-        return "int64"
-    if isinstance(dtype, dtypes.Float32) or issubclass(dtype, dtypes.Float32):
+    if isinstance_or_issubclass(dtype, dtypes.Float64):
+        return "float64"
+    if isinstance_or_issubclass(dtype, dtypes.Float32):
         return "float32"
+    if isinstance_or_issubclass(dtype, dtypes.Int64):
+        return "int64"
+    if isinstance_or_issubclass(dtype, dtypes.Int32):
+        return "int32"
+    if isinstance_or_issubclass(dtype, dtypes.Int16):
+        return "int16"
+    if isinstance_or_issubclass(dtype, dtypes.UInt8):
+        return "uint8"
+    if isinstance_or_issubclass(dtype, dtypes.UInt64):
+        return "uint64"
+    if isinstance_or_issubclass(dtype, dtypes.UInt32):
+        return "uint32"
+    if isinstance_or_issubclass(dtype, dtypes.UInt16):
+        return "uint16"
+    if isinstance_or_issubclass(dtype, dtypes.UInt8):
+        return "uint8"
+    if isinstance_or_issubclass(dtype, dtypes.String):
+        return "object"
+    if isinstance_or_issubclass(dtype, dtypes.Bool):
+        return "bool"
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
