@@ -86,6 +86,10 @@ class Expr(Protocol):
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Expr:
         ...
 
+    @property
+    def str(self) -> ExprStringNamespace:
+        ...
+
 
 class ExprStringNamespace(Protocol):
     def ends_with(self, suffix: str) -> Expr:
@@ -100,6 +104,17 @@ class DType(Protocol):
 
 class Namespace(Protocol):
     Float64: DType
+    Float32: DType
+    Int64: DType
+    Int32: DType
+    Int16: DType
+    Int8: DType
+    UInt64: DType
+    UInt32: DType
+    UInt16: DType
+    UInt8: DType
+    Bool: DType
+    String: DType
 
     def col(self, *names: str | Iterable[str]) -> Expr:
         ...
@@ -111,6 +126,12 @@ class Namespace(Protocol):
         ...
 
     def mean(self, *columns: str) -> Expr:
+        ...
+
+    def max(self, *columns: str) -> Expr:
+        ...
+
+    def min(self, *columns: str) -> Expr:
         ...
 
     def len(self) -> Expr:
