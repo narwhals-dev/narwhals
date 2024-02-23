@@ -213,6 +213,9 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                 root_names.extend(arg._root_names)
             else:
                 root_names = None
+                break
+        elif root_names is None:
+            break
 
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,
