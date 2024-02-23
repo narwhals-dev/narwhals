@@ -8,7 +8,7 @@ import polars
 polars.Config.set_tbl_cols(10)
 
 
-def q1(df_raw: Any) -> None:
+def q1(df_raw: Any) -> Any:
     var_1 = datetime(1998, 9, 2)
     df, pl = to_polars_api(df_raw, version="0.20")
     result = (

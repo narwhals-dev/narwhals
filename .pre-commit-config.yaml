@@ -8,4 +8,9 @@ repos:
       args: [--fix]
     # Run the formatter.
     - id: ruff-format
-  
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.8.0'
+    hooks:
+    -   id: mypy
+        additional_dependencies: ['polars==0.20.10', 'pytest==8.0.1']
+        exclude: utils

@@ -15,7 +15,7 @@ def q5(
     lineitem_ds_raw: Any,
     orders_ds_raw: Any,
     supplier_ds_raw: Any,
-):
+) -> Any:
     var_1 = "ASIA"
     var_2 = datetime(1994, 1, 1)
     var_3 = datetime(1995, 1, 1)

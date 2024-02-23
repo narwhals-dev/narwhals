@@ -18,6 +18,9 @@ class Expr(Protocol):
     def cast(self, dtype: DType) -> Self:
         ...
 
+    def __eq__(self, other: object) -> Expr:  # type: ignore[override]
+        ...
+
     def __and__(self, other: Any) -> Expr:
         ...
 

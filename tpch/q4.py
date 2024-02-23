@@ -13,7 +13,7 @@ Q_NUM = 4
 def q4(
     lineitem_ds_raw: Any,
     orders_ds_raw: Any,
-):
+) -> Any:
     var_1 = datetime(1993, 7, 1)
     var_2 = datetime(1993, 10, 1)
 
