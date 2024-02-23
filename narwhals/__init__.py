@@ -1,8 +1,8 @@
 from narwhals import containers
 from narwhals.translate import get_namespace
 from narwhals.translate import to_original_object
-from narwhals.translate import to_polars_api
+from narwhals.translate import translate_frame
 
 __version__ = "0.1.12"
 
-__all__ = ["to_polars_api", "to_original_object", "get_namespace", "containers"]
+__all__ = ["translate_frame", "to_original_object", "get_namespace", "containers"]

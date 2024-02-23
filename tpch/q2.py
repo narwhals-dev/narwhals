@@ -5,7 +5,7 @@ import polars
 import pandas as pd
 
 from narwhals import to_original_object
-from narwhals import to_polars_api
+from narwhals import translate_frame
 
 polars.Config.set_tbl_cols(10)
 pd.set_option("display.max_columns", 10)
@@ -22,11 +22,11 @@ def q2(
     var_2 = "BRASS"
     var_3 = "EUROPE"
 
-    region_ds, pl = to_polars_api(region_ds_raw, version="0.20")
-    nation_ds, _ = to_polars_api(nation_ds_raw, version="0.20")
-    supplier_ds, _ = to_polars_api(supplier_ds_raw, version="0.20")
-    part_ds, _ = to_polars_api(part_ds_raw, version="0.20")
-    part_supp_ds, _ = to_polars_api(part_supp_ds_raw, version="0.20")
+    region_ds, pl = translate_frame(region_ds_raw, version="0.20")
+    nation_ds, _ = translate_frame(nation_ds_raw, version="0.20")
+    supplier_ds, _ = translate_frame(supplier_ds_raw, version="0.20")
+    part_ds, _ = translate_frame(part_ds_raw, version="0.20")
+    part_supp_ds, _ = translate_frame(part_supp_ds_raw, version="0.20")
 
     result_q2 = (
         part_ds.join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")

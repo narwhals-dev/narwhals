@@ -7,7 +7,7 @@ import polars
 import pandas as pd
 
 from narwhals import to_original_object
-from narwhals import to_polars_api
+from narwhals import translate_frame
 import polars
 
 polars.Config.set_tbl_cols(10)
@@ -22,9 +22,9 @@ def q3(
     var_1 = var_2 = datetime(1995, 3, 15)
     var_3 = "BUILDING"
 
-    customer_ds, pl = to_polars_api(customer_ds_raw, version="0.20")
-    line_item_ds, _ = to_polars_api(line_item_ds_raw, version="0.20")
-    orders_ds, _ = to_polars_api(orders_ds_raw, version="0.20")
+    customer_ds, pl = translate_frame(customer_ds_raw, version="0.20")
+    line_item_ds, _ = translate_frame(line_item_ds_raw, version="0.20")
+    orders_ds, _ = translate_frame(orders_ds_raw, version="0.20")
 
     q_final = (
         customer_ds.filter(pl.col("c_mktsegment") == var_3)

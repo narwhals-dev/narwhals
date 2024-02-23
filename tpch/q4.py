@@ -5,7 +5,7 @@ from typing import Any
 import polars
 
 from narwhals import to_original_object
-from narwhals import to_polars_api
+from narwhals import translate_frame
 
 Q_NUM = 4
 
@@ -17,8 +17,8 @@ def q4(
     var_1 = datetime(1993, 7, 1)
     var_2 = datetime(1993, 10, 1)
 
-    line_item_ds, pl = to_polars_api(lineitem_ds_raw, version="0.20")
-    orders_ds, _ = to_polars_api(orders_ds_raw, version="0.20")
+    line_item_ds, pl = translate_frame(lineitem_ds_raw, version="0.20")
+    orders_ds, _ = translate_frame(orders_ds_raw, version="0.20")
 
     result = (
         line_item_ds.join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")

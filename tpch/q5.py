@@ -5,7 +5,7 @@ from typing import Any
 import polars
 
 from narwhals import to_original_object
-from narwhals import to_polars_api
+from narwhals import translate_frame
 
 
 def q5(
@@ -20,12 +20,12 @@ def q5(
     var_2 = datetime(1994, 1, 1)
     var_3 = datetime(1995, 1, 1)
 
-    region_ds, pl = to_polars_api(region_ds_raw, version="0.20")
-    nation_ds, _ = to_polars_api(nation_ds_raw, version="0.20")
-    customer_ds, _ = to_polars_api(customer_ds_raw, version="0.20")
-    line_item_ds, _ = to_polars_api(lineitem_ds_raw, version="0.20")
-    orders_ds, _ = to_polars_api(orders_ds_raw, version="0.20")
-    supplier_ds, _ = to_polars_api(supplier_ds_raw, version="0.20")
+    region_ds, pl = translate_frame(region_ds_raw, version="0.20")
+    nation_ds, _ = translate_frame(nation_ds_raw, version="0.20")
+    customer_ds, _ = translate_frame(customer_ds_raw, version="0.20")
+    line_item_ds, _ = translate_frame(lineitem_ds_raw, version="0.20")
+    orders_ds, _ = translate_frame(orders_ds_raw, version="0.20")
+    supplier_ds, _ = translate_frame(supplier_ds_raw, version="0.20")
 
     result = (
         region_ds.join(nation_ds, left_on="r_regionkey", right_on="n_regionkey")
