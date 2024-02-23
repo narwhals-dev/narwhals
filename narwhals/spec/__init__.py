@@ -283,6 +283,7 @@ class LazyFrame(Protocol):
     def schema(self) -> dict[str, DType]:
         ...
 
+    # --- reshaping ---
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -296,6 +297,7 @@ class LazyFrame(Protocol):
     ) -> Self:
         ...
 
+    # --- transform ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -304,9 +306,11 @@ class LazyFrame(Protocol):
     ) -> Self:
         ...
 
+    # --- convert ---
     def collect(self) -> DataFrame:
         ...
 
+    # --- actions ---
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
         ...
 
@@ -320,9 +324,7 @@ class LazyFrame(Protocol):
     ) -> Self:
         ...
 
-    def cache(self) -> Self:
-        ...
-
+    # --- reductions ---
     def head(self, n: int) -> Self:
         ...
 
@@ -330,6 +332,10 @@ class LazyFrame(Protocol):
         ...
 
     def rename(self, mapping: dict[str, str]) -> Self:
+        ...
+
+    # --- no-op ---
+    def cache(self) -> Self:
         ...
 
 

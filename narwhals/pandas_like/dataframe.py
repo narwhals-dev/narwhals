@@ -174,8 +174,7 @@ class DataFrame(DataFrameProtocol):
 
 
 class LazyFrame(LazyFrameProtocol):
-    """dataframe object"""
-
+    # --- not in the spec ---
     def __init__(
         self,
         dataframe: Any,
@@ -187,16 +186,6 @@ class LazyFrame(LazyFrameProtocol):
         self._dataframe = dataframe.reset_index(drop=True)
         self._api_version = api_version
         self._implementation = implementation
-
-    @property
-    def columns(self) -> list[str]:
-        return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
-
-    @property
-    def schema(self) -> dict[str, DType]:
-        return {
-            col: translate_dtype(dtype) for col, dtype in self._dataframe.dtypes.items()
-        }
 
     def __repr__(self) -> str:  # pragma: no cover
         header = f" Standard DataFrame (api_version={self._api_version}) "
@@ -237,11 +226,18 @@ class LazyFrame(LazyFrameProtocol):
             implementation=self._implementation,
         )
 
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
-        from narwhals.pandas_like.group_by import LazyGroupBy
+    # --- properties ---
+    @property
+    def columns(self) -> list[str]:
+        return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
 
-        return LazyGroupBy(self, flatten_str(*keys), api_version=self._api_version)
+    @property
+    def schema(self) -> dict[str, DType]:
+        return {
+            col: translate_dtype(dtype) for col, dtype in self._dataframe.dtypes.items()
+        }
 
+    # --- reshaping ---
     def select(
         self,
         *exprs: IntoExpr | Iterable[IntoExpr],
@@ -276,6 +272,10 @@ class LazyFrame(LazyFrameProtocol):
         )
         return self._from_dataframe(df)
 
+    def rename(self, mapping: dict[str, str]) -> Self:
+        return self._from_dataframe(self._dataframe.rename(columns=mapping))
+
+    # --- transform ---
     def sort(
         self,
         by: str | Iterable[str],
@@ -294,7 +294,20 @@ class LazyFrame(LazyFrameProtocol):
             df.sort_values(flat_keys, ascending=ascending),
         )
 
-    # Other
+    # --- convert ---
+    def collect(self) -> DataFrame:
+        return DataFrame(
+            self._dataframe,
+            api_version=self._api_version,
+            implementation=self._implementation,
+        )
+
+    # --- actions ---
+    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
+        from narwhals.pandas_like.group_by import LazyGroupBy
+
+        return LazyGroupBy(self, flatten_str(*keys), api_version=self._api_version)
+
     def join(
         self,
         other: Self,
@@ -327,16 +340,7 @@ class LazyFrame(LazyFrameProtocol):
             ),
         )
 
-    # Conversion
-    def collect(self) -> DataFrame:
-        return DataFrame(
-            self._dataframe,
-            api_version=self._api_version,
-            implementation=self._implementation,
-        )
-
-    def cache(self) -> Self:
-        return self
+    # --- reductions ---
 
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))
@@ -344,5 +348,6 @@ class LazyFrame(LazyFrameProtocol):
     def unique(self, subset: list[str]) -> Self:
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
 
-    def rename(self, mapping: dict[str, str]) -> Self:
-        return self._from_dataframe(self._dataframe.rename(columns=mapping))
+    # --- no-op ---
+    def cache(self) -> Self:
+        return self
