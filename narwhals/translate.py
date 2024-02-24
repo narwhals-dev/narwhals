@@ -5,6 +5,11 @@ from typing import Any
 from typing import Literal
 from typing import overload
 
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_polars
+
 if TYPE_CHECKING:
     from narwhals.spec import DataFrame
     from narwhals.spec import LazyFrame
@@ -53,11 +58,8 @@ def translate_frame(
 
     if hasattr(df, "__narwhals_frame__"):
         return df.__narwhals_frame__(eager_only=eager_only, lazy_only=lazy_only)  # type: ignore[no-any-return]
-    try:
-        import polars as pl
-    except ModuleNotFoundError:
-        pass
-    else:
+
+    if (pl := get_polars()) is not None:
         if isinstance(df, pl.LazyFrame) and eager_only:
             msg = (
                 "Expected DataFrame, got LazyFrame. Set `eager_only=False` if you "
@@ -73,43 +75,31 @@ def translate_frame(
             )
             raise TypeError(msg)
         if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
-            return df, pl  # type: ignore[return-value]
-    try:
-        import pandas as pd
-    except ModuleNotFoundError:
-        pass
-    else:
-        if isinstance(df, pd.DataFrame):
-            from narwhals.pandas_like.translate import translate
+            return df, pl
 
-            return translate(
-                df,
-                implementation="pandas",
-                eager_only=eager_only,
-                lazy_only=lazy_only,
-            )
-    try:
-        import cudf
-    except ModuleNotFoundError:
-        pass
-    else:
-        if isinstance(df, cudf.DataFrame):
-            from narwhals.pandas_like.translate import translate
+    if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
+        from narwhals.pandas_like.translate import translate
 
-            return translate(
-                df, implementation="cudf", eager_only=eager_only, lazy_only=lazy_only
-            )
-    try:
-        import modin.pandas as mpd
-    except ModuleNotFoundError:
-        pass
-    else:
-        if isinstance(df, mpd.DataFrame):
-            from narwhals.pandas_like.translate import translate
+        return translate(
+            df,
+            implementation="pandas",
+            eager_only=eager_only,
+            lazy_only=lazy_only,
+        )
 
-            return translate(
-                df, implementation="modin", eager_only=eager_only, lazy_only=lazy_only
-            )
+    if (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame):
+        from narwhals.pandas_like.translate import translate
+
+        return translate(
+            df, implementation="cudf", eager_only=eager_only, lazy_only=lazy_only
+        )
+
+    if (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
+        from narwhals.pandas_like.translate import translate
+
+        return translate(
+            df, implementation="modin", eager_only=eager_only, lazy_only=lazy_only
+        )
     msg = f"Could not translate DataFrame {type(df)}, please open a feature request."
     raise TypeError(msg)
 
