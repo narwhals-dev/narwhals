@@ -38,7 +38,7 @@ class Expr(ExprProtocol):
 
     def __repr__(self) -> str:
         return (
-            f"Expr("
+            f"Narwhals Expr("
             f"depth={self._depth}, "
             f"function_name={self._function_name}, "
             f"root_names={self._root_names}, "

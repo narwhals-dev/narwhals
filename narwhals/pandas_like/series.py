@@ -35,14 +35,14 @@ class Series(SeriesProtocol):
         self._implementation = implementation
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals Series"
+        header = " Narwhals Series                         "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Add `._series` to see native output         |\n"
+            + "| Add `.to_native()` to see native output         |\n"
             + "└"
             + "─" * length
             + "┘\n"
