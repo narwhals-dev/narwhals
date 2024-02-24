@@ -74,8 +74,16 @@ def translate_frame(
                 "before passing it to this function."
             )
             raise TypeError(msg)
-        if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
-            return df, pl
+        if isinstance(df, pl.DataFrame):
+            from narwhals.polars import DataFrame
+            from narwhals.polars import Namespace
+
+            return DataFrame(df), Namespace()
+        if isinstance(df, pl.LazyFrame):
+            from narwhals.polars import LazyFrame
+            from narwhals.polars import Namespace
+
+            return LazyFrame(df), Namespace()
 
     if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
         from narwhals.pandas_like.translate import translate

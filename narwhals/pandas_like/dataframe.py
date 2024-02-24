@@ -7,12 +7,12 @@ from typing import Iterable
 from typing import Literal
 
 from narwhals.pandas_like.utils import evaluate_into_exprs
-from narwhals.pandas_like.utils import flatten_str
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_dataframe_comparand
 from narwhals.spec import DataFrame as DataFrameProtocol
 from narwhals.spec import LazyFrame as LazyFrameProtocol
+from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

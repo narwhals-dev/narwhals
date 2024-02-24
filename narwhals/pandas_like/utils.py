@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
+from narwhals.utils import flatten_into_expr
 from narwhals.utils import remove_prefix
 
 T = TypeVar("T")
@@ -120,44 +121,6 @@ def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[S
 
     expr = parse_into_expr(df._implementation, into_expr)
     return expr._call(df)
-
-
-def flatten_str(*args: str | Iterable[str]) -> list[str]:
-    out: list[str] = []
-    for arg in args:
-        if isinstance(arg, str):
-            out.append(arg)
-        else:
-            for item in arg:
-                if not isinstance(item, str):
-                    msg = f"Expected str, got {type(item)}"
-                    raise TypeError(msg)
-                out.append(item)
-    return out
-
-
-def flatten_bool(*args: bool | Iterable[bool]) -> list[bool]:
-    out: list[bool] = []
-    for arg in args:
-        if isinstance(arg, bool):
-            out.append(arg)
-        else:
-            for item in arg:
-                if not isinstance(item, bool):
-                    msg = f"Expected str, got {type(item)}"
-                    raise TypeError(msg)
-                out.append(item)
-    return out
-
-
-def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
-    out: list[IntoExpr] = []
-    for arg in args:
-        if isinstance(arg, (list, tuple)):
-            out.extend(arg)
-        else:
-            out.append(arg)  # type: ignore[arg-type]
-    return out
 
 
 def evaluate_into_exprs(

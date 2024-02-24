@@ -12,12 +12,12 @@ from narwhals.pandas_like.dataframe import DataFrame
 from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.pandas_like.expr import Expr
 from narwhals.pandas_like.series import Series
-from narwhals.pandas_like.utils import flatten_str
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.pandas_like.utils import series_from_iterable
 from narwhals.spec import IntoExpr
 from narwhals.spec import Namespace as NamespaceProtocol
+from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
     AnyDataFrame = TypeVar("AnyDataFrame", DataFrame, LazyFrame)
