@@ -4,4 +4,4 @@ from narwhals.translate import translate_frame
 
 __version__ = "0.1.12"
 
-__all__ = ["translate_frame", "to_original_object", "get_namespace", "containers"]
+__all__ = ["translate_frame", "to_original_object", "containers"]
