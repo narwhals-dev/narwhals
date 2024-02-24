@@ -42,7 +42,7 @@ from typing import TypeVar
 import pandas as pd
 import polars as pl
 
-from narwhals import to_polars_api, to_original_object
+from narwhals import translate_frame
 
 AnyDataFrame = TypeVar("AnyDataFrame")
 
@@ -51,8 +51,8 @@ def my_agnostic_function(
     suppliers_native: AnyDataFrame,
     parts_native: AnyDataFrame,
 ) -> AnyDataFrame:
-    suppliers, pl = to_polars_api(suppliers_native, lazy_only=True)
-    parts, _ = to_polars_api(parts_native, lazy_only=True)
+    suppliers, pl = translate_frame(suppliers_native, lazy_only=True)
+    parts, _ = translate_frame(parts_native, lazy_only=True)
     result = (
         suppliers.join(parts, left_on="city", right_on="city")
         .filter(
@@ -65,10 +65,11 @@ def my_agnostic_function(
             weight_max=pl.col("weight").max(),
         )
     )
-    return to_original_object(result.collect())
+    return result.collect().to_native()
 ```
 You can pass in a pandas, Polars, cuDF, or Modin dataframe, the output will be the same!
 Let's try it out:
+
 ```python
 suppliers = {
     "s": ["S1", "S2", "S3", "S4", "S5"],
@@ -99,26 +100,27 @@ print(
     )
 )
 ```
+
 ```
 pandas output:
-    s   p  weight_mean  weight_max
-0  S1  P6         19.0        19.0
-1  S2  P2         17.0        17.0
-2  S3  P2         17.0        17.0
-3  S4  P6         19.0        19.0
+    s   p  weight_mean
+0  S1  P6         19.0
+1  S2  P2         17.0
+2  S3  P2         17.0
+3  S4  P6         19.0
 
 Polars output:
-shape: (4, 4)
-┌─────┬─────┬─────────────┬────────────┐
-│ s   ┆ p   ┆ weight_mean ┆ weight_max │
-│ --- ┆ --- ┆ ---         ┆ ---        │
-│ str ┆ str ┆ f64         ┆ f64        │
-╞═════╪═════╪═════════════╪════════════╡
-│ S1  ┆ P6  ┆ 19.0        ┆ 19.0       │
-│ S3  ┆ P2  ┆ 17.0        ┆ 17.0       │
-│ S4  ┆ P6  ┆ 19.0        ┆ 19.0       │
-│ S2  ┆ P2  ┆ 17.0        ┆ 17.0       │
-└─────┴─────┴─────────────┴────────────┘
+shape: (4, 3)
+┌─────┬─────┬─────────────┐
+│ s   ┆ p   ┆ weight_mean │
+│ --- ┆ --- ┆ ---         │
+│ str ┆ str ┆ f64         │
+╞═════╪═════╪═════════════╡
+│ S1  ┆ P6  ┆ 19.0        │
+│ S3  ┆ P2  ┆ 17.0        │
+│ S4  ┆ P6  ┆ 19.0        │
+│ S2  ┆ P2  ┆ 17.0        │
+└─────┴─────┴─────────────┘
 ```
 Magic! 🪄 
 
