@@ -100,6 +100,7 @@ def translate_frame(
         return translate(
             df, implementation="modin", eager_only=eager_only, lazy_only=lazy_only
         )
+
     msg = f"Could not translate DataFrame {type(df)}, please open a feature request."
     raise TypeError(msg)
 
