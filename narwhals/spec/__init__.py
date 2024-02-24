@@ -280,6 +280,10 @@ class DataFrame(Protocol):
     def unique(self, subset: list[str]) -> Self:
         ...
 
+    # --- public, non-Polars ---
+    def to_native(self) -> Any:
+        ...
+
 
 class LazyFrame(Protocol):
     # --- properties ---
@@ -342,8 +346,12 @@ class LazyFrame(Protocol):
     def rename(self, mapping: dict[str, str]) -> Self:
         ...
 
-    # --- no-op ---
+    # --- lazy-only ---
     def cache(self) -> Self:
+        ...
+
+    # --- public, non-Polars ---
+    def to_native(self) -> Any:
         ...
 
 

@@ -169,6 +169,10 @@ class DataFrame(DataFrameProtocol):
     def unique(self, subset: list[str]) -> Self:
         return self._dispatch_to_lazy("unique", subset)
 
+    # --- public, non-Polars ---
+    def to_native(self) -> Any:
+        return self._dataframe
+
 
 class LazyFrame(LazyFrameProtocol):
     # --- not in the spec ---
@@ -343,6 +347,10 @@ class LazyFrame(LazyFrameProtocol):
     def unique(self, subset: list[str]) -> Self:
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
 
-    # --- no-op ---
+    # --- lazy-only ---
     def cache(self) -> Self:
         return self
+
+    # --- public, non-Polars ---
+    def to_native(self) -> Any:
+        return self._dataframe
