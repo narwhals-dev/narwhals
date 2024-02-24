@@ -361,14 +361,15 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     raise TypeError(msg)
 
 
-def reset_index(df: Any) -> Any:
+def reset_index(obj: Any) -> Any:
+    index = obj.index
     if (
-        hasattr(df, "start")
-        and hasattr(df, "stop")
-        and hasattr(df, "step")
-        and df.start == 0
-        and df.stop == len(df)
-        and df.step == 1
+        hasattr(index, "start")
+        and hasattr(index, "stop")
+        and hasattr(index, "step")
+        and index.start == 0
+        and index.stop == len(obj)
+        and index.step == 1
     ):
-        return df
-    return df.reset_index(drop=True)
+        return obj
+    return obj.reset_index(drop=True)
