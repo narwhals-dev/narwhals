@@ -9,10 +9,11 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dataframe import LazyFrame
     from narwhals.pandas_like.namespace import Namespace
+    from narwhals.pandas_like.series import Series
 
 
 @overload
-def translate(
+def translate_frame(
     df: Any,
     implementation: str,
     *,
@@ -23,7 +24,7 @@ def translate(
 
 
 @overload
-def translate(
+def translate_frame(
     df: Any,
     implementation: str,
     *,
@@ -34,7 +35,7 @@ def translate(
 
 
 @overload
-def translate(
+def translate_frame(
     df: Any,
     implementation: str,
     *,
@@ -45,7 +46,7 @@ def translate(
 
 
 @overload
-def translate(
+def translate_frame(
     df: Any,
     implementation: str,
     *,
@@ -55,7 +56,7 @@ def translate(
     ...
 
 
-def translate(
+def translate_frame(
     df: Any,
     implementation: str,
     *,
@@ -76,4 +77,16 @@ def translate(
             df,
             implementation=implementation,
         )
-    return df, Namespace(implementation=df._implementation)
+    return df, Namespace(implementation=implementation)
+
+
+def translate_series(
+    series: Any,
+    implementation: str,
+) -> tuple[Series, Namespace]:
+    from narwhals.pandas_like.namespace import Namespace
+    from narwhals.pandas_like.series import Series
+
+    return Series(series, implementation=implementation), Namespace(
+        implementation=implementation
+    )

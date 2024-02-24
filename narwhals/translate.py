@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from narwhals.spec import DataFrame
     from narwhals.spec import LazyFrame
     from narwhals.spec import Namespace
+    from narwhals.spec import Series
 
 
 @overload
@@ -86,9 +87,9 @@ def translate_frame(
             return LazyFrame(df), Namespace()
 
     if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-        from narwhals.pandas_like.translate import translate
+        from narwhals.pandas_like.translate import translate_frame
 
-        return translate(
+        return translate_frame(
             df,
             implementation="pandas",
             eager_only=eager_only,
@@ -96,16 +97,16 @@ def translate_frame(
         )
 
     if (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame):
-        from narwhals.pandas_like.translate import translate
+        from narwhals.pandas_like.translate import translate_frame
 
-        return translate(
+        return translate_frame(
             df, implementation="cudf", eager_only=eager_only, lazy_only=lazy_only
         )
 
     if (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
-        from narwhals.pandas_like.translate import translate
+        from narwhals.pandas_like.translate import translate_frame
 
-        return translate(
+        return translate_frame(
             df, implementation="modin", eager_only=eager_only, lazy_only=lazy_only
         )
 
@@ -113,7 +114,35 @@ def translate_frame(
     raise TypeError(msg)
 
 
-def to_original_object(df: DataFrame | LazyFrame) -> Any:
-    if (pl := get_polars()) is not None and isinstance(df, (pl.DataFrame, pl.LazyFrame)):
-        return df
-    return df._dataframe  # type: ignore[union-attr]
+def translate_series(
+    series: Any,
+) -> tuple[Series, Namespace]:
+    if hasattr(series, "__narwhals_series__"):
+        return series.__narwhals_series__()  # type: ignore[no-any-return]
+
+    if (pl := get_polars()) is not None and isinstance(series, pl.Series):
+        from narwhals.polars import Namespace
+        from narwhals.polars import Series
+
+        return Series(series), Namespace()
+
+    if (pd := get_pandas()) is not None and isinstance(series, pd.DataFrame):
+        from narwhals.pandas_like.translate import translate_series
+
+        return translate_series(
+            series,
+            implementation="pandas",
+        )
+
+    if (cudf := get_cudf()) is not None and isinstance(series, cudf.DataFrame):
+        from narwhals.pandas_like.translate import translate_series
+
+        return translate_series(series, implementation="cudf")
+
+    if (mpd := get_modin()) is not None and isinstance(series, mpd.DataFrame):
+        from narwhals.pandas_like.translate import translate_series
+
+        return translate_series(series, implementation="modin")
+
+    msg = f"Could not translate DataFrame {type(series)}, please open a feature request."
+    raise TypeError(msg)
