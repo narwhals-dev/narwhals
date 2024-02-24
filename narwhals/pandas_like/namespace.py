@@ -38,7 +38,7 @@ class Namespace(NamespaceProtocol):
     String = dtypes.String
 
     # --- not in spec ---
-    def __init__(self, *, implementation: str) -> None:
+    def __init__(self, implementation: str) -> None:
         self._implementation = implementation
 
     def _create_expr_from_callable(  # noqa: PLR0913
@@ -145,13 +145,13 @@ class Namespace(NamespaceProtocol):
 
     # --- horizontal ---
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-        return reduce(lambda x, y: x + y, parse_into_exprs(self, *exprs))
+        return reduce(lambda x, y: x + y, parse_into_exprs(self._implementation, *exprs))
 
     def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-        return reduce(lambda x, y: x & y, parse_into_exprs(self, *exprs))
+        return reduce(lambda x, y: x & y, parse_into_exprs(self._implementation, *exprs))
 
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-        return reduce(lambda x, y: x | y, parse_into_exprs(self, *exprs))
+        return reduce(lambda x, y: x | y, parse_into_exprs(self._implementation, *exprs))
 
     def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:  # type: ignore[override]
         dfs: list[Any] = []

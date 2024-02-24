@@ -8,7 +8,6 @@ from typing import Literal
 
 from narwhals.pandas_like.utils import evaluate_into_exprs
 from narwhals.pandas_like.utils import flatten_str
-from narwhals.pandas_like.utils import get_namespace
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_dataframe_comparand
@@ -249,7 +248,9 @@ class LazyFrame(LazyFrameProtocol):
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
     ) -> Self:
-        plx = get_namespace(self)
+        from narwhals.pandas_like.namespace import Namespace
+
+        plx = Namespace(self._implementation)
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]

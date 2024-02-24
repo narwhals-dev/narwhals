@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import LazyFrame
     from narwhals.pandas_like.dtypes import DType
     from narwhals.pandas_like.expr import Expr
-    from narwhals.pandas_like.namespace import Namespace
     from narwhals.pandas_like.series import Series
 
     ExprT = TypeVar("ExprT", bound=Expr)
@@ -85,24 +84,24 @@ def maybe_evaluate_expr(df: DataFrame | LazyFrame, arg: Any) -> Any:
     return arg
 
 
-def get_namespace(obj: Any) -> Namespace:
-    from narwhals.pandas_like.namespace import Namespace
-
-    return Namespace(implementation=obj._implementation)
-
-
 def parse_into_exprs(
-    plx: Namespace, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+    implementation: str, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
 ) -> list[Expr]:
-    out = [parse_into_expr(plx, into_expr) for into_expr in flatten_into_expr(*exprs)]
+    out = [
+        parse_into_expr(implementation, into_expr)
+        for into_expr in flatten_into_expr(*exprs)
+    ]
     for name, expr in named_exprs.items():
-        out.append(parse_into_expr(plx, expr).alias(name))
+        out.append(parse_into_expr(implementation, expr).alias(name))
     return out
 
 
-def parse_into_expr(plx: Namespace, into_expr: IntoExpr) -> Expr:
+def parse_into_expr(implementation: str, into_expr: IntoExpr) -> Expr:
     from narwhals.pandas_like.expr import Expr
+    from narwhals.pandas_like.namespace import Namespace
     from narwhals.pandas_like.series import Series
+
+    plx = Namespace(implementation=implementation)
 
     if isinstance(into_expr, str):
         return plx.col(into_expr)
@@ -118,7 +117,8 @@ def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[S
     """
     Return list of raw columns.
     """
-    expr = parse_into_expr(get_namespace(df), into_expr)
+
+    expr = parse_into_expr(df._implementation, into_expr)
     return expr._call(df)
 
 
@@ -184,9 +184,10 @@ def evaluate_into_exprs(
 
 def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
     from narwhals.pandas_like.expr import Expr
+    from narwhals.pandas_like.namespace import Namespace
     from narwhals.pandas_like.series import Series
 
-    plx = get_namespace(expr)
+    plx = Namespace(implementation=expr._implementation)
 
     def func(df: DataFrame | LazyFrame) -> list[Series]:
         out: list[Series] = []

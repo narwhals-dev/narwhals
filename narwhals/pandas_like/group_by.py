@@ -11,7 +11,6 @@ from typing import Iterable
 from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.pandas_like.utils import dataframe_from_dict
 from narwhals.pandas_like.utils import evaluate_simple_aggregation
-from narwhals.pandas_like.utils import get_namespace
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import is_simple_aggregation
 from narwhals.pandas_like.utils import item
@@ -52,7 +51,7 @@ class LazyGroupBy(LazyGroupByProtocol):
     ) -> LazyFrame:
         df = self._df._dataframe
         exprs = parse_into_exprs(
-            get_namespace(self._df),
+            self._df._implementation,
             *aggs,
             **named_aggs,
         )

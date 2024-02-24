@@ -114,20 +114,3 @@ def to_original_object(df: DataFrame | LazyFrame) -> Any:
         if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
             return df
     return df._dataframe  # type: ignore[union-attr]
-
-
-def get_namespace(obj: Any, implementation: str | None = None) -> Namespace:
-    if implementation == "polars":
-        import polars as pl
-
-        return pl  # type: ignore[return-value]
-    try:
-        import polars as pl
-    except ModuleNotFoundError:
-        pass
-    else:
-        if isinstance(obj, (pl.DataFrame, pl.LazyFrame, pl.Series)):
-            return pl  # type: ignore[return-value]
-    from narwhals.pandas_like.namespace import Namespace
-
-    return Namespace(implementation=obj._implementation)

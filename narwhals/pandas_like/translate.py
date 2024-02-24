@@ -64,7 +64,7 @@ def translate(
 ) -> tuple[LazyFrame | DataFrame, Namespace]:
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dataframe import LazyFrame
-    from narwhals.pandas_like.utils import get_namespace
+    from narwhals.pandas_like.namespace import Namespace
 
     if eager_only and not lazy_only:
         df = DataFrame(
@@ -76,4 +76,4 @@ def translate(
             df,
             implementation=implementation,
         )
-    return df, get_namespace(df)
+    return df, Namespace(implementation=df._implementation)

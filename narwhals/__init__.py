@@ -1,5 +1,4 @@
 from narwhals import containers
-from narwhals.translate import get_namespace
 from narwhals.translate import to_original_object
 from narwhals.translate import translate_frame
 
