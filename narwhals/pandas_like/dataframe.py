@@ -8,6 +8,7 @@ from typing import Literal
 
 from narwhals.pandas_like.utils import evaluate_into_exprs
 from narwhals.pandas_like.utils import horizontal_concat
+from narwhals.pandas_like.utils import reset_index
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_dataframe_comparand
 from narwhals.spec import DataFrame as DataFrameProtocol
@@ -34,7 +35,7 @@ class DataFrame(DataFrameProtocol):
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._dataframe = dataframe.reset_index(drop=True)
+        self._dataframe = reset_index(dataframe)
         self._implementation = implementation
 
     def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
@@ -182,7 +183,7 @@ class LazyFrame(LazyFrameProtocol):
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._dataframe = dataframe.reset_index(drop=True)
+        self._dataframe = reset_index(dataframe)
         self._implementation = implementation
 
     def __repr__(self) -> str:  # pragma: no cover

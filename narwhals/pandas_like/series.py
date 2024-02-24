@@ -7,6 +7,7 @@ from typing import Sequence
 from pandas.api.types import is_extension_array_dtype
 
 from narwhals.pandas_like.utils import item
+from narwhals.pandas_like.utils import reset_index
 from narwhals.pandas_like.utils import reverse_translate_dtype
 from narwhals.pandas_like.utils import validate_column_comparand
 from narwhals.spec import Series as SeriesProtocol
@@ -32,7 +33,7 @@ class Series(SeriesProtocol):
 
         self._name = series.name
         assert self._name is not None
-        self._series = series.reset_index(drop=True)
+        self._series = reset_index(series)
         self._implementation = implementation
 
     def __repr__(self) -> str:  # pragma: no cover

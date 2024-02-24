@@ -359,3 +359,16 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "bool"
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
+
+
+def reset_index(df: Any) -> Any:
+    if (
+        hasattr(df, "start")
+        and hasattr(df, "stop")
+        and hasattr(df, "step")
+        and df.start == 0
+        and df.stop == len(df)
+        and df.step == 1
+    ):
+        return df
+    return df.reset_index(drop=True)
