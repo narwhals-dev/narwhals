@@ -126,7 +126,7 @@ def translate_series(
 
         return Series(series), Namespace()
 
-    if (pd := get_pandas()) is not None and isinstance(series, pd.DataFrame):
+    if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
         from narwhals.pandas_like.translate import translate_series
 
         return translate_series(
@@ -134,15 +134,22 @@ def translate_series(
             implementation="pandas",
         )
 
-    if (cudf := get_cudf()) is not None and isinstance(series, cudf.DataFrame):
+    if (cudf := get_cudf()) is not None and isinstance(series, cudf.Series):
         from narwhals.pandas_like.translate import translate_series
 
         return translate_series(series, implementation="cudf")
 
-    if (mpd := get_modin()) is not None and isinstance(series, mpd.DataFrame):
+    if (mpd := get_modin()) is not None and isinstance(series, mpd.Series):
         from narwhals.pandas_like.translate import translate_series
 
         return translate_series(series, implementation="modin")
 
     msg = f"Could not translate DataFrame {type(series)}, please open a feature request."
     raise TypeError(msg)
+
+
+def translate_any(obj: Any) -> tuple[Series | DataFrame, Namespace]:
+    try:
+        return translate_series(obj)
+    except TypeError:
+        return translate_frame(obj, eager_only=True)
