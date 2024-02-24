@@ -1,3 +1,4 @@
+# todo: simplify all of this!
 try:
     import polars as pl
 except ModuleNotFoundError:

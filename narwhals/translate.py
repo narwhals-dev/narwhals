@@ -106,11 +106,6 @@ def translate_frame(
 
 
 def to_original_object(df: DataFrame | LazyFrame) -> Any:
-    try:
-        import polars as pl
-    except ModuleNotFoundError:
-        pass
-    else:
-        if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
-            return df
+    if (pl := get_polars()) is not None and isinstance(df, (pl.DataFrame, pl.LazyFrame)):
+        return df
     return df._dataframe  # type: ignore[union-attr]
