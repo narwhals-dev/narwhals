@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Protocol
+from typing import Sequence
 from typing import TypeVar
 
 if TYPE_CHECKING:
@@ -193,7 +194,7 @@ class Series(Protocol):
     def n_unique(self) -> int:
         ...
 
-    def zip_with(self, mask: Series, other: Series) -> Series:
+    def zip_with(self, mask: Self, other: Self) -> Self:
         ...
 
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Series:
@@ -242,7 +243,7 @@ class DataFrame(Protocol):
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Iterable[bool] = False,
+        descending: bool | Sequence[bool] = False,
     ) -> Self:
         ...
 
@@ -314,7 +315,7 @@ class LazyFrame(Protocol):
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Iterable[bool] = False,
+        descending: bool | Sequence[bool] = False,
     ) -> Self:
         ...
 

@@ -114,7 +114,7 @@ class DataFrame(DataFrameProtocol):
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Iterable[bool] = False,
+        descending: bool | Sequence[bool] = False,
     ) -> Self:
         return self._dispatch_to_lazy("sort", by, *more_by, descending=descending)
 
@@ -279,7 +279,7 @@ class LazyFrame(LazyFrameProtocol):
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Iterable[bool] = False,
+        descending: bool | Sequence[bool] = False,
     ) -> Self:
         flat_keys = flatten_str([*flatten_str(by), *more_by])
         if not flat_keys:

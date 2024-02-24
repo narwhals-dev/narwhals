@@ -22,11 +22,11 @@ def q2(
     var_2 = "BRASS"
     var_3 = "EUROPE"
 
-    region_ds, pl = translate_frame(region_ds_raw, version="0.20")
-    nation_ds, _ = translate_frame(nation_ds_raw, version="0.20")
-    supplier_ds, _ = translate_frame(supplier_ds_raw, version="0.20")
-    part_ds, _ = translate_frame(part_ds_raw, version="0.20")
-    part_supp_ds, _ = translate_frame(part_supp_ds_raw, version="0.20")
+    region_ds, pl = translate_frame(region_ds_raw, lazy_only=True)
+    nation_ds, _ = translate_frame(nation_ds_raw, lazy_only=True)
+    supplier_ds, _ = translate_frame(supplier_ds_raw, lazy_only=True)
+    part_ds, _ = translate_frame(part_ds_raw, lazy_only=True)
+    part_supp_ds, _ = translate_frame(part_supp_ds_raw, lazy_only=True)
 
     result_q2 = (
         part_ds.join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")

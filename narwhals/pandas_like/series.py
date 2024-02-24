@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from pandas.api.types import is_extension_array_dtype
 
@@ -287,7 +288,7 @@ class Series(SeriesProtocol):
     def sort(
         self,
         *,
-        descending: bool = True,
+        descending: bool | Sequence[bool] = True,
     ) -> Series:
         ser = self.series
         return self._from_series(

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Iterable
 
-from narwhals.spec import IntoExpr
+if TYPE_CHECKING:
+    from narwhals.spec import IntoExpr
 
 
 def remove_prefix(text: str, prefix: str) -> str:

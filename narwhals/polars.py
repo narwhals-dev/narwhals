@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
-from typing import TypeVar
+from typing import Sequence
 
 import polars as pl
 
@@ -20,34 +20,39 @@ from narwhals.spec import Series as SeriesProtocol
 from narwhals.utils import flatten_into_expr
 
 if TYPE_CHECKING:
-    import polars as pl
     from typing_extensions import Self
 
+    from narwhals.spec import AnyDataFrame
+    from narwhals.spec import IntoExpr
 
-def extract_native(object: Any) -> Any:
-    if isinstance(object, Expr):
-        return object._expr
-    if isinstance(object, DType):
-        return object._dtype
-    if isinstance(object, DataFrame):
-        return object._dataframe
-    if isinstance(object, LazyFrame):
-        return object._dataframe
-    if isinstance(object, Series):
-        return object._series
-    return object
+
+def extract_native(obj: Any) -> Any:
+    if isinstance(obj, Expr):
+        return obj._expr
+    if isinstance(obj, DType):
+        return obj._dtype
+    if isinstance(obj, DataFrame):
+        return obj._dataframe
+    if isinstance(obj, LazyFrame):
+        return obj._dataframe
+    if isinstance(obj, Series):
+        return obj._series
+    return obj
 
 
 class Expr(ExprProtocol):
-    def __init__(self, expr: pl.Expr):
+    def __init__(self, expr: pl.Expr) -> None:
         self._expr = expr
 
     # --- convert ---
     def alias(self, name: str) -> Self:
         return self.__class__(self._expr.alias(name))
 
-    def cast(self, dtype: DType) -> Self:
-        self.__class__(self._expr.cast(extract_native(dtype)))
+    def cast(
+        self,
+        dtype: DType,  # type: ignore[override]
+    ) -> Self:
+        return self.__class__(self._expr.cast(extract_native(dtype)))
 
     # --- binary ---
     def __eq__(self, other: object) -> Expr:  # type: ignore[override]
@@ -109,7 +114,7 @@ class Expr(ExprProtocol):
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Expr:
-        return self.__class__(self._expr.is_between(lower_bound, upper_bound, closed))
+        return self.__class__(self._expr.is_between(lower_bound, upper_bound, closed))  # type: ignore[arg-type]
 
     def is_in(self, other: Any) -> Expr:
         return self.__class__(self._expr.is_in(other))
@@ -122,7 +127,9 @@ class Expr(ExprProtocol):
         return self.__class__(self._expr.drop_nulls())
 
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Expr:
-        return self.__class__(self._expr.sample(n, fraction, with_replacement))
+        return self.__class__(
+            self._expr.sample(n, fraction=fraction, with_replacement=with_replacement)
+        )
 
     # --- namespaces ---
     @property
@@ -131,20 +138,20 @@ class Expr(ExprProtocol):
 
 
 class ExprStringNamespace(ExprStringNamespaceProtocol):
-    def __init__(self, expr: Expr) -> None:
+    def __init__(self, expr: Any) -> None:
         self._expr = expr
 
     def ends_with(self, suffix: str) -> Expr:
-        self.__class__(self._expr.ends_with(suffix))
+        return Expr(self._expr.str.ends_with(suffix))
 
 
 class DType(DTypeProtocol):
-    def __init__(self, dtype):
+    def __init__(self, dtype: Any) -> None:
         self._dtype = dtype
 
     @classmethod
     def is_numeric(cls: type[Self]) -> bool:
-        return self._dtype.is_numeric()
+        return cls._dtype.is_numeric()  # type: ignore[no-any-return]
 
 
 class Namespace(NamespaceProtocol):
@@ -163,9 +170,7 @@ class Namespace(NamespaceProtocol):
 
     # --- selection ---
     def col(self, *names: str | Iterable[str]) -> Expr:
-        import polars as pl
-
-        return Expr(pl.col(*names))
+        return Expr(pl.col(*names))  # type: ignore[arg-type]
 
     def all(self) -> Expr:
         return Expr(pl.all())
@@ -198,58 +203,65 @@ class Namespace(NamespaceProtocol):
 
     def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:
         # bit harder, do this later
-        ...
+        raise NotImplementedError
 
 
 class Series(SeriesProtocol):
-    def __init__(self, series: pl.Series):
+    def __init__(self, series: pl.Series) -> None:
         self._series = series
 
     def alias(self, name: str) -> Self:
-        ...
+        return self.__class__(self._series.alias(name))
 
     @property
     def name(self) -> str:
-        ...
+        return self._series.name
 
-    def cast(self, dtype: DType) -> Self:
-        ...
+    def cast(
+        self,
+        dtype: DType,  # type: ignore[override]
+    ) -> Self:
+        return self.__class__(self._series.cast(extract_native(dtype)))
 
     def item(self) -> Any:
-        ...
+        return self._series.item()
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Series:
-        ...
+        return self.__class__(self._series.is_between(lower_bound, upper_bound, closed))  # type: ignore[arg-type]
 
     def is_in(self, other: Any) -> Series:
-        ...
+        return self.__class__(self._series.is_in(other))
 
     def is_null(self) -> Series:
-        ...
+        return self.__class__(self._series.is_null())
 
     def drop_nulls(self) -> Series:
-        ...
+        return self.__class__(self._series.drop_nulls())
 
     def n_unique(self) -> int:
-        ...
+        return self._series.n_unique()
 
-    def zip_with(self, mask: Series, other: Series) -> Series:
-        ...
+    def zip_with(self, mask: Self, other: Self) -> Self:
+        return self.__class__(
+            self._series.zip_with(extract_native(mask), extract_native(other))
+        )
 
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Series:
-        ...
+        return self.__class__(
+            self._series.sample(n, fraction=fraction, with_replacement=with_replacement)
+        )
 
     def to_numpy(self) -> Any:
-        ...
+        return self._series.to_numpy()
 
     def to_pandas(self) -> Any:
-        ...
+        return self._series.to_pandas()
 
 
 class DataFrame(DataFrameProtocol):
-    def __init__(self, df: pl.DataFrame):
+    def __init__(self, df: pl.DataFrame) -> None:
         self._dataframe = df
 
     # --- properties ---
@@ -258,7 +270,7 @@ class DataFrame(DataFrameProtocol):
         return self._dataframe.columns
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self) -> dict[str, DTypeProtocol]:
         return {key: DType(value) for key, value in self._dataframe.schema.items()}
 
     @property
@@ -299,7 +311,7 @@ class DataFrame(DataFrameProtocol):
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Iterable[bool] = False,
+        descending: bool | Sequence[bool] = False,
     ) -> Self:
         return self.__class__(self._dataframe.sort(by, *more_by, descending=descending))
 
@@ -332,7 +344,7 @@ class DataFrame(DataFrameProtocol):
         )
 
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        return self.__class__(self._dataframe.group_by(*keys))
+        return GroupBy(self._dataframe.group_by(*keys))
 
     # --- partial reduction ---
     def head(self, n: int) -> Self:
@@ -347,7 +359,7 @@ class DataFrame(DataFrameProtocol):
 
 
 class LazyFrame(LazyFrameProtocol):
-    def __init__(self, df):
+    def __init__(self, df: pl.LazyFrame) -> None:
         self._dataframe = df
 
     # --- properties ---
@@ -356,7 +368,7 @@ class LazyFrame(LazyFrameProtocol):
         return self._dataframe.columns
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self) -> dict[str, DTypeProtocol]:
         return {key: DType(value) for key, value in self._dataframe.schema.items()}
 
     # --- reshape ---
@@ -390,9 +402,9 @@ class LazyFrame(LazyFrameProtocol):
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Iterable[bool] = False,
+        descending: bool | Sequence[bool] = False,
     ) -> Self:
-        return __class__(self._dataframe.sort(by, *more_by, descending=descending))
+        return self.__class__(self._dataframe.sort(by, *more_by, descending=descending))
 
     # --- convert ---
     def collect(self) -> DataFrame:
@@ -436,7 +448,7 @@ class LazyFrame(LazyFrameProtocol):
 
 
 class GroupBy(GroupByProtocol):
-    def __init__(self, groupby) -> None:
+    def __init__(self, groupby: Any) -> None:
         self._groupby = groupby
 
     def agg(
@@ -451,7 +463,7 @@ class GroupBy(GroupByProtocol):
 
 
 class LazyGroupBy(LazyGroupByProtocol):
-    def __init__(self, groupby):
+    def __init__(self, groupby: Any) -> None:
         self._groupby = groupby
 
     def agg(
@@ -463,8 +475,3 @@ class LazyGroupBy(LazyGroupByProtocol):
                 **{key: extract_native(value) for key, value in named_aggs.items()},
             )
         )
-
-
-IntoExpr = Expr | str | int | float | Series
-
-AnyDataFrame = TypeVar("AnyDataFrame", DataFrame, LazyFrame)

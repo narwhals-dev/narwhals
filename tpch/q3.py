@@ -22,9 +22,9 @@ def q3(
     var_1 = var_2 = datetime(1995, 3, 15)
     var_3 = "BUILDING"
 
-    customer_ds, pl = translate_frame(customer_ds_raw, version="0.20")
-    line_item_ds, _ = translate_frame(line_item_ds_raw, version="0.20")
-    orders_ds, _ = translate_frame(orders_ds_raw, version="0.20")
+    customer_ds, pl = translate_frame(customer_ds_raw, lazy_only=True)
+    line_item_ds, _ = translate_frame(line_item_ds_raw, lazy_only=True)
+    orders_ds, _ = translate_frame(orders_ds_raw, lazy_only=True)
 
     q_final = (
         customer_ds.filter(pl.col("c_mktsegment") == var_3)

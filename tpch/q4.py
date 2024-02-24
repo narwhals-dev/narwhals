@@ -17,8 +17,8 @@ def q4(
     var_1 = datetime(1993, 7, 1)
     var_2 = datetime(1993, 10, 1)
 
-    line_item_ds, pl = translate_frame(lineitem_ds_raw, version="0.20")
-    orders_ds, _ = translate_frame(orders_ds_raw, version="0.20")
+    line_item_ds, pl = translate_frame(lineitem_ds_raw, lazy_only=True)
+    orders_ds, _ = translate_frame(orders_ds_raw, lazy_only=True)
 
     result = (
         line_item_ds.join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
