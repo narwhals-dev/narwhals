@@ -111,7 +111,7 @@ def translate_frame(
         )
 
     msg = f"Could not translate DataFrame {type(df)}, please open a feature request."
-    raise TypeError(msg)
+    raise NotImplementedError(msg)
 
 
 def translate_series(
@@ -144,12 +144,12 @@ def translate_series(
 
         return translate_series(series, implementation="modin")
 
-    msg = f"Could not translate DataFrame {type(series)}, please open a feature request."
-    raise TypeError(msg)
+    msg = f"Could not translate {type(series)}, please open a feature request."
+    raise NotImplementedError(msg)
 
 
 def translate_any(obj: Any) -> tuple[Series | DataFrame, Namespace]:
     try:
         return translate_series(obj)
-    except TypeError:
+    except NotImplementedError:
         return translate_frame(obj, eager_only=True)
