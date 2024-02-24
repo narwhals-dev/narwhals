@@ -13,44 +13,66 @@ if TYPE_CHECKING:
 
 @overload
 def translate_frame(
-    df: Any, version: str, *, eager: Literal[True]
+    df: Any,
+    *,
+    eager_only: Literal[False] = ...,
+    lazy_only: Literal[False] = ...,
+) -> tuple[DataFrame | LazyFrame, Namespace]:
+    ...
+
+
+@overload
+def translate_frame(
+    df: Any,
+    *,
+    eager_only: Literal[True],
+    lazy_only: Literal[False] = ...,
 ) -> tuple[DataFrame, Namespace]:
     ...
 
 
 @overload
 def translate_frame(
-    df: Any, version: str, *, eager: Literal[False] = ...
+    df: Any,
+    *,
+    eager_only: Literal[False] = ...,
+    lazy_only: Literal[True],
 ) -> tuple[LazyFrame, Namespace]:
     ...
 
 
 def translate_frame(
-    df: Any, version: str, *, eager: bool = False
+    df: Any,
+    *,
+    eager_only: bool = False,
+    lazy_only: bool = False,
 ) -> tuple[DataFrame | LazyFrame, Namespace]:
+    if eager_only and lazy_only:
+        msg = "Only one of `eager_only` and `lazy_only` can be True."
+        raise ValueError(msg)
+
     if hasattr(df, "__narwhals_frame__"):
-        return df.__narwhals_frame__(version=version, eager=eager)  # type: ignore[no-any-return]
+        return df.__narwhals_frame__(eager_only=eager_only, lazy_only=lazy_only)  # type: ignore[no-any-return]
     try:
         import polars as pl
     except ModuleNotFoundError:
         pass
     else:
-        if isinstance(df, pl.DataFrame) and not eager:
+        if isinstance(df, pl.LazyFrame) and eager_only:
             msg = (
-                "Expected LazyFrame, got DataFrame. Set `eager=False` if you function requires "
-                "eager execution, or make you frame lazy before passing it to this function."
+                "Expected DataFrame, got LazyFrame. Set `eager_only=False` if you "
+                "function doesn't require eager execution, or collect your frame "
+                "before passing it to this function."
             )
             raise TypeError(msg)
-        if isinstance(df, pl.LazyFrame) and eager:
+        if isinstance(df, pl.DataFrame) and lazy_only:
             msg = (
-                "Expected DataFrame, got LazyFrame. Set `eager=True` if you function doesn't "
-                "require eager execution, or make you frame lazy before passing it to this "
-                "function."
+                "Expected LazyFrame, got DataFrame. Set `lazy_only=False` if you "
+                "function doesn't doesn't need to use `.collect`, or make your frame "
+                "before passing it to this function."
             )
             raise TypeError(msg)
-        if isinstance(df, pl.DataFrame):
-            return df, pl  # type: ignore[return-value]
-        if isinstance(df, pl.LazyFrame) and not eager:
+        if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
             return df, pl  # type: ignore[return-value]
     try:
         import pandas as pd
@@ -61,7 +83,10 @@ def translate_frame(
             from narwhals.pandas_like.translate import translate
 
             return translate(
-                df, api_version=version, implementation="pandas", eager=eager
+                df,
+                implementation="pandas",
+                eager_only=eager_only,
+                lazy_only=lazy_only,
             )
     try:
         import cudf
@@ -71,7 +96,9 @@ def translate_frame(
         if isinstance(df, cudf.DataFrame):
             from narwhals.pandas_like.translate import translate
 
-            return translate(df, api_version=version, implementation="cudf", eager=eager)
+            return translate(
+                df, implementation="cudf", eager_only=eager_only, lazy_only=lazy_only
+            )
     try:
         import modin.pandas as mpd
     except ModuleNotFoundError:
@@ -80,7 +107,9 @@ def translate_frame(
         if isinstance(df, mpd.DataFrame):
             from narwhals.pandas_like.translate import translate
 
-            return translate(df, api_version=version, implementation="modin", eager=eager)
+            return translate(
+                df, implementation="modin", eager_only=eager_only, lazy_only=lazy_only
+            )
     msg = f"Could not translate DataFrame {type(df)}, please open a feature request."
     raise TypeError(msg)
 
@@ -110,4 +139,4 @@ def get_namespace(obj: Any, implementation: str | None = None) -> Namespace:
             return pl  # type: ignore[return-value]
     from narwhals.pandas_like.namespace import Namespace
 
-    return Namespace(api_version="0.20.0", implementation=obj._implementation)
+    return Namespace(implementation=obj._implementation)

@@ -88,7 +88,7 @@ def maybe_evaluate_expr(df: DataFrame | LazyFrame, arg: Any) -> Any:
 def get_namespace(obj: Any) -> Namespace:
     from narwhals.pandas_like.namespace import Namespace
 
-    return Namespace(api_version="0.20.0", implementation=obj._implementation)
+    return Namespace(implementation=obj._implementation)
 
 
 def parse_into_exprs(

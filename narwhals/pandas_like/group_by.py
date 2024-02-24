@@ -28,28 +28,22 @@ if TYPE_CHECKING:
 
 
 class GroupBy(GroupByProtocol):
-    def __init__(self, df: DataFrame, keys: list[str], api_version: str) -> None:
+    def __init__(self, df: DataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
-        self._api_version = api_version
 
     def agg(
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
     ) -> DataFrame:
-        return (
-            LazyGroupBy(self._df.lazy(), self._keys, self._api_version)
-            .agg(*aggs, **named_aggs)
-            .collect()
-        )
+        return LazyGroupBy(self._df.lazy(), self._keys).agg(*aggs, **named_aggs).collect()
 
 
 class LazyGroupBy(LazyGroupByProtocol):
-    def __init__(self, df: LazyFrame, keys: list[str], api_version: str) -> None:
+    def __init__(self, df: LazyFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
-        self._api_version = api_version
 
     def agg(
         self,
@@ -99,9 +93,7 @@ class LazyGroupBy(LazyGroupByProtocol):
     def _from_dataframe(self, df: DataFrame) -> LazyFrame:
         from narwhals.pandas_like.dataframe import LazyFrame
 
-        return LazyFrame(
-            df, api_version=self._api_version, implementation=self._df._implementation
-        )
+        return LazyFrame(df, implementation=self._df._implementation)
 
 
 def agg_pandas(

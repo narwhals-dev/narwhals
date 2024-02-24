@@ -15,20 +15,9 @@ if TYPE_CHECKING:
 def translate(
     df: Any,
     implementation: str,
-    api_version: str,
     *,
-    eager: Literal[True],
-) -> tuple[DataFrame, Namespace]:
-    ...
-
-
-@overload
-def translate(
-    df: Any,
-    implementation: str,
-    api_version: str,
-    *,
-    eager: Literal[False],
+    eager_only: Literal[False],
+    lazy_only: Literal[False],
 ) -> tuple[LazyFrame, Namespace]:
     ...
 
@@ -37,9 +26,31 @@ def translate(
 def translate(
     df: Any,
     implementation: str,
-    api_version: str,
     *,
-    eager: bool,
+    eager_only: Literal[False],
+    lazy_only: Literal[True],
+) -> tuple[LazyFrame, Namespace]:
+    ...
+
+
+@overload
+def translate(
+    df: Any,
+    implementation: str,
+    *,
+    eager_only: Literal[True],
+    lazy_only: Literal[False],
+) -> tuple[DataFrame, Namespace]:
+    ...
+
+
+@overload
+def translate(
+    df: Any,
+    implementation: str,
+    *,
+    eager_only: bool,
+    lazy_only: bool,
 ) -> tuple[DataFrame | LazyFrame, Namespace]:
     ...
 
@@ -47,24 +58,22 @@ def translate(
 def translate(
     df: Any,
     implementation: str,
-    api_version: str,
     *,
-    eager: bool,
+    eager_only: bool,
+    lazy_only: bool,
 ) -> tuple[LazyFrame | DataFrame, Namespace]:
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dataframe import LazyFrame
     from narwhals.pandas_like.utils import get_namespace
 
-    if eager:
+    if eager_only and not lazy_only:
         df = DataFrame(
             df,
-            api_version=api_version,
             implementation=implementation,
         )
     else:
         df = LazyFrame(
             df,
-            api_version=api_version,
             implementation=implementation,
         )
     return df, get_namespace(df)

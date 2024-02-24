@@ -32,20 +32,19 @@ class DataFrame(DataFrameProtocol):
         self,
         dataframe: Any,
         *,
-        api_version: str,
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
         self._dataframe = dataframe.reset_index(drop=True)
-        self._api_version = api_version
         self._implementation = implementation
 
     def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
         return getattr(self.lazy(), method)(*args, **kwargs).collect()  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = f" Narwhals DataFrame (api_version={self._api_version}) "
+        header = " Narwhals DataFrame"
         length = len(header)
+        # TODO: use `to_original_object` instead of `._dataframe`
         return (
             "┌"
             + "─" * length
@@ -125,7 +124,6 @@ class DataFrame(DataFrameProtocol):
     def lazy(self) -> LazyFrame:
         return LazyFrame(
             self._dataframe,
-            api_version=self._api_version,
             implementation=self._implementation,
         )
 
@@ -151,7 +149,7 @@ class DataFrame(DataFrameProtocol):
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
         from narwhals.pandas_like.group_by import GroupBy
 
-        return GroupBy(self, flatten_str(*keys), api_version=self._api_version)
+        return GroupBy(self, flatten_str(*keys))
 
     def join(
         self,
@@ -179,16 +177,14 @@ class LazyFrame(LazyFrameProtocol):
         self,
         dataframe: Any,
         *,
-        api_version: str,
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
         self._dataframe = dataframe.reset_index(drop=True)
-        self._api_version = api_version
         self._implementation = implementation
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = f" Narwhals DataFrame (api_version={self._api_version}) "
+        header = " Narwhals DataFrame"
         length = len(header)
         return (
             "┌"
@@ -222,7 +218,6 @@ class LazyFrame(LazyFrameProtocol):
     def _from_dataframe(self, df: Any) -> Self:
         return self.__class__(
             df,
-            api_version=self._api_version,
             implementation=self._implementation,
         )
 
@@ -298,7 +293,6 @@ class LazyFrame(LazyFrameProtocol):
     def collect(self) -> DataFrame:
         return DataFrame(
             self._dataframe,
-            api_version=self._api_version,
             implementation=self._implementation,
         )
 
@@ -306,7 +300,7 @@ class LazyFrame(LazyFrameProtocol):
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
         from narwhals.pandas_like.group_by import LazyGroupBy
 
-        return LazyGroupBy(self, flatten_str(*keys), api_version=self._api_version)
+        return LazyGroupBy(self, flatten_str(*keys))
 
     def join(
         self,

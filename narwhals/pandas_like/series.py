@@ -21,7 +21,6 @@ class Series(SeriesProtocol):
         self,
         series: Any,
         *,
-        api_version: str,
         implementation: str,
     ) -> None:
         """Parameters
@@ -33,11 +32,10 @@ class Series(SeriesProtocol):
         self._name = series.name
         assert self._name is not None
         self._series = series.reset_index(drop=True)
-        self.api_version = api_version
         self._implementation = implementation
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = f" Narwhals Series (api_version={self.api_version}) "
+        header = " Narwhals Series"
         length = len(header)
         return (
             "┌"
@@ -53,7 +51,6 @@ class Series(SeriesProtocol):
     def _from_series(self, series: Any) -> Self:
         return self.__class__(
             series.rename(series.name, copy=False),
-            api_version=self.api_version,
             implementation=self._implementation,
         )
 

@@ -38,9 +38,7 @@ class Namespace(NamespaceProtocol):
     String = dtypes.String
 
     # --- not in spec ---
-    def __init__(self, *, api_version: str, implementation: str) -> None:
-        self.__dataframeapi_version__ = api_version
-        self.api_version = api_version
+    def __init__(self, *, implementation: str) -> None:
         self._implementation = implementation
 
     def _create_expr_from_callable(  # noqa: PLR0913
@@ -69,7 +67,6 @@ class Namespace(NamespaceProtocol):
                 index=series.series.index[0:1],
                 implementation=self._implementation,
             ),
-            api_version=self.api_version,
             implementation=self._implementation,
         )
 
@@ -94,7 +91,6 @@ class Namespace(NamespaceProtocol):
             lambda df: [
                 Series(
                     df._dataframe.loc[:, column_name],
-                    api_version=df._api_version,
                     implementation=self._implementation,
                 )
                 for column_name in df.columns
@@ -137,7 +133,6 @@ class Namespace(NamespaceProtocol):
                         index=[0],
                         implementation=self._implementation,
                     ),
-                    api_version=df._api_version,
                     implementation=self._implementation,
                 ),
             ],
@@ -173,11 +168,9 @@ class Namespace(NamespaceProtocol):
         if kind[0] is DataFrame:
             return DataFrame(  # type: ignore[return-value]
                 horizontal_concat(dfs, implementation=self._implementation),
-                api_version=self.api_version,
                 implementation=self._implementation,
             )
         return LazyFrame(  # type: ignore[return-value]
             horizontal_concat(dfs, implementation=self._implementation),
-            api_version=self.api_version,
             implementation=self._implementation,
         )

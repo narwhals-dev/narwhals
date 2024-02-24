@@ -29,7 +29,6 @@ class Expr(ExprProtocol):
         implementation: str,
     ) -> None:
         self._call = call
-        self._api_version = "0.20.0"  # todo
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
@@ -54,7 +53,6 @@ class Expr(ExprProtocol):
             lambda df: [
                 Series(
                     df._dataframe.loc[:, column_name],
-                    api_version=df._api_version,
                     implementation=implementation,
                 )
                 for column_name in column_names
@@ -217,7 +215,6 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
             lambda df: [
                 Series(
                     series.series.str.endswith(suffix),
-                    api_version=df._api_version,
                     implementation=df._implementation,
                 )
                 for series in self._expr._call(df)
@@ -234,7 +231,6 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
             lambda df: [
                 Series(
                     series.series.str.strip(characters),
-                    api_version=df._api_version,
                     implementation=df._implementation,
                 )
                 for series in self._expr._call(df)

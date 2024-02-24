@@ -51,8 +51,8 @@ def my_agnostic_function(
     suppliers_native: AnyDataFrame,
     parts_native: AnyDataFrame,
 ) -> AnyDataFrame:
-    suppliers, pl = to_polars_api(suppliers_native, version="0.20")
-    parts, _ = to_polars_api(parts_native, version="0.20")
+    suppliers, pl = to_polars_api(suppliers_native, lazy_only=True)
+    parts, _ = to_polars_api(parts_native, lazy_only=True)
     result = (
         suppliers.join(parts, left_on="city", right_on="city")
         .filter(

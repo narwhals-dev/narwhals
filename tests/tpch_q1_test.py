@@ -21,7 +21,7 @@ from tests.utils import compare_dicts
 )
 def test_q1(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)
-    df, pl = translate_frame(df_raw, version="0.20")
+    df, pl = translate_frame(df_raw, lazy_only=True)
     query_result = (
         df.filter(pl.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])
@@ -82,7 +82,7 @@ def test_q1(df_raw: Any) -> None:
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 def test_q1_w_pandas_agg_generic_path(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)
-    df, pl = translate_frame(df_raw, version="0.20")
+    df, pl = translate_frame(df_raw, lazy_only=True)
     query_result = (
         df.filter(pl.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])
