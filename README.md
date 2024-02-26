@@ -25,7 +25,7 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 1. use `narwhals.to_polars_api` to wrap a pandas, Polars, cuDF, or Modin dataframe
    in the Polars API
 2. use the subset of the Polars API defined in https://github.com/MarcoGorelli/narwhals/blob/main/narwhals/spec/__init__.py.
-3. use `narwhals.to_original_object` to return an object to the user in their original
+3. use `DataFrame.to_native` to return an object to the user in their original
    dataframe flavour. For example:
 
    - if you started with pandas, you'll get pandas back
@@ -51,8 +51,8 @@ def my_agnostic_function(
     suppliers_native: AnyDataFrame,
     parts_native: AnyDataFrame,
 ) -> AnyDataFrame:
-    suppliers, pl = translate_frame(suppliers_native, lazy_only=True)
-    parts, _ = translate_frame(parts_native, lazy_only=True)
+    suppliers, pl = translate_frame(suppliers_native)
+    parts, _ = translate_frame(parts_native)
     result = (
         suppliers.join(parts, left_on="city", right_on="city")
         .filter(
@@ -65,7 +65,7 @@ def my_agnostic_function(
             weight_max=pl.col("weight").max(),
         )
     )
-    return result.collect().to_native()
+    return result.to_native()
 ```
 You can pass in a pandas, Polars, cuDF, or Modin dataframe, the output will be the same!
 Let's try it out:
@@ -95,9 +95,16 @@ print(
 print("\nPolars output:")
 print(
     my_agnostic_function(
+        pl.DataFrame(suppliers),
+        pl.DataFrame(parts),
+    )
+)
+print("\nPolars lazy output:")
+print(
+    my_agnostic_function(
         pl.LazyFrame(suppliers),
         pl.LazyFrame(parts),
-    )
+    ).collect()
 )
 ```
 
@@ -110,6 +117,19 @@ pandas output:
 3  S4  P6         19.0
 
 Polars output:
+shape: (4, 3)
+┌─────┬─────┬─────────────┐
+│ s   ┆ p   ┆ weight_mean │
+│ --- ┆ --- ┆ ---         │
+│ str ┆ str ┆ f64         │
+╞═════╪═════╪═════════════╡
+│ S1  ┆ P6  ┆ 19.0        │
+│ S3  ┆ P2  ┆ 17.0        │
+│ S4  ┆ P6  ┆ 19.0        │
+│ S2  ┆ P2  ┆ 17.0        │
+└─────┴─────┴─────────────┘
+
+Polars lazy output:
 shape: (4, 3)
 ┌─────┬─────┬─────────────┐
 │ s   ┆ p   ┆ weight_mean │
