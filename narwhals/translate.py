@@ -99,7 +99,7 @@ def translate_frame(
 
 def translate_series(
     series: Any,
-) -> tuple[Series, Namespace]:
+) -> SeriesTranslation:
     if hasattr(series, "__narwhals_series__"):
         return SeriesTranslation(*series.__narwhals_series__())
 
