@@ -8,7 +8,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
-from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.pandas_like.utils import dataframe_from_dict
 from narwhals.pandas_like.utils import evaluate_simple_aggregation
 from narwhals.pandas_like.utils import horizontal_concat
@@ -17,38 +16,27 @@ from narwhals.pandas_like.utils import item
 from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.spec import GroupBy as GroupByProtocol
 from narwhals.spec import IntoExpr
-from narwhals.spec import LazyGroupBy as LazyGroupByProtocol
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import DataFrame
-    from narwhals.pandas_like.dataframe import LazyFrame
     from narwhals.pandas_like.expr import Expr
 
 
 class GroupBy(GroupByProtocol):
-    def __init__(self, df: DataFrame, keys: list[str]) -> None:
+    def __init__(
+        self, df: DataFrame, keys: list[str], *, eager_only: bool, lazy_only: bool
+    ) -> None:
         self._df = df
         self._keys = list(keys)
+        self._eager_only = eager_only
+        self._lazy_only = lazy_only
 
     def agg(
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
     ) -> DataFrame:
-        return LazyGroupBy(self._df.lazy(), self._keys).agg(*aggs, **named_aggs).collect()
-
-
-class LazyGroupBy(LazyGroupByProtocol):
-    def __init__(self, df: LazyFrame, keys: list[str]) -> None:
-        self._df = df
-        self._keys = list(keys)
-
-    def agg(
-        self,
-        *aggs: IntoExpr | Iterable[IntoExpr],
-        **named_aggs: IntoExpr,
-    ) -> LazyFrame:
         df = self._df._dataframe
         exprs = parse_into_exprs(
             self._df._implementation,
@@ -89,10 +77,15 @@ class LazyGroupBy(LazyGroupByProtocol):
             self._from_dataframe,
         )
 
-    def _from_dataframe(self, df: DataFrame) -> LazyFrame:
-        from narwhals.pandas_like.dataframe import LazyFrame
+    def _from_dataframe(self, df: DataFrame) -> DataFrame:
+        from narwhals.pandas_like.dataframe import DataFrame
 
-        return LazyFrame(df, implementation=self._df._implementation)
+        return DataFrame(
+            df,
+            implementation=self._df._implementation,
+            eager_only=self._eager_only,
+            lazy_only=self._lazy_only,
+        )
 
 
 def agg_pandas(
@@ -100,8 +93,8 @@ def agg_pandas(
     exprs: list[Expr],
     keys: list[str],
     output_names: list[str],
-    from_dataframe: Callable[[Any], LazyFrame],
-) -> LazyFrame:
+    from_dataframe: Callable[[Any], DataFrame],
+) -> DataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
 
@@ -153,8 +146,8 @@ def agg_generic(  # noqa: PLR0913
     group_by_keys: list[str],
     output_names: list[str],
     implementation: str,
-    from_dataframe: Callable[[Any], LazyFrame],
-) -> LazyFrame:
+    from_dataframe: Callable[[Any], DataFrame],
+) -> DataFrame:
     dfs: list[Any] = []
     to_remove: list[int] = []
     for i, expr in enumerate(exprs):

@@ -13,8 +13,6 @@ from narwhals.spec import DType as DTypeProtocol
 from narwhals.spec import Expr as ExprProtocol
 from narwhals.spec import ExprStringNamespace as ExprStringNamespaceProtocol
 from narwhals.spec import GroupBy as GroupByProtocol
-from narwhals.spec import LazyFrame as LazyFrameProtocol
-from narwhals.spec import LazyGroupBy as LazyGroupByProtocol
 from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.spec import Series as SeriesProtocol
 from narwhals.utils import flatten_into_expr
@@ -22,7 +20,6 @@ from narwhals.utils import flatten_into_expr
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals.spec import AnyDataFrame
     from narwhals.spec import IntoExpr
 
 
@@ -32,8 +29,6 @@ def extract_native(obj: Any) -> Any:
     if isinstance(obj, DType):
         return obj._dtype
     if isinstance(obj, DataFrame):
-        return obj._dataframe
-    if isinstance(obj, LazyFrame):
         return obj._dataframe
     if isinstance(obj, Series):
         return obj._series
@@ -201,7 +196,12 @@ class Namespace(NamespaceProtocol):
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         return Expr(pl.sum_horizontal(*[extract_native(v) for v in exprs]))
 
-    def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:
+    def concat(
+        self,
+        items: Iterable[DataFrame],  # type: ignore[override]
+        *,
+        how: str,
+    ) -> DataFrame:
         # bit harder, do this later
         raise NotImplementedError
 
@@ -261,8 +261,16 @@ class Series(SeriesProtocol):
 
 
 class DataFrame(DataFrameProtocol):
-    def __init__(self, df: pl.DataFrame) -> None:
+    def __init__(
+        self, df: pl.DataFrame | pl.LazyFrame, *, eager_only: bool, lazy_only: bool
+    ) -> None:
         self._dataframe = df
+        self._eager_only = eager_only
+        self._lazy_only = lazy_only
+
+    def _from_dataframe(self, df: pl.DataFrame | pl.LazyFrame) -> Self:
+        # construct, preserving properties
+        return self.__class__(df, eager_only=self._eager_only, lazy_only=self._lazy_only)
 
     # --- properties ---
     @property
@@ -275,13 +283,18 @@ class DataFrame(DataFrameProtocol):
 
     @property
     def shape(self) -> tuple[int, int]:
+        if not self._eager_only:
+            raise RuntimeError(
+                "DataFrame.shape can only be called if frame was instantiated with `eager_only=True`"
+            )
+        assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.shape
 
     # --- reshape ---
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        return self.__class__(
+        return self._from_dataframe(
             self._dataframe.with_columns(
                 *[extract_native(v) for v in exprs],
                 **{key: extract_native(value) for key, value in named_exprs.items()},
@@ -289,14 +302,14 @@ class DataFrame(DataFrameProtocol):
         )
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
-        return self.__class__(
+        return self._from_dataframe(
             self._dataframe.filter(*[extract_native(v) for v in predicates])
         )
 
     def select(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        return self.__class__(
+        return self._from_dataframe(
             self._dataframe.select(
                 *[extract_native(v) for v in exprs],
                 **{key: extract_native(value) for key, value in named_exprs.items()},
@@ -304,7 +317,7 @@ class DataFrame(DataFrameProtocol):
         )
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        return self.__class__(self._dataframe.rename(mapping))
+        return self._from_dataframe(self._dataframe.rename(mapping))
 
     # --- transform ---
     def sort(
@@ -313,19 +326,52 @@ class DataFrame(DataFrameProtocol):
         *more_by: str,
         descending: bool | Sequence[bool] = False,
     ) -> Self:
-        return self.__class__(self._dataframe.sort(by, *more_by, descending=descending))
+        return self._from_dataframe(
+            self._dataframe.sort(by, *more_by, descending=descending)
+        )
 
     # --- convert ---
-    def lazy(self) -> LazyFrame:
-        return LazyFrame(self._dataframe.lazy())
+    def lazy(self) -> Self:
+        return self.__class__(self._dataframe.lazy(), eager_only=False, lazy_only=True)
+
+    def collect(self) -> Self:
+        if not self._lazy_only:
+            raise RuntimeError(
+                "DataFrame.collect can only be called if frame was instantiated with `lazy_only=True`"
+            )
+        assert isinstance(self._dataframe, pl.LazyFrame)
+        return self.__class__(self._dataframe.collect(), eager_only=True, lazy_only=False)
+
+    def cache(self) -> Self:
+        if not self._lazy_only:
+            raise RuntimeError(
+                "DataFrame.cache can only be called if frame was instantiated with `lazy_only=True`"
+            )
+        assert isinstance(self._dataframe, pl.LazyFrame)
+        return self.__class__(self._dataframe.cache(), eager_only=False, lazy_only=True)
 
     def to_numpy(self) -> Any:
+        if not self._eager_only:
+            raise RuntimeError(
+                "DataFrame.to_numpy can only be called if frame was instantiated with `eager_only=True`"
+            )
+        assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
+        if not self._eager_only:
+            raise RuntimeError(
+                "DataFrame.to_pandas can only be called if frame was instantiated with `eager_only=True`"
+            )
+        assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.to_pandas()
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
+        if not self._eager_only:
+            raise RuntimeError(
+                "DataFrame.to_dict can only be called if frame was instantiated with `eager_only=True`"
+            )
+        assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.to_dict(as_series=as_series)
 
     # --- actions ---
@@ -337,141 +383,54 @@ class DataFrame(DataFrameProtocol):
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
-        return self.__class__(
+        # todo validate eager/lazy only
+        return self._from_dataframe(
             self._dataframe.join(
                 extract_native(other), how=how, left_on=left_on, right_on=right_on
             )
         )
 
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        return GroupBy(self._dataframe.group_by(*keys))
+        return GroupBy(
+            self._dataframe.group_by(*keys),
+            eager_only=self._eager_only,
+            lazy_only=self._lazy_only,
+        )
 
     # --- partial reduction ---
     def head(self, n: int) -> Self:
-        return self.__class__(self._dataframe.head(n))
+        return self._from_dataframe(self._dataframe.head(n))
 
     def unique(self, subset: list[str]) -> Self:
-        return self.__class__(self._dataframe.unique(subset))
+        return self._from_dataframe(self._dataframe.unique(subset))
 
     # --- public, non-Polars ---
     def to_native(self) -> Any:
         return self._dataframe
 
-
-class LazyFrame(LazyFrameProtocol):
-    def __init__(self, df: pl.LazyFrame) -> None:
-        self._dataframe = df
-
-    # --- properties ---
     @property
-    def columns(self) -> list[str]:
-        return self._dataframe.columns
+    def eager_only(self) -> bool:
+        return self._eager_only
 
     @property
-    def schema(self) -> dict[str, DTypeProtocol]:
-        return {key: DType(value) for key, value in self._dataframe.schema.items()}
-
-    # --- reshape ---
-    def with_columns(
-        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> Self:
-        return self.__class__(
-            self._dataframe.with_columns(
-                *[extract_native(v) for v in exprs],
-                **{key: extract_native(value) for key, value in named_exprs.items()},
-            )
-        )
-
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
-        return self.__class__(
-            self._dataframe.filter(*[extract_native(v) for v in predicates])
-        )
-
-    def select(
-        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> Self:
-        return self.__class__(
-            self._dataframe.select(
-                *[extract_native(v) for v in exprs],
-                **{key: extract_native(value) for key, value in named_exprs.items()},
-            )
-        )
-
-    # --- transform ---
-    def sort(
-        self,
-        by: str | Iterable[str],
-        *more_by: str,
-        descending: bool | Sequence[bool] = False,
-    ) -> Self:
-        return self.__class__(self._dataframe.sort(by, *more_by, descending=descending))
-
-    # --- convert ---
-    def collect(self) -> DataFrame:
-        return DataFrame(self._dataframe.collect())
-
-    # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
-        return LazyGroupBy(self._dataframe.group_by(*keys))
-
-    def join(
-        self,
-        other: Self,
-        *,
-        how: Literal["left", "inner", "outer"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
-    ) -> Self:
-        return self.__class__(
-            self._dataframe.join(
-                extract_native(other), how=how, left_on=left_on, right_on=right_on
-            )
-        )
-
-    # --- partial reduction ---
-    def head(self, n: int) -> Self:
-        return self.__class__(self._dataframe.head(n))
-
-    def unique(self, subset: list[str]) -> Self:
-        return self.__class__(self._dataframe.unique(subset))
-
-    def rename(self, mapping: dict[str, str]) -> Self:
-        return self.__class__(self._dataframe.rename(mapping))
-
-    # --- lazy-only ---
-    def cache(self) -> Self:
-        return self.__class__(self._dataframe.cache())
-
-    # --- public, non-Polars ---
-    def to_native(self) -> Any:
-        return self._dataframe
+    def lazy_only(self) -> bool:
+        return self._lazy_only
 
 
 class GroupBy(GroupByProtocol):
-    def __init__(self, groupby: Any) -> None:
+    def __init__(self, groupby: Any, *, eager_only: bool, lazy_only: bool) -> None:
         self._groupby = groupby
+        self._eager_only = eager_only
+        self._lazy_only = lazy_only
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
     ) -> DataFrame:
         return DataFrame(
             self._groupby.agg(
-                *[extract_native(v) for v in aggs],
-                **{key: extract_native(value) for key, value in named_aggs.items()},
-            )
-        )
-
-
-class LazyGroupBy(LazyGroupByProtocol):
-    def __init__(self, groupby: Any) -> None:
-        self._groupby = groupby
-
-    def agg(
-        self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> LazyFrame:
-        return LazyFrame(
-            self._groupby.agg(
                 *[extract_native(v) for v in flatten_into_expr(*aggs)],
                 **{key: extract_native(value) for key, value in named_aggs.items()},
-            )
+            ),
+            eager_only=self._eager_only,
+            lazy_only=self._lazy_only,
         )

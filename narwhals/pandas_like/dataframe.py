@@ -12,7 +12,6 @@ from narwhals.pandas_like.utils import reset_index
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_dataframe_comparand
 from narwhals.spec import DataFrame as DataFrameProtocol
-from narwhals.spec import LazyFrame as LazyFrameProtocol
 from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
@@ -21,7 +20,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.pandas_like.group_by import GroupBy
-    from narwhals.pandas_like.group_by import LazyGroupBy
     from narwhals.spec import DType
     from narwhals.spec import IntoExpr
 
@@ -33,158 +31,14 @@ class DataFrame(DataFrameProtocol):
         dataframe: Any,
         *,
         implementation: str,
+        eager_only: bool,
+        lazy_only: bool,
     ) -> None:
         self._validate_columns(dataframe.columns)
         self._dataframe = reset_index(dataframe)
         self._implementation = implementation
-
-    def _dispatch_to_lazy(self, method: str, *args: Any, **kwargs: Any) -> Self:
-        return getattr(self.lazy(), method)(*args, **kwargs).collect()  # type: ignore[no-any-return]
-
-    def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals DataFrame                      "
-        length = len(header)
-        return (
-            "┌"
-            + "─" * length
-            + "┐\n"
-            + f"|{header}|\n"
-            + "| Use `.to_native()` to see native output |\n"
-            + "└"
-            + "─" * length
-            + "┘\n"
-        )
-
-    def _validate_columns(self, columns: Sequence[str]) -> None:
-        counter = collections.Counter(columns)
-        for col, count in counter.items():
-            if count > 1:
-                msg = f"Expected unique column names, got {col} {count} time(s)"
-                raise ValueError(
-                    msg,
-                )
-
-    def _validate_booleanness(self) -> None:
-        if not (
-            (self._dataframe.dtypes == "bool") | (self._dataframe.dtypes == "boolean")
-        ).all():
-            msg = "'any' can only be called on DataFrame where all dtypes are 'bool'"
-            raise TypeError(
-                msg,
-            )
-
-    # --- properties ---
-    @property
-    def columns(self) -> list[str]:
-        return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
-
-    @property
-    def schema(self) -> dict[str, DType]:
-        return self.lazy().schema
-
-    @property
-    def shape(self) -> tuple[int, int]:
-        return self._dataframe.shape  # type: ignore[no-any-return]
-
-    # --- reshape ---
-    def with_columns(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
-    ) -> Self:
-        return self._dispatch_to_lazy("with_columns", *exprs, **named_exprs)
-
-    def select(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
-    ) -> Self:
-        return self._dispatch_to_lazy("select", *exprs, **named_exprs)
-
-    def filter(
-        self,
-        *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> Self:
-        return self._dispatch_to_lazy("filter", *predicates)
-
-    def rename(self, mapping: dict[str, str]) -> Self:
-        return self._dispatch_to_lazy("rename", mapping)
-
-    # --- transform ---
-    def sort(
-        self,
-        by: str | Iterable[str],
-        *more_by: str,
-        descending: bool | Sequence[bool] = False,
-    ) -> Self:
-        return self._dispatch_to_lazy("sort", by, *more_by, descending=descending)
-
-    # --- convert ---
-    def lazy(self) -> LazyFrame:
-        return LazyFrame(
-            self._dataframe,
-            implementation=self._implementation,
-        )
-
-    def to_numpy(self) -> Any:
-        return self._dataframe.to_numpy()
-
-    def to_pandas(self) -> Any:
-        if self._implementation == "pandas":
-            return self._dataframe
-        elif self._implementation == "cudf":
-            return self._dataframe.to_pandas()
-        elif self._implementation == "modin":
-            return self._dataframe._to_pandas()
-        msg = f"Unknown implementation: {self._implementation}"
-        raise TypeError(msg)
-
-    def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
-        if as_series:
-            return {col: self._dataframe[col] for col in self._dataframe.columns}
-        return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
-
-    # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        from narwhals.pandas_like.group_by import GroupBy
-
-        return GroupBy(self, flatten_str(*keys))
-
-    def join(
-        self,
-        other: Self,
-        *,
-        how: Literal["left", "inner", "outer"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
-    ) -> Self:
-        return self._dispatch_to_lazy(
-            "join", other.lazy(), how=how, left_on=left_on, right_on=right_on
-        )
-
-    # --- partial reduction ---
-    def head(self, n: int) -> Self:
-        return self._dispatch_to_lazy("head", n)
-
-    def unique(self, subset: list[str]) -> Self:
-        return self._dispatch_to_lazy("unique", subset)
-
-    # --- public, non-Polars ---
-    def to_native(self) -> Any:
-        return self._dataframe
-
-
-class LazyFrame(LazyFrameProtocol):
-    # --- not in the spec ---
-    def __init__(
-        self,
-        dataframe: Any,
-        *,
-        implementation: str,
-    ) -> None:
-        self._validate_columns(dataframe.columns)
-        self._dataframe = reset_index(dataframe)
-        self._implementation = implementation
+        self._eager_only = eager_only
+        self._lazy_only = lazy_only
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals LazyFrame                      "
@@ -222,6 +76,8 @@ class LazyFrame(LazyFrameProtocol):
         return self.__class__(
             df,
             implementation=self._implementation,
+            eager_only=self._eager_only,
+            lazy_only=self._lazy_only,
         )
 
     # --- properties ---
@@ -296,16 +152,27 @@ class LazyFrame(LazyFrameProtocol):
 
     # --- convert ---
     def collect(self) -> DataFrame:
+        if not self._lazy_only:
+            raise RuntimeError(
+                "DataFrame.collect can only be called when it was instantiated with `lazy_only=True`"
+            )
         return DataFrame(
             self._dataframe,
             implementation=self._implementation,
+            eager_only=True,
+            lazy_only=False,
         )
 
     # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
-        from narwhals.pandas_like.group_by import LazyGroupBy
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+        from narwhals.pandas_like.group_by import GroupBy
 
-        return LazyGroupBy(self, flatten_str(*keys))
+        return GroupBy(
+            self,
+            flatten_str(*keys),
+            eager_only=self._eager_only,
+            lazy_only=self._lazy_only,
+        )
 
     def join(
         self,
@@ -351,6 +218,54 @@ class LazyFrame(LazyFrameProtocol):
     def cache(self) -> Self:
         return self
 
+    def lazy(self) -> Self:
+        return self.__class__(
+            self._dataframe,
+            eager_only=False,
+            lazy_only=True,
+            implementation=self._implementation,
+        )
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        if not self._eager_only:
+            raise RuntimeError(
+                "DataFrame.shape can only be called when it was instantiated with `eager_only=True`"
+            )
+        return self._dataframe.shape  # type: ignore[no-any-return]
+
+    def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
+        if not self._eager_only:
+            raise RuntimeError(
+                "DataFrame.to_dict can only be called when it was instantiated with `eager_only=True`"
+            )
+        if as_series:
+            # todo: should this return narwhals series?
+            return {col: self._dataframe.loc[:, col] for col in self.columns}
+        return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
+
+    def to_numpy(self) -> Any:
+        if not self._eager_only:
+            raise RuntimeError(
+                "DataFrame.to_numpy can only be called when it was instantiated with `eager_only=True`"
+            )
+        return self._dataframe.to_numpy()
+
+    def to_pandas(self) -> Any:
+        if not self._eager_only:
+            raise RuntimeError(
+                "DataFrame.to_pandas can only be called when it was instantiated with `eager_only=True`"
+            )
+        return self._dataframe.to_pandas()
+
     # --- public, non-Polars ---
+    @property
+    def eager_only(self) -> bool:
+        return self._eager_only
+
+    @property
+    def lazy_only(self) -> bool:
+        return self._lazy_only
+
     def to_native(self) -> Any:
         return self._dataframe

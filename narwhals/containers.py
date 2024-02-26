@@ -32,16 +32,6 @@ else:
 from typing import Any
 
 
-def is_lazyframe(obj: Any) -> bool:
-    if POLARS_AVAILABLE and isinstance(
-        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
-    ):
-        return isinstance(obj, pl.LazyFrame)
-    from narwhals.pandas_like.dataframe import LazyFrame
-
-    return isinstance(obj, LazyFrame)
-
-
 def is_dataframe(obj: Any) -> bool:
     if POLARS_AVAILABLE and isinstance(
         obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)

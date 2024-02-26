@@ -6,7 +6,6 @@ from typing import Iterable
 from typing import Literal
 from typing import Protocol
 from typing import Sequence
-from typing import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -159,7 +158,7 @@ class Namespace(Protocol):
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...
 
-    def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:
+    def concat(self, items: Iterable[DataFrame], *, how: str) -> DataFrame:
         ...
 
 
@@ -248,7 +247,7 @@ class DataFrame(Protocol):
         ...
 
     # --- convert ---
-    def lazy(self) -> LazyFrame:
+    def lazy(self) -> Self:
         ...
 
     def to_numpy(self) -> Any:
@@ -285,74 +284,12 @@ class DataFrame(Protocol):
     def to_native(self) -> Any:
         ...
 
-
-class LazyFrame(Protocol):
-    # --- properties ---
     @property
-    def columns(self) -> list[str]:
+    def eager_only(self) -> bool:
         ...
 
     @property
-    def schema(self) -> dict[str, DType]:
-        ...
-
-    # --- reshape ---
-    def with_columns(
-        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> Self:
-        ...
-
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
-        ...
-
-    def select(
-        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> Self:
-        ...
-
-    # --- transform ---
-    def sort(
-        self,
-        by: str | Iterable[str],
-        *more_by: str,
-        descending: bool | Sequence[bool] = False,
-    ) -> Self:
-        ...
-
-    # --- convert ---
-    def collect(self) -> DataFrame:
-        ...
-
-    # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
-        ...
-
-    def join(
-        self,
-        other: Self,
-        *,
-        how: Literal["left", "inner", "outer"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
-    ) -> Self:
-        ...
-
-    # --- partial reduction ---
-    def head(self, n: int) -> Self:
-        ...
-
-    def unique(self, subset: list[str]) -> Self:
-        ...
-
-    def rename(self, mapping: dict[str, str]) -> Self:
-        ...
-
-    # --- lazy-only ---
-    def cache(self) -> Self:
-        ...
-
-    # --- public, non-Polars ---
-    def to_native(self) -> Any:
+    def lazy_only(self) -> bool:
         ...
 
 
@@ -363,13 +300,4 @@ class GroupBy(Protocol):
         ...
 
 
-class LazyGroupBy(Protocol):
-    def agg(
-        self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> LazyFrame:
-        ...
-
-
 IntoExpr = Expr | str | int | float | Series
-
-AnyDataFrame = TypeVar("AnyDataFrame", DataFrame, LazyFrame)

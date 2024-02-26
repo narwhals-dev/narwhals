@@ -13,14 +13,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.pandas_like.dataframe import DataFrame
-    from narwhals.pandas_like.dataframe import LazyFrame
     from narwhals.pandas_like.dtypes import DType
 
 
 class Expr(ExprProtocol):
     def __init__(  # noqa: PLR0913
         self,
-        call: Callable[[DataFrame | LazyFrame], list[Series]],
+        call: Callable[[DataFrame], list[Series]],
         *,
         depth: int,
         function_name: str,

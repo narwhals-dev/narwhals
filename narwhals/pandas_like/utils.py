@@ -13,7 +13,6 @@ T = TypeVar("T")
 
 if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import DataFrame
-    from narwhals.pandas_like.dataframe import LazyFrame
     from narwhals.pandas_like.dtypes import DType
     from narwhals.pandas_like.expr import Expr
     from narwhals.pandas_like.series import Series
@@ -76,7 +75,7 @@ def validate_dataframe_comparand(other: Any) -> Any:
     return other
 
 
-def maybe_evaluate_expr(df: DataFrame | LazyFrame, arg: Any) -> Any:
+def maybe_evaluate_expr(df: DataFrame, arg: Any) -> Any:
     """Evaluate expression if it's an expression, otherwise return it as is."""
     from narwhals.pandas_like.expr import Expr
 
@@ -114,7 +113,7 @@ def parse_into_expr(implementation: str, into_expr: IntoExpr) -> Expr:
     raise TypeError(msg)
 
 
-def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[Series]:
+def evaluate_into_expr(df: DataFrame, into_expr: IntoExpr) -> list[Series]:
     """
     Return list of raw columns.
     """
@@ -124,7 +123,7 @@ def evaluate_into_expr(df: DataFrame | LazyFrame, into_expr: IntoExpr) -> list[S
 
 
 def evaluate_into_exprs(
-    df: DataFrame | LazyFrame,
+    df: DataFrame,
     *exprs: IntoExpr | Iterable[IntoExpr],
     **named_exprs: IntoExpr,
 ) -> list[Series]:
@@ -152,7 +151,7 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
 
     plx = Namespace(implementation=expr._implementation)
 
-    def func(df: DataFrame | LazyFrame) -> list[Series]:
+    def func(df: DataFrame) -> list[Series]:
         out: list[Series] = []
         for column in expr._call(df):
             _out = getattr(column, attr)(

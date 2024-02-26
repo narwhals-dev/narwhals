@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from functools import reduce
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
-from typing import TypeVar
 
 from narwhals.pandas_like import dtypes
 from narwhals.pandas_like.dataframe import DataFrame
-from narwhals.pandas_like.dataframe import LazyFrame
 from narwhals.pandas_like.expr import Expr
 from narwhals.pandas_like.series import Series
 from narwhals.pandas_like.utils import horizontal_concat
@@ -18,9 +15,6 @@ from narwhals.pandas_like.utils import series_from_iterable
 from narwhals.spec import IntoExpr
 from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.utils import flatten_str
-
-if TYPE_CHECKING:
-    AnyDataFrame = TypeVar("AnyDataFrame", DataFrame, LazyFrame)
 
 
 class Namespace(NamespaceProtocol):
@@ -43,7 +37,7 @@ class Namespace(NamespaceProtocol):
 
     def _create_expr_from_callable(  # noqa: PLR0913
         self,
-        func: Callable[[DataFrame | LazyFrame], list[Series]],
+        func: Callable[[DataFrame], list[Series]],
         *,
         depth: int,
         function_name: str,
@@ -153,24 +147,27 @@ class Namespace(NamespaceProtocol):
     def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         return reduce(lambda x, y: x | y, parse_into_exprs(self._implementation, *exprs))
 
-    def concat(self, items: Iterable[AnyDataFrame], *, how: str) -> AnyDataFrame:  # type: ignore[override]
+    def concat(
+        self,
+        items: Iterable[DataFrame],  # type: ignore[override]
+        *,
+        how: str,
+    ) -> DataFrame:
         dfs: list[Any] = []
         kind: Any = {}
         for df in items:
             dfs.append(df._dataframe)
-            kind.append(type(df))
+            kind.append(type(df._dataframe))
         if len(kind) > 1:
             msg = "Can only concat DataFrames or LazyFrames, not mixtures of the two"
             raise TypeError(msg)
         if how != "horizontal":
             msg = "Only horizontal concatenation is supported for now"
             raise TypeError(msg)
-        if kind[0] is DataFrame:
-            return DataFrame(  # type: ignore[return-value]
-                horizontal_concat(dfs, implementation=self._implementation),
-                implementation=self._implementation,
-            )
-        return LazyFrame(  # type: ignore[return-value]
+        return DataFrame(
             horizontal_concat(dfs, implementation=self._implementation),
             implementation=self._implementation,
+            # TODO (incorrect!)
+            eager_only=True,
+            lazy_only=False,
         )

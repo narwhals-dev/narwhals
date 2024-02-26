@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Literal
-from typing import overload
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
@@ -12,39 +10,8 @@ from narwhals.dependencies import get_polars
 
 if TYPE_CHECKING:
     from narwhals.spec import DataFrame
-    from narwhals.spec import LazyFrame
     from narwhals.spec import Namespace
     from narwhals.spec import Series
-
-
-@overload
-def translate_frame(
-    df: Any,
-    *,
-    eager_only: Literal[False] = ...,
-    lazy_only: Literal[False] = ...,
-) -> tuple[DataFrame | LazyFrame, Namespace]:
-    ...
-
-
-@overload
-def translate_frame(
-    df: Any,
-    *,
-    eager_only: Literal[True],
-    lazy_only: Literal[False] = ...,
-) -> tuple[DataFrame, Namespace]:
-    ...
-
-
-@overload
-def translate_frame(
-    df: Any,
-    *,
-    eager_only: Literal[False] = ...,
-    lazy_only: Literal[True],
-) -> tuple[LazyFrame, Namespace]:
-    ...
 
 
 def translate_frame(
@@ -52,7 +19,7 @@ def translate_frame(
     *,
     eager_only: bool = False,
     lazy_only: bool = False,
-) -> tuple[DataFrame | LazyFrame, Namespace]:
+) -> tuple[DataFrame, Namespace]:
     if eager_only and lazy_only:
         msg = "Only one of `eager_only` and `lazy_only` can be True."
         raise ValueError(msg)
@@ -75,16 +42,11 @@ def translate_frame(
                 "before passing it to this function."
             )
             raise TypeError(msg)
-        if isinstance(df, pl.DataFrame):
+        if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
             from narwhals.polars import DataFrame
             from narwhals.polars import Namespace
 
-            return DataFrame(df), Namespace()
-        if isinstance(df, pl.LazyFrame):
-            from narwhals.polars import LazyFrame
-            from narwhals.polars import Namespace
-
-            return LazyFrame(df), Namespace()
+            return DataFrame(df, eager_only=eager_only, lazy_only=lazy_only), Namespace()
 
     if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
         from narwhals.pandas_like.translate import translate_frame
