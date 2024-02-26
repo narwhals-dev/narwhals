@@ -17,27 +17,27 @@ if TYPE_CHECKING:
 def translate_frame(
     df: Any,
     *,
-    eager_only: bool = False,
-    lazy_only: bool = False,
+    is_eager: bool = False,
+    is_lazy: bool = False,
 ) -> tuple[DataFrame, Namespace]:
-    if eager_only and lazy_only:
-        msg = "Only one of `eager_only` and `lazy_only` can be True."
+    if is_eager and is_lazy:
+        msg = "Only one of `is_eager` and `is_lazy` can be True."
         raise ValueError(msg)
 
     if hasattr(df, "__narwhals_frame__"):
-        return df.__narwhals_frame__(eager_only=eager_only, lazy_only=lazy_only)  # type: ignore[no-any-return]
+        return df.__narwhals_frame__(is_eager=is_eager, is_lazy=is_lazy)  # type: ignore[no-any-return]
 
     if (pl := get_polars()) is not None:
-        if isinstance(df, pl.LazyFrame) and eager_only:
+        if isinstance(df, pl.LazyFrame) and is_eager:
             msg = (
-                "Expected DataFrame, got LazyFrame. Set `eager_only=False` if you "
+                "Expected DataFrame, got LazyFrame. Set `is_eager=False` if you "
                 "function doesn't require eager execution, or collect your frame "
                 "before passing it to this function."
             )
             raise TypeError(msg)
-        if isinstance(df, pl.DataFrame) and lazy_only:
+        if isinstance(df, pl.DataFrame) and is_lazy:
             msg = (
-                "Expected LazyFrame, got DataFrame. Set `lazy_only=False` if you "
+                "Expected LazyFrame, got DataFrame. Set `is_lazy=False` if you "
                 "function doesn't doesn't need to use `.collect`, or make your frame "
                 "before passing it to this function."
             )
@@ -46,7 +46,7 @@ def translate_frame(
             from narwhals.polars import DataFrame
             from narwhals.polars import Namespace
 
-            return DataFrame(df, eager_only=eager_only, lazy_only=lazy_only), Namespace()
+            return DataFrame(df, is_eager=is_eager, is_lazy=is_lazy), Namespace()
 
     if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
         from narwhals.pandas_like.translate import translate_frame
@@ -54,22 +54,22 @@ def translate_frame(
         return translate_frame(
             df,
             implementation="pandas",
-            eager_only=eager_only,
-            lazy_only=lazy_only,
+            is_eager=is_eager,
+            is_lazy=is_lazy,
         )
 
     if (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame):
         from narwhals.pandas_like.translate import translate_frame
 
         return translate_frame(
-            df, implementation="cudf", eager_only=eager_only, lazy_only=lazy_only
+            df, implementation="cudf", is_eager=is_eager, is_lazy=is_lazy
         )
 
     if (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
         from narwhals.pandas_like.translate import translate_frame
 
         return translate_frame(
-            df, implementation="modin", eager_only=eager_only, lazy_only=lazy_only
+            df, implementation="modin", is_eager=is_eager, is_lazy=is_lazy
         )
 
     msg = f"Could not translate DataFrame {type(df)}, please open a feature request."
@@ -114,4 +114,4 @@ def translate_any(obj: Any) -> tuple[Series | DataFrame, Namespace]:
     try:
         return translate_series(obj)
     except NotImplementedError:
-        return translate_frame(obj, eager_only=True)
+        return translate_frame(obj, is_eager=True)

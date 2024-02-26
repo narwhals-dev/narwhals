@@ -1,7 +1,7 @@
 # ruff: noqa
 from typing import Any
 from datetime import datetime
-from narwhals import translate_frame, to_original_object
+from narwhals import translate_frame
 import pandas as pd
 import polars
 
@@ -10,7 +10,7 @@ polars.Config.set_tbl_cols(10)
 
 def q1(df_raw: Any) -> Any:
     var_1 = datetime(1998, 9, 2)
-    df, pl = translate_frame(df_raw, lazy_only=True)
+    df, pl = translate_frame(df_raw, is_lazy=True)
     result = (
         df.filter(pl.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])

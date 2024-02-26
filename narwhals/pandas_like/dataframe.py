@@ -31,14 +31,14 @@ class DataFrame(DataFrameProtocol):
         dataframe: Any,
         *,
         implementation: str,
-        eager_only: bool,
-        lazy_only: bool,
+        is_eager: bool,
+        is_lazy: bool,
     ) -> None:
         self._validate_columns(dataframe.columns)
         self._dataframe = reset_index(dataframe)
         self._implementation = implementation
-        self._eager_only = eager_only
-        self._lazy_only = lazy_only
+        self._is_eager = is_eager
+        self._is_lazy = is_lazy
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals LazyFrame                      "
@@ -76,8 +76,8 @@ class DataFrame(DataFrameProtocol):
         return self.__class__(
             df,
             implementation=self._implementation,
-            eager_only=self._eager_only,
-            lazy_only=self._lazy_only,
+            is_eager=self._is_eager,
+            is_lazy=self._is_lazy,
         )
 
     # --- properties ---
@@ -152,15 +152,15 @@ class DataFrame(DataFrameProtocol):
 
     # --- convert ---
     def collect(self) -> DataFrame:
-        if not self._lazy_only:
+        if not self._is_lazy:
             raise RuntimeError(
-                "DataFrame.collect can only be called when it was instantiated with `lazy_only=True`"
+                "DataFrame.collect can only be called when it was instantiated with `is_lazy=True`"
             )
         return DataFrame(
             self._dataframe,
             implementation=self._implementation,
-            eager_only=True,
-            lazy_only=False,
+            is_eager=True,
+            is_lazy=False,
         )
 
     # --- actions ---
@@ -170,8 +170,8 @@ class DataFrame(DataFrameProtocol):
         return GroupBy(
             self,
             flatten_str(*keys),
-            eager_only=self._eager_only,
-            lazy_only=self._lazy_only,
+            is_eager=self._is_eager,
+            is_lazy=self._is_lazy,
         )
 
     def join(
@@ -221,23 +221,23 @@ class DataFrame(DataFrameProtocol):
     def lazy(self) -> Self:
         return self.__class__(
             self._dataframe,
-            eager_only=False,
-            lazy_only=True,
+            is_eager=False,
+            is_lazy=True,
             implementation=self._implementation,
         )
 
     @property
     def shape(self) -> tuple[int, int]:
-        if not self._eager_only:
+        if not self._is_eager:
             raise RuntimeError(
-                "DataFrame.shape can only be called when it was instantiated with `eager_only=True`"
+                "DataFrame.shape can only be called when it was instantiated with `is_eager=True`"
             )
         return self._dataframe.shape  # type: ignore[no-any-return]
 
     def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
-        if not self._eager_only:
+        if not self._is_eager:
             raise RuntimeError(
-                "DataFrame.to_dict can only be called when it was instantiated with `eager_only=True`"
+                "DataFrame.to_dict can only be called when it was instantiated with `is_eager=True`"
             )
         if as_series:
             # todo: should this return narwhals series?
@@ -245,27 +245,27 @@ class DataFrame(DataFrameProtocol):
         return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
-        if not self._eager_only:
+        if not self._is_eager:
             raise RuntimeError(
-                "DataFrame.to_numpy can only be called when it was instantiated with `eager_only=True`"
+                "DataFrame.to_numpy can only be called when it was instantiated with `is_eager=True`"
             )
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
-        if not self._eager_only:
+        if not self._is_eager:
             raise RuntimeError(
-                "DataFrame.to_pandas can only be called when it was instantiated with `eager_only=True`"
+                "DataFrame.to_pandas can only be called when it was instantiated with `is_eager=True`"
             )
         return self._dataframe.to_pandas()
 
     # --- public, non-Polars ---
     @property
-    def eager_only(self) -> bool:
-        return self._eager_only
+    def is_eager(self) -> bool:
+        return self._is_eager
 
     @property
-    def lazy_only(self) -> bool:
-        return self._lazy_only
+    def is_lazy(self) -> bool:
+        return self._is_lazy
 
     def to_native(self) -> Any:
         return self._dataframe

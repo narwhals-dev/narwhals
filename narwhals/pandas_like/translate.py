@@ -13,8 +13,8 @@ def translate_frame(
     df: Any,
     implementation: str,
     *,
-    eager_only: bool,
-    lazy_only: bool,
+    is_eager: bool,
+    is_lazy: bool,
 ) -> tuple[DataFrame, Namespace]:
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.namespace import Namespace
@@ -22,8 +22,8 @@ def translate_frame(
     df = DataFrame(
         df,
         implementation=implementation,
-        eager_only=eager_only,
-        lazy_only=lazy_only,
+        is_eager=is_eager,
+        is_lazy=is_lazy,
     )
     return df, Namespace(implementation=implementation)
 

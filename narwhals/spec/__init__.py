@@ -250,6 +250,12 @@ class DataFrame(Protocol):
     def lazy(self) -> Self:
         ...
 
+    def collect(self) -> Self:
+        ...
+
+    def cache(self) -> Self:
+        ...
+
     def to_numpy(self) -> Any:
         ...
 
@@ -285,11 +291,11 @@ class DataFrame(Protocol):
         ...
 
     @property
-    def eager_only(self) -> bool:
+    def is_eager(self) -> bool:
         ...
 
     @property
-    def lazy_only(self) -> bool:
+    def is_lazy(self) -> bool:
         ...
 
 

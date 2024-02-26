@@ -168,6 +168,6 @@ class Namespace(NamespaceProtocol):
             horizontal_concat(dfs, implementation=self._implementation),
             implementation=self._implementation,
             # TODO (incorrect!)
-            eager_only=True,
-            lazy_only=False,
+            is_eager=True,
+            is_lazy=False,
         )

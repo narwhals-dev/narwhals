@@ -6,7 +6,6 @@ from datetime import datetime
 import polars
 import pandas as pd
 
-from narwhals import to_original_object
 from narwhals import translate_frame
 import polars
 
@@ -22,9 +21,9 @@ def q3(
     var_1 = var_2 = datetime(1995, 3, 15)
     var_3 = "BUILDING"
 
-    customer_ds, pl = translate_frame(customer_ds_raw, lazy_only=True)
-    line_item_ds, _ = translate_frame(line_item_ds_raw, lazy_only=True)
-    orders_ds, _ = translate_frame(orders_ds_raw, lazy_only=True)
+    customer_ds, pl = translate_frame(customer_ds_raw, is_lazy=True)
+    line_item_ds, _ = translate_frame(line_item_ds_raw, is_lazy=True)
+    orders_ds, _ = translate_frame(orders_ds_raw, is_lazy=True)
 
     q_final = (
         customer_ds.filter(pl.col("c_mktsegment") == var_3)
@@ -49,7 +48,7 @@ def q3(
         .head(10)
     )
 
-    return to_original_object(q_final.collect())
+    return q_final.collect().to_native()
 
 
 customer_ds = polars.scan_parquet("../tpch-data/customer.parquet")

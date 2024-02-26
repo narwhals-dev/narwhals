@@ -4,7 +4,6 @@ from typing import Any
 
 import polars
 
-from narwhals import to_original_object
 from narwhals import translate_frame
 
 Q_NUM = 4
@@ -17,8 +16,8 @@ def q4(
     var_1 = datetime(1993, 7, 1)
     var_2 = datetime(1993, 10, 1)
 
-    line_item_ds, pl = translate_frame(lineitem_ds_raw, lazy_only=True)
-    orders_ds, _ = translate_frame(orders_ds_raw, lazy_only=True)
+    line_item_ds, pl = translate_frame(lineitem_ds_raw, is_lazy=True)
+    orders_ds, _ = translate_frame(orders_ds_raw, is_lazy=True)
 
     result = (
         line_item_ds.join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
@@ -34,7 +33,7 @@ def q4(
         )
     )
 
-    return to_original_object(result.collect())
+    return result.collect().to_native()
 
 
 lineitem_ds = polars.scan_parquet("../tpch-data/lineitem.parquet")

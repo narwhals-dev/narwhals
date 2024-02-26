@@ -262,15 +262,15 @@ class Series(SeriesProtocol):
 
 class DataFrame(DataFrameProtocol):
     def __init__(
-        self, df: pl.DataFrame | pl.LazyFrame, *, eager_only: bool, lazy_only: bool
+        self, df: pl.DataFrame | pl.LazyFrame, *, is_eager: bool, is_lazy: bool
     ) -> None:
         self._dataframe = df
-        self._eager_only = eager_only
-        self._lazy_only = lazy_only
+        self._is_eager = is_eager
+        self._is_lazy = is_lazy
 
     def _from_dataframe(self, df: pl.DataFrame | pl.LazyFrame) -> Self:
         # construct, preserving properties
-        return self.__class__(df, eager_only=self._eager_only, lazy_only=self._lazy_only)
+        return self.__class__(df, is_eager=self._is_eager, is_lazy=self._is_lazy)
 
     # --- properties ---
     @property
@@ -283,9 +283,9 @@ class DataFrame(DataFrameProtocol):
 
     @property
     def shape(self) -> tuple[int, int]:
-        if not self._eager_only:
+        if not self._is_eager:
             raise RuntimeError(
-                "DataFrame.shape can only be called if frame was instantiated with `eager_only=True`"
+                "DataFrame.shape can only be called if frame was instantiated with `is_eager=True`"
             )
         assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.shape
@@ -332,44 +332,44 @@ class DataFrame(DataFrameProtocol):
 
     # --- convert ---
     def lazy(self) -> Self:
-        return self.__class__(self._dataframe.lazy(), eager_only=False, lazy_only=True)
+        return self.__class__(self._dataframe.lazy(), is_eager=False, is_lazy=True)
 
     def collect(self) -> Self:
-        if not self._lazy_only:
+        if not self._is_lazy:
             raise RuntimeError(
-                "DataFrame.collect can only be called if frame was instantiated with `lazy_only=True`"
+                "DataFrame.collect can only be called if frame was instantiated with `is_lazy=True`"
             )
         assert isinstance(self._dataframe, pl.LazyFrame)
-        return self.__class__(self._dataframe.collect(), eager_only=True, lazy_only=False)
+        return self.__class__(self._dataframe.collect(), is_eager=True, is_lazy=False)
 
     def cache(self) -> Self:
-        if not self._lazy_only:
+        if not self._is_lazy:
             raise RuntimeError(
-                "DataFrame.cache can only be called if frame was instantiated with `lazy_only=True`"
+                "DataFrame.cache can only be called if frame was instantiated with `is_lazy=True`"
             )
         assert isinstance(self._dataframe, pl.LazyFrame)
-        return self.__class__(self._dataframe.cache(), eager_only=False, lazy_only=True)
+        return self.__class__(self._dataframe.cache(), is_eager=False, is_lazy=True)
 
     def to_numpy(self) -> Any:
-        if not self._eager_only:
+        if not self._is_eager:
             raise RuntimeError(
-                "DataFrame.to_numpy can only be called if frame was instantiated with `eager_only=True`"
+                "DataFrame.to_numpy can only be called if frame was instantiated with `is_eager=True`"
             )
         assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
-        if not self._eager_only:
+        if not self._is_eager:
             raise RuntimeError(
-                "DataFrame.to_pandas can only be called if frame was instantiated with `eager_only=True`"
+                "DataFrame.to_pandas can only be called if frame was instantiated with `is_eager=True`"
             )
         assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.to_pandas()
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
-        if not self._eager_only:
+        if not self._is_eager:
             raise RuntimeError(
-                "DataFrame.to_dict can only be called if frame was instantiated with `eager_only=True`"
+                "DataFrame.to_dict can only be called if frame was instantiated with `is_eager=True`"
             )
         assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.to_dict(as_series=as_series)
@@ -393,8 +393,8 @@ class DataFrame(DataFrameProtocol):
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
         return GroupBy(
             self._dataframe.group_by(*keys),
-            eager_only=self._eager_only,
-            lazy_only=self._lazy_only,
+            is_eager=self._is_eager,
+            is_lazy=self._is_lazy,
         )
 
     # --- partial reduction ---
@@ -409,19 +409,19 @@ class DataFrame(DataFrameProtocol):
         return self._dataframe
 
     @property
-    def eager_only(self) -> bool:
-        return self._eager_only
+    def is_eager(self) -> bool:
+        return self._is_eager
 
     @property
-    def lazy_only(self) -> bool:
-        return self._lazy_only
+    def is_lazy(self) -> bool:
+        return self._is_lazy
 
 
 class GroupBy(GroupByProtocol):
-    def __init__(self, groupby: Any, *, eager_only: bool, lazy_only: bool) -> None:
+    def __init__(self, groupby: Any, *, is_eager: bool, is_lazy: bool) -> None:
         self._groupby = groupby
-        self._eager_only = eager_only
-        self._lazy_only = lazy_only
+        self._is_eager = is_eager
+        self._is_lazy = is_lazy
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
@@ -431,6 +431,6 @@ class GroupBy(GroupByProtocol):
                 *[extract_native(v) for v in flatten_into_expr(*aggs)],
                 **{key: extract_native(value) for key, value in named_aggs.items()},
             ),
-            eager_only=self._eager_only,
-            lazy_only=self._lazy_only,
+            is_eager=self._is_eager,
+            is_lazy=self._is_lazy,
         )

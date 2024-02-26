@@ -25,12 +25,12 @@ if TYPE_CHECKING:
 
 class GroupBy(GroupByProtocol):
     def __init__(
-        self, df: DataFrame, keys: list[str], *, eager_only: bool, lazy_only: bool
+        self, df: DataFrame, keys: list[str], *, is_eager: bool, is_lazy: bool
     ) -> None:
         self._df = df
         self._keys = list(keys)
-        self._eager_only = eager_only
-        self._lazy_only = lazy_only
+        self._is_eager = is_eager
+        self._is_lazy = is_lazy
 
     def agg(
         self,
@@ -83,8 +83,8 @@ class GroupBy(GroupByProtocol):
         return DataFrame(
             df,
             implementation=self._df._implementation,
-            eager_only=self._eager_only,
-            lazy_only=self._lazy_only,
+            is_eager=self._is_eager,
+            is_lazy=self._is_lazy,
         )
 
 
