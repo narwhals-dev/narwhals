@@ -272,6 +272,16 @@ class DataFrame(DataFrameProtocol):
         # construct, preserving properties
         return self.__class__(df, is_eager=self._is_eager, is_lazy=self._is_lazy)
 
+    def __getitem__(self, column_name: str) -> Series:
+        if not self._is_eager:
+            raise RuntimeError(
+                "DataFrame.shape can only be called if frame was instantiated with `is_eager=True`"
+            )
+        assert isinstance(self._dataframe, pl.DataFrame)
+        return Series(
+            self._dataframe[column_name],
+        )
+
     # --- properties ---
     @property
     def columns(self) -> list[str]:

@@ -207,6 +207,9 @@ class Series(Protocol):
 
 
 class DataFrame(Protocol):
+    def __getitem__(self, column_name: str) -> Series:
+        ...
+
     # --- properties ---
     @property
     def columns(self) -> list[str]:

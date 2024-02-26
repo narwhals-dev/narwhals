@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.pandas_like.group_by import GroupBy
+    from narwhals.pandas_like.series import Series
     from narwhals.spec import DType
     from narwhals.spec import IntoExpr
 
@@ -78,6 +79,18 @@ class DataFrame(DataFrameProtocol):
             implementation=self._implementation,
             is_eager=self._is_eager,
             is_lazy=self._is_lazy,
+        )
+
+    def __getitem__(self, column_name: str) -> Series:
+        from narwhals.pandas_like.series import Series
+
+        if not self._is_eager:
+            raise RuntimeError(
+                "DataFrame.__getitem__ can only be called when it was instantiated with `is_eager=True`"
+            )
+        return Series(
+            self._dataframe.loc[:, column_name],
+            implementation=self._implementation,
         )
 
     # --- properties ---
@@ -256,7 +269,7 @@ class DataFrame(DataFrameProtocol):
             raise RuntimeError(
                 "DataFrame.to_pandas can only be called when it was instantiated with `is_eager=True`"
             )
-        return self._dataframe.to_pandas()
+        return self._dataframe
 
     # --- public, non-Polars ---
     @property
