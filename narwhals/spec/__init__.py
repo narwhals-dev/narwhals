@@ -170,6 +170,10 @@ class Series(Protocol):
     def name(self) -> str:
         ...
 
+    @property
+    def shape(self) -> tuple[int]:
+        ...
+
     def cast(self, dtype: DType) -> Self:
         ...
 

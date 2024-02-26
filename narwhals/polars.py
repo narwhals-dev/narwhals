@@ -217,6 +217,10 @@ class Series(SeriesProtocol):
     def name(self) -> str:
         return self._series.name
 
+    @property
+    def shape(self) -> tuple[int]:
+        return self._series.shape
+
     def cast(
         self,
         dtype: DType,  # type: ignore[override]

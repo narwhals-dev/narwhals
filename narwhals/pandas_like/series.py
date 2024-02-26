@@ -31,8 +31,7 @@ class Series(SeriesProtocol):
             DataFrame this column originates from.
         """
 
-        self._name = series.name
-        assert self._name is not None
+        self._name = str(series.name) if series.name is not None else ""
         self._series = reset_index(series)
         self._implementation = implementation
 
@@ -58,7 +57,11 @@ class Series(SeriesProtocol):
 
     @property
     def name(self) -> str:
-        return self._name  # type: ignore[no-any-return]
+        return self._name
+
+    @property
+    def shape(self) -> tuple[int]:
+        return self._series.shape  # type: ignore[no-any-return]
 
     @property
     def series(self) -> Any:
