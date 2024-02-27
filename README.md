@@ -1,5 +1,12 @@
 # Narwhals
 
+<h1 align="center">
+	<img
+		width="400"
+		alt="narwhals_small"
+		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/26be901e-5383-49f2-9fbd-5c97b7696f27">
+</h1>
+
 Extremely lightweight compatibility layer between Polars, pandas, cuDF, and Modin.
 
 Seamlessly support all four, without depending on any of them!
