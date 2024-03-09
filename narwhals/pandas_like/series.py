@@ -63,6 +63,10 @@ class Series(SeriesProtocol):
     def shape(self) -> tuple[int]:
         return self._series.shape  # type: ignore[no-any-return]
 
+    def rename(self, name: str) -> Series:
+        ser = self.series
+        return self._from_series(ser.rename(name, copy=False))
+
     @property
     def series(self) -> Any:
         return self._series

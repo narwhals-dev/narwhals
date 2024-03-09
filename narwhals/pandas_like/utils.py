@@ -297,7 +297,7 @@ def series_from_iterable(
 def translate_dtype(dtype: Any) -> DType:
     from narwhals.pandas_like import dtypes
 
-    if dtype == "int64":
+    if dtype in ("int64", "Int64"):
         return dtypes.Int64()
     if dtype == "int32":
         return dtypes.Int32()
@@ -313,14 +313,16 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.UInt16()
     if dtype == "uint8":
         return dtypes.UInt8()
-    if dtype == "float64":
+    if dtype in ("float64", "Float64"):
         return dtypes.Float64()
-    if dtype == "float32":
+    if dtype in ("float32", "Float32"):
         return dtypes.Float32()
-    if dtype == "object":
+    if dtype in ("object", "string"):
         return dtypes.String()
-    if dtype == "bool":
-        return dtypes.Bool()
+    if dtype in ("bool", "boolean"):
+        return dtypes.Boolean()
+    if str(dtype).startswith("datetime64"):
+        return dtypes.Datetime()
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
 
@@ -354,7 +356,7 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
         return "object"
-    if isinstance_or_issubclass(dtype, dtypes.Bool):
+    if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)

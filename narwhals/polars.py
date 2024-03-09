@@ -8,6 +8,7 @@ from typing import Sequence
 
 import polars as pl
 
+from narwhals.pandas_like.utils import isinstance_or_issubclass
 from narwhals.spec import DataFrame as DataFrameProtocol
 from narwhals.spec import DType as DTypeProtocol
 from narwhals.spec import Expr as ExprProtocol
@@ -18,6 +19,7 @@ from narwhals.spec import Series as SeriesProtocol
 from narwhals.utils import flatten_into_expr
 
 if TYPE_CHECKING:
+    from polars.type_aliases import PolarsDataType
     from typing_extensions import Self
 
     from narwhals.spec import IntoExpr
@@ -47,7 +49,7 @@ class Expr(ExprProtocol):
         self,
         dtype: DType,  # type: ignore[override]
     ) -> Self:
-        return self.__class__(self._expr.cast(extract_native(dtype)))
+        return self.__class__(self._expr.cast(reverse_translate_dtype(dtype)))
 
     # --- binary ---
     def __eq__(self, other: object) -> Expr:  # type: ignore[override]
@@ -146,22 +148,86 @@ class DType(DTypeProtocol):
 
     @classmethod
     def is_numeric(cls: type[Self]) -> bool:
-        return cls._dtype.is_numeric()  # type: ignore[no-any-return]
+        return reverse_translate_dtype(cls).is_numeric()  # type: ignore[no-any-return]
+
+
+class NumericType(DType):
+    ...
+
+
+class TemporalType(DType):
+    ...
+
+
+class Int64(NumericType):
+    ...
+
+
+class Int32(NumericType):
+    ...
+
+
+class Int16(NumericType):
+    ...
+
+
+class Int8(NumericType):
+    ...
+
+
+class UInt64(NumericType):
+    ...
+
+
+class UInt32(NumericType):
+    ...
+
+
+class UInt16(NumericType):
+    ...
+
+
+class UInt8(NumericType):
+    ...
+
+
+class Float64(NumericType):
+    ...
+
+
+class Float32(NumericType):
+    ...
+
+
+class String(DType):
+    ...
+
+
+class Boolean(DType):
+    ...
+
+
+class Datetime(TemporalType):
+    ...
+
+
+class Date(TemporalType):
+    ...
 
 
 class Namespace(NamespaceProtocol):
-    Float64: DType
-    Float32: DType
-    Int64: DType
-    Int32: DType
-    Int16: DType
-    Int8: DType
-    UInt64: DType
-    UInt32: DType
-    UInt16: DType
-    UInt8: DType
-    Bool: DType
-    String: DType
+    Float64 = Float64
+    Float32 = Float32
+    Int64 = Int64
+    Int32 = Int32
+    Int16 = Int16
+    Int8 = Int8
+    UInt64 = UInt64
+    UInt32 = UInt32
+    UInt16 = UInt16
+    UInt8 = UInt8
+    Boolean = Boolean
+    String = String
 
     # --- selection ---
     def col(self, *names: str | Iterable[str]) -> Expr:
@@ -200,9 +266,15 @@ class Namespace(NamespaceProtocol):
         self,
         items: Iterable[DataFrame],  # type: ignore[override]
         *,
-        how: str,
+        how: str = "vertical",
     ) -> DataFrame:
-        # bit harder, do this later
+        if how == "horizontal":
+            # TODO: is_eager / is_lazy not really correct here
+            return DataFrame(
+                pl.concat([extract_native(v) for v in items], how="horizontal"),
+                is_eager=True,
+                is_lazy=False,
+            )
         raise NotImplementedError
 
 
@@ -221,11 +293,14 @@ class Series(SeriesProtocol):
     def shape(self) -> tuple[int]:
         return self._series.shape
 
+    def rename(self, name: str) -> Self:
+        return self.__class__(self._series.rename(name))
+
     def cast(
         self,
         dtype: DType,  # type: ignore[override]
     ) -> Self:
-        return self.__class__(self._series.cast(extract_native(dtype)))
+        return self.__class__(self._series.cast(reverse_translate_dtype(dtype)))
 
     def item(self) -> Any:
         return self._series.item()
@@ -293,7 +368,9 @@ class DataFrame(DataFrameProtocol):
 
     @property
     def schema(self) -> dict[str, DTypeProtocol]:
-        return {key: DType(value) for key, value in self._dataframe.schema.items()}
+        return {
+            col: translate_dtype(dtype) for col, dtype in self._dataframe.schema.items()
+        }
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -303,6 +380,14 @@ class DataFrame(DataFrameProtocol):
             )
         assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.shape
+
+    def iter_columns(self) -> Iterable[Series]:
+        if not self._is_eager:
+            raise RuntimeError(
+                "DataFrame.iter_columns can only be called if frame was instantiated with `is_eager=True`"
+            )
+        assert isinstance(self._dataframe, pl.DataFrame)
+        return (Series(self._dataframe[col]) for col in self.columns)
 
     # --- reshape ---
     def with_columns(
@@ -448,3 +533,69 @@ class GroupBy(GroupByProtocol):
             is_eager=self._is_eager,
             is_lazy=self._is_lazy,
         )
+
+
+def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
+    if isinstance_or_issubclass(dtype, Float64):
+        return pl.Float64
+    if isinstance_or_issubclass(dtype, Float32):
+        return pl.Float32
+    if isinstance_or_issubclass(dtype, Int64):
+        return pl.Int64
+    if isinstance_or_issubclass(dtype, Int32):
+        return pl.Int32
+    if isinstance_or_issubclass(dtype, Int16):
+        return pl.Int16
+    if isinstance_or_issubclass(dtype, UInt8):
+        return pl.UInt8
+    if isinstance_or_issubclass(dtype, UInt64):
+        return pl.UInt64
+    if isinstance_or_issubclass(dtype, UInt32):
+        return pl.UInt32
+    if isinstance_or_issubclass(dtype, UInt16):
+        return pl.UInt16
+    if isinstance_or_issubclass(dtype, UInt8):
+        return pl.UInt8
+    if isinstance_or_issubclass(dtype, String):
+        return pl.String
+    if isinstance_or_issubclass(dtype, Boolean):
+        return pl.Boolean
+    if isinstance_or_issubclass(dtype, Datetime):
+        return pl.Datetime
+    if isinstance_or_issubclass(dtype, Date):
+        return pl.Date
+    msg = f"Unknown dtype: {dtype}"
+    raise TypeError(msg)
+
+
+def translate_dtype(dtype: PolarsDataType) -> Any:
+    if dtype == pl.Float64:
+        return Float64
+    if dtype == pl.Float32:
+        return Float32
+    if dtype == pl.Int64:
+        return Int64
+    if dtype == pl.Int32:
+        return Int32
+    if dtype == pl.Int16:
+        return Int16
+    if dtype == pl.UInt8:
+        return UInt8
+    if dtype == pl.UInt64:
+        return UInt64
+    if dtype == pl.UInt32:
+        return UInt32
+    if dtype == pl.UInt16:
+        return UInt16
+    if dtype == pl.UInt8:
+        return UInt8
+    if dtype == pl.String:
+        return String
+    if dtype == pl.Boolean:
+        return Boolean
+    if dtype == pl.Datetime:
+        return Datetime
+    if dtype == pl.Date:
+        return Date
+    msg = f"Unknown dtype: {dtype}"
+    raise TypeError(msg)

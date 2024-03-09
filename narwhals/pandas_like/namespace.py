@@ -28,7 +28,7 @@ class Namespace(NamespaceProtocol):
     UInt8 = dtypes.UInt8
     Float64 = dtypes.Float64
     Float32 = dtypes.Float32
-    Bool = dtypes.Bool
+    Boolean = dtypes.Boolean
     String = dtypes.String
 
     # --- not in spec ---
@@ -151,13 +151,13 @@ class Namespace(NamespaceProtocol):
         self,
         items: Iterable[DataFrame],  # type: ignore[override]
         *,
-        how: str,
+        how: str = "vertical",
     ) -> DataFrame:
         dfs: list[Any] = []
-        kind: Any = {}
+        kind: Any = set()
         for df in items:
             dfs.append(df._dataframe)
-            kind.append(type(df._dataframe))
+            kind.add(type(df._dataframe))
         if len(kind) > 1:
             msg = "Can only concat DataFrames or LazyFrames, not mixtures of the two"
             raise TypeError(msg)

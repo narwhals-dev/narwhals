@@ -122,7 +122,7 @@ class Namespace(Protocol):
     UInt32: DType
     UInt16: DType
     UInt8: DType
-    Bool: DType
+    Boolean: DType
     String: DType
 
     # --- selection ---
@@ -158,7 +158,7 @@ class Namespace(Protocol):
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...
 
-    def concat(self, items: Iterable[DataFrame], *, how: str) -> DataFrame:
+    def concat(self, items: Iterable[DataFrame], *, how: str = "vertical") -> DataFrame:
         ...
 
 
@@ -172,6 +172,9 @@ class Series(Protocol):
 
     @property
     def shape(self) -> tuple[int]:
+        ...
+
+    def rename(self, name: str) -> Self:
         ...
 
     def cast(self, dtype: DType) -> Self:
@@ -225,6 +228,9 @@ class DataFrame(Protocol):
 
     @property
     def shape(self) -> tuple[int, int]:
+        ...
+
+    def iter_columns(self) -> Iterable[Series]:
         ...
 
     # --- reshape ---

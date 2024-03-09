@@ -1,78 +1,32 @@
-# todo: simplify all of this!
-try:
-    import polars as pl
-except ModuleNotFoundError:
-    POLARS_AVAILABLE = False
-    pl = object  # type: ignore[assignment]
-else:
-    POLARS_AVAILABLE = True
-try:
-    import pandas as pd
-except ModuleNotFoundError:
-    PANDAS_AVAILABLE = False
-    pd = object
-else:
-    PANDAS_AVAILABLE = True
-try:
-    import cudf
-except ModuleNotFoundError:
-    CUDF_AVAILABLE = False
-    cudf = object
-else:
-    CUDF_AVAILABLE = True
-try:
-    import modin.pandas as mpd
-except ModuleNotFoundError:
-    MODIN_AVAILABLE = False
-    mpd = object
-else:
-    MODIN_AVAILABLE = True
-
-
 from typing import Any
+
+from narwhals.translate import get_pandas
+from narwhals.translate import get_polars
 
 
 def is_dataframe(obj: Any) -> bool:
-    if POLARS_AVAILABLE and isinstance(
-        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
-    ):
-        return isinstance(obj, pl.DataFrame)
-    from narwhals.pandas_like.dataframe import DataFrame
-
-    return isinstance(obj, DataFrame)
-
-
-def is_expr(obj: Any) -> bool:
-    if POLARS_AVAILABLE and isinstance(
-        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
-    ):
-        return isinstance(obj, pl.Expr)
-    from narwhals.pandas_like.expr import Expr
-
-    return isinstance(obj, Expr)
+    if (pl := get_polars()) is not None and isinstance(obj, (pl.DataFrame, pl.LazyFrame)):
+        return True
+    if (pd := get_pandas()) is not None and isinstance(obj, pd.DataFrame):
+        return True
+    raise NotImplementedError
 
 
 def is_series(obj: Any) -> bool:
-    if POLARS_AVAILABLE and isinstance(
-        obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
-    ):
-        return isinstance(obj, pl.Series)
-    from narwhals.pandas_like.series import Series
-
-    return isinstance(obj, Series)
+    if (pl := get_polars()) is not None and isinstance(obj, (pl.Series)):
+        return True
+    if (pd := get_pandas()) is not None and isinstance(obj, pd.Series):
+        return True
+    raise NotImplementedError
 
 
 def get_implementation(obj: Any) -> str:
-    if POLARS_AVAILABLE and isinstance(
+    if (pl := get_polars()) is not None and isinstance(
         obj, (pl.DataFrame, pl.LazyFrame, pl.Expr, pl.Series)
     ):
         return "polars"
-    if PANDAS_AVAILABLE and isinstance(obj, (pd.DataFrame, pd.Series)):
+    if (pd := get_pandas()) is not None and isinstance(obj, (pd.DataFrame, pd.Series)):
         return "pandas"
-    if CUDF_AVAILABLE and isinstance(obj, (cudf.DataFrame, cudf.Series)):
-        return "cudf"
-    if MODIN_AVAILABLE and isinstance(obj, mpd.DataFrame):
-        return "modin"
     msg = f"Unknown implementation: {obj}"
     raise TypeError(msg)
 

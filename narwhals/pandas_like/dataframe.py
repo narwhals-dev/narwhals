@@ -49,7 +49,7 @@ class DataFrame(DataFrameProtocol):
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Add `._dataframe` to see native output |\n"
+            + "| Add `.to_native()` to see native output |\n"
             + "└"
             + "─" * length
             + "┘\n"
@@ -246,6 +246,18 @@ class DataFrame(DataFrameProtocol):
                 "DataFrame.shape can only be called when it was instantiated with `is_eager=True`"
             )
         return self._dataframe.shape  # type: ignore[no-any-return]
+
+    def iter_columns(self) -> Iterable[Series]:
+        from narwhals.pandas_like.series import Series
+
+        if not self._is_eager:
+            raise RuntimeError(
+                "DataFrame.iter_columns can only be called when it was instantiated with `is_eager=True`"
+            )
+        return (
+            Series(self._dataframe[col], implementation=self._implementation)
+            for col in self.columns
+        )
 
     def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
         if not self._is_eager:

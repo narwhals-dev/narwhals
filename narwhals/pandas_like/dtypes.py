@@ -25,6 +25,10 @@ class NumericType(DType):
     ...
 
 
+class TemporalType(DType):
+    ...
+
+
 class Int64(NumericType):
     ...
 
@@ -69,5 +73,17 @@ class String(DType):
     ...
 
 
-class Bool(DType):
+class Boolean(DType):
+    ...
+
+
+class Datetime(DType):
+    ...
+
+
+class Date(DType):
+    ...
+
+
+class Duration(DType):
     ...
