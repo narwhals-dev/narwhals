@@ -140,10 +140,23 @@ def translate_any(obj: Any) -> tuple[Series | DataFrame, Namespace]:
         return translate_frame(obj, is_eager=True)
 
 
+def get_namespace(implementation: str) -> Namespace:
+    if implementation == "pandas":
+        from narwhals.pandas_like.namespace import Namespace
+
+        return Namespace(implementation="pandas")
+    if implementation == "polars":
+        from narwhals.polars import Namespace  # type: ignore[assignment]
+
+        return Namespace()  # type: ignore[call-arg]
+    raise NotImplementedError
+
+
 __all__ = [
     "translate_frame",
     "translate_series",
     "translate_any",
     "get_pandas",
     "get_polars",
+    "get_namespace",
 ]

@@ -77,6 +77,10 @@ class Boolean(DType):
     ...
 
 
+class Object(DType):
+    ...
+
+
 class Datetime(DType):
     ...
 

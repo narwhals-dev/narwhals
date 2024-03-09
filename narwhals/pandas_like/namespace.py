@@ -8,7 +8,7 @@ from typing import Iterable
 from narwhals.pandas_like import dtypes
 from narwhals.pandas_like.dataframe import PdxDataFrame
 from narwhals.pandas_like.expr import Expr
-from narwhals.pandas_like.series import PdxSeries
+from narwhals.pandas_like.series import PandasLikeSeries
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.pandas_like.utils import series_from_iterable
@@ -31,13 +31,13 @@ class Namespace(NamespaceProtocol):
     Boolean = dtypes.Boolean
     String = dtypes.String
 
-    def Series(self, name: str, data: list[Any]) -> PdxSeries:  # noqa: N802
-        from narwhals.pandas_like.series import PdxSeries
+    def Series(self, name: str, data: list[Any]) -> PandasLikeSeries:  # noqa: N802
+        from narwhals.pandas_like.series import PandasLikeSeries
 
         if self._implementation == "pandas":
             import pandas as pd
 
-            return PdxSeries(
+            return PandasLikeSeries(
                 pd.Series(name=name, data=data), implementation=self._implementation
             )
         raise NotImplementedError
@@ -48,7 +48,7 @@ class Namespace(NamespaceProtocol):
 
     def _create_expr_from_callable(  # noqa: PLR0913
         self,
-        func: Callable[[PdxDataFrame], list[PdxSeries]],
+        func: Callable[[PdxDataFrame], list[PandasLikeSeries]],
         *,
         depth: int,
         function_name: str,
@@ -64,8 +64,10 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def _create_series_from_scalar(self, value: Any, series: PdxSeries) -> PdxSeries:
-        return PdxSeries(
+    def _create_series_from_scalar(
+        self, value: Any, series: PandasLikeSeries
+    ) -> PandasLikeSeries:
+        return PandasLikeSeries(
             series_from_iterable(
                 [value],
                 name=series.series.name,
@@ -75,7 +77,7 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def _create_expr_from_series(self, series: PdxSeries) -> Expr:
+    def _create_expr_from_series(self, series: PandasLikeSeries) -> Expr:
         return Expr(
             lambda _df: [series],
             depth=0,
@@ -94,7 +96,7 @@ class Namespace(NamespaceProtocol):
     def all(self) -> Expr:
         return Expr(
             lambda df: [
-                PdxSeries(
+                PandasLikeSeries(
                     df._dataframe.loc[:, column_name],
                     implementation=self._implementation,
                 )
@@ -131,7 +133,7 @@ class Namespace(NamespaceProtocol):
     def len(self) -> Expr:
         return Expr(
             lambda df: [
-                PdxSeries(
+                PandasLikeSeries(
                     series_from_iterable(
                         [len(df._dataframe)],
                         name="len",

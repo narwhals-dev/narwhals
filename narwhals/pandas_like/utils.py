@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import PdxDataFrame
     from narwhals.pandas_like.dtypes import DType
     from narwhals.pandas_like.expr import Expr
-    from narwhals.pandas_like.series import PdxSeries
+    from narwhals.pandas_like.series import PandasLikeSeries
 
     ExprT = TypeVar("ExprT", bound=Expr)
 
@@ -32,7 +32,7 @@ def validate_column_comparand(other: Any) -> Any:
     library can broadcast it.
     """
     from narwhals.pandas_like.dataframe import PdxDataFrame
-    from narwhals.pandas_like.series import PdxSeries
+    from narwhals.pandas_like.series import PandasLikeSeries
 
     if isinstance(other, list):
         if len(other) > 1:
@@ -42,7 +42,7 @@ def validate_column_comparand(other: Any) -> Any:
         other = other[0]
     if isinstance(other, PdxDataFrame):
         return NotImplemented
-    if isinstance(other, PdxSeries):
+    if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
             return other.item()
@@ -57,7 +57,7 @@ def validate_dataframe_comparand(other: Any) -> Any:
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
     from narwhals.pandas_like.dataframe import PdxDataFrame
-    from narwhals.pandas_like.series import PdxSeries
+    from narwhals.pandas_like.series import PandasLikeSeries
 
     if isinstance(other, list) and len(other) > 1:
         # e.g. `plx.all() + plx.all()`
@@ -67,7 +67,7 @@ def validate_dataframe_comparand(other: Any) -> Any:
         other = other[0]
     if isinstance(other, PdxDataFrame):
         return NotImplemented
-    if isinstance(other, PdxSeries):
+    if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
             return item(other)
@@ -99,7 +99,7 @@ def parse_into_exprs(
 def parse_into_expr(implementation: str, into_expr: IntoExpr) -> Expr:
     from narwhals.pandas_like.expr import Expr
     from narwhals.pandas_like.namespace import Namespace
-    from narwhals.pandas_like.series import PdxSeries
+    from narwhals.pandas_like.series import PandasLikeSeries
 
     plx = Namespace(implementation=implementation)
 
@@ -107,13 +107,13 @@ def parse_into_expr(implementation: str, into_expr: IntoExpr) -> Expr:
         return plx.col(into_expr)
     if isinstance(into_expr, Expr):
         return into_expr
-    if isinstance(into_expr, PdxSeries):
+    if isinstance(into_expr, PandasLikeSeries):
         return plx._create_expr_from_series(into_expr)
     msg = f"Expected IntoExpr, got {type(into_expr)}"
     raise TypeError(msg)
 
 
-def evaluate_into_expr(df: PdxDataFrame, into_expr: IntoExpr) -> list[PdxSeries]:
+def evaluate_into_expr(df: PdxDataFrame, into_expr: IntoExpr) -> list[PandasLikeSeries]:
     """
     Return list of raw columns.
     """
@@ -126,9 +126,9 @@ def evaluate_into_exprs(
     df: PdxDataFrame,
     *exprs: IntoExpr | Iterable[IntoExpr],
     **named_exprs: IntoExpr,
-) -> list[PdxSeries]:
+) -> list[PandasLikeSeries]:
     """Evaluate each expr into Series."""
-    series: list[PdxSeries] = [
+    series: list[PandasLikeSeries] = [
         item
         for sublist in [
             evaluate_into_expr(df, into_expr) for into_expr in flatten_into_expr(*exprs)
@@ -147,12 +147,12 @@ def evaluate_into_exprs(
 def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
     from narwhals.pandas_like.expr import Expr
     from narwhals.pandas_like.namespace import Namespace
-    from narwhals.pandas_like.series import PdxSeries
+    from narwhals.pandas_like.series import PandasLikeSeries
 
     plx = Namespace(implementation=expr._implementation)
 
-    def func(df: PdxDataFrame) -> list[PdxSeries]:
-        out: list[PdxSeries] = []
+    def func(df: PdxDataFrame) -> list[PandasLikeSeries]:
+        out: list[PandasLikeSeries] = []
         for column in expr._call(df):
             _out = getattr(column, attr)(
                 *[maybe_evaluate_expr(df, arg) for arg in args],
@@ -161,7 +161,7 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                     for arg_name, arg_value in kwargs.items()
                 },
             )
-            if isinstance(_out, PdxSeries):
+            if isinstance(_out, PandasLikeSeries):
                 out.append(_out)
             else:
                 out.append(plx._create_series_from_scalar(_out, column))
@@ -317,10 +317,12 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.Float64()
     if dtype in ("float32", "Float32"):
         return dtypes.Float32()
-    if dtype in ("object", "string"):
+    if dtype == ("string"):
         return dtypes.String()
     if dtype in ("bool", "boolean"):
         return dtypes.Boolean()
+    if dtype == "object":
+        return dtypes.Object()
     if str(dtype).startswith("datetime64"):
         return dtypes.Datetime()
     msg = f"Unknown dtype: {dtype}"

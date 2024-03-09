@@ -9,7 +9,7 @@ def is_dataframe(obj: Any) -> bool:
         return True
     if (pd := get_pandas()) is not None and isinstance(obj, pd.DataFrame):
         return True
-    raise NotImplementedError
+    return False
 
 
 def is_series(obj: Any) -> bool:

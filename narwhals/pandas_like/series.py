@@ -9,6 +9,7 @@ from pandas.api.types import is_extension_array_dtype
 from narwhals.pandas_like.utils import item
 from narwhals.pandas_like.utils import reset_index
 from narwhals.pandas_like.utils import reverse_translate_dtype
+from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_column_comparand
 from narwhals.spec import Series as SeriesProtocol
 
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.dtypes import DType
 
 
-class PdxSeries(SeriesProtocol):
+class PandasLikeSeries(SeriesProtocol):
     def __init__(
         self,
         series: Any,
@@ -43,7 +44,7 @@ class PdxSeries(SeriesProtocol):
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Add `.to_native()` to see native output         |\n"
+            + "| Add `.to_native()` to see native output |\n"
             + "└"
             + "─" * length
             + "┘\n"
@@ -63,12 +64,19 @@ class PdxSeries(SeriesProtocol):
     def shape(self) -> tuple[int]:
         return self._series.shape  # type: ignore[no-any-return]
 
-    def rename(self, name: str) -> PdxSeries:
+    def rename(self, name: str) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(ser.rename(name, copy=False))
 
     @property
     def series(self) -> Any:
+        return self._series
+
+    @property
+    def dtype(self) -> DType:
+        return translate_dtype(self._series.dtype)
+
+    def to_native(self) -> Any:
         return self._series
 
     def cast(
@@ -88,121 +96,121 @@ class PdxSeries(SeriesProtocol):
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
-    ) -> PdxSeries:
+    ) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(ser.between(lower_bound, upper_bound, inclusive=closed))
 
-    def is_in(self, other: Any) -> PdxSeries:
+    def is_in(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(ser.isin(other))
 
     # Binary comparisons
 
-    def __eq__(self, other: object) -> PdxSeries:  # type: ignore[override]
+    def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser == other).rename(ser.name, copy=False))
 
-    def __ne__(self, other: object) -> PdxSeries:  # type: ignore[override]
+    def __ne__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser != other).rename(ser.name, copy=False))
 
-    def __ge__(self, other: Any) -> PdxSeries:
+    def __ge__(self, other: Any) -> PandasLikeSeries:
         other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser >= other).rename(ser.name, copy=False))
 
-    def __gt__(self, other: Any) -> PdxSeries:
+    def __gt__(self, other: Any) -> PandasLikeSeries:
         other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser > other).rename(ser.name, copy=False))
 
-    def __le__(self, other: Any) -> PdxSeries:
+    def __le__(self, other: Any) -> PandasLikeSeries:
         other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser <= other).rename(ser.name, copy=False))
 
-    def __lt__(self, other: Any) -> PdxSeries:
+    def __lt__(self, other: Any) -> PandasLikeSeries:
         other = validate_column_comparand(other)
         ser = self.series
         return self._from_series((ser < other).rename(ser.name, copy=False))
 
-    def __and__(self, other: Any) -> PdxSeries:
+    def __and__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser & other).rename(ser.name, copy=False))
 
-    def __rand__(self, other: Any) -> PdxSeries:
+    def __rand__(self, other: Any) -> PandasLikeSeries:
         return self.__and__(other)
 
-    def __or__(self, other: Any) -> PdxSeries:
+    def __or__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser | other).rename(ser.name, copy=False))
 
-    def __ror__(self, other: Any) -> PdxSeries:
+    def __ror__(self, other: Any) -> PandasLikeSeries:
         return self.__or__(other)
 
-    def __add__(self, other: Any) -> PdxSeries:
+    def __add__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser + other).rename(ser.name, copy=False))
 
-    def __radd__(self, other: Any) -> PdxSeries:
+    def __radd__(self, other: Any) -> PandasLikeSeries:
         return self.__add__(other)
 
-    def __sub__(self, other: Any) -> PdxSeries:
+    def __sub__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser - other).rename(ser.name, copy=False))
 
-    def __rsub__(self, other: Any) -> PdxSeries:
+    def __rsub__(self, other: Any) -> PandasLikeSeries:
         return -1 * self.__sub__(other)
 
-    def __mul__(self, other: Any) -> PdxSeries:
+    def __mul__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser * other).rename(ser.name, copy=False))
 
-    def __rmul__(self, other: Any) -> PdxSeries:
+    def __rmul__(self, other: Any) -> PandasLikeSeries:
         return self.__mul__(other)
 
-    def __truediv__(self, other: Any) -> PdxSeries:
+    def __truediv__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser / other).rename(ser.name, copy=False))
 
-    def __rtruediv__(self, other: Any) -> PdxSeries:
+    def __rtruediv__(self, other: Any) -> PandasLikeSeries:
         raise NotImplementedError
 
-    def __floordiv__(self, other: Any) -> PdxSeries:
+    def __floordiv__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser // other).rename(ser.name, copy=False))
 
-    def __rfloordiv__(self, other: Any) -> PdxSeries:
+    def __rfloordiv__(self, other: Any) -> PandasLikeSeries:
         raise NotImplementedError
 
-    def __pow__(self, other: Any) -> PdxSeries:
+    def __pow__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser**other).rename(ser.name, copy=False))
 
-    def __rpow__(self, other: Any) -> PdxSeries:  # pragma: no cover
+    def __rpow__(self, other: Any) -> PandasLikeSeries:  # pragma: no cover
         raise NotImplementedError
 
-    def __mod__(self, other: Any) -> PdxSeries:
+    def __mod__(self, other: Any) -> PandasLikeSeries:
         ser = self.series
         other = validate_column_comparand(other)
         return self._from_series((ser % other).rename(ser.name, copy=False))
 
-    def __rmod__(self, other: Any) -> PdxSeries:  # pragma: no cover
+    def __rmod__(self, other: Any) -> PandasLikeSeries:  # pragma: no cover
         raise NotImplementedError
 
     # Unary
 
-    def __invert__(self: PdxSeries) -> PdxSeries:
+    def __invert__(self: PandasLikeSeries) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(~ser)
 
@@ -261,11 +269,11 @@ class PdxSeries(SeriesProtocol):
 
     # Transformations
 
-    def is_null(self) -> PdxSeries:
+    def is_null(self) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(ser.isna())
 
-    def drop_nulls(self) -> PdxSeries:
+    def drop_nulls(self) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(ser.dropna())
 
@@ -273,21 +281,23 @@ class PdxSeries(SeriesProtocol):
         ser = self.series
         return ser.nunique()  # type: ignore[no-any-return]
 
-    def zip_with(self, mask: SeriesProtocol, other: SeriesProtocol) -> PdxSeries:
+    def zip_with(self, mask: SeriesProtocol, other: SeriesProtocol) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(ser.where(mask, other))
 
-    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> PdxSeries:
+    def sample(
+        self, n: int, fraction: float, *, with_replacement: bool
+    ) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(
             ser.sample(n=n, frac=fraction, with_replacement=with_replacement)
         )
 
-    def unique(self) -> PdxSeries:
+    def unique(self) -> PandasLikeSeries:
         ser = self.series
         return ser.unique()  # type: ignore[no-any-return]
 
-    def is_nan(self) -> PdxSeries:
+    def is_nan(self) -> PandasLikeSeries:
         ser = self.series
         if is_extension_array_dtype(ser.dtype):
             return self._from_series((ser != ser).fillna(False))  # noqa: PLR0124
@@ -297,7 +307,7 @@ class PdxSeries(SeriesProtocol):
         self,
         *,
         descending: bool | Sequence[bool] = True,
-    ) -> PdxSeries:
+    ) -> PandasLikeSeries:
         ser = self.series
         return self._from_series(
             ser.sort_values(ascending=not descending).rename(self.name)

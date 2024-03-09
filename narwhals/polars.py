@@ -292,9 +292,16 @@ class Series(SeriesProtocol):
     def alias(self, name: str) -> Self:
         return self.__class__(self._series.alias(name))
 
+    def to_native(self) -> Any:
+        return self._series
+
     @property
     def name(self) -> str:
         return self._series.name
+
+    @property
+    def dtype(self) -> DType:
+        return translate_dtype(self._series.dtype)  # type: ignore[no-any-return]
 
     @property
     def shape(self) -> tuple[int]:
