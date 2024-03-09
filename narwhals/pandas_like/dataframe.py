@@ -19,13 +19,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals.pandas_like.group_by import GroupBy
-    from narwhals.pandas_like.series import PandasSeries
+    from narwhals.pandas_like.group_by import PdxGroupBy
+    from narwhals.pandas_like.series import PdxSeries
     from narwhals.spec import DType
     from narwhals.spec import IntoExpr
 
 
-class DataFrame(DataFrameProtocol):
+class PdxDataFrame(DataFrameProtocol):
     # --- not in the spec ---
     def __init__(
         self,
@@ -81,14 +81,14 @@ class DataFrame(DataFrameProtocol):
             is_lazy=self._is_lazy,
         )
 
-    def __getitem__(self, column_name: str) -> PandasSeries:
-        from narwhals.pandas_like.series import PandasSeries
+    def __getitem__(self, column_name: str) -> PdxSeries:
+        from narwhals.pandas_like.series import PdxSeries
 
         if not self._is_eager:
             raise RuntimeError(
                 "DataFrame.__getitem__ can only be called when it was instantiated with `is_eager=True`"
             )
-        return PandasSeries(
+        return PdxSeries(
             self._dataframe.loc[:, column_name],
             implementation=self._implementation,
         )
@@ -164,12 +164,12 @@ class DataFrame(DataFrameProtocol):
         )
 
     # --- convert ---
-    def collect(self) -> DataFrame:
+    def collect(self) -> PdxDataFrame:
         if not self._is_lazy:
             raise RuntimeError(
                 "DataFrame.collect can only be called when it was instantiated with `is_lazy=True`"
             )
-        return DataFrame(
+        return PdxDataFrame(
             self._dataframe,
             implementation=self._implementation,
             is_eager=True,
@@ -177,10 +177,10 @@ class DataFrame(DataFrameProtocol):
         )
 
     # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        from narwhals.pandas_like.group_by import GroupBy
+    def group_by(self, *keys: str | Iterable[str]) -> PdxGroupBy:
+        from narwhals.pandas_like.group_by import PdxGroupBy
 
-        return GroupBy(
+        return PdxGroupBy(
             self,
             flatten_str(*keys),
             is_eager=self._is_eager,
@@ -247,15 +247,15 @@ class DataFrame(DataFrameProtocol):
             )
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def iter_columns(self) -> Iterable[PandasSeries]:
-        from narwhals.pandas_like.series import PandasSeries
+    def iter_columns(self) -> Iterable[PdxSeries]:
+        from narwhals.pandas_like.series import PdxSeries
 
         if not self._is_eager:
             raise RuntimeError(
                 "DataFrame.iter_columns can only be called when it was instantiated with `is_eager=True`"
             )
         return (
-            PandasSeries(self._dataframe[col], implementation=self._implementation)
+            PdxSeries(self._dataframe[col], implementation=self._implementation)
             for col in self.columns
         )
 

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
-from narwhals.pandas_like.series import PandasSeries
+from narwhals.pandas_like.series import PdxSeries
 from narwhals.pandas_like.utils import register_expression_call
 from narwhals.spec import Expr as ExprProtocol
 from narwhals.spec import ExprStringNamespace as ExprStringNamespaceProtocol
@@ -12,14 +12,14 @@ from narwhals.spec import ExprStringNamespace as ExprStringNamespaceProtocol
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals.pandas_like.dataframe import DataFrame
+    from narwhals.pandas_like.dataframe import PdxDataFrame
     from narwhals.pandas_like.dtypes import DType
 
 
 class Expr(ExprProtocol):
     def __init__(  # noqa: PLR0913
         self,
-        call: Callable[[DataFrame], list[PandasSeries]],
+        call: Callable[[PdxDataFrame], list[PdxSeries]],
         *,
         depth: int,
         function_name: str,
@@ -50,7 +50,7 @@ class Expr(ExprProtocol):
     ) -> Self:
         return cls(
             lambda df: [
-                PandasSeries(
+                PdxSeries(
                     df._dataframe.loc[:, column_name],
                     implementation=implementation,
                 )
@@ -212,7 +212,7 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
 
         return Expr(
             lambda df: [
-                PandasSeries(
+                PdxSeries(
                     series.series.str.endswith(suffix),
                     implementation=df._implementation,
                 )
@@ -228,7 +228,7 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
     def strip_chars(self, characters: str = " ") -> Expr:
         return Expr(
             lambda df: [
-                PandasSeries(
+                PdxSeries(
                     series.series.str.strip(characters),
                     implementation=df._implementation,
                 )

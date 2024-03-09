@@ -6,9 +6,9 @@ from typing import Callable
 from typing import Iterable
 
 from narwhals.pandas_like import dtypes
-from narwhals.pandas_like.dataframe import DataFrame
+from narwhals.pandas_like.dataframe import PdxDataFrame
 from narwhals.pandas_like.expr import Expr
-from narwhals.pandas_like.series import PandasSeries
+from narwhals.pandas_like.series import PdxSeries
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.pandas_like.utils import series_from_iterable
@@ -31,13 +31,13 @@ class Namespace(NamespaceProtocol):
     Boolean = dtypes.Boolean
     String = dtypes.String
 
-    def Series(self, name: str, data: list[Any]) -> PandasSeries:  # noqa: N802
-        from narwhals.pandas_like.series import PandasSeries
+    def Series(self, name: str, data: list[Any]) -> PdxSeries:  # noqa: N802
+        from narwhals.pandas_like.series import PdxSeries
 
         if self._implementation == "pandas":
             import pandas as pd
 
-            return PandasSeries(
+            return PdxSeries(
                 pd.Series(name=name, data=data), implementation=self._implementation
             )
         raise NotImplementedError
@@ -48,7 +48,7 @@ class Namespace(NamespaceProtocol):
 
     def _create_expr_from_callable(  # noqa: PLR0913
         self,
-        func: Callable[[DataFrame], list[PandasSeries]],
+        func: Callable[[PdxDataFrame], list[PdxSeries]],
         *,
         depth: int,
         function_name: str,
@@ -64,10 +64,8 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def _create_series_from_scalar(
-        self, value: Any, series: PandasSeries
-    ) -> PandasSeries:
-        return PandasSeries(
+    def _create_series_from_scalar(self, value: Any, series: PdxSeries) -> PdxSeries:
+        return PdxSeries(
             series_from_iterable(
                 [value],
                 name=series.series.name,
@@ -77,7 +75,7 @@ class Namespace(NamespaceProtocol):
             implementation=self._implementation,
         )
 
-    def _create_expr_from_series(self, series: PandasSeries) -> Expr:
+    def _create_expr_from_series(self, series: PdxSeries) -> Expr:
         return Expr(
             lambda _df: [series],
             depth=0,
@@ -96,7 +94,7 @@ class Namespace(NamespaceProtocol):
     def all(self) -> Expr:
         return Expr(
             lambda df: [
-                PandasSeries(
+                PdxSeries(
                     df._dataframe.loc[:, column_name],
                     implementation=self._implementation,
                 )
@@ -133,7 +131,7 @@ class Namespace(NamespaceProtocol):
     def len(self) -> Expr:
         return Expr(
             lambda df: [
-                PandasSeries(
+                PdxSeries(
                     series_from_iterable(
                         [len(df._dataframe)],
                         name="len",
@@ -162,10 +160,10 @@ class Namespace(NamespaceProtocol):
 
     def concat(
         self,
-        items: Iterable[DataFrame],  # type: ignore[override]
+        items: Iterable[PdxDataFrame],  # type: ignore[override]
         *,
         how: str = "vertical",
-    ) -> DataFrame:
+    ) -> PdxDataFrame:
         dfs: list[Any] = []
         kind: Any = set()
         for df in items:
@@ -177,7 +175,7 @@ class Namespace(NamespaceProtocol):
         if how != "horizontal":
             msg = "Only horizontal concatenation is supported for now"
             raise TypeError(msg)
-        return DataFrame(
+        return PdxDataFrame(
             horizontal_concat(dfs, implementation=self._implementation),
             implementation=self._implementation,
             # TODO (incorrect!)

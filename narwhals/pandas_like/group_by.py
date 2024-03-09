@@ -19,13 +19,13 @@ from narwhals.spec import IntoExpr
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
-    from narwhals.pandas_like.dataframe import DataFrame
+    from narwhals.pandas_like.dataframe import PdxDataFrame
     from narwhals.pandas_like.expr import Expr
 
 
-class GroupBy(GroupByProtocol):
+class PdxGroupBy(GroupByProtocol):
     def __init__(
-        self, df: DataFrame, keys: list[str], *, is_eager: bool, is_lazy: bool
+        self, df: PdxDataFrame, keys: list[str], *, is_eager: bool, is_lazy: bool
     ) -> None:
         self._df = df
         self._keys = list(keys)
@@ -36,7 +36,7 @@ class GroupBy(GroupByProtocol):
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
-    ) -> DataFrame:
+    ) -> PdxDataFrame:
         df = self._df._dataframe
         exprs = parse_into_exprs(
             self._df._implementation,
@@ -77,10 +77,10 @@ class GroupBy(GroupByProtocol):
             self._from_dataframe,
         )
 
-    def _from_dataframe(self, df: DataFrame) -> DataFrame:
-        from narwhals.pandas_like.dataframe import DataFrame
+    def _from_dataframe(self, df: PdxDataFrame) -> PdxDataFrame:
+        from narwhals.pandas_like.dataframe import PdxDataFrame
 
-        return DataFrame(
+        return PdxDataFrame(
             df,
             implementation=self._df._implementation,
             is_eager=self._is_eager,
@@ -93,8 +93,8 @@ def agg_pandas(
     exprs: list[Expr],
     keys: list[str],
     output_names: list[str],
-    from_dataframe: Callable[[Any], DataFrame],
-) -> DataFrame:
+    from_dataframe: Callable[[Any], PdxDataFrame],
+) -> PdxDataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
 
@@ -146,8 +146,8 @@ def agg_generic(  # noqa: PLR0913
     group_by_keys: list[str],
     output_names: list[str],
     implementation: str,
-    from_dataframe: Callable[[Any], DataFrame],
-) -> DataFrame:
+    from_dataframe: Callable[[Any], PdxDataFrame],
+) -> PdxDataFrame:
     dfs: list[Any] = []
     to_remove: list[int] = []
     for i, expr in enumerate(exprs):
