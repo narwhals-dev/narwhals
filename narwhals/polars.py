@@ -229,6 +229,13 @@ class Namespace(NamespaceProtocol):
     Boolean = Boolean
     String = String
 
+    def Series(self, name: str, data: list[Any]) -> Series:  # noqa: N802
+        import polars as pl
+
+        from narwhals.polars import Series
+
+        return Series(pl.Series(name=name, values=data))
+
     # --- selection ---
     def col(self, *names: str | Iterable[str]) -> Expr:
         return Expr(pl.col(*names))  # type: ignore[arg-type]

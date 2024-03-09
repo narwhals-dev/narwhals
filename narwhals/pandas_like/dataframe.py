@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.pandas_like.group_by import GroupBy
-    from narwhals.pandas_like.series import Series
+    from narwhals.pandas_like.series import PandasSeries
     from narwhals.spec import DType
     from narwhals.spec import IntoExpr
 
@@ -81,14 +81,14 @@ class DataFrame(DataFrameProtocol):
             is_lazy=self._is_lazy,
         )
 
-    def __getitem__(self, column_name: str) -> Series:
-        from narwhals.pandas_like.series import Series
+    def __getitem__(self, column_name: str) -> PandasSeries:
+        from narwhals.pandas_like.series import PandasSeries
 
         if not self._is_eager:
             raise RuntimeError(
                 "DataFrame.__getitem__ can only be called when it was instantiated with `is_eager=True`"
             )
-        return Series(
+        return PandasSeries(
             self._dataframe.loc[:, column_name],
             implementation=self._implementation,
         )
@@ -247,15 +247,15 @@ class DataFrame(DataFrameProtocol):
             )
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def iter_columns(self) -> Iterable[Series]:
-        from narwhals.pandas_like.series import Series
+    def iter_columns(self) -> Iterable[PandasSeries]:
+        from narwhals.pandas_like.series import PandasSeries
 
         if not self._is_eager:
             raise RuntimeError(
                 "DataFrame.iter_columns can only be called when it was instantiated with `is_eager=True`"
             )
         return (
-            Series(self._dataframe[col], implementation=self._implementation)
+            PandasSeries(self._dataframe[col], implementation=self._implementation)
             for col in self.columns
         )
 

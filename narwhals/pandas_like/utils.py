@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.dtypes import DType
     from narwhals.pandas_like.expr import Expr
-    from narwhals.pandas_like.series import Series
+    from narwhals.pandas_like.series import PandasSeries
 
     ExprT = TypeVar("ExprT", bound=Expr)
 
@@ -32,7 +32,7 @@ def validate_column_comparand(other: Any) -> Any:
     library can broadcast it.
     """
     from narwhals.pandas_like.dataframe import DataFrame
-    from narwhals.pandas_like.series import Series
+    from narwhals.pandas_like.series import PandasSeries
 
     if isinstance(other, list):
         if len(other) > 1:
@@ -42,7 +42,7 @@ def validate_column_comparand(other: Any) -> Any:
         other = other[0]
     if isinstance(other, DataFrame):
         return NotImplemented
-    if isinstance(other, Series):
+    if isinstance(other, PandasSeries):
         if other.len() == 1:
             # broadcast
             return other.item()
@@ -57,7 +57,7 @@ def validate_dataframe_comparand(other: Any) -> Any:
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
     from narwhals.pandas_like.dataframe import DataFrame
-    from narwhals.pandas_like.series import Series
+    from narwhals.pandas_like.series import PandasSeries
 
     if isinstance(other, list) and len(other) > 1:
         # e.g. `plx.all() + plx.all()`
@@ -67,7 +67,7 @@ def validate_dataframe_comparand(other: Any) -> Any:
         other = other[0]
     if isinstance(other, DataFrame):
         return NotImplemented
-    if isinstance(other, Series):
+    if isinstance(other, PandasSeries):
         if other.len() == 1:
             # broadcast
             return item(other)
@@ -99,7 +99,7 @@ def parse_into_exprs(
 def parse_into_expr(implementation: str, into_expr: IntoExpr) -> Expr:
     from narwhals.pandas_like.expr import Expr
     from narwhals.pandas_like.namespace import Namespace
-    from narwhals.pandas_like.series import Series
+    from narwhals.pandas_like.series import PandasSeries
 
     plx = Namespace(implementation=implementation)
 
@@ -107,13 +107,13 @@ def parse_into_expr(implementation: str, into_expr: IntoExpr) -> Expr:
         return plx.col(into_expr)
     if isinstance(into_expr, Expr):
         return into_expr
-    if isinstance(into_expr, Series):
+    if isinstance(into_expr, PandasSeries):
         return plx._create_expr_from_series(into_expr)
     msg = f"Expected IntoExpr, got {type(into_expr)}"
     raise TypeError(msg)
 
 
-def evaluate_into_expr(df: DataFrame, into_expr: IntoExpr) -> list[Series]:
+def evaluate_into_expr(df: DataFrame, into_expr: IntoExpr) -> list[PandasSeries]:
     """
     Return list of raw columns.
     """
@@ -126,9 +126,9 @@ def evaluate_into_exprs(
     df: DataFrame,
     *exprs: IntoExpr | Iterable[IntoExpr],
     **named_exprs: IntoExpr,
-) -> list[Series]:
+) -> list[PandasSeries]:
     """Evaluate each expr into Series."""
-    series: list[Series] = [
+    series: list[PandasSeries] = [
         item
         for sublist in [
             evaluate_into_expr(df, into_expr) for into_expr in flatten_into_expr(*exprs)
@@ -147,12 +147,12 @@ def evaluate_into_exprs(
 def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
     from narwhals.pandas_like.expr import Expr
     from narwhals.pandas_like.namespace import Namespace
-    from narwhals.pandas_like.series import Series
+    from narwhals.pandas_like.series import PandasSeries
 
     plx = Namespace(implementation=expr._implementation)
 
-    def func(df: DataFrame) -> list[Series]:
-        out: list[Series] = []
+    def func(df: DataFrame) -> list[PandasSeries]:
+        out: list[PandasSeries] = []
         for column in expr._call(df):
             _out = getattr(column, attr)(
                 *[maybe_evaluate_expr(df, arg) for arg in args],
@@ -161,7 +161,7 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                     for arg_name, arg_value in kwargs.items()
                 },
             )
-            if isinstance(_out, Series):
+            if isinstance(_out, PandasSeries):
                 out.append(_out)
             else:
                 out.append(plx._create_series_from_scalar(_out, column))

@@ -6,7 +6,7 @@ from typing import Any
 if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import DataFrame
     from narwhals.pandas_like.namespace import Namespace
-    from narwhals.pandas_like.series import Series
+    from narwhals.pandas_like.series import PandasSeries
 
 
 def translate_frame(
@@ -31,10 +31,10 @@ def translate_frame(
 def translate_series(
     series: Any,
     implementation: str,
-) -> tuple[Series, Namespace]:
+) -> tuple[PandasSeries, Namespace]:
     from narwhals.pandas_like.namespace import Namespace
-    from narwhals.pandas_like.series import Series
+    from narwhals.pandas_like.series import PandasSeries
 
-    return Series(series, implementation=implementation), Namespace(
+    return PandasSeries(series, implementation=implementation), Namespace(
         implementation=implementation
     )
