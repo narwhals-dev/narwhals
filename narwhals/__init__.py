@@ -4,6 +4,7 @@ from narwhals.containers import is_pandas
 from narwhals.containers import is_polars
 from narwhals.containers import is_series
 from narwhals.translate import get_namespace
+from narwhals.translate import to_native
 from narwhals.translate import translate_any
 from narwhals.translate import translate_frame
 from narwhals.translate import translate_series
@@ -20,4 +21,5 @@ __all__ = [
     "is_pandas",
     "get_implementation",
     "get_namespace",
+    "to_native",
 ]

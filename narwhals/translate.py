@@ -174,6 +174,25 @@ def get_namespace(obj: Any) -> Namespace:
     raise NotImplementedError
 
 
+def to_native(obj: Any) -> Any:
+    from narwhals.pandas_like.dataframe import PandasDataFrame
+    from narwhals.pandas_like.series import PandasSeries
+    from narwhals.polars import PolarsDataFrame
+    from narwhals.polars import PolarsSeries
+
+    if isinstance(obj, PandasDataFrame):
+        return obj._dataframe
+    if isinstance(obj, PandasSeries):
+        return obj._series
+    if isinstance(obj, PolarsDataFrame):
+        return obj._dataframe
+    if isinstance(obj, PolarsSeries):
+        return obj._series
+
+    msg = f"Expected Narwhals object, got {type(obj)}."
+    raise TypeError(msg)
+
+
 __all__ = [
     "translate_frame",
     "translate_series",
@@ -181,4 +200,5 @@ __all__ = [
     "get_pandas",
     "get_polars",
     "get_namespace",
+    "to_native",
 ]

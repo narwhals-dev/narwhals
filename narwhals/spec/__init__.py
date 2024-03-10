@@ -299,10 +299,6 @@ class DataFrame(Protocol):
     def unique(self, subset: list[str]) -> Self:
         ...
 
-    # --- public, non-Polars ---
-    def to_native(self) -> Any:
-        ...
-
     @property
     def is_eager(self) -> bool:
         ...

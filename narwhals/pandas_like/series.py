@@ -77,9 +77,6 @@ class PandasSeries(SeriesProtocol):
     def dtype(self) -> DType:
         return translate_dtype(self._series.dtype)
 
-    def to_native(self) -> Any:
-        return self._series
-
     def cast(
         self,
         dtype: DType,  # type: ignore[override]

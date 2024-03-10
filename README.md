@@ -29,10 +29,11 @@ Or just vendor it, it's only a bunch of pure-Python files.
 
 There are three steps to writing dataframe-agnostic code using Narwhals:
 
-1. use `narwhals.to_polars_api` to wrap a pandas, Polars, cuDF, or Modin dataframe
-   in the Polars API
-2. use the subset of the Polars API defined in https://github.com/MarcoGorelli/narwhals/blob/main/narwhals/spec/__init__.py.
-3. use `DataFrame.to_native` to return an object to the user in their original
+1. use `narwhals.translate_frame` to wrap a pandas or Polars DataFrame to a Narwhals DataFrame
+2. (optional) use `narwhals.get_namespace` to get a namespace object
+3. use the subset of the Polars API defined in https://github.com/MarcoGorelli/narwhals/blob/main/narwhals/spec/__init__.py.
+   Some methods are only available if you called `narwhals.translate_frame` with `is_eager=True`
+4. use `narwhals.to_native` to return an object to the user in their original
    dataframe flavour. For example:
 
    - if you started with pandas, you'll get pandas back
@@ -47,7 +48,7 @@ from typing import TypeVar
 import pandas as pd
 import polars as pl
 
-from narwhals import translate_frame
+from narwhals import translate_frame, get_namespace, to_native
 
 AnyDataFrame = TypeVar("AnyDataFrame")
 
@@ -56,8 +57,10 @@ def my_agnostic_function(
     suppliers_native: AnyDataFrame,
     parts_native: AnyDataFrame,
 ) -> AnyDataFrame:
-    suppliers, pl = translate_frame(suppliers_native)
-    parts, _ = translate_frame(parts_native)
+    suppliers = translate_frame(suppliers_native)
+    parts = translate_frame(parts_native)
+    pl = get_namespace(suppliers)
+
     result = (
         suppliers.join(parts, left_on="city", right_on="city")
         .filter(
@@ -70,7 +73,7 @@ def my_agnostic_function(
             weight_max=pl.col("weight").max(),
         )
     )
-    return result.to_native()
+    return to_native(result)
 ```
 You can pass in a pandas or Polars dataframe, the output will be the same!
 Let's try it out:

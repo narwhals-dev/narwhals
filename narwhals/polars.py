@@ -295,9 +295,6 @@ class PolarsSeries(SeriesProtocol):
     def alias(self, name: str) -> Self:
         return self.__class__(self._series.alias(name))
 
-    def to_native(self) -> Any:
-        return self._series
-
     @property
     def name(self) -> str:
         return self._series.name
@@ -522,10 +519,6 @@ class PolarsDataFrame(DataFrameProtocol):
 
     def unique(self, subset: list[str]) -> Self:
         return self._from_dataframe(self._dataframe.unique(subset))
-
-    # --- public, non-Polars ---
-    def to_native(self) -> Any:
-        return self._dataframe
 
     @property
     def is_eager(self) -> bool:

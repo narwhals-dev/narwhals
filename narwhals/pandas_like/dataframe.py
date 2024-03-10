@@ -291,6 +291,3 @@ class PandasDataFrame(DataFrameProtocol):
     @property
     def is_lazy(self) -> bool:
         return self._is_lazy
-
-    def to_native(self) -> Any:
-        return self._dataframe
