@@ -4,7 +4,7 @@ from typing import Any
 import polars
 import pandas as pd
 
-from narwhals import translate_frame
+from narwhals import translate_frame, get_namespace, to_native
 
 polars.Config.set_tbl_cols(10)
 pd.set_option("display.max_columns", 10)
@@ -21,11 +21,12 @@ def q2(
     var_2 = "BRASS"
     var_3 = "EUROPE"
 
-    region_ds, pl = translate_frame(region_ds_raw, is_lazy=True)
-    nation_ds, _ = translate_frame(nation_ds_raw, is_lazy=True)
-    supplier_ds, _ = translate_frame(supplier_ds_raw, is_lazy=True)
-    part_ds, _ = translate_frame(part_ds_raw, is_lazy=True)
-    part_supp_ds, _ = translate_frame(part_supp_ds_raw, is_lazy=True)
+    region_ds = translate_frame(region_ds_raw, is_lazy=True)
+    nation_ds = translate_frame(nation_ds_raw, is_lazy=True)
+    supplier_ds = translate_frame(supplier_ds_raw, is_lazy=True)
+    part_ds = translate_frame(part_ds_raw, is_lazy=True)
+    part_supp_ds = translate_frame(part_supp_ds_raw, is_lazy=True)
+    pl = get_namespace(region_ds)
 
     result_q2 = (
         part_ds.join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")
@@ -64,7 +65,7 @@ def q2(
         .head(100)
     )
 
-    return q_final.collect().to_native()
+    return to_native(q_final.collect())
 
 
 region_ds = polars.scan_parquet("../tpch-data/region.parquet")

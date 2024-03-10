@@ -13,4 +13,4 @@ repos:
     hooks:
     -   id: mypy
         additional_dependencies: ['polars==0.20.10', 'pytest==8.0.1']
-        exclude: utils
+        exclude: utils|tpch
