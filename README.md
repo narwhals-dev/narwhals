@@ -7,9 +7,9 @@
 		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/26be901e-5383-49f2-9fbd-5c97b7696f27">
 </h1>
 
-Extremely lightweight compatibility layer between Polars, pandas, cuDF, and Modin.
+Extremely lightweight compatibility layer between Polars, pandas, and more.
 
-Seamlessly support all four, without depending on any of them!
+Seamlessly support both, without depending on either!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
@@ -37,8 +37,6 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
    - if you started with pandas, you'll get pandas back
    - if you started with Polars, you'll get Polars back
-   - if you started with Modin, you'll get Modin back
-   - if you started with cuDF, you'll get cuDF back (and computation will happen natively on the GPU!)
    
 ## Example
 
@@ -74,7 +72,7 @@ def my_agnostic_function(
     )
     return result.to_native()
 ```
-You can pass in a pandas, Polars, cuDF, or Modin dataframe, the output will be the same!
+You can pass in a pandas or Polars dataframe, the output will be the same!
 Let's try it out:
 
 ```python
@@ -158,8 +156,8 @@ Magic! 🪄
 
 If, I'd love to hear from you!
 
-**Note**: this is **not** a "Dataframe Standard" project. It just translates a subset of the Polars
-API to pandas-like libraries.
+**Note**: You might suspect that this is a secret ploy to infiltrate the Polars API everywhere.
+Indeed, you may suspect that.
 
 ## Why "Narwhals"?
 
