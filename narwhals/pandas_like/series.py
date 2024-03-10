@@ -12,6 +12,7 @@ from narwhals.pandas_like.utils import reverse_translate_dtype
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_column_comparand
 from narwhals.spec import Series as SeriesProtocol
+from narwhals.translate import get_namespace
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -101,8 +102,12 @@ class PandasLikeSeries(SeriesProtocol):
         return self._from_series(ser.between(lower_bound, upper_bound, inclusive=closed))
 
     def is_in(self, other: Any) -> PandasLikeSeries:
+        import pandas as pd
+
         ser = self.series
-        return self._from_series(ser.isin(other))
+        res = ser.isin(other).convert_dtypes()
+        res[ser.isna()] = pd.NA
+        return self._from_series(res)
 
     # Binary comparisons
 
@@ -282,6 +287,8 @@ class PandasLikeSeries(SeriesProtocol):
         return ser.nunique()  # type: ignore[no-any-return]
 
     def zip_with(self, mask: SeriesProtocol, other: SeriesProtocol) -> PandasLikeSeries:
+        mask = validate_column_comparand(mask)
+        other = validate_column_comparand(other)
         ser = self.series
         return self._from_series(ser.where(mask, other))
 
@@ -295,7 +302,8 @@ class PandasLikeSeries(SeriesProtocol):
 
     def unique(self) -> PandasLikeSeries:
         ser = self.series
-        return ser.unique()  # type: ignore[no-any-return]
+        plx = get_namespace(self._implementation)
+        return plx.Series(self.name, ser.unique())  # type: ignore[no-any-return, attr-defined]
 
     def is_nan(self) -> PandasLikeSeries:
         ser = self.series

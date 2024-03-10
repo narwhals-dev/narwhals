@@ -107,6 +107,9 @@ class Expr(ExprProtocol):
     def n_unique(self) -> Expr:
         return self.__class__(self._expr.n_unique())
 
+    def unique(self) -> Expr:
+        return self.__class__(self._expr.unique())
+
     # --- transform ---
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
@@ -335,6 +338,9 @@ class Series(SeriesProtocol):
 
     def n_unique(self) -> int:
         return self._series.n_unique()
+
+    def unique(self) -> Series:
+        return self.__class__(self._series.unique())
 
     def zip_with(self, mask: Self, other: Self) -> Self:
         return self.__class__(
