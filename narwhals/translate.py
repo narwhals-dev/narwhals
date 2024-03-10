@@ -30,15 +30,13 @@ def translate_frame(
     *,
     is_eager: bool = False,
     is_lazy: bool = False,
-) -> FrameTranslation:
+) -> DataFrame:
     if is_eager and is_lazy:
         msg = "Only one of `is_eager` and `is_lazy` can be True."
         raise ValueError(msg)
 
     if hasattr(df, "__narwhals_frame__"):
-        return FrameTranslation(
-            *df.__narwhals_frame__(is_eager=is_eager, is_lazy=is_lazy)
-        )
+        return df.__narwhals_frame__(is_eager=is_eager, is_lazy=is_lazy)  # type: ignore[no-any-return]
 
     if (pl := get_polars()) is not None:
         if isinstance(df, pl.LazyFrame) and is_eager:
@@ -56,41 +54,32 @@ def translate_frame(
             )
             raise TypeError(msg)
         if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
-            from narwhals.polars import DataFrame
-            from narwhals.polars import Namespace
+            from narwhals.polars import PolarsDataFrame
 
-            return FrameTranslation(
-                DataFrame(df, is_eager=is_eager, is_lazy=is_lazy), Namespace()
-            )
+            return PolarsDataFrame(df, is_eager=is_eager, is_lazy=is_lazy)
 
     if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
         from narwhals.pandas_like.translate import translate_frame
 
-        return FrameTranslation(
-            *translate_frame(
-                df,
-                implementation="pandas",
-                is_eager=is_eager,
-                is_lazy=is_lazy,
-            )
+        return translate_frame(
+            df,
+            implementation="pandas",
+            is_eager=is_eager,
+            is_lazy=is_lazy,
         )
 
     if (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame):
         from narwhals.pandas_like.translate import translate_frame
 
-        return FrameTranslation(
-            *translate_frame(
-                df, implementation="cudf", is_eager=is_eager, is_lazy=is_lazy
-            )
+        return translate_frame(
+            df, implementation="cudf", is_eager=is_eager, is_lazy=is_lazy
         )
 
     if (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
         from narwhals.pandas_like.translate import translate_frame
 
-        return FrameTranslation(
-            *translate_frame(
-                df, implementation="modin", is_eager=is_eager, is_lazy=is_lazy
-            )
+        return translate_frame(
+            df, implementation="modin", is_eager=is_eager, is_lazy=is_lazy
         )
 
     msg = f"Could not translate DataFrame {type(df)}, please open a feature request."
@@ -99,56 +88,89 @@ def translate_frame(
 
 def translate_series(
     series: Any,
-) -> SeriesTranslation:
+) -> Series:
     if hasattr(series, "__narwhals_series__"):
-        return SeriesTranslation(*series.__narwhals_series__())
+        return series.__narwhals_series__()  # type: ignore[no-any-return]
 
     if (pl := get_polars()) is not None and isinstance(series, pl.Series):
-        from narwhals.polars import Namespace
-        from narwhals.polars import Series
+        from narwhals.polars import PolarsSeries
 
-        return SeriesTranslation(Series(series), Namespace())
+        return PolarsSeries(series)
 
     if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
         from narwhals.pandas_like.translate import translate_series
 
-        return SeriesTranslation(
-            *translate_series(
-                series,
-                implementation="pandas",
-            )
+        return translate_series(
+            series,
+            implementation="pandas",
         )
 
     if (cudf := get_cudf()) is not None and isinstance(series, cudf.Series):
         from narwhals.pandas_like.translate import translate_series
 
-        return SeriesTranslation(*translate_series(series, implementation="cudf"))
+        return translate_series(series, implementation="cudf")
 
     if (mpd := get_modin()) is not None and isinstance(series, mpd.Series):
         from narwhals.pandas_like.translate import translate_series
 
-        return SeriesTranslation(*translate_series(series, implementation="modin"))
+        return translate_series(series, implementation="modin")
 
     msg = f"Could not translate {type(series)}, please open a feature request."
     raise NotImplementedError(msg)
 
 
-def translate_any(obj: Any) -> tuple[Series | DataFrame, Namespace]:
+def translate_any(obj: Any) -> Series | DataFrame:
     try:
         return translate_series(obj)
     except NotImplementedError:
         return translate_frame(obj, is_eager=True)
 
 
-def get_namespace(implementation: str) -> Namespace:
-    if implementation == "pandas":
+def get_namespace(obj: Any) -> Namespace:
+    from narwhals.containers import is_cudf
+    from narwhals.containers import is_modin
+    from narwhals.containers import is_pandas
+    from narwhals.containers import is_polars
+    from narwhals.pandas_like.dataframe import PandasDataFrame
+    from narwhals.pandas_like.series import PandasSeries
+    from narwhals.polars import PolarsDataFrame
+    from narwhals.polars import PolarsSeries
+
+    if obj == "pandas":
         from narwhals.pandas_like.namespace import Namespace
 
         return Namespace(implementation="pandas")
-    if implementation == "polars":
+    if obj == "polars":
         from narwhals.polars import Namespace  # type: ignore[assignment]
 
         return Namespace()  # type: ignore[call-arg]
+
+    if isinstance(obj, (PandasDataFrame, PandasSeries)):
+        from narwhals.pandas_like.namespace import Namespace
+
+        return Namespace(implementation=obj._implementation)
+    if isinstance(obj, (PolarsDataFrame, PolarsSeries)):
+        from narwhals.polars import Namespace  # type: ignore[assignment]
+
+        return Namespace()  # type: ignore[call-arg]
+
+    if is_polars(obj):
+        from narwhals.polars import Namespace  # type: ignore[assignment]
+
+        return Namespace(implementation="polars")
+    if is_pandas(obj):
+        from narwhals.pandas_like.namespace import Namespace
+
+        return Namespace(implementation="pandas")
+    if is_modin(obj):
+        from narwhals.pandas_like.namespace import Namespace
+
+        return Namespace(implementation="modin")
+    if is_cudf(obj):
+        from narwhals.pandas_like.namespace import Namespace
+
+        return Namespace(implementation="cudf")
+
     raise NotImplementedError
 
 

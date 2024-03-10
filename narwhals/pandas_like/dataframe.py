@@ -20,12 +20,12 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.pandas_like.group_by import PdxGroupBy
-    from narwhals.pandas_like.series import PandasLikeSeries
+    from narwhals.pandas_like.series import PandasSeries
     from narwhals.spec import DType
     from narwhals.spec import IntoExpr
 
 
-class PdxDataFrame(DataFrameProtocol):
+class PandasDataFrame(DataFrameProtocol):
     # --- not in the spec ---
     def __init__(
         self,
@@ -81,14 +81,14 @@ class PdxDataFrame(DataFrameProtocol):
             is_lazy=self._is_lazy,
         )
 
-    def __getitem__(self, column_name: str) -> PandasLikeSeries:
-        from narwhals.pandas_like.series import PandasLikeSeries
+    def __getitem__(self, column_name: str) -> PandasSeries:
+        from narwhals.pandas_like.series import PandasSeries
 
         if not self._is_eager:
             raise RuntimeError(
                 "DataFrame.__getitem__ can only be called when it was instantiated with `is_eager=True`"
             )
-        return PandasLikeSeries(
+        return PandasSeries(
             self._dataframe.loc[:, column_name],
             implementation=self._implementation,
         )
@@ -164,12 +164,12 @@ class PdxDataFrame(DataFrameProtocol):
         )
 
     # --- convert ---
-    def collect(self) -> PdxDataFrame:
+    def collect(self) -> PandasDataFrame:
         if not self._is_lazy:
             raise RuntimeError(
                 "DataFrame.collect can only be called when it was instantiated with `is_lazy=True`"
             )
-        return PdxDataFrame(
+        return PandasDataFrame(
             self._dataframe,
             implementation=self._implementation,
             is_eager=True,
@@ -247,15 +247,15 @@ class PdxDataFrame(DataFrameProtocol):
             )
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def iter_columns(self) -> Iterable[PandasLikeSeries]:
-        from narwhals.pandas_like.series import PandasLikeSeries
+    def iter_columns(self) -> Iterable[PandasSeries]:
+        from narwhals.pandas_like.series import PandasSeries
 
         if not self._is_eager:
             raise RuntimeError(
                 "DataFrame.iter_columns can only be called when it was instantiated with `is_eager=True`"
             )
         return (
-            PandasLikeSeries(self._dataframe[col], implementation=self._implementation)
+            PandasSeries(self._dataframe[col], implementation=self._implementation)
             for col in self.columns
         )
 

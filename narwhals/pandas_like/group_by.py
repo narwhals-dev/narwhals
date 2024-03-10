@@ -19,13 +19,13 @@ from narwhals.spec import IntoExpr
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
-    from narwhals.pandas_like.dataframe import PdxDataFrame
+    from narwhals.pandas_like.dataframe import PandasDataFrame
     from narwhals.pandas_like.expr import Expr
 
 
 class PdxGroupBy(GroupByProtocol):
     def __init__(
-        self, df: PdxDataFrame, keys: list[str], *, is_eager: bool, is_lazy: bool
+        self, df: PandasDataFrame, keys: list[str], *, is_eager: bool, is_lazy: bool
     ) -> None:
         self._df = df
         self._keys = list(keys)
@@ -36,7 +36,7 @@ class PdxGroupBy(GroupByProtocol):
         self,
         *aggs: IntoExpr | Iterable[IntoExpr],
         **named_aggs: IntoExpr,
-    ) -> PdxDataFrame:
+    ) -> PandasDataFrame:
         df = self._df._dataframe
         exprs = parse_into_exprs(
             self._df._implementation,
@@ -77,10 +77,10 @@ class PdxGroupBy(GroupByProtocol):
             self._from_dataframe,
         )
 
-    def _from_dataframe(self, df: PdxDataFrame) -> PdxDataFrame:
-        from narwhals.pandas_like.dataframe import PdxDataFrame
+    def _from_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:
+        from narwhals.pandas_like.dataframe import PandasDataFrame
 
-        return PdxDataFrame(
+        return PandasDataFrame(
             df,
             implementation=self._df._implementation,
             is_eager=self._is_eager,
@@ -93,8 +93,8 @@ def agg_pandas(
     exprs: list[Expr],
     keys: list[str],
     output_names: list[str],
-    from_dataframe: Callable[[Any], PdxDataFrame],
-) -> PdxDataFrame:
+    from_dataframe: Callable[[Any], PandasDataFrame],
+) -> PandasDataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
 
@@ -146,8 +146,8 @@ def agg_generic(  # noqa: PLR0913
     group_by_keys: list[str],
     output_names: list[str],
     implementation: str,
-    from_dataframe: Callable[[Any], PdxDataFrame],
-) -> PdxDataFrame:
+    from_dataframe: Callable[[Any], PandasDataFrame],
+) -> PandasDataFrame:
     dfs: list[Any] = []
     to_remove: list[int] = []
     for i, expr in enumerate(exprs):

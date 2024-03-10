@@ -8,6 +8,7 @@ from unittest import mock
 import polars
 import pytest
 
+from narwhals import get_namespace
 from narwhals import translate_frame
 from tests.utils import compare_dicts
 
@@ -21,7 +22,8 @@ from tests.utils import compare_dicts
 )
 def test_q1(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)
-    df, pl = translate_frame(df_raw, is_lazy=True)
+    df = translate_frame(df_raw, is_lazy=True)
+    pl = get_namespace(df)
     query_result = (
         df.filter(pl.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])
@@ -82,7 +84,8 @@ def test_q1(df_raw: Any) -> None:
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 def test_q1_w_pandas_agg_generic_path(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)
-    df, pl = translate_frame(df_raw, is_lazy=True)
+    df = translate_frame(df_raw, is_lazy=True)
+    pl = get_namespace(df)
     query_result = (
         df.filter(pl.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])

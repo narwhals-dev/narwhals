@@ -30,9 +30,9 @@ def extract_native(obj: Any) -> Any:
         return obj._expr
     if isinstance(obj, DType):
         return obj._dtype
-    if isinstance(obj, DataFrame):
+    if isinstance(obj, PolarsDataFrame):
         return obj._dataframe
-    if isinstance(obj, Series):
+    if isinstance(obj, PolarsSeries):
         return obj._series
     return obj
 
@@ -232,12 +232,12 @@ class Namespace(NamespaceProtocol):
     Boolean = Boolean
     String = String
 
-    def Series(self, name: str, data: list[Any]) -> Series:  # noqa: N802
+    def Series(self, name: str, data: list[Any]) -> PolarsSeries:  # noqa: N802
         import polars as pl
 
-        from narwhals.polars import Series
+        from narwhals.polars import PolarsSeries
 
-        return Series(pl.Series(name=name, values=data))
+        return PolarsSeries(pl.Series(name=name, values=data))
 
     # --- selection ---
     def col(self, *names: str | Iterable[str]) -> Expr:
@@ -274,13 +274,13 @@ class Namespace(NamespaceProtocol):
 
     def concat(
         self,
-        items: Iterable[DataFrame],  # type: ignore[override]
+        items: Iterable[PolarsDataFrame],  # type: ignore[override]
         *,
         how: str = "vertical",
-    ) -> DataFrame:
+    ) -> PolarsDataFrame:
         if how == "horizontal":
             # TODO: is_eager / is_lazy not really correct here
-            return DataFrame(
+            return PolarsDataFrame(
                 pl.concat([extract_native(v) for v in items], how="horizontal"),
                 is_eager=True,
                 is_lazy=False,
@@ -288,7 +288,7 @@ class Namespace(NamespaceProtocol):
         raise NotImplementedError
 
 
-class Series(SeriesProtocol):
+class PolarsSeries(SeriesProtocol):
     def __init__(self, series: pl.Series) -> None:
         self._series = series
 
@@ -324,22 +324,22 @@ class Series(SeriesProtocol):
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
-    ) -> Series:
+    ) -> PolarsSeries:
         return self.__class__(self._series.is_between(lower_bound, upper_bound, closed))  # type: ignore[arg-type]
 
-    def is_in(self, other: Any) -> Series:
+    def is_in(self, other: Any) -> PolarsSeries:
         return self.__class__(self._series.is_in(other))
 
-    def is_null(self) -> Series:
+    def is_null(self) -> PolarsSeries:
         return self.__class__(self._series.is_null())
 
-    def drop_nulls(self) -> Series:
+    def drop_nulls(self) -> PolarsSeries:
         return self.__class__(self._series.drop_nulls())
 
     def n_unique(self) -> int:
         return self._series.n_unique()
 
-    def unique(self) -> Series:
+    def unique(self) -> PolarsSeries:
         return self.__class__(self._series.unique())
 
     def zip_with(self, mask: Self, other: Self) -> Self:
@@ -347,7 +347,7 @@ class Series(SeriesProtocol):
             self._series.zip_with(extract_native(mask), extract_native(other))
         )
 
-    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Series:
+    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> PolarsSeries:
         return self.__class__(
             self._series.sample(n, fraction=fraction, with_replacement=with_replacement)
         )
@@ -359,7 +359,7 @@ class Series(SeriesProtocol):
         return self._series.to_pandas()
 
 
-class DataFrame(DataFrameProtocol):
+class PolarsDataFrame(DataFrameProtocol):
     def __init__(
         self, df: pl.DataFrame | pl.LazyFrame, *, is_eager: bool, is_lazy: bool
     ) -> None:
@@ -371,13 +371,13 @@ class DataFrame(DataFrameProtocol):
         # construct, preserving properties
         return self.__class__(df, is_eager=self._is_eager, is_lazy=self._is_lazy)
 
-    def __getitem__(self, column_name: str) -> Series:
+    def __getitem__(self, column_name: str) -> PolarsSeries:
         if not self._is_eager:
             raise RuntimeError(
                 "DataFrame.shape can only be called if frame was instantiated with `is_eager=True`"
             )
         assert isinstance(self._dataframe, pl.DataFrame)
-        return Series(
+        return PolarsSeries(
             self._dataframe[column_name],
         )
 
@@ -401,13 +401,13 @@ class DataFrame(DataFrameProtocol):
         assert isinstance(self._dataframe, pl.DataFrame)
         return self._dataframe.shape
 
-    def iter_columns(self) -> Iterable[Series]:
+    def iter_columns(self) -> Iterable[PolarsSeries]:
         if not self._is_eager:
             raise RuntimeError(
                 "DataFrame.iter_columns can only be called if frame was instantiated with `is_eager=True`"
             )
         assert isinstance(self._dataframe, pl.DataFrame)
-        return (Series(self._dataframe[col]) for col in self.columns)
+        return (PolarsSeries(self._dataframe[col]) for col in self.columns)
 
     # --- reshape ---
     def with_columns(
@@ -544,8 +544,8 @@ class GroupBy(GroupByProtocol):
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> DataFrame:
-        return DataFrame(
+    ) -> PolarsDataFrame:
+        return PolarsDataFrame(
             self._groupby.agg(
                 *[extract_native(v) for v in flatten_into_expr(*aggs)],
                 **{key: extract_native(value) for key, value in named_aggs.items()},
