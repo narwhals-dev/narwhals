@@ -11,7 +11,6 @@ from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import reset_index
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_dataframe_comparand
-from narwhals.spec import DataFrame as DataFrameProtocol
 from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
@@ -19,13 +18,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals.pandas_like.group_by import PdxGroupBy
+    from narwhals.dtypes import DType
+    from narwhals.pandas_like.group_by import PandasGroupBy
     from narwhals.pandas_like.series import PandasSeries
-    from narwhals.spec import DType
-    from narwhals.spec import IntoExpr
+    from narwhals.pandas_like.typing import IntoExpr
 
 
-class PandasDataFrame(DataFrameProtocol):
+class PandasDataFrame:
     # --- not in the spec ---
     def __init__(
         self,
@@ -40,20 +39,6 @@ class PandasDataFrame(DataFrameProtocol):
         self._implementation = implementation
         self._is_eager = is_eager
         self._is_lazy = is_lazy
-
-    def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals LazyFrame                      "
-        length = len(header)
-        return (
-            "┌"
-            + "─" * length
-            + "┐\n"
-            + f"|{header}|\n"
-            + "| Add `.to_native()` to see native output |\n"
-            + "└"
-            + "─" * length
-            + "┘\n"
-        )
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
         counter = collections.Counter(columns)
@@ -112,7 +97,7 @@ class PandasDataFrame(DataFrameProtocol):
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = horizontal_concat(
-            [series.series for series in new_series],
+            [series._series for series in new_series],
             implementation=self._implementation,
         )
         return self._from_dataframe(df)
@@ -137,7 +122,7 @@ class PandasDataFrame(DataFrameProtocol):
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self._dataframe.assign(
-            **{series.name: series.series for series in new_series}
+            **{series.name: validate_dataframe_comparand(series) for series in new_series}
         )
         return self._from_dataframe(df)
 
@@ -177,10 +162,10 @@ class PandasDataFrame(DataFrameProtocol):
         )
 
     # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> PdxGroupBy:
-        from narwhals.pandas_like.group_by import PdxGroupBy
+    def group_by(self, *keys: str | Iterable[str]) -> PandasGroupBy:
+        from narwhals.pandas_like.group_by import PandasGroupBy
 
-        return PdxGroupBy(
+        return PandasGroupBy(
             self,
             flatten_str(*keys),
             is_eager=self._is_eager,

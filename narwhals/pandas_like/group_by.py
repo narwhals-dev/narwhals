@@ -14,16 +14,15 @@ from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import is_simple_aggregation
 from narwhals.pandas_like.utils import item
 from narwhals.pandas_like.utils import parse_into_exprs
-from narwhals.spec import GroupBy as GroupByProtocol
-from narwhals.spec import IntoExpr
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import PandasDataFrame
-    from narwhals.pandas_like.expr import Expr
+    from narwhals.pandas_like.expr import PandasExpr
+    from narwhals.pandas_like.typing import IntoExpr
 
 
-class PdxGroupBy(GroupByProtocol):
+class PandasGroupBy:
     def __init__(
         self, df: PandasDataFrame, keys: list[str], *, is_eager: bool, is_lazy: bool
     ) -> None:
@@ -90,7 +89,7 @@ class PdxGroupBy(GroupByProtocol):
 
 def agg_pandas(
     grouped: Any,
-    exprs: list[Expr],
+    exprs: list[PandasExpr],
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], PandasDataFrame],
@@ -142,7 +141,7 @@ def agg_pandas(
 
 def agg_generic(  # noqa: PLR0913
     grouped: Any,
-    exprs: list[Expr],
+    exprs: list[PandasExpr],
     group_by_keys: list[str],
     output_names: list[str],
     implementation: str,
