@@ -30,8 +30,8 @@ Or just vendor it, it's only a bunch of pure-Python files.
 There are three steps to writing dataframe-agnostic code using Narwhals:
 
 1. use `narwhals.DataFrame` to wrap a pandas or Polars DataFrame to a Narwhals DataFrame
-2. use the subset of the Polars API supported by Narwhals
-   Some methods are only available if you called `narwhals.translate_frame` with `is_eager=True`
+2. use the subset of the Polars API supported by Narwhals. Some methods are only available
+   if you passed `is_eager=True` to `narwhals.DataFrame`
 3. use `narwhals.to_native` to return an object to the user in its original
    dataframe flavour. For example:
 
