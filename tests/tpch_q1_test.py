@@ -8,8 +8,7 @@ from unittest import mock
 import polars
 import pytest
 
-from narwhals import get_namespace
-from narwhals import translate_frame
+import narwhals as nw
 from tests.utils import compare_dicts
 
 
@@ -22,29 +21,28 @@ from tests.utils import compare_dicts
 )
 def test_q1(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)
-    df = translate_frame(df_raw, is_lazy=True)
-    pl = get_namespace(df)
+    df = nw.DataFrame(df_raw, is_lazy=True)
     query_result = (
-        df.filter(pl.col("l_shipdate") <= var_1)
+        df.filter(nw.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
             [
-                pl.sum("l_quantity").alias("sum_qty"),
-                pl.sum("l_extendedprice").alias("sum_base_price"),
-                (pl.col("l_extendedprice") * (1 - pl.col("l_discount")))
+                nw.col("l_quantity").sum().alias("sum_qty"),
+                nw.col("l_extendedprice").sum().alias("sum_base_price"),
+                (nw.col("l_extendedprice") * (1 - nw.col("l_discount")))
                 .sum()
                 .alias("sum_disc_price"),
                 (
-                    pl.col("l_extendedprice")
-                    * (1.0 - pl.col("l_discount"))
-                    * (1.0 + pl.col("l_tax"))
+                    nw.col("l_extendedprice")
+                    * (1.0 - nw.col("l_discount"))
+                    * (1.0 + nw.col("l_tax"))
                 )
                 .sum()
                 .alias("sum_charge"),
-                pl.mean("l_quantity").alias("avg_qty"),
-                pl.mean("l_extendedprice").alias("avg_price"),
-                pl.mean("l_discount").alias("avg_disc"),
-                pl.len().alias("count_order"),
+                nw.col("l_quantity").mean().alias("avg_qty"),
+                nw.col("l_extendedprice").mean().alias("avg_price"),
+                nw.col("l_discount").mean().alias("avg_disc"),
+                nw.len().alias("count_order"),
             ],
         )
         .sort(["l_returnflag", "l_linestatus"])
@@ -84,29 +82,28 @@ def test_q1(df_raw: Any) -> None:
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 def test_q1_w_pandas_agg_generic_path(df_raw: Any) -> None:
     var_1 = datetime(1998, 9, 2)
-    df = translate_frame(df_raw, is_lazy=True)
-    pl = get_namespace(df)
+    df = nw.DataFrame(df_raw, is_lazy=True)
     query_result = (
-        df.filter(pl.col("l_shipdate") <= var_1)
+        df.filter(nw.col("l_shipdate") <= var_1)
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
             [
-                pl.sum("l_quantity").alias("sum_qty"),
-                pl.sum("l_extendedprice").alias("sum_base_price"),
-                (pl.col("l_extendedprice") * (1 - pl.col("l_discount")))
+                nw.sum("l_quantity").alias("sum_qty"),
+                nw.sum("l_extendedprice").alias("sum_base_price"),
+                (nw.col("l_extendedprice") * (1 - nw.col("l_discount")))
                 .sum()
                 .alias("sum_disc_price"),
                 (
-                    pl.col("l_extendedprice")
-                    * (1.0 - pl.col("l_discount"))
-                    * (1.0 + pl.col("l_tax"))
+                    nw.col("l_extendedprice")
+                    * (1.0 - nw.col("l_discount"))
+                    * (1.0 + nw.col("l_tax"))
                 )
                 .sum()
                 .alias("sum_charge"),
-                pl.mean("l_quantity").alias("avg_qty"),
-                pl.mean("l_extendedprice").alias("avg_price"),
-                pl.mean("l_discount").alias("avg_disc"),
-                pl.len().alias("count_order"),
+                nw.mean("l_quantity").alias("avg_qty"),
+                nw.mean("l_extendedprice").alias("avg_price"),
+                nw.mean("l_discount").alias("avg_disc"),
+                nw.len().alias("count_order"),
             ],
         )
         .sort(["l_returnflag", "l_linestatus"])

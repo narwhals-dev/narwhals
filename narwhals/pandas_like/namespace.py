@@ -1,23 +1,25 @@
 from __future__ import annotations
 
 from functools import reduce
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
 
-from narwhals.pandas_like import dtypes
+from narwhals import dtypes
 from narwhals.pandas_like.dataframe import PandasDataFrame
-from narwhals.pandas_like.expr import Expr
+from narwhals.pandas_like.expr import PandasExpr
 from narwhals.pandas_like.series import PandasSeries
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.pandas_like.utils import series_from_iterable
-from narwhals.spec import IntoExpr
-from narwhals.spec import Namespace as NamespaceProtocol
 from narwhals.utils import flatten_str
 
+if TYPE_CHECKING:
+    from narwhals.pandas_like.typing import IntoExpr
 
-class Namespace(NamespaceProtocol):
+
+class Namespace:
     Int64 = dtypes.Int64
     Int32 = dtypes.Int32
     Int16 = dtypes.Int16
@@ -54,8 +56,8 @@ class Namespace(NamespaceProtocol):
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-    ) -> Expr:
-        return Expr(
+    ) -> PandasExpr:
+        return PandasExpr(
             func,
             depth=depth,
             function_name=function_name,
@@ -70,15 +72,15 @@ class Namespace(NamespaceProtocol):
         return PandasSeries(
             series_from_iterable(
                 [value],
-                name=series.series.name,
-                index=series.series.index[0:1],
+                name=series._series.name,
+                index=series._series.index[0:1],
                 implementation=self._implementation,
             ),
             implementation=self._implementation,
         )
 
-    def _create_expr_from_series(self, series: PandasSeries) -> Expr:
-        return Expr(
+    def _create_expr_from_series(self, series: PandasSeries) -> PandasExpr:
+        return PandasExpr(
             lambda _df: [series],
             depth=0,
             function_name="series",
@@ -88,13 +90,13 @@ class Namespace(NamespaceProtocol):
         )
 
     # --- selection ---
-    def col(self, *column_names: str | Iterable[str]) -> Expr:
-        return Expr.from_column_names(
+    def col(self, *column_names: str | Iterable[str]) -> PandasExpr:
+        return PandasExpr.from_column_names(
             *flatten_str(*column_names), implementation=self._implementation
         )
 
-    def all(self) -> Expr:
-        return Expr(
+    def all(self) -> PandasExpr:
+        return PandasExpr(
             lambda df: [
                 PandasSeries(
                     df._dataframe.loc[:, column_name],
@@ -110,28 +112,28 @@ class Namespace(NamespaceProtocol):
         )
 
     # --- reduction ---
-    def sum(self, *column_names: str) -> Expr:
-        return Expr.from_column_names(
+    def sum(self, *column_names: str) -> PandasExpr:
+        return PandasExpr.from_column_names(
             *column_names, implementation=self._implementation
         ).sum()
 
-    def mean(self, *column_names: str) -> Expr:
-        return Expr.from_column_names(
+    def mean(self, *column_names: str) -> PandasExpr:
+        return PandasExpr.from_column_names(
             *column_names, implementation=self._implementation
         ).mean()
 
-    def max(self, *column_names: str) -> Expr:
-        return Expr.from_column_names(
+    def max(self, *column_names: str) -> PandasExpr:
+        return PandasExpr.from_column_names(
             *column_names, implementation=self._implementation
         ).max()
 
-    def min(self, *column_names: str) -> Expr:
-        return Expr.from_column_names(
+    def min(self, *column_names: str) -> PandasExpr:
+        return PandasExpr.from_column_names(
             *column_names, implementation=self._implementation
         ).min()
 
-    def len(self) -> Expr:
-        return Expr(
+    def len(self) -> PandasExpr:
+        return PandasExpr(
             lambda df: [
                 PandasSeries(
                     series_from_iterable(
@@ -151,18 +153,18 @@ class Namespace(NamespaceProtocol):
         )
 
     # --- horizontal ---
-    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> PandasExpr:
         return reduce(lambda x, y: x + y, parse_into_exprs(self._implementation, *exprs))
 
-    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> PandasExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(self._implementation, *exprs))
 
-    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> PandasExpr:
         return reduce(lambda x, y: x | y, parse_into_exprs(self._implementation, *exprs))
 
     def concat(
         self,
-        items: Iterable[PandasDataFrame],  # type: ignore[override]
+        items: Iterable[PandasDataFrame],
         *,
         how: str = "vertical",
     ) -> PandasDataFrame:

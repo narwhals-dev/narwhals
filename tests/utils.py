@@ -4,7 +4,7 @@ from typing import Any
 
 
 def compare_dicts(result: dict[str, Any], expected: dict[str, Any]) -> None:
-    for key in result:
+    for key in expected:
         for lhs, rhs in zip(result[key], expected[key]):
             if isinstance(lhs, float):
                 assert abs(lhs - rhs) < 1e-6

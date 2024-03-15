@@ -44,41 +44,40 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 Here's an example of a dataframe agnostic function:
 
 ```python
-from typing import TypeVar
+from typing import Any
 import pandas as pd
 import polars as pl
 
-from narwhals import translate_frame, get_namespace, to_native
-
-AnyDataFrame = TypeVar("AnyDataFrame")
+import narwhals as nw
 
 
 def my_agnostic_function(
-    suppliers_native: AnyDataFrame,
-    parts_native: AnyDataFrame,
-) -> AnyDataFrame:
-    suppliers = translate_frame(suppliers_native)
-    parts = translate_frame(parts_native)
-    pl = get_namespace(suppliers)
+    suppliers_native,
+    parts_native,
+):
+    suppliers = nw.DataFrame(suppliers_native)
+    parts = nw.DataFrame(parts_native)
 
     result = (
         suppliers.join(parts, left_on="city", right_on="city")
         .filter(
-            pl.col("color").is_in(["Red", "Green"]),
-            pl.col("weight") > 14,
+            nw.col("color").is_in(["Red", "Green"]),
+            nw.col("weight") > 14,
         )
         .group_by("s", "p")
         .agg(
-            weight_mean=pl.col("weight").mean(),
-            weight_max=pl.col("weight").max(),
+            weight_mean=nw.col("weight").mean(),
+            weight_max=nw.col("weight").max(),
         )
-    )
-    return to_native(result)
+    ).with_columns(nw.col("weight_max").cast(nw.Int64))
+    return nw.to_native(result)
+
 ```
 You can pass in a pandas or Polars dataframe, the output will be the same!
 Let's try it out:
 
 ```python
+
 suppliers = {
     "s": ["S1", "S2", "S3", "S4", "S5"],
     "sname": ["Smith", "Jones", "Blake", "Clark", "Adams"],

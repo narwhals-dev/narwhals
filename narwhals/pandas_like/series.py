@@ -11,16 +11,14 @@ from narwhals.pandas_like.utils import reset_index
 from narwhals.pandas_like.utils import reverse_translate_dtype
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_column_comparand
-from narwhals.spec import Series as SeriesProtocol
-from narwhals.translate import get_namespace
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals.pandas_like.dtypes import DType
+    from narwhals.dtypes import DType
 
 
-class PandasSeries(SeriesProtocol):
+class PandasSeries:
     def __init__(
         self,
         series: Any,
@@ -37,25 +35,14 @@ class PandasSeries(SeriesProtocol):
         self._series = reset_index(series)
         self._implementation = implementation
 
-    def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals Series                         "
-        length = len(header)
-        return (
-            "┌"
-            + "─" * length
-            + "┐\n"
-            + f"|{header}|\n"
-            + "| Add `.to_native()` to see native output |\n"
-            + "└"
-            + "─" * length
-            + "┘\n"
-        )
-
     def _from_series(self, series: Any) -> Self:
         return self.__class__(
             series.rename(series.name, copy=False),
             implementation=self._implementation,
         )
+
+    def __len__(self) -> int:
+        return self.shape[0]
 
     @property
     def name(self) -> str:
@@ -66,12 +53,8 @@ class PandasSeries(SeriesProtocol):
         return self._series.shape  # type: ignore[no-any-return]
 
     def rename(self, name: str) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         return self._from_series(ser.rename(name, copy=False))
-
-    @property
-    def series(self) -> Any:
-        return self._series
 
     @property
     def dtype(self) -> DType:
@@ -79,29 +62,29 @@ class PandasSeries(SeriesProtocol):
 
     def cast(
         self,
-        dtype: DType,  # type: ignore[override]
+        dtype: Any,
     ) -> Self:
-        ser = self.series
+        ser = self._series
         dtype = reverse_translate_dtype(dtype)
         return self._from_series(ser.astype(dtype))
 
     def filter(self, mask: Self) -> Self:
-        ser = self.series
+        ser = self._series
         return self._from_series(ser.loc[validate_column_comparand(mask)])
 
     def item(self) -> Any:
-        return item(self.series)
+        return item(self._series)
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         return self._from_series(ser.between(lower_bound, upper_bound, inclusive=closed))
 
     def is_in(self, other: Any) -> PandasSeries:
         import pandas as pd
 
-        ser = self.series
+        ser = self._series
         res = ser.isin(other).convert_dtypes()
         res[ser.isna()] = pd.NA
         return self._from_series(res)
@@ -110,36 +93,36 @@ class PandasSeries(SeriesProtocol):
 
     def __eq__(self, other: object) -> PandasSeries:  # type: ignore[override]
         other = validate_column_comparand(other)
-        ser = self.series
+        ser = self._series
         return self._from_series((ser == other).rename(ser.name, copy=False))
 
     def __ne__(self, other: object) -> PandasSeries:  # type: ignore[override]
         other = validate_column_comparand(other)
-        ser = self.series
+        ser = self._series
         return self._from_series((ser != other).rename(ser.name, copy=False))
 
     def __ge__(self, other: Any) -> PandasSeries:
         other = validate_column_comparand(other)
-        ser = self.series
+        ser = self._series
         return self._from_series((ser >= other).rename(ser.name, copy=False))
 
     def __gt__(self, other: Any) -> PandasSeries:
         other = validate_column_comparand(other)
-        ser = self.series
+        ser = self._series
         return self._from_series((ser > other).rename(ser.name, copy=False))
 
     def __le__(self, other: Any) -> PandasSeries:
         other = validate_column_comparand(other)
-        ser = self.series
+        ser = self._series
         return self._from_series((ser <= other).rename(ser.name, copy=False))
 
     def __lt__(self, other: Any) -> PandasSeries:
         other = validate_column_comparand(other)
-        ser = self.series
+        ser = self._series
         return self._from_series((ser < other).rename(ser.name, copy=False))
 
     def __and__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser & other).rename(ser.name, copy=False))
 
@@ -147,7 +130,7 @@ class PandasSeries(SeriesProtocol):
         return self.__and__(other)
 
     def __or__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser | other).rename(ser.name, copy=False))
 
@@ -155,7 +138,7 @@ class PandasSeries(SeriesProtocol):
         return self.__or__(other)
 
     def __add__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser + other).rename(ser.name, copy=False))
 
@@ -163,7 +146,7 @@ class PandasSeries(SeriesProtocol):
         return self.__add__(other)
 
     def __sub__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser - other).rename(ser.name, copy=False))
 
@@ -171,7 +154,7 @@ class PandasSeries(SeriesProtocol):
         return -1 * self.__sub__(other)
 
     def __mul__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser * other).rename(ser.name, copy=False))
 
@@ -179,7 +162,7 @@ class PandasSeries(SeriesProtocol):
         return self.__mul__(other)
 
     def __truediv__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser / other).rename(ser.name, copy=False))
 
@@ -187,7 +170,7 @@ class PandasSeries(SeriesProtocol):
         raise NotImplementedError
 
     def __floordiv__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser // other).rename(ser.name, copy=False))
 
@@ -195,7 +178,7 @@ class PandasSeries(SeriesProtocol):
         raise NotImplementedError
 
     def __pow__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser**other).rename(ser.name, copy=False))
 
@@ -203,7 +186,7 @@ class PandasSeries(SeriesProtocol):
         raise NotImplementedError
 
     def __mod__(self, other: Any) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         other = validate_column_comparand(other)
         return self._from_series((ser % other).rename(ser.name, copy=False))
 
@@ -213,41 +196,41 @@ class PandasSeries(SeriesProtocol):
     # Unary
 
     def __invert__(self: PandasSeries) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         return self._from_series(~ser)
 
     # Reductions
 
     def any(self) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.any()
 
     def all(self) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.all()
 
     def min(self) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.min()
 
     def max(self) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.max()
 
     def sum(self) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.sum()
 
     def prod(self) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.prod()
 
     def median(self) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.median()
 
     def mean(self) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.mean()
 
     def std(
@@ -255,7 +238,7 @@ class PandasSeries(SeriesProtocol):
         *,
         correction: float = 1.0,
     ) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.std(ddof=correction)
 
     def var(
@@ -263,7 +246,7 @@ class PandasSeries(SeriesProtocol):
         *,
         correction: float = 1.0,
     ) -> Any:
-        ser = self.series
+        ser = self._series
         return ser.var(ddof=correction)
 
     def len(self) -> Any:
@@ -272,36 +255,42 @@ class PandasSeries(SeriesProtocol):
     # Transformations
 
     def is_null(self) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         return self._from_series(ser.isna())
 
     def drop_nulls(self) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         return self._from_series(ser.dropna())
 
     def n_unique(self) -> int:
-        ser = self.series
+        ser = self._series
         return ser.nunique()  # type: ignore[no-any-return]
 
-    def zip_with(self, mask: SeriesProtocol, other: SeriesProtocol) -> PandasSeries:
+    def zip_with(self, mask: PandasSeries, other: PandasSeries) -> PandasSeries:
         mask = validate_column_comparand(mask)
         other = validate_column_comparand(other)
-        ser = self.series
+        ser = self._series
         return self._from_series(ser.where(mask, other))
 
     def sample(self, n: int, fraction: float, *, with_replacement: bool) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         return self._from_series(
             ser.sample(n=n, frac=fraction, with_replacement=with_replacement)
         )
 
     def unique(self) -> PandasSeries:
-        ser = self.series
-        plx = get_namespace(self._implementation)
-        return plx.Series(self.name, ser.unique())  # type: ignore[no-any-return, attr-defined]
+        if self._implementation != "pandas":
+            raise NotImplementedError
+        import pandas as pd
+
+        return self._from_series(
+            pd.Series(
+                self._series.unique(), dtype=self._series.dtype, name=self._series.name
+            )
+        )
 
     def is_nan(self) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         if is_extension_array_dtype(ser.dtype):
             return self._from_series((ser != ser).fillna(False))  # noqa: PLR0124
         return self._from_series(ser.isna())
@@ -311,24 +300,24 @@ class PandasSeries(SeriesProtocol):
         *,
         descending: bool | Sequence[bool] = True,
     ) -> PandasSeries:
-        ser = self.series
+        ser = self._series
         return self._from_series(
             ser.sort_values(ascending=not descending).rename(self.name)
         )
 
     def alias(self, name: str) -> Self:
-        ser = self.series
+        ser = self._series
         return self._from_series(ser.rename(name, copy=False))
 
     def to_numpy(self) -> Any:
-        return self.series.to_numpy()
+        return self._series.to_numpy()
 
     def to_pandas(self) -> Any:
         if self._implementation == "pandas":
-            return self.series
+            return self._series
         elif self._implementation == "cudf":
-            return self.series.to_pandas()
+            return self._series.to_pandas()
         elif self._implementation == "modin":
-            return self.series._to_pandas()
+            return self._series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"
         raise TypeError(msg)

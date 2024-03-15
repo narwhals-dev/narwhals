@@ -12,12 +12,12 @@ from narwhals.utils import remove_prefix
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from narwhals.dtypes import DType
     from narwhals.pandas_like.dataframe import PandasDataFrame
-    from narwhals.pandas_like.dtypes import DType
-    from narwhals.pandas_like.expr import Expr
+    from narwhals.pandas_like.expr import PandasExpr
     from narwhals.pandas_like.series import PandasSeries
 
-    ExprT = TypeVar("ExprT", bound=Expr)
+    ExprT = TypeVar("ExprT", bound=PandasExpr)
 
     from narwhals.spec import IntoExpr
 
@@ -46,7 +46,7 @@ def validate_column_comparand(other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other.item()
-        return other.series
+        return other._series
     return other
 
 
@@ -70,23 +70,23 @@ def validate_dataframe_comparand(other: Any) -> Any:
     if isinstance(other, PandasSeries):
         if other.len() == 1:
             # broadcast
-            return item(other)
-        return other.series
+            return item(other._series)
+        return other._series
     return other
 
 
 def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
     """Evaluate expression if it's an expression, otherwise return it as is."""
-    from narwhals.pandas_like.expr import Expr
+    from narwhals.pandas_like.expr import PandasExpr
 
-    if isinstance(arg, Expr):
+    if isinstance(arg, PandasExpr):
         return arg._call(df)
     return arg
 
 
 def parse_into_exprs(
     implementation: str, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-) -> list[Expr]:
+) -> list[PandasExpr]:
     out = [
         parse_into_expr(implementation, into_expr)
         for into_expr in flatten_into_expr(*exprs)
@@ -96,19 +96,16 @@ def parse_into_exprs(
     return out
 
 
-def parse_into_expr(implementation: str, into_expr: IntoExpr) -> Expr:
-    from narwhals.pandas_like.expr import Expr
+def parse_into_expr(implementation: str, into_expr: IntoExpr) -> PandasExpr:
+    from narwhals.expression import Expr
     from narwhals.pandas_like.namespace import Namespace
-    from narwhals.pandas_like.series import PandasSeries
 
     plx = Namespace(implementation=implementation)
 
+    if isinstance(into_expr, Expr):
+        return into_expr._call(plx)  # type: ignore[no-any-return]
     if isinstance(into_expr, str):
         return plx.col(into_expr)
-    if isinstance(into_expr, Expr):
-        return into_expr
-    if isinstance(into_expr, PandasSeries):
-        return plx._create_expr_from_series(into_expr)
     msg = f"Expected IntoExpr, got {type(into_expr)}"
     raise TypeError(msg)
 
@@ -117,7 +114,6 @@ def evaluate_into_expr(df: PandasDataFrame, into_expr: IntoExpr) -> list[PandasS
     """
     Return list of raw columns.
     """
-
     expr = parse_into_expr(df._implementation, into_expr)
     return expr._call(df)
 
@@ -145,7 +141,7 @@ def evaluate_into_exprs(
 
 
 def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
-    from narwhals.pandas_like.expr import Expr
+    from narwhals.pandas_like.expr import PandasExpr
     from narwhals.pandas_like.namespace import Namespace
     from narwhals.pandas_like.series import PandasSeries
 
@@ -171,7 +167,7 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
 
     root_names = copy(expr._root_names)
     for arg in list(args) + list(kwargs.values()):
-        if root_names is not None and isinstance(arg, Expr):
+        if root_names is not None and isinstance(arg, PandasExpr):
             if arg._root_names is not None:
                 root_names.extend(arg._root_names)
             else:
@@ -197,7 +193,7 @@ def item(s: Any) -> Any:
     return s.iloc[0]
 
 
-def is_simple_aggregation(expr: Expr) -> bool:
+def is_simple_aggregation(expr: PandasExpr) -> bool:
     return (
         expr._function_name is not None
         and expr._depth is not None
@@ -207,7 +203,7 @@ def is_simple_aggregation(expr: Expr) -> bool:
     )
 
 
-def evaluate_simple_aggregation(expr: Expr, grouped: Any) -> Any:
+def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any) -> Any:
     """
     Use fastpath for simple aggregations if possible.
 
@@ -295,7 +291,7 @@ def series_from_iterable(
 
 
 def translate_dtype(dtype: Any) -> DType:
-    from narwhals.pandas_like import dtypes
+    from narwhals import dtypes
 
     if dtype in ("int64", "Int64"):
         return dtypes.Int64()
@@ -334,7 +330,7 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
 
 
 def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
-    from narwhals.pandas_like import dtypes
+    from narwhals import dtypes
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"

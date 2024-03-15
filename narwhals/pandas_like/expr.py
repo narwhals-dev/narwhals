@@ -6,17 +6,14 @@ from typing import Callable
 
 from narwhals.pandas_like.series import PandasSeries
 from narwhals.pandas_like.utils import register_expression_call
-from narwhals.spec import Expr as ExprProtocol
-from narwhals.spec import ExprStringNamespace as ExprStringNamespaceProtocol
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.pandas_like.dataframe import PandasDataFrame
-    from narwhals.pandas_like.dtypes import DType
 
 
-class Expr(ExprProtocol):
+class PandasExpr:
     def __init__(  # noqa: PLR0913
         self,
         call: Callable[[PandasDataFrame], list[PandasSeries]],
@@ -37,7 +34,7 @@ class Expr(ExprProtocol):
 
     def __repr__(self) -> str:
         return (
-            f"Narwhals Expr("
+            f"PandasExpr("
             f"depth={self._depth}, "
             f"function_name={self._function_name}, "
             f"root_names={self._root_names}, "
@@ -65,77 +62,77 @@ class Expr(ExprProtocol):
 
     def cast(
         self,
-        dtype: DType,  # type: ignore[override]
+        dtype: Any,
     ) -> Self:
         return register_expression_call(self, "cast", dtype)
 
-    def __eq__(self, other: Expr | Any) -> Self:  # type: ignore[override]
+    def __eq__(self, other: PandasExpr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__eq__", other)
 
-    def __ne__(self, other: Expr | Any) -> Self:  # type: ignore[override]
+    def __ne__(self, other: PandasExpr | Any) -> Self:  # type: ignore[override]
         return register_expression_call(self, "__ne__", other)
 
-    def __ge__(self, other: Expr | Any) -> Self:
+    def __ge__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__ge__", other)
 
-    def __gt__(self, other: Expr | Any) -> Self:
+    def __gt__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__gt__", other)
 
-    def __le__(self, other: Expr | Any) -> Self:
+    def __le__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__le__", other)
 
-    def __lt__(self, other: Expr | Any) -> Self:
+    def __lt__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__lt__", other)
 
-    def __and__(self, other: Expr | bool | Any) -> Self:
+    def __and__(self, other: PandasExpr | bool | Any) -> Self:
         return register_expression_call(self, "__and__", other)
 
     def __rand__(self, other: Any) -> Self:
         return register_expression_call(self, "__rand__", other)
 
-    def __or__(self, other: Expr | bool | Any) -> Self:
+    def __or__(self, other: PandasExpr | bool | Any) -> Self:
         return register_expression_call(self, "__or__", other)
 
     def __ror__(self, other: Any) -> Self:
         return register_expression_call(self, "__ror__", other)
 
-    def __add__(self, other: Expr | Any) -> Self:
+    def __add__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__add__", other)
 
     def __radd__(self, other: Any) -> Self:
         return register_expression_call(self, "__radd__", other)
 
-    def __sub__(self, other: Expr | Any) -> Self:
+    def __sub__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__sub__", other)
 
     def __rsub__(self, other: Any) -> Self:
         return register_expression_call(self, "__rsub__", other)
 
-    def __mul__(self, other: Expr | Any) -> Self:
+    def __mul__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__mul__", other)
 
     def __rmul__(self, other: Any) -> Self:
         return self.__mul__(other)
 
-    def __truediv__(self, other: Expr | Any) -> Self:
+    def __truediv__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__truediv__", other)
 
     def __rtruediv__(self, other: Any) -> Self:
         raise NotImplementedError
 
-    def __floordiv__(self, other: Expr | Any) -> Self:
+    def __floordiv__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__floordiv__", other)
 
     def __rfloordiv__(self, other: Any) -> Self:
         raise NotImplementedError
 
-    def __pow__(self, other: Expr | Any) -> Self:
+    def __pow__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__pow__", other)
 
     def __rpow__(self, other: Any) -> Self:  # pragma: no cover
         raise NotImplementedError
 
-    def __mod__(self, other: Expr | Any) -> Self:
+    def __mod__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__mod__", other)
 
     def __rmod__(self, other: Any) -> Self:  # pragma: no cover
@@ -203,17 +200,17 @@ class Expr(ExprProtocol):
         return ExprStringNamespace(self)
 
 
-class ExprStringNamespace(ExprStringNamespaceProtocol):
-    def __init__(self, expr: Expr) -> None:
+class ExprStringNamespace:
+    def __init__(self, expr: PandasExpr) -> None:
         self._expr = expr
 
-    def ends_with(self, suffix: str) -> Expr:
+    def ends_with(self, suffix: str) -> PandasExpr:
         # TODO make a register_expression_call for namespaces
 
-        return Expr(
+        return PandasExpr(
             lambda df: [
                 PandasSeries(
-                    series.series.str.endswith(suffix),
+                    series._series.str.endswith(suffix),
                     implementation=df._implementation,
                 )
                 for series in self._expr._call(df)
@@ -225,11 +222,11 @@ class ExprStringNamespace(ExprStringNamespaceProtocol):
             implementation=self._expr._implementation,
         )
 
-    def strip_chars(self, characters: str = " ") -> Expr:
-        return Expr(
+    def strip_chars(self, characters: str = " ") -> PandasExpr:
+        return PandasExpr(
             lambda df: [
                 PandasSeries(
-                    series.series.str.strip(characters),
+                    series._series.str.strip(characters),
                     implementation=df._implementation,
                 )
                 for series in self._expr._call(df)

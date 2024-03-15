@@ -33,6 +33,7 @@ lint.select = [
   "ALL",
 ]
 lint.ignore = [
+  'A001',
   'A003',
   'ANN101',
   'ANN401',
@@ -44,6 +45,7 @@ lint.ignore = [
   'DTZ',
   'E501',
   'EM101',  # todo: enable
+  'ERA001',  # todo: enable
   'FBT003',  # todo: enable
   'FIX',
   'ICN001',

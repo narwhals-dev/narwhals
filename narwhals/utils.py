@@ -19,7 +19,7 @@ def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
         if isinstance(arg, (list, tuple)):
             out.extend(arg)
         else:
-            out.append(arg)  # type: ignore[arg-type]
+            out.append(arg)
     return out
 
 
