@@ -1,0 +1,27 @@
+site_name: Narwhals
+repo_url: https://github.com/MarcoGorelli/narwhals.git
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick start: quick_start.md
+  - Tutorial:
+    - basics/dataframe.md
+    - basics/column.md
+    - basics/complete_example.md
+  - API Reference: reference.md
+theme:
+  name: material
+  font: false
+plugins:
+- search
+- mkdocstrings
+markdown_extensions:
+- md_in_html
+- pymdownx.tabbed:
+    alternate_style: true
+- pymdownx.superfences:
+    custom_fences:
+    - name: python
+      class: python
+      validator: !!python/name:markdown_exec.validator
+      format: !!python/name:markdown_exec.formatter
