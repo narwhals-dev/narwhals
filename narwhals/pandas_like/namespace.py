@@ -188,7 +188,4 @@ class Namespace:
         return PandasDataFrame(
             horizontal_concat(dfs, implementation=self._implementation),
             implementation=self._implementation,
-            # TODO (incorrect!)
-            is_eager=True,
-            is_lazy=False,
         )

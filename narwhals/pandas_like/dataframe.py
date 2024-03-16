@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import ClassVar
 from typing import Iterable
 from typing import Literal
 
@@ -25,20 +26,18 @@ if TYPE_CHECKING:
 
 
 class PandasDataFrame:
+    _features: ClassVar[set[str]] = {"eager", "lazy"}
+
     # --- not in the spec ---
     def __init__(
         self,
         dataframe: Any,
         *,
         implementation: str,
-        is_eager: bool,
-        is_lazy: bool,
     ) -> None:
         self._validate_columns(dataframe.columns)
         self._dataframe = reset_index(dataframe)
         self._implementation = implementation
-        self._is_eager = is_eager
-        self._is_lazy = is_lazy
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
         counter = collections.Counter(columns)
@@ -62,17 +61,11 @@ class PandasDataFrame:
         return self.__class__(
             df,
             implementation=self._implementation,
-            is_eager=self._is_eager,
-            is_lazy=self._is_lazy,
         )
 
     def __getitem__(self, column_name: str) -> PandasSeries:
         from narwhals.pandas_like.series import PandasSeries
 
-        if not self._is_eager:
-            raise RuntimeError(
-                "DataFrame.__getitem__ can only be called when it was instantiated with `is_eager=True`"
-            )
         return PandasSeries(
             self._dataframe.loc[:, column_name],
             implementation=self._implementation,
@@ -150,15 +143,9 @@ class PandasDataFrame:
 
     # --- convert ---
     def collect(self) -> PandasDataFrame:
-        if not self._is_lazy:
-            raise RuntimeError(
-                "DataFrame.collect can only be called when it was instantiated with `is_lazy=True`"
-            )
         return PandasDataFrame(
             self._dataframe,
             implementation=self._implementation,
-            is_eager=True,
-            is_lazy=False,
         )
 
     # --- actions ---
@@ -168,8 +155,6 @@ class PandasDataFrame:
         return PandasGroupBy(
             self,
             flatten_str(*keys),
-            is_eager=self._is_eager,
-            is_lazy=self._is_lazy,
         )
 
     def join(
@@ -219,60 +204,29 @@ class PandasDataFrame:
     def lazy(self) -> Self:
         return self.__class__(
             self._dataframe,
-            is_eager=False,
-            is_lazy=True,
             implementation=self._implementation,
         )
 
     @property
     def shape(self) -> tuple[int, int]:
-        if not self._is_eager:
-            raise RuntimeError(
-                "DataFrame.shape can only be called when it was instantiated with `is_eager=True`"
-            )
         return self._dataframe.shape  # type: ignore[no-any-return]
 
     def iter_columns(self) -> Iterable[PandasSeries]:
         from narwhals.pandas_like.series import PandasSeries
 
-        if not self._is_eager:
-            raise RuntimeError(
-                "DataFrame.iter_columns can only be called when it was instantiated with `is_eager=True`"
-            )
         return (
             PandasSeries(self._dataframe[col], implementation=self._implementation)
             for col in self.columns
         )
 
     def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
-        if not self._is_eager:
-            raise RuntimeError(
-                "DataFrame.to_dict can only be called when it was instantiated with `is_eager=True`"
-            )
         if as_series:
             # todo: should this return narwhals series?
             return {col: self._dataframe.loc[:, col] for col in self.columns}
         return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
-        if not self._is_eager:
-            raise RuntimeError(
-                "DataFrame.to_numpy can only be called when it was instantiated with `is_eager=True`"
-            )
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
-        if not self._is_eager:
-            raise RuntimeError(
-                "DataFrame.to_pandas can only be called when it was instantiated with `is_eager=True`"
-            )
         return self._dataframe
-
-    # --- public, non-Polars ---
-    @property
-    def is_eager(self) -> bool:
-        return self._is_eager
-
-    @property
-    def is_lazy(self) -> bool:
-        return self._is_lazy

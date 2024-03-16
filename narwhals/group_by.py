@@ -22,6 +22,5 @@ class GroupBy(Generic[T]):
         return self._df.__class__(
             self._df._dataframe.group_by(*self._keys).agg(*aggs, **named_aggs),
             implementation=self._df._implementation,
-            is_eager=self._df._is_eager,
-            is_lazy=self._df._is_lazy,
+            features=self._df._features,
         )

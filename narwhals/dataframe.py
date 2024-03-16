@@ -23,37 +23,40 @@ if TYPE_CHECKING:
 from narwhals.typing import T
 
 
+def _validate_features(df: Any, features: set[str]) -> None:
+    if (pl := get_polars()) is not None and isinstance(df, pl.DataFrame):
+        df_features = {"eager"}
+    elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
+        df_features = {"lazy"}
+    else:
+        df_features = df._features
+    if diff := {f for f in features if f not in df_features}:
+        msg = f"Features {diff} not supported by {type(df)} DataFrame"
+        raise TypeError(msg)
+
+
 class DataFrame(Generic[T]):
     def __init__(
         self,
         df: T,
         *,
-        is_eager: bool = False,
-        is_lazy: bool = False,
+        features: Iterable[str] | None = None,
         implementation: str | None = None,
     ) -> None:
-        self._is_eager = is_eager
-        self._is_lazy = is_lazy
+        self._features: set[str] = set(features) if features is not None else set()
         if implementation is not None:
             self._dataframe: Any = df
             self._implementation = implementation
             return
+        _validate_features(df, self._features)
         if (pl := get_polars()) is not None and isinstance(
             df, (pl.DataFrame, pl.LazyFrame)
         ):
-            if isinstance(df, pl.DataFrame) and is_lazy:
-                msg = "can't instantiate with is_lazy and pl.DataFrame"
-                raise TypeError(msg)
-            if isinstance(df, pl.LazyFrame) and is_eager:
-                msg = "can't instantiate with is_eager and pl.LazyFrame"
-                raise TypeError(msg)
             self._dataframe = df
             self._implementation = "polars"
             return
         if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(
-                df, is_eager=is_eager, is_lazy=is_lazy, implementation="pandas"
-            )
+            self._dataframe = PandasDataFrame(df, implementation="pandas")
             self._implementation = "pandas"
             return
         msg = f"Expected pandas or Polars dataframe or lazyframe, got: {type(df)}"
@@ -63,8 +66,7 @@ class DataFrame(Generic[T]):
         # construct, preserving properties
         return self.__class__(
             df,
-            is_eager=self._is_eager,
-            is_lazy=self._is_lazy,
+            features=self._features,
             implementation=self._implementation,
         )
 
@@ -118,18 +120,18 @@ class DataFrame(Generic[T]):
 
     @property
     def shape(self) -> tuple[int, int]:
-        if self._is_lazy:
+        if "eager" not in self._features:
             raise RuntimeError(
-                "Can't extract Series from Narwhals DataFrame if it was instantiated with `is_lazy=True`"
+                "`DataFrame.shape` can only be called when feature 'eager' is enabled"
             )
         return self._dataframe.shape  # type: ignore[no-any-return]
 
     def __getitem__(self, col_name: str) -> Series[Any]:
         from narwhals.series import Series
 
-        if self._is_lazy:
+        if "eager" not in self._features:
             raise RuntimeError(
-                "Can't extract Series from Narwhals DataFrame if it was instantiated with `is_lazy=True`"
+                "`DataFrame.shape` can only be called when feature 'eager' is enabled"
             )
         return Series(self._dataframe[col_name], implementation=self._implementation)
 
@@ -176,11 +178,12 @@ class DataFrame(Generic[T]):
         )
 
     def collect(self) -> Self:
+        features = {f for f in self._features if f != "lazy"}
+        features.add("eager")
         return self.__class__(
             self._dataframe.collect(),
-            is_eager=True,
-            is_lazy=False,
             implementation=self._implementation,
+            features=features,
         )
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
@@ -204,15 +207,15 @@ class DataFrame(Generic[T]):
         )
 
     def to_pandas(self) -> Any:
-        if not self._is_eager:
+        if "eager" not in self._features:
             raise RuntimeError(
-                "DataFrame.to_pandas can only be called when it was instantiated with `is_eager=True`"
+                "`DataFrame.shape` can only be called when feature 'eager' is enabled"
             )
         return self._dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
-        if not self._is_eager:
+        if "eager" not in self._features:
             raise RuntimeError(
-                "DataFrame.to_numpy can only be called when it was instantiated with `is_eager=True`"
+                "`DataFrame.shape` can only be called when feature 'eager' is enabled"
             )
         return self._dataframe.to_numpy()

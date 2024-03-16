@@ -23,13 +23,9 @@ if TYPE_CHECKING:
 
 
 class PandasGroupBy:
-    def __init__(
-        self, df: PandasDataFrame, keys: list[str], *, is_eager: bool, is_lazy: bool
-    ) -> None:
+    def __init__(self, df: PandasDataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
-        self._is_eager = is_eager
-        self._is_lazy = is_lazy
 
     def agg(
         self,
@@ -82,8 +78,6 @@ class PandasGroupBy:
         return PandasDataFrame(
             df,
             implementation=self._df._implementation,
-            is_eager=self._is_eager,
-            is_lazy=self._is_lazy,
         )
 
 
