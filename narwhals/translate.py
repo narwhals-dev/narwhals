@@ -7,16 +7,16 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
     from narwhals.typing import T
 
 
-def to_native(obj: DataFrame[T] | Series[T]) -> T:
-    from narwhals.dataframe import DataFrame
+def to_native(obj: BaseFrame[T] | Series[T]) -> T:
+    from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
 
-    if isinstance(obj, DataFrame):
+    if isinstance(obj, BaseFrame):
         return (  # type: ignore[no-any-return]
             obj._dataframe
             if obj._implementation == "polars"

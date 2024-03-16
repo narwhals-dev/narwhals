@@ -36,40 +36,14 @@ def _validate_features(df: Any, features: set[str]) -> None:
         raise TypeError(msg)
 
 
-class DataFrame(Generic[T]):
-    def __init__(
-        self,
-        df: T,
-        *,
-        features: Iterable[str] | None = None,
-        implementation: str | None = None,
-    ) -> None:
-        self._features: set[str] = set(features) if features is not None else set()
-        if implementation is not None:
-            self._dataframe: Any = df
-            self._implementation = implementation
-            return
-        if (pl := get_polars()) is not None and isinstance(
-            df, (pl.DataFrame, pl.LazyFrame)
-        ):
-            self._dataframe = df
-            self._implementation = "polars"
-        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
-            self._implementation = "pandas"
-        elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="modin")
-            self._implementation = "modin"
-        else:
-            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
-            raise TypeError(msg)
-        _validate_features(self._dataframe, self._features)
+class BaseFrame(Generic[T]):
+    _dataframe: Any
+    _implementation: str
 
     def _from_dataframe(self, df: Any) -> Self:
         # construct, preserving properties
-        return self.__class__(
+        return self.__class__(  # type: ignore[call-arg]
             df,
-            features=self._features,
             implementation=self._implementation,
         )
 
@@ -86,7 +60,7 @@ class DataFrame(Generic[T]):
 
         if self._implementation != "polars":
             return arg
-        if isinstance(arg, DataFrame):
+        if isinstance(arg, BaseFrame):
             return arg._dataframe
         if isinstance(arg, Series):
             return arg._series
@@ -121,23 +95,6 @@ class DataFrame(Generic[T]):
     def columns(self) -> list[str]:
         return self._dataframe.columns  # type: ignore[no-any-return]
 
-    @property
-    def shape(self) -> tuple[int, int]:
-        if "eager" not in self._features:
-            raise RuntimeError(
-                "`DataFrame.shape` can only be called when feature 'eager' is enabled"
-            )
-        return self._dataframe.shape  # type: ignore[no-any-return]
-
-    def __getitem__(self, col_name: str) -> Series[Any]:
-        from narwhals.series import Series
-
-        if "eager" not in self._features:
-            raise RuntimeError(
-                "`DataFrame.__getitem__` can only be called when feature 'eager' is enabled"
-            )
-        return Series(self._dataframe[col_name], implementation=self._implementation)
-
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -168,7 +125,8 @@ class DataFrame(Generic[T]):
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy[T]:
         from narwhals.group_by import GroupBy
 
-        return GroupBy(self, *keys)
+        # todo: groupby and lazygroupby
+        return GroupBy(self, *keys)  # type: ignore[arg-type]
 
     def sort(
         self,
@@ -179,22 +137,6 @@ class DataFrame(Generic[T]):
         return self._from_dataframe(
             self._dataframe.sort(by, *more_by, descending=descending)
         )
-
-    def collect(self) -> Self:
-        if "lazy" not in self._features:
-            raise RuntimeError(
-                "`DataFrame.collect` can only be called when feature 'lazy' is enabled"
-            )
-        features = {f for f in self._features if f != "lazy"}
-        features.add("eager")
-        return self.__class__(
-            self._dataframe.collect(),
-            implementation=self._implementation,
-            features=features,
-        )
-
-    def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
-        return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     def join(
         self,
@@ -213,16 +155,82 @@ class DataFrame(Generic[T]):
             )
         )
 
-    def to_pandas(self) -> Any:
-        if "eager" not in self._features:
-            raise RuntimeError(
-                "`DataFrame.to_pandas` can only be called when feature 'eager' is enabled"
+
+class DataFrame(BaseFrame[T]):
+    def __init__(
+        self,
+        df: T,
+        *,
+        implementation: str | None = None,
+    ) -> None:
+        if implementation is not None:
+            self._dataframe: Any = df
+            self._implementation = implementation
+            return
+        if (pl := get_polars()) is not None and isinstance(df, pl.DataFrame):
+            self._dataframe = df
+            self._implementation = "polars"
+        elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
+            raise TypeError(
+                "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
             )
+        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
+            self._dataframe = PandasDataFrame(df, implementation="pandas")
+            self._implementation = "pandas"
+        elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
+            self._dataframe = PandasDataFrame(df, implementation="modin")
+            self._implementation = "modin"
+        else:
+            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
+            raise TypeError(msg)
+
+    def to_pandas(self) -> Any:
         return self._dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
-        if "eager" not in self._features:
-            raise RuntimeError(
-                "`DataFrame.to_numpy` can only be called when feature 'eager' is enabled"
-            )
         return self._dataframe.to_numpy()
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self._dataframe.shape  # type: ignore[no-any-return]
+
+    def __getitem__(self, col_name: str) -> Series[Any]:
+        from narwhals.series import Series
+
+        return Series(self._dataframe[col_name], implementation=self._implementation)
+
+    def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
+        return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
+
+
+class LazyFrame(BaseFrame[T]):
+    def __init__(
+        self,
+        df: T,
+        *,
+        implementation: str | None = None,
+    ) -> None:
+        if implementation is not None:
+            self._dataframe: Any = df
+            self._implementation = implementation
+            return
+        if (pl := get_polars()) is not None and isinstance(
+            df, (pl.DataFrame, pl.LazyFrame)
+        ):
+            self._dataframe = df.lazy()
+            self._implementation = "polars"
+        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
+            self._dataframe = PandasDataFrame(df, implementation="pandas")
+            self._implementation = "pandas"
+        elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
+            self._dataframe = PandasDataFrame(df, implementation="modin")
+            self._implementation = "modin"
+        else:
+            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
+            raise TypeError(msg)
+
+    def collect(self) -> DataFrame[Any]:
+        return DataFrame(
+            self._dataframe.collect(),
+            implementation=self._implementation,
+        )

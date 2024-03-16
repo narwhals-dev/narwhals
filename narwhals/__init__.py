@@ -4,6 +4,7 @@ from narwhals.containers import is_pandas
 from narwhals.containers import is_polars
 from narwhals.containers import is_series
 from narwhals.dataframe import DataFrame
+from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import *  # noqa: F403
 from narwhals.expression import all
 from narwhals.expression import col
@@ -34,5 +35,6 @@ __all__ = [
     "sum",
     "sum_horizontal",
     "DataFrame",
+    "LazyFrame",
     "Series",
 ]
