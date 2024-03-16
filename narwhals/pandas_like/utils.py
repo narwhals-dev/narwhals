@@ -127,9 +127,7 @@ def evaluate_into_exprs(
     """Evaluate each expr into Series."""
     series: list[PandasSeries] = [
         item
-        for sublist in [
-            evaluate_into_expr(df, into_expr) for into_expr in flatten(*exprs)
-        ]
+        for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten(exprs)]
         for item in sublist
     ]
     for name, expr in named_exprs.items():
