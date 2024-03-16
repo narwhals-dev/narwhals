@@ -70,6 +70,16 @@ class Expr:
             lambda plx: self._call(plx).__rsub__(extract_native(plx, other))
         )
 
+    def __truediv__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__truediv__(extract_native(plx, other))
+        )
+
+    def __rtruediv__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__rtruediv__(extract_native(plx, other))
+        )
+
     def __mul__(self, other: Any) -> Expr:
         return self.__class__(
             lambda plx: self._call(plx).__mul__(extract_native(plx, other))

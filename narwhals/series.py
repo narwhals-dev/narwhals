@@ -130,3 +130,9 @@ class Series(Generic[T]):
 
     def to_pandas(self) -> Any:
         return self._series.to_pandas()
+
+    def mean(self) -> Any:
+        return self._series.mean()
+
+    def std(self) -> Any:
+        return self._series.std()

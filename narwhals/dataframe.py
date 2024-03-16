@@ -72,7 +72,7 @@ class DataFrame(Generic[T]):
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
         from narwhals.utils import flatten
 
-        args = [self._extract_native(v) for v in flatten(*args)]  # type: ignore[assignment]
+        args = [self._extract_native(v) for v in flatten(args)]  # type: ignore[assignment]
         kwargs = {k: self._extract_native(v) for k, v in kwargs.items()}
         return args, kwargs
 

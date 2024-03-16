@@ -2,11 +2,12 @@
 # type: ignore
 import polars
 import pandas as pd
+import polars as pl
 
 import narwhals as nw
 
 df_raw = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df = nw.DataFrame(df_raw)
+df = nw.DataFrame(df_raw, features=["lazy"])
 df_raw_2 = pd.DataFrame({"a": [1, 3], "c": [7, 9]})
 df2 = nw.DataFrame(df_raw_2, features=["lazy"])
 
@@ -123,3 +124,8 @@ print(result._dataframe._dataframe.dtypes)
 
 result = df.select("a", "b").select(nw.all() + nw.col("a"))
 print(nw.to_native(result))
+
+df = nw.DataFrame(df_raw, features=["eager"])
+print(df["a"].mean())
+df = nw.DataFrame(pl.from_pandas(df_raw), features=["eager"])
+print(df["a"].mean())
