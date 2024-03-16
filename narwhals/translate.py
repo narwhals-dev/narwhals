@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 
@@ -31,5 +32,6 @@ def to_native(obj: DataFrame[T] | Series[T]) -> T:
 __all__ = [
     "get_pandas",
     "get_polars",
+    "get_modin",
     "to_native",
 ]

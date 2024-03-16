@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Please start by following the [installation instructions](installation.md)
+Please start by following the [installation instructions](installation.md).
 
 Then, please install the following:
 

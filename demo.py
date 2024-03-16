@@ -1,6 +1,7 @@
 # ruff: noqa
 from typing import Any
 import polars as pl
+import modin.pandas as mpd
 
 import narwhals as nw
 
@@ -22,6 +23,8 @@ def func(df_raw: nw.typing.T) -> nw.typing.T:
 import pandas as pd
 
 df = pd.DataFrame({"a": [1, 1, 3], "b": [4, 5, 6], "c": [7, 8, 9]})
+print(func(df))
+df = mpd.DataFrame({"a": [1, 1, 3], "b": [4, 5, 6], "c": [7, 8, 9]})
 print(func(df))
 df = pl.DataFrame({"a": [1, 1, 3], "b": [4, 5, 6], "c": [7, 8, 9]})
 print(func(df))

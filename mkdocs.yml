@@ -12,6 +12,10 @@ nav:
 theme:
   name: material
   font: false
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - navigation.footer
 plugins:
 - search
 - mkdocstrings

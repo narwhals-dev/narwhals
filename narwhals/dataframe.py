@@ -9,6 +9,7 @@ from typing import Sequence
 
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.pandas_like.dataframe import PandasDataFrame
+from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
 
@@ -56,8 +57,11 @@ class DataFrame(Generic[T]):
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="pandas")
             self._implementation = "pandas"
+        elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
+            self._dataframe = PandasDataFrame(df, implementation="modin")
+            self._implementation = "modin"
         else:
-            msg = f"Expected pandas or Polars dataframe or lazyframe, got: {type(df)}"
+            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
         _validate_features(self._dataframe, self._features)
 

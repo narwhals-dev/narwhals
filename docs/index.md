@@ -1,19 +1,19 @@
 # Narwhals
 
-Extremely lightweight compatibility layer between pandas and Polars:
+![](assets/image.png)
 
-- ✅ No dependencies.
-- ✅ Lightweight: wheel is smaller than 30 kB.
-- ✅ Simple, minimal, and predictable.
+Extremely lightweight compatibility layer between Polars, pandas, and more.
 
-No need to choose - support both with ease!
+Seamlessly support both, without depending on either!
+
+- ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
+- ✅ **No dependencies** (not even Polars), keep your library lightweight
+- ✅ Support both **lazy** and eager execution
+- ✅ Use Polars **Expressions**
 
 ## Who's this for?
 
 Anyone wishing to write a library/application/service which consumes dataframes, and wishing to make it
 completely dataframe-agnostic.
 
-## Let's get started!
-
-- [Installation](installation.md)
-- [Quick start](quick_start.md)
+Let's get started!
