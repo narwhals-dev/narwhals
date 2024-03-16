@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.typing import IntoPandasExpr
 
 
-class Namespace:
+class PandasNamespace:
     Int64 = dtypes.Int64
     Int32 = dtypes.Int32
     Int16 = dtypes.Int16

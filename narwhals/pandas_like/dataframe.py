@@ -99,9 +99,9 @@ class PandasDataFrame:
         self,
         *predicates: IntoPandasExpr | Iterable[IntoPandasExpr],
     ) -> Self:
-        from narwhals.pandas_like.namespace import Namespace
+        from narwhals.pandas_like.namespace import PandasNamespace
 
-        plx = Namespace(self._implementation)
+        plx = PandasNamespace(self._implementation)
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
