@@ -44,8 +44,6 @@ parts = {
     "city": ["London", "Paris", "Oslo", "London", "Paris", "London"],
 }
 
-reveal_type(parts)
-
 print("pandas output:")
 print(
     my_agnostic_function(
@@ -60,7 +58,7 @@ print(
         pl.DataFrame(parts),
     )
 )
-reveal_type(
+print(
     my_agnostic_function(
         pl.DataFrame(suppliers),
         pl.DataFrame(parts),
