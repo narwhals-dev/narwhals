@@ -97,10 +97,13 @@ def parse_into_exprs(
 
 def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
     from narwhals.expression import Expr
-    from narwhals.pandas_like.namespace import Namespace
+    from narwhals.pandas_like.expr import PandasExpr
+    from narwhals.pandas_like.namespace import PandasNamespace
 
-    plx = Namespace(implementation=implementation)
+    plx = PandasNamespace(implementation=implementation)
 
+    if isinstance(into_expr, PandasExpr):
+        return into_expr
     if isinstance(into_expr, Expr):
         return into_expr._call(plx)
     if isinstance(into_expr, str):
@@ -141,10 +144,10 @@ def evaluate_into_exprs(
 
 def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
     from narwhals.pandas_like.expr import PandasExpr
-    from narwhals.pandas_like.namespace import Namespace
+    from narwhals.pandas_like.namespace import PandasNamespace
     from narwhals.pandas_like.series import PandasSeries
 
-    plx = Namespace(implementation=expr._implementation)
+    plx = PandasNamespace(implementation=expr._implementation)
 
     def func(df: PandasDataFrame) -> list[PandasSeries]:
         out: list[PandasSeries] = []
