@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
 
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+from narwhals.typing import T
 
 
-class Series:
+class Series(Generic[T]):
     def __init__(
         self,
         series: Any,
@@ -93,24 +95,24 @@ class Series:
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
-    ) -> Series:
+    ) -> Self:
         return self._from_series(
             self._series.is_between(lower_bound, upper_bound, closed)
         )
 
-    def is_in(self, other: Any) -> Series:
+    def is_in(self, other: Any) -> Self:
         return self._from_series(self._series.is_in(self._extract_native(other)))
 
-    def is_null(self) -> Series:
+    def is_null(self) -> Self:
         return self._from_series(self._series.is_null())
 
-    def drop_nulls(self) -> Series:
+    def drop_nulls(self) -> Self:
         return self._from_series(self._series.drop_nulls())
 
     def n_unique(self) -> int:
         return self._series.n_unique()  # type: ignore[no-any-return]
 
-    def unique(self) -> Series:
+    def unique(self) -> Self:
         return self._from_series(self._series.unique())
 
     def zip_with(self, mask: Self, other: Self) -> Self:
@@ -118,7 +120,7 @@ class Series:
             self._series.zip_with(self._extract_native(mask), self._extract_native(other))
         )
 
-    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Series:
+    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Self:
         return self._from_series(
             self._series.sample(n, fraction=fraction, with_replacement=with_replacement)
         )

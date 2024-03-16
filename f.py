@@ -8,9 +8,9 @@ import narwhals as nw
 
 
 def my_agnostic_function(
-    suppliers_native,
-    parts_native,
-):
+    suppliers_native: nw.typing.T,
+    parts_native: nw.typing.T,
+) -> nw.typing.T:
     suppliers = nw.DataFrame(suppliers_native)
     parts = nw.DataFrame(parts_native)
 
@@ -43,6 +43,8 @@ parts = {
     "city": ["London", "Paris", "Oslo", "London", "Paris", "London"],
 }
 
+reveal_type(parts)
+
 print("pandas output:")
 print(
     my_agnostic_function(
@@ -52,6 +54,12 @@ print(
 )
 print("\nPolars output:")
 print(
+    my_agnostic_function(
+        pl.DataFrame(suppliers),
+        pl.DataFrame(parts),
+    )
+)
+reveal_type(
     my_agnostic_function(
         pl.DataFrame(suppliers),
         pl.DataFrame(parts),

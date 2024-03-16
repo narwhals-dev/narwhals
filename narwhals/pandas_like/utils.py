@@ -6,7 +6,7 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
-from narwhals.utils import flatten_into_expr
+from narwhals.utils import flatten
 from narwhals.utils import remove_prefix
 
 T = TypeVar("T")
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     ExprT = TypeVar("ExprT", bound=PandasExpr)
 
-    from narwhals.spec import IntoExpr
+    from narwhals.pandas_like.typing import IntoExpr
 
 
 def validate_column_comparand(other: Any) -> Any:
@@ -87,10 +87,7 @@ def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
 def parse_into_exprs(
     implementation: str, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
 ) -> list[PandasExpr]:
-    out = [
-        parse_into_expr(implementation, into_expr)
-        for into_expr in flatten_into_expr(*exprs)
-    ]
+    out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(*exprs)]  # type: ignore[arg-type]
     for name, expr in named_exprs.items():
         out.append(parse_into_expr(implementation, expr).alias(name))
     return out
@@ -103,7 +100,7 @@ def parse_into_expr(implementation: str, into_expr: IntoExpr) -> PandasExpr:
     plx = Namespace(implementation=implementation)
 
     if isinstance(into_expr, Expr):
-        return into_expr._call(plx)  # type: ignore[no-any-return]
+        return into_expr._call(plx)
     if isinstance(into_expr, str):
         return plx.col(into_expr)
     msg = f"Expected IntoExpr, got {type(into_expr)}"
@@ -127,7 +124,8 @@ def evaluate_into_exprs(
     series: list[PandasSeries] = [
         item
         for sublist in [
-            evaluate_into_expr(df, into_expr) for into_expr in flatten_into_expr(*exprs)
+            evaluate_into_expr(df, into_expr)  # type: ignore[arg-type]
+            for into_expr in flatten(*exprs)
         ]
         for item in sublist
     ]

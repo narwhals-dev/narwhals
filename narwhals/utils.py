@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Iterable
 
 if TYPE_CHECKING:
-    from narwhals.spec import IntoExpr
+    from narwhals.typing import T
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -13,13 +13,13 @@ def remove_prefix(text: str, prefix: str) -> str:
     return text
 
 
-def flatten_into_expr(*args: IntoExpr | Iterable[IntoExpr]) -> list[IntoExpr]:
-    out: list[IntoExpr] = []
+def flatten(*args: T | Iterable[T]) -> list[T]:
+    out: list[T] = []
     for arg in args:
         if isinstance(arg, (list, tuple)):
             out.extend(arg)
         else:
-            out.append(arg)
+            out.append(arg)  # type: ignore[arg-type]
     return out
 
 

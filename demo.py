@@ -5,8 +5,8 @@ import polars as pl
 import narwhals as nw
 
 
-def func(df_raw: Any) -> Any:
-    df = nw.DataFrame(df_raw)
+def func(df_raw: nw.typing.T) -> nw.typing.T:
+    df: nw.DataFrame[nw.typing.T] = nw.DataFrame(df_raw)
     res = df.with_columns(
         d=nw.col("a") + 1,
         e=nw.col("a") + nw.col("b"),

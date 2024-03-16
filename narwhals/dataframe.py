@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -18,9 +19,11 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.series import Series
     from narwhals.typing import IntoExpr
+    from narwhals.typing import T
+from narwhals.typing import T
 
 
-class DataFrame:
+class DataFrame(Generic[T]):
     def __init__(
         self,
         df: Any,
@@ -66,9 +69,9 @@ class DataFrame:
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
-        from narwhals.utils import flatten_into_expr
+        from narwhals.utils import flatten
 
-        args = [self._extract_native(v) for v in flatten_into_expr(*args)]  # type: ignore[assignment]
+        args = [self._extract_native(v) for v in flatten(*args)]  # type: ignore[assignment]
         kwargs = {k: self._extract_native(v) for k, v in kwargs.items()}
         return args, kwargs
 
@@ -121,7 +124,7 @@ class DataFrame:
             )
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def __getitem__(self, col_name: str) -> Series:
+    def __getitem__(self, col_name: str) -> Series[Any]:
         from narwhals.series import Series
 
         if self._is_lazy:
@@ -157,7 +160,7 @@ class DataFrame:
             self._dataframe.filter(*predicates),
         )
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy[T]:
         from narwhals.group_by import GroupBy
 
         return GroupBy(self, *keys)
