@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any
 from typing import Iterable
-
-if TYPE_CHECKING:
-    from narwhals.typing import T
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -13,14 +10,18 @@ def remove_prefix(text: str, prefix: str) -> str:
     return text
 
 
-def flatten(*args: T | Iterable[T]) -> list[T]:
-    out: list[T] = []
-    for arg in args:
-        if isinstance(arg, (list, tuple)):
-            out.extend(arg)
-        else:
-            out.append(arg)  # type: ignore[arg-type]
-    return out
+def flatten(args: Any) -> list[Any]:
+    if not args:
+        return []
+    if len(args) == 1 and _is_iterable(args[0]):
+        return args[0]  # type: ignore[no-any-return]
+    return args  # type: ignore[no-any-return]
+
+
+def _is_iterable(arg: Any | Iterable[Any]) -> bool:
+    from narwhals.series import Series
+
+    return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
 def flatten_str(*args: str | Iterable[str]) -> list[str]:

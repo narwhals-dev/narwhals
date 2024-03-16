@@ -89,7 +89,7 @@ def parse_into_exprs(
     *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
     **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]:
-    out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(*exprs)]  # type: ignore[arg-type]
+    out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
     for name, expr in named_exprs.items():
         out.append(parse_into_expr(implementation, expr).alias(name))
     return out
@@ -127,10 +127,7 @@ def evaluate_into_exprs(
     """Evaluate each expr into Series."""
     series: list[PandasSeries] = [
         item
-        for sublist in [
-            evaluate_into_expr(df, into_expr)  # type: ignore[arg-type]
-            for into_expr in flatten(*exprs)
-        ]
+        for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten(exprs)]
         for item in sublist
     ]
     for name, expr in named_exprs.items():

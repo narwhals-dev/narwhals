@@ -11,17 +11,12 @@ if TYPE_CHECKING:
 def translate_frame(
     df: Any,
     implementation: str,
-    *,
-    is_eager: bool,
-    is_lazy: bool,
 ) -> PandasDataFrame:
     from narwhals.pandas_like.dataframe import PandasDataFrame
 
     return PandasDataFrame(
         df,
         implementation=implementation,
-        is_eager=is_eager,
-        is_lazy=is_lazy,
     )
 
 

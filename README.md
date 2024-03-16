@@ -31,12 +31,14 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
 1. use `narwhals.DataFrame` to wrap a pandas or Polars DataFrame to a Narwhals DataFrame
 2. use the subset of the Polars API supported by Narwhals. Some methods are only available
-   if you passed `is_eager=True` to `narwhals.DataFrame`
+   if you initialised `narwhals.DataFrame` with `features=['eager']`, or `features=['lazy']`
 3. use `narwhals.to_native` to return an object to the user in its original
    dataframe flavour. For example:
 
-   - if you started with pandas, you'll get pandas back
-   - if you started with Polars, you'll get Polars back
+   - if you started with a pandas DataFrame, you'll get a pandas DataFrame back
+   - if you started with a Polars DataFrame, you'll get a Polars DataFrame back
+   - if you started with a Polars LazyFrame, you'll get a Polars LazyFrame back (unless
+     you called `.collect`!)
    
 ## Example
 
