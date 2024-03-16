@@ -7,4 +7,4 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.expr import PandasExpr
     from narwhals.pandas_like.series import PandasSeries
 
-    IntoExpr: TypeAlias = PandasExpr | str | int | float | PandasSeries
+    IntoPandasExpr: TypeAlias = PandasExpr | str | int | float | PandasSeries

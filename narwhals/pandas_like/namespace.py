@@ -16,7 +16,7 @@ from narwhals.pandas_like.utils import series_from_iterable
 from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
-    from narwhals.pandas_like.typing import IntoExpr
+    from narwhals.pandas_like.typing import IntoPandasExpr
 
 
 class Namespace:
@@ -153,13 +153,19 @@ class Namespace:
         )
 
     # --- horizontal ---
-    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> PandasExpr:
+    def sum_horizontal(
+        self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
+    ) -> PandasExpr:
         return reduce(lambda x, y: x + y, parse_into_exprs(self._implementation, *exprs))
 
-    def all_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> PandasExpr:
+    def all_horizontal(
+        self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
+    ) -> PandasExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(self._implementation, *exprs))
 
-    def any_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> PandasExpr:
+    def any_horizontal(
+        self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
+    ) -> PandasExpr:
         return reduce(lambda x, y: x | y, parse_into_exprs(self._implementation, *exprs))
 
     def concat(

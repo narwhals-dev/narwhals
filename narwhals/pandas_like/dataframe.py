@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.pandas_like.group_by import PandasGroupBy
     from narwhals.pandas_like.series import PandasSeries
-    from narwhals.pandas_like.typing import IntoExpr
+    from narwhals.pandas_like.typing import IntoPandasExpr
 
 
 class PandasDataFrame:
@@ -92,8 +92,8 @@ class PandasDataFrame:
     # --- reshape ---
     def select(
         self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+        **named_exprs: IntoPandasExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = horizontal_concat(
@@ -104,7 +104,7 @@ class PandasDataFrame:
 
     def filter(
         self,
-        *predicates: IntoExpr | Iterable[IntoExpr],
+        *predicates: IntoPandasExpr | Iterable[IntoPandasExpr],
     ) -> Self:
         from narwhals.pandas_like.namespace import Namespace
 
@@ -117,8 +117,8 @@ class PandasDataFrame:
 
     def with_columns(
         self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+        **named_exprs: IntoPandasExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self._dataframe.assign(

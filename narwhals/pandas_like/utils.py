@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     ExprT = TypeVar("ExprT", bound=PandasExpr)
 
-    from narwhals.pandas_like.typing import IntoExpr
+    from narwhals.pandas_like.typing import IntoPandasExpr
 
 
 def validate_column_comparand(other: Any) -> Any:
@@ -85,7 +85,9 @@ def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
 
 
 def parse_into_exprs(
-    implementation: str, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+    implementation: str,
+    *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+    **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]:
     out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(*exprs)]  # type: ignore[arg-type]
     for name, expr in named_exprs.items():
@@ -93,7 +95,7 @@ def parse_into_exprs(
     return out
 
 
-def parse_into_expr(implementation: str, into_expr: IntoExpr) -> PandasExpr:
+def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
     from narwhals.expression import Expr
     from narwhals.pandas_like.namespace import Namespace
 
@@ -107,7 +109,9 @@ def parse_into_expr(implementation: str, into_expr: IntoExpr) -> PandasExpr:
     raise TypeError(msg)
 
 
-def evaluate_into_expr(df: PandasDataFrame, into_expr: IntoExpr) -> list[PandasSeries]:
+def evaluate_into_expr(
+    df: PandasDataFrame, into_expr: IntoPandasExpr
+) -> list[PandasSeries]:
     """
     Return list of raw columns.
     """
@@ -117,8 +121,8 @@ def evaluate_into_expr(df: PandasDataFrame, into_expr: IntoExpr) -> list[PandasS
 
 def evaluate_into_exprs(
     df: PandasDataFrame,
-    *exprs: IntoExpr | Iterable[IntoExpr],
-    **named_exprs: IntoExpr,
+    *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+    **named_exprs: IntoPandasExpr,
 ) -> list[PandasSeries]:
     """Evaluate each expr into Series."""
     series: list[PandasSeries] = [

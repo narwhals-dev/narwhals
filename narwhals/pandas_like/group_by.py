@@ -19,7 +19,7 @@ from narwhals.utils import remove_prefix
 if TYPE_CHECKING:
     from narwhals.pandas_like.dataframe import PandasDataFrame
     from narwhals.pandas_like.expr import PandasExpr
-    from narwhals.pandas_like.typing import IntoExpr
+    from narwhals.pandas_like.typing import IntoPandasExpr
 
 
 class PandasGroupBy:
@@ -33,8 +33,8 @@ class PandasGroupBy:
 
     def agg(
         self,
-        *aggs: IntoExpr | Iterable[IntoExpr],
-        **named_aggs: IntoExpr,
+        *aggs: IntoPandasExpr | Iterable[IntoPandasExpr],
+        **named_aggs: IntoPandasExpr,
     ) -> PandasDataFrame:
         df = self._df._dataframe
         exprs = parse_into_exprs(
