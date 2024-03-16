@@ -1,32 +1,27 @@
 # ruff: noqa
-from typing import Any, TYPE_CHECKING, TypeVar
+# type: ignore
 import pandas as pd
 import polars as pl
 
 import narwhals as nw
 
-T = TypeVar("T")
-
 
 def my_agnostic_function(
-    suppliers_native: T,
-    parts_native: T,
-) -> T:
-    suppliers = nw.DataFrame(suppliers_native)
-    parts = nw.DataFrame(parts_native)
+    suppliers_native,
+    parts_native,
+):
+    suppliers = nw.LazyFrame(suppliers_native)
+    parts = nw.LazyFrame(parts_native)
 
     result = (
         suppliers.join(parts, left_on="city", right_on="city")
-        .filter(
-            nw.col("color").is_in(["Red", "Green"]),
-            nw.col("weight") > 14,
-        )
-        .group_by("s", "p")
+        .filter(nw.col("weight") > 10)
+        .group_by("s")
         .agg(
             weight_mean=nw.col("weight").mean(),
             weight_max=nw.col("weight").max(),
         )
-    ).with_columns(nw.col("weight_max").cast(nw.Int64))
+    )
     return nw.to_native(result)
 
 
@@ -52,19 +47,6 @@ print(
     )
 )
 print("\nPolars output:")
-print(
-    my_agnostic_function(
-        pl.DataFrame(suppliers),
-        pl.DataFrame(parts),
-    )
-)
-print(
-    my_agnostic_function(
-        pl.DataFrame(suppliers),
-        pl.DataFrame(parts),
-    )
-)
-print("\nPolars lazy output:")
 print(
     my_agnostic_function(
         pl.LazyFrame(suppliers),

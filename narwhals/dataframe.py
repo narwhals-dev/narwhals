@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Generic
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -21,22 +20,9 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import IntoExpr
     from narwhals.typing import T
-from narwhals.typing import T
 
 
-def _validate_features(df: Any, features: set[str]) -> None:
-    if (pl := get_polars()) is not None and isinstance(df, pl.DataFrame):
-        df_features = {"eager"}
-    elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
-        df_features = {"lazy"}
-    else:
-        df_features = df._features
-    if diff := {f for f in features if f not in df_features}:
-        msg = f"Features {diff} not supported by {type(df)} DataFrame"
-        raise TypeError(msg)
-
-
-class BaseFrame(Generic[T]):
+class BaseFrame:
     _dataframe: Any
     _implementation: str
 
@@ -122,7 +108,7 @@ class BaseFrame(Generic[T]):
             self._dataframe.filter(*predicates),
         )
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy[T]:
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
         from narwhals.group_by import GroupBy
 
         # todo: groupby and lazygroupby
@@ -156,7 +142,7 @@ class BaseFrame(Generic[T]):
         )
 
 
-class DataFrame(BaseFrame[T]):
+class DataFrame(BaseFrame):
     def __init__(
         self,
         df: T,
@@ -194,7 +180,7 @@ class DataFrame(BaseFrame[T]):
     def shape(self) -> tuple[int, int]:
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def __getitem__(self, col_name: str) -> Series[Any]:
+    def __getitem__(self, col_name: str) -> Series:
         from narwhals.series import Series
 
         return Series(self._dataframe[col_name], implementation=self._implementation)
@@ -203,7 +189,7 @@ class DataFrame(BaseFrame[T]):
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
 
-class LazyFrame(BaseFrame[T]):
+class LazyFrame(BaseFrame):
     def __init__(
         self,
         df: T,
@@ -229,7 +215,7 @@ class LazyFrame(BaseFrame[T]):
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
 
-    def collect(self) -> DataFrame[Any]:
+    def collect(self) -> DataFrame:
         return DataFrame(
             self._dataframe.collect(),
             implementation=self._implementation,

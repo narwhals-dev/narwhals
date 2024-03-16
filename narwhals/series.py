@@ -2,20 +2,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Generic
 
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
 
 if TYPE_CHECKING:
     from typing_extensions import Self
-from narwhals.typing import T
 
 
-class Series(Generic[T]):
+class Series:
     def __init__(
         self,
-        series: T,
+        series: Any,
         *,
         implementation: str | None = None,
     ) -> None:
