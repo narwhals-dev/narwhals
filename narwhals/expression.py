@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Iterable
 
 from narwhals.dtypes import translate_dtype
+from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
@@ -184,7 +185,9 @@ def max(*columns: str) -> Expr:
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    return Expr(lambda plx: plx.sum_horizontal(*exprs))
+    return Expr(
+        lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)])
+    )
 
 
 __all__ = [
