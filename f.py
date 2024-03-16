@@ -1,16 +1,17 @@
 # ruff: noqa
-# type: ignore
-from typing import Any
+from typing import Any, TYPE_CHECKING, TypeVar
 import pandas as pd
 import polars as pl
 
 import narwhals as nw
 
+T = TypeVar("T")
+
 
 def my_agnostic_function(
-    suppliers_native: nw.typing.T,
-    parts_native: nw.typing.T,
-) -> nw.typing.T:
+    suppliers_native: T,
+    parts_native: T,
+) -> T:
     suppliers = nw.DataFrame(suppliers_native)
     parts = nw.DataFrame(parts_native)
 

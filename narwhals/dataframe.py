@@ -26,7 +26,7 @@ from narwhals.typing import T
 class DataFrame(Generic[T]):
     def __init__(
         self,
-        df: Any,
+        df: T,
         *,
         is_eager: bool = False,
         is_lazy: bool = False,
@@ -35,7 +35,7 @@ class DataFrame(Generic[T]):
         self._is_eager = is_eager
         self._is_lazy = is_lazy
         if implementation is not None:
-            self._dataframe = df
+            self._dataframe: Any = df
             self._implementation = implementation
             return
         if (pl := get_polars()) is not None and isinstance(

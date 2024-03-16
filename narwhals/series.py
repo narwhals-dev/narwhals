@@ -15,14 +15,14 @@ from narwhals.typing import T
 class Series(Generic[T]):
     def __init__(
         self,
-        series: Any,
+        series: T,
         *,
         implementation: str | None = None,
     ) -> None:
         from narwhals.pandas_like.series import PandasSeries
 
         if implementation is not None:
-            self._series = series
+            self._series: Any = series
             self._implementation = implementation
             return
         if (pl := get_polars()) is not None and isinstance(series, pl.Series):
