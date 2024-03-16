@@ -48,19 +48,18 @@ class DataFrame(Generic[T]):
             self._dataframe: Any = df
             self._implementation = implementation
             return
-        _validate_features(df, self._features)
         if (pl := get_polars()) is not None and isinstance(
             df, (pl.DataFrame, pl.LazyFrame)
         ):
             self._dataframe = df
             self._implementation = "polars"
-            return
-        if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
+        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="pandas")
             self._implementation = "pandas"
-            return
-        msg = f"Expected pandas or Polars dataframe or lazyframe, got: {type(df)}"
-        raise TypeError(msg)
+        else:
+            msg = f"Expected pandas or Polars dataframe or lazyframe, got: {type(df)}"
+            raise TypeError(msg)
+        _validate_features(self._dataframe, self._features)
 
     def _from_dataframe(self, df: Any) -> Self:
         # construct, preserving properties
