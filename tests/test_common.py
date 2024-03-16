@@ -162,6 +162,6 @@ def test_accepted_dataframes() -> None:
     array = np.array([[0, 4.0], [2, 5]])
     with pytest.raises(
         TypeError,
-        match="Expected pandas or Polars dataframe or lazyframe, got: <class 'numpy.ndarray'>",
+        match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
     ):
         nw.DataFrame(array)
