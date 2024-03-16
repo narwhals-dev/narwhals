@@ -130,7 +130,7 @@ class DataFrame(Generic[T]):
 
         if "eager" not in self._features:
             raise RuntimeError(
-                "`DataFrame.shape` can only be called when feature 'eager' is enabled"
+                "`DataFrame.__getitem__` can only be called when feature 'eager' is enabled"
             )
         return Series(self._dataframe[col_name], implementation=self._implementation)
 
@@ -177,6 +177,10 @@ class DataFrame(Generic[T]):
         )
 
     def collect(self) -> Self:
+        if "lazy" not in self._features:
+            raise RuntimeError(
+                "`DataFrame.collect` can only be called when feature 'lazy' is enabled"
+            )
         features = {f for f in self._features if f != "lazy"}
         features.add("eager")
         return self.__class__(
@@ -208,13 +212,13 @@ class DataFrame(Generic[T]):
     def to_pandas(self) -> Any:
         if "eager" not in self._features:
             raise RuntimeError(
-                "`DataFrame.shape` can only be called when feature 'eager' is enabled"
+                "`DataFrame.to_pandas` can only be called when feature 'eager' is enabled"
             )
         return self._dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
         if "eager" not in self._features:
             raise RuntimeError(
-                "`DataFrame.shape` can only be called when feature 'eager' is enabled"
+                "`DataFrame.to_numpy` can only be called when feature 'eager' is enabled"
             )
         return self._dataframe.to_numpy()
