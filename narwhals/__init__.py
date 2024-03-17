@@ -17,7 +17,7 @@ from narwhals.expression import sum_horizontal
 from narwhals.series import Series
 from narwhals.translate import to_native
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 __all__ = [
     "is_dataframe",
