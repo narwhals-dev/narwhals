@@ -134,3 +134,9 @@ class Series:
 
     def std(self) -> Any:
         return self._series.std()
+
+    def __gt__(self, other: Any) -> Series:
+        return self._series.__gt__(self._extract_native(other))  # type: ignore[no-any-return]
+
+    def __lt__(self, other: Any) -> Series:
+        return self._series.__lt__(self._extract_native(other))  # type: ignore[no-any-return]
