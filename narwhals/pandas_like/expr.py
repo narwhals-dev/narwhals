@@ -112,31 +112,31 @@ class PandasExpr:
         return register_expression_call(self, "__mul__", other)
 
     def __rmul__(self, other: Any) -> Self:
-        return self.__mul__(other)
+        return register_expression_call(self, "__rmul__", other)
 
     def __truediv__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__truediv__", other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        raise NotImplementedError
+        return register_expression_call(self, "__rtruediv__", other)
 
     def __floordiv__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__floordiv__", other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        raise NotImplementedError
+        return register_expression_call(self, "__rfloordiv__", other)
 
     def __pow__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__pow__", other)
 
     def __rpow__(self, other: Any) -> Self:  # pragma: no cover
-        raise NotImplementedError
+        return register_expression_call(self, "__rpow__", other)
 
     def __mod__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__mod__", other)
 
     def __rmod__(self, other: Any) -> Self:  # pragma: no cover
-        raise NotImplementedError
+        return register_expression_call(self, "__rmod__", other)
 
     # Unary
 
