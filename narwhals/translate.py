@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -33,5 +34,6 @@ __all__ = [
     "get_pandas",
     "get_polars",
     "get_modin",
+    "get_cudf",
     "to_native",
 ]

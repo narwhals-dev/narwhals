@@ -8,6 +8,7 @@ from typing import Sequence
 
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.pandas_like.dataframe import PandasDataFrame
+from narwhals.translate import get_cudf
 from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
@@ -168,6 +169,9 @@ class DataFrame(BaseFrame):
         elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="modin")
             self._implementation = "modin"
+        elif (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame):
+            self._dataframe = PandasDataFrame(df, implementation="cudf")
+            self._implementation = "cudf"
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
@@ -213,6 +217,9 @@ class LazyFrame(BaseFrame):
         elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="modin")
             self._implementation = "modin"
+        elif (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame):
+            self._dataframe = PandasDataFrame(df, implementation="cudf")
+            self._implementation = "cudf"
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
