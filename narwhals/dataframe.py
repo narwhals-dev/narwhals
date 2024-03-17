@@ -137,7 +137,7 @@ class BaseFrame:
     ) -> Self:
         return self._from_dataframe(
             self._dataframe.join(
-                other._dataframe,
+                self._extract_native(other),
                 how=how,
                 left_on=left_on,
                 right_on=right_on,
@@ -148,7 +148,7 @@ class BaseFrame:
 class DataFrame(BaseFrame):
     def __init__(
         self,
-        df: T,
+        df: Any,
         *,
         implementation: str | None = None,
     ) -> None:
