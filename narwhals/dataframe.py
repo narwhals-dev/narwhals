@@ -42,18 +42,20 @@ class BaseFrame:
 
     def _extract_native(self, arg: Any) -> Any:
         from narwhals.expression import Expr
+        from narwhals.pandas_like.namespace import PandasNamespace
         from narwhals.series import Series
 
-        if self._implementation != "polars":
-            return arg
         if isinstance(arg, BaseFrame):
             return arg._dataframe
         if isinstance(arg, Series):
             return arg._series
         if isinstance(arg, Expr):
-            import polars as pl
+            if self._implementation == "polars":
+                import polars as pl
 
-            return arg._call(pl)
+                return arg._call(pl)
+            plx = PandasNamespace(implementation=self._implementation)
+            return arg._call(plx)
         return arg
 
     def __repr__(self) -> str:  # pragma: no cover

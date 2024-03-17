@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
-import modin.pandas as mpd
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -17,7 +16,7 @@ df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=UserWarning)
-    df_mpd = mpd.DataFrame(
+    df_mpd = pd.DataFrame(
         pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     )
 

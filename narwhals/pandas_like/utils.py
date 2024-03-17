@@ -96,7 +96,6 @@ def parse_into_exprs(
 
 
 def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
-    from narwhals.expression import Expr
     from narwhals.pandas_like.expr import PandasExpr
     from narwhals.pandas_like.namespace import PandasNamespace
     from narwhals.pandas_like.series import PandasSeries
@@ -105,8 +104,8 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
 
     if isinstance(into_expr, PandasExpr):
         return into_expr
-    if isinstance(into_expr, Expr):
-        return into_expr._call(plx)
+    # if isinstance(into_expr, Expr):
+    #     return into_expr._call(plx)
     if isinstance(into_expr, PandasSeries):
         return plx._create_expr_from_series(into_expr)
     if isinstance(into_expr, str):
