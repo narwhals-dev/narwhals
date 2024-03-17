@@ -177,6 +177,9 @@ class DataFrame(BaseFrame):
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
             self._implementation = "cudf"
+        elif hasattr(df, "__narwhals_dataframe__"):
+            self._dataframe = df.__narwhals_dataframe__()
+            self._implementation = "custom"
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)

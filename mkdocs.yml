@@ -8,6 +8,7 @@ nav:
     - basics/dataframe.md
     - basics/column.md
     - basics/complete_example.md
+  - Extending: extending.md
   - API Reference: reference.md
 theme:
   name: material
