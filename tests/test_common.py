@@ -51,11 +51,11 @@ def test_filter(df_raw: Any) -> None:
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas],
+    [df_pandas, df_polars],
 )
 def test_filter_series(df_raw: Any) -> None:
-    df = nw.DataFrame(df_raw)
-    result = df.filter(df["a"] > 1)
+    df = nw.DataFrame(df_raw).with_columns(mask=nw.col("a") > 1)
+    result = df.filter(df["mask"]).drop("mask")
     result_native = nw.to_native(result)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
     compare_dicts(result_native, expected)
@@ -91,6 +91,18 @@ def test_double(df_raw: Any) -> None:
     result = df.with_columns(nw.all() * 2)
     result_native = nw.to_native(result)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
+    compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [df_pandas, df_lazy],
+)
+def test_select(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = df.select("a")
+    result_native = nw.to_native(result)
+    expected = {"a": [1, 3, 2]}
     compare_dicts(result_native, expected)
 
 

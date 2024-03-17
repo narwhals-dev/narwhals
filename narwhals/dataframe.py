@@ -105,6 +105,9 @@ class BaseFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_dataframe(self._dataframe.rename(mapping))
 
+    def drop(self, *columns: str | Iterable[str]) -> Self:
+        return self._from_dataframe(self._dataframe.drop(*columns))
+
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         predicates, _ = self._flatten_and_extract(*predicates)
         return self._from_dataframe(
