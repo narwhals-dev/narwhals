@@ -3,7 +3,6 @@ from __future__ import annotations
 import collections
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import ClassVar
 from typing import Iterable
 from typing import Literal
 
@@ -26,8 +25,6 @@ if TYPE_CHECKING:
 
 
 class PandasDataFrame:
-    _features: ClassVar[set[str]] = {"eager", "lazy"}
-
     # --- not in the spec ---
     def __init__(
         self,
