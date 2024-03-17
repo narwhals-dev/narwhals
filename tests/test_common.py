@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
+import modin.pandas as mpd
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -16,7 +17,7 @@ df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=UserWarning)
-    df_mpd = pd.DataFrame(
+    df_mpd = mpd.DataFrame(
         pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     )
 
@@ -172,12 +173,19 @@ def test_columns(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.columns
     expected = ["a", "b", "z"]
-    assert len(result) == len(expected)
-    assert all(x == y for x, y in zip(result, expected))
+    assert result == expected
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+def test_lazy_instantiation(df_raw: Any) -> None:
+    result = nw.LazyFrame(df_raw)
+    result_native = nw.to_native(result)
+    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    compare_dicts(result_native, expected)
 
 
 @pytest.mark.parametrize("df_raw", [df_lazy])
-def test_lazy_instantiation(df_raw: Any) -> None:
+def test_lazy_instantiation_error(df_raw: Any) -> None:
     with pytest.raises(
         TypeError, match="Can't instantiate DataFrame from Polars LazyFrame."
     ):
@@ -204,3 +212,24 @@ def test_accepted_dataframes() -> None:
         match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
     ):
         nw.LazyFrame(array)
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
+def test_convert_pandas(df_raw: Any) -> None:
+    result = nw.DataFrame(df_raw).to_pandas()
+    expected = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+    pd.testing.assert_frame_equal(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
+def test_convert_numpy(df_raw: Any) -> None:
+    result = nw.DataFrame(df_raw).to_numpy()
+    expected = np.array([[1, 3, 2], [4, 4, 6], [7.0, 8, 9]]).T
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
+def test_shape(df_raw: Any) -> None:
+    result = nw.DataFrame(df_raw).shape
+    expected = (3, 3)
+    assert result == expected

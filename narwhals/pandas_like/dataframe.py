@@ -229,4 +229,8 @@ class PandasDataFrame:
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
-        return self._dataframe
+        if self._implementation == "pandas":
+            return self._dataframe
+        if self._implementation == "modin":
+            return self._dataframe._to_pandas()
+        return self._dataframe.to_pandas()

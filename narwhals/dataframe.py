@@ -169,7 +169,9 @@ class DataFrame(BaseFrame):
         elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="modin")
             self._implementation = "modin"
-        elif (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame):
+        elif (cudf := get_cudf()) is not None and isinstance(
+            df, cudf.DataFrame
+        ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
             self._implementation = "cudf"
         else:
@@ -217,7 +219,9 @@ class LazyFrame(BaseFrame):
         elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="modin")
             self._implementation = "modin"
-        elif (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame):
+        elif (cudf := get_cudf()) is not None and isinstance(
+            df, cudf.DataFrame
+        ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
             self._implementation = "cudf"
         else:
