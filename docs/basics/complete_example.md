@@ -44,17 +44,15 @@ call `.collect()` on the result if they want to materialise its values.
 Unlike the `transform` method, `fit` cannot stay lazy, as we need to compute concrete values
 for the means and standard deviations.
 
-To be able to get `Series` out of our `DataFrame`, we'll need the `DataFrame` to be an
-eager one, as Polars doesn't have a concept of lazy `Series`.
-To do that, when we instantiate our `narwhals.DataFrame`, we pass `features=['eager']`,
-which lets us access eager-only features.
+To be able to get `Series` out of our `DataFrame`, we'll need to use `narwhals.DataFrame` (as opposed to
+`narwhals.LazyFrame`), as Polars doesn't have a concept of lazy `Series`.
 
 ```python
 import narwhals as nw
 
 class StandardScalar:
     def fit(self, df):
-        df = nw.DataFrame(df, features=['eager'])
+        df = nw.DataFrame(df)
         self._means = {df[col].mean() for col in df.columns}
         self._std_devs = {df[col].std() for col in df.columns}
 ```
@@ -67,12 +65,12 @@ import narwhals as nw
 
 class StandardScaler:
     def fit(self, df):
-        df = nw.DataFrame(df, features=["eager"])
+        df = nw.DataFrame(df)
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 
     def transform(self, df):
-        df = nw.DataFrame(df)
+        df = nw.LazyFrame(df)
         df = df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
             for col in df.columns
@@ -81,7 +79,7 @@ class StandardScaler:
 ```
 
 Next, let's try running it. Notice how, as `transform` doesn't use
-`features=['lazy']`, we can pass a `polars.LazyFrame` to it without issues!
+any eager-only features, so we can make it completely lazy!
 
 === "pandas"
     ```python exec="true" source="material-block" result="python" session="tute-ex1"

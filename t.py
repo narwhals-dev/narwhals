@@ -7,9 +7,9 @@ import polars as pl
 import narwhals as nw
 
 df_raw = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df = nw.DataFrame(df_raw, features=["lazy"])
+df = nw.LazyFrame(df_raw)
 df_raw_2 = pd.DataFrame({"a": [1, 3], "c": [7, 9]})
-df2 = nw.DataFrame(df_raw_2, features=["lazy"])
+df2 = nw.LazyFrame(df_raw_2)
 
 result = df.sort("a", "b")
 print(nw.to_native(result))
