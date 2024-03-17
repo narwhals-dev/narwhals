@@ -18,7 +18,7 @@ df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=UserWarning)
     df_mpd = mpd.DataFrame(
-        pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+        mpd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     )
 
 
