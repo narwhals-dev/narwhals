@@ -245,3 +245,30 @@ def test_shape(df_raw: Any) -> None:
     result = nw.DataFrame(df_raw).shape
     expected = (3, 3)
     assert result == expected
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+def test_expr(df_raw: Any) -> None:
+    result = nw.LazyFrame(df_raw).with_columns(
+        a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
+        b=nw.col("z") / (2 - nw.col("b")),
+        c=nw.col("a") + nw.col("b") / 2,
+        d=nw.col("a") - nw.col("b"),
+        e=((nw.col("a") > nw.col("b")) & (nw.col("a") >= nw.col("z"))).cast(nw.Int64),
+        f=(
+            (nw.col("a") < nw.col("b"))
+            | (nw.col("a") <= nw.col("z"))
+            | (nw.col("a") == 1)
+        ).cast(nw.Int64),
+    )
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [4, 3.333333, 3.5],
+        "b": [-3.5, -4.0, -2.25],
+        "z": [7.0, 8.0, 9.0],
+        "c": [3, 5, 5],
+        "d": [-3, -1, -4],
+        "e": [0, 0, 0],
+        "f": [1, 1, 1],
+    }
+    compare_dicts(result_native, expected)
