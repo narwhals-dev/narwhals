@@ -1,0 +1,7 @@
+covdefaults
+pandas
+polars
+pre-commit
+pyarrow
+pytest
+pytest-cov

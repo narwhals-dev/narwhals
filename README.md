@@ -140,3 +140,5 @@ Indeed, you may suspect that.
 ## Why "Narwhals"?
 
 Because they are so awesome.
+
+Thanks to [Olha Urdeichuk](https://www.fiverr.com/olhaurdeichuk) for the illustration!
