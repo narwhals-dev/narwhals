@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import os
+import warnings
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -101,12 +102,21 @@ def agg_pandas(
     simple_aggs = []
     complex_aggs = []
     for expr in exprs:
-        if is_simple_aggregation(expr):
+        if is_simple_aggregation(expr, implementation="pandas"):
             simple_aggs.append(expr)
         else:
             complex_aggs.append(expr)
     simple_aggregations = {}
     for expr in simple_aggs:
+        if expr._depth == 0:
+            # e.g. agg(pl.len())
+            assert expr._output_names is not None
+            for output_name in expr._output_names:
+                simple_aggregations[output_name] = pd.NamedAgg(
+                    column=keys[0], aggfunc=expr._function_name.replace("len", "size")
+                )
+            continue
+
         assert expr._root_names is not None
         assert expr._output_names is not None
         for root_name, output_name in zip(expr._root_names, expr._output_names):
@@ -124,17 +134,31 @@ def agg_pandas(
                 out_names.append(result_keys.name)
         return pd.Series(out_group, index=out_names)
 
-    if parse(pd.__version__) < parse("2.2.0"):
-        result_complex = grouped.apply(func)
-    else:
-        result_complex = grouped.apply(func, include_groups=False)
-
-    if result_simple is not None:
-        result = pd.concat(
-            [result_simple, result_complex.drop(columns=keys)], axis=1, copy=False
+    if complex_aggs:
+        warnings.warn(
+            "Found complex group-by expression, which can't be expressed efficiently with the "
+            "pandas API. If you can, please rewrite your query such that group-by aggregations "
+            "are simple (e.g. mean, std, min, max, ...).",
+            UserWarning,
+            stacklevel=2,
         )
-    else:
+        if parse(pd.__version__) < parse("2.2.0"):
+            result_complex = grouped.apply(func)
+        else:
+            result_complex = grouped.apply(func, include_groups=False)
+
+    if result_simple is not None and not complex_aggs:
+        result = result_simple
+    elif result_simple is not None and complex_aggs:
+        result = pd.concat(
+            [result_simple, result_complex.drop(columns=keys)],
+            axis=1,
+            copy=False,
+        )
+    elif complex_aggs:
         result = result_complex
+    else:
+        raise AssertionError("At least one aggregation should have been passed")
     return from_dataframe(result.loc[:, output_names])
 
 
@@ -149,7 +173,7 @@ def agg_generic(  # noqa: PLR0913
     dfs: list[Any] = []
     to_remove: list[int] = []
     for i, expr in enumerate(exprs):
-        if is_simple_aggregation(expr):
+        if is_simple_aggregation(expr, implementation):
             dfs.append(evaluate_simple_aggregation(expr, grouped))
             to_remove.append(i)
     exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
