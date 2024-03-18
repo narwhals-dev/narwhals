@@ -8,6 +8,8 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
+from packaging.version import parse
+
 from narwhals.pandas_like.utils import dataframe_from_dict
 from narwhals.pandas_like.utils import evaluate_simple_aggregation
 from narwhals.pandas_like.utils import horizontal_concat
@@ -122,7 +124,10 @@ def agg_pandas(
                 out_names.append(result_keys.name)
         return pd.Series(out_group, index=out_names)
 
-    result_complex = grouped.apply(func, include_groups=False)
+    if parse(pd.__version__) < parse("2.2.0"):
+        result_complex = grouped.apply(func)
+    else:
+        result_complex = grouped.apply(func, include_groups=False)
 
     if result_simple is not None:
         result = pd.concat(

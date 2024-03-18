@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
-import modin.pandas as mpd
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -17,8 +16,8 @@ df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=UserWarning)
-    df_mpd = mpd.DataFrame(
-        mpd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+    df_mpd = pd.DataFrame(
+        pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     )
 
 
@@ -234,6 +233,9 @@ def test_convert_pandas(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
+@pytest.mark.filterwarnings(
+    r"ignore:np\.find_common_type is deprecated\.:DeprecationWarning"
+)
 def test_convert_numpy(df_raw: Any) -> None:
     result = nw.DataFrame(df_raw).to_numpy()
     expected = np.array([[1, 3, 2], [4, 4, 6], [7.0, 8, 9]]).T
