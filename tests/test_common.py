@@ -303,17 +303,20 @@ def test_expr_unary(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
 def test_expr_transform(df_raw: Any) -> None:
-    result = (
-        nw.LazyFrame(df_raw)
-        .with_columns(
-            a_mean=nw.col("a").mean(),
-            a_sum=nw.col("a").sum(),
-            b_nunique=nw.col("b").n_unique(),
-            z_min=nw.col("z").min(),
-            z_max=nw.col("z").max(),
-        )
-        .select(nw.col("a_mean", "a_sum", "b_nunique", "z_min", "z_max").unique())
+    result = nw.LazyFrame(df_raw).with_columns(
+        a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5])
     )
     result_native = nw.to_native(result)
-    expected = {"a_mean": [2], "a_sum": [6], "b_nunique": [2], "z_min": [7], "z_max": [9]}
+    expected = {"a": [True, False, False], "b": [True, True, False], "z": [7, 8, 9]}
     compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+def test_expr_min_max(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result_min = nw.to_native(df.select(nw.min("a", "b", "z")))
+    result_max = nw.to_native(df.select(nw.max("a", "b", "z")))
+    expected_min = {"a": [1], "b": [4], "z": [7]}
+    expected_max = {"a": [3], "b": [6], "z": [9]}
+    compare_dicts(result_min, expected_min)
+    compare_dicts(result_max, expected_max)
