@@ -179,7 +179,7 @@ class DataFrame(BaseFrame):
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
             self._implementation = "cudf"
-        elif hasattr(df, "__narwhals_dataframe__"):
+        elif hasattr(df, "__narwhals_dataframe__"):  # pragma: no cover
             self._dataframe = df.__narwhals_dataframe__()
             self._implementation = "custom"
         else:
