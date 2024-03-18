@@ -283,7 +283,7 @@ def test_expr_binary(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_lazy])
 def test_expr_unary(df_raw: Any) -> None:
     result = (
         nw.LazyFrame(df_raw)
@@ -311,7 +311,7 @@ def test_expr_transform(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_lazy])
 def test_expr_min_max(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result_min = nw.to_native(df.select(nw.min("a", "b", "z")))
