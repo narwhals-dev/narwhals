@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.series import Series
     from narwhals.typing import IntoExpr
-    from narwhals.typing import T
 
 
 class BaseFrame:
@@ -208,7 +207,7 @@ class DataFrame(BaseFrame):
 class LazyFrame(BaseFrame):
     def __init__(
         self,
-        df: T,
+        df: Any,
         *,
         implementation: str | None = None,
     ) -> None:
