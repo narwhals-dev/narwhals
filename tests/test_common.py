@@ -257,7 +257,7 @@ def test_shape(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
-def test_expr(df_raw: Any) -> None:
+def test_expr_binary(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
         b=nw.col("z") / (2 - nw.col("b")),
@@ -280,4 +280,40 @@ def test_expr(df_raw: Any) -> None:
         "e": [0, 0, 0],
         "f": [1, 1, 1],
     }
+    compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+def test_expr_unary(df_raw: Any) -> None:
+    result = (
+        nw.LazyFrame(df_raw)
+        .with_columns(
+            a_mean=nw.col("a").mean(),
+            a_sum=nw.col("a").sum(),
+            b_nunique=nw.col("b").n_unique(),
+            z_min=nw.col("z").min(),
+            z_max=nw.col("z").max(),
+        )
+        .select(nw.col("a_mean", "a_sum", "b_nunique", "z_min", "z_max").unique())
+    )
+    result_native = nw.to_native(result)
+    expected = {"a_mean": [2], "a_sum": [6], "b_nunique": [2], "z_min": [7], "z_max": [9]}
+    compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+def test_expr_transform(df_raw: Any) -> None:
+    result = (
+        nw.LazyFrame(df_raw)
+        .with_columns(
+            a_mean=nw.col("a").mean(),
+            a_sum=nw.col("a").sum(),
+            b_nunique=nw.col("b").n_unique(),
+            z_min=nw.col("z").min(),
+            z_max=nw.col("z").max(),
+        )
+        .select(nw.col("a_mean", "a_sum", "b_nunique", "z_min", "z_max").unique())
+    )
+    result_native = nw.to_native(result)
+    expected = {"a_mean": [2], "a_sum": [6], "b_nunique": [2], "z_min": [7], "z_max": [9]}
     compare_dicts(result_native, expected)
