@@ -39,11 +39,9 @@ def q1(df_raw: Any) -> Any:
     return nw.to_native(result.collect())
 
 
-# df = pd.read_parquet("../tpch-data/lineitem.parquet")
-# df[["l_quantity", "l_extendedprice", "l_discount", "l_tax"]] = df[
-#     ["l_quantity", "l_extendedprice", "l_discount", "l_tax"]
-# ].astype("float64")
+df = pd.read_parquet("../tpch-data/s1/lineitem.parquet", dtype_backend="pyarrow")
+breakpoint()
 # df["l_shipdate"] = pd.to_datetime(df["l_shipdate"])
-# print(q1(df))
-df = polars.scan_parquet("../tpch-data/lineitem.parquet")
+print(q1(df))
+df = polars.scan_parquet("../tpch-data/s1/lineitem.parquet")
 print(q1(df))

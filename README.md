@@ -7,9 +7,9 @@
 		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/26be901e-5383-49f2-9fbd-5c97b7696f27">
 </h1>
 
-Extremely lightweight compatibility layer between Polars, pandas, and more.
+Extremely lightweight compatibility layer between Polars, pandas, modin, and cuDF (and possibly more?).
 
-Seamlessly support both, without depending on either!
+Seamlessly support all, without depending on any!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
@@ -38,7 +38,8 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
    - if you started with pandas, you'll get pandas back
    - if you started with Polars, you'll get Polars back
-   - if you started with Polars, you'll get Polars back
+   - if you started with Modin, you'll get Modin back (and compute will be distributed)
+   - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
    
 ## Example
 
