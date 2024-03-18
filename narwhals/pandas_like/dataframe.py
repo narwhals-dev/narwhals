@@ -8,7 +8,6 @@ from typing import Literal
 
 from narwhals.pandas_like.utils import evaluate_into_exprs
 from narwhals.pandas_like.utils import horizontal_concat
-from narwhals.pandas_like.utils import reset_index
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_dataframe_comparand
 from narwhals.utils import flatten_str
@@ -33,17 +32,18 @@ class PandasDataFrame:
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._dataframe = reset_index(dataframe)
+        self._dataframe = dataframe
         self._implementation = implementation
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
-        counter = collections.Counter(columns)
-        for col, count in counter.items():
-            if count > 1:
-                msg = f"Expected unique column names, got {col!r} {count} time(s)"
-                raise ValueError(
-                    msg,
-                )
+        if len(columns) != len(set(columns)):
+            counter = collections.Counter(columns)
+            for col, count in counter.items():
+                if count > 1:
+                    msg = f"Expected unique column names, got {col!r} {count} time(s)"
+                    raise ValueError(
+                        msg,
+                    )
 
     def _validate_booleanness(self) -> None:
         if not (
@@ -102,7 +102,7 @@ class PandasDataFrame:
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
-        _mask = validate_dataframe_comparand(mask)
+        _mask = validate_dataframe_comparand(self._dataframe.index, mask)
         return self._from_dataframe(self._dataframe.loc[_mask])
 
     def with_columns(
@@ -112,7 +112,10 @@ class PandasDataFrame:
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         df = self._dataframe.assign(
-            **{series.name: validate_dataframe_comparand(series) for series in new_series}
+            **{
+                series.name: validate_dataframe_comparand(self._dataframe.index, series)
+                for series in new_series
+            }
         )
         return self._from_dataframe(df)
 
@@ -137,9 +140,7 @@ class PandasDataFrame:
             ascending: bool | list[bool] = not descending
         else:
             ascending = [not d for d in descending]
-        return self._from_dataframe(
-            df.sort_values(flat_keys, ascending=ascending),
-        )
+        return self._from_dataframe(df.sort_values(flat_keys, ascending=ascending))
 
     # --- convert ---
     def collect(self) -> PandasDataFrame:

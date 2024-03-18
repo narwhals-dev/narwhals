@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Any
 from unittest import mock
 
-import polars
+import pandas as pd
+import polars as pl
 import pytest
 
 import narwhals as nw
@@ -13,13 +13,16 @@ from tests.utils import compare_dicts
 
 
 @pytest.mark.parametrize(
-    "df_raw",
-    [
-        (polars.read_parquet("tests/data/lineitem.parquet").to_pandas()),
-        polars.scan_parquet("tests/data/lineitem.parquet"),
-    ],
+    "library",
+    ["pandas", "polars"],
 )
-def test_q1(df_raw: Any) -> None:
+@pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
+def test_q1(library: str) -> None:
+    if library == "pandas":
+        df_raw = pd.read_parquet("tests/data/lineitem.parquet")
+        df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
+    elif library == "polars":
+        df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
     df = nw.LazyFrame(df_raw)
     query_result = (
@@ -73,14 +76,11 @@ def test_q1(df_raw: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize(
-    "df_raw",
-    [
-        (polars.read_parquet("tests/data/lineitem.parquet").to_pandas()),
-    ],
-)
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
-def test_q1_w_pandas_agg_generic_path(df_raw: Any) -> None:
+@pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
+def test_q1_w_pandas_agg_generic_path() -> None:
+    df_raw = pd.read_parquet("tests/data/lineitem.parquet")
+    df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)
     df = nw.LazyFrame(df_raw)
     query_result = (

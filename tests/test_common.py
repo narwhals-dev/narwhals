@@ -233,6 +233,7 @@ def test_accepted_dataframes() -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
+@pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_convert_pandas(df_raw: Any) -> None:
     result = nw.DataFrame(df_raw).to_pandas()
     expected = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})

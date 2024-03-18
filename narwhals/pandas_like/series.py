@@ -7,7 +7,6 @@ from typing import Sequence
 from pandas.api.types import is_extension_array_dtype
 
 from narwhals.pandas_like.utils import item
-from narwhals.pandas_like.utils import reset_index
 from narwhals.pandas_like.utils import reverse_translate_dtype
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_column_comparand
@@ -32,7 +31,7 @@ class PandasSeries:
         """
 
         self._name = str(series.name) if series.name is not None else ""
-        self._series = reset_index(series)
+        self._series = series
         self._implementation = implementation
 
     def _from_series(self, series: Any) -> Self:
@@ -70,7 +69,9 @@ class PandasSeries:
 
     def filter(self, mask: Self) -> Self:
         ser = self._series
-        return self._from_series(ser.loc[validate_column_comparand(mask)])
+        return self._from_series(
+            ser.loc[validate_column_comparand(self._series.index, mask)]
+        )
 
     def item(self) -> Any:
         return item(self._series)
@@ -93,122 +94,122 @@ class PandasSeries:
 
     def __eq__(self, other: object) -> PandasSeries:  # type: ignore[override]
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__eq__(other)).rename(ser.name, copy=False))
 
     def __ne__(self, other: object) -> PandasSeries:  # type: ignore[override]
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__ne__(other)).rename(ser.name, copy=False))
 
     def __ge__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__ge__(other)).rename(ser.name, copy=False))
 
     def __gt__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__gt__(other)).rename(ser.name, copy=False))
 
     def __le__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__le__(other)).rename(ser.name, copy=False))
 
     def __lt__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__lt__(other)).rename(ser.name, copy=False))
 
     def __and__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__and__(other)).rename(ser.name, copy=False))
 
     def __rand__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__rand__(other)).rename(ser.name, copy=False))
 
     def __or__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__or__(other)).rename(ser.name, copy=False))
 
     def __ror__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__ror__(other)).rename(ser.name, copy=False))
 
     def __add__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__add__(other)).rename(ser.name, copy=False))
 
     def __radd__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__radd__(other)).rename(ser.name, copy=False))
 
     def __sub__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__sub__(other)).rename(ser.name, copy=False))
 
     def __rsub__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__rsub__(other)).rename(ser.name, copy=False))
 
     def __mul__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__mul__(other)).rename(ser.name, copy=False))
 
     def __rmul__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__rmul__(other)).rename(ser.name, copy=False))
 
     def __truediv__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__truediv__(other)).rename(ser.name, copy=False))
 
     def __rtruediv__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__rtruediv__(other)).rename(ser.name, copy=False))
 
     def __floordiv__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__floordiv__(other)).rename(ser.name, copy=False))
 
     def __rfloordiv__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__rfloordiv__(other)).rename(ser.name, copy=False))
 
     def __pow__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__pow__(other)).rename(ser.name, copy=False))
 
     def __rpow__(self, other: Any) -> PandasSeries:  # pragma: no cover
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__rpow__(other)).rename(ser.name, copy=False))
 
     def __mod__(self, other: Any) -> PandasSeries:
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__mod__(other)).rename(ser.name, copy=False))
 
     def __rmod__(self, other: Any) -> PandasSeries:  # pragma: no cover
         ser = self._series
-        other = validate_column_comparand(other)
+        other = validate_column_comparand(self._series.index, other)
         return self._from_series((ser.__rmod__(other)).rename(ser.name, copy=False))
 
     # Unary
@@ -285,8 +286,8 @@ class PandasSeries:
         return ser.nunique()  # type: ignore[no-any-return]
 
     def zip_with(self, mask: PandasSeries, other: PandasSeries) -> PandasSeries:
-        mask = validate_column_comparand(mask)
-        other = validate_column_comparand(other)
+        mask = validate_column_comparand(self._series.index, mask)
+        other = validate_column_comparand(self._series.index, other)
         ser = self._series
         return self._from_series(ser.where(mask, other))
 

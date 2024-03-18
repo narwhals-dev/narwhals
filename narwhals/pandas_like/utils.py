@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from narwhals.pandas_like.typing import IntoPandasExpr
 
 
-def validate_column_comparand(other: Any) -> Any:
+def validate_column_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -47,11 +47,17 @@ def validate_column_comparand(other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other.item()
+        if other._series.index is not index and not (other._series.index == index).all():
+            msg = (
+                "Narwhals does not support automated index alignment. "
+                "Please reset the index of the Series or DataFrame."
+            )
+            raise ValueError(msg)
         return other._series
     return other
 
 
-def validate_dataframe_comparand(other: Any) -> Any:
+def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -60,19 +66,25 @@ def validate_dataframe_comparand(other: Any) -> Any:
     from narwhals.pandas_like.dataframe import PandasDataFrame
     from narwhals.pandas_like.series import PandasSeries
 
-    if isinstance(other, list) and len(other) > 1:
-        # e.g. `plx.all() + plx.all()`
-        msg = "Multi-output expressions are not supported in this context"
-        raise ValueError(msg)
-    if isinstance(other, list):
-        other = other[0]
     if isinstance(other, PandasDataFrame):
         return NotImplemented
     if isinstance(other, PandasSeries):
         if other.len() == 1:
             # broadcast
             return item(other._series)
+        if other._series.index is not index and not (other._series.index == index).all():
+            msg = (
+                "Narwhals does not support automated index alignment. "
+                "Please reset the index of the Series or DataFrame."
+            )
+            raise ValueError(msg)
         return other._series
+    if isinstance(other, list) and len(other) > 1:
+        # e.g. `plx.all() + plx.all()`
+        msg = "Multi-output expressions are not supported in this context"
+        raise ValueError(msg)
+    if isinstance(other, list):
+        other = other[0]
     return other
 
 
@@ -368,17 +380,3 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "bool"
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
-
-
-def reset_index(obj: Any) -> Any:
-    index = obj.index
-    if (
-        hasattr(index, "start")
-        and hasattr(index, "stop")
-        and hasattr(index, "step")
-        and index.start == 0
-        and index.stop == len(obj)
-        and index.step == 1
-    ):
-        return obj
-    return obj.reset_index(drop=True)
