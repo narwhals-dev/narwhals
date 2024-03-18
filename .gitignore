@@ -3,3 +3,4 @@
 todo.md
 .coverage
 site/
+.coverage.*
