@@ -169,7 +169,9 @@ class DataFrame(BaseFrame):
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="pandas")
             self._implementation = "pandas"
-        elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
+        elif (mpd := get_modin()) is not None and isinstance(
+            df, mpd.DataFrame
+        ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="modin")
             self._implementation = "modin"
         elif (cudf := get_cudf()) is not None and isinstance(
@@ -177,7 +179,7 @@ class DataFrame(BaseFrame):
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
             self._implementation = "cudf"
-        elif hasattr(df, "__narwhals_dataframe__"):
+        elif hasattr(df, "__narwhals_dataframe__"):  # pragma: no cover
             self._dataframe = df.__narwhals_dataframe__()
             self._implementation = "custom"
         else:
@@ -222,7 +224,9 @@ class LazyFrame(BaseFrame):
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="pandas")
             self._implementation = "pandas"
-        elif (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame):
+        elif (mpd := get_modin()) is not None and isinstance(
+            df, mpd.DataFrame
+        ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="modin")
             self._implementation = "modin"
         elif (cudf := get_cudf()) is not None and isinstance(

@@ -1,5 +1,4 @@
 covdefaults
-modin[dask]
 pandas
 polars
 pre-commit
