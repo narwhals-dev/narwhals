@@ -148,7 +148,13 @@ class Expr:
     def drop_nulls(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).drop_nulls())
 
-    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Expr:
+    def sample(
+        self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Expr:
         return self.__class__(
             lambda plx: self._call(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement
