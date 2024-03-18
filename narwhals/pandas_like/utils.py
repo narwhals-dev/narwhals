@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -195,13 +196,20 @@ def item(s: Any) -> Any:
     return s.iloc[0]
 
 
-def is_simple_aggregation(expr: PandasExpr) -> bool:
+def is_simple_aggregation(expr: PandasExpr, implementation: str) -> bool:
     return (
         expr._function_name is not None
         and expr._depth is not None
         and expr._depth < 2
         # todo: avoid this one?
-        and expr._root_names is not None
+        and (
+            expr._root_names is not None
+            or (
+                expr._depth == 0
+                and implementation == "pandas"
+                and not os.environ.get("NARWHALS_FORCE_GENERIC")
+            )
+        )
     )
 
 
