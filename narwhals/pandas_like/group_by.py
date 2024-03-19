@@ -58,7 +58,9 @@ class PandasGroupBy:
                 raise ValueError(msg)
             output_names.extend(expr._output_names)
 
-        if implementation == "pandas" and not os.environ.get("NARWHALS_FORCE_GENERIC"):
+        if implementation in ("pandas", "modin") and not os.environ.get(
+            "NARWHALS_FORCE_GENERIC"
+        ):
             return agg_pandas(
                 grouped,
                 exprs,
