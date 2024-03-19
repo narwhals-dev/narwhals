@@ -232,7 +232,7 @@ def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any) -> Any:
     Returns naive DataFrame.
     """
     if expr._depth == 0:
-        return grouped.size()["size"].rename(expr._output_names[0])
+        return grouped.size()["size"].rename(expr._output_names[0])  # type: ignore[index]
     if expr._root_names is None or expr._output_names is None:
         msg = "Expected expr to have root_names and output_names set, but they are None. Please report a bug."
         raise AssertionError(msg)

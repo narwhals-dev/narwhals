@@ -102,7 +102,7 @@ def agg_pandas(
     simple_aggs = []
     complex_aggs = []
     for expr in exprs:
-        if is_simple_aggregation(expr, implementation="pandas"):
+        if is_simple_aggregation(expr):
             simple_aggs.append(expr)
         else:
             complex_aggs.append(expr)
@@ -173,7 +173,7 @@ def agg_generic(  # noqa: PLR0913
     dfs: list[Any] = []
     to_remove: list[int] = []
     for i, expr in enumerate(exprs):
-        if is_simple_aggregation(expr, implementation):
+        if is_simple_aggregation(expr):
             dfs.append(evaluate_simple_aggregation(expr, grouped))
             to_remove.append(i)
     exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
