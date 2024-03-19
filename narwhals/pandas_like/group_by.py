@@ -174,7 +174,7 @@ def agg_generic(  # noqa: PLR0913
     to_remove: list[int] = []
     for i, expr in enumerate(exprs):
         if is_simple_aggregation(expr):
-            dfs.append(evaluate_simple_aggregation(expr, grouped))
+            dfs.append(evaluate_simple_aggregation(expr, grouped, group_by_keys))
             to_remove.append(i)
     exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
 

@@ -217,7 +217,7 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
     )
 
 
-def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any) -> Any:
+def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any, keys: list[str]) -> Any:
     """
     Use fastpath for simple aggregations if possible.
 
@@ -232,7 +232,13 @@ def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any) -> Any:
     Returns naive DataFrame.
     """
     if expr._depth == 0:
-        return grouped.size()["size"].rename(expr._output_names[0])  # type: ignore[index]
+        ser = grouped.size()
+        if len(ser.shape) > 1:
+            # dataframe
+            ser = ser.drop(columns=keys)
+            ser = ser[ser.columns[0]]
+        ser.name = expr._output_names[0]  # type: ignore[index]
+        return ser
     if expr._root_names is None or expr._output_names is None:
         msg = "Expected expr to have root_names and output_names set, but they are None. Please report a bug."
         raise AssertionError(msg)
