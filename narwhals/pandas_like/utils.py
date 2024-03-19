@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -208,20 +207,13 @@ def item(s: Any) -> Any:
     return s.iloc[0]
 
 
-def is_simple_aggregation(expr: PandasExpr, implementation: str) -> bool:
+def is_simple_aggregation(expr: PandasExpr) -> bool:
     return (
         expr._function_name is not None
         and expr._depth is not None
         and expr._depth < 2
         # todo: avoid this one?
-        and (
-            expr._root_names is not None
-            or (
-                expr._depth == 0
-                and implementation == "pandas"
-                and not os.environ.get("NARWHALS_FORCE_GENERIC")
-            )
-        )
+        and (expr._root_names is not None or (expr._depth == 0))
     )
 
 
@@ -239,6 +231,8 @@ def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any) -> Any:
 
     Returns naive DataFrame.
     """
+    if expr._depth == 0:
+        return grouped.size()["size"].rename(expr._output_names[0])
     if expr._root_names is None or expr._output_names is None:
         msg = "Expected expr to have root_names and output_names set, but they are None. Please report a bug."
         raise AssertionError(msg)
