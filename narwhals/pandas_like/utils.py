@@ -233,7 +233,7 @@ def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any, keys: list[str])
     """
     if expr._depth == 0:
         # e.g. agg(pl.len())
-        df = grouped.size()
+        df = getattr(grouped, expr._function_name)()
         df = df.drop(columns=keys) if len(df.shape) > 1 else df.to_frame("size")
         return df.rename(columns={"size": expr._output_names[0]})  # type: ignore[index]
     if expr._root_names is None or expr._output_names is None:
