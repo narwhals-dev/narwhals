@@ -232,13 +232,10 @@ def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any, keys: list[str])
     Returns naive DataFrame.
     """
     if expr._depth == 0:
-        ser = grouped.size()
-        if len(ser.shape) > 1:
-            # dataframe
-            ser = ser.drop(columns=keys)
-            ser = ser[ser.columns[0]]
-        ser.name = expr._output_names[0]  # type: ignore[index]
-        return ser
+        # e.g. agg(pl.len())
+        df = grouped.size()
+        df = df.drop(columns=keys) if len(df.shape) > 1 else df.to_frame("size")
+        return df.rename(columns={"size": expr._output_names[0]})  # type: ignore[index]
     if expr._root_names is None or expr._output_names is None:
         msg = "Expected expr to have root_names and output_names set, but they are None. Please report a bug."
         raise AssertionError(msg)
