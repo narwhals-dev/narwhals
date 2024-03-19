@@ -180,8 +180,16 @@ class PandasExpr:
     def unique(self) -> Self:
         return register_expression_call(self, "unique")
 
-    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Self:
-        return register_expression_call(self, "sample", n, fraction, with_replacement)
+    def sample(
+        self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        return register_expression_call(
+            self, "sample", n, fraction=fraction, with_replacement=with_replacement
+        )
 
     def alias(self, name: str) -> Self:
         # Define this one manually, so that we can

@@ -118,9 +118,15 @@ class Series:
             self._series.zip_with(self._extract_native(mask), self._extract_native(other))
         )
 
-    def sample(self, n: int, fraction: float, *, with_replacement: bool) -> Self:
+    def sample(
+        self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
         return self._from_series(
-            self._series.sample(n, fraction=fraction, with_replacement=with_replacement)
+            self._series.sample(n=n, fraction=fraction, with_replacement=with_replacement)
         )
 
     def to_numpy(self) -> Any:
