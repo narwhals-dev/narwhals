@@ -349,3 +349,11 @@ def test_head(df_raw: Any) -> None:
     result = nw.to_native(df.head(2))
     expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+def test_unique(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.unique("b").sort("b"))
+    expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
+    compare_dicts(result, expected)

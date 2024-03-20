@@ -110,6 +110,9 @@ class BaseFrame:
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_dataframe(self._dataframe.drop(*columns))
 
+    def unique(self, subset: str | list[str]) -> Self:
+        return self._from_dataframe(self._dataframe.unique(subset=subset))
+
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         predicates, _ = self._flatten_and_extract(*predicates)
         return self._from_dataframe(

@@ -197,7 +197,8 @@ class PandasDataFrame:
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))
 
-    def unique(self, subset: list[str]) -> Self:
+    def unique(self, subset: str | list[str]) -> Self:
+        subset = flatten_str(subset)
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
 
     # --- lazy-only ---
