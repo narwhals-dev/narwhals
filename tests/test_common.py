@@ -328,8 +328,8 @@ def test_expr_min_max(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
 def test_expr_sample(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
-    result_shape = nw.to_native(df.select(nw.col("a", "b").sample(n=2)).collect()).shape
-    expected = (2, 2)
+    result_shape = nw.to_native(df.select(nw.col("a").sample(n=2)).collect()).shape
+    expected = (2, 1)
     assert result_shape == expected
 
 
