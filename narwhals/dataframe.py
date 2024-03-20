@@ -104,6 +104,9 @@ class BaseFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_dataframe(self._dataframe.rename(mapping))
 
+    def head(self, n: int) -> Self:
+        return self._from_dataframe(self._dataframe.head(n))
+
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_dataframe(self._dataframe.drop(*columns))
 

@@ -341,3 +341,11 @@ def test_expr_na(df_raw: Any) -> None:
     )
     expected = {"a": [2], "b": [6], "z": [9]}
     compare_dicts(result_nna, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+def test_head(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.head(2))
+    expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
+    compare_dicts(result, expected)
