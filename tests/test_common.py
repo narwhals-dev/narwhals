@@ -15,6 +15,8 @@ from tests.utils import compare_dicts
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
+df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 
 if os.environ.get("CI", None):
     import modin.pandas as mpd
@@ -321,3 +323,21 @@ def test_expr_min_max(df_raw: Any) -> None:
     expected_max = {"a": [3], "b": [6], "z": [9]}
     compare_dicts(result_min, expected_min)
     compare_dicts(result_max, expected_max)
+
+
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+def test_expr_sample(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result_shape = nw.to_native(df.select(nw.col("a", "b").sample(n=2)).collect()).shape
+    expected = (2, 2)
+    assert result_shape == expected
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])
+def test_expr_na(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result_nna = nw.to_native(
+        df.filter((~nw.col("a").is_null()) & (~nw.col("z").is_null()))
+    )
+    expected = {"a": [2], "b": [6], "z": [9]}
+    compare_dicts(result_nna, expected)

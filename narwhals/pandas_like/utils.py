@@ -381,3 +381,15 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "bool"
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
+
+
+def maybe_reset_indices(series: list[PandasSeries]) -> list[PandasSeries]:
+    idx = series[0]._series.index
+    found_non_matching_index = False
+    for s in series[1:]:
+        if s._series.index is not idx and not (s._series.index == idx).all():
+            found_non_matching_index = True
+            break
+    if found_non_matching_index:
+        return [s._from_series(s._series.reset_index(drop=True)) for s in series]
+    return series

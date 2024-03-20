@@ -112,6 +112,9 @@ class Expr:
         )
 
     # --- unary ---
+    def __invert__(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).__invert__())
+
     def mean(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).mean())
 
