@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals.dataframe import DataFrame
-from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
@@ -33,6 +31,9 @@ def to_native(obj: BaseFrame | Series) -> Any:
 
 
 def from_native(df: Any) -> BaseFrame:
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
     if (pl := get_polars()) is not None and isinstance(df, pl.DataFrame):
         return DataFrame(df)
     elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
