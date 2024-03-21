@@ -4,7 +4,7 @@ from typing import Any
 
 import polars
 
-from narwhals import translate_frame
+import narwhals as nw
 
 
 def q5(
@@ -19,12 +19,12 @@ def q5(
     var_2 = datetime(1994, 1, 1)
     var_3 = datetime(1995, 1, 1)
 
-    region_ds, pl = translate_frame(region_ds_raw, is_lazy=True)
-    nation_ds, _ = translate_frame(nation_ds_raw, is_lazy=True)
-    customer_ds, _ = translate_frame(customer_ds_raw, is_lazy=True)
-    line_item_ds, _ = translate_frame(lineitem_ds_raw, is_lazy=True)
-    orders_ds, _ = translate_frame(orders_ds_raw, is_lazy=True)
-    supplier_ds, _ = translate_frame(supplier_ds_raw, is_lazy=True)
+    region_ds = nw.LazyFrame(region_ds_raw)
+    nation_ds = nw.LazyFrame(nation_ds_raw)
+    customer_ds = nw.LazyFrame(customer_ds_raw)
+    line_item_ds = nw.LazyFrame(lineitem_ds_raw)
+    orders_ds = nw.LazyFrame(orders_ds_raw)
+    supplier_ds = nw.LazyFrame(supplier_ds_raw)
 
     result = (
         region_ds.join(nation_ds, left_on="r_regionkey", right_on="n_regionkey")
@@ -36,17 +36,17 @@ def q5(
             left_on=["l_suppkey", "n_nationkey"],
             right_on=["s_suppkey", "s_nationkey"],
         )
-        .filter(pl.col("r_name") == var_1)
-        .filter(pl.col("o_orderdate").is_between(var_2, var_3, closed="left"))
+        .filter(nw.col("r_name") == var_1)
+        .filter(nw.col("o_orderdate").is_between(var_2, var_3, closed="left"))
         .with_columns(
-            (pl.col("l_extendedprice") * (1 - pl.col("l_discount"))).alias("revenue")
+            (nw.col("l_extendedprice") * (1 - nw.col("l_discount"))).alias("revenue")
         )
         .group_by("n_name")
-        .agg([pl.sum("revenue")])
+        .agg([nw.sum("revenue")])
         .sort(by="revenue", descending=True)
     )
 
-    return result.collect().to_native()
+    return nw.to_native(result.collect())
 
 
 region_ds = polars.scan_parquet("../tpch-data/region.parquet")

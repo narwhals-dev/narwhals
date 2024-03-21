@@ -104,8 +104,14 @@ class BaseFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_dataframe(self._dataframe.rename(mapping))
 
+    def head(self, n: int) -> Self:
+        return self._from_dataframe(self._dataframe.head(n))
+
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_dataframe(self._dataframe.drop(*columns))
+
+    def unique(self, subset: str | list[str]) -> Self:
+        return self._from_dataframe(self._dataframe.unique(subset=subset))
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         predicates, _ = self._flatten_and_extract(*predicates)

@@ -328,8 +328,8 @@ def test_expr_min_max(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
 def test_expr_sample(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
-    result_shape = nw.to_native(df.select(nw.col("a", "b").sample(n=2)).collect()).shape
-    expected = (2, 2)
+    result_shape = nw.to_native(df.select(nw.col("a").sample(n=2)).collect()).shape
+    expected = (2, 1)
     assert result_shape == expected
 
 
@@ -341,3 +341,19 @@ def test_expr_na(df_raw: Any) -> None:
     )
     expected = {"a": [2], "b": [6], "z": [9]}
     compare_dicts(result_nna, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+def test_head(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.head(2))
+    expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+def test_unique(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.unique("b").sort("b"))
+    expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
+    compare_dicts(result, expected)

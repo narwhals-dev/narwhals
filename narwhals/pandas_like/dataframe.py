@@ -8,9 +8,9 @@ from typing import Literal
 
 from narwhals.pandas_like.utils import evaluate_into_exprs
 from narwhals.pandas_like.utils import horizontal_concat
-from narwhals.pandas_like.utils import maybe_reset_indices
 from narwhals.pandas_like.utils import translate_dtype
 from narwhals.pandas_like.utils import validate_dataframe_comparand
+from narwhals.pandas_like.utils import validate_indices
 from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
@@ -87,7 +87,7 @@ class PandasDataFrame:
         **named_exprs: IntoPandasExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        new_series = maybe_reset_indices(new_series)
+        new_series = validate_indices(new_series)
         df = horizontal_concat(
             [series._series for series in new_series],
             implementation=self._implementation,
@@ -197,7 +197,8 @@ class PandasDataFrame:
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))
 
-    def unique(self, subset: list[str]) -> Self:
+    def unique(self, subset: str | list[str]) -> Self:
+        subset = flatten_str(subset)
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
 
     # --- lazy-only ---

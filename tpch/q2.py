@@ -4,7 +4,7 @@ from typing import Any
 import polars
 import pandas as pd
 
-from narwhals import translate_frame, get_namespace, to_native
+import narwhals as nw
 
 polars.Config.set_tbl_cols(10)
 pd.set_option("display.max_columns", 10)
@@ -21,21 +21,20 @@ def q2(
     var_2 = "BRASS"
     var_3 = "EUROPE"
 
-    region_ds = translate_frame(region_ds_raw, is_lazy=True)
-    nation_ds = translate_frame(nation_ds_raw, is_lazy=True)
-    supplier_ds = translate_frame(supplier_ds_raw, is_lazy=True)
-    part_ds = translate_frame(part_ds_raw, is_lazy=True)
-    part_supp_ds = translate_frame(part_supp_ds_raw, is_lazy=True)
-    pl = get_namespace(region_ds)
+    region_ds = nw.LazyFrame(region_ds_raw)
+    nation_ds = nw.LazyFrame(nation_ds_raw)
+    supplier_ds = nw.LazyFrame(supplier_ds_raw)
+    part_ds = nw.LazyFrame(part_ds_raw)
+    part_supp_ds = nw.LazyFrame(part_supp_ds_raw)
 
     result_q2 = (
         part_ds.join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")
         .join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")
         .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")
         .join(region_ds, left_on="n_regionkey", right_on="r_regionkey")
-        .filter(pl.col("p_size") == var_1)
-        .filter(pl.col("p_type").str.ends_with(var_2))
-        .filter(pl.col("r_name") == var_3)
+        .filter(nw.col("p_size") == var_1)
+        .filter(nw.col("p_type").str.ends_with(var_2))
+        .filter(nw.col("r_name") == var_3)
     ).cache()
 
     final_cols = [
@@ -51,7 +50,7 @@ def q2(
 
     q_final = (
         result_q2.group_by("p_partkey")
-        .agg(pl.min("ps_supplycost").alias("ps_supplycost"))
+        .agg(nw.min("ps_supplycost").alias("ps_supplycost"))
         .join(
             result_q2,
             left_on=["p_partkey", "ps_supplycost"],
@@ -65,14 +64,14 @@ def q2(
         .head(100)
     )
 
-    return to_native(q_final.collect())
+    return nw.to_native(q_final.collect())
 
 
-region_ds = polars.scan_parquet("../tpch-data/region.parquet")
-ration_ds = polars.scan_parquet("../tpch-data/nation.parquet")
-supplier_ds = polars.scan_parquet("../tpch-data/supplier.parquet")
-part_ds = polars.scan_parquet("../tpch-data/part.parquet")
-part_supp_ds = polars.scan_parquet("../tpch-data/partsupp.parquet")
+region_ds = polars.scan_parquet("../tpch-data/s1/region.parquet")
+ration_ds = polars.scan_parquet("../tpch-data/s1/nation.parquet")
+supplier_ds = polars.scan_parquet("../tpch-data/s1/supplier.parquet")
+part_ds = polars.scan_parquet("../tpch-data/s1/part.parquet")
+part_supp_ds = polars.scan_parquet("../tpch-data/s1/partsupp.parquet")
 print(
     q2(
         region_ds.collect().to_pandas(),
