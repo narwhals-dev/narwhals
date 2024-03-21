@@ -15,6 +15,7 @@ from narwhals.expression import min
 from narwhals.expression import sum
 from narwhals.expression import sum_horizontal
 from narwhals.series import Series
+from narwhals.translate import from_native
 from narwhals.translate import to_native
 
 __version__ = "0.6.7"
@@ -26,6 +27,7 @@ __all__ = [
     "is_pandas",
     "get_implementation",
     "to_native",
+    "from_native",
     "all",
     "col",
     "len",
