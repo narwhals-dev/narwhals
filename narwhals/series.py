@@ -107,12 +107,6 @@ class Series:
     def drop_nulls(self) -> Self:
         return self._from_series(self._series.drop_nulls())
 
-    # def mean(self) -> Any:
-    #     return self._from_series(self._series.mean())
-
-    # def std(self) -> Any:
-    #     return self._from_series(self._series.std())
-
     def n_unique(self) -> int:
         return self._series.n_unique()  # type: ignore[no-any-return]
 
