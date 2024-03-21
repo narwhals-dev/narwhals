@@ -9,14 +9,13 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
-from packaging.version import parse
-
 from narwhals.pandas_like.utils import dataframe_from_dict
 from narwhals.pandas_like.utils import evaluate_simple_aggregation
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import is_simple_aggregation
 from narwhals.pandas_like.utils import item
 from narwhals.pandas_like.utils import parse_into_exprs
+from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -144,7 +143,7 @@ def agg_pandas(
             UserWarning,
             stacklevel=2,
         )
-        if parse(pd.__version__) < parse("2.2.0"):
+        if parse_version(pd.__version__) < parse_version("2.2.0"):
             result_complex = grouped.apply(func)
         else:
             result_complex = grouped.apply(func, include_groups=False)

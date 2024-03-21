@@ -16,9 +16,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-  "packaging; python_version < '3.9'",
-]
 
 [project.urls]
 "Homepage" = "https://github.com/MarcoGorelli/narwhals"

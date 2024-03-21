@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 from typing import Iterable
+from typing import Sequence
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -50,3 +52,10 @@ def flatten_bool(*args: bool | Iterable[bool]) -> list[bool]:
                     raise TypeError(msg)
                 out.append(item)
     return out
+
+
+def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
+    """Simple version parser; split into a tuple of ints for comparison."""
+    if isinstance(version, str):
+        version = version.split(".")
+    return tuple(int(re.sub(r"\D", "", str(v))) for v in version)
