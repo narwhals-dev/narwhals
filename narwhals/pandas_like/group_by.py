@@ -169,35 +169,3 @@ def agg_pandas(  # noqa: PLR0913,PLR0915
     else:
         raise AssertionError("At least one aggregation should have been passed")
     return from_dataframe(result.loc[:, output_names])
-
-
-# def agg_generic(
-#     grouped: Any,
-#     exprs: list[PandasExpr],
-#     group_by_keys: list[str],
-#     output_names: list[str],
-#     implementation: str,
-#     from_dataframe: Callable[[Any], PandasDataFrame],
-# ) -> PandasDataFrame:
-#     dfs: list[Any] = []
-#     to_remove: list[int] = []
-#     for i, expr in enumerate(exprs):
-#         if is_simple_aggregation(expr):
-#             dfs.append(evaluate_simple_aggregation(expr, grouped, group_by_keys))
-#             to_remove.append(i)
-#     exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
-
-#     out: dict[str, list[Any]] = collections.defaultdict(list)
-#     for keys, df_keys in grouped:
-#         for key, name in zip(keys, group_by_keys):
-#             out[name].append(key)
-#         for expr in exprs:
-#             results_keys = expr._call(from_dataframe(df_keys))
-#             for result_keys in results_keys:
-#                 out[result_keys.name].append(result_keys.item())
-
-#     results_keys = dataframe_from_dict(out, implementation=implementation)
-#     results_df = horizontal_concat(
-#         [results_keys, *dfs], implementation=implementation
-#     ).loc[:, output_names]
-#     return from_dataframe(results_df)
