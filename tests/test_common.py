@@ -357,3 +357,11 @@ def test_unique(df_raw: Any) -> None:
     result = nw.to_native(df.unique("b").sort("b"))
     expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])
+def test_drop_nulls(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.select(nw.col("a").drop_nulls()))
+    expected = {"a": [3, 2]}
+    compare_dicts(result, expected)

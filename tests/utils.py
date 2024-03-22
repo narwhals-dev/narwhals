@@ -11,6 +11,6 @@ def compare_dicts(result: dict[str, Any], expected: dict[str, Any]) -> None:
     for key in expected:
         for lhs, rhs in zip(result[key], expected[key]):
             if isinstance(lhs, float):
-                assert abs(lhs - rhs) < 1e-6
+                assert abs(lhs - rhs) < 1e-6, (lhs, rhs)
             else:
-                assert lhs == rhs
+                assert lhs == rhs, (lhs, rhs)

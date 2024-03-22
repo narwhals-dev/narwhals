@@ -120,7 +120,12 @@ def agg_pandas(  # noqa: PLR0913,PLR0915
         for output_name, named_agg in simple_aggregations.items():
             aggs[named_agg[0]].append(named_agg[1])
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
-        result_simple = grouped.agg(aggs)
+        try:
+            result_simple = grouped.agg(aggs)
+        except AttributeError as exc:
+            raise RuntimeError(
+                "Failed to aggregated - does your aggregation function return a scalar?"
+            ) from exc
         result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
         result_simple = result_simple.rename(columns=name_mapping).reset_index()
     else:
@@ -149,11 +154,11 @@ def agg_pandas(  # noqa: PLR0913,PLR0915
         if implementation == "pandas":
             import pandas as pd
 
-            if parse_version(pd.__version__) < parse_version("2.2.0"):
+            if parse_version(pd.__version__) < parse_version("2.2.0"):  # pragma: no cover
                 result_complex = grouped.apply(func)
             else:
                 result_complex = grouped.apply(func, include_groups=False)
-        else:
+        else:  # pragma: no cover
             result_complex = grouped.apply(func)
 
     if result_simple is not None and not complex_aggs:
