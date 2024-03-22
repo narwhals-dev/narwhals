@@ -33,15 +33,19 @@ class PandasNamespace:
     Boolean = dtypes.Boolean
     String = dtypes.String
 
-    def Series(self, name: str, data: list[Any]) -> PandasSeries:  # noqa: N802
-        from narwhals.pandas_like.series import PandasSeries
-
+    def make_native_series(self, name: str, data: list[Any], index: Any) -> Any:
         if self._implementation == "pandas":
             import pandas as pd
 
-            return PandasSeries(
-                pd.Series(name=name, data=data), implementation=self._implementation
-            )
+            return pd.Series(name=name, data=data, index=index)
+        if self._implementation == "modin":
+            import modin.pandas as mpd
+
+            return mpd.Series(name=name, data=data, index=index)
+        if self._implementation == "cudf":
+            import cudf
+
+            return cudf.Series(name=name, data=data, index=index)
         raise NotImplementedError
 
     # --- not in spec ---
