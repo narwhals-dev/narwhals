@@ -21,9 +21,9 @@ def q3(
     var_1 = var_2 = datetime(1995, 3, 15)
     var_3 = "BUILDING"
 
-    customer_ds = nw.LazyFrame(customer_ds_raw)
-    line_item_ds = nw.LazyFrame(line_item_ds_raw)
-    orders_ds = nw.LazyFrame(orders_ds_raw)
+    customer_ds = nw.from_native(customer_ds_raw)
+    line_item_ds = nw.from_native(line_item_ds_raw)
+    orders_ds = nw.from_native(orders_ds_raw)
 
     q_final = (
         customer_ds.filter(nw.col("c_mktsegment") == var_3)
@@ -48,7 +48,7 @@ def q3(
         .head(10)
     )
 
-    return nw.to_native(q_final.collect())
+    return nw.to_native(q_final)
 
 
 customer_ds = polars.scan_parquet("../tpch-data/s1/customer.parquet")
@@ -66,5 +66,5 @@ print(
         customer_ds,
         lineitem_ds,
         orders_ds,
-    )
+    ).collect()
 )

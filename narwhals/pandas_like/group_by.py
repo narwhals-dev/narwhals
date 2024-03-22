@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import os
 import warnings
 from copy import copy
 from typing import TYPE_CHECKING
@@ -9,9 +8,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
-from narwhals.pandas_like.utils import dataframe_from_dict
-from narwhals.pandas_like.utils import evaluate_simple_aggregation
-from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import is_simple_aggregation
 from narwhals.pandas_like.utils import item
 from narwhals.pandas_like.utils import parse_into_exprs
@@ -43,7 +39,7 @@ class PandasGroupBy:
         grouped = df.groupby(
             list(self._keys),
             sort=False,
-            as_index=False,
+            as_index=True,
         )
         implementation: str = self._df._implementation
         output_names: list[str] = copy(self._keys)
@@ -57,23 +53,13 @@ class PandasGroupBy:
                 raise ValueError(msg)
             output_names.extend(expr._output_names)
 
-        if implementation in ("pandas", "modin") and not os.environ.get(
-            "NARWHALS_FORCE_GENERIC"
-        ):
-            return agg_pandas(
-                grouped,
-                exprs,
-                self._keys,
-                output_names,
-                self._from_dataframe,
-            )
-        return agg_generic(
+        return agg_pandas(
             grouped,
             exprs,
             self._keys,
             output_names,
-            implementation,
             self._from_dataframe,
+            implementation,
         )
 
     def _from_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:
@@ -85,12 +71,13 @@ class PandasGroupBy:
         )
 
 
-def agg_pandas(
+def agg_pandas(  # noqa: PLR0913,PLR0915
     grouped: Any,
     exprs: list[PandasExpr],
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], PandasDataFrame],
+    implementation: Any,
 ) -> PandasDataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
@@ -99,6 +86,8 @@ def agg_pandas(
     - https://github.com/rapidsai/cudf/issues/15084
     """
     import pandas as pd
+
+    from narwhals.pandas_like.namespace import PandasNamespace
 
     simple_aggs = []
     complex_aggs = []
@@ -113,8 +102,9 @@ def agg_pandas(
             # e.g. agg(pl.len())
             assert expr._output_names is not None
             for output_name in expr._output_names:
-                simple_aggregations[output_name] = pd.NamedAgg(
-                    column=keys[0], aggfunc=expr._function_name.replace("len", "size")
+                simple_aggregations[output_name] = (
+                    keys[0],
+                    expr._function_name.replace("len", "size"),
                 )
             continue
 
@@ -122,8 +112,21 @@ def agg_pandas(
         assert expr._output_names is not None
         for root_name, output_name in zip(expr._root_names, expr._output_names):
             name = remove_prefix(expr._function_name, "col->")
-            simple_aggregations[output_name] = pd.NamedAgg(column=root_name, aggfunc=name)
-    result_simple = grouped.agg(**simple_aggregations) if simple_aggregations else None
+            simple_aggregations[output_name] = (root_name, name)
+
+    if simple_aggregations:
+        aggs = collections.defaultdict(list)
+        name_mapping = {}
+        for output_name, named_agg in simple_aggregations.items():
+            aggs[named_agg[0]].append(named_agg[1])
+            name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
+        result_simple = grouped.agg(aggs)
+        result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
+        result_simple = result_simple.rename(columns=name_mapping).reset_index()
+    else:
+        result_simple = None
+
+    plx = PandasNamespace(implementation=implementation)
 
     def func(df: Any) -> Any:
         out_group = []
@@ -133,7 +136,7 @@ def agg_pandas(
             for result_keys in results_keys:
                 out_group.append(item(result_keys._series))
                 out_names.append(result_keys.name)
-        return pd.Series(out_group, index=out_names)
+        return plx.make_native_series(name="", data=out_group, index=out_names)
 
     if complex_aggs:
         warnings.warn(
@@ -143,53 +146,26 @@ def agg_pandas(
             UserWarning,
             stacklevel=2,
         )
-        if parse_version(pd.__version__) < parse_version("2.2.0"):
-            result_complex = grouped.apply(func)
+        if implementation == "pandas":
+            import pandas as pd
+
+            if parse_version(pd.__version__) < parse_version("2.2.0"):
+                result_complex = grouped.apply(func)
+            else:
+                result_complex = grouped.apply(func, include_groups=False)
         else:
-            result_complex = grouped.apply(func, include_groups=False)
+            result_complex = grouped.apply(func)
 
     if result_simple is not None and not complex_aggs:
         result = result_simple
     elif result_simple is not None and complex_aggs:
         result = pd.concat(
-            [result_simple, result_complex.drop(columns=keys)],
+            [result_simple, result_complex.reset_index(drop=True)],
             axis=1,
             copy=False,
         )
     elif complex_aggs:
-        result = result_complex
+        result = result_complex.reset_index()
     else:
         raise AssertionError("At least one aggregation should have been passed")
     return from_dataframe(result.loc[:, output_names])
-
-
-def agg_generic(  # noqa: PLR0913
-    grouped: Any,
-    exprs: list[PandasExpr],
-    group_by_keys: list[str],
-    output_names: list[str],
-    implementation: str,
-    from_dataframe: Callable[[Any], PandasDataFrame],
-) -> PandasDataFrame:
-    dfs: list[Any] = []
-    to_remove: list[int] = []
-    for i, expr in enumerate(exprs):
-        if is_simple_aggregation(expr):
-            dfs.append(evaluate_simple_aggregation(expr, grouped, group_by_keys))
-            to_remove.append(i)
-    exprs = [expr for i, expr in enumerate(exprs) if i not in to_remove]
-
-    out: dict[str, list[Any]] = collections.defaultdict(list)
-    for keys, df_keys in grouped:
-        for key, name in zip(keys, group_by_keys):
-            out[name].append(key)
-        for expr in exprs:
-            results_keys = expr._call(from_dataframe(df_keys))
-            for result_keys in results_keys:
-                out[result_keys.name].append(result_keys.item())
-
-    results_keys = dataframe_from_dict(out, implementation=implementation)
-    results_df = horizontal_concat(
-        [results_keys, *dfs], implementation=implementation
-    ).loc[:, output_names]
-    return from_dataframe(results_df)
