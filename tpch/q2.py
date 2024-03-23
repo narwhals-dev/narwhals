@@ -21,11 +21,11 @@ def q2(
     var_2 = "BRASS"
     var_3 = "EUROPE"
 
-    region_ds = nw.LazyFrame(region_ds_raw)
-    nation_ds = nw.LazyFrame(nation_ds_raw)
-    supplier_ds = nw.LazyFrame(supplier_ds_raw)
-    part_ds = nw.LazyFrame(part_ds_raw)
-    part_supp_ds = nw.LazyFrame(part_supp_ds_raw)
+    region_ds = nw.from_native(region_ds_raw)
+    nation_ds = nw.from_native(nation_ds_raw)
+    supplier_ds = nw.from_native(supplier_ds_raw)
+    part_ds = nw.from_native(part_ds_raw)
+    part_supp_ds = nw.from_native(part_supp_ds_raw)
 
     result_q2 = (
         part_ds.join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")
@@ -64,7 +64,7 @@ def q2(
         .head(100)
     )
 
-    return nw.to_native(q_final.collect())
+    return nw.to_native(q_final)
 
 
 region_ds = polars.scan_parquet("../tpch-data/s1/region.parquet")
@@ -88,5 +88,5 @@ print(
         supplier_ds,
         part_ds,
         part_supp_ds,
-    )
+    ).collect()
 )
