@@ -204,11 +204,11 @@ class PandasExpr:
         )
 
     @property
-    def str(self) -> ExprStringNamespace:
-        return ExprStringNamespace(self)
+    def str(self) -> PandasExprStringNamespace:
+        return PandasExprStringNamespace(self)
 
 
-class ExprStringNamespace:
+class PandasExprStringNamespace:
     def __init__(self, expr: PandasExpr) -> None:
         self._expr = expr
 
@@ -225,22 +225,6 @@ class ExprStringNamespace:
             ],
             depth=self._expr._depth + 1,
             function_name=f"{self._expr._function_name}->str.ends_with",
-            root_names=self._expr._root_names,
-            output_names=self._expr._output_names,
-            implementation=self._expr._implementation,
-        )
-
-    def strip_chars(self, characters: str = " ") -> PandasExpr:
-        return PandasExpr(
-            lambda df: [
-                PandasSeries(
-                    series._series.str.strip(characters),
-                    implementation=df._implementation,
-                )
-                for series in self._expr._call(df)
-            ],
-            depth=self._expr._depth + 1,
-            function_name=f"{self._expr._function_name}->str.strip_chars",
             root_names=self._expr._root_names,
             output_names=self._expr._output_names,
             implementation=self._expr._implementation,
