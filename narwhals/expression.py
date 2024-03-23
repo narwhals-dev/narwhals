@@ -164,6 +164,20 @@ class Expr:
             )
         )
 
+    @property
+    def str(self) -> ExprStringNamespace:
+        return ExprStringNamespace(self)
+
+
+class ExprStringNamespace:
+    def __init__(self, expr: Expr) -> None:
+        self._expr = expr
+
+    def ends_with(self, suffix: str) -> Expr:
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.ends_with(suffix)
+        )
+
 
 def col(*names: str | Iterable[str]) -> Expr:
     return Expr(lambda plx: plx.col(*names))

@@ -35,7 +35,7 @@ def q2(
         .filter(nw.col("p_size") == var_1)
         .filter(nw.col("p_type").str.ends_with(var_2))
         .filter(nw.col("r_name") == var_3)
-    ).cache()
+    )
 
     final_cols = [
         "s_acctbal",
