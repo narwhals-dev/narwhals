@@ -18,7 +18,7 @@ from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 
-__version__ = "0.6.8"
+__version__ = "0.6.9"
 
 __all__ = [
     "is_dataframe",
