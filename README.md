@@ -8,7 +8,6 @@
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
-
 [![Documentation](https://img.shields.io/badge/Documentation-coolgreen?style=flat&link=https://marcogorelli.github.io/narwhals/)](https://marcogorelli.github.io/narwhals/)
 
 Extremely lightweight compatibility layer between Polars, pandas, modin, and cuDF (and possibly more?).
