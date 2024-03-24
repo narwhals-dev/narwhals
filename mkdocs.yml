@@ -9,7 +9,11 @@ nav:
     - basics/column.md
     - basics/complete_example.md
   - Extending: extending.md
-  - API Reference: reference.md
+  - Related projects: related.md
+  - API Reference:
+    - api-reference/narwhals.md
+    - api-reference/dataframe.md
+    - api-reference/lazyframe.md
 theme:
   name: material
   font: false
@@ -19,7 +23,13 @@ theme:
     - navigation.footer
 plugins:
 - search
-- mkdocstrings
+- mkdocstrings:
+    handlers:
+      python:
+        import:
+        - https://installer.readthedocs.io/en/stable/objects.inv
+        rendering:
+          show_signature_annotations: true
 markdown_extensions:
 - md_in_html
 - pymdownx.tabbed:
