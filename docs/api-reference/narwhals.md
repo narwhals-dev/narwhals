@@ -8,5 +8,12 @@ Here are the top-level functions available in Narwhals.
       members:
         - from_native
         - to_native
+        - col
+        - min
+        - max
+        - mean
+        - sum
+        - len
+        - sum_horizontal
       #show_root_heading: false
       show_source: false

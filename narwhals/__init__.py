@@ -6,6 +6,7 @@ from narwhals.containers import is_series
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import *  # noqa: F403
+from narwhals.expression import Expr
 from narwhals.expression import all
 from narwhals.expression import col
 from narwhals.expression import len
@@ -39,4 +40,5 @@ __all__ = [
     "DataFrame",
     "LazyFrame",
     "Series",
+    "Expr",
 ]
