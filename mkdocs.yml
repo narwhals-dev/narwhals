@@ -2,6 +2,7 @@ site_name: Narwhals
 repo_url: https://github.com/MarcoGorelli/narwhals.git
 nav:
   - Home: index.md
+  - Why: why.md
   - Installation: installation.md
   - Quick start: quick_start.md
   - Tutorial:
