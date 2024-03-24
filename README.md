@@ -32,10 +32,9 @@ Or just vendor it, it's only a bunch of pure-Python files.
 
 There are three steps to writing dataframe-agnostic code using Narwhals:
 
-1. use `narwhals.LazyFrame` or `narwhals.DataFrame` to wrap a pandas or Polars
+1. use `narwhals.DataFrame` or `narwhals.LazyFrame` to wrap a pandas/Polars/Modin/cuDF
    DataFrame/LazyFrame in a Narwhals class
-2. use the subset of the Polars API supported by Narwhals. Just like in Polars,
-   some methods (e.g. `to_numpy`) are only available for `DataFrame`, not `LazyFrame`
+2. use the [subset of the Polars API supported by Narwhals](https://marcogorelli.github.io/narwhals/api-reference/narwhals/)
 3. use `narwhals.to_native` to return an object to the user in its original
    dataframe flavour. For example:
 
