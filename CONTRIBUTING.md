@@ -10,7 +10,8 @@ Here's how you can set up your local development environment to contribute:
 2. Create a new virtual environment with `python3.11 -m venv .venv` (or whichever version of Python3.9+ you prefer)
 3. Activate it: `. .venv/bin/activate`
 4. Install Narwhals: `pip install -e .`
-5. Install docs requirements: `pip install -r docs/requirements-docs.txt`
+5. Install test requirements: `pip install -r requirements-dev.txt`
+6. Install docs requirements: `pip install -r docs/requirements-docs.txt`
 
 ## Running tests
 
