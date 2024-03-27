@@ -216,6 +216,41 @@ class DataFrame(BaseFrame):
 
     @property
     def columns(self) -> list[str]:
+        r"""
+        Get or set column names.
+
+        Examples:
+            Get column names.
+            ```python
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6, 7, 8],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df.columns
+            ['foo', 'bar', 'ham']
+            ```
+
+            Set column names.
+            ```python
+            >>> df_pl = nw.to_native(df)
+            >>> df_pl.columns = ["apple", "banana", "orange"]
+            >>> df_pl
+            shape: (3, 3)
+            ┌───────┬────────┬────────┐
+            │ apple ┆ banana ┆ orange │
+            │ ---   ┆ ---    ┆ ---    │
+            │ i64   ┆ i64    ┆ str    │
+            ╞═══════╪════════╪════════╡
+            │ 1     ┆ 6      ┆ a      │
+            │ 2     ┆ 7      ┆ b      │
+            │ 3     ┆ 8      ┆ c      │
+            └───────┴────────┴────────┘
+            ```
+        """
         return super().columns
 
     def with_columns(
@@ -241,30 +276,31 @@ class DataFrame(BaseFrame):
             Creating a new DataFrame using this method does not create a new copy of
             existing data.
 
-        Examples: Pass an expression to add it as a new column.
-                    ```python
-                    >>> df_pl = pl.DataFrame(
-                    ...     {
-                    ...         "a": [1, 2, 3, 4],
-                    ...         "b": [0.5, 4, 10, 13],
-                    ...         "c": [True, True, False, True],
-                    ...     }
-                    ... )
-                    >>> df = nw.DataFrame(df_pl)
-                    >>> df = df.with_columns((pl.col("a") ** 2).alias("a^2"))
-                    >>> nw.to_native(df)
-                    shape: (4, 4)
-                    ┌─────┬──────┬───────┬──────┐
-                    │ a   ┆ b    ┆ c     ┆ a^2  │
-                    │ --- ┆ ---  ┆ ---   ┆ ---  │
-                    │ i64 ┆ f64  ┆ bool  ┆ f64  │
-                    ╞═════╪══════╪═══════╪══════╡
-                    │ 1   ┆ 0.5  ┆ true  ┆ 1.0  │
-                    │ 2   ┆ 4.0  ┆ true  ┆ 4.0  │
-                    │ 3   ┆ 10.0 ┆ false ┆ 9.0  │
-                    │ 4   ┆ 13.0 ┆ true  ┆ 16.0 │
-                    └─────┴──────┴───────┴──────┘
-                    ```
+        Examples:
+            Pass an expression to add it as a new column.
+            ```python
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 4],
+            ...         "b": [0.5, 4, 10, 13],
+            ...         "c": [True, True, False, True],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df = df.with_columns((pl.col("a") ** 2).alias("a^2"))
+            >>> nw.to_native(df)
+            shape: (4, 4)
+            ┌─────┬──────┬───────┬──────┐
+            │ a   ┆ b    ┆ c     ┆ a^2  │
+            │ --- ┆ ---  ┆ ---   ┆ ---  │
+            │ i64 ┆ f64  ┆ bool  ┆ f64  │
+            ╞═════╪══════╪═══════╪══════╡
+            │ 1   ┆ 0.5  ┆ true  ┆ 1.0  │
+            │ 2   ┆ 4.0  ┆ true  ┆ 4.0  │
+            │ 3   ┆ 10.0 ┆ false ┆ 9.0  │
+            │ 4   ┆ 13.0 ┆ true  ┆ 16.0 │
+            └─────┴──────┴───────┴──────┘
+            ```
         """
         return super().with_columns(*exprs, **named_exprs)
 
