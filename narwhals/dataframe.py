@@ -221,6 +221,51 @@ class DataFrame(BaseFrame):
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
+        r"""
+        Add columns to this DataFrame.
+
+        Added columns will replace existing columns with the same name.
+
+        Arguments:
+            *exprs: Column(s) to add, specified as positional arguments.
+                     Accepts expression input. Strings are parsed as column names, other
+                     non-expression inputs are parsed as literals.
+
+            **named_exprs: Additional columns to add, specified as keyword arguments.
+                            The columns will be renamed to the keyword used.
+
+        Returns:
+            DataFrame: A new DataFrame with the columns added.
+
+        Note:
+            Creating a new DataFrame using this method does not create a new copy of
+            existing data.
+
+        Examples: Pass an expression to add it as a new column.
+                    ```python
+                    >>> df_pl = pl.DataFrame(
+                    ...     {
+                    ...         "a": [1, 2, 3, 4],
+                    ...         "b": [0.5, 4, 10, 13],
+                    ...         "c": [True, True, False, True],
+                    ...     }
+                    ... )
+                    >>> df = nw.DataFrame(df_pl)
+                    >>> df = df.with_columns((pl.col("a") ** 2).alias("a^2"))
+                    >>> nw.to_native(df)
+                    shape: (4, 4)
+                    ┌─────┬──────┬───────┬──────┐
+                    │ a   ┆ b    ┆ c     ┆ a^2  │
+                    │ --- ┆ ---  ┆ ---   ┆ ---  │
+                    │ i64 ┆ f64  ┆ bool  ┆ f64  │
+                    ╞═════╪══════╪═══════╪══════╡
+                    │ 1   ┆ 0.5  ┆ true  ┆ 1.0  │
+                    │ 2   ┆ 4.0  ┆ true  ┆ 4.0  │
+                    │ 3   ┆ 10.0 ┆ false ┆ 9.0  │
+                    │ 4   ┆ 13.0 ┆ true  ┆ 16.0 │
+                    └─────┴──────┴───────┴──────┘
+                    ```
+        """
         return super().with_columns(*exprs, **named_exprs)
 
     def select(

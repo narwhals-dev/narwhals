@@ -4,3 +4,8 @@ todo.md
 .coverage
 site/
 .coverage.*
+
+Makefile
+requirements-freeze.txt
+.requirements-freeze-hashes.txt
+.project.mk
