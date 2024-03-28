@@ -17,6 +17,8 @@ df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
+df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
+df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 
 if os.environ.get("CI", None):
     import modin.pandas as mpd
@@ -365,3 +367,33 @@ def test_drop_nulls(df_raw: Any) -> None:
     result = nw.to_native(df.select(nw.col("a").drop_nulls()))
     expected = {"a": [3, 2]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
+)
+def test_concat_horizontal(df_raw: Any, df_raw_right: Any) -> None:
+    df_left = nw.LazyFrame(df_raw)
+    df_right = nw.LazyFrame(df_raw_right)
+    result = nw.concat([df_left, df_right], how="horizontal")
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8, 9],
+        "c": [6, 12, -1],
+        "d": [0, -4, 2],
+    }
+    compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize(
+    ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
+)
+def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
+    df_left = nw.LazyFrame(df_raw).rename({"a": "c", "b": "d"}).drop("z")
+    df_right = nw.LazyFrame(df_raw_right)
+    result = nw.concat([df_left, df_right], how="vertical")
+    result_native = nw.to_native(result)
+    expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
+    compare_dicts(result_native, expected)
