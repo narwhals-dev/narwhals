@@ -177,18 +177,13 @@ class PandasDataFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
 
-        if overlap := (set(self.columns) - set(left_on)).intersection(
-            set(other.columns) - set(right_on),
-        ):
-            msg = f"Found overlapping columns in join: {overlap}. Please rename columns to avoid this."
-            raise ValueError(msg)
-
         return self._from_dataframe(
             self._dataframe.merge(
                 other._dataframe,
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
+                suffixes=("", "_right"),
             ),
         )
 
