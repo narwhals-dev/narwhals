@@ -1,8 +1,9 @@
 from typing import TYPE_CHECKING
-from typing import TypeAlias
 from typing import TypeVar
 
 if TYPE_CHECKING:
+    from typing import TypeAlias
+
     from narwhals.expression import Expr
     from narwhals.series import Series
 

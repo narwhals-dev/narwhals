@@ -61,7 +61,7 @@ class Series:
             + "| Use `narwhals.to_native()` to see native output |\n"
             + "└"
             + "─" * length
-            + "┘\n"
+            + "┘"
         )
 
     def alias(self, name: str) -> Self:
