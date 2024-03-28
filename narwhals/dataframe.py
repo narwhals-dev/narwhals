@@ -294,7 +294,7 @@ class DataFrame(BaseFrame):
             ...     }
             ... )
             >>> df = nw.DataFrame(df_pl)
-            >>> dframe = df.with_columns((pl.col("a") ** 2).alias("a^2"))
+            >>> dframe = df.with_columns((nw.col("a") ** 2).alias("a^2"))
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
@@ -389,7 +389,7 @@ class DataFrame(BaseFrame):
             list. Expressions are also accepted.
 
             ```python
-            >>> dframe = df.select(pl.col("foo"), pl.col("bar") + 1)
+            >>> dframe = df.select(nw.col("foo"), nw.col("bar") + 1)
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |

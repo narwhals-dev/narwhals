@@ -47,8 +47,8 @@ class PandasGroupBy:
             if expr._output_names is None:
                 msg = (
                     "Anonymous expressions are not supported in group_by.agg.\n"
-                    "Instead of `pl.all()`, try using a named expression, such as "
-                    "`pl.col('a', 'b')`\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
             output_names.extend(expr._output_names)
