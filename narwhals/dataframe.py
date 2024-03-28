@@ -69,7 +69,7 @@ class BaseFrame:
             + "| Use `narwhals.to_native()` to see native output |\n"
             + "└"
             + "─" * length
-            + "┘\n"
+            + "┘"
         )
 
     @property
@@ -217,6 +217,8 @@ class DataFrame(BaseFrame):
 
         Examples:
             ```python
+            >>> import polars as pl
+            >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
             ...     {
             ...         "foo": [1, 2, 3],
@@ -225,7 +227,7 @@ class DataFrame(BaseFrame):
             ...     }
             ... )
             >>> df = nw.DataFrame(df_pl)
-            >>> df.schema
+            >>> df.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
             ```
         """
@@ -240,6 +242,8 @@ class DataFrame(BaseFrame):
             Get column names.
 
             ```python
+            >>> import polars as pl
+            >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
             ...     {
             ...         "foo": [1, 2, 3],
@@ -250,7 +254,6 @@ class DataFrame(BaseFrame):
             >>> df = nw.DataFrame(df_pl)
             >>> df.columns
             ['foo', 'bar', 'ham']
-            ```
         """
         return super().columns
 
@@ -281,6 +284,8 @@ class DataFrame(BaseFrame):
             Pass an expression to add it as a new column.
 
             ```python
+            >>> import polars as pl
+            >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
             ...     {
             ...         "a": [1, 2, 3, 4],
@@ -295,6 +300,7 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
+
             >>> nw.to_native(dframe)
             shape: (4, 4)
             ┌─────┬──────┬───────┬──────┐
@@ -307,7 +313,6 @@ class DataFrame(BaseFrame):
             │ 3   ┆ 10.0 ┆ false ┆ 9.0  │
             │ 4   ┆ 13.0 ┆ true  ┆ 16.0 │
             └─────┴──────┴───────┴──────┘
-            ```
         """
         return super().with_columns(*exprs, **named_exprs)
 
@@ -331,6 +336,8 @@ class DataFrame(BaseFrame):
             Pass the name of a column to select that column.
 
             ```python
+            >>> import polars as pl
+            >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
             ...     {
             ...         "foo": [1, 2, 3],
@@ -356,7 +363,6 @@ class DataFrame(BaseFrame):
             │ 2   │
             │ 3   │
             └─────┘
-            ```
 
             Multiple columns can be selected by passing a list of column names.
 
@@ -378,13 +384,13 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7   │
             │ 3   ┆ 8   │
             └─────┴─────┘
-            ```
 
             Multiple columns can also be selected using positional arguments instead of a
             list. Expressions are also accepted.
 
             ```python
             >>> dframe = df.select(pl.col("foo"), pl.col("bar") + 1)
+            >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
@@ -400,12 +406,11 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 8   │
             │ 3   ┆ 9   │
             └─────┴─────┘
-            ```
 
             Use keyword arguments to easily name your expression inputs.
 
             ```python
-            >>> dframe = df.select(threshold=pl.when(pl.col("foo") > 2).then(10).otherwise(0))
+            >>> dframe = df.select(threshold=nw.col('foo')*2)
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
@@ -416,39 +421,12 @@ class DataFrame(BaseFrame):
             ┌───────────┐
             │ threshold │
             │ ---       │
-            │ i32       │
+            │ i64       │
             ╞═══════════╡
-            │ 0         │
-            │ 0         │
-            │ 10        │
+            │ 2         │
+            │ 4         │
+            │ 6         │
             └───────────┘
-            ```
-
-            Expressions with multiple outputs can be automatically instantiated as Structs
-            by enabling the setting `Config.set_auto_structify(True)`:
-
-            ```python
-            >>> with pl.Config(auto_structify=True):
-            ...     dframe = df.select(
-            ...         is_odd=(pl.col(pl.INTEGER_DTYPES) % 2).name.suffix("_is_odd"),
-            ...     )
-            >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (3, 1)
-            ┌───────────┐
-            │ is_odd    │
-            │ ---       │
-            │ struct[2] │
-            ╞═══════════╡
-            │ {1,0}     │
-            │ {0,1}     │
-            │ {1,0}     │
-            └───────────┘
-            ```
         """
         return super().select(*exprs, **named_exprs)
 
@@ -462,6 +440,8 @@ class DataFrame(BaseFrame):
 
         Examples:
             ```python
+            >>> import polars as pl
+            >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
             ...     {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
             ... )
@@ -472,6 +452,7 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
+
             >>> nw.to_native(dframe)
             shape: (3, 3)
             ┌───────┬─────┬─────┐
@@ -483,7 +464,7 @@ class DataFrame(BaseFrame):
             │ 2     ┆ 7   ┆ b   │
             │ 3     ┆ 8   ┆ c   │
             └───────┴─────┴─────┘
-            >>> dframe = df.rename(lambda column_name: "c" + column_name[1:])
+            >>> dframe = df.rename(lambda column_name: "f" + column_name[1:])
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
@@ -492,7 +473,7 @@ class DataFrame(BaseFrame):
             >>> nw.to_native(dframe)
             shape: (3, 3)
             ┌─────┬─────┬─────┐
-            │ coo ┆ car ┆ cam │
+            │ foo ┆ far ┆ fam │
             │ --- ┆ --- ┆ --- │
             │ i64 ┆ i64 ┆ str │
             ╞═════╪═════╪═════╡
@@ -500,7 +481,6 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7   ┆ b   │
             │ 3   ┆ 8   ┆ c   │
             └─────┴─────┴─────┘
-            ```
         """
         return super().rename(mapping)
 
