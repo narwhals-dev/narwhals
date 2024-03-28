@@ -230,7 +230,7 @@ def max(*columns: str) -> Expr:
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
-    Instantiate an expression representing the horzontal sum of one or more expressions, similar to `polars.sum_horizontal`.
+    Instantiate an expression representing the horizontal sum of one or more expressions, similar to `polars.sum_horizontal`.
     """
     return Expr(
         lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)])

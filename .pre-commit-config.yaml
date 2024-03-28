@@ -14,3 +14,10 @@ repos:
     -   id: mypy
         additional_dependencies: ['polars==0.20.10', 'pytest==8.0.1']
         exclude: utils|tpch
+-   repo: https://github.com/codespell-project/codespell
+    rev: v2.2.5
+    hooks:
+      - id: codespell
+        files: \.(py|rst|md)$
+        args: [--ignore-words-list=ser]
+
