@@ -255,7 +255,7 @@ def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any, keys: list[str])
 
 def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     """
-    Concatenate (native) DataFrames.
+    Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
@@ -271,6 +271,37 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
         import modin.pandas as mpd
 
         return mpd.concat(dfs, axis=1)
+    msg = f"Unknown implementation: {implementation}"
+    raise TypeError(msg)
+
+
+def vertical_concat(dfs: list[Any], implementation: str) -> Any:
+    """
+    Concatenate (native) DataFrames vertically.
+
+    Should be in namespace.
+    """
+    if not dfs:
+        msg = "No dataframes to concatenate"
+        raise TypeError(msg)
+    cols = set(dfs[0].columns)
+    for df in dfs:
+        cols_current = set(df.columns)
+        if cols_current != cols:
+            msg = "Unable to vstack, column names don't match"
+            raise TypeError(msg)
+    if implementation == "pandas":
+        import pandas as pd
+
+        return pd.concat(dfs, axis=0, copy=False)
+    if implementation == "cudf":
+        import cudf
+
+        return cudf.concat(dfs, axis=0)
+    if implementation == "modin":
+        import modin.pandas as mpd
+
+        return mpd.concat(dfs, axis=0)
     msg = f"Unknown implementation: {implementation}"
     raise TypeError(msg)
 

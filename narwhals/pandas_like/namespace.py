@@ -13,6 +13,7 @@ from narwhals.pandas_like.series import PandasSeries
 from narwhals.pandas_like.utils import horizontal_concat
 from narwhals.pandas_like.utils import parse_into_exprs
 from narwhals.pandas_like.utils import series_from_iterable
+from narwhals.pandas_like.utils import vertical_concat
 from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
@@ -186,10 +187,14 @@ class PandasNamespace:
         if len(kind) > 1:
             msg = "Can only concat DataFrames or LazyFrames, not mixtures of the two"
             raise TypeError(msg)
-        if how != "horizontal":
-            msg = "Only horizontal concatenation is supported for now"
-            raise TypeError(msg)
-        return PandasDataFrame(
-            horizontal_concat(dfs, implementation=self._implementation),
-            implementation=self._implementation,
-        )
+        if how == "horizontal":
+            return PandasDataFrame(
+                horizontal_concat(dfs, implementation=self._implementation),
+                implementation=self._implementation,
+            )
+        if how == "vertical":
+            return PandasDataFrame(
+                vertical_concat(dfs, implementation=self._implementation),
+                implementation=self._implementation,
+            )
+        raise NotImplementedError

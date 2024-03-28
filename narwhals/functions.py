@@ -12,10 +12,14 @@ if TYPE_CHECKING:
 
 
 def concat(
-    items: Iterable[DataFrame | LazyFrame], *, how: Literal["horizontal"]
+    items: Iterable[DataFrame | LazyFrame],
+    *,
+    how: Literal["horizontal", "vertical"] = "vertical",
 ) -> DataFrame | LazyFrame:
-    if how != "horizontal":
-        raise NotImplementedError("Only horizontal concatenation is supported")
+    if how not in ("horizontal", "vertical"):
+        raise NotImplementedError(
+            "Only horizontal and vertical concatenations are supported"
+        )
     if not items:
         raise ValueError("No items to concatenate")
     items = list(items)
