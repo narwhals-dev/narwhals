@@ -216,7 +216,6 @@ class DataFrame(BaseFrame):
         Get a dict[column name, DataType].
 
         Examples:
-            ```python
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
@@ -241,7 +240,6 @@ class DataFrame(BaseFrame):
         Examples:
             Get column names.
 
-            ```python
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
@@ -283,7 +281,6 @@ class DataFrame(BaseFrame):
         Examples:
             Pass an expression to add it as a new column.
 
-            ```python
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
@@ -294,7 +291,7 @@ class DataFrame(BaseFrame):
             ...     }
             ... )
             >>> df = nw.DataFrame(df_pl)
-            >>> dframe = df.with_columns((nw.col("a") ** 2).alias("a^2"))
+            >>> dframe = df.with_columns((nw.col("a") * 2).alias("a*2"))
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
@@ -303,16 +300,16 @@ class DataFrame(BaseFrame):
 
             >>> nw.to_native(dframe)
             shape: (4, 4)
-            ┌─────┬──────┬───────┬──────┐
-            │ a   ┆ b    ┆ c     ┆ a^2  │
-            │ --- ┆ ---  ┆ ---   ┆ ---  │
-            │ i64 ┆ f64  ┆ bool  ┆ f64  │
-            ╞═════╪══════╪═══════╪══════╡
-            │ 1   ┆ 0.5  ┆ true  ┆ 1.0  │
-            │ 2   ┆ 4.0  ┆ true  ┆ 4.0  │
-            │ 3   ┆ 10.0 ┆ false ┆ 9.0  │
-            │ 4   ┆ 13.0 ┆ true  ┆ 16.0 │
-            └─────┴──────┴───────┴──────┘
+            ┌─────┬──────┬───────┬─────┐
+            │ a   ┆ b    ┆ c     ┆ a*2 │
+            │ --- ┆ ---  ┆ ---   ┆ --- │
+            │ i64 ┆ f64  ┆ bool  ┆ i64 │
+            ╞═════╪══════╪═══════╪═════╡
+            │ 1   ┆ 0.5  ┆ true  ┆ 2   │
+            │ 2   ┆ 4.0  ┆ true  ┆ 4   │
+            │ 3   ┆ 10.0 ┆ false ┆ 6   │
+            │ 4   ┆ 13.0 ┆ true  ┆ 8   │
+            └─────┴──────┴───────┴─────┘
         """
         return super().with_columns(*exprs, **named_exprs)
 
@@ -335,7 +332,6 @@ class DataFrame(BaseFrame):
         Examples:
             Pass the name of a column to select that column.
 
-            ```python
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
@@ -366,7 +362,6 @@ class DataFrame(BaseFrame):
 
             Multiple columns can be selected by passing a list of column names.
 
-            ```python
             >>> dframe = df.select(["foo", "bar"])
             >>> dframe
             ┌─────────────────────────────────────────────────┐
@@ -388,7 +383,6 @@ class DataFrame(BaseFrame):
             Multiple columns can also be selected using positional arguments instead of a
             list. Expressions are also accepted.
 
-            ```python
             >>> dframe = df.select(nw.col("foo"), nw.col("bar") + 1)
             >>> dframe
             ┌─────────────────────────────────────────────────┐
@@ -409,7 +403,6 @@ class DataFrame(BaseFrame):
 
             Use keyword arguments to easily name your expression inputs.
 
-            ```python
             >>> dframe = df.select(threshold=nw.col('foo')*2)
             >>> dframe
             ┌─────────────────────────────────────────────────┐
@@ -439,7 +432,6 @@ class DataFrame(BaseFrame):
                       that takes the old name as input and returns the new name.
 
         Examples:
-            ```python
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pl = pl.DataFrame(
