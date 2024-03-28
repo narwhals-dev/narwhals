@@ -6,7 +6,7 @@ For example, do the following produce the same output?
 
 ```python
 import pandas as pd
-import polars as pd
+import polars as pl
 
 print(3 in pd.Series([1, 2, 3]))
 print(3 in pl.Series([1, 2, 3]))

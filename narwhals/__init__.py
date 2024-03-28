@@ -15,13 +15,15 @@ from narwhals.expression import mean
 from narwhals.expression import min
 from narwhals.expression import sum
 from narwhals.expression import sum_horizontal
+from narwhals.functions import concat
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 
-__version__ = "0.6.9"
+__version__ = "0.7.2"
 
 __all__ = [
+    "concat",
     "is_dataframe",
     "is_series",
     "is_polars",
