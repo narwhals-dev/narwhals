@@ -12,7 +12,9 @@ if TYPE_CHECKING:
 
 
 def concat(
-    items: Iterable[DataFrame | LazyFrame], *, how: Literal["horizontal", "vertical"]
+    items: Iterable[DataFrame | LazyFrame],
+    *,
+    how: Literal["horizontal", "vertical"] = "vertical",
 ) -> DataFrame | LazyFrame:
     if how not in ("horizontal", "vertical"):
         raise NotImplementedError(
