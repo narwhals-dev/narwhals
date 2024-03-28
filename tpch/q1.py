@@ -1,4 +1,5 @@
 # ruff: noqa
+import polars as pl
 from typing import Any
 from datetime import datetime
 import narwhals as nw
@@ -10,7 +11,7 @@ polars.Config.set_tbl_cols(10)
 
 def q1(df_raw: Any) -> Any:
     var_1 = datetime(1998, 9, 2)
-    df = nw.LazyFrame(df_raw)
+    df = nw.from_native(df_raw)
     result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -36,10 +37,14 @@ def q1(df_raw: Any) -> Any:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    return nw.to_native(result.collect())
+    return nw.to_native(result)
 
 
 df = pd.read_parquet(
     "../tpch-data/s1/lineitem.parquet", dtype_backend="pyarrow", engine="pyarrow"
 )
 print(q1(df))
+df = pl.read_parquet("../tpch-data/s1/lineitem.parquet")
+print(q1(df))
+df = pl.scan_parquet("../tpch-data/s1/lineitem.parquet")
+print(q1(df).collect())

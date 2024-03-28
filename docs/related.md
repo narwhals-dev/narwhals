@@ -1,6 +1,4 @@
-# Reference
-
-Here are some related projects.
+# Related projects
 
 ## Dataframe Interchange Protocol
 

@@ -2,7 +2,10 @@
 
 To write a dataframe-agnostic function, the steps you'll want to follow are:
 
-1. Initialise a Narwhals DataFrame by passing your dataframe to `nw.DataFrame`.
+1. Initialise a Narwhals DataFrame or LazyFrame by passing your dataframe to `nw.from_native`.
+   
+    Note: if you need eager execution, use `nw.DataFrame` instead.
+
 2. Express your logic using the subset of the Polars API supported by Narwhals.
 3. If you need to return a dataframe to the user in its original library, call `narwhals.to_native`.
 
@@ -16,9 +19,9 @@ import narwhals as nw
 
 def func(df):
     # 1. Create a Narwhals dataframe
-    df_s = nw.DataFrame(df)
+    df_s = nw.from_native(df)
     # 2. Use the subset of the Polars API supported by Narwhals
-    df_s = df_s.group_by('a').agg(nw.col('b').mean())
+    df_s = df_s.group_by('a').agg(nw.col('b').mean()).sort('a')
     # 3. Return a library from the user's original library
     return nw.to_native(df_s)
 ```
@@ -32,10 +35,18 @@ Let's try it out:
     print(func(df))
     ```
 
-=== "Polars"
+=== "Polars (eager)"
     ```python exec="true" source="material-block" result="python" session="df_ex1"
     import polars as pl
 
     df = pl.DataFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
     print(func(df))
+    ```
+
+=== "Polars (lazy)"
+    ```python exec="true" source="material-block" result="python" session="df_ex1"
+    import polars as pl
+
+    df = pl.LazyFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
+    print(func(df).collect())
     ```

@@ -29,6 +29,15 @@ content = content.replace(
 with open("narwhals/__init__.py", "w", encoding="utf-8") as f:
     f.write(content)
 
+with open("docs/installation.md", encoding="utf-8") as f:
+    content = f.read()
+content = content.replace(
+    f"'{old_version}'",
+    f"'{version}'",
+)
+with open("docs/installation.md", "w", encoding="utf-8") as f:
+    f.write(content)
+
 subprocess.run(["git", "commit", "-a", "-m", f"Bump version to {version}"])
 subprocess.run(["git", "tag", "-a", version, "-m", version])
 subprocess.run(["git", "push", "--follow-tags"])

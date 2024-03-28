@@ -18,7 +18,10 @@ stored them in attributes `self.means` and `self.std_devs`.
 
 The general strategy will be:
 
-1. Initialise a Narwhals DataFrame by passing your dataframe to `nw.DataFrame`.
+1. Initialise a Narwhals DataFrame or LazyFrame by passing your dataframe to `nw.from_native`.
+   
+    Note: if you need eager execution, use `nw.DataFrame` instead.
+
 2. Express your logic using the subset of the Polars API supported by Narwhals.
 3. If you need to return a dataframe to the user in its original library, call `narwhals.to_native`.
 
@@ -27,7 +30,7 @@ import narwhals as nw
 
 class StandardScalar:
     def transform(self, df):
-        df = nw.DataFrame(df)
+        df = nw.from_native(df)
         df = df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
             for col in df.columns

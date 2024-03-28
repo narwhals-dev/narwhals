@@ -164,36 +164,74 @@ class Expr:
             )
         )
 
+    @property
+    def str(self) -> ExprStringNamespace:
+        return ExprStringNamespace(self)
+
+
+class ExprStringNamespace:
+    def __init__(self, expr: Expr) -> None:
+        self._expr = expr
+
+    def ends_with(self, suffix: str) -> Expr:
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.ends_with(suffix)
+        )
+
 
 def col(*names: str | Iterable[str]) -> Expr:
+    """
+    Instantiate an expression, similar to `polars.col`.
+    """
     return Expr(lambda plx: plx.col(*names))
 
 
 def all() -> Expr:
+    """
+    Instantiate an expression representing all columns, similar to `polars.all`.
+    """
     return Expr(lambda plx: plx.all())
 
 
 def len() -> Expr:
+    """
+    Instantiate an expression representing the length of a dataframe, similar to `polars.len`.
+    """
     return Expr(lambda plx: plx.len())
 
 
 def sum(*columns: str) -> Expr:
+    """
+    Instantiate an expression representing the sum of one or more columns, similar to `polars.sum`.
+    """
     return Expr(lambda plx: plx.sum(*columns))
 
 
 def mean(*columns: str) -> Expr:
+    """
+    Instantiate an expression representing the mean of one or more columns, similar to `polars.mean`.
+    """
     return Expr(lambda plx: plx.mean(*columns))
 
 
 def min(*columns: str) -> Expr:
+    """
+    Instantiate an expression representing the minimum of one or more columns, similar to `polars.min`.
+    """
     return Expr(lambda plx: plx.min(*columns))
 
 
 def max(*columns: str) -> Expr:
+    """
+    Instantiate an expression representing the maximum of one or more columns, similar to `polars.max`.
+    """
     return Expr(lambda plx: plx.max(*columns))
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Instantiate an expression representing the horizontal sum of one or more expressions, similar to `polars.sum_horizontal`.
+    """
     return Expr(
         lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)])
     )

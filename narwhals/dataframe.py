@@ -209,6 +209,73 @@ class DataFrame(BaseFrame):
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
+    # inherited
+    @property
+    def schema(self) -> dict[str, DType]:
+        return super().schema
+
+    @property
+    def columns(self) -> list[str]:
+        return super().columns
+
+    def with_columns(
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+    ) -> Self:
+        return super().with_columns(*exprs, **named_exprs)
+
+    def select(
+        self,
+        *exprs: IntoExpr | Iterable[IntoExpr],
+        **named_exprs: IntoExpr,
+    ) -> Self:
+        return super().select(*exprs, **named_exprs)
+
+    def rename(self, mapping: dict[str, str]) -> Self:
+        return super().rename(mapping)
+
+    def head(self, n: int) -> Self:
+        return super().head(n)
+
+    def drop(self, *columns: str | Iterable[str]) -> Self:
+        return super().drop(*columns)
+
+    def unique(self, subset: str | list[str]) -> Self:
+        return super().unique(subset)
+
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+        return super().filter(*predicates)
+
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+        from narwhals.group_by import GroupBy
+
+        # todo: groupby and lazygroupby
+        return GroupBy(self, *keys)
+
+    def sort(
+        self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Sequence[bool] = False,
+    ) -> Self:
+        return super().sort(by, *more_by, descending=descending)
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: Literal["inner"] = "inner",
+        left_on: str | list[str],
+        right_on: str | list[str],
+    ) -> Self:
+        return self._from_dataframe(
+            self._dataframe.join(
+                self._extract_native(other),
+                how=how,
+                left_on=left_on,
+                right_on=right_on,
+            )
+        )
+
 
 class LazyFrame(BaseFrame):
     def __init__(
@@ -247,4 +314,71 @@ class LazyFrame(BaseFrame):
         return DataFrame(
             self._dataframe.collect(),
             implementation=self._implementation,
+        )
+
+    # inherited
+    @property
+    def schema(self) -> dict[str, DType]:
+        return super().schema
+
+    @property
+    def columns(self) -> list[str]:
+        return super().columns
+
+    def with_columns(
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+    ) -> Self:
+        return super().with_columns(*exprs, **named_exprs)
+
+    def select(
+        self,
+        *exprs: IntoExpr | Iterable[IntoExpr],
+        **named_exprs: IntoExpr,
+    ) -> Self:
+        return super().select(*exprs, **named_exprs)
+
+    def rename(self, mapping: dict[str, str]) -> Self:
+        return super().rename(mapping)
+
+    def head(self, n: int) -> Self:
+        return super().head(n)
+
+    def drop(self, *columns: str | Iterable[str]) -> Self:
+        return super().drop(*columns)
+
+    def unique(self, subset: str | list[str]) -> Self:
+        return super().unique(subset)
+
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+        return super().filter(*predicates)
+
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+        from narwhals.group_by import GroupBy
+
+        # todo: groupby and lazygroupby
+        return GroupBy(self, *keys)
+
+    def sort(
+        self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Sequence[bool] = False,
+    ) -> Self:
+        return super().sort(by, *more_by, descending=descending)
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: Literal["inner"] = "inner",
+        left_on: str | list[str],
+        right_on: str | list[str],
+    ) -> Self:
+        return self._from_dataframe(
+            self._dataframe.join(
+                self._extract_native(other),
+                how=how,
+                left_on=left_on,
+                right_on=right_on,
+            )
         )

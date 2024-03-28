@@ -1,6 +1,7 @@
 # ruff: noqa
 from datetime import datetime
 from typing import Any
+import pandas as pd
 
 import polars
 
@@ -38,7 +39,10 @@ def q5(
         )
         .filter(nw.col("r_name") == var_1)
         .filter(nw.col("o_orderdate").is_between(var_2, var_3, closed="left"))
-        .with_columns(
+    )
+    breakpoint()
+    result = (
+        result.with_columns(
             (nw.col("l_extendedprice") * (1 - nw.col("l_discount"))).alias("revenue")
         )
         .group_by("n_name")
@@ -49,22 +53,40 @@ def q5(
     return nw.to_native(result.collect())
 
 
+region_ds = pd.read_parquet(
+    "../tpch-data/s1/region.parquet", engine="pyarrow", dtype_backend="pyarrow"
+)
+nation_ds = pd.read_parquet(
+    "../tpch-data/s1/nation.parquet", engine="pyarrow", dtype_backend="pyarrow"
+)
+customer_ds = pd.read_parquet(
+    "../tpch-data/s1/customer.parquet", engine="pyarrow", dtype_backend="pyarrow"
+)
+lineitem_ds = pd.read_parquet(
+    "../tpch-data/s1/lineitem.parquet", engine="pyarrow", dtype_backend="pyarrow"
+)
+orders_ds = pd.read_parquet(
+    "../tpch-data/s1/orders.parquet", engine="pyarrow", dtype_backend="pyarrow"
+)
+supplier_ds = pd.read_parquet(
+    "../tpch-data/s1/supplier.parquet", engine="pyarrow", dtype_backend="pyarrow"
+)
+print(
+    q5(
+        region_ds,
+        nation_ds,
+        customer_ds,
+        lineitem_ds,
+        orders_ds,
+        supplier_ds,
+    )
+)
 region_ds = polars.scan_parquet("../tpch-data/region.parquet")
 nation_ds = polars.scan_parquet("../tpch-data/nation.parquet")
 customer_ds = polars.scan_parquet("../tpch-data/customer.parquet")
 lineitem_ds = polars.scan_parquet("../tpch-data/lineitem.parquet")
 orders_ds = polars.scan_parquet("../tpch-data/orders.parquet")
 supplier_ds = polars.scan_parquet("../tpch-data/supplier.parquet")
-print(
-    q5(
-        region_ds.collect().to_pandas(),
-        nation_ds.collect().to_pandas(),
-        customer_ds.collect().to_pandas(),
-        lineitem_ds.collect().to_pandas(),
-        orders_ds.collect().to_pandas(),
-        supplier_ds.collect().to_pandas(),
-    )
-)
 print(
     q5(
         region_ds,

@@ -7,6 +7,9 @@
 		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/26be901e-5383-49f2-9fbd-5c97b7696f27">
 </h1>
 
+[![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
+[![Documentation](https://img.shields.io/badge/Documentation-coolgreen?style=flat&link=https://marcogorelli.github.io/narwhals/)](https://marcogorelli.github.io/narwhals/)
+
 Extremely lightweight compatibility layer between Polars, pandas, modin, and cuDF (and possibly more?).
 
 Seamlessly support all, without depending on any!
@@ -29,10 +32,9 @@ Or just vendor it, it's only a bunch of pure-Python files.
 
 There are three steps to writing dataframe-agnostic code using Narwhals:
 
-1. use `narwhals.LazyFrame` or `narwhals.DataFrame` to wrap a pandas or Polars
+1. use `narwhals.DataFrame` or `narwhals.LazyFrame` to wrap a pandas/Polars/Modin/cuDF
    DataFrame/LazyFrame in a Narwhals class
-2. use the subset of the Polars API supported by Narwhals. Just like in Polars,
-   some methods (e.g. `to_numpy`) are only available for `DataFrame`, not `LazyFrame`
+2. use the [subset of the Polars API supported by Narwhals](https://marcogorelli.github.io/narwhals/api-reference/narwhals/)
 3. use `narwhals.to_native` to return an object to the user in its original
    dataframe flavour. For example:
 
