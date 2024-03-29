@@ -6,8 +6,8 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals.dtypes import to_narwhals_dtype
-from narwhals.pandas_like.dataframe import PandasDataFrame
 from narwhals.translate import get_cudf
 from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
@@ -41,8 +41,8 @@ class BaseFrame:
         return args, kwargs
 
     def _extract_native(self, arg: Any) -> Any:
+        from narwhals._pandas_like.namespace import PandasNamespace
         from narwhals.expression import Expr
-        from narwhals.pandas_like.namespace import PandasNamespace
         from narwhals.series import Series
 
         if isinstance(arg, BaseFrame):

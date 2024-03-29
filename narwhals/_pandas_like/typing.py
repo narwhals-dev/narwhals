@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import TypeAlias
 
-    from narwhals.pandas_like.expr import PandasExpr
-    from narwhals.pandas_like.series import PandasSeries
+    from narwhals._pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.series import PandasSeries
 
     IntoPandasExpr: TypeAlias = PandasExpr | str | int | float | PandasSeries

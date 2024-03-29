@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals.pandas_like.utils import isinstance_or_issubclass
+from narwhals._pandas_like.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing_extensions import Self

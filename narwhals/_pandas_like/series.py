@@ -6,10 +6,10 @@ from typing import Sequence
 
 from pandas.api.types import is_extension_array_dtype
 
-from narwhals.pandas_like.utils import item
-from narwhals.pandas_like.utils import reverse_translate_dtype
-from narwhals.pandas_like.utils import translate_dtype
-from narwhals.pandas_like.utils import validate_column_comparand
+from narwhals._pandas_like.utils import item
+from narwhals._pandas_like.utils import reverse_translate_dtype
+from narwhals._pandas_like.utils import translate_dtype
+from narwhals._pandas_like.utils import validate_column_comparand
 
 if TYPE_CHECKING:
     from typing_extensions import Self

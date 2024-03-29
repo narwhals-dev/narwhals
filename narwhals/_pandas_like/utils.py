@@ -12,14 +12,14 @@ from narwhals.utils import remove_prefix
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.series import PandasSeries
     from narwhals.dtypes import DType
-    from narwhals.pandas_like.dataframe import PandasDataFrame
-    from narwhals.pandas_like.expr import PandasExpr
-    from narwhals.pandas_like.series import PandasSeries
 
     ExprT = TypeVar("ExprT", bound=PandasExpr)
 
-    from narwhals.pandas_like.typing import IntoPandasExpr
+    from narwhals._pandas_like.typing import IntoPandasExpr
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:
@@ -31,8 +31,8 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
     If RHS is length 1, return the scalar value, so that the underlying
     library can broadcast it.
     """
-    from narwhals.pandas_like.dataframe import PandasDataFrame
-    from narwhals.pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.series import PandasSeries
 
     if isinstance(other, list):
         if len(other) > 1:
@@ -62,8 +62,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
-    from narwhals.pandas_like.dataframe import PandasDataFrame
-    from narwhals.pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.series import PandasSeries
 
     if isinstance(other, PandasDataFrame):
         return NotImplemented
@@ -89,7 +89,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
 
 def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
     """Evaluate expression if it's an expression, otherwise return it as is."""
-    from narwhals.pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.expr import PandasExpr
 
     if isinstance(arg, PandasExpr):
         return arg._call(df)
@@ -108,9 +108,9 @@ def parse_into_exprs(
 
 
 def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
-    from narwhals.pandas_like.expr import PandasExpr
-    from narwhals.pandas_like.namespace import PandasNamespace
-    from narwhals.pandas_like.series import PandasSeries
+    from narwhals._pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.series import PandasSeries
 
     plx = PandasNamespace(implementation=implementation)
 
@@ -155,9 +155,9 @@ def evaluate_into_exprs(
 
 
 def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
-    from narwhals.pandas_like.expr import PandasExpr
-    from narwhals.pandas_like.namespace import PandasNamespace
-    from narwhals.pandas_like.series import PandasSeries
+    from narwhals._pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.series import PandasSeries
 
     plx = PandasNamespace(implementation=expr._implementation)
 

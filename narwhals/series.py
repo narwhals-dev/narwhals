@@ -17,7 +17,7 @@ class Series:
         *,
         implementation: str | None = None,
     ) -> None:
-        from narwhals.pandas_like.series import PandasSeries
+        from narwhals._pandas_like.series import PandasSeries
 
         if implementation is not None:
             self._series: Any = series

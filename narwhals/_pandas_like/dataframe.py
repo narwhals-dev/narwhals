@@ -6,11 +6,11 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 
-from narwhals.pandas_like.utils import evaluate_into_exprs
-from narwhals.pandas_like.utils import horizontal_concat
-from narwhals.pandas_like.utils import translate_dtype
-from narwhals.pandas_like.utils import validate_dataframe_comparand
-from narwhals.pandas_like.utils import validate_indices
+from narwhals._pandas_like.utils import evaluate_into_exprs
+from narwhals._pandas_like.utils import horizontal_concat
+from narwhals._pandas_like.utils import translate_dtype
+from narwhals._pandas_like.utils import validate_dataframe_comparand
+from narwhals._pandas_like.utils import validate_indices
 from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
@@ -18,10 +18,10 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._pandas_like.group_by import PandasGroupBy
+    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.typing import IntoPandasExpr
     from narwhals.dtypes import DType
-    from narwhals.pandas_like.group_by import PandasGroupBy
-    from narwhals.pandas_like.series import PandasSeries
-    from narwhals.pandas_like.typing import IntoPandasExpr
 
 
 class PandasDataFrame:
@@ -62,7 +62,7 @@ class PandasDataFrame:
         )
 
     def __getitem__(self, column_name: str) -> PandasSeries:
-        from narwhals.pandas_like.series import PandasSeries
+        from narwhals._pandas_like.series import PandasSeries
 
         return PandasSeries(
             self._dataframe.loc[:, column_name],
@@ -98,7 +98,7 @@ class PandasDataFrame:
         self,
         *predicates: IntoPandasExpr | Iterable[IntoPandasExpr],
     ) -> Self:
-        from narwhals.pandas_like.namespace import PandasNamespace
+        from narwhals._pandas_like.namespace import PandasNamespace
 
         plx = PandasNamespace(self._implementation)
         expr = plx.all_horizontal(*predicates)
@@ -153,7 +153,7 @@ class PandasDataFrame:
 
     # --- actions ---
     def group_by(self, *keys: str | Iterable[str]) -> PandasGroupBy:
-        from narwhals.pandas_like.group_by import PandasGroupBy
+        from narwhals._pandas_like.group_by import PandasGroupBy
 
         return PandasGroupBy(
             self,
@@ -211,7 +211,7 @@ class PandasDataFrame:
         return self._dataframe.shape  # type: ignore[no-any-return]
 
     def iter_columns(self) -> Iterable[PandasSeries]:
-        from narwhals.pandas_like.series import PandasSeries
+        from narwhals._pandas_like.series import PandasSeries
 
         return (
             PandasSeries(self._dataframe[col], implementation=self._implementation)

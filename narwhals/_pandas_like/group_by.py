@@ -8,16 +8,16 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
-from narwhals.pandas_like.utils import is_simple_aggregation
-from narwhals.pandas_like.utils import item
-from narwhals.pandas_like.utils import parse_into_exprs
+from narwhals._pandas_like.utils import is_simple_aggregation
+from narwhals._pandas_like.utils import item
+from narwhals._pandas_like.utils import parse_into_exprs
 from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
-    from narwhals.pandas_like.dataframe import PandasDataFrame
-    from narwhals.pandas_like.expr import PandasExpr
-    from narwhals.pandas_like.typing import IntoPandasExpr
+    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.typing import IntoPandasExpr
 
 
 class PandasGroupBy:
@@ -63,7 +63,7 @@ class PandasGroupBy:
         )
 
     def _from_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:
-        from narwhals.pandas_like.dataframe import PandasDataFrame
+        from narwhals._pandas_like.dataframe import PandasDataFrame
 
         return PandasDataFrame(
             df,
@@ -87,7 +87,7 @@ def agg_pandas(  # noqa: PLR0913
     """
     import pandas as pd
 
-    from narwhals.pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.namespace import PandasNamespace
 
     all_simple_aggs = True
     for expr in exprs:

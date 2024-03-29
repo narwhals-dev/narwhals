@@ -28,7 +28,7 @@ def concat(
         import polars as pl
 
         return from_native(pl.concat([df._dataframe for df in items], how=how))
-    from narwhals.pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.namespace import PandasNamespace
 
     plx = PandasNamespace(first_item._implementation)
     return first_item._from_dataframe(

@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
-from narwhals.pandas_like.series import PandasSeries
-from narwhals.pandas_like.utils import register_expression_call
+from narwhals._pandas_like.series import PandasSeries
+from narwhals._pandas_like.utils import register_expression_call
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals.pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.dataframe import PandasDataFrame
 
 
 class PandasExpr:

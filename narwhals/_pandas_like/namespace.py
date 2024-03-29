@@ -7,17 +7,17 @@ from typing import Callable
 from typing import Iterable
 
 from narwhals import dtypes
-from narwhals.pandas_like.dataframe import PandasDataFrame
-from narwhals.pandas_like.expr import PandasExpr
-from narwhals.pandas_like.series import PandasSeries
-from narwhals.pandas_like.utils import horizontal_concat
-from narwhals.pandas_like.utils import parse_into_exprs
-from narwhals.pandas_like.utils import series_from_iterable
-from narwhals.pandas_like.utils import vertical_concat
+from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals._pandas_like.expr import PandasExpr
+from narwhals._pandas_like.series import PandasSeries
+from narwhals._pandas_like.utils import horizontal_concat
+from narwhals._pandas_like.utils import parse_into_exprs
+from narwhals._pandas_like.utils import series_from_iterable
+from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten_str
 
 if TYPE_CHECKING:
-    from narwhals.pandas_like.typing import IntoPandasExpr
+    from narwhals._pandas_like.typing import IntoPandasExpr
 
 
 class PandasNamespace:
