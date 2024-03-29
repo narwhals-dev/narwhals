@@ -140,6 +140,8 @@ If, I'd love to hear from you!
 **Note**: You might suspect that this is a secret ploy to infiltrate the Polars API everywhere.
 Indeed, you may suspect that.
 
+Also, please note that this is not intended as a "dataframe standard" project.
+
 ## Why "Narwhals"?
 
 Because they are so awesome.

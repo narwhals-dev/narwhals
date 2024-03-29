@@ -207,6 +207,10 @@ class PandasExpr:
     def str(self) -> PandasExprStringNamespace:
         return PandasExprStringNamespace(self)
 
+    @property
+    def dt(self) -> PandasExprDateTimeNamespace:
+        return PandasExprDateTimeNamespace(self)
+
 
 class PandasExprStringNamespace:
     def __init__(self, expr: PandasExpr) -> None:
@@ -225,6 +229,29 @@ class PandasExprStringNamespace:
             ],
             depth=self._expr._depth + 1,
             function_name=f"{self._expr._function_name}->str.ends_with",
+            root_names=self._expr._root_names,
+            output_names=self._expr._output_names,
+            implementation=self._expr._implementation,
+        )
+
+
+class PandasExprDateTimeNamespace:
+    def __init__(self, expr: PandasExpr) -> None:
+        self._expr = expr
+
+    def year(self) -> PandasExpr:
+        # TODO make a register_expression_call for namespaces
+
+        return PandasExpr(
+            lambda df: [
+                PandasSeries(
+                    series._series.dt.year,
+                    implementation=df._implementation,
+                )
+                for series in self._expr._call(df)
+            ],
+            depth=self._expr._depth + 1,
+            function_name=f"{self._expr._function_name}->dt.year",
             root_names=self._expr._root_names,
             output_names=self._expr._output_names,
             implementation=self._expr._implementation,
