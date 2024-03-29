@@ -119,7 +119,7 @@ def my_func(df):
     import polars as pl
 
     df = pl.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
-    print(my_func(df))
+    print(my_func(df).collect())
     ```
 
 ## Example 3: finding the mean of a column as a scalar
