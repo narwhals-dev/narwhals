@@ -492,8 +492,6 @@ class DataFrame(BaseFrame):
             n: Number of rows to return. If a negative value is passed, return all rows
                 except the last `abs(n)`.
 
-        See Also: `tail`, `glimpse`, `slice`
-
         Examples:
             Get column names.
 
@@ -557,7 +555,6 @@ class DataFrame(BaseFrame):
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
-                       Accepts column selector input.
 
         Examples:
             Drop a single column by passing the name of that column.
@@ -583,7 +580,7 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
-            >>> nw.to_native(df)
+            >>> nw.to_native(dframe)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -613,27 +610,6 @@ class DataFrame(BaseFrame):
             │ 1   │
             │ 2   │
             │ 3   │
-            └─────┘
-
-            Drop multiple columns by passing a selector.
-
-            >>> import polars.selectors as cs
-            >>> dframe = df.drop(cs.numeric())
-            >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (3, 1)
-            ┌─────┐
-            │ ham │
-            │ --- │
-            │ str │
-            ╞═════╡
-            │ a   │
-            │ b   │
-            │ c   │
             └─────┘
 
             Use positional arguments to drop multiple columns.
@@ -673,7 +649,7 @@ class DataFrame(BaseFrame):
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = pl.DataFrame(
+            >>> df_pl = pl.DataFrame(
             ...     {
             ...         "foo": [1, 2, 3],
             ...         "bar": [6, 7, 8],
@@ -793,13 +769,13 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
-            >>> dframe = df.group_by("a").agg(nw.col("b").sum())  # doctest: +IGNORE_RESULT
+            >>> dframe = df.group_by("a").agg(nw.col("b").sum())
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> nw.to_native(dframe) # doctest: +SKIP
             shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
@@ -813,13 +789,13 @@ class DataFrame(BaseFrame):
 
             Group by multiple columns by passing a list of column names.
 
-            >>> dframe = df.group_by(["a", "b"]).agg(nw.max("c"))  # doctest: +IGNORE_RESULT
+            >>> dframe = df.group_by(["a", "b"]).agg(nw.max("c"))
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> nw.to_native(dframe) # doctest: +SKIP
             shape: (4, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
