@@ -168,6 +168,10 @@ class Expr:
     def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
 
+    @property
+    def dt(self) -> ExprDateTimeNamespace:
+        return ExprDateTimeNamespace(self)
+
 
 class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
@@ -177,6 +181,14 @@ class ExprStringNamespace:
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
+
+
+class ExprDateTimeNamespace:
+    def __init__(self, expr: Expr) -> None:
+        self._expr = expr
+
+    def year(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
 
 
 def col(*names: str | Iterable[str]) -> Expr:
