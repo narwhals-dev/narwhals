@@ -57,7 +57,7 @@ class StandardScalar:
     def fit(self, df):
         df = nw.DataFrame(df)
         self._means = {col: df[col].mean() for col in df.columns}
-        self._std_devs = {df[col].std() for col in df.columns}
+        self._std_devs = {col: df[col].std() for col in df.columns}
 ```
 
 ## Putting it all together
