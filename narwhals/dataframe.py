@@ -769,7 +769,7 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
-            >>> dframe = df.group_by("a").agg(nw.col("b").sum())
+            >>> dframe = df.group_by("a").agg(nw.col("b").sum()).sort("a")
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
@@ -782,14 +782,14 @@ class DataFrame(BaseFrame):
             │ --- ┆ --- │
             │ str ┆ i64 │
             ╞═════╪═════╡
-            │ c   ┆ 3   │
-            │ b   ┆ 5   │
             │ a   ┆ 2   │
+            │ b   ┆ 5   │
+            │ c   ┆ 3   │
             └─────┴─────┘
 
             Group by multiple columns by passing a list of column names.
 
-            >>> dframe = df.group_by(["a", "b"]).agg(nw.max("c"))
+            >>> dframe = df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
             >>> dframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
