@@ -863,6 +863,90 @@ class DataFrame(BaseFrame):
         *more_by: str,
         descending: bool | Sequence[bool] = False,
     ) -> Self:
+        r"""
+        Sort the dataframe by the given columns.
+
+        Arguments:
+            by: Column(s) names to sort by.
+
+            *more_by: Additional columns to sort by, specified as positional
+                       arguments.
+
+            descending: Sort in descending order. When sorting by multiple
+                         columns, can be specified per column by passing a
+                         sequence of booleans.
+
+        Examples:
+            Pass a single column name to sort by that column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, None],
+            ...         "b": [6.0, 5.0, 4.0],
+            ...         "c": ["a", "c", "b"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> dframe = df.sort("a")
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ null ┆ 4.0 ┆ b   │
+            │ 1    ┆ 6.0 ┆ a   │
+            │ 2    ┆ 5.0 ┆ c   │
+            └──────┴─────┴─────┘
+
+            Sort by multiple columns by passing a list of columns.
+
+            >>> dframe = df.sort(["c", "a"], descending=True)
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ 2    ┆ 5.0 ┆ c   │
+            │ null ┆ 4.0 ┆ b   │
+            │ 1    ┆ 6.0 ┆ a   │
+            └──────┴─────┴─────┘
+
+            Or use positional arguments to sort by multiple columns in the same way.
+
+            >>> dframe = df.sort("c", "a", descending=[False, True])
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ 1    ┆ 6.0 ┆ a   │
+            │ null ┆ 4.0 ┆ b   │
+            │ 2    ┆ 5.0 ┆ c   │
+            └──────┴─────┴─────┘
+        """
         return super().sort(by, *more_by, descending=descending)
 
     def join(
