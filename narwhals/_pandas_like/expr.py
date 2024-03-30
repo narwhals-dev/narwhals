@@ -49,7 +49,7 @@ class PandasExpr:
             lambda df: [
                 PandasSeries(
                     df._dataframe.loc[:, column_name],
-                    implementation=implementation,
+                    implementation=df._implementation,
                 )
                 for column_name in column_names
             ],

@@ -40,7 +40,6 @@ def q5(
         .filter(nw.col("r_name") == var_1)
         .filter(nw.col("o_orderdate").is_between(var_2, var_3, closed="left"))
     )
-    breakpoint()
     result = (
         result.with_columns(
             (nw.col("l_extendedprice") * (1 - nw.col("l_discount"))).alias("revenue")

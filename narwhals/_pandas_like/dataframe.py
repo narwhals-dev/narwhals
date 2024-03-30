@@ -36,6 +36,12 @@ class PandasDataFrame:
         self._dataframe = dataframe
         self._implementation = implementation
 
+    def __narwhals_dataframe__(self) -> Self:
+        return self
+
+    def __narwhals_lazyframe__(self) -> Self:
+        return self
+
     def _validate_columns(self, columns: Sequence[str]) -> None:
         if len(columns) != len(set(columns)):
             counter = collections.Counter(columns)

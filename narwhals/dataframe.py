@@ -54,7 +54,7 @@ class BaseFrame:
                 import polars as pl
 
                 return arg._call(pl)
-            plx = PandasNamespace(implementation=self._implementation)
+            plx = PandasNamespace(implementation=self._dataframe._implementation)
             return arg._call(plx)
         return arg
 
@@ -160,11 +160,13 @@ class DataFrame(BaseFrame):
         *,
         implementation: str | None = None,
     ) -> None:
-        if implementation is not None:
-            self._dataframe: Any = df
+        if hasattr(df, "__narwhals_dataframe__"):  # pragma: no cover
+            self._dataframe: Any = df.__narwhals_dataframe__()
+            self._implementation = "custom"
+        elif implementation is not None:
+            self._dataframe = df
             self._implementation = implementation
-            return
-        if (pl := get_polars()) is not None and isinstance(df, pl.DataFrame):
+        elif (pl := get_polars()) is not None and isinstance(df, pl.DataFrame):
             self._dataframe = df
             self._implementation = "polars"
         elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
@@ -184,9 +186,6 @@ class DataFrame(BaseFrame):
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
             self._implementation = "cudf"
-        elif hasattr(df, "__narwhals_dataframe__"):  # pragma: no cover
-            self._dataframe = df.__narwhals_dataframe__()
-            self._implementation = "custom"
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
@@ -527,11 +526,13 @@ class LazyFrame(BaseFrame):
         *,
         implementation: str | None = None,
     ) -> None:
-        if implementation is not None:
-            self._dataframe: Any = df
+        if hasattr(df, "__narwhals_lazyframe__"):  # pragma: no cover
+            self._dataframe: Any = df.__narwhals_lazyframe__()
+            self._implementation = "custom"
+        elif implementation is not None:
+            self._dataframe = df
             self._implementation = implementation
-            return
-        if (pl := get_polars()) is not None and isinstance(
+        elif (pl := get_polars()) is not None and isinstance(
             df, (pl.DataFrame, pl.LazyFrame)
         ):
             self._dataframe = df.lazy()

@@ -30,7 +30,7 @@ def concat(
         return from_native(pl.concat([df._dataframe for df in items], how=how))
     from narwhals._pandas_like.namespace import PandasNamespace
 
-    plx = PandasNamespace(first_item._implementation)
+    plx = PandasNamespace(first_item._dataframe._implementation)
     return first_item._from_dataframe(
         plx.concat([df._dataframe for df in items], how=how)
     )
