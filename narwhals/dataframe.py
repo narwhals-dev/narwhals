@@ -631,6 +631,54 @@ class DataFrame(BaseFrame):
         return super().drop(*columns)
 
     def unique(self, subset: str | list[str]) -> Self:
+        r"""
+        Drop duplicate rows from this dataframe.
+
+        Arguments:
+            subset: Column name(s) to consider when identifying duplicate rows.
+
+        Returns:
+            DataFrame: DataFrame with unique rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3, 1],
+            ...         "bar": ["a", "a", "a", "a"],
+            ...         "ham": ["b", "b", "b", "b"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> dframe = df.unique(["bar", "ham"])
+            >>> nw.to_native(dframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+            >>> dframe = df.unique("foo").sort("foo")
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            │ 2   ┆ a   ┆ b   │
+            │ 3   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+        """
         return super().unique(subset)
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
