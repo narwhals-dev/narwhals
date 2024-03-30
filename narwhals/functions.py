@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Literal
 
-from narwhals.translate import from_native
-
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
@@ -25,4 +23,7 @@ def concat(
     items = list(items)
     first_item = items[0]
     plx = first_item.__narwhals_namespace__()
-    return from_native(plx.concat([df._dataframe for df in items], how=how))
+    return first_item.__class__(
+        plx.concat([df._dataframe for df in items], how=how),
+        is_polars=first_item._is_polars,
+    )
