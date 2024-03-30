@@ -24,13 +24,12 @@ if TYPE_CHECKING:
 
 class BaseFrame:
     _dataframe: Any
-    _implementation: str
+    _is_polars: bool
 
     def _from_dataframe(self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
             df,
-            implementation=self._implementation,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -50,7 +49,7 @@ class BaseFrame:
         if isinstance(arg, Series):
             return arg._series
         if isinstance(arg, Expr):
-            if self._implementation == "polars":
+            if self._is_polars:
                 import polars as pl
 
                 return arg._call(pl)
@@ -75,7 +74,7 @@ class BaseFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            k: to_narwhals_dtype(v, self._implementation)
+            k: to_narwhals_dtype(v, is_polars=self._is_polars)
             for k, v in self._dataframe.schema.items()
         }
 
@@ -157,35 +156,27 @@ class DataFrame(BaseFrame):
     def __init__(
         self,
         df: Any,
-        *,
-        implementation: str | None = None,
     ) -> None:
+        self._is_polars = False
         if hasattr(df, "__narwhals_dataframe__"):  # pragma: no cover
             self._dataframe: Any = df.__narwhals_dataframe__()
-            self._implementation = "custom"
-        elif implementation is not None:
-            self._dataframe = df
-            self._implementation = implementation
         elif (pl := get_polars()) is not None and isinstance(df, pl.DataFrame):
             self._dataframe = df
-            self._implementation = "polars"
+            self._is_polars = True
         elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
             raise TypeError(
                 "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
             )
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="pandas")
-            self._implementation = "pandas"
         elif (mpd := get_modin()) is not None and isinstance(
             df, mpd.DataFrame
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="modin")
-            self._implementation = "modin"
         elif (cudf := get_cudf()) is not None and isinstance(
             df, cudf.DataFrame
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
-            self._implementation = "cudf"
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
@@ -203,7 +194,7 @@ class DataFrame(BaseFrame):
     def __getitem__(self, col_name: str) -> Series:
         from narwhals.series import Series
 
-        return Series(self._dataframe[col_name], implementation=self._implementation)
+        return Series(self._dataframe[col_name])
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
@@ -523,33 +514,25 @@ class LazyFrame(BaseFrame):
     def __init__(
         self,
         df: Any,
-        *,
-        implementation: str | None = None,
     ) -> None:
+        self._is_polars = False
         if hasattr(df, "__narwhals_lazyframe__"):  # pragma: no cover
             self._dataframe: Any = df.__narwhals_lazyframe__()
-            self._implementation = "custom"
-        elif implementation is not None:
-            self._dataframe = df
-            self._implementation = implementation
         elif (pl := get_polars()) is not None and isinstance(
             df, (pl.DataFrame, pl.LazyFrame)
         ):
             self._dataframe = df.lazy()
-            self._implementation = "polars"
+            self._is_polars = True
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="pandas")
-            self._implementation = "pandas"
         elif (mpd := get_modin()) is not None and isinstance(
             df, mpd.DataFrame
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="modin")
-            self._implementation = "modin"
         elif (cudf := get_cudf()) is not None and isinstance(
             df, cudf.DataFrame
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
-            self._implementation = "cudf"
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
@@ -557,7 +540,6 @@ class LazyFrame(BaseFrame):
     def collect(self) -> DataFrame:
         return DataFrame(
             self._dataframe.collect(),
-            implementation=self._implementation,
         )
 
     # inherited

@@ -106,8 +106,8 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
     raise TypeError(msg)
 
 
-def to_narwhals_dtype(dtype: Any, implementation: str) -> DType:
-    if implementation != "polars":
+def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
+    if not is_polars:
         return dtype  # type: ignore[no-any-return]
     import polars as pl
 

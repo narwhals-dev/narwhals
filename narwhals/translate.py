@@ -30,13 +30,13 @@ def to_native(narwhals_object: LazyFrame | DataFrame | Series) -> Any:
     if isinstance(narwhals_object, BaseFrame):
         return (
             narwhals_object._dataframe
-            if narwhals_object._implementation == "polars"
+            if narwhals_object._is_polars
             else narwhals_object._dataframe._dataframe
         )
     if isinstance(narwhals_object, Series):
         return (
             narwhals_object._series
-            if narwhals_object._implementation == "polars"
+            if narwhals_object._is_polars
             else narwhals_object._series._series
         )
 

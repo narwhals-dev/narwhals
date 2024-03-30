@@ -24,7 +24,7 @@ def concat(
         raise ValueError("No items to concatenate")
     items = list(items)
     first_item = items[0]
-    if first_item._implementation == "polars":
+    if first_item._is_polars:
         import polars as pl
 
         return from_native(pl.concat([df._dataframe for df in items], how=how))

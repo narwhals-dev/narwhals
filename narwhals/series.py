@@ -14,22 +14,19 @@ class Series:
     def __init__(
         self,
         series: Any,
-        *,
-        implementation: str | None = None,
     ) -> None:
         from narwhals._pandas_like.series import PandasSeries
 
-        if implementation is not None:
-            self._series: Any = series
-            self._implementation = implementation
+        self._is_polars = False
+        if hasattr(series, "__narwhals_series__"):
+            self._series = series.__narwhals_series__()
             return
         if (pl := get_polars()) is not None and isinstance(series, pl.Series):
             self._series = series
-            self._implementation = "polars"
+            self._is_polars = True
             return
         if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
             self._series = PandasSeries(series, implementation="pandas")
-            self._implementation = "pandas"
             return
         msg = f"Expected pandas or Polars Series, got: {type(series)}"
         raise TypeError(msg)
@@ -37,7 +34,7 @@ class Series:
     def _extract_native(self, arg: Any) -> Any:
         from narwhals.expression import Expr
 
-        if self._implementation != "polars":
+        if not self._is_polars:
             return arg
         if isinstance(arg, Series):
             return arg._series
@@ -48,7 +45,7 @@ class Series:
         return arg
 
     def _from_series(self, series: Any) -> Self:
-        return self.__class__(series, implementation=self._implementation)
+        return self.__class__(series)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals Series                                 "

@@ -34,6 +34,9 @@ class PandasSeries:
         self._series = series
         self._implementation = implementation
 
+    def __narwhals_series__(self) -> Self:
+        return self
+
     def _from_series(self, series: Any) -> Self:
         return self.__class__(
             series.rename(series.name, copy=False),

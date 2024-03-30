@@ -22,5 +22,4 @@ class GroupBy:
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
         return self._df.__class__(
             self._df._dataframe.group_by(*self._keys).agg(*aggs, **named_aggs),
-            implementation=self._df._implementation,
         )
