@@ -1,23 +1,23 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.3.4
+  rev: 'v0.3.4'
   hooks:
     # Run the formatter.
     - id: ruff-format
     # Run the linter.
     - id: ruff
       args: [--fix]
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.9.0'
-    hooks:
-    -   id: mypy
-        additional_dependencies: ['polars==0.20.10', 'pytest==8.0.1']
-        exclude: utils|tpch
--   repo: https://github.com/codespell-project/codespell
-    rev: v2.2.5
-    hooks:
-      - id: codespell
-        files: \.(py|rst|md)$
-        args: [--ignore-words-list=ser]
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: 'v1.9.0'
+  hooks:
+    - id: mypy
+      additional_dependencies: ['polars==0.20.10', 'pytest==8.0.1']
+      exclude: utils|tpch
+- repo: https://github.com/codespell-project/codespell
+  rev: 'v2.2.5'
+  hooks:
+    - id: codespell
+      files: \.(py|rst|md)$
+      args: [--ignore-words-list=ser]
 

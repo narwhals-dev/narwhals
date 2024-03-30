@@ -195,6 +195,17 @@ class DataFrame(BaseFrame):
 
     @property
     def shape(self) -> tuple[int, int]:
+        r"""
+        Get the shape of the DataFrame.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3, 4, 5]})
+            >>> df = nw.DataFrame(df_pl)
+            >>> df.shape
+            (5, 1)
+        """
         return self._dataframe.shape  # type: ignore[no-any-return]
 
     def __getitem__(self, col_name: str) -> Series:
@@ -224,7 +235,6 @@ class DataFrame(BaseFrame):
             >>> df = nw.DataFrame(df_pl)
             >>> df.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
-            ```
         """
         return super().schema
 
@@ -293,7 +303,6 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
-
             >>> nw.to_native(dframe)
             shape: (4, 4)
             ┌─────┬──────┬───────┬─────┐
@@ -440,7 +449,6 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
-
             >>> nw.to_native(dframe)
             shape: (3, 3)
             ┌───────┬─────┬─────┐
@@ -473,18 +481,329 @@ class DataFrame(BaseFrame):
         return super().rename(mapping)
 
     def head(self, n: int) -> Self:
+        r"""
+        Get the first `n` rows.
+
+        Arguments:
+            n: Number of rows to return. If a negative value is passed, return all rows
+                except the last `abs(n)`.
+
+        Examples:
+            Get column names.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3, 4, 5],
+            ...         "bar": [6, 7, 8, 9, 10],
+            ...         "ham": ["a", "b", "c", "d", "e"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> dframe = df.head(3)
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            │ 2   ┆ 7   ┆ b   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+
+            Pass a negative value to get all rows `except` the last `abs(n)`.
+
+            >>> dframe = df.head(-3)
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            │ 2   ┆ 7   ┆ b   │
+            └─────┴─────┴─────┘
+        """
         return super().head(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
+        r"""
+        Remove columns from the dataframe.
+
+        Arguments:
+            *columns: Names of the columns that should be removed from the dataframe.
+
+        Examples:
+            Drop a single column by passing the name of that column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> dframe = df.drop("ham")
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ i64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 6.0 │
+            │ 2   ┆ 7.0 │
+            │ 3   ┆ 8.0 │
+            └─────┴─────┘
+
+            Drop multiple columns by passing a list of column names.
+
+            >>> dframe = df.drop(["bar", "ham"])
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 1)
+            ┌─────┐
+            │ foo │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+
+            Use positional arguments to drop multiple columns.
+
+            >>> dframe = df.drop("foo", "ham")
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 1)
+            ┌─────┐
+            │ bar │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 6.0 │
+            │ 7.0 │
+            │ 8.0 │
+            └─────┘
+        """
         return super().drop(*columns)
 
     def unique(self, subset: str | list[str]) -> Self:
         return super().unique(subset)
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+        r"""
+        Filter the rows in the DataFrame based on one or more predicate expressions.
+
+        The original order of the remaining rows is preserved.
+
+        Arguments:
+            predicates: Expression(s) that evaluates to a boolean Series.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6, 7, 8],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+
+            Filter on one condition:
+
+            >>> dframe = df.filter(nw.col("foo") > 1)
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 2   ┆ 7   ┆ b   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+
+            Filter on multiple conditions, combined with and/or operators:
+
+            >>> dframe = df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+
+            >>> dframe = df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+
+            Provide multiple filters using `*args` syntax:
+
+            >>> dframe = df.filter(
+            ...     nw.col("foo") <= 2,
+            ...     ~nw.col("ham").is_in(["b", "c"]),
+            ... )
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+        """
         return super().filter(*predicates)
 
     def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+        r"""
+        Start a group by operation.
+
+        Arguments:
+            *keys: Column(s) to group by. Accepts multiple columns names as a list.
+
+        Returns:
+            GroupBy: Object which can be used to perform aggregations.
+
+        Examples:
+            Group by one column and call `agg` to compute the grouped sum of another
+             column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": ["a", "b", "a", "b", "c"],
+            ...         "b": [1, 2, 1, 3, 3],
+            ...         "c": [5, 4, 3, 2, 1],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> dframe = df.group_by("a").agg(nw.col("b").sum()).sort("a")
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ str ┆ i64 │
+            ╞═════╪═════╡
+            │ a   ┆ 2   │
+            │ b   ┆ 5   │
+            │ c   ┆ 3   │
+            └─────┴─────┘
+
+            Group by multiple columns by passing a list of column names.
+
+            >>> dframe = df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe) # doctest: +SKIP
+            shape: (4, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ b   ┆ 2   ┆ 4   │
+            │ b   ┆ 3   ┆ 2   │
+            │ c   ┆ 3   ┆ 1   │
+            │ a   ┆ 1   ┆ 5   │
+            └─────┴─────┴─────┘
+        """
         from narwhals.group_by import GroupBy
 
         # todo: groupby and lazygroupby
