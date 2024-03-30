@@ -8,6 +8,7 @@ from typing import TypeVar
 
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
+from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
 T = TypeVar("T")
@@ -263,7 +264,9 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     if implementation == "pandas":
         import pandas as pd
 
-        return pd.concat(dfs, axis=1, copy=False)
+        if parse_version(pd.__version__) < parse_version("3.0.0"):
+            return pd.concat(dfs, axis=1, copy=False)
+        return pd.concat(dfs, axis=1)
     if implementation == "cudf":
         import cudf
 
@@ -294,7 +297,9 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
     if implementation == "pandas":
         import pandas as pd
 
-        return pd.concat(dfs, axis=0, copy=False)
+        if parse_version(pd.__version__) < parse_version("3.0.0"):
+            return pd.concat(dfs, axis=0, copy=False)
+        return pd.concat(dfs, axis=0)
     if implementation == "cudf":
         import cudf
 

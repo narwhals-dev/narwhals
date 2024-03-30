@@ -10,7 +10,7 @@
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
 [![Documentation](https://img.shields.io/badge/Documentation-coolgreen?style=flat&link=https://marcogorelli.github.io/narwhals/)](https://marcogorelli.github.io/narwhals/)
 
-Extremely lightweight compatibility layer between Polars, pandas, modin, and cuDF (and possibly more?).
+Extremely lightweight and extensible compatibility layer between Polars, pandas, modin, and cuDF (and more!).
 
 Seamlessly support all, without depending on any!
 
@@ -18,8 +18,7 @@ Seamlessly support all, without depending on any!
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
 - ✅ Separate **lazy** and eager APIs
 - ✅ Use Polars **Expressions**
-
-**Note: this is work-in-progress, and a bit of an experiment, don't take it too seriously**.
+- ✅ Tested against pandas and Polars nightly builds!
 
 ## Installation
 
@@ -133,14 +132,12 @@ Magic! 🪄
 ## Scope
 
 - Do you maintain a dataframe-consuming library?
-- Is there a Polars function which you'd like Narwhals to have, which would make your job easier?
+- Is there a Polars function which you'd like Narwhals to have, which would make your work easier?
 
 If, I'd love to hear from you!
 
 **Note**: You might suspect that this is a secret ploy to infiltrate the Polars API everywhere.
 Indeed, you may suspect that.
-
-Also, please note that this is not intended as a "dataframe standard" project.
 
 ## Why "Narwhals"?
 
