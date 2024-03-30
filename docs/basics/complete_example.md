@@ -2,7 +2,7 @@
 
 We're going to write a dataframe-agnostic "Standard Scaler". This class will have
 `fit` and `transform` methods (like `scikit-learn` transformers), and will work
-agnosstically for pandas and Polars.
+agnostically for pandas and Polars.
 
 We'll need to write two methods:
 
@@ -48,7 +48,7 @@ Unlike the `transform` method, `fit` cannot stay lazy, as we need to compute con
 for the means and standard deviations.
 
 To be able to get `Series` out of our `DataFrame`, we'll need to use `narwhals.DataFrame` (as opposed to
-`narwhals.LazyFrame`), as Polars doesn't have a concept of lazy `Series`.
+`narwhals.from_native`), as Polars doesn't have a concept of lazy `Series`.
 
 ```python
 import narwhals as nw
@@ -56,8 +56,8 @@ import narwhals as nw
 class StandardScalar:
     def fit(self, df):
         df = nw.DataFrame(df)
-        self._means = {df[col].mean() for col in df.columns}
-        self._std_devs = {df[col].std() for col in df.columns}
+        self._means = {col: df[col].mean() for col in df.columns}
+        self._std_devs = {col: df[col].std() for col in df.columns}
 ```
 
 ## Putting it all together
@@ -73,7 +73,7 @@ class StandardScaler:
         self._std_devs = {col: df[col].std() for col in df.columns}
 
     def transform(self, df):
-        df = nw.LazyFrame(df)
+        df = nw.from_native(df)
         df = df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
             for col in df.columns
