@@ -118,15 +118,15 @@ def my_func(df):
     ```python exec="true" source="material-block" result="python" session="ex2.1"
     import polars as pl
 
-    df = pl.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
-    print(my_func(df))
+    df = pl.LazyFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    print(my_func(df).collect())
     ```
 
 ## Example 3: finding the mean of a column as a scalar
 
 Now, we want to find the mean of column `'a'`, and we need it as a Python scalar.
 This means that computation cannot stay lazy - it must execute!
-Therefore, instead of `nw.from_dataframe`, we'll use `nw.DataFrame`.
+Therefore, instead of `nw.from_native`, we'll use `nw.DataFrame`.
 
 ```python exec="1" source="above" session="ex2"
 import narwhals as nw
