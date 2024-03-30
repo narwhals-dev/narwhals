@@ -26,6 +26,13 @@ class BaseFrame:
     _dataframe: Any
     _is_polars: bool
 
+    def __narwhals_namespace__(self) -> Any:
+        if self._is_polars:
+            import polars as pl
+
+            return pl
+        return self._dataframe.__narwhals_namespace__()
+
     def _from_dataframe(self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
@@ -41,7 +48,6 @@ class BaseFrame:
         return args, kwargs
 
     def _extract_native(self, arg: Any) -> Any:
-        from narwhals._pandas_like.namespace import PandasNamespace
         from narwhals.expression import Expr
         from narwhals.series import Series
 
@@ -50,12 +56,7 @@ class BaseFrame:
         if isinstance(arg, Series):
             return arg._series
         if isinstance(arg, Expr):
-            if self._is_polars:
-                import polars as pl
-
-                return arg._call(pl)
-            plx = PandasNamespace(implementation=self._dataframe._implementation)
-            return arg._call(plx)
+            return arg._call(self.__narwhals_namespace__())
         return arg
 
     def __repr__(self) -> str:  # pragma: no cover

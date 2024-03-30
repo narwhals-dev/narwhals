@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import TypeVar
 
 from narwhals.utils import flatten
+from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import remove_prefix
 
 T = TypeVar("T")
@@ -377,10 +378,6 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.Datetime()
     msg = f"Unknown dtype: {dtype}"
     raise TypeError(msg)
-
-
-def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
-    return isinstance(obj, cls) or issubclass(obj, cls)
 
 
 def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:

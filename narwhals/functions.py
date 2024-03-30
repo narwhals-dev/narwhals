@@ -24,13 +24,5 @@ def concat(
         raise ValueError("No items to concatenate")
     items = list(items)
     first_item = items[0]
-    if first_item._is_polars:
-        import polars as pl
-
-        return from_native(pl.concat([df._dataframe for df in items], how=how))
-    from narwhals._pandas_like.namespace import PandasNamespace
-
-    plx = PandasNamespace(first_item._dataframe._implementation)
-    return first_item._from_dataframe(
-        plx.concat([df._dataframe for df in items], how=how)
-    )
+    plx = first_item.__narwhals_namespace__()
+    return from_native(plx.concat([df._dataframe for df in items], how=how))

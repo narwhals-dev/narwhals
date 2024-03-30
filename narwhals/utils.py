@@ -59,3 +59,7 @@ def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
     if isinstance(version, str):
         version = version.split(".")
     return tuple(int(re.sub(r"\D", "", str(v))) for v in version)
+
+
+def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
+    return isinstance(obj, cls) or issubclass(obj, cls)

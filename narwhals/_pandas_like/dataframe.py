@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasGroupBy
+    from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
     from narwhals._pandas_like.typing import IntoPandasExpr
     from narwhals.dtypes import DType
@@ -41,6 +42,11 @@ class PandasDataFrame:
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
+
+    def __narwhals_namespace__(self) -> PandasNamespace:
+        from narwhals._pandas_like.namespace import PandasNamespace
+
+        return PandasNamespace(self._implementation)
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
         if len(columns) != len(set(columns)):
