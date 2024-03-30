@@ -14,14 +14,18 @@ class Series:
     def __init__(
         self,
         series: Any,
+        *,
+        is_polars: bool = False,
     ) -> None:
         from narwhals._pandas_like.series import PandasSeries
 
-        self._is_polars = False
+        self._is_polars = is_polars
         if hasattr(series, "__narwhals_series__"):
             self._series = series.__narwhals_series__()
             return
-        if (pl := get_polars()) is not None and isinstance(series, pl.Series):
+        if is_polars or (
+            (pl := get_polars()) is not None and isinstance(series, pl.Series)
+        ):
             self._series = series
             self._is_polars = True
             return
@@ -45,7 +49,7 @@ class Series:
         return arg
 
     def _from_series(self, series: Any) -> Self:
-        return self.__class__(series)
+        return self.__class__(series, is_polars=self._is_polars)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals Series                                 "

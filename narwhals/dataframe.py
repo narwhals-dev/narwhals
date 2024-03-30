@@ -30,6 +30,7 @@ class BaseFrame:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
             df,
+            is_polars=self._is_polars,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -156,11 +157,15 @@ class DataFrame(BaseFrame):
     def __init__(
         self,
         df: Any,
+        *,
+        is_polars: bool = False,
     ) -> None:
-        self._is_polars = False
-        if hasattr(df, "__narwhals_dataframe__"):  # pragma: no cover
+        self._is_polars = is_polars
+        if hasattr(df, "__narwhals_dataframe__"):
             self._dataframe: Any = df.__narwhals_dataframe__()
-        elif (pl := get_polars()) is not None and isinstance(df, pl.DataFrame):
+        elif is_polars or (
+            (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
+        ):
             self._dataframe = df
             self._is_polars = True
         elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
@@ -514,12 +519,15 @@ class LazyFrame(BaseFrame):
     def __init__(
         self,
         df: Any,
+        *,
+        is_polars: bool = False,
     ) -> None:
-        self._is_polars = False
-        if hasattr(df, "__narwhals_lazyframe__"):  # pragma: no cover
+        self._is_polars = is_polars
+        if hasattr(df, "__narwhals_lazyframe__"):
             self._dataframe: Any = df.__narwhals_lazyframe__()
-        elif (pl := get_polars()) is not None and isinstance(
-            df, (pl.DataFrame, pl.LazyFrame)
+        elif is_polars or (
+            (pl := get_polars()) is not None
+            and isinstance(df, (pl.DataFrame, pl.LazyFrame))
         ):
             self._dataframe = df.lazy()
             self._is_polars = True
