@@ -987,7 +987,8 @@ class DataFrame(BaseFrame):
 
             right_on: Name(s) of the right join column(s).
 
-        Returns: DataFrame
+        Returns:
+            A new joined DataFrame
 
         Examples:
             >>> import polars as pl
