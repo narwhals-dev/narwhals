@@ -207,7 +207,7 @@ class DataFrame(BaseFrame):
             >>> import narwhals as nw
             >>> df_pl = pl.DataFrame({"foo": [1, 2, 3, 4, 5]})
             >>> df = nw.DataFrame(df_pl)
-            >>> df.shape  # doctest: +SKIP
+            >>> df.shape
             (5, 1)
         """
         return self._dataframe.shape  # type: ignore[no-any-return]
@@ -775,7 +775,7 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                              |
             | Use `narwhals.to_native()` to see native output |
             └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe) # doctest: +SKIP
+            >>> nw.to_native(dframe)
             shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
