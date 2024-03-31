@@ -10,6 +10,7 @@ Seamlessly support both, without depending on either!
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
 - ✅ Support both **lazy** and eager execution
 - ✅ Use Polars **Expressions**
+- ✅ Tested against pandas and Polars nightly builds!
 
 ## Who's this for?
 

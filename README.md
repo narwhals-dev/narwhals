@@ -31,7 +31,7 @@ Or just vendor it, it's only a bunch of pure-Python files.
 
 There are three steps to writing dataframe-agnostic code using Narwhals:
 
-1. use `narwhals.DataFrame` or `narwhals.LazyFrame` to wrap a pandas/Polars/Modin/cuDF
+1. use `narwhals.from_native` to wrap a pandas/Polars/Modin/cuDF
    DataFrame/LazyFrame in a Narwhals class
 2. use the [subset of the Polars API supported by Narwhals](https://marcogorelli.github.io/narwhals/api-reference/narwhals/)
 3. use `narwhals.to_native` to return an object to the user in its original
@@ -58,8 +58,8 @@ def my_agnostic_function(
     suppliers_native,
     parts_native,
 ):
-    suppliers = nw.LazyFrame(suppliers_native)
-    parts = nw.LazyFrame(parts_native)
+    suppliers = nw.from_native(suppliers_native)
+    parts = nw.from_native(parts_native)
 
     result = (
         suppliers.join(parts, left_on="city", right_on="city")
@@ -70,6 +70,7 @@ def my_agnostic_function(
             weight_max=nw.col("weight").max(),
         )
     )
+
     return nw.to_native(result)
 ```
 You can pass in a pandas or Polars dataframe, the output will be the same!
