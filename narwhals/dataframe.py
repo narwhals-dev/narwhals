@@ -963,25 +963,11 @@ class DataFrame(BaseFrame):
         Arguments:
             other: DataFrame to join with.
 
-            how: {'inner', 'left', 'outer', 'semi', 'anti', 'cross', 'outer_coalesce'}
+            how: {'inner'}
                   Join strategy.
 
                   * *inner*: Returns rows that have matching values in both
                               tables
-                  * *left*: Returns all rows from the left table, and the
-                              matched rows from the right table
-                  * *outer*: Returns all rows when there is a match in either
-                              left or right table
-                  * *outer_coalesce*: Same as 'outer', but coalesces the key
-                                        columns
-                  * *cross*: Returns the Cartesian product of rows from both
-                               tables
-                  * *semi*: Filter rows that have a match in the right table.
-                  * *anti*: Filter rows that not have a match in the right
-                             table.
-
-                  Note:
-                      A left join preserves the row order of the left DataFrame.
 
             left_on: Name(s) of the left join column(s).
 
@@ -1024,76 +1010,6 @@ class DataFrame(BaseFrame):
             │ 1   ┆ 6.0 ┆ a   ┆ x     │
             │ 2   ┆ 7.0 ┆ b   ┆ y     │
             └─────┴─────┴─────┴───────┘
-
-            >>> dframe = df.join(other_df, left_on="ham", right_on="ham", how="outer")
-            >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (4, 5)
-            ┌──────┬──────┬──────┬───────┬───────────┐
-            │ foo  ┆ bar  ┆ ham  ┆ apple ┆ ham_right │
-            │ ---  ┆ ---  ┆ ---  ┆ ---   ┆ ---       │
-            │ i64  ┆ f64  ┆ str  ┆ str   ┆ str       │
-            ╞══════╪══════╪══════╪═══════╪═══════════╡
-            │ 1    ┆ 6.0  ┆ a    ┆ x     ┆ a         │
-            │ 2    ┆ 7.0  ┆ b    ┆ y     ┆ b         │
-            │ null ┆ null ┆ null ┆ z     ┆ d         │
-            │ 3    ┆ 8.0  ┆ c    ┆ null  ┆ null      │
-            └──────┴──────┴──────┴───────┴───────────┘
-
-            >>> dframe = df.join(other_df, left_on="ham", right_on="ham", how="left")
-            >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (3, 4)
-            ┌─────┬─────┬─────┬───────┐
-            │ foo ┆ bar ┆ ham ┆ apple │
-            │ --- ┆ --- ┆ --- ┆ ---   │
-            │ i64 ┆ f64 ┆ str ┆ str   │
-            ╞═════╪═════╪═════╪═══════╡
-            │ 1   ┆ 6.0 ┆ a   ┆ x     │
-            │ 2   ┆ 7.0 ┆ b   ┆ y     │
-            │ 3   ┆ 8.0 ┆ c   ┆ null  │
-            └─────┴─────┴─────┴───────┘
-
-            >>> dframe = df.join(other_df, left_on="ham", right_on="ham", how="semi")
-            >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (2, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ f64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6.0 ┆ a   │
-            │ 2   ┆ 7.0 ┆ b   │
-            └─────┴─────┴─────┘
-
-            >>> dframe = df.join(other_df, left_on="ham", right_on="ham", how="anti")
-            >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (1, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ f64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 3   ┆ 8.0 ┆ c   │
-            └─────┴─────┴─────┘
         """
         return self._from_dataframe(
             self._dataframe.join(
