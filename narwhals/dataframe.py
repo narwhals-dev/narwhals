@@ -631,6 +631,54 @@ class DataFrame(BaseFrame):
         return super().drop(*columns)
 
     def unique(self, subset: str | list[str]) -> Self:
+        r"""
+        Drop duplicate rows from this dataframe.
+
+        Arguments:
+            subset: Column name(s) to consider when identifying duplicate rows.
+
+        Returns:
+            DataFrame: DataFrame with unique rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3, 1],
+            ...         "bar": ["a", "a", "a", "a"],
+            ...         "ham": ["b", "b", "b", "b"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> dframe = df.unique(["bar", "ham"])
+            >>> nw.to_native(dframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+            >>> dframe = df.unique("foo").sort("foo")
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            │ 2   ┆ a   ┆ b   │
+            │ 3   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+        """
         return super().unique(subset)
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
@@ -815,6 +863,90 @@ class DataFrame(BaseFrame):
         *more_by: str,
         descending: bool | Sequence[bool] = False,
     ) -> Self:
+        r"""
+        Sort the dataframe by the given columns.
+
+        Arguments:
+            by: Column(s) names to sort by.
+
+            *more_by: Additional columns to sort by, specified as positional
+                       arguments.
+
+            descending: Sort in descending order. When sorting by multiple
+                         columns, can be specified per column by passing a
+                         sequence of booleans.
+
+        Examples:
+            Pass a single column name to sort by that column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, None],
+            ...         "b": [6.0, 5.0, 4.0],
+            ...         "c": ["a", "c", "b"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> dframe = df.sort("a")
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ null ┆ 4.0 ┆ b   │
+            │ 1    ┆ 6.0 ┆ a   │
+            │ 2    ┆ 5.0 ┆ c   │
+            └──────┴─────┴─────┘
+
+            Sort by multiple columns by passing a list of columns.
+
+            >>> dframe = df.sort(["c", "a"], descending=True)
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ 2    ┆ 5.0 ┆ c   │
+            │ null ┆ 4.0 ┆ b   │
+            │ 1    ┆ 6.0 ┆ a   │
+            └──────┴─────┴─────┘
+
+            Or use positional arguments to sort by multiple columns in the same way.
+
+            >>> dframe = df.sort("c", "a", descending=[False, True])
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ 1    ┆ 6.0 ┆ a   │
+            │ null ┆ 4.0 ┆ b   │
+            │ 2    ┆ 5.0 ┆ c   │
+            └──────┴─────┴─────┘
+        """
         return super().sort(by, *more_by, descending=descending)
 
     def join(
@@ -825,6 +957,60 @@ class DataFrame(BaseFrame):
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
+        r"""
+        Join in SQL-like fashion.
+
+        Arguments:
+            other: DataFrame to join with.
+
+            how: {'inner'}
+                  Join strategy.
+
+                  * *inner*: Returns rows that have matching values in both
+                              tables
+
+            left_on: Name(s) of the left join column(s).
+
+            right_on: Name(s) of the right join column(s).
+
+        Returns:
+            A new joined DataFrame
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> other_df_pl = pl.DataFrame(
+            ...     {
+            ...         "apple": ["x", "y", "z"],
+            ...         "ham": ["a", "b", "d"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> other_df = nw.DataFrame(other_df_pl)
+            >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
+            >>> dframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (2, 4)
+            ┌─────┬─────┬─────┬───────┐
+            │ foo ┆ bar ┆ ham ┆ apple │
+            │ --- ┆ --- ┆ --- ┆ ---   │
+            │ i64 ┆ f64 ┆ str ┆ str   │
+            ╞═════╪═════╪═════╪═══════╡
+            │ 1   ┆ 6.0 ┆ a   ┆ x     │
+            │ 2   ┆ 7.0 ┆ b   ┆ y     │
+            └─────┴─────┴─────┴───────┘
+        """
         return self._from_dataframe(
             self._dataframe.join(
                 self._extract_native(other),
