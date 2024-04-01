@@ -37,16 +37,10 @@ class Series:
         raise TypeError(msg)  # pragma: no cover
 
     def _extract_native(self, arg: Any) -> Any:
-        from narwhals.expression import Expr
+        from narwhals.series import Series
 
-        if not self._is_polars:
-            return arg
         if isinstance(arg, Series):
             return arg._series
-        if isinstance(arg, Expr):
-            import polars as pl
-
-            return arg._call(pl)
         return arg
 
     def _from_series(self, series: Any) -> Self:
@@ -118,6 +112,9 @@ class Series:
     def unique(self) -> Self:
         return self._from_series(self._series.unique())
 
+    def sort(self) -> Self:
+        return self._from_series(self._series.sort())
+
     def zip_with(self, mask: Self, other: Self) -> Self:
         return self._from_series(
             self._series.zip_with(self._extract_native(mask), self._extract_native(other))
@@ -147,7 +144,7 @@ class Series:
         return self._series.std()
 
     def __gt__(self, other: Any) -> Series:
-        return self._series.__gt__(self._extract_native(other))  # type: ignore[no-any-return]
+        return self._from_series(self._series.__gt__(self._extract_native(other)))
 
     def __lt__(self, other: Any) -> Series:
-        return self._series.__lt__(self._extract_native(other))  # type: ignore[no-any-return]
+        return self._from_series(self._series.__lt__(self._extract_native(other)))

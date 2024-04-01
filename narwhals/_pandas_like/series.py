@@ -15,6 +15,7 @@ from narwhals.utils import parse_version
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals.dtypes import DType
 
 
@@ -44,6 +45,11 @@ class PandasSeries:
                 pass
         else:  # pragma: no cover
             pass
+
+    def __narwhals_namespace__(self) -> PandasNamespace:
+        from narwhals._pandas_like.namespace import PandasNamespace
+
+        return PandasNamespace(self._implementation)
 
     def __narwhals_series__(self) -> Self:
         return self

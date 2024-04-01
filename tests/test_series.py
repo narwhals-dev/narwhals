@@ -29,6 +29,19 @@ def test_is_in(df_raw: Any) -> None:
     assert result[2]
 
 
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_gt(df_raw: Any) -> None:
+    s = nw.Series(df_raw["a"])
+    result = nw.to_native(s > s)  # noqa: PLR0124
+    assert not result[0]
+    assert not result[1]
+    assert not result[2]
+    result = nw.to_native(s > 1)
+    assert not result[0]
+    assert result[1]
+    assert result[2]
+
+
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
 def test_dtype(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).collect()["a"].dtype

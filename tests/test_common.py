@@ -496,3 +496,16 @@ def test_any_all(df_raw: Any) -> None:
     result = nw.to_native(df.select((nw.all() > 1).any()))
     expected = {"a": [True], "b": [True], "z": [True]}
     compare_dicts(result, expected)
+
+
+def test_invalid() -> None:
+    df = nw.LazyFrame(df_pandas)
+    with pytest.raises(ValueError, match="Multi-output"):
+        df.select(nw.all() + nw.all())
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas])
+def test_reindex(df_raw: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    with pytest.raises(RuntimeError, match="implicit index alignment"):
+        df.select("a", df["b"].sort())
