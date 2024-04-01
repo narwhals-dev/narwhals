@@ -13,7 +13,7 @@ import narwhals as nw
     st.lists(st.datetimes(), min_size=3, max_size=3),
     st.lists(st.floats(), min_size=3, max_size=3),
     st.lists(st.text(min_size=1), min_size=3, max_size=3),
-) 
+)
 def test_isnull(
     integers: st.SearchStrategy,
     datetimes: st.SearchStrategy,
