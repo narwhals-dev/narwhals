@@ -32,7 +32,7 @@ class PandasExpr:
         self._output_names = output_names
         self._implementation = implementation
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return (
             f"PandasExpr("
             f"depth={self._depth}, "
