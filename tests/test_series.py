@@ -13,12 +13,20 @@ df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_len(df_raw: Any) -> None:
-    result = len(nw.LazyFrame(df_raw).collect()["a"])
+    result = len(nw.Series(df_raw["a"]))
     assert result == 3
     result = len(nw.to_native(nw.LazyFrame(df_raw).collect()["a"]))
     assert result == 3
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_in(df_raw: Any) -> None:
+    result = nw.to_native(nw.Series(df_raw["a"]).is_in([1, 2]))
+    assert result[0]
+    assert not result[1]
+    assert result[2]
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
