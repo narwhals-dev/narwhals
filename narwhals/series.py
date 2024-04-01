@@ -33,8 +33,8 @@ class Series:
         if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
             self._series = PandasSeries(series, implementation="pandas")
             return
-        msg = f"Expected pandas or Polars Series, got: {type(series)}"
-        raise TypeError(msg)
+        msg = f"Expected pandas or Polars Series, got: {type(series)}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
     def _extract_native(self, arg: Any) -> Any:
         from narwhals.expression import Expr
