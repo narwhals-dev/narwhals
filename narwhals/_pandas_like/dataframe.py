@@ -59,7 +59,7 @@ class PandasDataFrame:
                 continue
             if get_pyarrow() is not None:
                 replacements[col] = dataframe[col].astype("string[pyarrow]")
-            else:
+            else:  # pragma: no cover
                 replacements[col] = dataframe[col].astype("string[python]")
         return dataframe.assign(**replacements)
 

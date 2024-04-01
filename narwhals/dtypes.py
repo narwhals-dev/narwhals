@@ -84,8 +84,8 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
         return plx.Int32
     if dtype == Int16:
         return plx.Int16
-    if dtype == UInt8:
-        return plx.UInt8
+    if dtype == Int8:
+        return plx.Int8
     if dtype == UInt64:
         return plx.UInt64
     if dtype == UInt32:

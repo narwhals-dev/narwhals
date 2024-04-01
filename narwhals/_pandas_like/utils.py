@@ -266,17 +266,17 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
 
         if parse_version(pd.__version__) < parse_version("3.0.0"):
             return pd.concat(dfs, axis=1, copy=False)
-        return pd.concat(dfs, axis=1)
-    if implementation == "cudf":
+        return pd.concat(dfs, axis=1)  # pragma: no cover
+    if implementation == "cudf":  # pragma: no cover
         import cudf
 
         return cudf.concat(dfs, axis=1)
-    if implementation == "modin":
+    if implementation == "modin":  # pragma: no cover
         import modin.pandas as mpd
 
         return mpd.concat(dfs, axis=1)
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
+    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def vertical_concat(dfs: list[Any], implementation: str) -> Any:
@@ -299,35 +299,17 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
 
         if parse_version(pd.__version__) < parse_version("3.0.0"):
             return pd.concat(dfs, axis=0, copy=False)
-        return pd.concat(dfs, axis=0)
-    if implementation == "cudf":
+        return pd.concat(dfs, axis=0)  # pragma: no cover
+    if implementation == "cudf":  # pragma: no cover
         import cudf
 
         return cudf.concat(dfs, axis=0)
-    if implementation == "modin":
+    if implementation == "modin":  # pragma: no cover
         import modin.pandas as mpd
 
         return mpd.concat(dfs, axis=0)
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
-
-
-def dataframe_from_dict(data: dict[str, Any], implementation: str) -> Any:
-    """Return native dataframe."""
-    if implementation == "pandas":
-        import pandas as pd
-
-        return pd.DataFrame(data, copy=False)
-    if implementation == "cudf":
-        import cudf
-
-        return cudf.DataFrame(data)
-    if implementation == "modin":
-        import modin.pandas as mpd
-
-        return mpd.DataFrame(data)
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
+    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def series_from_iterable(
@@ -338,16 +320,16 @@ def series_from_iterable(
         import pandas as pd
 
         return pd.Series(data, name=name, index=index, copy=False)
-    if implementation == "cudf":
+    if implementation == "cudf":  # pragma: no cover
         import cudf
 
         return cudf.Series(data, name=name, index=index)
-    if implementation == "modin":
+    if implementation == "modin":  # pragma: no cover
         import modin.pandas as mpd
 
         return mpd.Series(data, name=name, index=index)
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
+    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def translate_dtype(dtype: Any) -> DType:
