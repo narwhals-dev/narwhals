@@ -151,6 +151,12 @@ class PandasExpr:
     def mean(self) -> Self:
         return register_expression_call(self, "mean")
 
+    def any(self) -> Self:
+        return register_expression_call(self, "any")
+
+    def all(self) -> Self:
+        return register_expression_call(self, "all")
+
     def max(self) -> Self:
         return register_expression_call(self, "max")
 

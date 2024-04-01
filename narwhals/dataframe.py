@@ -84,6 +84,11 @@ class BaseFrame:
     def columns(self) -> list[str]:
         return self._dataframe.columns  # type: ignore[no-any-return]
 
+    def lazy(self) -> LazyFrame:
+        return LazyFrame(
+            self._dataframe.lazy(),
+        )
+
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -144,6 +149,8 @@ class BaseFrame:
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
+        if how != "inner":
+            raise NotImplementedError("Only inner joins are supported for now")
         return self._from_dataframe(
             self._dataframe.join(
                 self._extract_native(other),
@@ -1011,14 +1018,7 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7.0 ┆ b   ┆ y     │
             └─────┴─────┴─────┴───────┘
         """
-        return self._from_dataframe(
-            self._dataframe.join(
-                self._extract_native(other),
-                how=how,
-                left_on=left_on,
-                right_on=right_on,
-            )
-        )
+        return super().join(other, how=how, left_on=left_on, right_on=right_on)
 
 
 class LazyFrame(BaseFrame):
@@ -1114,11 +1114,4 @@ class LazyFrame(BaseFrame):
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
-        return self._from_dataframe(
-            self._dataframe.join(
-                self._extract_native(other),
-                how=how,
-                left_on=left_on,
-                right_on=right_on,
-            )
-        )
+        return super().join(other, how=how, left_on=left_on, right_on=right_on)

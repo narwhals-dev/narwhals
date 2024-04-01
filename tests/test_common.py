@@ -46,6 +46,14 @@ def test_sort(df_raw: Any) -> None:
         "z": [7.0, 9.0, 8.0],
     }
     compare_dicts(result_native, expected)
+    result = df.sort("a", "b", descending=[True, False])
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [3, 2, 1],
+        "b": [4, 6, 4],
+        "z": [8.0, 9.0, 7.0],
+    }
+    compare_dicts(result_native, expected)
 
 
 @pytest.mark.parametrize(
@@ -177,6 +185,14 @@ def test_join(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     df_right = df
     result = df.join(df_right, left_on=["a", "b"], right_on=["a", "b"], how="inner")
+    result_native = nw.to_native(result)
+    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
+    compare_dicts(result_native, expected)
+
+    with pytest.raises(NotImplementedError):
+        result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
+
+    result = df.join(df_right, left_on="a", right_on="a", how="inner")
     result_native = nw.to_native(result)
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
     compare_dicts(result_native, expected)
@@ -397,3 +413,10 @@ def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
     result_native = nw.to_native(result)
     expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
     compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_lazy(df_raw: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    result = df.lazy()
+    assert isinstance(result, nw.LazyFrame)

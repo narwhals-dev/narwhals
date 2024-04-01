@@ -57,15 +57,7 @@ class PandasDataFrame:
                     raise ValueError(
                         msg,
                     )
-
-    def _validate_booleanness(self) -> None:
-        if not (
-            (self._dataframe.dtypes == "bool") | (self._dataframe.dtypes == "boolean")
-        ).all():
-            msg = "'any' can only be called on DataFrame where all dtypes are 'bool'"
-            raise TypeError(
-                msg,
-            )
+            raise AssertionError("Pls report bug")
 
     def _from_dataframe(self, df: Any) -> Self:
         return self.__class__(
@@ -147,8 +139,6 @@ class PandasDataFrame:
         descending: bool | Sequence[bool] = False,
     ) -> Self:
         flat_keys = flatten_str([*flatten_str(by), *more_by])
-        if not flat_keys:
-            flat_keys = self._dataframe.columns.tolist()
         df = self._dataframe
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -180,10 +170,6 @@ class PandasDataFrame:
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
-        if how not in ["inner"]:
-            msg = "Only inner join supported for now, others coming soon"
-            raise ValueError(msg)
-
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
@@ -209,9 +195,6 @@ class PandasDataFrame:
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
 
     # --- lazy-only ---
-    def cache(self) -> Self:
-        return self
-
     def lazy(self) -> Self:
         return self.__class__(
             self._dataframe,

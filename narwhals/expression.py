@@ -115,6 +115,12 @@ class Expr:
     def __invert__(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).__invert__())
 
+    def any(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).any())
+
+    def all(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).all())
+
     def mean(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).mean())
 
