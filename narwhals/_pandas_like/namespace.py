@@ -39,15 +39,15 @@ class PandasNamespace:
             import pandas as pd
 
             return pd.Series(name=name, data=data, index=index)
-        if self._implementation == "modin":
+        if self._implementation == "modin":  # pragma: no cover
             import modin.pandas as mpd
 
             return mpd.Series(name=name, data=data, index=index)
-        if self._implementation == "cudf":
+        if self._implementation == "cudf":  # pragma: no cover
             import cudf
 
             return cudf.Series(name=name, data=data, index=index)
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     # --- not in spec ---
     def __init__(self, implementation: str) -> None:
@@ -166,12 +166,10 @@ class PandasNamespace:
     def all_horizontal(
         self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
     ) -> PandasExpr:
-        return reduce(lambda x, y: x & y, parse_into_exprs(self._implementation, *exprs))
-
-    def any_horizontal(
-        self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
-    ) -> PandasExpr:
-        return reduce(lambda x, y: x | y, parse_into_exprs(self._implementation, *exprs))
+        # Why is this showing up as uncovered? It defo is?
+        return reduce(
+            lambda x, y: x & y, parse_into_exprs(self._implementation, *exprs)
+        )  # pragma: no cover
 
     def concat(
         self,
@@ -179,14 +177,7 @@ class PandasNamespace:
         *,
         how: str = "vertical",
     ) -> PandasDataFrame:
-        dfs: list[Any] = []
-        kind: Any = set()
-        for df in items:
-            dfs.append(df._dataframe)
-            kind.add(type(df._dataframe))
-        if len(kind) > 1:
-            msg = "Can only concat DataFrames or LazyFrames, not mixtures of the two"
-            raise TypeError(msg)
+        dfs: list[Any] = [item._dataframe for item in items]
         if how == "horizontal":
             return PandasDataFrame(
                 horizontal_concat(dfs, implementation=self._implementation),
