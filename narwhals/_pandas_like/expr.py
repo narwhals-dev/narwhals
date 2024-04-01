@@ -129,13 +129,13 @@ class PandasExpr:
     def __pow__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__pow__", other)
 
-    def __rpow__(self, other: Any) -> Self:  # pragma: no cover
+    def __rpow__(self, other: Any) -> Self:
         return register_expression_call(self, "__rpow__", other)
 
     def __mod__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__mod__", other)
 
-    def __rmod__(self, other: Any) -> Self:  # pragma: no cover
+    def __rmod__(self, other: Any) -> Self:
         return register_expression_call(self, "__rmod__", other)
 
     # Unary

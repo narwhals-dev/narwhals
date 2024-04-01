@@ -196,7 +196,13 @@ def test_join(df_raw: Any) -> None:
 
     result = df.join(df_right, left_on="a", right_on="a", how="inner")
     result_native = nw.to_native(result)
-    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "b_right": [4, 4, 6],
+        "z": [7.0, 8, 9],
+        "z_right": [7.0, 8, 9],
+    }
     compare_dicts(result_native, expected)
 
 
@@ -292,6 +298,15 @@ def test_expr_binary(df_raw: Any) -> None:
             | (nw.col("a") <= nw.col("z"))
             | (nw.col("a") == 1)
         ).cast(nw.Int64),
+        g=nw.col("a") != 1,
+        h=(False & (nw.col("a") != 1)),
+        i=(False | (nw.col("a") != 1)),
+        j=2 ** nw.col("a"),
+        k=2 // nw.col("a"),
+        l=nw.col("a") // 2,
+        m=nw.col("a") ** 2,
+        n=nw.col("a") % 2,
+        o=2 % nw.col("a"),
     )
     result_native = nw.to_native(result)
     expected = {
@@ -302,6 +317,15 @@ def test_expr_binary(df_raw: Any) -> None:
         "d": [-3, -1, -4],
         "e": [0, 0, 0],
         "f": [1, 1, 1],
+        "g": [False, True, True],
+        "h": [False, False, False],
+        "i": [False, True, True],
+        "j": [2, 8, 4],
+        "k": [2, 0, 1],
+        "l": [0, 1, 1],
+        "m": [1, 9, 4],
+        "n": [1, 1, 0],
+        "o": [0, 2, 0],
     }
     compare_dicts(result_native, expected)
 
@@ -444,3 +468,14 @@ def test_to_dict() -> None:
     }
     for key in expected:
         pl_assert_series_equal(result[key], expected[key])
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+def test_any_all(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.select((nw.all() > 1).all()))
+    expected = {"a": [False], "b": [True], "z": [True]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.select((nw.all() > 1).any()))
+    expected = {"a": [True], "b": [True], "z": [True]}
+    compare_dicts(result, expected)
