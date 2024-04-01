@@ -205,14 +205,6 @@ class PandasDataFrame:
     def shape(self) -> tuple[int, int]:
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def iter_columns(self) -> Iterable[PandasSeries]:
-        from narwhals._pandas_like.series import PandasSeries
-
-        return (
-            PandasSeries(self._dataframe[col], implementation=self._implementation)
-            for col in self.columns
-        )
-
     def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
         if as_series:
             # todo: should this return narwhals series?
@@ -225,6 +217,6 @@ class PandasDataFrame:
     def to_pandas(self) -> Any:
         if self._implementation == "pandas":
             return self._dataframe
-        if self._implementation == "modin":
+        if self._implementation == "modin":  # pragma: no cover
             return self._dataframe._to_pandas()
-        return self._dataframe.to_pandas()
+        return self._dataframe.to_pandas()  # pragma: no cover

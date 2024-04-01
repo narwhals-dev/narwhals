@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
+from pandas.testing import assert_series_equal as pd_assert_series_equal
+from polars.testing import assert_series_equal as pl_assert_series_equal
 
 import narwhals as nw
 from tests.utils import compare_dicts
@@ -420,3 +422,25 @@ def test_lazy(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)
     result = df.lazy()
     assert isinstance(result, nw.LazyFrame)
+
+
+def test_to_dict() -> None:
+    df = nw.DataFrame(df_pandas)
+    result = df.to_dict(as_series=True)
+    expected = {
+        "a": pd.Series([1, 3, 2], name="a"),
+        "b": pd.Series([4, 4, 6], name="b"),
+        "z": pd.Series([7.0, 8, 9], name="z"),
+    }
+    for key in expected:
+        pd_assert_series_equal(result[key], expected[key])
+
+    df = nw.DataFrame(df_polars)
+    result = df.to_dict(as_series=True)
+    expected = {
+        "a": pl.Series("a", [1, 3, 2]),
+        "b": pl.Series("b", [4, 4, 6]),
+        "z": pl.Series("z", [7.0, 8, 9]),
+    }
+    for key in expected:
+        pl_assert_series_equal(result[key], expected[key])
