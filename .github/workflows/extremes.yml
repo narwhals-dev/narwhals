@@ -55,14 +55,23 @@ jobs:
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-build-${{ matrix.python-version }}
+      - name: install-kaggle
+        run: python -m pip install kaggle
+      - name: Download Kaggle notebook artifact
+          env:
+            KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+            KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+          run: kaggle kernels output marcogorelli/polars-nightly
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
-      - name: uninstall pandas
-        run: python -m pip uninstall pandas -y
+      - name: uninstall pandas/polars
+        run: python -m pip uninstall pandas polars -y
       - name: install-modin
         run: pip install modin[dask]
-      - name: install-nightly
+      - name: install-pandas-nightly
         run: python -m pip install --pre --extra-index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
+      - name: install-polars-nightly
+        run: python -m pip install *.whl
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50
       - name: Run doctests
