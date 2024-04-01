@@ -435,8 +435,7 @@ class DataFrame(BaseFrame):
         Rename column names.
 
         Arguments:
-            mapping: Key value pairs that map from old name to new name, or a function
-                      that takes the old name as input and returns the new name.
+            mapping: Key value pairs that map from old name to new name.
 
         Examples:
             >>> import polars as pl
@@ -462,23 +461,6 @@ class DataFrame(BaseFrame):
             │ 2     ┆ 7   ┆ b   │
             │ 3     ┆ 8   ┆ c   │
             └───────┴─────┴─────┘
-            >>> dframe = df.rename(lambda column_name: "f" + column_name[1:])
-            >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ far ┆ fam │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            │ 2   ┆ 7   ┆ b   │
-            │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
         """
         return super().rename(mapping)
 
