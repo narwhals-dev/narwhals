@@ -40,6 +40,10 @@ class PandasSeries:
 
             if parse_version(pd.__version__) < parse_version("3.0.0"):
                 self._use_copy_false = True
+            else:  # pragma: no cover
+                pass
+        else:  # pragma: no cover
+            pass
 
     def __narwhals_series__(self) -> Self:
         return self
@@ -47,7 +51,7 @@ class PandasSeries:
     def _rename(self, series: Any, name: str) -> Any:
         if self._use_copy_false:
             return series.rename(name, copy=False)
-        return series.rename(name)
+        return series.rename(name)  # pragma: no cover
 
     def _from_series(self, series: Any) -> Self:
         return self.__class__(
@@ -66,10 +70,6 @@ class PandasSeries:
     def shape(self) -> tuple[int]:
         return self._series.shape  # type: ignore[no-any-return]
 
-    def rename(self, name: str) -> PandasSeries:
-        ser = self._series
-        return self._from_series(self._rename(ser, name))
-
     @property
     def dtype(self) -> DType:
         return translate_dtype(self._series.dtype)
@@ -81,12 +81,6 @@ class PandasSeries:
         ser = self._series
         dtype = reverse_translate_dtype(dtype)
         return self._from_series(ser.astype(dtype))
-
-    def filter(self, mask: Self) -> Self:
-        ser = self._series
-        return self._from_series(
-            ser.loc[validate_column_comparand(self._series.index, mask)]
-        )
 
     def item(self) -> Any:
         return item(self._series)

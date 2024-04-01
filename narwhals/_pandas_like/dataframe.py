@@ -11,7 +11,7 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
-from narwhals.utils import flatten_str
+from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -129,7 +129,7 @@ class PandasDataFrame:
         return self._from_dataframe(self._dataframe.rename(columns=mapping))
 
     def drop(self, columns: str | Iterable[str]) -> Self:
-        return self._from_dataframe(self._dataframe.drop(columns=flatten_str(columns)))
+        return self._from_dataframe(self._dataframe.drop(columns=flatten(columns)))
 
     # --- transform ---
     def sort(
@@ -138,7 +138,7 @@ class PandasDataFrame:
         *more_by: str,
         descending: bool | Sequence[bool] = False,
     ) -> Self:
-        flat_keys = flatten_str([*flatten_str(by), *more_by])
+        flat_keys = flatten([*flatten(by), *more_by])
         df = self._dataframe
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -159,7 +159,7 @@ class PandasDataFrame:
 
         return PandasGroupBy(
             self,
-            flatten_str(*keys),
+            flatten(keys),
         )
 
     def join(
@@ -191,7 +191,7 @@ class PandasDataFrame:
         return self._from_dataframe(self._dataframe.head(n))
 
     def unique(self, subset: str | list[str]) -> Self:
-        subset = flatten_str(subset)
+        subset = flatten(subset)
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
 
     # --- lazy-only ---

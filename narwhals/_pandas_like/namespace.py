@@ -14,7 +14,7 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import parse_into_exprs
 from narwhals._pandas_like.utils import series_from_iterable
 from narwhals._pandas_like.utils import vertical_concat
-from narwhals.utils import flatten_str
+from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasExpr
@@ -97,7 +97,7 @@ class PandasNamespace:
     # --- selection ---
     def col(self, *column_names: str | Iterable[str]) -> PandasExpr:
         return PandasExpr.from_column_names(
-            *flatten_str(*column_names), implementation=self._implementation
+            *flatten(column_names), implementation=self._implementation
         )
 
     def all(self) -> PandasExpr:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.dtypes import to_narwhals_dtype
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
 
@@ -68,13 +69,16 @@ class Series:
     def alias(self, name: str) -> Self:
         return self._from_series(self._series.alias(name))
 
+    def __len__(self) -> int:
+        return len(self._series)
+
     @property
     def name(self) -> str:
         return self._series.name  # type: ignore[no-any-return]
 
     @property
     def dtype(self) -> Any:
-        return self._series.dtype
+        return to_narwhals_dtype(self._series.dtype, is_polars=self._is_polars)
 
     @property
     def shape(self) -> tuple[int]:

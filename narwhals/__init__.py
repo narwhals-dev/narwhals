@@ -1,8 +1,3 @@
-from narwhals.containers import get_implementation
-from narwhals.containers import is_dataframe
-from narwhals.containers import is_pandas
-from narwhals.containers import is_polars
-from narwhals.containers import is_series
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import *  # noqa: F403
@@ -24,11 +19,6 @@ __version__ = "0.7.5"
 
 __all__ = [
     "concat",
-    "is_dataframe",
-    "is_series",
-    "is_polars",
-    "is_pandas",
-    "get_implementation",
     "to_native",
     "from_native",
     "all",
