@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy
+    from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
     from narwhals.typing import IntoExpr
 
@@ -124,12 +125,6 @@ class BaseFrame:
         return self._from_dataframe(
             self._dataframe.filter(*predicates),
         )
-
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        from narwhals.group_by import GroupBy
-
-        # todo: groupby and lazygroupby
-        return GroupBy(self, *keys)  # type: ignore[arg-type]
 
     def sort(
         self,
@@ -861,7 +856,6 @@ class DataFrame(BaseFrame):
         """
         from narwhals.group_by import GroupBy
 
-        # todo: groupby and lazygroupby
         return GroupBy(self, *keys)
 
     def sort(
@@ -1092,11 +1086,10 @@ class LazyFrame(BaseFrame):
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
-        from narwhals.group_by import GroupBy
+    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
+        from narwhals.group_by import LazyGroupBy
 
-        # todo: groupby and lazygroupby
-        return GroupBy(self, *keys)
+        return LazyGroupBy(self, *keys)
 
     def sort(
         self,

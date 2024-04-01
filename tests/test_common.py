@@ -194,7 +194,7 @@ def test_join(df_raw: Any) -> None:
     with pytest.raises(NotImplementedError):
         result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
 
-    result = df.join(df_right, left_on="a", right_on="a", how="inner")
+    result = df.collect().join(df_right.collect(), left_on="a", right_on="a", how="inner")  # type: ignore[assignment]
     result_native = nw.to_native(result)
     expected = {
         "a": [1, 3, 2],
@@ -208,9 +208,17 @@ def test_join(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
 def test_schema(df_raw: Any) -> None:
-    df = nw.LazyFrame(df_raw)
-    result = df.schema
-    expected = {"a": nw.dtypes.Int64, "b": nw.dtypes.Int64, "z": nw.dtypes.Float64}
+    result = nw.LazyFrame(df_raw).schema
+    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+    assert result == expected
+    result = nw.LazyFrame(df_raw).collect().schema
+    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+    assert result == expected
+    result = nw.LazyFrame(df_raw).columns  # type: ignore[assignment]
+    expected = ["a", "b", "z"]  # type: ignore[assignment]
+    assert result == expected
+    result = nw.LazyFrame(df_raw).collect().columns  # type: ignore[assignment]
+    expected = ["a", "b", "z"]  # type: ignore[assignment]
     assert result == expected
 
 
@@ -393,12 +401,18 @@ def test_head(df_raw: Any) -> None:
     result = nw.to_native(df.head(2))
     expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
     compare_dicts(result, expected)
+    result = nw.to_native(df.collect().head(2))
+    expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
+    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
 def test_unique(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = nw.to_native(df.unique("b").sort("b"))
+    expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.collect().unique("b").sort("b"))
     expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
     compare_dicts(result, expected)
 
@@ -428,12 +442,15 @@ def test_concat_horizontal(df_raw: Any, df_raw_right: Any) -> None:
     }
     compare_dicts(result_native, expected)
 
+    with pytest.raises(ValueError, match="No items"):
+        nw.concat([])
+
 
 @pytest.mark.parametrize(
     ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
 )
 def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
-    df_left = nw.LazyFrame(df_raw).rename({"a": "c", "b": "d"}).drop("z")
+    df_left = nw.LazyFrame(df_raw).collect().rename({"a": "c", "b": "d"}).lazy().drop("z")
     df_right = nw.LazyFrame(df_raw_right)
     result = nw.concat([df_left, df_right], how="vertical")
     result_native = nw.to_native(result)

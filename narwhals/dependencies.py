@@ -6,7 +6,7 @@ from typing import Any
 def get_polars() -> Any:
     try:
         import polars
-    except ImportError:
+    except ImportError:  # pragma: no cover
         return None
     return polars
 
@@ -15,7 +15,7 @@ def get_polars() -> Any:
 def get_pandas() -> Any:
     try:
         import pandas
-    except ImportError:
+    except ImportError:  # pragma: no cover
         return None
     return pandas
 
@@ -24,7 +24,7 @@ def get_pandas() -> Any:
 def get_modin() -> Any:
     try:
         import modin.pandas as mpd
-    except ImportError:
+    except ImportError:  # pragma: no cover
         return None
     return mpd
 
@@ -33,6 +33,6 @@ def get_modin() -> Any:
 def get_cudf() -> Any:
     try:
         import cudf
-    except ImportError:
+    except ImportError:  # pragma: no cover
         return None
-    return cudf
+    return cudf  # pragma: no cover
