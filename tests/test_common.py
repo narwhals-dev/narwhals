@@ -263,7 +263,7 @@ def test_accepted_dataframes() -> None:
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_convert_pandas(df_raw: Any) -> None:
-    result = nw.DataFrame(df_raw).to_pandas()
+    result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]
     expected = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     pd.testing.assert_frame_equal(result, expected)
 
@@ -333,7 +333,7 @@ def test_expr_binary(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_lazy])
 def test_expr_unary(df_raw: Any) -> None:
     result = (
-        nw.LazyFrame(df_raw)
+        nw.from_native(df_raw)
         .with_columns(
             a_mean=nw.col("a").mean(),
             a_sum=nw.col("a").sum(),

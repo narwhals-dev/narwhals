@@ -28,7 +28,8 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
 
 def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
     """Simple version parser; split into a tuple of ints for comparison."""
-    if isinstance(version, str):
+    # lifted from Polars
+    if isinstance(version, str):  # pragma: no cover
         version = version.split(".")
     return tuple(int(re.sub(r"\D", "", str(v))) for v in version)
 

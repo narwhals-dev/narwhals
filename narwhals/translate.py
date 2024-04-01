@@ -40,8 +40,8 @@ def to_native(narwhals_object: LazyFrame | DataFrame | Series) -> Any:
             else narwhals_object._series._series
         )
 
-    msg = f"Expected Narwhals object, got {type(narwhals_object)}."
-    raise TypeError(msg)
+    msg = f"Expected Narwhals object, got {type(narwhals_object)}."  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def from_native(native_dataframe: Any) -> DataFrame | LazyFrame:
@@ -82,7 +82,7 @@ def from_native(native_dataframe: Any) -> DataFrame | LazyFrame:
         return DataFrame(native_dataframe.__narwhals_dataframe__())
     elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
         return LazyFrame(native_dataframe.__narwhals_lazyframe__())
-    else:
+    else:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)
 
