@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class DType:
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return self.__class__.__qualname__
 
     @classmethod
@@ -121,8 +121,8 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Int32()
     if dtype == pl.Int16:
         return Int16()
-    if dtype == pl.UInt8:
-        return UInt8()
+    if dtype == pl.Int8:
+        return Int8()
     if dtype == pl.UInt64:
         return UInt64()
     if dtype == pl.UInt32:

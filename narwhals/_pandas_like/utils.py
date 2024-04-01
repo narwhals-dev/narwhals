@@ -362,7 +362,7 @@ def translate_dtype(dtype: Any) -> DType:
     if dtype == "int8":
         return dtypes.Int8()
     if dtype == "uint64":
-        return dtypes.Int64()
+        return dtypes.UInt64()
     if dtype == "uint32":
         return dtypes.UInt32()
     if dtype == "uint16":

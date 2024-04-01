@@ -36,3 +36,12 @@ def get_cudf() -> Any:
     except ImportError:  # pragma: no cover
         return None
     return cudf  # pragma: no cover
+
+
+@functools.lru_cache
+def get_pyarrow() -> Any:
+    try:
+        import pyarrow
+    except ImportError:  # pragma: no cover
+        return None
+    return pyarrow  # pragma: no cover
