@@ -239,13 +239,13 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
     Should be in namespace.
     """
     if not dfs:
-        msg = "No dataframes to concatenate"
-        raise TypeError(msg)
+        msg = "No dataframes to concatenate"  # pragma: no cover
+        raise AssertionError(msg)
     cols = set(dfs[0].columns)
     for df in dfs:
         cols_current = set(df.columns)
         if cols_current != cols:
-            msg = "Unable to vstack, column names don't match"
+            msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
     if implementation == "pandas":
         import pandas as pd

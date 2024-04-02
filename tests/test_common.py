@@ -468,6 +468,10 @@ def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
     result_native = nw.to_native(result)
     expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
     compare_dicts(result_native, expected)
+    with pytest.raises(ValueError, match="No items"):
+        nw.concat([], how="vertical")
+    with pytest.raises(Exception, match="unable to vstack"):
+        nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()  # type: ignore[union-attr]
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
