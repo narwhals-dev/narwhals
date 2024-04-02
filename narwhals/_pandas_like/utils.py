@@ -9,7 +9,6 @@ from typing import TypeVar
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
-from narwhals.utils import remove_prefix
 
 T = TypeVar("T")
 
@@ -206,42 +205,6 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
         and expr._depth < 2
         # todo: avoid this one?
         and (expr._root_names is not None or (expr._depth == 0))
-    )
-
-
-def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any, keys: list[str]) -> Any:
-    """
-    Use fastpath for simple aggregations if possible.
-
-    If an aggregation is simple (e.g. `pl.col('a').mean()`), then pandas-like
-    implementations have a fastpath we can use.
-
-    For example, `df.group_by('a').agg(pl.col('b').mean())` can be evaluated
-    as `df.groupby('a')['b'].mean()`, whereas
-    `df.group_by('a').agg(mean=(pl.col('b') - pl.col('c').mean()).mean())`
-    requires a lambda function, which is slower.
-
-    Returns naive DataFrame.
-    """
-    if expr._depth == 0:
-        # e.g. agg(pl.len())
-        df = getattr(grouped, expr._function_name.replace("len", "size"))()
-        df = (
-            df.drop(columns=keys)
-            if len(df.shape) > 1
-            else df.reset_index(drop=True).to_frame("size")
-        )
-        return df.rename(columns={"size": expr._output_names[0]})  # type: ignore[index]
-    if expr._root_names is None or expr._output_names is None:
-        msg = "Expected expr to have root_names and output_names set, but they are None. Please report a bug."
-        raise AssertionError(msg)
-    if len(expr._root_names) != len(expr._output_names):
-        msg = "Expected expr to have same number of root_names and output_names, but they are different. Please report a bug."
-        raise AssertionError(msg)
-    new_names = dict(zip(expr._root_names, expr._output_names))
-    function_name = remove_prefix(expr._function_name, "col->")
-    return getattr(grouped[expr._root_names], function_name)()[expr._root_names].rename(
-        columns=new_names
     )
 
 
