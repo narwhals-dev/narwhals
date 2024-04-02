@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dtypes import to_narwhals_dtype
+from narwhals.dtypes import translate_dtype
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
 
@@ -35,6 +36,13 @@ class Series:
             return
         msg = f"Expected pandas or Polars Series, got: {type(series)}"  # pragma: no cover
         raise TypeError(msg)  # pragma: no cover
+
+    def __narwhals_namespace__(self) -> Any:
+        if self._is_polars:
+            import polars as pl
+
+            return pl
+        return self._series.__narwhals_namespace__()
 
     def _extract_native(self, arg: Any) -> Any:
         from narwhals.series import Series
@@ -82,7 +90,9 @@ class Series:
         self,
         dtype: Any,
     ) -> Self:
-        return self._from_series(self._series.cast(dtype))
+        return self._from_series(
+            self._series.cast(translate_dtype(self.__narwhals_namespace__(), dtype))
+        )
 
     def item(self) -> Any:
         return self._series.item()

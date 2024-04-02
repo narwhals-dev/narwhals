@@ -316,8 +316,8 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.Object()
     if str(dtype).startswith("datetime64"):
         return dtypes.Datetime()
-    msg = f"Unknown dtype: {dtype}"
-    raise TypeError(msg)
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
@@ -333,8 +333,8 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "int32"
     if isinstance_or_issubclass(dtype, dtypes.Int16):
         return "int16"
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return "uint8"
+    if isinstance_or_issubclass(dtype, dtypes.Int8):
+        return "int8"
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
         return "uint64"
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
@@ -347,8 +347,10 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "object"
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
-    msg = f"Unknown dtype: {dtype}"
-    raise TypeError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        return "datetime64[us]"
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def validate_indices(series: list[PandasSeries]) -> list[PandasSeries]:

@@ -104,7 +104,7 @@ def test_dtypes() -> None:
 
 
 def test_cast() -> None:
-    df = pl.DataFrame(
+    df_raw = pl.DataFrame(
         {
             "a": [1],
             "b": [1],
@@ -136,7 +136,7 @@ def test_cast() -> None:
             "m": pl.Boolean,
         },
     )
-    df = nw.DataFrame(df).select(  # type: ignore[assignment]
+    df = nw.DataFrame(df_raw).select(
         nw.col("a").cast(nw.Int32),
         nw.col("b").cast(nw.Int16),
         nw.col("c").cast(nw.Int8),
@@ -172,3 +172,53 @@ def test_cast() -> None:
     assert result == expected
     result_pd = nw.from_native(df.to_pandas()).schema
     assert result_pd == expected
+    result = df.select(
+        df["a"].cast(nw.Int32),
+        df["b"].cast(nw.Int16),
+        df["c"].cast(nw.Int8),
+        df["d"].cast(nw.Int64),
+        df["e"].cast(nw.UInt32),
+        df["f"].cast(nw.UInt16),
+        df["g"].cast(nw.UInt8),
+        df["h"].cast(nw.UInt64),
+        df["i"].cast(nw.Float32),
+        df["j"].cast(nw.Float64),
+        df["k"].cast(nw.String),
+        df["l"].cast(nw.Datetime),
+        df["m"].cast(nw.Int8),
+        n=df["m"].cast(nw.Boolean),
+    ).schema
+    expected = {
+        "a": nw.Int32,
+        "b": nw.Int16,
+        "c": nw.Int8,
+        "d": nw.Int64,
+        "e": nw.UInt32,
+        "f": nw.UInt16,
+        "g": nw.UInt8,
+        "h": nw.UInt64,
+        "i": nw.Float32,
+        "j": nw.Float64,
+        "k": nw.String,
+        "l": nw.Datetime,
+        "m": nw.Int8,
+        "n": nw.Boolean,
+    }
+    df = nw.from_native(df.to_pandas())  # type: ignore[assignment]
+    result_pd = df.select(
+        df["a"].cast(nw.Int32),
+        df["b"].cast(nw.Int16),
+        df["c"].cast(nw.Int8),
+        df["d"].cast(nw.Int64),
+        df["e"].cast(nw.UInt32),
+        df["f"].cast(nw.UInt16),
+        df["g"].cast(nw.UInt8),
+        df["h"].cast(nw.UInt64),
+        df["i"].cast(nw.Float32),
+        df["j"].cast(nw.Float64),
+        df["k"].cast(nw.String),
+        df["l"].cast(nw.Datetime),
+        df["m"].cast(nw.Int8),
+        n=df["m"].cast(nw.Boolean),
+    ).schema
+    assert result == expected
