@@ -1039,11 +1039,81 @@ class LazyFrame(BaseFrame):
 
     @property
     def columns(self) -> list[str]:
+        r"""
+        Get column names.
+
+        Examples:
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6, 7, 8],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... ).select("foo", "bar")
+            >>> df = nw.DataFrame(df_pl)
+            >>> df.columns
+            ['foo', 'bar']
+        """
         return super().columns
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
+        r"""
+        Add columns to this LazyFrame.
+
+        Added columns will replace existing columns with the same name.
+
+        Arguments:
+            *exprs: Column(s) to add, specified as positional arguments.
+                     Accepts expression input. Strings are parsed as column names, other
+                     non-expression inputs are parsed as literals.
+
+            **named_exprs: Additional columns to add, specified as keyword arguments.
+                            The columns will be renamed to the keyword used.
+
+        Returns:
+            LazyFrame: A new LazyFrame with the columns added.
+
+        Note:
+            Creating a new LazyFrame using this method does not create a new copy of
+            existing data.
+
+        Examples:
+            Pass an expression to add it as a new column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 4],
+            ...         "b": [0.5, 4, 10, 13],
+            ...         "c": [True, True, False, True],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.with_columns((nw.col("a") ** 2).alias("a^2")).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (4, 4)
+            ┌─────┬──────┬───────┬──────┐
+            │ a   ┆ b    ┆ c     ┆ a^2  │
+            │ --- ┆ ---  ┆ ---   ┆ ---  │
+            │ i64 ┆ f64  ┆ bool  ┆ f64  │
+            ╞═════╪══════╪═══════╪══════╡
+            │ 1   ┆ 0.5  ┆ true  ┆ 1.0  │
+            │ 2   ┆ 4.0  ┆ true  ┆ 4.0  │
+            │ 3   ┆ 10.0 ┆ false ┆ 9.0  │
+            │ 4   ┆ 13.0 ┆ true  ┆ 16.0 │
+            └─────┴──────┴───────┴──────┘
+        """
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
@@ -1051,6 +1121,109 @@ class LazyFrame(BaseFrame):
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> Self:
+        r"""
+        Select columns from this LazyFrame.
+
+        Arguments:
+            *exprs: Column(s) to select, specified as positional arguments.
+                     Accepts expression input. Strings are parsed as column names,
+                     other non-expression inputs are parsed as literals.
+
+            **named_exprs: Additional columns to select, specified as keyword arguments.
+                            The columns will be renamed to the keyword used.
+
+        Examples:
+            Pass the name of a column to select that column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6, 7, 8],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.select("foo").collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 1)
+            ┌─────┐
+            │ foo │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+
+            Multiple columns can be selected by passing a list of column names.
+
+            >>> lframe = lf.select(["foo", "bar"]).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 6   │
+            │ 2   ┆ 7   │
+            │ 3   ┆ 8   │
+            └─────┴─────┘
+
+            Multiple columns can also be selected using positional arguments instead of a
+            list. Expressions are also accepted.
+
+            >>> lframe = lf.select(nw.col("foo"), nw.col("bar") + 1).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 7   │
+            │ 2   ┆ 8   │
+            │ 3   ┆ 9   │
+            └─────┴─────┘
+
+            Use keyword arguments to easily name your expression inputs.
+
+            >>> lframe = lf.select(threshold=nw.col('foo')*2).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 1)
+            ┌───────────┐
+            │ threshold │
+            │ ---       │
+            │ i64       │
+            ╞═══════════╡
+            │ 2         │
+            │ 4         │
+            │ 6         │
+            └───────────┘
+        """
         return super().select(*exprs, **named_exprs)
 
     def rename(self, mapping: dict[str, str]) -> Self:
