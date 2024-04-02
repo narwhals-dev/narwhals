@@ -998,6 +998,157 @@ class DataFrame(BaseFrame):
 
 
 class LazyFrame(BaseFrame):
+    r"""
+    Representation of a Lazy computation graph/query against a DataFrame.
+
+    This allows for whole-query optimisation in addition to parallelism, and
+    is the preferred (and highest-performance) mode of operation for narwhals.
+
+    Arguments:
+        df: A pandas-like dataframe (Pandas, cuDF or Modin), a Polars dataframe,
+             a Polars lazyframe, or a narwhals DataFrame
+
+        is_polars: if set to `True`, assume the dataframe to be of Polars type.
+
+    Note:
+        Initialising `LazyFrame(...)` directly is equivalent to `DataFrame(...).lazy()`.
+
+    Examples:
+        Constructing a LazyFrame directly from a dictionary:
+
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> lf_pl = pl.LazyFrame(data)
+        >>> lf = nw.LazyFrame(lf_pl)
+        >>> lframe = lf.collect()
+        >>> lframe
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(lframe)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+
+        To specify a more detailed/specific frame schema you can supply the `schema`
+        parameter with a dictionary of (name,dtype) pairs...
+
+        >>> data = {"col1": [0, 2], "col2": [3, 7]}
+        >>> lf_pl2 = pl.LazyFrame(data, schema={"col1": pl.Float32, "col2": pl.Int64})
+        >>> lframe2 = nw.LazyFrame(lf_pl2).collect()
+        >>> lframe2
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(lframe2)
+        shape: (2, 2)
+        ┌──────┬──────┐
+        │ col1 ┆ col2 │
+        │ ---  ┆ ---  │
+        │ f32  ┆ i64  │
+        ╞══════╪══════╡
+        │ 0.0  ┆ 3    │
+        │ 2.0  ┆ 7    │
+        └──────┴──────┘
+
+        ...a sequence of (name,dtype) pairs...
+
+        >>> data = {"col1": [1, 2], "col2": [3, 4]}
+        >>> lf_pl3 = pl.LazyFrame(data, schema=[("col1", pl.Float32), ("col2", pl.Int64)])
+        >>> lframe3 = nw.LazyFrame(lf_pl3).collect()
+        >>> lframe3
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(lframe3)
+        shape: (2, 2)
+        ┌──────┬──────┐
+        │ col1 ┆ col2 │
+        │ ---  ┆ ---  │
+        │ f32  ┆ i64  │
+        ╞══════╪══════╡
+        │ 1.0  ┆ 3    │
+        │ 2.0  ┆ 4    │
+        └──────┴──────┘
+
+        ...or a list of typed Series.
+
+        >>> data = [
+        ...     pl.Series("col1", [1, 2], dtype=pl.Float32),
+        ...     pl.Series("col2", [3, 4], dtype=pl.Int64),
+        ... ]
+        >>> lf_pl4 = pl.LazyFrame(data)
+        >>> lframe4 = nw.LazyFrame(lf_pl4).collect()
+        >>> lframe4
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(lframe4)
+        shape: (2, 2)
+        ┌──────┬──────┐
+        │ col1 ┆ col2 │
+        │ ---  ┆ ---  │
+        │ f32  ┆ i64  │
+        ╞══════╪══════╡
+        │ 1.0  ┆ 3    │
+        │ 2.0  ┆ 4    │
+        └──────┴──────┘
+
+        Constructing a LazyFrame from a numpy ndarray, specifying column names:
+
+        >>> import numpy as np
+        >>> data = np.array([(1, 2), (3, 4)], dtype=np.int64)
+        >>> lf_pl5 = pl.LazyFrame(data, schema=["a", "b"], orient="col")
+        >>> lframe5 = nw.LazyFrame(lf_pl5).collect()
+        >>> lframe5
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(lframe5)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+
+        Constructing a LazyFrame from a list of lists, row orientation inferred:
+
+        >>> data = [[1, 2, 3], [4, 5, 6]]
+        >>> lf_pl6 = pl.LazyFrame(data, schema=["a", "b", "c"])
+        >>> lframe6 = nw.LazyFrame(lf_pl6).collect()
+        >>> lframe6
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(lframe6)
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ a   ┆ b   ┆ c   │
+        │ --- ┆ --- ┆ --- │
+        │ i64 ┆ i64 ┆ i64 │
+        ╞═════╪═════╪═════╡
+        │ 1   ┆ 2   ┆ 3   │
+        │ 4   ┆ 5   ┆ 6   │
+        └─────┴─────┴─────┘
+    """
+
     def __init__(
         self,
         df: Any,
