@@ -68,9 +68,6 @@ class Series:
             + "┘"
         )
 
-    def alias(self, name: str) -> Self:
-        return self._from_series(self._series.alias(name))
-
     def __len__(self) -> int:
         return len(self._series)
 
