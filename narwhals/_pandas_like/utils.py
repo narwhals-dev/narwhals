@@ -312,8 +312,6 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.String()
     if dtype in ("bool", "boolean"):
         return dtypes.Boolean()
-    if dtype == "object":
-        return dtypes.Object()
     if str(dtype).startswith("datetime64"):
         return dtypes.Datetime()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
