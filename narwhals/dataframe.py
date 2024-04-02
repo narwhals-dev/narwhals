@@ -1046,15 +1046,15 @@ class LazyFrame(BaseFrame):
 
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
+            >>> lf_pl = pl.LazyFrame(
             ...     {
             ...         "foo": [1, 2, 3],
             ...         "bar": [6, 7, 8],
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... ).select("foo", "bar")
-            >>> df = nw.DataFrame(df_pl)
-            >>> df.columns
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf.columns
             ['foo', 'bar']
         """
         return super().columns
