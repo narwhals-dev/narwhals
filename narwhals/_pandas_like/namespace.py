@@ -33,6 +33,7 @@ class PandasNamespace:
     Float32 = dtypes.Float32
     Boolean = dtypes.Boolean
     String = dtypes.String
+    Datetime = dtypes.Datetime
 
     def make_native_series(self, name: str, data: list[Any], index: Any) -> Any:
         if self._implementation == "pandas":

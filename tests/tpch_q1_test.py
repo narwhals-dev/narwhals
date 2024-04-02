@@ -21,7 +21,7 @@ def test_q1(library: str) -> None:
     if library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
-    elif library == "polars":
+    else:
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
     df = nw.LazyFrame(df_raw)
@@ -88,7 +88,7 @@ def test_q1_w_generic_funcs(library: str) -> None:
     if library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
-    elif library == "polars":
+    else:
         df_raw = pl.read_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
     df = nw.DataFrame(df_raw)

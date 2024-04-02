@@ -18,7 +18,7 @@ Seamlessly support all, without depending on any!
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
 - ✅ Separate **lazy** and eager APIs
 - ✅ Use Polars **Expressions**
-- ✅ Tested against pandas and Polars nightly builds!
+- ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
 
 ## Installation
 

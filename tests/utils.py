@@ -7,7 +7,9 @@ from typing import Sequence
 
 def zip_longest(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     if len(left) != len(right):
-        raise ValueError("left len != right len", len(left), len(right))
+        raise ValueError(
+            "left len != right len", len(left), len(right)
+        )  # pragma: no cover
     return zip(left, right)
 
 

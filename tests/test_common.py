@@ -30,7 +30,7 @@ if os.environ.get("CI", None):
         df_mpd = mpd.DataFrame(
             pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
         )
-else:
+else:  # pragma: no cover
     df_mpd = df_pandas.copy()
 
 
@@ -113,6 +113,10 @@ def test_double(df_raw: Any) -> None:
     result_native = nw.to_native(result)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
     compare_dicts(result_native, expected)
+    result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
+    result_native = nw.to_native(result)
+    expected = {"o": [1, 3, 2], "a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
+    compare_dicts(result_native, expected)
 
 
 @pytest.mark.parametrize(
@@ -170,6 +174,14 @@ def test_double_selected(df_raw: Any) -> None:
     result = df.select(nw.col("a", "b") * 2)
     result_native = nw.to_native(result)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12]}
+    compare_dicts(result_native, expected)
+    result = df.select("z", nw.col("a", "b") * 2)
+    result_native = nw.to_native(result)
+    expected = {"z": [7, 8, 9], "a": [2, 6, 4], "b": [8, 8, 12]}
+    compare_dicts(result_native, expected)
+    result = df.select("a").select(nw.col("a") + nw.all())
+    result_native = nw.to_native(result)
+    expected = {"a": [2, 6, 4]}
     compare_dicts(result_native, expected)
 
 
@@ -456,6 +468,10 @@ def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
     result_native = nw.to_native(result)
     expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
     compare_dicts(result_native, expected)
+    with pytest.raises(ValueError, match="No items"):
+        nw.concat([], how="vertical")
+    with pytest.raises(Exception, match="unable to vstack"):
+        nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()  # type: ignore[union-attr]
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
@@ -509,3 +525,11 @@ def test_reindex(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)
     with pytest.raises(RuntimeError, match="implicit index alignment"):
         df.select("a", df["b"].sort())
+
+    s = df["a"]
+    with pytest.raises(ValueError, match="index alignment"):
+        nw.to_native(s > s.sort())
+    with pytest.raises(ValueError, match="index alignment"):
+        nw.to_native(df.with_columns(s.sort()))
+    with pytest.raises(ValueError, match="Multi-output expressions are not supported"):
+        nw.to_native(df.with_columns(nw.all() + nw.all()))

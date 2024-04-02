@@ -63,10 +63,6 @@ class String(DType): ...
 class Boolean(DType): ...
 
 
-class Object(DType):  # todo: do we really want this one?
-    ...
-
-
 class Datetime(TemporalType): ...
 
 
@@ -100,10 +96,8 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
         return plx.Boolean
     if dtype == Datetime:
         return plx.Datetime
-    if dtype == Date:
-        return plx.Date
-    msg = f"Unknown dtype: {dtype}"
-    raise TypeError(msg)
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
@@ -137,7 +131,5 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Boolean()
     if dtype == pl.Datetime:
         return Datetime()
-    if dtype == pl.Date:
-        return Date()
-    msg = f"Unexpected dtype, got: {type(dtype)}"
-    raise TypeError(msg)
+    msg = f"Unexpected dtype, got: {type(dtype)}"  # pragma: no cover
+    raise AssertionError(msg)
