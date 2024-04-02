@@ -112,8 +112,8 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
         return plx._create_expr_from_series(into_expr)
     if isinstance(into_expr, str):
         return plx.col(into_expr)
-    msg = f"Expected IntoExpr, got {type(into_expr)}"
-    raise TypeError(msg)
+    msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def evaluate_into_expr(
@@ -140,8 +140,8 @@ def evaluate_into_exprs(
     for name, expr in named_exprs.items():
         evaluated_expr = evaluate_into_expr(df, expr)
         if len(evaluated_expr) > 1:
-            msg = "Named expressions must return a single column"
-            raise ValueError(msg)
+            msg = "Named expressions must return a single column"  # pragma: no cover
+            raise AssertionError(msg)
         series.append(evaluated_expr[0].alias(name))
     return series
 
@@ -194,8 +194,8 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
 def item(s: Any) -> Any:
     # cuDF doesn't have Series.item().
     if len(s) != 1:
-        msg = "Can only convert a Series of length 1 to a scalar"
-        raise ValueError(msg)
+        msg = "Can only convert a Series of length 1 to a scalar"  # pragma: no cover
+        raise AssertionError(msg)
     return s.iloc[0]
 
 

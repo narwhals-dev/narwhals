@@ -113,6 +113,10 @@ def test_double(df_raw: Any) -> None:
     result_native = nw.to_native(result)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
     compare_dicts(result_native, expected)
+    result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
+    result_native = nw.to_native(result)
+    expected = {"o": [1, 3, 2], "a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
+    compare_dicts(result_native, expected)
 
 
 @pytest.mark.parametrize(
@@ -170,6 +174,14 @@ def test_double_selected(df_raw: Any) -> None:
     result = df.select(nw.col("a", "b") * 2)
     result_native = nw.to_native(result)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12]}
+    compare_dicts(result_native, expected)
+    result = df.select("z", nw.col("a", "b") * 2)
+    result_native = nw.to_native(result)
+    expected = {"z": [7, 8, 9], "a": [2, 6, 4], "b": [8, 8, 12]}
+    compare_dicts(result_native, expected)
+    result = df.select("a").select(nw.col("a") + nw.all())
+    result_native = nw.to_native(result)
+    expected = {"a": [2, 6, 4]}
     compare_dicts(result_native, expected)
 
 
