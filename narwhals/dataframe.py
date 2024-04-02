@@ -1006,7 +1006,7 @@ class LazyFrame(BaseFrame):
 
     Arguments:
         df: A pandas-like dataframe (Pandas, cuDF or Modin), a Polars dataframe,
-             a Polars lazyframe, or a narwhals DataFrame
+             a Polars lazyframe, a narwhals DataFrame or a narwhals LazyFrame.
 
         is_polars: if set to `True`, assume the dataframe to be of Polars type.
 
