@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
+from numpy.testing import assert_array_equal
+from pandas.testing import assert_series_equal
 
 import narwhals as nw
 
@@ -47,6 +50,14 @@ def test_dtype(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).collect()["a"].dtype
     assert result == nw.Int64
     assert result.is_numeric()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+def test_convert(df_raw: Any) -> None:
+    result = nw.LazyFrame(df_raw).collect()["a"].to_numpy()
+    assert_array_equal(result, np.array([1, 3, 2]))
+    result = nw.LazyFrame(df_raw).collect()["a"].to_pandas()
+    assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
 
 
 def test_dtypes() -> None:
