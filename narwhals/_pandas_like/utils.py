@@ -80,13 +80,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
             )
             raise ValueError(msg)
         return other._series
-    if isinstance(other, list) and len(other) > 1:
-        # e.g. `plx.all() + plx.all()`
-        msg = "Multi-output expressions are not supported in this context"
-        raise ValueError(msg)
-    if isinstance(other, list):
-        other = other[0]
-    return other
+    raise AssertionError("Please report a bug")
 
 
 def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
@@ -101,12 +95,8 @@ def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
 def parse_into_exprs(
     implementation: str,
     *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
-    **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]:
-    out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
-    for name, expr in named_exprs.items():
-        out.append(parse_into_expr(implementation, expr).alias(name))
-    return out
+    return [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
 
 
 def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:

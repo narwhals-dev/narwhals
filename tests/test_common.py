@@ -509,3 +509,11 @@ def test_reindex(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)
     with pytest.raises(RuntimeError, match="implicit index alignment"):
         df.select("a", df["b"].sort())
+
+    s = df["a"]
+    with pytest.raises(ValueError, match="index alignment"):
+        nw.to_native(s > s.sort())
+    with pytest.raises(ValueError, match="index alignment"):
+        nw.to_native(df.with_columns(s.sort()))
+    with pytest.raises(ValueError, match="Multi-output expressions are not supported"):
+        nw.to_native(df.with_columns(nw.all() + nw.all()))

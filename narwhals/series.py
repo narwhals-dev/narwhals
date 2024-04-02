@@ -78,9 +78,6 @@ class Series:
     def shape(self) -> tuple[int]:
         return self._series.shape  # type: ignore[no-any-return]
 
-    def rename(self, name: str) -> Self:
-        return self._from_series(self._series.rename(name))
-
     def cast(
         self,
         dtype: Any,
