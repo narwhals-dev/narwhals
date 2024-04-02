@@ -30,7 +30,7 @@ if os.environ.get("CI", None):
         df_mpd = mpd.DataFrame(
             pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
         )
-else:
+else:  # pragma: no cover
     df_mpd = df_pandas.copy()
 
 
