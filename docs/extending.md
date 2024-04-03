@@ -22,6 +22,8 @@ If you want your own library to be recognised too, you can either:
     functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
   - `Series.__narwhals_series__`: return an object which implements public methods
     from `Narwhals.Series`
+  - `Series.__narwhals_namespace__`: return an object which implements public top-level
+    functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
 
   If your library doesn't distinguish between lazy and eager, then it's OK for your dataframe
   object to implement both `__narwhals_dataframe__` and `__narwhals_lazyframe__`. In fact,

@@ -169,6 +169,9 @@ class Expr:
     def mean(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).mean())
 
+    def std(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).std())
+
     def sum(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).sum())
 

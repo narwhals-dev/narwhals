@@ -91,6 +91,7 @@ def test_add(df_raw: Any) -> None:
     result = df.with_columns(
         c=nw.col("a") + nw.col("b"),
         d=nw.col("a") - nw.col("a").mean(),
+        e=nw.col("a") - nw.col("a").std(),
     )
     result_native = nw.to_native(result)
     expected = {
@@ -99,6 +100,7 @@ def test_add(df_raw: Any) -> None:
         "z": [7.0, 8.0, 9.0],
         "c": [5, 7, 8],
         "d": [-1.0, 1.0, 0.0],
+        "e": [0.0, 2.0, 1.0],
     }
     compare_dicts(result_native, expected)
 

@@ -153,7 +153,7 @@ class PandasDataFrame:
         *more_by: str,
         descending: bool | Sequence[bool] = False,
     ) -> Self:
-        flat_keys = flatten([*flatten(by), *more_by])
+        flat_keys = flatten([*flatten([by]), *more_by])
         df = self._dataframe
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending

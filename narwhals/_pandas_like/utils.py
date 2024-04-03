@@ -94,8 +94,12 @@ def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
 def parse_into_exprs(
     implementation: str,
     *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+    **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]:
-    return [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
+    out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
+    for name, expr in named_exprs.items():
+        out.append(parse_into_expr(implementation, expr).alias(name))
+    return out
 
 
 def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
