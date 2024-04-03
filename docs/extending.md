@@ -7,10 +7,8 @@ Currently, Narwhals recognises the following libraries as inputs:
 - cuDF
 - Modin
 
-If you want your own library to be recognised too, you can either:
-
-- open a PR (with tests)
-- or, make sure that, in addition to the public Narwhals API, you also define:
+If you want your own library to be recognised too, you can either open a PR (with tests) or
+you can make sure that, in addition to the public Narwhals API, you also define:
 
   - `DataFrame.__narwhals_dataframe__`: return an object which implements public methods
     from `Narwhals.DataFrame`
