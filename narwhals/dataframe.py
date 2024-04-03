@@ -330,7 +330,7 @@ class DataFrame(BaseFrame):
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
         else:
-            msg = f"Expected pandas-like dataframe, or Polars dataframe, got: {type(df)}"
+            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
 
     def to_pandas(self) -> Any:
