@@ -83,6 +83,12 @@ class Series:
             self._series.cast(translate_dtype(self.__narwhals_namespace__(), dtype))
         )
 
+    def mean(self) -> Any:
+        return self._series.mean()
+
+    def std(self) -> Any:
+        return self._series.std()
+
     def is_in(self, other: Any) -> Self:
         return self._from_series(self._series.is_in(self._extract_native(other)))
 

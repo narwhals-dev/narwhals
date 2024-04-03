@@ -53,6 +53,12 @@ def test_dtype(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+def test_reductions(df_raw: Any) -> None:
+    assert nw.LazyFrame(df_raw).collect()["a"].mean() == 2.0
+    assert nw.LazyFrame(df_raw).collect()["a"].std() == 1.0
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
 def test_convert(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).collect()["a"].to_numpy()
     assert_array_equal(result, np.array([1, 3, 2]))

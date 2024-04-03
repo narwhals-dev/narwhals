@@ -13,6 +13,7 @@ nav:
   - Roadmap: roadmap.md
   - Related projects: related.md
   - API Reference:
+    - api-reference/index.md
     - api-reference/narwhals.md
     - api-reference/dataframe.md
     - api-reference/lazyframe.md
@@ -25,6 +26,7 @@ theme:
     - content.code.copy
     - content.code.annotate
     - navigation.footer
+    - navigation.indexes
 plugins:
 - search
 - mkdocstrings:

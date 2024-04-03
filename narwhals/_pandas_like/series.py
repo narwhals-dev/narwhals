@@ -257,6 +257,14 @@ class PandasSeries:
         ser = self._series
         return ser.mean()
 
+    def std(
+        self,
+        *,
+        correction: float = 1.0,
+    ) -> Any:
+        ser = self._series
+        return ser.std(ddof=correction)
+
     def len(self) -> Any:
         return len(self._series)
 
