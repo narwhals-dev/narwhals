@@ -9,11 +9,9 @@ a dataframe operation, you should use expressions - but if you need to extract a
 column, you need to ensure that you start with an eager `DataFrame`. To do that, we'll
 use the `nw.DataFrame` constructor, as opposed to `nw.from_native`.
 
-## Extracting a series
+## Example 1: filter based on a column's values
 
-## Example 1: filter based on a series' values
-
-This can stay lazy, so we just use `nw.from_native`:
+This can stay lazy, so we just use `nw.from_native` and expressions:
 
 ```python exec="1" source="above" session="ex1"
 import narwhals as nw
@@ -51,7 +49,7 @@ def my_func(df):
 ## Example 2: multiply a column's values by a constant
 
 Let's write a dataframe-agnostic function which multiplies the values in column
-`'a'` by 2. This can also stay lazy.
+`'a'` by 2. This can also stay lazy, and can use expressions:
 
 ```python exec="1" source="above" session="ex2"
 import narwhals as nw
@@ -87,7 +85,7 @@ def my_func(df):
     ```
 
 Note that column `'a'` was overwritten. If we had wanted to add a new column called `'c'` containing column `'a'`'s
-values multiplied by 2, we could have used `Series.alias`:
+values multiplied by 2, we could have used `Expr.alias`:
 
 ```python exec="1" source="above" session="ex2.1"
 import narwhals as nw
@@ -126,7 +124,8 @@ def my_func(df):
 
 Now, we want to find the mean of column `'a'`, and we need it as a Python scalar.
 This means that computation cannot stay lazy - it must execute!
-Therefore, instead of `nw.from_native`, we'll use `nw.DataFrame`.
+Therefore, instead of `nw.from_native`, we'll use `nw.DataFrame`, and then, instead
+of using expressions, we'll extract a `Series`.
 
 ```python exec="1" source="above" session="ex2"
 import narwhals as nw
