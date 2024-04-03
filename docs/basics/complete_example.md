@@ -39,8 +39,6 @@ class StandardScalar:
 ```
 
 Note that all the calculations here can stay lazy if the underlying library permits it.
-For Polars, the return value is a `polars.LazyFrame` - it is the caller's responsibility to
-call `.collect()` on the result if they want to materialise its values.
 
 ## Fit method
 
@@ -48,7 +46,8 @@ Unlike the `transform` method, `fit` cannot stay lazy, as we need to compute con
 for the means and standard deviations.
 
 To be able to get `Series` out of our `DataFrame`, we'll need to use `narwhals.DataFrame` (as opposed to
-`narwhals.from_native`), as Polars doesn't have a concept of lazy `Series`.
+`narwhals.from_native`). This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
+doesn't either.
 
 ```python
 import narwhals as nw
@@ -82,7 +81,8 @@ class StandardScaler:
 ```
 
 Next, let's try running it. Notice how, as `transform` doesn't use
-any eager-only features, so we can make it completely lazy!
+any eager-only features, so we can pass a Polars LazyFrame to it and have it
+stay lazy!
 
 === "pandas"
     ```python exec="true" source="material-block" result="python" session="tute-ex1"
