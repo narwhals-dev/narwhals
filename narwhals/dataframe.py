@@ -334,6 +334,58 @@ class DataFrame(BaseFrame):
             raise TypeError(msg)
 
     def to_pandas(self) -> Any:
+        r"""
+        Convert this DataFrame to a pandas DataFrame.
+
+        Returns:
+            A pandas DataFrame.
+
+        Notes:
+            This operation requires that `pandas` is installed.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> df.to_pandas()
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+
+            Null values in numeric columns are converted to `NaN`.
+
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, None],
+            ...         "bar": [6.0, None, 8.0],
+            ...         "ham": [None, "b", "c"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> df.to_pandas()
+               foo  bar   ham
+            0  1.0  6.0  None
+            1  2.0  NaN     b
+            2  NaN  8.0     c
+        """
         return self._dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
