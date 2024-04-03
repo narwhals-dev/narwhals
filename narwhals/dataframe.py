@@ -389,6 +389,37 @@ class DataFrame(BaseFrame):
         return self._dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
+        r"""
+        Convert this DataFrame to a NumPy ndarray.
+
+        Returns:
+            A NumPy ndarray.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.5, 7.0, 8.5],
+            ...         "ham": ["a", "b", "c"],
+            ...     },
+            ...     schema_overrides={"foo": pl.UInt8, "bar": pl.Float32},
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+
+            Export to a standard 2D numpy array.
+
+            >>> df.to_numpy()
+            array([[1, 6.5, 'a'],
+                   [2, 7.0, 'b'],
+                   [3, 8.5, 'c']], dtype=object)
+        """
         return self._dataframe.to_numpy()
 
     @property
@@ -412,6 +443,99 @@ class DataFrame(BaseFrame):
         return Series(self._dataframe[col_name])
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
+        r"""
+        Convert DataFrame to a dictionary mapping column name to values.
+
+        Arguments:
+            as_series: If set to true ``True`` values are Series, otherwise
+                        values are Any.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "A": [1, 2, 3, 4, 5],
+            ...         "fruits": ["banana", "banana", "apple", "apple", "banana"],
+            ...         "B": [5, 4, 3, 2, 1],
+            ...         "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+            ...         "optional": [28, 300, None, 2, -30],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(df)
+            shape: (5, 5)
+            ┌─────┬────────┬─────┬────────┬──────────┐
+            │ A   ┆ fruits ┆ B   ┆ cars   ┆ optional │
+            │ --- ┆ ---    ┆ --- ┆ ---    ┆ ---      │
+            │ i64 ┆ str    ┆ i64 ┆ str    ┆ i64      │
+            ╞═════╪════════╪═════╪════════╪══════════╡
+            │ 1   ┆ banana ┆ 5   ┆ beetle ┆ 28       │
+            │ 2   ┆ banana ┆ 4   ┆ audi   ┆ 300      │
+            │ 3   ┆ apple  ┆ 3   ┆ beetle ┆ null     │
+            │ 4   ┆ apple  ┆ 2   ┆ beetle ┆ 2        │
+            │ 5   ┆ banana ┆ 1   ┆ beetle ┆ -30      │
+            └─────┴────────┴─────┴────────┴──────────┘
+            >>> import pprint
+            >>> pprint.pprint(df.to_dict(as_series=False))
+            {'A': [1, 2, 3, 4, 5],
+             'B': [5, 4, 3, 2, 1],
+             'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'],
+             'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'],
+             'optional': [28, 300, None, 2, -30]}
+            >>> p = pprint.pformat(df.to_dict(as_series=True)).replace('\t', '    ')
+            >>> print(p)
+            {'A': shape: (5,)
+            Series: 'A' [i64]
+            [
+                1
+                2
+                3
+                4
+                5
+            ],
+             'B': shape: (5,)
+            Series: 'B' [i64]
+            [
+                5
+                4
+                3
+                2
+                1
+            ],
+             'cars': shape: (5,)
+            Series: 'cars' [str]
+            [
+                "beetle"
+                "audi"
+                "beetle"
+                "beetle"
+                "beetle"
+            ],
+             'fruits': shape: (5,)
+            Series: 'fruits' [str]
+            [
+                "banana"
+                "banana"
+                "apple"
+                "apple"
+                "banana"
+            ],
+             'optional': shape: (5,)
+            Series: 'optional' [i64]
+            [
+                28
+                300
+                null
+                2
+                -30
+            ]}
+        """
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
