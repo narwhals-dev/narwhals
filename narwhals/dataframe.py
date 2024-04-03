@@ -157,6 +157,150 @@ class BaseFrame:
 
 
 class DataFrame(BaseFrame):
+    r"""
+    Two-dimensional data structure representing data as a table with rows and columns.
+
+    Arguments:
+        df: A pandas-like dataframe (Pandas, cuDF or Modin), a Polars dataframe,
+             a narwhals DataFrame or a narwhals LazyFrame.
+
+        is_polars: if set to `True`, assume the dataframe to be of Polars type.
+
+    Examples:
+        Constructing a DataFrame from a dictionary:
+
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df = nw.DataFrame(df_pl)
+        >>> df
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(df)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+
+        To specify a more detailed/specific frame schema you can supply the `schema`
+        parameter with a dictionary of (name,dtype) pairs...
+
+        >>> data = {"col1": [0, 2], "col2": [3, 7]}
+        >>> df_pl2 = pl.DataFrame(data, schema={"col1": pl.Float32, "col2": pl.Int64})
+        >>> df2 = nw.DataFrame(df_pl2)
+        >>> df2
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(df2)
+        shape: (2, 2)
+        ┌──────┬──────┐
+        │ col1 ┆ col2 │
+        │ ---  ┆ ---  │
+        │ f32  ┆ i64  │
+        ╞══════╪══════╡
+        │ 0.0  ┆ 3    │
+        │ 2.0  ┆ 7    │
+        └──────┴──────┘
+
+        ...a sequence of (name,dtype) pairs...
+
+        >>> data = {"col1": [1, 2], "col2": [3, 4]}
+        >>> df_pl3 = pl.DataFrame(data, schema=[("col1", pl.Float32), ("col2", pl.Int64)])
+        >>> df3 = nw.DataFrame(df_pl3)
+        >>> df3
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(df3)
+        shape: (2, 2)
+        ┌──────┬──────┐
+        │ col1 ┆ col2 │
+        │ ---  ┆ ---  │
+        │ f32  ┆ i64  │
+        ╞══════╪══════╡
+        │ 1.0  ┆ 3    │
+        │ 2.0  ┆ 4    │
+        └──────┴──────┘
+
+        ...or a list of typed Series.
+
+        >>> data = [
+        ...     pl.Series("col1", [1, 2], dtype=pl.Float32),
+        ...     pl.Series("col2", [3, 4], dtype=pl.Int64),
+        ... ]
+        >>> df_pl4 = pl.DataFrame(data)
+        >>> df4 = nw.DataFrame(df_pl4)
+        >>> df4
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(df4)
+        shape: (2, 2)
+        ┌──────┬──────┐
+        │ col1 ┆ col2 │
+        │ ---  ┆ ---  │
+        │ f32  ┆ i64  │
+        ╞══════╪══════╡
+        │ 1.0  ┆ 3    │
+        │ 2.0  ┆ 4    │
+        └──────┴──────┘
+
+        Constructing a DataFrame from a numpy ndarray, specifying column names:
+
+        >>> import numpy as np
+        >>> data = np.array([(1, 2), (3, 4)], dtype=np.int64)
+        >>> df_pl5 = pl.DataFrame(data, schema=["a", "b"], orient="col")
+        >>> df5 = nw.DataFrame(df_pl5)
+        >>> df5
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(df5)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+
+        Constructing a DataFrame from a list of lists, row orientation inferred:
+
+        >>> data = [[1, 2, 3], [4, 5, 6]]
+        >>> df_pl6 = pl.DataFrame(data, schema=["a", "b", "c"])
+        >>> df6 = nw.DataFrame(df_pl6)
+        >>> df6
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(df6)
+        shape: (2, 3)
+        ┌─────┬─────┬─────┐
+        │ a   ┆ b   ┆ c   │
+        │ --- ┆ --- ┆ --- │
+        │ i64 ┆ i64 ┆ i64 │
+        ╞═════╪═════╪═════╡
+        │ 1   ┆ 2   ┆ 3   │
+        │ 4   ┆ 5   ┆ 6   │
+        └─────┴─────┴─────┘
+    """
+
     def __init__(
         self,
         df: Any,
@@ -186,7 +330,7 @@ class DataFrame(BaseFrame):
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
         else:
-            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
+            msg = f"Expected pandas-like dataframe, or Polars dataframe, got: {type(df)}"
             raise TypeError(msg)
 
     def to_pandas(self) -> Any:
