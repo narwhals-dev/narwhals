@@ -1316,9 +1316,160 @@ class LazyFrame(BaseFrame):
         return super().drop(*columns)
 
     def unique(self, subset: str | list[str]) -> Self:
+        """
+        Drop duplicate rows from this LazyFrame.
+
+        Arguments:
+            subset: Column name(s) to consider when identifying duplicate rows.
+                     If set to `None`, use all columns.
+
+        Returns:
+            LazyFrame: LazyFrame with unique rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3, 1],
+            ...         "bar": ["a", "a", "a", "a"],
+            ...         "ham": ["b", "b", "b", "b"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.unique(None).collect().sort("foo")
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            │ 2   ┆ a   ┆ b   │
+            │ 3   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+            >>> lframe = lf.unique(subset=["bar", "ham"]).collect().sort("foo")
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+        """
         return super().unique(subset)
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+        r"""
+        Filter the rows in the LazyFrame based on a predicate expression.
+
+        The original order of the remaining rows is preserved.
+
+        Arguments:
+            *predicates: Expression that evaluates to a boolean Series.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6, 7, 8],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+
+            Filter on one condition:
+
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.filter(nw.col("foo") > 1).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 2   ┆ 7   ┆ b   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+
+            Filter on multiple conditions:
+
+            >>> lframe = lf.filter((nw.col("foo") < 3) & (nw.col("ham") == "a")).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+
+            Provide multiple filters using `*args` syntax:
+
+            >>> lframe = lf.filter(
+            ...     nw.col("foo") == 1,
+            ...     nw.col("ham") == "a",
+            ... ).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+
+            Filter on an OR condition:
+
+            >>> lframe = lf.filter((nw.col("foo") == 1) | (nw.col("ham") == "c")).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+        """
         return super().filter(*predicates)
 
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
