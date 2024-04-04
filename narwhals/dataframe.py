@@ -1028,6 +1028,47 @@ class LazyFrame(BaseFrame):
             raise TypeError(msg)
 
     def collect(self) -> DataFrame:
+        r"""
+        Materialize this LazyFrame into a DataFrame.
+
+
+        Returns:
+            DataFrame
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": ["a", "b", "a", "b", "b", "c"],
+            ...         "b": [1, 2, 3, 4, 5, 6],
+            ...         "c": [6, 5, 4, 3, 2, 1],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(df).sort("a")
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 4   ┆ 10  │
+            │ b   ┆ 11  ┆ 10  │
+            │ c   ┆ 6   ┆ 1   │
+            └─────┴─────┴─────┘
+        """
         return DataFrame(
             self._dataframe.collect(),
         )
