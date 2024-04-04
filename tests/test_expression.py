@@ -20,7 +20,7 @@ import narwhals as nw
         min_size=3,
         max_size=3,
     ),
-)
+)  # type: ignore[misc]
 def test_mean(
     integer: st.SearchStrategy[list[int]],
     floats: st.SearchStrategy[float],
