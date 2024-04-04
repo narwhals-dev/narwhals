@@ -1173,9 +1173,146 @@ class LazyFrame(BaseFrame):
         return super().rename(mapping)
 
     def head(self, n: int) -> Self:
+        r"""
+        Get the first `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Notes:
+            Consider using the `fetch` operation if you only want to test
+             your query. The `fetch` operation will load the first `n`
+             rows at the scan level, whereas the `head`/`limit` are
+             applied at the end.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 4, 5, 6],
+            ...         "b": [7, 8, 9, 10, 11, 12],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.head(5).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (5, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 7   │
+            │ 2   ┆ 8   │
+            │ 3   ┆ 9   │
+            │ 4   ┆ 10  │
+            │ 5   ┆ 11  │
+            └─────┴─────┘
+            >>> lframe = lf.head(2).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 7   │
+            │ 2   ┆ 8   │
+            └─────┴─────┘
+        """
         return super().head(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
+        r"""
+        Remove columns from the LazyFrame.
+
+        Arguments:
+            *columns: Names of the columns that should be removed from the
+                      dataframe. Accepts column selector input.
+
+        Examples:
+            Drop a single column by passing the name of that column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.drop("ham").collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ i64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 6.0 │
+            │ 2   ┆ 7.0 │
+            │ 3   ┆ 8.0 │
+            └─────┴─────┘
+
+            Drop multiple columns by passing a selector.
+
+            >>> import polars.selectors as cs
+            >>> lframe = lf.drop(cs.numeric()).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 1)
+            ┌─────┐
+            │ ham │
+            │ --- │
+            │ str │
+            ╞═════╡
+            │ a   │
+            │ b   │
+            │ c   │
+            └─────┘
+
+            Use positional arguments to drop multiple columns.
+
+            >>> lframe = lf.drop("foo", "ham").collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 1)
+            ┌─────┐
+            │ bar │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 6.0 │
+            │ 7.0 │
+            │ 8.0 │
+            └─────┘
+        """
         return super().drop(*columns)
 
     def unique(self, subset: str | list[str]) -> Self:
