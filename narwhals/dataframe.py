@@ -1031,7 +1031,6 @@ class LazyFrame(BaseFrame):
         r"""
         Materialize this LazyFrame into a DataFrame.
 
-
         Returns:
             DataFrame
 
@@ -1076,6 +1075,23 @@ class LazyFrame(BaseFrame):
     # inherited
     @property
     def schema(self) -> dict[str, DType]:
+        r"""
+        Get a dict[column name, DType].
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf.schema # doctest: +SKIP
+            OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
+        """
         return super().schema
 
     @property
@@ -1095,6 +1111,65 @@ class LazyFrame(BaseFrame):
         return super().select(*exprs, **named_exprs)
 
     def rename(self, mapping: dict[str, str]) -> Self:
+        r"""
+        Rename column names.
+
+        Arguments:
+            mapping: Key value pairs that map from old name to new name, or a
+                      function that takes the old name as input and returns the
+                      new name.
+
+        Notes:
+            If existing names are swapped (e.g. 'A' points to 'B' and 'B'
+             points to 'A'), polars will block projection and predicate
+             pushdowns at this node.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6, 7, 8],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.rename({"foo": "apple"}).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 3)
+            ┌───────┬─────┬─────┐
+            │ apple ┆ bar ┆ ham │
+            │ ---   ┆ --- ┆ --- │
+            │ i64   ┆ i64 ┆ str │
+            ╞═══════╪═════╪═════╡
+            │ 1     ┆ 6   ┆ a   │
+            │ 2     ┆ 7   ┆ b   │
+            │ 3     ┆ 8   ┆ c   │
+            └───────┴─────┴─────┘
+            >>> lframe = lf.rename(lambda column_name: "c" + column_name[1:]).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ coo ┆ car ┆ cam │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            │ 2   ┆ 7   ┆ b   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+        """
         return super().rename(mapping)
 
     def head(self, n: int) -> Self:
