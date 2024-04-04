@@ -25,20 +25,20 @@ def test_mean(
     integer: st.SearchStrategy[list[int]],
     floats: st.SearchStrategy[float],
 ) -> None:
-    dfpd = pd.DataFrame(
+    df_pandas = pd.DataFrame(
         {
             "integer": integer,
             "floats": floats,
         }
     )
-    dfpl = pl.DataFrame(
+    df_polars = pl.DataFrame(
         {
             "integer": integer,
             "floats": floats,
         },
     )
-    df_nw1 = nw.DataFrame(dfpd)
-    df_nw2 = nw.DataFrame(dfpl)
+    df_nw1 = nw.DataFrame(df_pandas)
+    df_nw2 = nw.DataFrame(df_polars)
 
     assert_allclose(
         nw.to_native(df_nw1.select(nw.col("integer").mean())),
