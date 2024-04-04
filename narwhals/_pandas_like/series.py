@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from pandas.api.types import is_extension_array_dtype
-
 from narwhals._pandas_like.utils import item
 from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import translate_dtype
@@ -15,6 +13,7 @@ from narwhals.utils import parse_version
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals.dtypes import DType
 
 
@@ -40,6 +39,15 @@ class PandasSeries:
 
             if parse_version(pd.__version__) < parse_version("3.0.0"):
                 self._use_copy_false = True
+            else:  # pragma: no cover
+                pass
+        else:  # pragma: no cover
+            pass
+
+    def __narwhals_namespace__(self) -> PandasNamespace:
+        from narwhals._pandas_like.namespace import PandasNamespace
+
+        return PandasNamespace(self._implementation)
 
     def __narwhals_series__(self) -> Self:
         return self
@@ -47,7 +55,7 @@ class PandasSeries:
     def _rename(self, series: Any, name: str) -> Any:
         if self._use_copy_false:
             return series.rename(name, copy=False)
-        return series.rename(name)
+        return series.rename(name)  # pragma: no cover
 
     def _from_series(self, series: Any) -> Self:
         return self.__class__(
@@ -66,10 +74,6 @@ class PandasSeries:
     def shape(self) -> tuple[int]:
         return self._series.shape  # type: ignore[no-any-return]
 
-    def rename(self, name: str) -> PandasSeries:
-        ser = self._series
-        return self._from_series(self._rename(ser, name))
-
     @property
     def dtype(self) -> DType:
         return translate_dtype(self._series.dtype)
@@ -81,12 +85,6 @@ class PandasSeries:
         ser = self._series
         dtype = reverse_translate_dtype(dtype)
         return self._from_series(ser.astype(dtype))
-
-    def filter(self, mask: Self) -> Self:
-        ser = self._series
-        return self._from_series(
-            ser.loc[validate_column_comparand(self._series.index, mask)]
-        )
 
     def item(self) -> Any:
         return item(self._series)
@@ -255,14 +253,6 @@ class PandasSeries:
         ser = self._series
         return ser.sum()
 
-    def prod(self) -> Any:
-        ser = self._series
-        return ser.prod()
-
-    def median(self) -> Any:
-        ser = self._series
-        return ser.median()
-
     def mean(self) -> Any:
         ser = self._series
         return ser.mean()
@@ -274,14 +264,6 @@ class PandasSeries:
     ) -> Any:
         ser = self._series
         return ser.std(ddof=correction)
-
-    def var(
-        self,
-        *,
-        correction: float = 1.0,
-    ) -> Any:
-        ser = self._series
-        return ser.var(ddof=correction)
 
     def len(self) -> Any:
         return len(self._series)
@@ -299,12 +281,6 @@ class PandasSeries:
     def n_unique(self) -> int:
         ser = self._series
         return ser.nunique()  # type: ignore[no-any-return]
-
-    def zip_with(self, mask: PandasSeries, other: PandasSeries) -> PandasSeries:
-        mask = validate_column_comparand(self._series.index, mask)
-        other = validate_column_comparand(self._series.index, other)
-        ser = self._series
-        return self._from_series(ser.where(mask, other))
 
     def sample(
         self,
@@ -327,12 +303,6 @@ class PandasSeries:
             )
         )
 
-    def is_nan(self) -> PandasSeries:
-        ser = self._series
-        if is_extension_array_dtype(ser.dtype):
-            return self._from_series((ser != ser).fillna(False))  # noqa: PLR0124
-        return self._from_series(ser.isna())
-
     def sort(
         self,
         *,
@@ -353,9 +323,9 @@ class PandasSeries:
     def to_pandas(self) -> Any:
         if self._implementation == "pandas":
             return self._series
-        elif self._implementation == "cudf":
+        elif self._implementation == "cudf":  # pragma: no cover
             return self._series.to_pandas()
-        elif self._implementation == "modin":
+        elif self._implementation == "modin":  # pragma: no cover
             return self._series._to_pandas()
-        msg = f"Unknown implementation: {self._implementation}"
-        raise TypeError(msg)
+        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
+        raise AssertionError(msg)

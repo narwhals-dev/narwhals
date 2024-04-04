@@ -20,7 +20,7 @@ if os.environ.get("CI", None):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
         df_mpd = mpd.DataFrame({"a": ["fdas", "edfas"]})
-else:
+else:  # pragma: no cover
     df_mpd = df_pandas.copy()
 
 

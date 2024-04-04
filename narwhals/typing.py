@@ -1,5 +1,5 @@
-from typing import TYPE_CHECKING
-from typing import TypeVar
+from typing import TYPE_CHECKING  # pragma: no cover
+from typing import TypeVar  # pragma: no cover
 
 if TYPE_CHECKING:
     from typing import TypeAlias
@@ -11,5 +11,3 @@ if TYPE_CHECKING:
 
     NativeDataFrame = TypeVar("NativeDataFrame")
     NativeSeries = TypeVar("NativeSeries")
-
-T = TypeVar("T")

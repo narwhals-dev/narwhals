@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
+from pandas.testing import assert_series_equal as pd_assert_series_equal
+from polars.testing import assert_series_equal as pl_assert_series_equal
 
 import narwhals as nw
 from tests.utils import compare_dicts
@@ -28,7 +30,7 @@ if os.environ.get("CI", None):
         df_mpd = mpd.DataFrame(
             pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
         )
-else:
+else:  # pragma: no cover
     df_mpd = df_pandas.copy()
 
 
@@ -44,6 +46,14 @@ def test_sort(df_raw: Any) -> None:
         "a": [1, 2, 3],
         "b": [4, 6, 4],
         "z": [7.0, 9.0, 8.0],
+    }
+    compare_dicts(result_native, expected)
+    result = df.sort("a", "b", descending=[True, False])
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [3, 2, 1],
+        "b": [4, 6, 4],
+        "z": [8.0, 9.0, 7.0],
     }
     compare_dicts(result_native, expected)
 
@@ -81,6 +91,7 @@ def test_add(df_raw: Any) -> None:
     result = df.with_columns(
         c=nw.col("a") + nw.col("b"),
         d=nw.col("a") - nw.col("a").mean(),
+        e=nw.col("a") - nw.col("a").std(),
     )
     result_native = nw.to_native(result)
     expected = {
@@ -89,6 +100,7 @@ def test_add(df_raw: Any) -> None:
         "z": [7.0, 8.0, 9.0],
         "c": [5, 7, 8],
         "d": [-1.0, 1.0, 0.0],
+        "e": [0.0, 2.0, 1.0],
     }
     compare_dicts(result_native, expected)
 
@@ -102,6 +114,10 @@ def test_double(df_raw: Any) -> None:
     result = df.with_columns(nw.all() * 2)
     result_native = nw.to_native(result)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
+    compare_dicts(result_native, expected)
+    result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
+    result_native = nw.to_native(result)
+    expected = {"o": [1, 3, 2], "a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
     compare_dicts(result_native, expected)
 
 
@@ -161,6 +177,14 @@ def test_double_selected(df_raw: Any) -> None:
     result_native = nw.to_native(result)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12]}
     compare_dicts(result_native, expected)
+    result = df.select("z", nw.col("a", "b") * 2)
+    result_native = nw.to_native(result)
+    expected = {"z": [7, 8, 9], "a": [2, 6, 4], "b": [8, 8, 12]}
+    compare_dicts(result_native, expected)
+    result = df.select("a").select(nw.col("a") + nw.all())
+    result_native = nw.to_native(result)
+    expected = {"a": [2, 6, 4]}
+    compare_dicts(result_native, expected)
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
@@ -181,12 +205,34 @@ def test_join(df_raw: Any) -> None:
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
     compare_dicts(result_native, expected)
 
+    with pytest.raises(NotImplementedError):
+        result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
+
+    result = df.collect().join(df_right.collect(), left_on="a", right_on="a", how="inner")  # type: ignore[assignment]
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "b_right": [4, 4, 6],
+        "z": [7.0, 8, 9],
+        "z_right": [7.0, 8, 9],
+    }
+    compare_dicts(result_native, expected)
+
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
 def test_schema(df_raw: Any) -> None:
-    df = nw.LazyFrame(df_raw)
-    result = df.schema
-    expected = {"a": nw.dtypes.Int64, "b": nw.dtypes.Int64, "z": nw.dtypes.Float64}
+    result = nw.LazyFrame(df_raw).schema
+    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+    assert result == expected
+    result = nw.LazyFrame(df_raw).collect().schema
+    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+    assert result == expected
+    result = nw.LazyFrame(df_raw).columns  # type: ignore[assignment]
+    expected = ["a", "b", "z"]  # type: ignore[assignment]
+    assert result == expected
+    result = nw.LazyFrame(df_raw).collect().columns  # type: ignore[assignment]
+    expected = ["a", "b", "z"]  # type: ignore[assignment]
     assert result == expected
 
 
@@ -239,7 +285,7 @@ def test_accepted_dataframes() -> None:
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_convert_pandas(df_raw: Any) -> None:
-    result = nw.DataFrame(df_raw).to_pandas()
+    result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]
     expected = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     pd.testing.assert_frame_equal(result, expected)
 
@@ -274,6 +320,15 @@ def test_expr_binary(df_raw: Any) -> None:
             | (nw.col("a") <= nw.col("z"))
             | (nw.col("a") == 1)
         ).cast(nw.Int64),
+        g=nw.col("a") != 1,
+        h=(False & (nw.col("a") != 1)),
+        i=(False | (nw.col("a") != 1)),
+        j=2 ** nw.col("a"),
+        k=2 // nw.col("a"),
+        l=nw.col("a") // 2,
+        m=nw.col("a") ** 2,
+        n=nw.col("a") % 2,
+        o=2 % nw.col("a"),
     )
     result_native = nw.to_native(result)
     expected = {
@@ -284,6 +339,15 @@ def test_expr_binary(df_raw: Any) -> None:
         "d": [-3, -1, -4],
         "e": [0, 0, 0],
         "f": [1, 1, 1],
+        "g": [False, True, True],
+        "h": [False, False, False],
+        "i": [False, True, True],
+        "j": [2, 8, 4],
+        "k": [2, 0, 1],
+        "l": [0, 1, 1],
+        "m": [1, 9, 4],
+        "n": [1, 1, 0],
+        "o": [0, 2, 0],
     }
     compare_dicts(result_native, expected)
 
@@ -291,7 +355,7 @@ def test_expr_binary(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_lazy])
 def test_expr_unary(df_raw: Any) -> None:
     result = (
-        nw.LazyFrame(df_raw)
+        nw.from_native(df_raw)
         .with_columns(
             a_mean=nw.col("a").mean(),
             a_sum=nw.col("a").sum(),
@@ -351,12 +415,18 @@ def test_head(df_raw: Any) -> None:
     result = nw.to_native(df.head(2))
     expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
     compare_dicts(result, expected)
+    result = nw.to_native(df.collect().head(2))
+    expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
+    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
 def test_unique(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = nw.to_native(df.unique("b").sort("b"))
+    expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.collect().unique("b").sort("b"))
     expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
     compare_dicts(result, expected)
 
@@ -386,14 +456,82 @@ def test_concat_horizontal(df_raw: Any, df_raw_right: Any) -> None:
     }
     compare_dicts(result_native, expected)
 
+    with pytest.raises(ValueError, match="No items"):
+        nw.concat([])
+
 
 @pytest.mark.parametrize(
     ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
 )
 def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
-    df_left = nw.LazyFrame(df_raw).rename({"a": "c", "b": "d"}).drop("z")
+    df_left = nw.LazyFrame(df_raw).collect().rename({"a": "c", "b": "d"}).lazy().drop("z")
     df_right = nw.LazyFrame(df_raw_right)
     result = nw.concat([df_left, df_right], how="vertical")
     result_native = nw.to_native(result)
     expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
     compare_dicts(result_native, expected)
+    with pytest.raises(ValueError, match="No items"):
+        nw.concat([], how="vertical")
+    with pytest.raises(Exception, match="unable to vstack"):
+        nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_lazy(df_raw: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    result = df.lazy()
+    assert isinstance(result, nw.LazyFrame)
+
+
+def test_to_dict() -> None:
+    df = nw.DataFrame(df_pandas)
+    result = df.to_dict(as_series=True)
+    expected = {
+        "a": pd.Series([1, 3, 2], name="a"),
+        "b": pd.Series([4, 4, 6], name="b"),
+        "z": pd.Series([7.0, 8, 9], name="z"),
+    }
+    for key in expected:
+        pd_assert_series_equal(result[key], expected[key])
+
+    df = nw.DataFrame(df_polars)
+    result = df.to_dict(as_series=True)
+    expected = {
+        "a": pl.Series("a", [1, 3, 2]),
+        "b": pl.Series("b", [4, 4, 6]),
+        "z": pl.Series("z", [7.0, 8, 9]),
+    }
+    for key in expected:
+        pl_assert_series_equal(result[key], expected[key])
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+def test_any_all(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.select((nw.all() > 1).all()))
+    expected = {"a": [False], "b": [True], "z": [True]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.select((nw.all() > 1).any()))
+    expected = {"a": [True], "b": [True], "z": [True]}
+    compare_dicts(result, expected)
+
+
+def test_invalid() -> None:
+    df = nw.LazyFrame(df_pandas)
+    with pytest.raises(ValueError, match="Multi-output"):
+        df.select(nw.all() + nw.all())
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas])
+def test_reindex(df_raw: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    with pytest.raises(RuntimeError, match="implicit index alignment"):
+        df.select("a", df["b"].sort())
+
+    s = df["a"]
+    with pytest.raises(ValueError, match="index alignment"):
+        nw.to_native(s > s.sort())
+    with pytest.raises(ValueError, match="index alignment"):
+        nw.to_native(df.with_columns(s.sort()))
+    with pytest.raises(ValueError, match="Multi-output expressions are not supported"):
+        nw.to_native(df.with_columns(nw.all() + nw.all()))

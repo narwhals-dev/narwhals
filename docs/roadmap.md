@@ -1,6 +1,6 @@
 # Roadmap
 
-Where do we go from here? What are the project's priorties?
+Where do we go from here? What are the project's priorities?
 
 ## 1. Tests and docs coverage
 

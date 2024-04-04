@@ -9,7 +9,6 @@ from typing import TypeVar
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
-from narwhals.utils import remove_prefix
 
 T = TypeVar("T")
 
@@ -80,13 +79,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
             )
             raise ValueError(msg)
         return other._series
-    if isinstance(other, list) and len(other) > 1:
-        # e.g. `plx.all() + plx.all()`
-        msg = "Multi-output expressions are not supported in this context"
-        raise ValueError(msg)
-    if isinstance(other, list):
-        other = other[0]
-    return other
+    raise AssertionError("Please report a bug")
 
 
 def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
@@ -122,8 +115,8 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
         return plx._create_expr_from_series(into_expr)
     if isinstance(into_expr, str):
         return plx.col(into_expr)
-    msg = f"Expected IntoExpr, got {type(into_expr)}"
-    raise TypeError(msg)
+    msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def evaluate_into_expr(
@@ -150,8 +143,8 @@ def evaluate_into_exprs(
     for name, expr in named_exprs.items():
         evaluated_expr = evaluate_into_expr(df, expr)
         if len(evaluated_expr) > 1:
-            msg = "Named expressions must return a single column"
-            raise ValueError(msg)
+            msg = "Named expressions must return a single column"  # pragma: no cover
+            raise AssertionError(msg)
         series.append(evaluated_expr[0].alias(name))
     return series
 
@@ -204,8 +197,8 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
 def item(s: Any) -> Any:
     # cuDF doesn't have Series.item().
     if len(s) != 1:
-        msg = "Can only convert a Series of length 1 to a scalar"
-        raise ValueError(msg)
+        msg = "Can only convert a Series of length 1 to a scalar"  # pragma: no cover
+        raise AssertionError(msg)
     return s.iloc[0]
 
 
@@ -216,42 +209,6 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
         and expr._depth < 2
         # todo: avoid this one?
         and (expr._root_names is not None or (expr._depth == 0))
-    )
-
-
-def evaluate_simple_aggregation(expr: PandasExpr, grouped: Any, keys: list[str]) -> Any:
-    """
-    Use fastpath for simple aggregations if possible.
-
-    If an aggregation is simple (e.g. `pl.col('a').mean()`), then pandas-like
-    implementations have a fastpath we can use.
-
-    For example, `df.group_by('a').agg(pl.col('b').mean())` can be evaluated
-    as `df.groupby('a')['b'].mean()`, whereas
-    `df.group_by('a').agg(mean=(pl.col('b') - pl.col('c').mean()).mean())`
-    requires a lambda function, which is slower.
-
-    Returns naive DataFrame.
-    """
-    if expr._depth == 0:
-        # e.g. agg(pl.len())
-        df = getattr(grouped, expr._function_name.replace("len", "size"))()
-        df = (
-            df.drop(columns=keys)
-            if len(df.shape) > 1
-            else df.reset_index(drop=True).to_frame("size")
-        )
-        return df.rename(columns={"size": expr._output_names[0]})  # type: ignore[index]
-    if expr._root_names is None or expr._output_names is None:
-        msg = "Expected expr to have root_names and output_names set, but they are None. Please report a bug."
-        raise AssertionError(msg)
-    if len(expr._root_names) != len(expr._output_names):
-        msg = "Expected expr to have same number of root_names and output_names, but they are different. Please report a bug."
-        raise AssertionError(msg)
-    new_names = dict(zip(expr._root_names, expr._output_names))
-    function_name = remove_prefix(expr._function_name, "col->")
-    return getattr(grouped[expr._root_names], function_name)()[expr._root_names].rename(
-        columns=new_names
     )
 
 
@@ -266,17 +223,17 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
 
         if parse_version(pd.__version__) < parse_version("3.0.0"):
             return pd.concat(dfs, axis=1, copy=False)
-        return pd.concat(dfs, axis=1)
-    if implementation == "cudf":
+        return pd.concat(dfs, axis=1)  # pragma: no cover
+    if implementation == "cudf":  # pragma: no cover
         import cudf
 
         return cudf.concat(dfs, axis=1)
-    if implementation == "modin":
+    if implementation == "modin":  # pragma: no cover
         import modin.pandas as mpd
 
         return mpd.concat(dfs, axis=1)
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
+    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def vertical_concat(dfs: list[Any], implementation: str) -> Any:
@@ -286,48 +243,30 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
     Should be in namespace.
     """
     if not dfs:
-        msg = "No dataframes to concatenate"
-        raise TypeError(msg)
+        msg = "No dataframes to concatenate"  # pragma: no cover
+        raise AssertionError(msg)
     cols = set(dfs[0].columns)
     for df in dfs:
         cols_current = set(df.columns)
         if cols_current != cols:
-            msg = "Unable to vstack, column names don't match"
+            msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
     if implementation == "pandas":
         import pandas as pd
 
         if parse_version(pd.__version__) < parse_version("3.0.0"):
             return pd.concat(dfs, axis=0, copy=False)
-        return pd.concat(dfs, axis=0)
-    if implementation == "cudf":
+        return pd.concat(dfs, axis=0)  # pragma: no cover
+    if implementation == "cudf":  # pragma: no cover
         import cudf
 
         return cudf.concat(dfs, axis=0)
-    if implementation == "modin":
+    if implementation == "modin":  # pragma: no cover
         import modin.pandas as mpd
 
         return mpd.concat(dfs, axis=0)
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
-
-
-def dataframe_from_dict(data: dict[str, Any], implementation: str) -> Any:
-    """Return native dataframe."""
-    if implementation == "pandas":
-        import pandas as pd
-
-        return pd.DataFrame(data, copy=False)
-    if implementation == "cudf":
-        import cudf
-
-        return cudf.DataFrame(data)
-    if implementation == "modin":
-        import modin.pandas as mpd
-
-        return mpd.DataFrame(data)
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
+    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def series_from_iterable(
@@ -338,16 +277,16 @@ def series_from_iterable(
         import pandas as pd
 
         return pd.Series(data, name=name, index=index, copy=False)
-    if implementation == "cudf":
+    if implementation == "cudf":  # pragma: no cover
         import cudf
 
         return cudf.Series(data, name=name, index=index)
-    if implementation == "modin":
+    if implementation == "modin":  # pragma: no cover
         import modin.pandas as mpd
 
         return mpd.Series(data, name=name, index=index)
-    msg = f"Unknown implementation: {implementation}"
-    raise TypeError(msg)
+    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def translate_dtype(dtype: Any) -> DType:
@@ -362,7 +301,7 @@ def translate_dtype(dtype: Any) -> DType:
     if dtype == "int8":
         return dtypes.Int8()
     if dtype == "uint64":
-        return dtypes.Int64()
+        return dtypes.UInt64()
     if dtype == "uint32":
         return dtypes.UInt32()
     if dtype == "uint16":
@@ -377,12 +316,10 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.String()
     if dtype in ("bool", "boolean"):
         return dtypes.Boolean()
-    if dtype == "object":
-        return dtypes.Object()
     if str(dtype).startswith("datetime64"):
         return dtypes.Datetime()
-    msg = f"Unknown dtype: {dtype}"
-    raise TypeError(msg)
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
@@ -398,8 +335,8 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "int32"
     if isinstance_or_issubclass(dtype, dtypes.Int16):
         return "int16"
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return "uint8"
+    if isinstance_or_issubclass(dtype, dtypes.Int8):
+        return "int8"
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
         return "uint64"
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
@@ -412,8 +349,10 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "object"
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
-    msg = f"Unknown dtype: {dtype}"
-    raise TypeError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        return "datetime64[us]"
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def validate_indices(series: list[PandasSeries]) -> list[PandasSeries]:

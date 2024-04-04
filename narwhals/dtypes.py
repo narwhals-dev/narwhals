@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class DType:
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return self.__class__.__qualname__
 
     @classmethod
@@ -63,10 +63,6 @@ class String(DType): ...
 class Boolean(DType): ...
 
 
-class Object(DType):  # todo: do we really want this one?
-    ...
-
-
 class Datetime(TemporalType): ...
 
 
@@ -84,8 +80,8 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
         return plx.Int32
     if dtype == Int16:
         return plx.Int16
-    if dtype == UInt8:
-        return plx.UInt8
+    if dtype == Int8:
+        return plx.Int8
     if dtype == UInt64:
         return plx.UInt64
     if dtype == UInt32:
@@ -100,10 +96,8 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
         return plx.Boolean
     if dtype == Datetime:
         return plx.Datetime
-    if dtype == Date:
-        return plx.Date
-    msg = f"Unknown dtype: {dtype}"
-    raise TypeError(msg)
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
@@ -121,8 +115,8 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Int32()
     if dtype == pl.Int16:
         return Int16()
-    if dtype == pl.UInt8:
-        return UInt8()
+    if dtype == pl.Int8:
+        return Int8()
     if dtype == pl.UInt64:
         return UInt64()
     if dtype == pl.UInt32:
@@ -137,7 +131,5 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Boolean()
     if dtype == pl.Datetime:
         return Datetime()
-    if dtype == pl.Date:
-        return Date()
-    msg = f"Unexpected dtype, got: {type(dtype)}"
-    raise TypeError(msg)
+    msg = f"Unexpected dtype, got: {type(dtype)}"  # pragma: no cover
+    raise AssertionError(msg)

@@ -11,7 +11,8 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
-from narwhals.utils import flatten_str
+from narwhals.dependencies import get_pyarrow
+from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -34,7 +35,7 @@ class PandasDataFrame:
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._dataframe = dataframe
+        self._dataframe = self._convert_object_dtypes(dataframe)
         self._implementation = implementation
 
     def __narwhals_dataframe__(self) -> Self:
@@ -48,6 +49,20 @@ class PandasDataFrame:
 
         return PandasNamespace(self._implementation)
 
+    def _convert_object_dtypes(self, dataframe: Any) -> Any:
+        schema = dataframe.dtypes
+        if (schema != object).all():
+            return dataframe
+        replacements = {}
+        for col in dataframe.columns:
+            if schema[col] != object:
+                continue
+            if get_pyarrow() is not None:
+                replacements[col] = dataframe[col].astype("string[pyarrow]")
+            else:  # pragma: no cover
+                replacements[col] = dataframe[col].astype("string[python]")
+        return dataframe.assign(**replacements)
+
     def _validate_columns(self, columns: Sequence[str]) -> None:
         if len(columns) != len(set(columns)):
             counter = collections.Counter(columns)
@@ -57,15 +72,7 @@ class PandasDataFrame:
                     raise ValueError(
                         msg,
                     )
-
-    def _validate_booleanness(self) -> None:
-        if not (
-            (self._dataframe.dtypes == "bool") | (self._dataframe.dtypes == "boolean")
-        ).all():
-            msg = "'any' can only be called on DataFrame where all dtypes are 'bool'"
-            raise TypeError(
-                msg,
-            )
+            raise AssertionError("Pls report bug")
 
     def _from_dataframe(self, df: Any) -> Self:
         return self.__class__(
@@ -137,7 +144,7 @@ class PandasDataFrame:
         return self._from_dataframe(self._dataframe.rename(columns=mapping))
 
     def drop(self, columns: str | Iterable[str]) -> Self:
-        return self._from_dataframe(self._dataframe.drop(columns=flatten_str(columns)))
+        return self._from_dataframe(self._dataframe.drop(columns=flatten(columns)))
 
     # --- transform ---
     def sort(
@@ -146,9 +153,7 @@ class PandasDataFrame:
         *more_by: str,
         descending: bool | Sequence[bool] = False,
     ) -> Self:
-        flat_keys = flatten_str([*flatten_str(by), *more_by])
-        if not flat_keys:
-            flat_keys = self._dataframe.columns.tolist()
+        flat_keys = flatten([*flatten([by]), *more_by])
         df = self._dataframe
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -169,7 +174,7 @@ class PandasDataFrame:
 
         return PandasGroupBy(
             self,
-            flatten_str(*keys),
+            flatten(keys),
         )
 
     def join(
@@ -180,10 +185,6 @@ class PandasDataFrame:
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
-        if how not in ["inner"]:
-            msg = "Only inner join supported for now, others coming soon"
-            raise ValueError(msg)
-
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
@@ -205,13 +206,10 @@ class PandasDataFrame:
         return self._from_dataframe(self._dataframe.head(n))
 
     def unique(self, subset: str | list[str]) -> Self:
-        subset = flatten_str(subset)
+        subset = flatten(subset)
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
 
     # --- lazy-only ---
-    def cache(self) -> Self:
-        return self
-
     def lazy(self) -> Self:
         return self.__class__(
             self._dataframe,
@@ -221,14 +219,6 @@ class PandasDataFrame:
     @property
     def shape(self) -> tuple[int, int]:
         return self._dataframe.shape  # type: ignore[no-any-return]
-
-    def iter_columns(self) -> Iterable[PandasSeries]:
-        from narwhals._pandas_like.series import PandasSeries
-
-        return (
-            PandasSeries(self._dataframe[col], implementation=self._implementation)
-            for col in self.columns
-        )
 
     def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
         if as_series:
@@ -242,6 +232,6 @@ class PandasDataFrame:
     def to_pandas(self) -> Any:
         if self._implementation == "pandas":
             return self._dataframe
-        if self._implementation == "modin":
+        if self._implementation == "modin":  # pragma: no cover
             return self._dataframe._to_pandas()
-        return self._dataframe.to_pandas()
+        return self._dataframe.to_pandas()  # pragma: no cover

@@ -21,7 +21,7 @@ def test_q1(library: str) -> None:
     if library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
-    elif library == "polars":
+    else:
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
     df = nw.LazyFrame(df_raw)
@@ -88,10 +88,10 @@ def test_q1_w_generic_funcs(library: str) -> None:
     if library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
-    elif library == "polars":
-        df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
+    else:
+        df_raw = pl.read_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
-    df = nw.LazyFrame(df_raw)
+    df = nw.DataFrame(df_raw)
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -103,22 +103,20 @@ def test_q1_w_generic_funcs(library: str) -> None:
         )
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
-            [
-                nw.sum("l_quantity").alias("sum_qty"),
-                nw.sum("l_extendedprice").alias("sum_base_price"),
-                (nw.col("l_extendedprice") * (1 - nw.col("l_discount")))
-                .sum()
-                .alias("sum_disc_price"),
-                nw.col("charge").sum().alias("sum_charge"),
-                nw.mean("l_quantity").alias("avg_qty"),
-                nw.mean("l_extendedprice").alias("avg_price"),
-                nw.mean("l_discount").alias("avg_disc"),
-                nw.len().alias("count_order"),
-            ],
+            nw.sum("l_quantity").alias("sum_qty"),
+            nw.sum("l_extendedprice").alias("sum_base_price"),
+            (nw.col("l_extendedprice") * (1 - nw.col("l_discount")))
+            .sum()
+            .alias("sum_disc_price"),
+            nw.col("charge").sum().alias("sum_charge"),
+            nw.mean("l_quantity").alias("avg_qty"),
+            nw.mean("l_extendedprice").alias("avg_price"),
+            nw.mean("l_discount").alias("avg_disc"),
+            count_order=nw.len(),
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = query_result.collect().to_dict(as_series=False)
+    result = query_result.to_dict(as_series=False)
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],

@@ -41,14 +41,29 @@ class Expr:
             lambda plx: self._call(plx).__eq__(extract_native(plx, other))
         )
 
+    def __ne__(self, other: object) -> Expr:  # type: ignore[override]
+        return self.__class__(
+            lambda plx: self._call(plx).__ne__(extract_native(plx, other))
+        )
+
     def __and__(self, other: Any) -> Expr:
         return self.__class__(
             lambda plx: self._call(plx).__and__(extract_native(plx, other))
         )
 
+    def __rand__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__rand__(extract_native(plx, other))
+        )
+
     def __or__(self, other: Any) -> Expr:
         return self.__class__(
             lambda plx: self._call(plx).__or__(extract_native(plx, other))
+        )
+
+    def __ror__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__ror__(extract_native(plx, other))
         )
 
     def __add__(self, other: Any) -> Expr:
@@ -111,12 +126,51 @@ class Expr:
             lambda plx: self._call(plx).__ge__(extract_native(plx, other))
         )
 
+    def __pow__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__pow__(extract_native(plx, other))
+        )
+
+    def __rpow__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__rpow__(extract_native(plx, other))
+        )
+
+    def __floordiv__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__floordiv__(extract_native(plx, other))
+        )
+
+    def __rfloordiv__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__rfloordiv__(extract_native(plx, other))
+        )
+
+    def __mod__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__mod__(extract_native(plx, other))
+        )
+
+    def __rmod__(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).__rmod__(extract_native(plx, other))
+        )
+
     # --- unary ---
     def __invert__(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).__invert__())
 
+    def any(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).any())
+
+    def all(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).all())
+
     def mean(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).mean())
+
+    def std(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).std())
 
     def sum(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).sum())

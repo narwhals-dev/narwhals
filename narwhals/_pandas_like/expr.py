@@ -32,7 +32,7 @@ class PandasExpr:
         self._output_names = output_names
         self._implementation = implementation
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return (
             f"PandasExpr("
             f"depth={self._depth}, "
@@ -129,13 +129,13 @@ class PandasExpr:
     def __pow__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__pow__", other)
 
-    def __rpow__(self, other: Any) -> Self:  # pragma: no cover
+    def __rpow__(self, other: Any) -> Self:
         return register_expression_call(self, "__rpow__", other)
 
     def __mod__(self, other: PandasExpr | Any) -> Self:
         return register_expression_call(self, "__mod__", other)
 
-    def __rmod__(self, other: Any) -> Self:  # pragma: no cover
+    def __rmod__(self, other: Any) -> Self:
         return register_expression_call(self, "__rmod__", other)
 
     # Unary
@@ -150,6 +150,15 @@ class PandasExpr:
 
     def mean(self) -> Self:
         return register_expression_call(self, "mean")
+
+    def std(self) -> Self:
+        return register_expression_call(self, "std")
+
+    def any(self) -> Self:
+        return register_expression_call(self, "any")
+
+    def all(self) -> Self:
+        return register_expression_call(self, "all")
 
     def max(self) -> Self:
         return register_expression_call(self, "max")
