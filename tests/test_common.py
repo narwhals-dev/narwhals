@@ -563,7 +563,7 @@ def test_invalid() -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas])
 def test_reindex(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)
-    with pytest.raises(RuntimeError, match="implicit index alignment"):
+    with pytest.raises(RuntimeError, match="automated index alignment"):
         df.select("a", df["b"].sort())
 
     s = df["a"]

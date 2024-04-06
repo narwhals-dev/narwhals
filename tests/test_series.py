@@ -21,6 +21,15 @@ df_pandas_nullable = pd.DataFrame(
         "z": "Float64",
     }
 )
+df_pandas_pyarrow = pd.DataFrame(
+    {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+).astype(
+    {
+        "a": "Int64[pyarrow]",
+        "b": "Int64[pyarrow]",
+        "z": "Float64[pyarrow]",
+    }
+)
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 
@@ -54,14 +63,18 @@ def test_gt(df_raw: Any) -> None:
     assert result[2]
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy, df_pandas_nullable])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_dtype(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).collect()["a"].dtype
     assert result == nw.Int64
     assert result.is_numeric()
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy, df_pandas_nullable])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_reductions(df_raw: Any) -> None:
     assert nw.LazyFrame(df_raw).collect()["a"].mean() == 2.0
     assert nw.LazyFrame(df_raw).collect()["a"].std() == 1.0

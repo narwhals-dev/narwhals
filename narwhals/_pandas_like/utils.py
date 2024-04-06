@@ -51,7 +51,7 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
         if other._series.index is not index and not (other._series.index == index).all():
             msg = (
                 "Narwhals does not support automated index alignment. "
-                "Please reset the index of the Series or DataFrame."
+                "You may need to do a join before this operation."
             )
             raise ValueError(msg)
         return other._series
@@ -76,7 +76,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
         if other._series.index is not index and not (other._series.index == index).all():
             msg = (
                 "Narwhals does not support automated index alignment. "
-                "Please reset the index of the Series or DataFrame."
+                "You may need to do a join before this operation."
             )
             raise ValueError(msg)
         return other._series
@@ -366,6 +366,9 @@ def validate_indices(series: list[PandasSeries]) -> list[PandasSeries]:
     idx = series[0]._series.index
     for s in series[1:]:
         if s._series.index is not idx and not (s._series.index == idx).all():
-            msg = "Found implicit index alignment, which is not allowed by Narwhals."
+            msg = (
+                "Narwhals does not support automated index alignment. "
+                "You may need to do a join before this operation."
+            )
             raise RuntimeError(msg)
     return series
