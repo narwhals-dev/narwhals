@@ -473,6 +473,9 @@ def test_drop_nulls(df_raw: Any) -> None:
     result = nw.to_native(df.select(nw.col("a").drop_nulls()))
     expected = {"a": [3, 2]}
     compare_dicts(result, expected)
+    result = nw.to_native(df.select(df.collect()["a"].drop_nulls()))
+    expected = {"a": [3, 2]}
+    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize(
