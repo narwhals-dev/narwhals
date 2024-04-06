@@ -187,6 +187,9 @@ class Expr:
     def unique(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).unique())
 
+    def sort(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).sort())
+
     # --- transform ---
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"

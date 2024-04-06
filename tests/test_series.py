@@ -34,7 +34,9 @@ df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_polars, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_len(df_raw: Any) -> None:
     result = len(nw.Series(df_raw["a"]))
     assert result == 3
@@ -78,6 +80,22 @@ def test_dtype(df_raw: Any) -> None:
 def test_reductions(df_raw: Any) -> None:
     assert nw.LazyFrame(df_raw).collect()["a"].mean() == 2.0
     assert nw.LazyFrame(df_raw).collect()["a"].std() == 1.0
+    assert nw.LazyFrame(df_raw).collect()["a"].min() == 1
+    assert nw.LazyFrame(df_raw).collect()["a"].max() == 3
+    assert nw.LazyFrame(df_raw).collect()["a"].sum() == 6
+    assert nw.to_native(nw.LazyFrame(df_raw).collect()["a"].is_between(1, 2))[0]
+    assert not nw.to_native(nw.LazyFrame(df_raw).collect()["a"].is_between(1, 2))[1]
+    assert nw.to_native(nw.LazyFrame(df_raw).collect()["a"].is_between(1, 2))[2]
+    assert nw.LazyFrame(df_raw).collect()["a"].n_unique() == 3
+
+
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
+def test_boolean_reductions(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw).select(nw.col("a") > 1)
+    assert not df.collect()["a"].all()
+    assert df.collect()["a"].any()
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])

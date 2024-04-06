@@ -86,6 +86,21 @@ class Series:
     def mean(self) -> Any:
         return self._series.mean()
 
+    def any(self) -> Any:
+        return self._series.any()
+
+    def all(self) -> Any:
+        return self._series.all()
+
+    def min(self) -> Any:
+        return self._series.min()
+
+    def max(self) -> Any:
+        return self._series.max()
+
+    def sum(self) -> Any:
+        return self._series.sum()
+
     def std(self) -> Any:
         return self._series.std()
 
@@ -94,6 +109,16 @@ class Series:
 
     def sort(self) -> Self:
         return self._from_series(self._series.sort())
+
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> Self:
+        return self._from_series(
+            self._series.is_between(lower_bound, upper_bound, closed=closed)
+        )
+
+    def n_unique(self) -> int:
+        return self._series.n_unique()  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
         return self._series.to_numpy()

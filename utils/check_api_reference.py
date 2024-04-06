@@ -7,6 +7,8 @@ import narwhals as nw
 from narwhals.utils import remove_prefix
 from narwhals.utils import remove_suffix
 
+ret = 0
+
 # todo: make dtypes reference page as well
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions = [
@@ -25,13 +27,13 @@ documented = [
     if i.startswith("        - ")
 ]
 if missing := set(top_level_functions).difference(documented):
-    print("not documented")  # noqa: T201
+    print("top-level functions: not documented")  # noqa: T201
     print(missing)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 if extra := set(documented).difference(top_level_functions):
-    print("outdated")  # noqa: T201
+    print("top-level functions: outdated")  # noqa: T201
     print(extra)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 
 top_level_functions = [
     i
@@ -46,13 +48,13 @@ documented = [
     if i.startswith("        - ")
 ]
 if missing := set(top_level_functions).difference(documented):
-    print("not documented")  # noqa: T201
+    print("DataFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 if extra := set(documented).difference(top_level_functions):
-    print("outdated")  # noqa: T201
+    print("DataFrame: outdated")  # noqa: T201
     print(extra)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 
 top_level_functions = [
     i
@@ -67,13 +69,13 @@ documented = [
     if i.startswith("        - ")
 ]
 if missing := set(top_level_functions).difference(documented):
-    print("not documented")  # noqa: T201
+    print("LazyFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 if extra := set(documented).difference(top_level_functions):
-    print("outdated")  # noqa: T201
+    print("LazyFrame: outdated")  # noqa: T201
     print(extra)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 
 top_level_functions = [
     i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
@@ -86,13 +88,13 @@ documented = [
     if i.startswith("        - ")
 ]
 if missing := set(top_level_functions).difference(documented):
-    print("not documented")  # noqa: T201
+    print("Series: not documented")  # noqa: T201
     print(missing)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 if extra := set(documented).difference(top_level_functions):
-    print("outdated")  # noqa: T201
+    print("Series: outdated")  # noqa: T201
     print(extra)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 
 top_level_functions = [
     i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
@@ -105,12 +107,33 @@ documented = [
     if i.startswith("        - ")
 ]
 if missing := set(top_level_functions).difference(documented):
-    print("not documented")  # noqa: T201
+    print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 if extra := set(documented).difference(top_level_functions):
-    print("outdated")  # noqa: T201
+    print("Expr: outdated")  # noqa: T201
     print(extra)  # noqa: T201
-    sys.exit(1)
+    ret = 1
 
-sys.exit(0)
+# DTypes
+
+# dt
+
+# str
+
+# Check Expr vs Series
+expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
+series = [
+    i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
+]
+todo = {"drop_nulls", "unique", "sample", "str", "alias", "dt", "is_null"}
+if missing := set(expr).difference(series).difference(todo):
+    print("In expr but not in series")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+if extra := set(series).difference(expr).difference({"to_pandas", "to_numpy", "dtype"}):
+    print("in series but not in expr")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
+
+sys.exit(ret)

@@ -4,12 +4,19 @@
     handler: python
     options:
       members:
+        - all
+        - any
         - cast
         - dtype
+        - is_between
         - is_in
+        - max
         - mean
+        - min
+        - n_unique
         - sort
         - std
+        - sum
         - to_numpy
         - to_pandas
       show_root_heading: false

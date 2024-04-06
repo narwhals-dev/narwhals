@@ -19,6 +19,7 @@
         - n_unique
         - unique
         - sample
+        - sort
         - std
         - str
         - sum
