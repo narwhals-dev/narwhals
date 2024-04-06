@@ -94,4 +94,23 @@ if extra := set(documented).difference(top_level_functions):
     print(extra)  # noqa: T201
     sys.exit(1)
 
+top_level_functions = [
+    i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
+]
+with open("docs/api-reference/expressions.md") as fd:
+    content = fd.read()
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ")
+]
+if missing := set(top_level_functions).difference(documented):
+    print("not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    sys.exit(1)
+if extra := set(documented).difference(top_level_functions):
+    print("outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    sys.exit(1)
+
 sys.exit(0)
