@@ -7,6 +7,7 @@
         - all
         - any
         - cast
+        - drop_nulls
         - dtype
         - is_between
         - is_in

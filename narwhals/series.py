@@ -107,6 +107,9 @@ class Series:
     def is_in(self, other: Any) -> Self:
         return self._from_series(self._series.is_in(self._extract_native(other)))
 
+    def drop_nulls(self) -> Self:
+        return self._from_series(self._series.drop_nulls())
+
     def sort(self) -> Self:
         return self._from_series(self._series.sort())
 
