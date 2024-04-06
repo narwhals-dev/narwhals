@@ -27,4 +27,5 @@ repos:
       pass_filenames: false
       entry: python -m utils.check_api_reference
       language: python
+      additional_dependencies: [polars]
 

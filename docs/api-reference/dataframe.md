@@ -4,23 +4,22 @@
     handler: python
     options:
       members:
-        - to_pandas
-        - to_numpy
-        - shape
-        - __getitem__
-        - to_dict
-        - schema
         - columns
-        - with_columns
-        - select
-        - rename
-        - head
         - drop
-        - unique
         - filter
         - group_by
-        - sort
+        - head
         - join
-      show_root_heading: false
+        - lazy
+        - rename
+        - schema
+        - select
+        - shape
+        - sort
+        - to_dict
+        - to_numpy
+        - to_pandas
+        - unique
+        - with_columns
       show_source: false
       show_bases: false

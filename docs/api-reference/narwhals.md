@@ -17,5 +17,4 @@ Here are the top-level functions available in Narwhals.
         - sum
         - sum_horizontal
         - to_native
-      #show_root_heading: false
       show_source: false
