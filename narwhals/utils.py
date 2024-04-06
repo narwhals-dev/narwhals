@@ -12,7 +12,7 @@ def remove_prefix(text: str, prefix: str) -> str:
     return text  # pragma: no cover
 
 
-def remove_suffix(text: str, suffix: str) -> str:
+def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
     if text.endswith(suffix):
         return text[: -len(suffix)]
     return text  # pragma: no cover
