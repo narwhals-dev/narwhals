@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
+from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -292,37 +293,40 @@ def series_from_iterable(
 def translate_dtype(dtype: Any) -> DType:
     from narwhals import dtypes
 
-    if dtype in ("int64", "Int64"):
+    if dtype in ("int64", "Int64", "Int64[pyarrow]"):
         return dtypes.Int64()
-    if dtype == "int32":
+    if dtype in ("int32", "Int32", "Int32[pyarrow]"):
         return dtypes.Int32()
-    if dtype == "int16":
+    if dtype in ("int16", "Int16", "Int16[pyarrow]"):
         return dtypes.Int16()
-    if dtype == "int8":
+    if dtype in ("int8", "Int8", "Int8[pyarrow]"):
         return dtypes.Int8()
-    if dtype == "uint64":
+    if dtype in ("uint64", "UInt64", "UInt64[pyarrow]"):
         return dtypes.UInt64()
-    if dtype == "uint32":
+    if dtype in ("uint32", "UInt32", "UInt32[pyarrow]"):
         return dtypes.UInt32()
-    if dtype == "uint16":
+    if dtype in ("uint16", "UInt16", "UInt16[pyarrow]"):
         return dtypes.UInt16()
-    if dtype == "uint8":
+    if dtype in ("uint8", "UInt8", "UInt8[pyarrow]"):
         return dtypes.UInt8()
-    if dtype in ("float64", "Float64"):
+    if dtype in ("float64", "Float64", "Float64[pyarrow]"):
         return dtypes.Float64()
-    if dtype in ("float32", "Float32"):
+    if dtype in ("float32", "Float32", "Float32[pyarrow]"):
         return dtypes.Float32()
-    if dtype == ("string"):
+    if dtype in ("string", "string[python]", "string[pyarrow]"):
         return dtypes.String()
-    if dtype in ("bool", "boolean"):
+    if dtype in ("bool", "boolean", "boolean[pyarrow]"):
         return dtypes.Boolean()
     if str(dtype).startswith("datetime64"):
+        # todo: different time units and time zones
         return dtypes.Datetime()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
 
 def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
+    # Use the default pandas dtype here
+    # TODO: maybe this could be configurable?
     from narwhals import dtypes
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -346,10 +350,13 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
         return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
-        return "object"
+        if get_pyarrow() is not None:
+            return "string[pyarrow]"
+        return "string[python]"  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        # todo: different time units and time zones
         return "datetime64[us]"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

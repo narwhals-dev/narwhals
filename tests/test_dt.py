@@ -17,6 +17,18 @@ df_pandas = pd.DataFrame(
         "z": [7.0, 8, 9],
     }
 )
+df_pandas_nullable = pd.DataFrame(
+    {
+        "a": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
+        "b": [4, 4, 6],
+        "z": [7.0, 8, 9],
+    }
+).astype(
+    {
+        "b": "Int64",
+        "z": "Float64",
+    }
+)
 df_polars = pl.DataFrame(
     {
         "a": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
@@ -33,7 +45,7 @@ df_lazy = pl.LazyFrame(
 )
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy, df_pandas_nullable])
 def test_any_all(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = nw.to_native(df.select(nw.col("a").dt.year()))
