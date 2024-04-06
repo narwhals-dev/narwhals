@@ -1,6 +1,18 @@
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
-from narwhals.dtypes import *  # noqa: F403
+from narwhals.dtypes import Boolean
+from narwhals.dtypes import Datetime
+from narwhals.dtypes import Float32
+from narwhals.dtypes import Float64
+from narwhals.dtypes import Int8
+from narwhals.dtypes import Int16
+from narwhals.dtypes import Int32
+from narwhals.dtypes import Int64
+from narwhals.dtypes import String
+from narwhals.dtypes import UInt8
+from narwhals.dtypes import UInt16
+from narwhals.dtypes import UInt32
+from narwhals.dtypes import UInt64
 from narwhals.expression import Expr
 from narwhals.expression import all
 from narwhals.expression import col
@@ -33,4 +45,17 @@ __all__ = [
     "LazyFrame",
     "Series",
     "Expr",
+    "Int64",
+    "Int32",
+    "Int16",
+    "Int8",
+    "UInt64",
+    "UInt32",
+    "UInt16",
+    "UInt8",
+    "Float64",
+    "Float32",
+    "Boolean",
+    "String",
+    "Datetime",
 ]
