@@ -187,8 +187,8 @@ class Expr:
     def unique(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).unique())
 
-    def sort(self) -> Expr:
-        return self.__class__(lambda plx: self._call(plx).sort())
+    def sort(self, *, descending: bool = False) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
 
     # --- transform ---
     def is_between(

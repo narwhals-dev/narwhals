@@ -87,6 +87,10 @@ def test_reductions(df_raw: Any) -> None:
     assert not nw.to_native(nw.LazyFrame(df_raw).collect()["a"].is_between(1, 2))[1]
     assert nw.to_native(nw.LazyFrame(df_raw).collect()["a"].is_between(1, 2))[2]
     assert nw.LazyFrame(df_raw).collect()["a"].n_unique() == 3
+    unique = nw.LazyFrame(df_raw).collect()["a"].unique().sort()
+    assert unique[0] == 1
+    assert unique[1] == 2
+    assert unique[2] == 3
 
 
 @pytest.mark.parametrize(

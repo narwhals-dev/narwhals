@@ -52,6 +52,9 @@ class PandasSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
+    def __getitem__(self, idx: int) -> Any:
+        return self._series.iloc[idx]
+
     def _rename(self, series: Any, name: str) -> Any:
         if self._use_copy_false:
             return series.rename(name, copy=False)
@@ -293,12 +296,8 @@ class PandasSeries:
         return self._from_series(ser.sample(n=n, frac=fraction, replace=with_replacement))
 
     def unique(self) -> PandasSeries:
-        if self._implementation != "pandas":
-            raise NotImplementedError
-        import pandas as pd
-
         return self._from_series(
-            pd.Series(
+            self._series.__class__(
                 self._series.unique(), dtype=self._series.dtype, name=self._series.name
             )
         )
@@ -306,7 +305,7 @@ class PandasSeries:
     def sort(
         self,
         *,
-        descending: bool | Sequence[bool] = True,
+        descending: bool | Sequence[bool] = False,
     ) -> PandasSeries:
         ser = self._series
         return self._from_series(

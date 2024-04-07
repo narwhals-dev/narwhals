@@ -567,9 +567,9 @@ def test_invalid() -> None:
 def test_reindex(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)
     with pytest.raises(RuntimeError, match="automated index alignment"):
-        df.select("a", df["b"].sort())
+        df.select("a", df["b"].sort(descending=True))
     with pytest.raises(RuntimeError, match="automated index alignment"):
-        df.select("a", nw.col("b").sort())
+        df.select("a", nw.col("b").sort(descending=True))
 
     s = df["a"]
     with pytest.raises(ValueError, match="index alignment"):

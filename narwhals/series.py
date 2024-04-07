@@ -37,6 +37,9 @@ class Series:
         msg = f"Expected pandas or Polars Series, got: {type(series)}"  # pragma: no cover
         raise TypeError(msg)  # pragma: no cover
 
+    def __getitem__(self, idx: int) -> Any:
+        return self._series[idx]
+
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
             import polars as pl
@@ -110,8 +113,11 @@ class Series:
     def drop_nulls(self) -> Self:
         return self._from_series(self._series.drop_nulls())
 
-    def sort(self) -> Self:
-        return self._from_series(self._series.sort())
+    def unique(self) -> Self:
+        return self._from_series(self._series.unique())
+
+    def sort(self, *, descending: bool = False) -> Self:
+        return self._from_series(self._series.sort(descending=descending))
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
