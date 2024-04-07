@@ -51,3 +51,6 @@ def test_any_all(df_raw: Any) -> None:
     result = nw.to_native(df.select(nw.col("a").dt.year()))
     expected = {"a": [2020, 2020, 2020]}
     compare_dicts(result, expected)
+    result = nw.to_native(df.select(df.collect()["a"].dt.year()))
+    expected = {"a": [2020, 2020, 2020]}
+    compare_dicts(result, expected)

@@ -333,6 +333,10 @@ class PandasSeries:
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)
 
+    @property
+    def dt(self) -> PandasSeriesDateTimeNamespace:
+        return PandasSeriesDateTimeNamespace(self)
+
 
 class PandasSeriesStringNamespace:
     def __init__(self, series: PandasSeries) -> None:
@@ -343,4 +347,14 @@ class PandasSeriesStringNamespace:
 
         return self._series._from_series(
             self._series._series.str.endswith(suffix),
+        )
+
+
+class PandasSeriesDateTimeNamespace:
+    def __init__(self, series: PandasSeries) -> None:
+        self._series = series
+
+    def year(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.year,
         )

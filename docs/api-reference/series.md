@@ -9,6 +9,7 @@
         - any
         - cast
         - drop_nulls
+        - dt
         - dtype
         - is_between
         - is_in

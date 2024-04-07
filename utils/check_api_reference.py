@@ -126,8 +126,7 @@ expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] !
 series = [
     i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
 ]
-todo = {"dt"}
-if missing := set(expr).difference(series).difference(todo):
+if missing := set(expr).difference(series):
     print("In expr but not in series")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1

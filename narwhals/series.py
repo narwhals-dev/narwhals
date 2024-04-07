@@ -167,6 +167,10 @@ class Series:
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
 
+    @property
+    def dt(self) -> SeriesDateTimeNamespace:
+        return SeriesDateTimeNamespace(self)
+
 
 class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
@@ -174,3 +178,11 @@ class SeriesStringNamespace:
 
     def ends_with(self, suffix: str) -> Series:
         return self._series.__class__(self._series._series.str.ends_with(suffix))
+
+
+class SeriesDateTimeNamespace:
+    def __init__(self, series: Series) -> None:
+        self._series = series
+
+    def year(self) -> Series:
+        return self._series.__class__(self._series._series.dt.year())
