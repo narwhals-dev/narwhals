@@ -78,6 +78,10 @@ class Series:
     def dtype(self) -> Any:
         return to_narwhals_dtype(self._series.dtype, is_polars=self._is_polars)
 
+    @property
+    def name(self) -> str:
+        return self._series.name  # type: ignore[no-any-return]
+
     def cast(
         self,
         dtype: Any,
@@ -126,6 +130,9 @@ class Series:
         return self._from_series(
             self._series.sample(n=n, fraction=fraction, with_replacement=with_replacement)
         )
+
+    def alias(self, name: str) -> Self:
+        return self._from_series(self._series.alias(name=name))
 
     def sort(self, *, descending: bool = False) -> Self:
         return self._from_series(self._series.sort(descending=descending))

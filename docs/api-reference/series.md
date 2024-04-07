@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - alias
         - all
         - any
         - cast
@@ -14,6 +15,7 @@
         - max
         - mean
         - min
+        - name
         - n_unique
         - sample
         - sort

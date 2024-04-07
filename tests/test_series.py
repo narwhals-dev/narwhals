@@ -78,19 +78,21 @@ def test_dtype(df_raw: Any) -> None:
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_reductions(df_raw: Any) -> None:
-    assert nw.LazyFrame(df_raw).collect()["a"].mean() == 2.0
-    assert nw.LazyFrame(df_raw).collect()["a"].std() == 1.0
-    assert nw.LazyFrame(df_raw).collect()["a"].min() == 1
-    assert nw.LazyFrame(df_raw).collect()["a"].max() == 3
-    assert nw.LazyFrame(df_raw).collect()["a"].sum() == 6
-    assert nw.to_native(nw.LazyFrame(df_raw).collect()["a"].is_between(1, 2))[0]
-    assert not nw.to_native(nw.LazyFrame(df_raw).collect()["a"].is_between(1, 2))[1]
-    assert nw.to_native(nw.LazyFrame(df_raw).collect()["a"].is_between(1, 2))[2]
-    assert nw.LazyFrame(df_raw).collect()["a"].n_unique() == 3
-    unique = nw.LazyFrame(df_raw).collect()["a"].unique().sort()
+    s = nw.LazyFrame(df_raw).collect()["a"]
+    assert s.mean() == 2.0
+    assert s.std() == 1.0
+    assert s.min() == 1
+    assert s.max() == 3
+    assert s.sum() == 6
+    assert nw.to_native(s.is_between(1, 2))[0]
+    assert not nw.to_native(s.is_between(1, 2))[1]
+    assert nw.to_native(s.is_between(1, 2))[2]
+    assert s.n_unique() == 3
+    unique = s.unique().sort()
     assert unique[0] == 1
     assert unique[1] == 2
     assert unique[2] == 3
+    assert s.alias("foo").name == "foo"
 
 
 @pytest.mark.parametrize(
