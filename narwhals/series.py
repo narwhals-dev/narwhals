@@ -162,3 +162,15 @@ class Series:
     # unary
     def __invert__(self) -> Series:
         return self._from_series(self._series.__invert__())
+
+    @property
+    def str(self) -> SeriesStringNamespace:
+        return SeriesStringNamespace(self)
+
+
+class SeriesStringNamespace:
+    def __init__(self, series: Series) -> None:
+        self._series = series
+
+    def ends_with(self, suffix: str) -> Series:
+        return self._series.__class__(self._series._series.str.ends_with(suffix))

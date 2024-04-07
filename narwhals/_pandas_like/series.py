@@ -328,3 +328,19 @@ class PandasSeries:
             return self._series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
+
+    @property
+    def str(self) -> PandasSeriesStringNamespace:
+        return PandasSeriesStringNamespace(self)
+
+
+class PandasSeriesStringNamespace:
+    def __init__(self, series: PandasSeries) -> None:
+        self._series = series
+
+    def ends_with(self, suffix: str) -> PandasSeries:
+        # TODO make a register_expression_call for namespaces
+
+        return self._series._from_series(
+            self._series._series.str.endswith(suffix),
+        )

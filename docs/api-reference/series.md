@@ -21,6 +21,7 @@
         - sample
         - sort
         - std
+        - str
         - sum
         - to_numpy
         - to_pandas
