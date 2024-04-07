@@ -116,6 +116,17 @@ class Series:
     def unique(self) -> Self:
         return self._from_series(self._series.unique())
 
+    def sample(
+        self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        return self._from_series(
+            self._series.sample(n=n, fraction=fraction, with_replacement=with_replacement)
+        )
+
     def sort(self, *, descending: bool = False) -> Self:
         return self._from_series(self._series.sort(descending=descending))
 

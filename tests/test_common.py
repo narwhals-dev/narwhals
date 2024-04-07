@@ -429,6 +429,9 @@ def test_expr_sample(df_raw: Any) -> None:
     result_shape = nw.to_native(df.select(nw.col("a").sample(n=2)).collect()).shape
     expected = (2, 1)
     assert result_shape == expected
+    result_shape = nw.to_native(df.collect()["a"].sample(n=2)).shape
+    expected = (2,)  # type: ignore[assignment]
+    assert result_shape == expected
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])

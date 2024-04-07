@@ -15,6 +15,7 @@
         - mean
         - min
         - n_unique
+        - sample
         - sort
         - std
         - sum
