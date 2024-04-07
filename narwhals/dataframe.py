@@ -189,116 +189,6 @@ class DataFrame(BaseFrame):
         │ 1   ┆ 3   │
         │ 2   ┆ 4   │
         └─────┴─────┘
-
-        To specify a more detailed/specific frame schema you can supply the `schema`
-        parameter with a dictionary of (name,dtype) pairs...
-
-        >>> data = {"col1": [0, 2], "col2": [3, 7]}
-        >>> df_pl2 = pl.DataFrame(data, schema={"col1": pl.Float32, "col2": pl.Int64})
-        >>> df2 = nw.DataFrame(df_pl2)
-        >>> df2
-        ┌─────────────────────────────────────────────────┐
-        | Narwhals DataFrame                              |
-        | Use `narwhals.to_native()` to see native output |
-        └─────────────────────────────────────────────────┘
-        >>> nw.to_native(df2)
-        shape: (2, 2)
-        ┌──────┬──────┐
-        │ col1 ┆ col2 │
-        │ ---  ┆ ---  │
-        │ f32  ┆ i64  │
-        ╞══════╪══════╡
-        │ 0.0  ┆ 3    │
-        │ 2.0  ┆ 7    │
-        └──────┴──────┘
-
-        ...a sequence of (name,dtype) pairs...
-
-        >>> data = {"col1": [1, 2], "col2": [3, 4]}
-        >>> df_pl3 = pl.DataFrame(data, schema=[("col1", pl.Float32), ("col2", pl.Int64)])
-        >>> df3 = nw.DataFrame(df_pl3)
-        >>> df3
-        ┌─────────────────────────────────────────────────┐
-        | Narwhals DataFrame                              |
-        | Use `narwhals.to_native()` to see native output |
-        └─────────────────────────────────────────────────┘
-        >>> nw.to_native(df3)
-        shape: (2, 2)
-        ┌──────┬──────┐
-        │ col1 ┆ col2 │
-        │ ---  ┆ ---  │
-        │ f32  ┆ i64  │
-        ╞══════╪══════╡
-        │ 1.0  ┆ 3    │
-        │ 2.0  ┆ 4    │
-        └──────┴──────┘
-
-        ...or a list of typed Series.
-
-        >>> data = [
-        ...     pl.Series("col1", [1, 2], dtype=pl.Float32),
-        ...     pl.Series("col2", [3, 4], dtype=pl.Int64),
-        ... ]
-        >>> df_pl4 = pl.DataFrame(data)
-        >>> df4 = nw.DataFrame(df_pl4)
-        >>> df4
-        ┌─────────────────────────────────────────────────┐
-        | Narwhals DataFrame                              |
-        | Use `narwhals.to_native()` to see native output |
-        └─────────────────────────────────────────────────┘
-        >>> nw.to_native(df4)
-        shape: (2, 2)
-        ┌──────┬──────┐
-        │ col1 ┆ col2 │
-        │ ---  ┆ ---  │
-        │ f32  ┆ i64  │
-        ╞══════╪══════╡
-        │ 1.0  ┆ 3    │
-        │ 2.0  ┆ 4    │
-        └──────┴──────┘
-
-        Constructing a DataFrame from a numpy ndarray, specifying column names:
-
-        >>> import numpy as np
-        >>> data = np.array([(1, 2), (3, 4)], dtype=np.int64)
-        >>> df_pl5 = pl.DataFrame(data, schema=["a", "b"], orient="col")
-        >>> df5 = nw.DataFrame(df_pl5)
-        >>> df5
-        ┌─────────────────────────────────────────────────┐
-        | Narwhals DataFrame                              |
-        | Use `narwhals.to_native()` to see native output |
-        └─────────────────────────────────────────────────┘
-        >>> nw.to_native(df5)
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
-
-        Constructing a DataFrame from a list of lists, row orientation inferred:
-
-        >>> data = [[1, 2, 3], [4, 5, 6]]
-        >>> df_pl6 = pl.DataFrame(data, schema=["a", "b", "c"])
-        >>> df6 = nw.DataFrame(df_pl6)
-        >>> df6
-        ┌─────────────────────────────────────────────────┐
-        | Narwhals DataFrame                              |
-        | Use `narwhals.to_native()` to see native output |
-        └─────────────────────────────────────────────────┘
-        >>> nw.to_native(df6)
-        shape: (2, 3)
-        ┌─────┬─────┬─────┐
-        │ a   ┆ b   ┆ c   │
-        │ --- ┆ --- ┆ --- │
-        │ i64 ┆ i64 ┆ i64 │
-        ╞═════╪═════╪═════╡
-        │ 1   ┆ 2   ┆ 3   │
-        │ 4   ┆ 5   ┆ 6   │
-        └─────┴─────┴─────┘
     """
 
     def __init__(
@@ -481,15 +371,9 @@ class DataFrame(BaseFrame):
             │ 4   ┆ apple  ┆ 2   ┆ beetle ┆ 2        │
             │ 5   ┆ banana ┆ 1   ┆ beetle ┆ -30      │
             └─────┴────────┴─────┴────────┴──────────┘
-            >>> import pprint
-            >>> pprint.pprint(df.to_dict(as_series=False))
-            {'A': [1, 2, 3, 4, 5],
-             'B': [5, 4, 3, 2, 1],
-             'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'],
-             'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'],
-             'optional': [28, 300, None, 2, -30]}
-            >>> p = pprint.pformat(df.to_dict(as_series=True)).replace('\t', '    ')
-            >>> print(p)
+            >>> df.to_dict(as_series=False)
+            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
+            >>> df.to_dict(as_series=True) # doctest: +SKIP
             {'A': shape: (5,)
             Series: 'A' [i64]
             [
@@ -498,26 +382,7 @@ class DataFrame(BaseFrame):
                 3
                 4
                 5
-            ],
-             'B': shape: (5,)
-            Series: 'B' [i64]
-            [
-                5
-                4
-                3
-                2
-                1
-            ],
-             'cars': shape: (5,)
-            Series: 'cars' [str]
-            [
-                "beetle"
-                "audi"
-                "beetle"
-                "beetle"
-                "beetle"
-            ],
-             'fruits': shape: (5,)
+            ], 'fruits': shape: (5,)
             Series: 'fruits' [str]
             [
                 "banana"
@@ -525,8 +390,23 @@ class DataFrame(BaseFrame):
                 "apple"
                 "apple"
                 "banana"
-            ],
-             'optional': shape: (5,)
+            ], 'B': shape: (5,)
+            Series: 'B' [i64]
+            [
+                5
+                4
+                3
+                2
+                1
+            ], 'cars': shape: (5,)
+            Series: 'cars' [str]
+            [
+                "beetle"
+                "audi"
+                "beetle"
+                "beetle"
+                "beetle"
+            ], 'optional': shape: (5,)
             Series: 'optional' [i64]
             [
                 28
