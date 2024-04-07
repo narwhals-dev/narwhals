@@ -438,7 +438,7 @@ def test_expr_sample(df_raw: Any) -> None:
 def test_expr_na(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result_nna = nw.to_native(
-        df.filter((~nw.col("a").is_null()) & (~nw.col("z").is_null()))
+        df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
     )
     expected = {"a": [2], "b": [6], "z": [9]}
     compare_dicts(result_nna, expected)

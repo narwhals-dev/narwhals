@@ -137,6 +137,9 @@ class Series:
     def sort(self, *, descending: bool = False) -> Self:
         return self._from_series(self._series.sort(descending=descending))
 
+    def is_null(self) -> Self:
+        return self._from_series(self._series.is_null())
+
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
@@ -155,3 +158,7 @@ class Series:
 
     def __gt__(self, other: Any) -> Series:
         return self._from_series(self._series.__gt__(self._extract_native(other)))
+
+    # unary
+    def __invert__(self) -> Series:
+        return self._from_series(self._series.__invert__())

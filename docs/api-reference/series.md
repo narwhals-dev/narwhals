@@ -12,6 +12,7 @@
         - dtype
         - is_between
         - is_in
+        - is_null
         - max
         - mean
         - min
@@ -24,6 +25,5 @@
         - to_numpy
         - to_pandas
         - unique
-      show_root_heading: false
       show_source: false
       show_bases: false
