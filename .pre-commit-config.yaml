@@ -20,4 +20,12 @@ repos:
     - id: codespell
       files: \.(py|rst|md)$
       args: [--ignore-words-list=ser]
+- repo: local
+  hooks:
+    - id: check-api-reference
+      name: check-api-reference
+      pass_filenames: false
+      entry: python -m utils.check_api_reference
+      language: python
+      additional_dependencies: [polars]
 

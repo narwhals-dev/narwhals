@@ -15,6 +15,24 @@ import narwhals as nw
 from tests.utils import compare_dicts
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+df_pandas_nullable = pd.DataFrame(
+    {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+).astype(
+    {
+        "a": "Int64",
+        "b": "Int64",
+        "z": "Float64",
+    }
+)
+df_pandas_pyarrow = pd.DataFrame(
+    {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+).astype(
+    {
+        "a": "Int64[pyarrow]",
+        "b": "Int64[pyarrow]",
+        "z": "Float64[pyarrow]",
+    }
+)
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
@@ -36,7 +54,7 @@ else:  # pragma: no cover
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas, df_polars, df_lazy],
+    [df_pandas, df_polars, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
 def test_sort(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
@@ -60,7 +78,7 @@ def test_sort(df_raw: Any) -> None:
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas, df_lazy],
+    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
 def test_filter(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
@@ -84,7 +102,7 @@ def test_filter_series(df_raw: Any) -> None:
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas, df_lazy],
+    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
 def test_add(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
@@ -107,7 +125,7 @@ def test_add(df_raw: Any) -> None:
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas, df_lazy],
+    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
 def test_double(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
@@ -123,7 +141,7 @@ def test_double(df_raw: Any) -> None:
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas, df_lazy],
+    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
 def test_select(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
@@ -133,7 +151,7 @@ def test_select(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy, df_pandas_nullable])
 def test_sumh(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.with_columns(horizonal_sum=nw.sum_horizontal(nw.col("a"), nw.col("b")))
@@ -147,7 +165,9 @@ def test_sumh(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_sumh_literal(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.with_columns(horizonal_sum=nw.sum_horizontal("a", nw.col("b")))
@@ -161,7 +181,9 @@ def test_sumh_literal(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_sum_all(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.select(nw.all().sum())
@@ -170,7 +192,9 @@ def test_sum_all(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_double_selected(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.select(nw.col("a", "b") * 2)
@@ -187,7 +211,9 @@ def test_double_selected(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_rename(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.rename({"a": "x", "b": "y"})
@@ -196,7 +222,9 @@ def test_rename(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_join(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     df_right = df
@@ -220,7 +248,9 @@ def test_join(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_schema(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
@@ -236,7 +266,9 @@ def test_schema(df_raw: Any) -> None:
     assert result == expected
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_columns(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.columns
@@ -397,19 +429,24 @@ def test_expr_sample(df_raw: Any) -> None:
     result_shape = nw.to_native(df.select(nw.col("a").sample(n=2)).collect()).shape
     expected = (2, 1)
     assert result_shape == expected
+    result_shape = nw.to_native(df.collect()["a"].sample(n=2)).shape
+    expected = (2,)  # type: ignore[assignment]
+    assert result_shape == expected
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])
 def test_expr_na(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result_nna = nw.to_native(
-        df.filter((~nw.col("a").is_null()) & (~nw.col("z").is_null()))
+        df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
     )
     expected = {"a": [2], "b": [6], "z": [9]}
     compare_dicts(result_nna, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_head(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = nw.to_native(df.head(2))
@@ -420,7 +457,9 @@ def test_head(df_raw: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_unique(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = nw.to_native(df.unique("b").sort("b"))
@@ -435,6 +474,9 @@ def test_unique(df_raw: Any) -> None:
 def test_drop_nulls(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = nw.to_native(df.select(nw.col("a").drop_nulls()))
+    expected = {"a": [3, 2]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.select(df.collect()["a"].drop_nulls()))
     expected = {"a": [3, 2]}
     compare_dicts(result, expected)
 
@@ -505,7 +547,9 @@ def test_to_dict() -> None:
         pl_assert_series_equal(result[key], expected[key])
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_any_all(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = nw.to_native(df.select((nw.all() > 1).all()))
@@ -525,8 +569,10 @@ def test_invalid() -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas])
 def test_reindex(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)
-    with pytest.raises(RuntimeError, match="implicit index alignment"):
-        df.select("a", df["b"].sort())
+    with pytest.raises(RuntimeError, match="automated index alignment"):
+        df.select("a", df["b"].sort(descending=True))
+    with pytest.raises(RuntimeError, match="automated index alignment"):
+        df.select("a", nw.col("b").sort(descending=True))
 
     s = df["a"]
     with pytest.raises(ValueError, match="index alignment"):

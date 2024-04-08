@@ -4,19 +4,20 @@
     handler: python
     options:
       members:
-        - schema
+        - collect
         - columns
-        - with_columns
-        - select
-        - rename
-        - head
         - drop
-        - unique
         - filter
         - group_by
-        - sort
+        - head
         - join
-        - collect
+        - lazy
+        - rename
+        - schema
+        - select
+        - sort
+        - unique
+        - with_columns
       show_root_heading: false
       show_source: false
       show_bases: false

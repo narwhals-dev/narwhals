@@ -13,8 +13,12 @@ if TYPE_CHECKING:
 
 
 def extract_native(expr: Expr, other: Any) -> Any:
+    from narwhals.series import Series
+
     if isinstance(other, Expr):
         return other._call(expr)
+    if isinstance(other, Series):
+        return other._series
     return other
 
 
@@ -186,6 +190,9 @@ class Expr:
 
     def unique(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).unique())
+
+    def sort(self, *, descending: bool = False) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
 
     # --- transform ---
     def is_between(

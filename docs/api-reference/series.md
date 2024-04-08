@@ -5,24 +5,27 @@
     options:
       members:
         - alias
-        - name
-        - dtype
-        - shape
-        - rename
+        - all
+        - any
         - cast
-        - item
+        - drop_nulls
+        - dt
+        - dtype
         - is_between
         - is_in
         - is_null
-        - drop_nulls
+        - max
+        - mean
+        - min
+        - name
         - n_unique
-        - unique
-        - zip_with
         - sample
+        - sort
+        - std
+        - str
+        - sum
         - to_numpy
         - to_pandas
-        - mean
-        - std
-      show_root_heading: false
+        - unique
       show_source: false
       show_bases: false

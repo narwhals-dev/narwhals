@@ -37,6 +37,9 @@ class Series:
         msg = f"Expected pandas or Polars Series, got: {type(series)}"  # pragma: no cover
         raise TypeError(msg)  # pragma: no cover
 
+    def __getitem__(self, idx: int) -> Any:
+        return self._series[idx]
+
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
             import polars as pl
@@ -75,6 +78,10 @@ class Series:
     def dtype(self) -> Any:
         return to_narwhals_dtype(self._series.dtype, is_polars=self._is_polars)
 
+    @property
+    def name(self) -> str:
+        return self._series.name  # type: ignore[no-any-return]
+
     def cast(
         self,
         dtype: Any,
@@ -86,14 +93,62 @@ class Series:
     def mean(self) -> Any:
         return self._series.mean()
 
+    def any(self) -> Any:
+        return self._series.any()
+
+    def all(self) -> Any:
+        return self._series.all()
+
+    def min(self) -> Any:
+        return self._series.min()
+
+    def max(self) -> Any:
+        return self._series.max()
+
+    def sum(self) -> Any:
+        return self._series.sum()
+
     def std(self) -> Any:
         return self._series.std()
 
     def is_in(self, other: Any) -> Self:
         return self._from_series(self._series.is_in(self._extract_native(other)))
 
-    def sort(self) -> Self:
-        return self._from_series(self._series.sort())
+    def drop_nulls(self) -> Self:
+        return self._from_series(self._series.drop_nulls())
+
+    def unique(self) -> Self:
+        return self._from_series(self._series.unique())
+
+    def sample(
+        self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        return self._from_series(
+            self._series.sample(n=n, fraction=fraction, with_replacement=with_replacement)
+        )
+
+    def alias(self, name: str) -> Self:
+        return self._from_series(self._series.alias(name=name))
+
+    def sort(self, *, descending: bool = False) -> Self:
+        return self._from_series(self._series.sort(descending=descending))
+
+    def is_null(self) -> Self:
+        return self._from_series(self._series.is_null())
+
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> Self:
+        return self._from_series(
+            self._series.is_between(lower_bound, upper_bound, closed=closed)
+        )
+
+    def n_unique(self) -> int:
+        return self._series.n_unique()  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
         return self._series.to_numpy()
@@ -103,3 +158,31 @@ class Series:
 
     def __gt__(self, other: Any) -> Series:
         return self._from_series(self._series.__gt__(self._extract_native(other)))
+
+    # unary
+    def __invert__(self) -> Series:
+        return self._from_series(self._series.__invert__())
+
+    @property
+    def str(self) -> SeriesStringNamespace:
+        return SeriesStringNamespace(self)
+
+    @property
+    def dt(self) -> SeriesDateTimeNamespace:
+        return SeriesDateTimeNamespace(self)
+
+
+class SeriesStringNamespace:
+    def __init__(self, series: Series) -> None:
+        self._series = series
+
+    def ends_with(self, suffix: str) -> Series:
+        return self._series.__class__(self._series._series.str.ends_with(suffix))
+
+
+class SeriesDateTimeNamespace:
+    def __init__(self, series: Series) -> None:
+        self._series = series
+
+    def year(self) -> Series:
+        return self._series.__class__(self._series._series.dt.year())
