@@ -7,8 +7,7 @@ For example:
 ```python
 import narwhals as nw
 
-nw: DataFrame
-nw.with_columns(
+df.with_columns(
     a_mean = nw.col('a').mean(),
     a_std = nw.col('a').std(),
 )
@@ -20,8 +19,7 @@ However,
 ```python
 import narwhals as nw
 
-nw: DataFrame
-nw.with_columns(
+df.with_columns(
     a_ewm_mean = nw.col('a').ewm_mean(alpha=.7),
 )
 ```
