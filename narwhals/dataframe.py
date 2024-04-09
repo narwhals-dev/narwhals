@@ -157,6 +157,40 @@ class BaseFrame:
 
 
 class DataFrame(BaseFrame):
+    r"""
+    Two-dimensional data structure representing data as a table with rows and columns.
+
+    Arguments:
+        df: A pandas-like dataframe (Pandas, cuDF or Modin), a Polars dataframe,
+             a narwhals DataFrame or a narwhals LazyFrame.
+
+        is_polars: if set to `True`, assume the dataframe to be of Polars type.
+
+    Examples:
+        Constructing a DataFrame from a dictionary:
+
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df = nw.DataFrame(df_pl)
+        >>> df
+        ┌─────────────────────────────────────────────────┐
+        | Narwhals DataFrame                              |
+        | Use `narwhals.to_native()` to see native output |
+        └─────────────────────────────────────────────────┘
+        >>> nw.to_native(df)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+    """
+
     def __init__(
         self,
         df: Any,
@@ -190,9 +224,92 @@ class DataFrame(BaseFrame):
             raise TypeError(msg)
 
     def to_pandas(self) -> Any:
+        r"""
+        Convert this DataFrame to a pandas DataFrame.
+
+        Returns:
+            A pandas DataFrame.
+
+        Notes:
+            This operation requires that `pandas` is installed.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> df.to_pandas()
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+
+            Null values in numeric columns are converted to `NaN`.
+
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, None],
+            ...         "bar": [6.0, None, 8.0],
+            ...         "ham": [None, "b", "c"],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> df.to_pandas()
+               foo  bar   ham
+            0  1.0  6.0  None
+            1  2.0  NaN     b
+            2  NaN  8.0     c
+        """
         return self._dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
+        r"""
+        Convert this DataFrame to a NumPy ndarray.
+
+        Returns:
+            A NumPy ndarray.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.5, 7.0, 8.5],
+            ...         "ham": ["a", "b", "c"],
+            ...     },
+            ...     schema_overrides={"foo": pl.UInt8, "bar": pl.Float32},
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+
+            Export to a standard 2D numpy array.
+
+            >>> df.to_numpy()
+            array([[1, 6.5, 'a'],
+                   [2, 7.0, 'b'],
+                   [3, 8.5, 'c']], dtype=object)
+        """
         return self._dataframe.to_numpy()
 
     @property
@@ -216,6 +333,89 @@ class DataFrame(BaseFrame):
         return Series(self._dataframe[col_name])
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
+        r"""
+        Convert DataFrame to a dictionary mapping column name to values.
+
+        Arguments:
+            as_series: If set to true ``True`` values are Series, otherwise
+                        values are Any.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "A": [1, 2, 3, 4, 5],
+            ...         "fruits": ["banana", "banana", "apple", "apple", "banana"],
+            ...         "B": [5, 4, 3, 2, 1],
+            ...         "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+            ...         "optional": [28, 300, None, 2, -30],
+            ...     }
+            ... )
+            >>> df = nw.DataFrame(df_pl)
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(df)
+            shape: (5, 5)
+            ┌─────┬────────┬─────┬────────┬──────────┐
+            │ A   ┆ fruits ┆ B   ┆ cars   ┆ optional │
+            │ --- ┆ ---    ┆ --- ┆ ---    ┆ ---      │
+            │ i64 ┆ str    ┆ i64 ┆ str    ┆ i64      │
+            ╞═════╪════════╪═════╪════════╪══════════╡
+            │ 1   ┆ banana ┆ 5   ┆ beetle ┆ 28       │
+            │ 2   ┆ banana ┆ 4   ┆ audi   ┆ 300      │
+            │ 3   ┆ apple  ┆ 3   ┆ beetle ┆ null     │
+            │ 4   ┆ apple  ┆ 2   ┆ beetle ┆ 2        │
+            │ 5   ┆ banana ┆ 1   ┆ beetle ┆ -30      │
+            └─────┴────────┴─────┴────────┴──────────┘
+            >>> df.to_dict(as_series=False)
+            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
+            >>> df.to_dict(as_series=True) # doctest: +SKIP
+            {'A': shape: (5,)
+            Series: 'A' [i64]
+            [
+                1
+                2
+                3
+                4
+                5
+            ], 'fruits': shape: (5,)
+            Series: 'fruits' [str]
+            [
+                "banana"
+                "banana"
+                "apple"
+                "apple"
+                "banana"
+            ], 'B': shape: (5,)
+            Series: 'B' [i64]
+            [
+                5
+                4
+                3
+                2
+                1
+            ], 'cars': shape: (5,)
+            Series: 'cars' [str]
+            [
+                "beetle"
+                "audi"
+                "beetle"
+                "beetle"
+                "beetle"
+            ], 'optional': shape: (5,)
+            Series: 'optional' [i64]
+            [
+                28
+                300
+                null
+                2
+                -30
+            ]}
+        """
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
