@@ -1228,6 +1228,46 @@ class LazyFrame(BaseFrame):
             raise TypeError(msg)
 
     def collect(self) -> DataFrame:
+        r"""
+        Materialize this LazyFrame into a DataFrame.
+
+        Returns:
+            DataFrame
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": ["a", "b", "a", "b", "b", "c"],
+            ...         "b": [1, 2, 3, 4, 5, 6],
+            ...         "c": [6, 5, 4, 3, 2, 1],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
+            >>> df
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(df).sort("a")
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 4   ┆ 10  │
+            │ b   ┆ 11  ┆ 10  │
+            │ c   ┆ 6   ┆ 1   │
+            └─────┴─────┴─────┘
+        """
         return DataFrame(
             self._dataframe.collect(),
         )
@@ -1235,6 +1275,23 @@ class LazyFrame(BaseFrame):
     # inherited
     @property
     def schema(self) -> dict[str, DType]:
+        r"""
+        Get a dict[column name, DType].
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf.schema # doctest: +SKIP
+            OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
+        """
         return super().schema
 
     @property
@@ -1254,21 +1311,385 @@ class LazyFrame(BaseFrame):
         return super().select(*exprs, **named_exprs)
 
     def rename(self, mapping: dict[str, str]) -> Self:
+        r"""
+        Rename column names.
+
+        Arguments:
+            mapping: Key value pairs that map from old name to new name, or a
+                      function that takes the old name as input and returns the
+                      new name.
+
+        Notes:
+            If existing names are swapped (e.g. 'A' points to 'B' and 'B'
+             points to 'A'), polars will block projection and predicate
+             pushdowns at this node.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6, 7, 8],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.rename({"foo": "apple"}).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 3)
+            ┌───────┬─────┬─────┐
+            │ apple ┆ bar ┆ ham │
+            │ ---   ┆ --- ┆ --- │
+            │ i64   ┆ i64 ┆ str │
+            ╞═══════╪═════╪═════╡
+            │ 1     ┆ 6   ┆ a   │
+            │ 2     ┆ 7   ┆ b   │
+            │ 3     ┆ 8   ┆ c   │
+            └───────┴─────┴─────┘
+        """
         return super().rename(mapping)
 
     def head(self, n: int) -> Self:
+        r"""
+        Get the first `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 4, 5, 6],
+            ...         "b": [7, 8, 9, 10, 11, 12],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.head(5).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (5, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 7   │
+            │ 2   ┆ 8   │
+            │ 3   ┆ 9   │
+            │ 4   ┆ 10  │
+            │ 5   ┆ 11  │
+            └─────┴─────┘
+            >>> lframe = lf.head(2).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 7   │
+            │ 2   ┆ 8   │
+            └─────┴─────┘
+        """
         return super().head(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
+        r"""
+        Remove columns from the LazyFrame.
+
+        Arguments:
+            *columns: Names of the columns that should be removed from the
+                      dataframe. Accepts column selector input.
+
+        Examples:
+            Drop a single column by passing the name of that column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.drop("ham").collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ i64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 6.0 │
+            │ 2   ┆ 7.0 │
+            │ 3   ┆ 8.0 │
+            └─────┴─────┘
+
+            Use positional arguments to drop multiple columns.
+
+            >>> lframe = lf.drop("foo", "ham").collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 1)
+            ┌─────┐
+            │ bar │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 6.0 │
+            │ 7.0 │
+            │ 8.0 │
+            └─────┘
+        """
         return super().drop(*columns)
 
     def unique(self, subset: str | list[str]) -> Self:
+        """
+        Drop duplicate rows from this LazyFrame.
+
+        Arguments:
+            subset: Column name(s) to consider when identifying duplicate rows.
+                     If set to `None`, use all columns.
+
+        Returns:
+            LazyFrame: LazyFrame with unique rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3, 1],
+            ...         "bar": ["a", "a", "a", "a"],
+            ...         "ham": ["b", "b", "b", "b"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.unique(None).collect().sort("foo")
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            │ 2   ┆ a   ┆ b   │
+            │ 3   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+            >>> lframe = lf.unique(subset=["bar", "ham"]).collect().sort("foo")
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+        """
         return super().unique(subset)
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+        r"""
+        Filter the rows in the LazyFrame based on a predicate expression.
+
+        The original order of the remaining rows is preserved.
+
+        Arguments:
+            *predicates: Expression that evaluates to a boolean Series.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6, 7, 8],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+
+            Filter on one condition:
+
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.filter(nw.col("foo") > 1).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 2   ┆ 7   ┆ b   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+
+            Filter on multiple conditions:
+
+            >>> lframe = lf.filter((nw.col("foo") < 3) & (nw.col("ham") == "a")).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+
+            Provide multiple filters using `*args` syntax:
+
+            >>> lframe = lf.filter(
+            ...     nw.col("foo") == 1,
+            ...     nw.col("ham") == "a",
+            ... ).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+
+            Filter on an OR condition:
+
+            >>> lframe = lf.filter((nw.col("foo") == 1) | (nw.col("ham") == "c")).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+        """
         return super().filter(*predicates)
 
     def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
+        r"""
+        Start a group by operation.
+
+        Arguments:
+            *keys:
+                Column(s) to group by. Accepts expression input. Strings are
+                parsed as column names.
+
+        Examples:
+            Group by one column and call `agg` to compute the grouped sum of
+            another column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": ["a", "b", "a", "b", "c"],
+            ...         "b": [1, 2, 1, 3, 3],
+            ...         "c": [5, 4, 3, 2, 1],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.group_by("a").agg(nw.col("b").sum()).collect().sort("a")
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ str ┆ i64 │
+            ╞═════╪═════╡
+            │ a   ┆ 2   │
+            │ b   ┆ 5   │
+            │ c   ┆ 3   │
+            └─────┴─────┘
+
+            Group by multiple columns by passing a list of column names.
+
+            >>> lframe = lf.group_by(["a", "b"]).agg(nw.max("c")).collect().sort(["a", "b"])
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (4, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 1   ┆ 5   │
+            │ b   ┆ 2   ┆ 4   │
+            │ b   ┆ 3   ┆ 2   │
+            │ c   ┆ 3   ┆ 1   │
+            └─────┴─────┴─────┘
+        """
         from narwhals.group_by import LazyGroupBy
 
         return LazyGroupBy(self, *keys)
@@ -1279,6 +1700,91 @@ class LazyFrame(BaseFrame):
         *more_by: str,
         descending: bool | Sequence[bool] = False,
     ) -> Self:
+        r"""
+        Sort the LazyFrame by the given columns.
+
+        Arguments:
+            by: Column(s) to sort by. Accepts expression input. Strings are
+                 parsed as column names.
+
+            *more_by: Additional columns to sort by, specified as positional
+                       arguments.
+
+            descending: Sort in descending order. When sorting by multiple
+                         columns, can be specified per column by passing a
+                         sequence of booleans.
+
+        Examples:
+            Pass a single column name to sort by that column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": [1, 2, None],
+            ...         "b": [6.0, 5.0, 4.0],
+            ...         "c": ["a", "c", "b"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.sort("a").collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ null ┆ 4.0 ┆ b   │
+            │ 1    ┆ 6.0 ┆ a   │
+            │ 2    ┆ 5.0 ┆ c   │
+            └──────┴─────┴─────┘
+
+            Sort by multiple columns by passing a list of columns.
+
+            >>> lframe = lf.sort(["c", "a"], descending=True).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ 2    ┆ 5.0 ┆ c   │
+            │ null ┆ 4.0 ┆ b   │
+            │ 1    ┆ 6.0 ┆ a   │
+            └──────┴─────┴─────┘
+
+            Or use positional arguments to sort by multiple columns in the same way.
+
+            >>> lframe = lf.sort("c", "a", descending=[False, True]).collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (3, 3)
+            ┌──────┬─────┬─────┐
+            │ a    ┆ b   ┆ c   │
+            │ ---  ┆ --- ┆ --- │
+            │ i64  ┆ f64 ┆ str │
+            ╞══════╪═════╪═════╡
+            │ 1    ┆ 6.0 ┆ a   │
+            │ null ┆ 4.0 ┆ b   │
+            │ 2    ┆ 5.0 ┆ c   │
+            └──────┴─────┴─────┘
+        """
         return super().sort(by, *more_by, descending=descending)
 
     def join(
@@ -1289,4 +1795,58 @@ class LazyFrame(BaseFrame):
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
+        r"""
+        Add a join operation to the Logical Plan.
+
+        Arguments:
+            other: Lazy DataFrame to join with.
+
+            how: {'inner'}
+                  Join strategy.
+
+                  * *inner*: Returns rows that have matching values in both
+                              tables
+
+            left_on: Join column of the left DataFrame.
+
+            right_on: Join column of the right DataFrame.
+
+        Returns:
+            A new joined LazyFrame
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> other_lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "apple": ["x", "y", "z"],
+            ...         "ham": ["a", "b", "d"],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> other_lf = nw.LazyFrame(other_lf_pl)
+            >>> lframe = lf.join(other_lf, left_on="ham", right_on="ham").collect()
+            >>> lframe
+            ┌─────────────────────────────────────────────────┐
+            | Narwhals DataFrame                              |
+            | Use `narwhals.to_native()` to see native output |
+            └─────────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (2, 4)
+            ┌─────┬─────┬─────┬───────┐
+            │ foo ┆ bar ┆ ham ┆ apple │
+            │ --- ┆ --- ┆ --- ┆ ---   │
+            │ i64 ┆ f64 ┆ str ┆ str   │
+            ╞═════╪═════╪═════╪═══════╡
+            │ 1   ┆ 6.0 ┆ a   ┆ x     │
+            │ 2   ┆ 7.0 ┆ b   ┆ y     │
+            └─────┴─────┴─────┴───────┘
+        """
         return super().join(other, how=how, left_on=left_on, right_on=right_on)
