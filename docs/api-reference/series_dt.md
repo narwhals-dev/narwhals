@@ -1,4 +1,4 @@
-# `narwhals.Series.str`
+# `narwhals.Series.dt`
 
 ::: narwhals.series.SeriesStringNamespace
     handler: python
