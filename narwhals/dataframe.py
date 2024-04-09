@@ -1152,23 +1152,6 @@ class LazyFrame(BaseFrame):
             │ 2     ┆ 7   ┆ b   │
             │ 3     ┆ 8   ┆ c   │
             └───────┴─────┴─────┘
-            >>> lframe = lf.rename(lambda column_name: "c" + column_name[1:]).collect()
-            >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ coo ┆ car ┆ cam │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            │ 2   ┆ 7   ┆ b   │
-            │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
         """
         return super().rename(mapping)
 
@@ -1178,12 +1161,6 @@ class LazyFrame(BaseFrame):
 
         Arguments:
             n: Number of rows to return.
-
-        Notes:
-            Consider using the `fetch` operation if you only want to test
-             your query. The `fetch` operation will load the first `n`
-             rows at the scan level, whereas the `head`/`limit` are
-             applied at the end.
 
         Examples:
             >>> import polars as pl
@@ -1271,27 +1248,6 @@ class LazyFrame(BaseFrame):
             │ 2   ┆ 7.0 │
             │ 3   ┆ 8.0 │
             └─────┴─────┘
-
-            Drop multiple columns by passing a selector.
-
-            >>> import polars.selectors as cs
-            >>> lframe = lf.drop(cs.numeric()).collect()
-            >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (3, 1)
-            ┌─────┐
-            │ ham │
-            │ --- │
-            │ str │
-            ╞═════╡
-            │ a   │
-            │ b   │
-            │ c   │
-            └─────┘
 
             Use positional arguments to drop multiple columns.
 
