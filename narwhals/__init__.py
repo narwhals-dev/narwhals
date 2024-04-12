@@ -27,7 +27,7 @@ from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 
-__version__ = "0.7.9"
+__version__ = "0.7.10"
 
 __all__ = [
     "concat",
