@@ -52,6 +52,9 @@ class PandasSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
+    def __getitem__(self, idx: int) -> Any:
+        return self._series.iloc[idx]
+
     def _rename(self, series: Any, name: str) -> Any:
         if self._use_copy_false:
             return series.rename(name, copy=False)
@@ -257,6 +260,14 @@ class PandasSeries:
         ser = self._series
         return ser.mean()
 
+    def std(
+        self,
+        *,
+        correction: float = 1.0,
+    ) -> Any:
+        ser = self._series
+        return ser.std(ddof=correction)
+
     def len(self) -> Any:
         return len(self._series)
 
@@ -285,12 +296,8 @@ class PandasSeries:
         return self._from_series(ser.sample(n=n, frac=fraction, replace=with_replacement))
 
     def unique(self) -> PandasSeries:
-        if self._implementation != "pandas":
-            raise NotImplementedError
-        import pandas as pd
-
         return self._from_series(
-            pd.Series(
+            self._series.__class__(
                 self._series.unique(), dtype=self._series.dtype, name=self._series.name
             )
         )
@@ -298,7 +305,7 @@ class PandasSeries:
     def sort(
         self,
         *,
-        descending: bool | Sequence[bool] = True,
+        descending: bool | Sequence[bool] = False,
     ) -> PandasSeries:
         ser = self._series
         return self._from_series(
@@ -321,3 +328,33 @@ class PandasSeries:
             return self._series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
+
+    @property
+    def str(self) -> PandasSeriesStringNamespace:
+        return PandasSeriesStringNamespace(self)
+
+    @property
+    def dt(self) -> PandasSeriesDateTimeNamespace:
+        return PandasSeriesDateTimeNamespace(self)
+
+
+class PandasSeriesStringNamespace:
+    def __init__(self, series: PandasSeries) -> None:
+        self._series = series
+
+    def ends_with(self, suffix: str) -> PandasSeries:
+        # TODO make a register_expression_call for namespaces
+
+        return self._series._from_series(
+            self._series._series.str.endswith(suffix),
+        )
+
+
+class PandasSeriesDateTimeNamespace:
+    def __init__(self, series: PandasSeries) -> None:
+        self._series = series
+
+    def year(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.year,
+        )

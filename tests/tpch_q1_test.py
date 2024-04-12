@@ -103,18 +103,16 @@ def test_q1_w_generic_funcs(library: str) -> None:
         )
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
-            [
-                nw.sum("l_quantity").alias("sum_qty"),
-                nw.sum("l_extendedprice").alias("sum_base_price"),
-                (nw.col("l_extendedprice") * (1 - nw.col("l_discount")))
-                .sum()
-                .alias("sum_disc_price"),
-                nw.col("charge").sum().alias("sum_charge"),
-                nw.mean("l_quantity").alias("avg_qty"),
-                nw.mean("l_extendedprice").alias("avg_price"),
-                nw.mean("l_discount").alias("avg_disc"),
-                nw.len().alias("count_order"),
-            ],
+            nw.sum("l_quantity").alias("sum_qty"),
+            nw.sum("l_extendedprice").alias("sum_base_price"),
+            (nw.col("l_extendedprice") * (1 - nw.col("l_discount")))
+            .sum()
+            .alias("sum_disc_price"),
+            nw.col("charge").sum().alias("sum_charge"),
+            nw.mean("l_quantity").alias("avg_qty"),
+            nw.mean("l_extendedprice").alias("avg_price"),
+            nw.mean("l_discount").alias("avg_disc"),
+            count_order=nw.len(),
         )
         .sort(["l_returnflag", "l_linestatus"])
     )

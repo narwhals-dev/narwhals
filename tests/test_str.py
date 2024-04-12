@@ -36,3 +36,9 @@ def test_ends_with(df_raw: Any) -> None:
         "a": [True, False],
     }
     compare_dicts(result_native, expected)
+    result = df.select(df.collect()["a"].str.ends_with("das"))
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [True, False],
+    }
+    compare_dicts(result_native, expected)

@@ -6,14 +6,15 @@ Here are the top-level functions available in Narwhals.
     handler: python
     options:
       members:
-        - from_native
-        - to_native
+        - all
         - col
-        - min
+        - concat
+        - from_native
+        - len
         - max
         - mean
+        - min
         - sum
-        - len
         - sum_horizontal
-      #show_root_heading: false
+        - to_native
       show_source: false

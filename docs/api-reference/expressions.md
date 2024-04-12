@@ -5,19 +5,23 @@
     options:
       members:
         - alias
+        - all
+        - any
         - cast
-        - mean
-        - sum
-        - min
-        - max
-        - n_unique
-        - unique
+        - dt
+        - drop_nulls
         - is_between
         - is_in
         - is_null
-        - drop_nulls
+        - max
+        - mean
+        - min
+        - n_unique
+        - unique
         - sample
+        - sort
+        - std
         - str
-      show_root_heading: false
+        - sum
       show_source: false
       show_bases: false

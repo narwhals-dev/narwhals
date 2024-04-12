@@ -151,6 +151,9 @@ class PandasExpr:
     def mean(self) -> Self:
         return register_expression_call(self, "mean")
 
+    def std(self) -> Self:
+        return register_expression_call(self, "std")
+
     def any(self) -> Self:
         return register_expression_call(self, "any")
 
@@ -179,6 +182,9 @@ class PandasExpr:
 
     def drop_nulls(self) -> Self:
         return register_expression_call(self, "drop_nulls")
+
+    def sort(self, *, descending: bool = False) -> Self:
+        return register_expression_call(self, "sort", descending=descending)
 
     def n_unique(self) -> Self:
         return register_expression_call(self, "n_unique")
