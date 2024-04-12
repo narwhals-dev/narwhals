@@ -1393,7 +1393,7 @@ class LazyFrame(BaseFrame):
             ...     }
             ... )
             >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.with_columns((nw.col("a") ** 2).alias("a^2")).collect()
+            >>> lframe = lf.with_columns((nw.col("a") * 2).alias("2a")).collect()
             >>> lframe
             ┌─────────────────────────────────────────────────┐
             | Narwhals DataFrame                              |
@@ -1401,16 +1401,16 @@ class LazyFrame(BaseFrame):
             └─────────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (4, 4)
-            ┌─────┬──────┬───────┬──────┐
-            │ a   ┆ b    ┆ c     ┆ a^2  │
-            │ --- ┆ ---  ┆ ---   ┆ ---  │
-            │ i64 ┆ f64  ┆ bool  ┆ f64  │
-            ╞═════╪══════╪═══════╪══════╡
-            │ 1   ┆ 0.5  ┆ true  ┆ 1.0  │
-            │ 2   ┆ 4.0  ┆ true  ┆ 4.0  │
-            │ 3   ┆ 10.0 ┆ false ┆ 9.0  │
-            │ 4   ┆ 13.0 ┆ true  ┆ 16.0 │
-            └─────┴──────┴───────┴──────┘
+            ┌─────┬──────┬───────┬─────┐
+            │ a   ┆ b    ┆ c     ┆ 2a  │
+            │ --- ┆ ---  ┆ ---   ┆ --- │
+            │ i64 ┆ f64  ┆ bool  ┆ i64 │
+            ╞═════╪══════╪═══════╪═════╡
+            │ 1   ┆ 0.5  ┆ true  ┆ 2   │
+            │ 2   ┆ 4.0  ┆ true  ┆ 4   │
+            │ 3   ┆ 10.0 ┆ false ┆ 6   │
+            │ 4   ┆ 13.0 ┆ true  ┆ 8   │
+            └─────┴──────┴───────┴─────┘
         """
         return super().with_columns(*exprs, **named_exprs)
 
