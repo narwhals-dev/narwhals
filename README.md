@@ -49,12 +49,10 @@ with Ibis (though note that the two projects have different goals and are not in
 
 <h1 align="center">
 	<img
-		width="600"
+		width="800"
 		alt="Comparison between Narwhals (0.3 MB) and Ibis (~310 MB)"
 		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/641c1ad1-841c-47ab-876d-8f462f119482">
 </h1>
-
-
    
 ## Example
 
