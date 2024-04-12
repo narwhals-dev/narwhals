@@ -32,30 +32,34 @@ import narwhals as nw
         unique=True,
     ),
 )  # type: ignore[misc]
-def test_join(integers: st.SearchStrategy[list[int]],
-              other_integers: st.SearchStrategy[list[int]],
-              floats: st.SearchStrategy[list[float]],
-              cols: st.SearchStrategy[list[str]],
+def test_join(
+    integers: st.SearchStrategy[list[int]],
+    other_integers: st.SearchStrategy[list[int]],
+    floats: st.SearchStrategy[list[float]],
+    cols: st.SearchStrategy[list[str]],
 ) -> None:
     data = {"a": integers, "b": other_integers, "c": floats}
-    
+
     df_polars = pl.DataFrame(data)
     df_polars2 = pl.DataFrame(data)
     df_pl = nw.DataFrame(df_polars)
     other_pl = nw.DataFrame(df_polars2)
     dframe_pl = df_pl.join(other_pl, left_on=cols, right_on=cols, how="inner")
-    
+
     df_pandas = pd.DataFrame(data)
     df_pandas2 = pd.DataFrame(data)
     df_pd = nw.DataFrame(df_pandas)
     other_pd = nw.DataFrame(df_pandas2)
     dframe_pd = df_pd.join(other_pd, left_on=cols, right_on=cols, how="inner")
-    
+
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()
-    dframe_pd1 = dframe_pd1.sort_values(by=dframe_pd1.columns.to_list(), ignore_index=True)
+    dframe_pd1 = dframe_pd1.sort_values(
+        by=dframe_pd1.columns.to_list(), ignore_index=True
+    )
 
     dframe_pd2 = nw.to_native(dframe_pd)
-    dframe_pd2 = dframe_pd2.sort_values(by=dframe_pd2.columns.to_list(), ignore_index=True)
+    dframe_pd2 = dframe_pd2.sort_values(
+        by=dframe_pd2.columns.to_list(), ignore_index=True
+    )
 
     assert_frame_equal(dframe_pd1, dframe_pd2)
-
