@@ -41,6 +41,20 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Polars, you'll get Polars back
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
+
+## Package size
+
+At only 0.3 MB and with **zero** dependencies, Narwhals is about as lightweight as it gets. Here's a comparison
+with Ibis (though note that the two projects have different goals and are not in competition):
+
+<h1 align="center">
+	<img
+		width="600"
+		alt="Comparison between Narwhals (0.3 MB) and Ibis (~310 MB)"
+		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/641c1ad1-841c-47ab-876d-8f462f119482">
+</h1>
+
+
    
 ## Example
 
