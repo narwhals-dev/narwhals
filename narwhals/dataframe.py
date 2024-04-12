@@ -60,20 +60,6 @@ class BaseFrame:
             return arg._call(self.__narwhals_namespace__())
         return arg
 
-    def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals DataFrame                              "
-        length = len(header)
-        return (
-            "┌"
-            + "─" * length
-            + "┐\n"
-            + f"|{header}|\n"
-            + "| Use `narwhals.to_native()` to see native output |\n"
-            + "└"
-            + "─" * length
-            + "┘"
-        )
-
     @property
     def schema(self) -> dict[str, DType]:
         return {
@@ -175,10 +161,10 @@ class DataFrame(BaseFrame):
         >>> df_pl = pl.DataFrame(data)
         >>> df = nw.DataFrame(df_pl)
         >>> df
-        ┌─────────────────────────────────────────────────┐
-        | Narwhals DataFrame                              |
-        | Use `narwhals.to_native()` to see native output |
-        └─────────────────────────────────────────────────┘
+        ┌───────────────────────────────────────────────┐
+        | Narwhals DataFrame                            |
+        | Use `narwhals.to_native` to see native output |
+        └───────────────────────────────────────────────┘
         >>> nw.to_native(df)
         shape: (2, 2)
         ┌─────┬─────┐
@@ -223,6 +209,20 @@ class DataFrame(BaseFrame):
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
 
+    def __repr__(self) -> str:  # pragma: no cover
+        header = " Narwhals DataFrame                            "
+        length = len(header)
+        return (
+            "┌"
+            + "─" * length
+            + "┐\n"
+            + f"|{header}|\n"
+            + "| Use `narwhals.to_native` to see native output |\n"
+            + "└"
+            + "─" * length
+            + "┘"
+        )
+
     def to_pandas(self) -> Any:
         r"""
         Convert this DataFrame to a pandas DataFrame.
@@ -245,10 +245,10 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> df.to_pandas()
                foo  bar ham
             0    1  6.0   a
@@ -266,10 +266,10 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> df.to_pandas()
                foo  bar   ham
             0  1.0  6.0  None
@@ -298,10 +298,10 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
 
             Export to a standard 2D numpy array.
 
@@ -354,10 +354,10 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(df)
             shape: (5, 5)
             ┌─────┬────────┬─────┬────────┬──────────┐
@@ -501,10 +501,10 @@ class DataFrame(BaseFrame):
             >>> df = nw.DataFrame(df_pl)
             >>> dframe = df.with_columns((nw.col("a") * 2).alias("a*2"))
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (4, 4)
             ┌─────┬──────┬───────┬─────┐
@@ -551,10 +551,10 @@ class DataFrame(BaseFrame):
             >>> df = nw.DataFrame(df_pl)
             >>> dframe = df.select("foo")
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 1)
             ┌─────┐
@@ -571,10 +571,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.select(["foo", "bar"])
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -592,10 +592,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.select(nw.col("foo"), nw.col("bar") + 1)
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -612,10 +612,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.select(threshold=nw.col('foo')*2)
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 1)
             ┌───────────┐
@@ -646,10 +646,10 @@ class DataFrame(BaseFrame):
             >>> df = nw.DataFrame(df_pl)
             >>> dframe = df.rename({"foo": "apple"})
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 3)
             ┌───────┬─────┬─────┐
@@ -686,16 +686,16 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> dframe = df.head(3)
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 3)
             ┌─────┬─────┬─────┐
@@ -712,10 +712,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.head(-3)
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
@@ -750,16 +750,16 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> dframe = df.drop("ham")
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -776,10 +776,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.drop(["bar", "ham"])
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 1)
             ┌─────┐
@@ -796,10 +796,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.drop("foo", "ham")
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 1)
             ┌─────┐
@@ -836,10 +836,10 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> dframe = df.unique(["bar", "ham"])
             >>> nw.to_native(dframe)
             shape: (1, 3)
@@ -886,19 +886,19 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
 
             Filter on one condition:
 
             >>> dframe = df.filter(nw.col("foo") > 1)
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
@@ -914,10 +914,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
@@ -930,10 +930,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
@@ -952,10 +952,10 @@ class DataFrame(BaseFrame):
             ...     ~nw.col("ham").is_in(["b", "c"]),
             ... )
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
@@ -993,16 +993,16 @@ class DataFrame(BaseFrame):
             ... )
             >>> df = nw.DataFrame(df_pl)
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> dframe = df.group_by("a").agg(nw.col("b").sum()).sort("a")
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -1019,10 +1019,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe) # doctest: +SKIP
             shape: (4, 3)
             ┌─────┬─────┬─────┐
@@ -1074,10 +1074,10 @@ class DataFrame(BaseFrame):
             >>> df = nw.DataFrame(df_pl)
             >>> dframe = df.sort("a")
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 3)
             ┌──────┬─────┬─────┐
@@ -1094,10 +1094,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.sort(["c", "a"], descending=True)
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 3)
             ┌──────┬─────┬─────┐
@@ -1114,10 +1114,10 @@ class DataFrame(BaseFrame):
 
             >>> dframe = df.sort("c", "a", descending=[False, True])
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (3, 3)
             ┌──────┬─────┬─────┐
@@ -1179,10 +1179,10 @@ class DataFrame(BaseFrame):
             >>> other_df = nw.DataFrame(other_df_pl)
             >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
             >>> dframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(dframe)
             shape: (2, 4)
             ┌─────┬─────┬─────┬───────┐
@@ -1221,13 +1221,13 @@ class LazyFrame(BaseFrame):
         >>> data = {"a": [1, 2], "b": [3, 4]}
         >>> lf_pl = pl.LazyFrame(data)
         >>> lf = nw.LazyFrame(lf_pl)
-        >>> lframe = lf.collect()
-        >>> lframe
-        ┌─────────────────────────────────────────────────┐
-        | Narwhals DataFrame                              |
-        | Use `narwhals.to_native()` to see native output |
-        └─────────────────────────────────────────────────┘
-        >>> nw.to_native(lframe)
+        >>> dframe = lf.collect()
+        >>> dframe
+        ┌───────────────────────────────────────────────┐
+        | Narwhals DataFrame                            |
+        | Use `narwhals.to_native` to see native output |
+        └───────────────────────────────────────────────┘
+        >>> nw.to_native(dframe)
         shape: (2, 2)
         ┌─────┬─────┐
         │ a   ┆ b   │
@@ -1268,6 +1268,20 @@ class LazyFrame(BaseFrame):
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
 
+    def __repr__(self) -> str:  # pragma: no cover
+        header = " Narwhals LazyFrame                            "
+        length = len(header)
+        return (
+            "┌"
+            + "─" * length
+            + "┐\n"
+            + f"|{header}|\n"
+            + "| Use `narwhals.to_native` to see native output |\n"
+            + "└"
+            + "─" * length
+            + "┘"
+        )
+
     def collect(self) -> DataFrame:
         r"""
         Materialize this LazyFrame into a DataFrame.
@@ -1287,16 +1301,16 @@ class LazyFrame(BaseFrame):
             ... )
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lf
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals LazyFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
             >>> df
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(df).sort("a")
             shape: (3, 3)
             ┌─────┬─────┬─────┐
@@ -1395,10 +1409,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.with_columns((nw.col("a") * 2).alias("2a")).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (4, 4)
             ┌─────┬──────┬───────┬─────┐
@@ -1445,10 +1459,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.select("foo").collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 1)
             ┌─────┐
@@ -1465,10 +1479,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.select(["foo", "bar"]).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -1486,10 +1500,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.select(nw.col("foo"), nw.col("bar") + 1).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -1506,10 +1520,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.select(threshold=nw.col('foo')*2).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 1)
             ┌───────────┐
@@ -1551,10 +1565,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.rename({"foo": "apple"}).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 3)
             ┌───────┬─────┬─────┐
@@ -1588,10 +1602,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.head(5).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (5, 2)
             ┌─────┬─────┐
@@ -1607,10 +1621,10 @@ class LazyFrame(BaseFrame):
             └─────┴─────┘
             >>> lframe = lf.head(2).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (2, 2)
             ┌─────┬─────┐
@@ -1647,10 +1661,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.drop("ham").collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -1667,10 +1681,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.drop("foo", "ham").collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 1)
             ┌─────┐
@@ -1709,10 +1723,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.unique(None).collect().sort("foo")
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 3)
             ┌─────┬─────┬─────┐
@@ -1726,10 +1740,10 @@ class LazyFrame(BaseFrame):
             └─────┴─────┴─────┘
             >>> lframe = lf.unique(subset=["bar", "ham"]).collect().sort("foo")
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
@@ -1767,10 +1781,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.filter(nw.col("foo") > 1).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
@@ -1786,10 +1800,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.filter((nw.col("foo") < 3) & (nw.col("ham") == "a")).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
@@ -1807,10 +1821,10 @@ class LazyFrame(BaseFrame):
             ...     nw.col("ham") == "a",
             ... ).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
@@ -1825,10 +1839,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.filter((nw.col("foo") == 1) | (nw.col("ham") == "c")).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
@@ -1867,10 +1881,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.group_by("a").agg(nw.col("b").sum()).collect().sort("a")
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -1887,10 +1901,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.group_by(["a", "b"]).agg(nw.max("c")).collect().sort(["a", "b"])
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (4, 3)
             ┌─────┬─────┬─────┐
@@ -1943,10 +1957,10 @@ class LazyFrame(BaseFrame):
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.sort("a").collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 3)
             ┌──────┬─────┬─────┐
@@ -1963,10 +1977,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.sort(["c", "a"], descending=True).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 3)
             ┌──────┬─────┬─────┐
@@ -1983,10 +1997,10 @@ class LazyFrame(BaseFrame):
 
             >>> lframe = lf.sort("c", "a", descending=[False, True]).collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (3, 3)
             ┌──────┬─────┬─────┐
@@ -2048,10 +2062,10 @@ class LazyFrame(BaseFrame):
             >>> other_lf = nw.LazyFrame(other_lf_pl)
             >>> lframe = lf.join(other_lf, left_on="ham", right_on="ham").collect()
             >>> lframe
-            ┌─────────────────────────────────────────────────┐
-            | Narwhals DataFrame                              |
-            | Use `narwhals.to_native()` to see native output |
-            └─────────────────────────────────────────────────┘
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
             >>> nw.to_native(lframe)
             shape: (2, 4)
             ┌─────┬─────┬─────┬───────┐
