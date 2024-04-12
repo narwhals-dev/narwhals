@@ -10,7 +10,7 @@
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
 [![Documentation](https://img.shields.io/badge/Documentation-coolgreen?style=flat&link=https://marcogorelli.github.io/narwhals/)](https://marcogorelli.github.io/narwhals/)
 
-Extremely lightweight and extensible compatibility layer between Polars, pandas, modin, and cuDF (and more!).
+Extremely lightweight and extensible compatibility layer between Polars, pandas, Modin, and cuDF (and more!).
 
 Seamlessly support all, without depending on any!
 
@@ -155,6 +155,6 @@ Indeed, you may suspect that.
 
 ## Why "Narwhals"?
 
-Because they are so awesome.
+[Coz they are so awesome](https://youtu.be/ykwqXuMPsoc?si=A-i8LdR38teYsos4).
 
 Thanks to [Olha Urdeichuk](https://www.fiverr.com/olhaurdeichuk) for the illustration!
