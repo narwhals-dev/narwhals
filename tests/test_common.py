@@ -322,7 +322,9 @@ def test_convert_pandas(df_raw: Any) -> None:
     pd.testing.assert_frame_equal(result, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
+@pytest.mark.parametrize(
+    "df_raw", [df_polars, df_pandas, df_mpd, df_pandas_nullable, df_pandas_pyarrow]
+)
 @pytest.mark.filterwarnings(
     r"ignore:np\.find_common_type is deprecated\.:DeprecationWarning"
 )
@@ -330,6 +332,7 @@ def test_convert_numpy(df_raw: Any) -> None:
     result = nw.DataFrame(df_raw).to_numpy()
     expected = np.array([[1, 3, 2], [4, 4, 6], [7.0, 8, 9]]).T
     np.testing.assert_array_equal(result, expected)
+    assert result.dtype == "float64"
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
