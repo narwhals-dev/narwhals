@@ -16,6 +16,14 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals.dtypes import DType
 
+pandas_to_numpy_dtype_no_missing = {
+    "Int64": "int64",
+}
+pandas_to_numpy_dtype_missing = {
+    "Int64": "float64",
+    "Int32": "float32",
+}
+
 
 class PandasSeries:
     def __init__(

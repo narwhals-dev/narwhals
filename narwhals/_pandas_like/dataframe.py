@@ -227,7 +227,14 @@ class PandasDataFrame:
         return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
-        return self._dataframe.to_numpy()
+        # pandas return `object` dtype for nullable dtypes, so we cast each
+        # Series to numpy and let numpy find a common dtype
+        # todo: only do this if there are nullable dtypes
+        import numpy as np
+
+        return np.hstack(
+            [self._dataframe[col].to_numpy()[:, None] for col in self.columns]
+        )
 
     def to_pandas(self) -> Any:
         if self._implementation == "pandas":
