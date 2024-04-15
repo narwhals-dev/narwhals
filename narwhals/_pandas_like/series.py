@@ -58,8 +58,8 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
     "uint8[pyarrow]": "float64",
     "Float64": "float64",
     "float64[pyarrow]": "float64",
-    "Float32": "float64",
-    "float32[pyarrow]": "float64",
+    "Float32": "float32",
+    "float32[pyarrow]": "float32",
 }
 
 
