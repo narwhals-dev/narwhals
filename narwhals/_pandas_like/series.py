@@ -370,15 +370,13 @@ class PandasSeries:
         return self._from_series(self._rename(ser, name))
 
     def to_numpy(self) -> Any:
-        if (
-            self._series.isna().any()
-            and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING
-        ):
+        has_missing = self._series.isna().any()
+        if has_missing and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
             return self._series.to_numpy(
                 dtype=PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)]
             )
         if (
-            not self._series.isna().any()
+            not has_missing
             and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING
         ):
             return self._series.to_numpy(
