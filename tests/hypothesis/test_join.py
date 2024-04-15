@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
@@ -32,6 +33,7 @@ import narwhals as nw
         unique=True,
     ),
 )  # type: ignore[misc]
+@pytest.mark.slow()
 def test_join(
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],

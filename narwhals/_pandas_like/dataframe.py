@@ -227,14 +227,18 @@ class PandasDataFrame:
         return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
-        # pandas return `object` dtype for nullable dtypes, so we cast each
-        # Series to numpy and let numpy find a common dtype
-        # todo: only do this if there are nullable dtypes
-        import numpy as np
+        from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 
-        return np.hstack(
-            [self._dataframe[col].to_numpy()[:, None] for col in self.columns]
-        )
+        # pandas return `object` dtype for nullable dtypes, so we cast each
+        # Series to numpy and let numpy find a common dtype.
+        # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
+        # returns Object) then we just call `to_numpy()` on the DataFrame.
+        for dtype in self._dataframe.dtypes:
+            if str(dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
+                import numpy as np
+
+                return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
+        return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
         if self._implementation == "pandas":
