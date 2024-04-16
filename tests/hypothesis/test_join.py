@@ -21,7 +21,7 @@ import narwhals as nw
         max_size=3,
     ),
     st.lists(
-        st.floats(min_value=-9223372036854775807.0, max_value=9223372036854775807.0),
+        st.floats(),
         min_size=3,
         max_size=3,
     ),
