@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
-from hypothesis import given, example
+from hypothesis import example
+from hypothesis import given
 from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
 
 import narwhals as nw
 
-@example([0, 0, 0], [0, 0, 0], [0.0, 0.0, -0.0], ["c"])
+
+@example([0, 0, 0], [0, 0, 0], [0.0, 0.0, -0.0], ["c"])  # type: ignore[misc]
 @given(
     st.lists(
         st.integers(min_value=-9223372036854775807, max_value=9223372036854775807),
