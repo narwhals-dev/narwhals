@@ -10,11 +10,7 @@ from pandas.testing import assert_frame_equal
 import narwhals as nw
 
 
-<<<<<<< HEAD
 @example([0, 0, 0], [0, 0, 0], [0.0, 0.0, -0.0], ["c"])  # type: ignore[misc]
-=======
-@example([0, 0, 0], [0, 0, 0], [0.0, 0.0, -0.0], ["c"])
->>>>>>> origin/error
 @given(
     st.lists(
         st.integers(min_value=-9223372036854775807, max_value=9223372036854775807),
