@@ -134,8 +134,8 @@ class BaseFrame:
             raise NotImplementedError("Only inner joins are supported for now")
 
         if self._is_polars != other._is_polars or (
-         (hasattr(self, "implementation") and hasattr(other, "implementation")) and (
-            self._dataframe._implementation != other._dataframe._implementation)
+            (hasattr(self, "implementation") and hasattr(other, "implementation"))
+            and (self._dataframe._implementation != other._dataframe._implementation)
         ):
             raise NotImplementedError("Cross-library comparisons aren't supported")
 
