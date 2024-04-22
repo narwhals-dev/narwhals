@@ -132,6 +132,13 @@ class BaseFrame:
     ) -> Self:
         if how != "inner":
             raise NotImplementedError("Only inner joins are supported for now")
+
+        if self._is_polars != other._is_polars or (
+         (hasattr(self, "implementation") and hasattr(other, "implementation")) and (
+            self._dataframe._implementation != other._dataframe._implementation)
+        ):
+            raise NotImplementedError("Cross-library comparisons aren't supported")
+
         return self._from_dataframe(
             self._dataframe.join(
                 self._extract_native(other),
