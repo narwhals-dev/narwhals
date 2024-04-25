@@ -11,6 +11,7 @@ Here are the top-level functions available in Narwhals.
         - concat
         - from_native
         - from_native_dataframe
+        - from_native_series
         - len
         - max
         - mean

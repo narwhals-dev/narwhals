@@ -56,9 +56,9 @@ def test_is_in(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 @pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_filter(df_raw: Any) -> None:
-    result = nw.from_native(df_raw["a"]).filter(df_raw["a"] > 1)
+    result = nw.from_native_series(df_raw["a"]).filter(df_raw["a"] > 1)
     expected = np.array([3, 2])
-    assert (result.to_numpy() == expected).all()  # type: ignore[union-attr]
+    assert (result.to_numpy() == expected).all()
     result = nw.DataFrame(df_raw).select(nw.col("a").filter(nw.col("a") > 1))["a"]
     expected = np.array([3, 2])
     assert (result.to_numpy() == expected).all()
