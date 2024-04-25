@@ -303,3 +303,6 @@ def test_to_numpy() -> None:
     s = pd.Series([1, 2, None], dtype="Int64")
     result = nw.Series(s).to_numpy()
     assert result.dtype == "float64"
+    result = nw.Series(s).__array__()
+    assert result.dtype == "float64"
+    assert nw.Series(s).shape == (3,)

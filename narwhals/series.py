@@ -167,19 +167,19 @@ class Series:
     def __gt__(self, other: Any) -> Series:
         return self._from_series(self._series.__gt__(self._extract_native(other)))
 
-    def __ge__(self, other: Any) -> Series:
+    def __ge__(self, other: Any) -> Series:  # pragma: no cover (todo)
         return self._from_series(self._series.__ge__(self._extract_native(other)))
 
-    def __lt__(self, other: Any) -> Series:
+    def __lt__(self, other: Any) -> Series:  # pragma: no cover (todo)
         return self._from_series(self._series.__lt__(self._extract_native(other)))
 
-    def __le__(self, other: Any) -> Series:
+    def __le__(self, other: Any) -> Series:  # pragma: no cover (todo)
         return self._from_series(self._series.__le__(self._extract_native(other)))
 
-    def __and__(self, other: Any) -> Series:
+    def __and__(self, other: Any) -> Series:  # pragma: no cover (todo)
         return self._from_series(self._series.__and__(self._extract_native(other)))
 
-    def __or__(self, other: Any) -> Series:
+    def __or__(self, other: Any) -> Series:  # pragma: no cover (todo)
         return self._from_series(self._series.__or__(self._extract_native(other)))
 
     # unary

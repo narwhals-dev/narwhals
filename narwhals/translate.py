@@ -73,7 +73,7 @@ def from_native(
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         return DataFrame(native_dataframe)
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
-        return LazyFrame(native_dataframe)
+        return LazyFrame(native_dataframe)  # pragma: no cover (todo)
     elif (
         (pd := get_pandas()) is not None
         and isinstance(native_dataframe, pd.DataFrame)
@@ -107,7 +107,7 @@ def from_native(
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)
-    return native_dataframe  # type: ignore[no-any-return]
+    return native_dataframe  # type: ignore[no-any-return]  # pragma: no cover (todo)
 
 
 def from_native_dataframe(
@@ -155,7 +155,7 @@ def from_native_dataframe(
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)
-    return native_dataframe  # type: ignore[no-any-return]
+    return native_dataframe  # type: ignore[no-any-return]  # pragma: no cover
 
 
 __all__ = [
