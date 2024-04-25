@@ -393,7 +393,7 @@ def test_expr_binary(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_lazy])
 def test_expr_unary(df_raw: Any) -> None:
     result = (
-        nw.from_native_dataframe(df_raw)
+        nw.from_native(df_raw)
         .with_columns(
             a_mean=nw.col("a").mean(),
             a_sum=nw.col("a").sum(),
