@@ -12,6 +12,7 @@ from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals._pandas_like.namespace import PandasNamespace
@@ -90,6 +91,9 @@ class PandasSeries:
         else:  # pragma: no cover
             pass
 
+    def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
+        return self._series.__array__(*args, **kwargs)
+
     def __narwhals_namespace__(self) -> PandasNamespace:
         from narwhals._pandas_like.namespace import PandasNamespace
 
@@ -160,6 +164,11 @@ class PandasSeries:
         return self._from_series(res)
 
     # Binary comparisons
+
+    def filter(self, other: Any) -> PandasSeries:
+        ser = self._series
+        other = validate_column_comparand(self._series.index, other)
+        return self._from_series(self._rename(ser.loc[other], ser.name))
 
     def __eq__(self, other: object) -> PandasSeries:  # type: ignore[override]
         ser = self._series

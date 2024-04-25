@@ -17,6 +17,7 @@ from narwhals.utils import flatten
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasGroupBy
@@ -37,6 +38,9 @@ class PandasDataFrame:
         self._validate_columns(dataframe.columns)
         self._dataframe = self._convert_object_dtypes(dataframe)
         self._implementation = implementation
+
+    def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
+        return self._dataframe.__array__(*args, **kwargs)
 
     def __narwhals_dataframe__(self) -> Self:
         return self
