@@ -16,12 +16,15 @@ if TYPE_CHECKING:
     from narwhals.series import Series
 
 
-def to_native(narwhals_object: LazyFrame | DataFrame | Series) -> Any:
+def to_native(
+    narwhals_object: LazyFrame | DataFrame | Series, *, strict: bool = True
+) -> Any:
     """
     Convert Narwhals object to native one.
 
     Arguments:
         narwhals_object: Narwhals object.
+        strict: whether to raise on non-Narwhals input.
 
     Returns:
         Object of class that user started with.
@@ -42,8 +45,12 @@ def to_native(narwhals_object: LazyFrame | DataFrame | Series) -> Any:
             else narwhals_object._series._series
         )
 
-    msg = f"Expected Narwhals object, got {type(narwhals_object)}."  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    if strict:  # pragma: no cover (todo)
+        msg = (
+            f"Expected Narwhals object, got {type(narwhals_object)}."  # pragma: no cover
+        )
+        raise TypeError(msg)  # pragma: no cover
+    return narwhals_object  # pragma: no cover (todo)
 
 
 @overload
