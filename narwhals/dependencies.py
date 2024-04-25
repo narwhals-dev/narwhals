@@ -4,6 +4,7 @@ from typing import Any
 
 @functools.lru_cache
 def get_polars() -> Any:
+    """Import Polars (if available - else return None)."""
     try:
         import polars
     except ImportError:  # pragma: no cover
@@ -13,6 +14,7 @@ def get_polars() -> Any:
 
 @functools.lru_cache
 def get_pandas() -> Any:
+    """Import pandas (if available - else return None)."""
     try:
         import pandas
     except ImportError:  # pragma: no cover

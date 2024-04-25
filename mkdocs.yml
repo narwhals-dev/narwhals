@@ -24,6 +24,7 @@ nav:
     - api-reference/expressions_dt.md
     - api-reference/expressions_str.md
     - api-reference/dtypes.md
+    - api-reference/dependencies.md
 theme:
   name: material
   font: false

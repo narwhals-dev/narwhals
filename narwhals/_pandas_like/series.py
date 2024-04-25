@@ -161,6 +161,11 @@ class PandasSeries:
 
     # Binary comparisons
 
+    def filter(self, other: Any) -> PandasSeries:
+        ser = self._series
+        other = validate_column_comparand(self._series.index, other)
+        return self._from_series(self._rename(ser.loc[other], ser.name))
+
     def __eq__(self, other: object) -> PandasSeries:  # type: ignore[override]
         ser = self._series
         other = validate_column_comparand(self._series.index, other)

@@ -205,6 +205,11 @@ class Expr:
     def is_in(self, other: Any) -> Expr:
         return self.__class__(lambda plx: self._call(plx).is_in(other))
 
+    def filter(self, other: Any) -> Expr:
+        return self.__class__(
+            lambda plx: self._call(plx).filter(extract_native(plx, other))
+        )
+
     def is_null(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).is_null())
 

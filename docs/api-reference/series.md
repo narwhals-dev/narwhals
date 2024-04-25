@@ -11,6 +11,7 @@
         - drop_nulls
         - dt
         - dtype
+        - filter
         - is_between
         - is_in
         - is_null
@@ -20,6 +21,7 @@
         - name
         - n_unique
         - sample
+        - shape
         - sort
         - std
         - str

@@ -9,6 +9,7 @@ from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
 
 if TYPE_CHECKING:
+    import numpy as np
     from typing_extensions import Self
 
 
@@ -37,6 +38,9 @@ class Series:
         msg = f"Expected pandas or Polars Series, got: {type(series)}"  # pragma: no cover
         raise TypeError(msg)  # pragma: no cover
 
+    def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
+        return self._series.to_numpy(*args, **kwargs)
+
     def __getitem__(self, idx: int) -> Any:
         return self._series[idx]
 
@@ -46,6 +50,10 @@ class Series:
 
             return pl
         return self._series.__narwhals_namespace__()
+
+    @property
+    def shape(self) -> tuple[int]:
+        return self._series.shape  # type: ignore[no-any-return]
 
     def _extract_native(self, arg: Any) -> Any:
         from narwhals.series import Series
@@ -159,9 +167,27 @@ class Series:
     def __gt__(self, other: Any) -> Series:
         return self._from_series(self._series.__gt__(self._extract_native(other)))
 
+    def __ge__(self, other: Any) -> Series:  # pragma: no cover (todo)
+        return self._from_series(self._series.__ge__(self._extract_native(other)))
+
+    def __lt__(self, other: Any) -> Series:  # pragma: no cover (todo)
+        return self._from_series(self._series.__lt__(self._extract_native(other)))
+
+    def __le__(self, other: Any) -> Series:  # pragma: no cover (todo)
+        return self._from_series(self._series.__le__(self._extract_native(other)))
+
+    def __and__(self, other: Any) -> Series:  # pragma: no cover (todo)
+        return self._from_series(self._series.__and__(self._extract_native(other)))
+
+    def __or__(self, other: Any) -> Series:  # pragma: no cover (todo)
+        return self._from_series(self._series.__or__(self._extract_native(other)))
+
     # unary
     def __invert__(self) -> Series:
         return self._from_series(self._series.__invert__())
+
+    def filter(self, other: Any) -> Series:
+        return self._from_series(self._series.filter(self._extract_native(other)))
 
     @property
     def str(self) -> SeriesStringNamespace:

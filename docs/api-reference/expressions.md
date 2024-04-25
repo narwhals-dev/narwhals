@@ -10,6 +10,7 @@
         - cast
         - dt
         - drop_nulls
+        - filter
         - is_between
         - is_in
         - is_null
