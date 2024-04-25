@@ -110,6 +110,51 @@ def from_native(
     return native_dataframe  # type: ignore[no-any-return]  # pragma: no cover (todo)
 
 
+def from_native_series(native_series: Any, *, strict: bool = False) -> Series:
+    """
+    Convert dataframe to Narwhals DataFrame or LazyFrame.
+
+    Arguments:
+        native_dataframe: Raw dataframe from user.
+            Input object can be:
+
+            - pandas.DataFrame
+            - polars.DataFrame
+            - polars.LazyFrame
+            - modin.DataFrame
+            - cudf.DataFrame
+            - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
+        strict: Whether to raise if object can't be converted (default) or
+            to just leave it as-is.
+
+    Returns:
+        narwhals.DataFrame or narwhals.LazyFrame
+    """
+    from narwhals.series import Series
+
+    if (
+        (pl := get_polars()) is not None
+        and isinstance(native_series, pl.Series)
+        or (pl := get_polars()) is not None
+        and isinstance(native_series, pl.Series)
+        or (
+            (pd := get_pandas()) is not None
+            and isinstance(native_series, pd.Series)
+            or (mpd := get_modin()) is not None
+            and isinstance(native_series, mpd.Series)
+            or (cudf := get_cudf()) is not None
+            and isinstance(native_series, cudf.Series)
+        )
+    ):
+        return Series(native_series)
+    elif hasattr(native_series, "__narwhals_series__"):  # pragma: no cover
+        return Series(native_series.__narwhals_series__())
+    elif strict:  # pragma: no cover
+        msg = f"Expected pandas-like series or Polars series, got: {type(native_series)}"
+        raise TypeError(msg)
+    return native_series  # type: ignore[no-any-return]  # pragma: no cover (todo)
+
+
 def from_native_dataframe(
     native_dataframe: Any, *, strict: bool = False
 ) -> DataFrame | LazyFrame:
