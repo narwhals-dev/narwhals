@@ -21,7 +21,7 @@ def get_pandas() -> Any:
 
 
 @functools.lru_cache
-def get_modin() -> Any:
+def get_modin() -> Any:  # pragma: no cover
     try:
         import modin.pandas as mpd
     except ImportError:  # pragma: no cover

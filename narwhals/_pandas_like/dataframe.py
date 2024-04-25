@@ -108,7 +108,7 @@ class PandasDataFrame:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         new_series = validate_indices(new_series)
         df = horizontal_concat(
-            [series._series for series in new_series],
+            new_series,
             implementation=self._implementation,
         )
         return self._from_dataframe(df)
@@ -227,6 +227,17 @@ class PandasDataFrame:
         return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
+        from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
+
+        # pandas return `object` dtype for nullable dtypes, so we cast each
+        # Series to numpy and let numpy find a common dtype.
+        # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
+        # returns Object) then we just call `to_numpy()` on the DataFrame.
+        for dtype in self._dataframe.dtypes:
+            if str(dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
+                import numpy as np
+
+                return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:

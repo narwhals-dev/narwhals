@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -15,6 +16,51 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals.dtypes import DType
+
+PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
+    "Int64": "int64",
+    "int64[pyarrow]": "int64",
+    "Int32": "int32",
+    "int32[pyarrow]": "int32",
+    "Int16": "int16",
+    "int16[pyarrow]": "int16",
+    "Int8": "int8",
+    "int8[pyarrow]": "int8",
+    "UInt64": "uint64",
+    "uint64[pyarrow]": "uint64",
+    "UInt32": "uint32",
+    "uint32[pyarrow]": "uint32",
+    "UInt16": "uint16",
+    "uint16[pyarrow]": "uint16",
+    "UInt8": "uint8",
+    "uint8[pyarrow]": "uint8",
+    "Float64": "float64",
+    "float64[pyarrow]": "float64",
+    "Float32": "float32",
+    "float32[pyarrow]": "float32",
+}
+PANDAS_TO_NUMPY_DTYPE_MISSING = {
+    "Int64": "float64",
+    "int64[pyarrow]": "float64",
+    "Int32": "float64",
+    "int32[pyarrow]": "float64",
+    "Int16": "float64",
+    "int16[pyarrow]": "float64",
+    "Int8": "float64",
+    "int8[pyarrow]": "float64",
+    "UInt64": "float64",
+    "uint64[pyarrow]": "float64",
+    "UInt32": "float64",
+    "uint32[pyarrow]": "float64",
+    "UInt16": "float64",
+    "uint16[pyarrow]": "float64",
+    "UInt8": "float64",
+    "uint8[pyarrow]": "float64",
+    "Float64": "float64",
+    "float64[pyarrow]": "float64",
+    "Float32": "float32",
+    "float32[pyarrow]": "float32",
+}
 
 
 class PandasSeries:
@@ -102,7 +148,14 @@ class PandasSeries:
         import pandas as pd
 
         ser = self._series
-        res = ser.isin(other).convert_dtypes()
+        with warnings.catch_warnings():
+            # np.find_common_type is deprecated.  Please use `np.result_type` or `np.promote_types`
+            warnings.filterwarnings(
+                "ignore",
+                message="np.find_common_type is deprecated.*",
+                category=DeprecationWarning,
+            )
+            res = ser.isin(other).convert_dtypes()
         res[ser.isna()] = pd.NA
         return self._from_series(res)
 
@@ -317,6 +370,19 @@ class PandasSeries:
         return self._from_series(self._rename(ser, name))
 
     def to_numpy(self) -> Any:
+        has_missing = self._series.isna().any()
+        if has_missing and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
+            return self._series.to_numpy(
+                dtype=PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)],
+                na_value=float("nan"),
+            )
+        if (
+            not has_missing
+            and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING
+        ):
+            return self._series.to_numpy(
+                dtype=PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(self._series.dtype)]
+            )
         return self._series.to_numpy()
 
     def to_pandas(self) -> Any:
