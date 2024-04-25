@@ -29,7 +29,7 @@ from narwhals.translate import from_native_dataframe
 from narwhals.translate import from_native_series
 from narwhals.translate import to_native
 
-__version__ = "0.7.10"
+__version__ = "0.7.11"
 
 __all__ = [
     "concat",
