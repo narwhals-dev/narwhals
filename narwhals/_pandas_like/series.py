@@ -12,7 +12,6 @@ from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
-    import numpy as np
     from typing_extensions import Self
 
     from narwhals._pandas_like.namespace import PandasNamespace
@@ -90,9 +89,6 @@ class PandasSeries:
                 pass
         else:  # pragma: no cover
             pass
-
-    def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
-        return self._series.__array__(*args, **kwargs)
 
     def __narwhals_namespace__(self) -> PandasNamespace:
         from narwhals._pandas_like.namespace import PandasNamespace

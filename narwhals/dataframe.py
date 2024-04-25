@@ -211,7 +211,7 @@ class DataFrame(BaseFrame):
             raise TypeError(msg)
 
     def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
-        return self._dataframe.__array__(*args, **kwargs)
+        return self._dataframe.to_numpy(*args, **kwargs)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "

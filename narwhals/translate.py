@@ -110,6 +110,54 @@ def from_native(
     return native_dataframe  # type: ignore[no-any-return]
 
 
+def from_native_dataframe(
+    native_dataframe: Any, *, strict: bool = False
+) -> DataFrame | LazyFrame:
+    """
+    Convert dataframe to Narwhals DataFrame or LazyFrame.
+
+    Arguments:
+        native_dataframe: Raw dataframe from user.
+            Input object can be:
+
+            - pandas.DataFrame
+            - polars.DataFrame
+            - polars.LazyFrame
+            - modin.DataFrame
+            - cudf.DataFrame
+            - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
+        strict: Whether to raise if object can't be converted (default) or
+            to just leave it as-is.
+
+    Returns:
+        narwhals.DataFrame or narwhals.LazyFrame
+    """
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
+        return DataFrame(native_dataframe)
+    elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
+        return LazyFrame(native_dataframe)
+    elif (
+        (pd := get_pandas()) is not None
+        and isinstance(native_dataframe, pd.DataFrame)
+        or (mpd := get_modin()) is not None
+        and isinstance(native_dataframe, mpd.DataFrame)
+        or (cudf := get_cudf()) is not None
+        and isinstance(native_dataframe, cudf.DataFrame)
+    ):
+        return DataFrame(native_dataframe)
+    elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
+        return DataFrame(native_dataframe.__narwhals_dataframe__())
+    elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
+        return LazyFrame(native_dataframe.__narwhals_lazyframe__())
+    elif strict:  # pragma: no cover
+        msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
+        raise TypeError(msg)
+    return native_dataframe  # type: ignore[no-any-return]
+
+
 __all__ = [
     "get_pandas",
     "get_polars",

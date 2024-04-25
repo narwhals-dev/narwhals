@@ -39,7 +39,7 @@ class Series:
         raise TypeError(msg)  # pragma: no cover
 
     def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
-        return self._series.__array__(*args, **kwargs)
+        return self._series.to_numpy(*args, **kwargs)
 
     def __getitem__(self, idx: int) -> Any:
         return self._series[idx]

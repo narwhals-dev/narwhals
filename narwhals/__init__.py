@@ -25,6 +25,7 @@ from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
 from narwhals.series import Series
 from narwhals.translate import from_native
+from narwhals.translate import from_native_dataframe
 from narwhals.translate import to_native
 
 __version__ = "0.7.10"
@@ -33,6 +34,7 @@ __all__ = [
     "concat",
     "to_native",
     "from_native",
+    "from_native_dataframe",
     "all",
     "col",
     "len",
