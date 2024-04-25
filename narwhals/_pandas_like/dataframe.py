@@ -108,7 +108,7 @@ class PandasDataFrame:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         new_series = validate_indices(new_series)
         df = horizontal_concat(
-            [series._series for series in new_series],
+            new_series,
             implementation=self._implementation,
         )
         return self._from_dataframe(df)
