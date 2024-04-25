@@ -373,7 +373,8 @@ class PandasSeries:
         has_missing = self._series.isna().any()
         if has_missing and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
             return self._series.to_numpy(
-                dtype=PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)]
+                dtype=PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)],
+                na_value=float("nan"),
             )
         if (
             not has_missing
