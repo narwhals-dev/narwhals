@@ -103,19 +103,23 @@ def from_native(
 
     Arguments:
         native_dataframe: Raw dataframe from user.
-            Input object can be:
+            Depending on the other arguments, input object can be:
 
             - pandas.DataFrame
             - polars.DataFrame
             - polars.LazyFrame
-            - modin.DataFrame
-            - cudf.DataFrame
             - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
+            - pandas.Series
+            - polars.Series
+            - anything with a `__narwhals_series__` method
         strict: Whether to raise if object can't be converted (default) or
             to just leave it as-is.
+        eager_only: Whether to only allow eager objects.
+        series_only: Whether to only allow series.
+        allow_series: Whether to allow series (default is only dataframe / lazyframe).
 
     Returns:
-        narwhals.DataFrame or narwhals.LazyFrame
+        narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
     """
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
