@@ -1,0 +1,15 @@
+{
+  "id": "marcogorelli/narwhals-tpch-q8-s2",
+  "title": "Narwhals TPCH Q8 S2",
+  "code_file": "execute.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "false",
+  "enable_gpu": "false",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": ["marcogorelli/tpc-h-data-parquet-s-2"],
+  "model_sources": []
+}
