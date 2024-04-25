@@ -286,3 +286,9 @@ def test_cast() -> None:
         n=df["m"].cast(nw.Boolean),
     ).schema
     assert result == expected
+
+
+def test_to_numpy() -> None:
+    s = pd.Series([1, 2, None], dtype="Int64")
+    result = nw.Series(s).to_numpy()
+    assert result.dtype == "float64"
