@@ -50,7 +50,7 @@ def to_native(narwhals_object: LazyFrame | DataFrame | Series) -> Any:
 def from_native(
     native_dataframe: Any,
     *,
-    strict: None = ...,
+    strict: bool = ...,
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
@@ -61,7 +61,7 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
-    strict: None = ...,
+    strict: bool = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
@@ -72,7 +72,7 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
-    strict: None = ...,
+    strict: bool = ...,
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
@@ -83,7 +83,7 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
-    strict: None = ...,
+    strict: bool = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
@@ -93,7 +93,7 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
-    strict: bool | None = None,
+    strict: bool = True,
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
