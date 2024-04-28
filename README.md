@@ -51,6 +51,9 @@ not aim to support as many backends, preferring to instead focus on dataframes.
 The projects are not in competition, and the comparison is intended only to help you choose the right tool
 for the right task.
 
+Here is the package size increase which would result from installing each tool in a non-pandas
+environment:
+
 <h1 align="center">
 	<img
 		width="800"
