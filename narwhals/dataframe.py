@@ -12,6 +12,7 @@ from narwhals.translate import get_cudf
 from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
+from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -132,13 +133,7 @@ class BaseFrame:
     ) -> Self:
         if how != "inner":
             raise NotImplementedError("Only inner joins are supported for now")
-
-        if self._is_polars != other._is_polars or (
-            (hasattr(self, "implementation") and hasattr(other, "implementation"))
-            and (self._dataframe._implementation != other._dataframe._implementation)
-        ):
-            raise NotImplementedError("Cross-library comparisons aren't supported")
-
+        validate_same_library(self, other)
         return self._from_dataframe(
             self._dataframe.join(
                 self._extract_native(other),

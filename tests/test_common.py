@@ -581,3 +581,24 @@ def test_reindex(df_raw: Any) -> None:
         nw.to_native(df.with_columns(s.sort()))
     with pytest.raises(ValueError, match="Multi-output expressions are not supported"):
         nw.to_native(df.with_columns(nw.all() + nw.all()))
+
+
+@pytest.mark.parametrize(
+    ("df_raw", "df_raw_right"),
+    [(df_pandas, df_polars), (df_polars, df_pandas)],
+)
+def test_library(df_raw: Any, df_raw_right: Any) -> None:
+    df_left = nw.LazyFrame(df_raw)
+    df_right = nw.LazyFrame(df_raw_right)
+    with pytest.raises(
+        NotImplementedError, match="Cross-library comparisons aren't supported"
+    ):
+        nw.concat([df_left, df_right], how="horizontal")
+    with pytest.raises(
+        NotImplementedError, match="Cross-library comparisons aren't supported"
+    ):
+        nw.concat([df_left, df_right], how="vertical")
+    with pytest.raises(
+        NotImplementedError, match="Cross-library comparisons aren't supported"
+    ):
+        df_left.join(df_right, left_on=["a"], right_on=["a"], how="inner")
