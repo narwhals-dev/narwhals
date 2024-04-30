@@ -17,7 +17,7 @@ df_polars = pl.LazyFrame({"a": ["fdas", "edfas"]})
 if os.environ.get("CI", None):
     try:
         import modin.pandas as mpd
-    except ImportError:
+    except ImportError:  # pragma: no cover
         df_mpd = df_pandas.copy()
     else:
         with warnings.catch_warnings():

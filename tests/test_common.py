@@ -47,7 +47,7 @@ df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 if os.environ.get("CI", None):
     try:
         import modin.pandas as mpd
-    except ImportError:
+    except ImportError:  # pragma: no cover
         df_mpd = df_pandas.copy()
     else:
         with warnings.catch_warnings():
