@@ -20,6 +20,12 @@ Seamlessly support all, without depending on any!
 - ✅ Use Polars **Expressions**
 - ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
 
+## Used by
+
+Join the party!
+
+- https://github.com/FBruzzesi/timebasedcv
+
 ## Installation
 
 ```
