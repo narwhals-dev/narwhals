@@ -282,12 +282,6 @@ def len() -> Expr:
         if (
             not hasattr(plx, "_implementation")
             and (pl := get_polars()) is not None
-            and parse_version(pl.__version__) >= parse_version("0.20.4")
-        ):
-            return plx.len()
-        if (
-            not hasattr(plx, "_implementation")
-            and (pl := get_polars()) is not None
             and parse_version(pl.__version__) < parse_version("0.20.4")
         ):
             return plx.count()  # pragma: no cover
