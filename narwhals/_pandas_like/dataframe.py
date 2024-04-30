@@ -13,6 +13,7 @@ from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -57,10 +58,13 @@ class PandasDataFrame:
         for col in dataframe.columns:
             if schema[col] != object:
                 continue
-            if get_pyarrow() is not None:
-                replacements[col] = dataframe[col].astype("string[pyarrow]")
-            else:  # pragma: no cover
-                replacements[col] = dataframe[col].astype("string[python]")
+            import pandas as pd  # todo: generalise across pandas-like implementations
+
+            if parse_version(pd.__version__) >= parse_version("2.0.0"):
+                if get_pyarrow() is not None:
+                    replacements[col] = dataframe[col].astype("string[pyarrow]")
+                else:  # pragma: no cover
+                    replacements[col] = dataframe[col].astype("string[python]")
         return dataframe.assign(**replacements)
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
