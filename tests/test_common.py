@@ -45,13 +45,16 @@ df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 
 if os.environ.get("CI", None):
-    import modin.pandas as mpd
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=UserWarning)
-        df_mpd = mpd.DataFrame(
-            pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-        )
+    try:
+        import modin.pandas as mpd
+    except ImportError:
+        df_mpd = df_pandas.copy()
+    else:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            df_mpd = mpd.DataFrame(
+                pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+            )
 else:  # pragma: no cover
     df_mpd = df_pandas.copy()
 
