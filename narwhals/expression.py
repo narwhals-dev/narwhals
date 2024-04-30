@@ -290,7 +290,7 @@ def len() -> Expr:
             and (pl := get_polars()) is not None
             and parse_version(pl.__version__) < parse_version("0.20.4")
         ):
-            return plx.count()
+            return plx.count()  # pragma: no cover
         return plx.len()
 
     return Expr(func)

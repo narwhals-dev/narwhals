@@ -87,6 +87,7 @@ plugins = ["covdefaults"]
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
+  'if df_raw is None:',
 ]
 
 [tool.mypy]

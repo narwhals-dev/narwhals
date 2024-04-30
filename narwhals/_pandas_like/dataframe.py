@@ -65,6 +65,8 @@ class PandasDataFrame:
                     replacements[col] = dataframe[col].astype("string[pyarrow]")
                 else:  # pragma: no cover
                     replacements[col] = dataframe[col].astype("string[python]")
+            else:  # pragma: no cover
+                pass
         return dataframe.assign(**replacements)
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
