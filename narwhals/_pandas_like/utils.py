@@ -312,6 +312,12 @@ def translate_dtype(dtype: Any) -> DType:
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
+    if dtype == "object":  # pragma: no cover
+        import pandas as pd
+
+        assert parse_version(pd.__version__) < parse_version("2.0.0")
+        # Should only happen for pandas pre 2.0.0
+        return dtypes.String()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -342,9 +348,13 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
         return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
-        if get_pyarrow() is not None:
-            return "string[pyarrow]"
-        return "string[python]"  # pragma: no cover
+        import pandas as pd
+
+        if parse_version(pd.__version__) >= parse_version("2.0.0"):
+            if get_pyarrow() is not None:
+                return "string[pyarrow]"
+            return "string[python]"  # pragma: no cover
+        return "object"  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):

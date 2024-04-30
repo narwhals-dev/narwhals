@@ -17,6 +17,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+pandas = ["pandas>=1.2.0"]
+polars = ["polars>=0.20.3"]
+
 [project.urls]
 "Homepage" = "https://github.com/MarcoGorelli/narwhals"
 "Bug Tracker" = "https://github.com/MarcoGorelli/narwhals"
@@ -83,6 +87,7 @@ plugins = ["covdefaults"]
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
+  'if df_raw is None:',
 ]
 
 [tool.mypy]
