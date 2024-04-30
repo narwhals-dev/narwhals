@@ -35,7 +35,7 @@ if parse_version(pd.__version__) >= parse_version("1.5.0"):
             "z": "Float64[pyarrow]",
         }
     )
-else:
+else:  # pragma: no cover
     df_pandas_pyarrow = None
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
