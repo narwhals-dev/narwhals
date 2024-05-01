@@ -5,8 +5,10 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 
+from narwhals.dependencies import get_polars
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
@@ -275,7 +277,17 @@ def len() -> Expr:
     """
     Instantiate an expression representing the length of a dataframe, similar to `polars.len`.
     """
-    return Expr(lambda plx: plx.len())
+
+    def func(plx: Any) -> Any:
+        if (
+            not hasattr(plx, "_implementation")
+            and (pl := get_polars()) is not None
+            and parse_version(pl.__version__) < parse_version("0.20.4")
+        ):  # pragma: no cover
+            return plx.count()
+        return plx.len()
+
+    return Expr(func)
 
 
 def sum(*columns: str) -> Expr:
