@@ -44,11 +44,11 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
     return isinstance(obj, cls) or issubclass(obj, cls)
 
 
-def validate_same_library(one_object: Any) -> None:
-    if all(obj._is_polars for obj in one_object):
+def validate_same_library(items: Iterable[Any]) -> None:
+    if all(item._is_polars for item in items):
         return
-    if all(hasattr(obj._dataframe, "_implementation") for obj in one_object) and (
-        len({obj._dataframe._implementation for obj in one_object}) == 1
+    if all(hasattr(item._dataframe, "_implementation") for item in items) and (
+        len({item._dataframe._implementation for item in items}) == 1
     ):
         return
     raise NotImplementedError("Cross-library comparisons aren't supported")
