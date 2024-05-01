@@ -60,6 +60,6 @@ jobs:
       - name: install-modin
         run: python -m pip install --upgrade modin[dask]
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow
       - name: Run doctests
         run: pytest narwhals --doctest-modules

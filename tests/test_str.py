@@ -15,11 +15,14 @@ df_pandas = pd.DataFrame({"a": ["fdas", "edfas"]})
 df_polars = pl.LazyFrame({"a": ["fdas", "edfas"]})
 
 if os.environ.get("CI", None):
-    import modin.pandas as mpd
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=UserWarning)
-        df_mpd = mpd.DataFrame({"a": ["fdas", "edfas"]})
+    try:
+        import modin.pandas as mpd
+    except ImportError:  # pragma: no cover
+        df_mpd = df_pandas.copy()
+    else:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            df_mpd = mpd.DataFrame({"a": ["fdas", "edfas"]})
 else:  # pragma: no cover
     df_mpd = df_pandas.copy()
 

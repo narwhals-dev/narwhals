@@ -49,11 +49,7 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             # broadcast
             return other.item()
         if other._series.index is not index and not (other._series.index == index).all():
-            msg = (
-                "Narwhals does not support automated index alignment. "
-                "You may need to do a join before this operation."
-            )
-            raise ValueError(msg)
+            return other._series.set_axis(index, axis=0)
         return other._series
     return other
 
@@ -74,11 +70,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
             # broadcast
             return item(other._series)
         if other._series.index is not index and not (other._series.index == index).all():
-            msg = (
-                "Narwhals does not support automated index alignment. "
-                "You may need to do a join before this operation."
-            )
-            raise ValueError(msg)
+            return other._series.set_axis(index, axis=0)
         return other._series
     raise AssertionError("Please report a bug")
 
@@ -320,6 +312,12 @@ def translate_dtype(dtype: Any) -> DType:
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
+    if dtype == "object":  # pragma: no cover
+        import pandas as pd
+
+        assert parse_version(pd.__version__) < parse_version("2.0.0")
+        # Should only happen for pandas pre 2.0.0
+        return dtypes.String()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -350,9 +348,13 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
         return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
-        if get_pyarrow() is not None:
-            return "string[pyarrow]"
-        return "string[python]"  # pragma: no cover
+        import pandas as pd
+
+        if parse_version(pd.__version__) >= parse_version("2.0.0"):
+            if get_pyarrow() is not None:
+                return "string[pyarrow]"
+            return "string[python]"  # pragma: no cover
+        return "object"  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
@@ -362,13 +364,12 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     raise AssertionError(msg)
 
 
-def validate_indices(series: list[PandasSeries]) -> list[PandasSeries]:
+def validate_indices(series: list[PandasSeries]) -> list[Any]:
     idx = series[0]._series.index
+    reindexed = [series[0]._series]
     for s in series[1:]:
         if s._series.index is not idx and not (s._series.index == idx).all():
-            msg = (
-                "Narwhals does not support automated index alignment. "
-                "You may need to do a join before this operation."
-            )
-            raise RuntimeError(msg)
-    return series
+            reindexed.append(s._series.set_axis(idx.rename(s._series.index.name), axis=0))
+        else:
+            reindexed.append(s._series)
+    return reindexed

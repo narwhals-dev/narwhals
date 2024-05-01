@@ -13,6 +13,7 @@ from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -57,10 +58,15 @@ class PandasDataFrame:
         for col in dataframe.columns:
             if schema[col] != object:
                 continue
-            if get_pyarrow() is not None:
-                replacements[col] = dataframe[col].astype("string[pyarrow]")
+            import pandas as pd  # todo: generalise across pandas-like implementations
+
+            if parse_version(pd.__version__) >= parse_version("2.0.0"):
+                if get_pyarrow() is not None:
+                    replacements[col] = dataframe[col].astype("string[pyarrow]")
+                else:  # pragma: no cover
+                    replacements[col] = dataframe[col].astype("string[python]")
             else:  # pragma: no cover
-                replacements[col] = dataframe[col].astype("string[python]")
+                pass
         return dataframe.assign(**replacements)
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
@@ -108,7 +114,7 @@ class PandasDataFrame:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         new_series = validate_indices(new_series)
         df = horizontal_concat(
-            [series._series for series in new_series],
+            new_series,
             implementation=self._implementation,
         )
         return self._from_dataframe(df)
@@ -227,6 +233,17 @@ class PandasDataFrame:
         return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
+        from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
+
+        # pandas return `object` dtype for nullable dtypes, so we cast each
+        # Series to numpy and let numpy find a common dtype.
+        # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
+        # returns Object) then we just call `to_numpy()` on the DataFrame.
+        for dtype in self._dataframe.dtypes:
+            if str(dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
+                import numpy as np
+
+                return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:

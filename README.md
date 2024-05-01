@@ -20,6 +20,12 @@ Seamlessly support all, without depending on any!
 - ✅ Use Polars **Expressions**
 - ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
 
+## Used by
+
+Join the party!
+
+- https://github.com/FBruzzesi/timebasedcv
+
 ## Installation
 
 ```
@@ -44,8 +50,15 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
 ## Package size
 
-At only 0.3 MB and with **zero** dependencies, Narwhals is about as lightweight as it gets. Here's a comparison
-with Ibis (though note that the two projects have different goals and are not in competition):
+Like Ibis, Narwhals aims to enable dataframe-agnostic code. However, Narwhals comes with **zero** dependencies,
+is about as lightweight as it gets, and is aimed at library developers rather than at end users. It also does
+not aim to support as many backends, preferring to instead focus on dataframes.
+
+The projects are not in competition, and the comparison is intended only to help you choose the right tool
+for the right task.
+
+Here is the package size increase which would result from installing each tool in a non-pandas
+environment:
 
 <h1 align="center">
 	<img

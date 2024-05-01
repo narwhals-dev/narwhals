@@ -15,6 +15,7 @@ from narwhals.translate import get_polars
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -210,6 +211,9 @@ class DataFrame(BaseFrame):
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
+
+    def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
+        return self._dataframe.to_numpy(*args, **kwargs)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "

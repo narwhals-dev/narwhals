@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
+import pytest
 from hypothesis import example
 from hypothesis import given
 from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
 
 import narwhals as nw
+from narwhals.utils import parse_version
+
+pl_version = parse_version(pl.__version__)
 
 
 @example([0, 0, 0], [0, 0, 0], [0.0, 0.0, -0.0], ["c"])  # type: ignore[misc]
@@ -34,6 +38,8 @@ import narwhals as nw
         unique=True,
     ),
 )  # type: ignore[misc]
+@pytest.mark.slow()
+@pytest.mark.xfail(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
 def test_join(
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],

@@ -29,9 +29,9 @@ jobs:
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
       - name: install-modin
-        run: python -m pip install pandas==2.0.0 polars==0.20.13 modin[dask]
+        run: python -m pip install pandas==1.2.0 polars==0.20.3
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
       - name: Run doctests
         run: pytest narwhals --doctest-modules
 
@@ -64,7 +64,7 @@ jobs:
       - name: install-pandas-nightly
         run: python -m pip install --pre --extra-index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
       - name: Run doctests
         run: pytest narwhals --doctest-modules
 
