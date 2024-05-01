@@ -31,6 +31,29 @@ class Expr:
 
     # --- convert ---
     def alias(self, name: str) -> Expr:
+        """
+        Rename the expression.
+
+        Arguments:
+            name: The new name.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 5]})
+            >>> df = nw.from_native(df_pd)
+            >>> expr = (nw.col('b')+10).alias('c')
+            >>> result = df.select(expr)
+            >>> result
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(result)
+                c
+            0  14
+            1  15
+        """
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
     def cast(
