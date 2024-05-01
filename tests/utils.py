@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 from typing import Iterator
 from typing import Sequence
@@ -21,7 +22,9 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
             assert key in expected
     for key in expected:
         for lhs, rhs in zip_longest(result[key], expected[key]):
-            if isinstance(lhs, float):
-                assert abs(lhs - rhs) < 1e-6, (lhs, rhs)
+            if isinstance(lhs, float) and not math.isnan(lhs):
+                assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
+            elif isinstance(lhs, float) and math.isnan(lhs):
+                assert math.isnan(rhs), (lhs, rhs)
             else:
                 assert lhs == rhs, (lhs, rhs)
