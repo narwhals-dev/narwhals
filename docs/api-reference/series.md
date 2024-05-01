@@ -9,7 +9,6 @@
         - any
         - cast
         - drop_nulls
-        - dt
         - dtype
         - filter
         - is_between
@@ -24,7 +23,6 @@
         - shape
         - sort
         - std
-        - str
         - sum
         - to_numpy
         - to_pandas

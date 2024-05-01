@@ -8,7 +8,6 @@
         - all
         - any
         - cast
-        - dt
         - drop_nulls
         - filter
         - is_between
@@ -22,7 +21,6 @@
         - sample
         - sort
         - std
-        - str
         - sum
       show_source: false
       show_bases: false
