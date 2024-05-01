@@ -12,6 +12,7 @@ from narwhals.translate import get_cudf
 from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
+from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
     import numpy as np
@@ -133,6 +134,7 @@ class BaseFrame:
     ) -> Self:
         if how != "inner":
             raise NotImplementedError("Only inner joins are supported for now")
+        validate_same_library([self, other])
         return self._from_dataframe(
             self._dataframe.join(
                 self._extract_native(other),

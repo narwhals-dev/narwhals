@@ -42,3 +42,13 @@ def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
 
 def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
     return isinstance(obj, cls) or issubclass(obj, cls)
+
+
+def validate_same_library(items: Iterable[Any]) -> None:
+    if all(item._is_polars for item in items):
+        return
+    if all(hasattr(item._dataframe, "_implementation") for item in items) and (
+        len({item._dataframe._implementation for item in items}) == 1
+    ):
+        return
+    raise NotImplementedError("Cross-library comparisons aren't supported")

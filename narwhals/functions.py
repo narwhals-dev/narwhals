@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Literal
 
+from narwhals.utils import validate_same_library
+
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
@@ -21,6 +23,7 @@ def concat(
     if not items:
         raise ValueError("No items to concatenate")
     items = list(items)
+    validate_same_library(items)
     first_item = items[0]
     plx = first_item.__narwhals_namespace__()
     return first_item.__class__(
