@@ -40,7 +40,7 @@ pl_version = parse_version(pl.__version__)
 )  # type: ignore[misc]
 @pytest.mark.slow()
 @pytest.mark.xfail(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
-def test_join(
+def test_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
     floats: st.SearchStrategy[list[float]],

@@ -29,7 +29,7 @@ from tests.utils import compare_dicts
     st.sampled_from(["horizontal", "vertical"]),
 )  # type: ignore[misc]
 @pytest.mark.slow()
-def test_concat(
+def test_concat(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
     floats: st.SearchStrategy[list[float]],

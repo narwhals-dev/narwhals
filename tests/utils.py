@@ -25,6 +25,6 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
             if isinstance(lhs, float) and not math.isnan(lhs):
                 assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
             elif isinstance(lhs, float) and math.isnan(lhs):
-                assert math.isnan(rhs), (lhs, rhs)
+                assert math.isnan(rhs), (lhs, rhs)  # pragma: no cover
             else:
                 assert lhs == rhs, (lhs, rhs)
