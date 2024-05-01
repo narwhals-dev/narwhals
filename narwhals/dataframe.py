@@ -134,7 +134,7 @@ class BaseFrame:
     ) -> Self:
         if how != "inner":
             raise NotImplementedError("Only inner joins are supported for now")
-        validate_same_library(self, other)
+        validate_same_library([self, other])
         return self._from_dataframe(
             self._dataframe.join(
                 self._extract_native(other),
