@@ -5,6 +5,9 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 
+from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_polars
+
 
 def remove_prefix(text: str, prefix: str) -> str:
     if text.startswith(prefix):
@@ -28,6 +31,15 @@ def flatten(args: Any) -> list[Any]:
 
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
+
+    if (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame)):
+        msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
+        raise TypeError(msg)
+    if (pl := get_polars()) is not None and isinstance(
+        arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+    ):
+        msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
+        raise TypeError(msg)
 
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
