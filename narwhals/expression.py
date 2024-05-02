@@ -96,9 +96,9 @@ class Expr:
             Let's define a dataframe-agnostic function:
 
             >>> def func(df_any):
-                ... df = nw.from_native(df_any)
-                ... df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar'): nw.UInt8))
-                ... return nw.to_native(df)
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar'): nw.UInt8))
+            ...     return nw.to_native(df)
 
             >>> func(df_pd)
                 foo     bar           ham
@@ -134,9 +134,9 @@ class Expr:
 
             Let's Define a dataframe-agnostic function:
             >>> def func(df_any):
-                ... df = nw.from_native(df_any)
-                ... df.select(nw.col('ham').(cast(nw.Date: nw.Datetime))
-                ... return nw.to_native(df)
+            ...     df = nw.from_native(df_any)
+            ...     df.select(nw.col('ham').(cast(nw.Date: nw.Datetime))
+            ...     return nw.to_native(df)
 
             >>> func(df_pd)
             foo  bar                  ham
@@ -300,9 +300,9 @@ class Expr:
             Let's define a dataframe-agnostic function: 
 
             >>> def func(df_any)
-                ... df = nw.from_native(df_any)
-                ... df = df.select(nw.col('a', 'b').any())
-                ... return nw.to_native(df)
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a', 'b').any())
+            ...     return nw.to_native(df)
 
             We can then pass any type of dataframe to `func`:
 
