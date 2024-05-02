@@ -75,87 +75,96 @@ class Expr:
         dtype: Any,
     ) -> Expr:
         """
-        Redefine an objects data type.
+                Redefine an objects data type.
 
-        Arguments:
-            dtype: Data type that the object will be cast into.
+                Arguments:
+                    dtype: Data type that the object will be cast into.
 
-    Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> from datetime import date
-            >>> df_pd = pd.DataFrame(
-            >>> {"foo": [1, 2, 3],
-            >>> "bar": [6.0, 7.0, 8.0], 
-            >>> "ham": [date(2020, 1, 2), date(2021, 3, 4), date(2022, 5, 6)],}) 
-            >>> df_pl = pl.DataFrame
-            >>> {"foo": [1, 2, 3],
-            >>> "bar": [6.0, 7.0, 8.0], 
-            >>> "ham": [date(2020, 1, 2), date(2021, 3, 4), date(2022, 5, 6)],})  
-                
-            Let's define a dataframe-agnostic function:
+            Examples:
+                    >>> import pandas as pd
+                    >>> import narwhals as nw
+                    >>> from datetime import date
+                    >>> df_pd = pd.DataFrame(
+                    >>> {"foo": [1, 2, 3],
+                    >>> "bar": [6.0, 7.0, 8.0],
+                    >>> "ham": [date(2020, 1, 2), date(2021, 3, 4), date(2022, 5, 6)],})
+                    >>> df_pl = pl.DataFrame
+                    >>> {"foo": [1, 2, 3],
+                    >>> "bar": [6.0, 7.0, 8.0],
+                    >>> "ham": [date(2020, 1, 2), date(2021, 3, 4), date(2022, 5, 6)],})
 
-            >>> def func(df_any):
-                ... df = nw.from_native(df_any)
-                ... df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar'): nw.UInt8))
-                ... return nw.to_native(df)
+                    Let's define a dataframe-agnostic function:
 
-            >>> func(df_pd)
-                foo     bar           ham 
-            0   1.0     6      2020-01-02
-            1   2.0     7      2021-03-04
-            1   3.0     8      2022-05-06
+                    >>> def func(df_any):
+                        ... df = nw.from_native(df_any)
+                        ... df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar'): nw.UInt8))
+                        ... return nw.to_native(df)
 
-            >>> func(df_pl)
-            shape: (3, 3)
-            ┌─────┬─────┬────────────┐
-            │ foo ┆ bar ┆ ham        │
-            │ --- ┆ --- ┆ ---        │
-            │ f32 ┆ u8  ┆ date       │
-            ╞═════╪═════╪════════════╡
-            │ 1.0 ┆ 6   ┆ 2020-01-02 │
-            │ 2.0 ┆ 7   ┆ 2021-03-04 │
-            │ 3.0 ┆ 8   ┆ 2022-05-06 │
-            └─────┴─────┴────────────┘
+                    >>> func(df_pd)
+                        foo     bar           ham
+                    0   1.0     6      2020-01-02
+                    1   2.0     7      2021-03-04
+                    1   3.0     8      2022-05-06
+
+                    >>> func(df_pl)
+                    shape: (3, 3)
+                    ┌─────┬─────┬────────────┐
+                    │ foo ┆ bar ┆ ham        │
+                    │ --- ┆ --- ┆ ---        │
+                    │ f32 ┆ u8  ┆ date       │
+                    ╞═════╪═════╪════════════╡
+                    │ 1.0 ┆ 6   ┆ 2020-01-02 │
+                    │ 2.0 ┆ 7   ┆ 2021-03-04 │
+                    │ 3.0 ┆ 8   ┆ 2022-05-06 │
+                    └─────┴─────┴────────────┘
 
 
-                >>> df = df.cast({"foo": pl.Float32, "bar": pl.UInt8})
-                >>> nw.to_native(df)
-                shape: (3, 3)
-                ┌─────┬─────┬────────────┐
-                │ foo ┆ bar ┆ ham        │
-                │ --- ┆ --- ┆ ---        │
-                │ f32 ┆ u8  ┆ date       │
-                ╞═════╪═════╪════════════╡
-                │ 1.0 ┆ 6   ┆ 2020-01-02 │
-                │ 2.0 ┆ 7   ┆ 2021-03-04 │
-                │ 3.0 ┆ 8   ┆ 2022-05-06 │
-                └─────┴─────┴────────────┘
+                        >>> df = df.cast({"foo": pl.Float32, "bar": pl.UInt8})
+                        >>> nw.to_native(df)
+                        shape: (3, 3)
+                        ┌─────┬─────┬────────────┐
+                        │ foo ┆ bar ┆ ham        │
+                        │ --- ┆ --- ┆ ---        │
+                        │ f32 ┆ u8  ┆ date       │
+                        ╞═════╪═════╪════════════╡
+                        │ 1.0 ┆ 6   ┆ 2020-01-02 │
+                        │ 2.0 ┆ 7   ┆ 2021-03-04 │
+                        │ 3.0 ┆ 8   ┆ 2022-05-06 │
+                        └─────┴─────┴────────────┘
 
+<<<<<<< HEAD
             Let's Define a dataframe agnostic function:
             >>> def func(df_any):
                 ... df = nw.from_native(df_any)
                 ... df.select(nw.col('ham').(cast(nw.Date: nw.Datetime))
                 ... return nw.to_native(df)
+=======
+        <<<<<<< HEAD
+                    Let's Define a dataframe agnostic function:
+                    >>> def func(df_any):
+                        ... df = nw.from_native(df_any)
+                        ... df.select(nw.col('ham').(cast(nw.Date: nw.Datetime))
+                        ... return nw.to_native(df)
+>>>>>>> ec9edcade5719d6c5058dde65c77f047fe6af0bc
 
-            >>> func(df_pd)
-            foo  bar                  ham
-            1    6.0  2020-01-02 00:00:00 
-            2    7.0  2021-03-04 00:00:00 
-            3    8.0  2022-05-06 00:00:00
+                    >>> func(df_pd)
+                    foo  bar                  ham
+                    1    6.0  2020-01-02 00:00:00
+                    2    7.0  2021-03-04 00:00:00
+                    3    8.0  2022-05-06 00:00:00
 
-            >>> func(df_pl)
-            shape: (3, 3)
-            ┌─────┬─────┬─────────────────────┐
-            │ foo ┆ bar ┆ ham                 │
-            │ --- ┆ --- ┆ ---                 │
-            │ i64 ┆ f64 ┆ datetime[μs]        │
-            ╞═════╪═════╪═════════════════════╡
-            │ 1   ┆ 6.0 ┆ 2020-01-02 00:00:00 │
-            │ 2   ┆ 7.0 ┆ 2021-03-04 00:00:00 │
-            │ 3   ┆ 8.0 ┆ 2022-05-06 00:00:00 │
-            └─────┴─────┴─────────────────────┘
-    """
+                    >>> func(df_pl)
+                    shape: (3, 3)
+                    ┌─────┬─────┬─────────────────────┐
+                    │ foo ┆ bar ┆ ham                 │
+                    │ --- ┆ --- ┆ ---                 │
+                    │ i64 ┆ f64 ┆ datetime[μs]        │
+                    ╞═════╪═════╪═════════════════════╡
+                    │ 1   ┆ 6.0 ┆ 2020-01-02 00:00:00 │
+                    │ 2   ┆ 7.0 ┆ 2021-03-04 00:00:00 │
+                    │ 3   ┆ 8.0 ┆ 2022-05-06 00:00:00 │
+                    └─────┴─────┴─────────────────────┘
+        """
 
         return self.__class__(
             lambda plx: self._call(plx).cast(translate_dtype(plx, dtype)),
