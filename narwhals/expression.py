@@ -132,7 +132,6 @@ class Expr:
                 │ 3.0 ┆ 8   ┆ 2022-05-06 │
                 └─────┴─────┴────────────┘
 
-<<<<<<< HEAD
             Let's Define a dataframe agnostic function:
             >>> def func(df_any):
                 ... df = nw.from_native(df_any)
@@ -288,6 +287,39 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).__invert__())
 
     def any(self) -> Expr:
+        """
+        Return whether any values are True
+
+        Examples: 
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [True, False], 'b': [True, True]})
+            >>> df_pl = pl.DataFrame({'a': [True, False], 'b': [True, True]})
+
+            Let's define a datafram agnostic function: 
+
+            >>> def func(df_any)
+                ... df = nw.from_native(df_any)
+                ... df = df.select(nw.col('a', 'b').any())
+                ... return nw.to_native(df)
+
+            We can then pass any type of dataframe to `func`:
+
+            >>> func(df_pd)
+                   a        b
+            0   True    False
+            >>> func(df_pl)
+            shape: (1,2)
+            ┌───────┬──────┐
+            │ a     ┆ b    │
+            │ ---   ┆ ---  │
+            │ bool  ┆ bool │
+            ╞═══════╪══════╡
+            │ true  ┆ true │
+            └───────┴──────┘
+
+        """
         return self.__class__(lambda plx: self._call(plx).any())
 
     def all(self) -> Expr:
