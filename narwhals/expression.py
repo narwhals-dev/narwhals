@@ -37,6 +37,32 @@ class Expr:
         self,
         dtype: Any,
     ) -> Expr:
+        """
+    Redefine an objects data type. 
+
+    Arguments: 
+        dtype: Data type that the object will be cast into.
+
+    Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.Dataframe({'a': [1,2,3], 'b': [4,5]})
+            >>> df = nw.from_native(df_pd)
+            >>> expr = (nw.col('a').cast(pl.String).alias('c'))
+            >>> result = df.select('a', 'c')
+            >>> result
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(result)
+                a       c
+                int32   str
+            0   1       '1'
+            1   2       '2'
+            2   3       '3'
+    """
+
         return self.__class__(
             lambda plx: self._call(plx).cast(translate_dtype(plx, dtype)),
         )
