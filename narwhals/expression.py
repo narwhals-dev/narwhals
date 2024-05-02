@@ -75,10 +75,10 @@ class Expr:
         dtype: Any,
     ) -> Expr:
         """
-    Redefine an objects data type. 
+        Redefine an objects data type.
 
-    Arguments: 
-        dtype: Data type that the object will be cast into.
+        Arguments:
+            dtype: Data type that the object will be cast into.
 
     Examples:
             >>> import pandas as pd
@@ -118,8 +118,21 @@ class Expr:
             │ 3.0 ┆ 8   ┆ 2022-05-06 │
             └─────┴─────┴────────────┘
 
-            Cast all frame columns matching one dtype (or dtype group) to another dtype:
 
+                >>> df = df.cast({"foo": pl.Float32, "bar": pl.UInt8})
+                >>> nw.to_native(df)
+                shape: (3, 3)
+                ┌─────┬─────┬────────────┐
+                │ foo ┆ bar ┆ ham        │
+                │ --- ┆ --- ┆ ---        │
+                │ f32 ┆ u8  ┆ date       │
+                ╞═════╪═════╪════════════╡
+                │ 1.0 ┆ 6   ┆ 2020-01-02 │
+                │ 2.0 ┆ 7   ┆ 2021-03-04 │
+                │ 3.0 ┆ 8   ┆ 2022-05-06 │
+                └─────┴─────┴────────────┘
+
+<<<<<<< HEAD
             Let's Define a dataframe agnostic function:
             >>> def func(df_any):
                 ... df = nw.from_native(df_any)
