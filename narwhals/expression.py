@@ -31,6 +31,43 @@ class Expr:
 
     # --- convert ---
     def alias(self, name: str) -> Expr:
+        """
+        Rename the expression.
+
+        Arguments:
+            name: The new name.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 5]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [4, 5]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select((nw.col('b')+10).alias('c'))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                c
+            0  14
+            1  15
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌─────┐
+            │ c   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 14  │
+            │ 15  │
+            └─────┘
+        """
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
     def cast(
@@ -196,6 +233,38 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).any())
 
     def all(self) -> Expr:
+        """
+        Return whether all values are True.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [True, False], 'b': [True, True]})
+            >>> df_pl = pl.DataFrame({'a': [True, False], 'b': [True, True]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a', 'b').all())
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                   a     b
+            0  False  True
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌───────┬──────┐
+            │ a     ┆ b    │
+            │ ---   ┆ ---  │
+            │ bool  ┆ bool │
+            ╞═══════╪══════╡
+            │ false ┆ true │
+            └───────┴──────┘
+        """
         return self.__class__(lambda plx: self._call(plx).all())
 
     def mean(self) -> Expr:
