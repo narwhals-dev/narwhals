@@ -39,20 +39,34 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 5]})
-            >>> df = nw.from_native(df_pd)
-            >>> expr = (nw.col('b')+10).alias('c')
-            >>> result = df.select(expr)
-            >>> result
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(result)
+            >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [4, 5]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select((nw.col('b')+10).alias('c'))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
                 c
             0  14
             1  15
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌─────┐
+            │ c   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 14  │
+            │ 15  │
+            └─────┘
         """
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
