@@ -130,7 +130,7 @@ class Expr:
             │ 1.0 ┆ 6   ┆ 2020-01-02 │
             │ 2.0 ┆ 7   ┆ 2021-03-04 │
             │ 3.0 ┆ 8   ┆ 2022-05-06 │
-            └─────┴─────┴────────────┘    
+            └─────┴─────┴────────────┘
 
             Let's Define a dataframe-agnostic function:
             >>> def func(df_any):
@@ -297,7 +297,7 @@ class Expr:
             >>> df_pd = pd.DataFrame({'a': [True, False], 'b': [True, True]})
             >>> df_pl = pl.DataFrame({'a': [True, False], 'b': [True, True]})
 
-            Let's define a dataframe-agnostic function: 
+            Let's define a dataframe-agnostic function:
 
             >>> def func(df_any)
             ...     df = nw.from_native(df_any)
