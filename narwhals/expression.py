@@ -303,7 +303,7 @@ class Expr:
             ...    df = df.select(nw.max('a', 'b'))
             ...    return nw.to_native(df)
 
-            We can then pass either pandas or polars to `func`:
+            We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
                 a    b
