@@ -204,11 +204,43 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).__invert__())
 
     def any(self) -> Expr:
+        """
+        Return whether any of the values in the column are `True`
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [True, False], 'b': [True, True]})
+            >>> df_pl = pl.DataFrame({'a': [True, False], 'b': [True, True]})
+
+            We define a data-frame agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a', 'b').any())
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                   a     b
+            0    True  True
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌──────┬──────┐
+            │ a    ┆ b    │
+            │ ---  ┆ ---  │
+            │ bool ┆ bool │
+            ╞══════╪══════╡
+            │ true ┆ true │
+            └──────┴──────┘
+        """
         return self.__class__(lambda plx: self._call(plx).any())
 
     def all(self) -> Expr:
         """
-        Return whether all values are True.
+        Return whether all values in the column are `True`.
 
         Examples:
             >>> import pandas as pd
