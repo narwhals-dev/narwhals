@@ -284,7 +284,7 @@ class Expr:
             │ ---   ┆ ---  │
             │ i64   ┆ i64  │
             ╞═══════╪══════╡
-            │  20   |  100 │
+            │ 20    | 100  │
             └───────┴──────┘
         """
         return self.__class__(lambda plx: self._call(plx).max())
