@@ -18,7 +18,7 @@ Seamlessly support all, without depending on any!
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
 - ✅ Separate **lazy** and eager APIs
-- ✅ Use Polars **Expressions**
+- ✅ Use **Expressions**
 - ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
 
 ## Used by
