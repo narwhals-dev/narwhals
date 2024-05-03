@@ -296,7 +296,7 @@ class Expr:
             >>> df_pd = pd.DataFrame({'a': [10, 20], 'b': [50, 100]})
             >>> df_pl = pl.DataFrame({'a': [10, 20], 'b': [50, 100]})
 
-            let's define a dataframe-agnostic function:
+            Let's define a dataframe-agnostic function:
 
             >>> def func(df_any):
             ...    df = nw.from_native(df_any)
