@@ -1,11 +1,17 @@
 from __future__ import annotations  # pragma: no cover
 
 from typing import TYPE_CHECKING  # pragma: no cover
+from typing import Union  # pragma: no cover
 
 if TYPE_CHECKING:
-    from typing import TypeAlias
+    import sys
+
+    if sys.version_info >= (3, 10):
+        from typing import TypeAlias
+    else:
+        from typing_extensions import TypeAlias
 
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.series import PandasSeries
 
-    IntoPandasExpr: TypeAlias = PandasExpr | str | int | float | PandasSeries
+    IntoPandasExpr: TypeAlias = Union[PandasExpr, str, int, float, PandasSeries]
