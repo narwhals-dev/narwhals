@@ -286,6 +286,38 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).min())
 
     def max(self) -> Expr:
+        """
+        Returns the maximum value(s) from a column(s).
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [10, 20], 'b': [50, 100]})
+            >>> df_pl = pl.DataFrame({'a': [10, 20], 'b': [50, 100]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...    df = nw.from_native(df_any)
+            ...    df = df.select(nw.max('a', 'b'))
+            ...    return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                a    b
+            0  20  100
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 20  ┆ 100 │
+            └─────┴─────┘
+        """
         return self.__class__(lambda plx: self._call(plx).max())
 
     def n_unique(self) -> Expr:
