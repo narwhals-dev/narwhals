@@ -271,10 +271,6 @@ class Expr:
             ...    df = df.select(nw.max('a', 'b'))
             ...    return nw.to_native(df)
 
-                df = nw.from_native(df_any)
-                df = df.select(nw.max('a', 'b'))
-                return nw.to_native(df)
-
             We can then pass either pandas or polars to `func`:
 
             >>> func(df_pd)
