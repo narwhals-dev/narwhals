@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import TYPE_CHECKING  # pragma: no cover
 from typing import TypeVar  # pragma: no cover
 from typing import Union  # pragma: no cover
