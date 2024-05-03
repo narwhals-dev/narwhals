@@ -224,8 +224,8 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                   a     b
-            0    True  True
+                  a     b
+            0  True  True
             >>> func(df_pl)
             shape: (1, 2)
             ┌──────┬──────┐
