@@ -49,24 +49,19 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
 
-## Package size
+## What about Ibis?
 
 Like Ibis, Narwhals aims to enable dataframe-agnostic code. However, Narwhals comes with **zero** dependencies,
 is about as lightweight as it gets, and is aimed at library developers rather than at end users. It also does
-not aim to support as many backends, preferring to instead focus on dataframes.
+not aim to support as many backends, preferring to instead focus on dataframes. So, which should you use?
 
-The projects are not in competition, and the comparison is intended only to help you choose the right tool
-for the right task.
+- If you need to run complicated analyses and aren't too bothered about package size: Ibis!
+- If you're a library maintainer and want the thinnest-possible layer to get cross-dataframe library support: Narwhals!
 
 Here is the package size increase which would result from installing each tool in a non-pandas
 environment:
 
-<h1 align="center">
-	<img
-		width="800"
-		alt="Comparison between Narwhals (0.3 MB) and Ibis (~310 MB)"
-		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/641c1ad1-841c-47ab-876d-8f462f119482">
-</h1>
+![image](https://github.com/MarcoGorelli/narwhals/assets/33491632/a8dfba78-feb1-48c1-960a-5b9b03585fa5)
    
 ## Example
 
