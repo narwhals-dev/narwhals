@@ -13,15 +13,6 @@ import narwhals as nw
 from narwhals.utils import parse_version
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_pandas_nullable = pd.DataFrame(
-    {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-).astype(
-    {
-        "a": "Int64",
-        "b": "Int64",
-        "z": "Float64",
-    }
-)
 if parse_version(pd.__version__) >= parse_version("1.5.0"):
     df_pandas_pyarrow = pd.DataFrame(
         {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -32,8 +23,19 @@ if parse_version(pd.__version__) >= parse_version("1.5.0"):
             "z": "Float64[pyarrow]",
         }
     )
+    df_pandas_nullable = pd.DataFrame(
+        {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    ).astype(
+        {
+            "a": "Int64",
+            "b": "Int64",
+            "z": "Float64",
+        }
+    )
 else:  # pragma: no cover
-    df_pandas_pyarrow = None
+    # pyarrow/nullable dtypes not supported so far back
+    df_pandas_pyarrow = df_pandas
+    df_pandas_nullable = df_pandas
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 
@@ -42,8 +44,6 @@ df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     "df_raw", [df_pandas, df_polars, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_len(df_raw: Any) -> None:
-    if df_raw is None:
-        return
     result = len(nw.Series(df_raw["a"]))
     assert result == 3
     result = len(nw.LazyFrame(df_raw).collect()["a"])
@@ -87,8 +87,6 @@ def test_gt(df_raw: Any) -> None:
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_dtype(df_raw: Any) -> None:
-    if df_raw is None:
-        return
     result = nw.LazyFrame(df_raw).collect()["a"].dtype
     assert result == nw.Int64
     assert result.is_numeric()
@@ -98,8 +96,6 @@ def test_dtype(df_raw: Any) -> None:
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_reductions(df_raw: Any) -> None:
-    if df_raw is None:
-        return
     s = nw.LazyFrame(df_raw).collect()["a"]
     assert s.mean() == 2.0
     assert s.std() == 1.0
@@ -121,8 +117,6 @@ def test_reductions(df_raw: Any) -> None:
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_boolean_reductions(df_raw: Any) -> None:
-    if df_raw is None:
-        return
     df = nw.LazyFrame(df_raw).select(nw.col("a") > 1)
     assert not df.collect()["a"].all()
     assert df.collect()["a"].any()
