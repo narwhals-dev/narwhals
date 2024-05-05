@@ -11,9 +11,7 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
-from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -36,7 +34,7 @@ class PandasDataFrame:
         implementation: str,
     ) -> None:
         self._validate_columns(dataframe.columns)
-        self._dataframe = self._convert_object_dtypes(dataframe)
+        self._dataframe = dataframe
         self._implementation = implementation
 
     def __narwhals_dataframe__(self) -> Self:
@@ -49,25 +47,6 @@ class PandasDataFrame:
         from narwhals._pandas_like.namespace import PandasNamespace
 
         return PandasNamespace(self._implementation)
-
-    def _convert_object_dtypes(self, dataframe: Any) -> Any:
-        schema = dataframe.dtypes
-        if (schema != object).all():
-            return dataframe
-        replacements = {}
-        for col in dataframe.columns:
-            if schema[col] != object:
-                continue
-            import pandas as pd  # todo: generalise across pandas-like implementations
-
-            if parse_version(pd.__version__) >= parse_version("2.0.0"):
-                if get_pyarrow() is not None:
-                    replacements[col] = dataframe[col].astype("string[pyarrow]")
-                else:  # pragma: no cover
-                    replacements[col] = dataframe[col].astype("string[python]")
-            else:  # pragma: no cover
-                pass
-        return dataframe.assign(**replacements)
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
         if len(columns) != len(set(columns)):

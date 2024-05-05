@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from numpy.testing import assert_allclose
@@ -21,6 +22,7 @@ import narwhals as nw
         max_size=3,
     ),
 )  # type: ignore[misc]
+@pytest.mark.slow()
 def test_mean(
     integer: st.SearchStrategy[list[int]],
     floats: st.SearchStrategy[float],
