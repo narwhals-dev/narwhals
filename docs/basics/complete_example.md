@@ -45,8 +45,8 @@ Note that all the calculations here can stay lazy if the underlying library perm
 Unlike the `transform` method, `fit` cannot stay lazy, as we need to compute concrete values
 for the means and standard deviations.
 
-To be able to get `Series` out of our `DataFrame`, we'll need to use `narwhals.DataFrame` (as opposed to
-`narwhals.from_native`). This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
+To be able to get `Series` out of our `DataFrame`, we'll pass `eager_only=True` to `narwhals.from_native`.
+This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
 doesn't either.
 
 ```python
@@ -54,7 +54,7 @@ import narwhals as nw
 
 class StandardScalar:
     def fit(self, df):
-        df = nw.DataFrame(df)
+        df = nw.from_native(df, eager_only=True)
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 ```
@@ -67,7 +67,7 @@ import narwhals as nw
 
 class StandardScaler:
     def fit(self, df):
-        df = nw.DataFrame(df)
+        df = nw.from_native(df, eager_only=True)
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 
