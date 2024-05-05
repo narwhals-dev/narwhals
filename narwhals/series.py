@@ -116,7 +116,7 @@ class Series:
     def sum(self) -> Any:
         return self._series.sum()
 
-    def std(self, *, ddof: int = 1) -> Self:
+    def std(self, *, ddof: int = 1) -> Any:
         return self._series.std(ddof=ddof)
 
     def is_in(self, other: Any) -> Self:
