@@ -292,7 +292,7 @@ class Expr:
             ...    return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
-            
+
             >>> func(df_pd)
                  a    b
             0  0.0  4.0
