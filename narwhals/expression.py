@@ -308,7 +308,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).mean())
 
-    def std(self) -> Expr:
+    def std(self, *, ddof: int = 1) -> Expr:
         """
         Get standard deviation.
 
@@ -323,25 +323,26 @@ class Expr:
 
             >>> def func(df_any):
             ...    df = nw.from_native(df_any)
-            ...    df = df.select(nw.col('a', 'b').std())
+            ...    df = df.select(nw.col('a', 'b').std(ddof=0))
             ...    return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                 a    b
-            0  1.0  2.0
+                      a         b
+            0  0.816497  1.632993
             >>> func(df_pl)
             shape: (1, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ f64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 1.0 ┆ 2.0 │
-            └─────┴─────┘
+            ┌──────────┬──────────┐
+            │ a        ┆ b        │
+            │ ---      ┆ ---      │
+            │ f64      ┆ f64      │
+            ╞══════════╪══════════╡
+            │ 0.816497 ┆ 1.632993 │
+            └──────────┴──────────┘
+
         """
-        return self.__class__(lambda plx: self._call(plx).std())
+        return self.__class__(lambda plx: self._call(plx).std(ddof=ddof))
 
     def sum(self) -> Expr:
         return self.__class__(lambda plx: self._call(plx).sum())

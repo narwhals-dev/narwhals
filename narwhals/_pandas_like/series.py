@@ -321,10 +321,10 @@ class PandasSeries:
     def std(
         self,
         *,
-        correction: float = 1.0,
+        ddof: int = 1,
     ) -> Any:
         ser = self._series
-        return ser.std(ddof=correction)
+        return ser.std(ddof=ddof)
 
     def len(self) -> Any:
         return len(self._series)
