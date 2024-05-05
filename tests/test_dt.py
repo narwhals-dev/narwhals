@@ -8,6 +8,7 @@ import polars as pl
 import pytest
 
 import narwhals as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 df_pandas = pd.DataFrame(
@@ -15,18 +16,6 @@ df_pandas = pd.DataFrame(
         "a": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
         "b": [4, 4, 6],
         "z": [7.0, 8, 9],
-    }
-)
-df_pandas_nullable = pd.DataFrame(
-    {
-        "a": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
-        "b": [4, 4, 6],
-        "z": [7.0, 8, 9],
-    }
-).astype(
-    {
-        "b": "Int64",
-        "z": "Float64",
     }
 )
 df_polars = pl.DataFrame(
@@ -43,6 +32,21 @@ df_lazy = pl.LazyFrame(
         "z": [7.0, 8, 9],
     }
 )
+if parse_version(pd.__version__) >= parse_version("1.2.0"):
+    df_pandas_nullable = pd.DataFrame(
+        {
+            "a": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
+            "b": [4, 4, 6],
+            "z": [7.0, 8, 9],
+        }
+    ).astype(
+        {
+            "b": "Int64",
+            "z": "Float64",
+        }
+    )
+else:  # pragma: no cover
+    df_pandas_nullable = df_pandas
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy, df_pandas_nullable])
