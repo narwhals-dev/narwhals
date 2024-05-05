@@ -312,12 +312,16 @@ class Expr:
         """
         Get standard deviation.
 
+        Arguments:
+            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements. By default ddof is 1.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 2, 3], 'b': [2, 4, 6]})
-            >>> df_pl = pl.DataFrame({'a': [1, 2, 3], 'b': [2, 4, 6]})
+            >>> df_pd = pd.DataFrame({'a': [20, 25, 60], 'b': [1.5, 1, -1.4]})
+            >>> df_pl = pl.DataFrame({'a': [20, 25, 60], 'b': [1.5, 1, -1.4]})
 
             Let's define a dataframe-agnostic function:
 
@@ -330,7 +334,7 @@ class Expr:
 
             >>> func(df_pd)
                       a         b
-            0  0.816497  1.632993
+            0  17.79513  1.265789
             >>> func(df_pl)
             shape: (1, 2)
             ┌──────────┬──────────┐
@@ -338,7 +342,7 @@ class Expr:
             │ ---      ┆ ---      │
             │ f64      ┆ f64      │
             ╞══════════╪══════════╡
-            │ 0.816497 ┆ 1.632993 │
+            │ 17.79513 ┆ 1.265789 │
             └──────────┴──────────┘
 
         """
