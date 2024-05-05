@@ -410,6 +410,56 @@ class Expr:
         )
 
     def is_null(self) -> Expr:
+        """
+        Returns a boolean Series indicating which values are null.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame(
+            ...         {
+            ...             'a': [2, 4, None, 3, 5],
+            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
+            ...         }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...         {
+            ...             'a': [2, 4, None, 3, 5],
+            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
+            ...         }
+            ... )
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(nw.all().is_null()) # nan != null for polars
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                   a      b
+            0  False  False
+            1  False  False
+            2   True   True
+            3  False  False
+            4  False  False
+            >>> func(df_pl)
+            shape: (5, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ false ┆ false │
+            │ false ┆ false │
+            │ true  ┆ false │
+            │ false ┆ false │
+            │ false ┆ false │
+            └───────┴───────┘
+        """
         return self.__class__(lambda plx: self._call(plx).is_null())
 
     # --- partial reduction ---
