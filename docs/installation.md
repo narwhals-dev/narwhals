@@ -11,6 +11,6 @@ Then, if you start the Python REPL and see the following:
 ```python
 >>> import narwhals
 >>> narwhals
-'0.7.15'
+'0.7.16'
 ```
 then installation worked correctly!
