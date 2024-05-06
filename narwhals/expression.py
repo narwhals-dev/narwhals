@@ -347,6 +347,38 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).sum())
 
     def min(self) -> Expr:
+        """
+        Returns the minimum value(s) from a column(s).
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 3]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [4, 3]})
+
+            Let's define a dataframe-agnostic function:
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.min('a','b'))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                a     b
+            0   1     3
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │   1 ┆   3 │
+            └─────┴─────┘
+        """
+
         return self.__class__(lambda plx: self._call(plx).min())
 
     def max(self) -> Expr:
