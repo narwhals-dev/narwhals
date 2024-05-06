@@ -9,7 +9,7 @@ nav:
     - basics/dataframe.md
     - basics/column.md
     - basics/complete_example.md
-  - Extending: extending.md
+  - extending.md
   - Roadmap: roadmap.md
   - Related projects: related.md
   - API Reference:
