@@ -366,8 +366,8 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                a     b
-            0   1     3
+               a  b
+            0  1  3
             >>> func(df_pl)
             shape: (1, 2)
             ┌─────┬─────┐
@@ -375,7 +375,7 @@ class Expr:
             │ --- ┆ --- │
             │ i64 ┆ i64 │
             ╞═════╪═════╡
-            │   1 ┆   3 │
+            │ 1   ┆ 3   │
             └─────┴─────┘
         """
 
