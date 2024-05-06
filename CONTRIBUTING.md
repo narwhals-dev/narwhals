@@ -18,7 +18,7 @@ You should also install pre-commit:
 pip install pre-commit
 pre-commit install
 ```
-This will automatically format and lint your code before each commit, and it will block the commit if any issues are found."
+This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
 ## Running tests
 
