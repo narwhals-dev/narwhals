@@ -135,6 +135,30 @@ def test_add(df_raw: Any) -> None:
     "df_raw",
     [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
+def test_std(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = df.select(
+        nw.col("a").std().alias("a_ddof_default"),
+        nw.col("a").std(ddof=1).alias("a_ddof_1"),
+        nw.col("a").std(ddof=0).alias("a_ddof_0"),
+        nw.col("b").std(ddof=2).alias("b_ddof_2"),
+        nw.col("z").std(ddof=0).alias("z_ddof_0"),
+    )
+    result_native = nw.to_native(result)
+    expected = {
+        "a_ddof_default": [1.0],
+        "a_ddof_1": [1.0],
+        "a_ddof_0": [0.816497],
+        "b_ddof_2": [1.632993],
+        "z_ddof_0": [0.816497],
+    }
+    compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
+)
 def test_double(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.with_columns(nw.all() * 2)
