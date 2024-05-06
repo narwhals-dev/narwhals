@@ -349,6 +349,38 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).std(ddof=ddof))
 
     def sum(self) -> Expr:
+        """
+        Return the sum value(s).
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [2, 4], 'b': [5, 10]})
+            >>> df_pl = pl.DataFrame({'a': [15, 25], 'b': [9, 21]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a', 'b').sum())
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to func:
+
+            >>> func(df_pd)
+                   a     b
+            0  6  15
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌───────┬──────┐
+            │ a     ┆ b    │
+            │ ---   ┆ ---  │
+            │ i64   ┆ i64  │
+            ╞═══════╪══════╡
+            │ 40    ┆ 30   │
+            └───────┴──────┘
+        """
         return self.__class__(lambda plx: self._call(plx).sum())
 
     def min(self) -> Expr:
