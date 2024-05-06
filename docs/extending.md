@@ -1,4 +1,4 @@
-# List of supported libraries (and how yours can join this list!)
+# List of supported libraries (and how to add yours!)
 
 Currently, Narwhals supports the following libraries as inputs:
 
