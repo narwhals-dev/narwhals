@@ -23,7 +23,7 @@ import narwhals as nw
 
 def my_func(df_any):
     df = nw.from_native(df_any)
-    df = df.with_columns(a_sorted=nw.col('a').sort())
+    df = df.with_columns(a_plus_one=nw.col('a')+1)
     return nw.to_native(df)
 ```
 
