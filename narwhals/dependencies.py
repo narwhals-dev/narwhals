@@ -1,49 +1,33 @@
-import functools
+"""
+pandas / Polars / etc. : if a user passes a dataframe from one of these
+libraries, it means they must already have imported the given module.
+So, we can just check sys.modules.
+"""
+
+import sys
 from typing import Any
 
 
-@functools.lru_cache
 def get_polars() -> Any:
     """Import Polars (if available - else return None)."""
-    try:
-        import polars
-    except ImportError:  # pragma: no cover
-        return None
-    return polars
+    return sys.modules.get("polars", None)
 
 
-@functools.lru_cache
 def get_pandas() -> Any:
     """Import pandas (if available - else return None)."""
-    try:
-        import pandas
-    except ImportError:  # pragma: no cover
-        return None
-    return pandas
+    return sys.modules.get("pandas", None)
 
 
-@functools.lru_cache
 def get_modin() -> Any:  # pragma: no cover
-    try:
-        import modin.pandas as mpd
-    except ImportError:  # pragma: no cover
-        return None
-    return mpd
+    modin = sys.modules.get("modin", None)
+    if modin is not None:
+        return modin.pandas
+    return None
 
 
-@functools.lru_cache
 def get_cudf() -> Any:
-    try:
-        import cudf
-    except ImportError:  # pragma: no cover
-        return None
-    return cudf  # pragma: no cover
+    return sys.modules.get("cudf", None)
 
 
-@functools.lru_cache
 def get_pyarrow() -> Any:
-    try:
-        import pyarrow
-    except ImportError:  # pragma: no cover
-        return None
-    return pyarrow  # pragma: no cover
+    return sys.modules.get("pyarrow", None)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "0.7.15"
+version = "0.7.16"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -18,7 +18,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-pandas = ["pandas>=1.2.0"]
+pandas = ["pandas>=1.1.5"]
 polars = ["polars>=0.20.3"]
 
 [project.urls]
@@ -87,7 +87,6 @@ plugins = ["covdefaults"]
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
-  'if df_raw is None:',
 ]
 
 [tool.mypy]

@@ -7,11 +7,11 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals.dependencies import get_polars
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.translate import get_cudf
 from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
-from narwhals.translate import get_polars
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
@@ -60,6 +60,16 @@ class BaseFrame:
             return arg._series
         if isinstance(arg, Expr):
             return arg._call(self.__narwhals_namespace__())
+        if (pl := get_polars()) is not None and isinstance(
+            arg, (pl.Series, pl.DataFrame, pl.LazyFrame, type(pl.col("")))
+        ):
+            msg = (
+                f"Expected Narwhals object, got: {type(arg)}.\n\n"
+                "Perhaps you:\n"
+                "- Forgot a `nw.from_native` somewhere?\n"
+                "- Used `pl.col` instead of `nw.col`?"
+            )
+            raise TypeError(msg)
         return arg
 
     @property
