@@ -50,16 +50,10 @@ df_pd = pd.DataFrame({'a': [2, 1, 3], 'b': [4, 5, 6]})
 s_pd = df_pd['a'].sort_values()
 df_pd['a_sorted'] = s_pd
 ```
-Reading the code, you might expect that this will create a dataframe that
-looks like this:
+Reading the code, you might expect that `'a_sorted'` will contain the
+values `[1, 2, 3]`.
 
-```python
-   a  b  a_sorted
-0  2  4         1
-1  1  5         2
-2  3  6         3
-```
-**However**, here is what `result` actually looks like:
+**However**, here's what actually happens:
 ```python exec="1" source="material-block" session="ex2" result="python"
 print(df_pd)
 ```
