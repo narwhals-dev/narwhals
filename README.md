@@ -11,7 +11,7 @@
 
 Extremely lightweight and extensible compatibility layer between Polars, pandas, Modin, and cuDF (and more!).
 
-- [Read the documentation](https://marcogorelli.github.io/narwhals/)
+- [Read the documentation](https://narwhals-dev.github.io/narwhals/)
 - [Chat with us on Discord!](https://discord.gg/V3PqtB4VA4)
 
 Seamlessly support all, without depending on any!
