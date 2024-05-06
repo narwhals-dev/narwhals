@@ -134,7 +134,7 @@ def test_add(df_raw: Any) -> None:
         "e": [0.0, 2.0, 1.0],
     }
     compare_dicts(result_native, expected)
-    
+
 
 @pytest.mark.parametrize(
     "df_raw",
