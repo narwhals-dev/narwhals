@@ -350,7 +350,7 @@ class Expr:
 
     def sum(self) -> Expr:
         """
-        Return the sum value(s).
+        Return the sum value.
 
         Examples:
             >>> import pandas as pd
