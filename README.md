@@ -8,10 +8,11 @@
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
-[![Docs](https://img.shields.io/badge/Docs-coolgreen?style=flat&link=https://marcogorelli.github.io/narwhals/)](https://marcogorelli.github.io/narwhals/)
-[![Chat with us! - Join Discord](https://img.shields.io/badge/Chat_with_us!-Join_Discord-coolgreen)](https://discord.gg/V3PqtB4VA4)
 
 Extremely lightweight and extensible compatibility layer between Polars, pandas, Modin, and cuDF (and more!).
+
+- [Read the documentation](https://marcogorelli.github.io/narwhals/)
+- [Chat with us on Discord!](https://discord.gg/V3PqtB4VA4)
 
 Seamlessly support all, without depending on any!
 
@@ -20,6 +21,7 @@ Seamlessly support all, without depending on any!
 - ✅ Separate **lazy** and eager APIs
 - ✅ Use **Expressions**
 - ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
+- ✅ Preserve your Index (if present) without it getting in the way!
 
 ## Used by
 
