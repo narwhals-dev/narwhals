@@ -152,13 +152,14 @@ def test_std(df_raw: Any) -> None:
     )
     result_native = nw.to_native(result)
     expected = {
-        "a_ddof_default": [1.0], 
-        "a_ddof_1": [1.0], 
-        "a_ddof_0": [0.816497], 
-        "b_ddof_2": [1.632993], 
+        "a_ddof_default": [1.0],
+        "a_ddof_1": [1.0],
+        "a_ddof_0": [0.816497],
+        "b_ddof_2": [1.632993],
         "z_ddof_0": [0.816497],
     }
     compare_dicts(result_native, expected)
+    
 
 @pytest.mark.parametrize(
     "df_raw",
