@@ -13,6 +13,13 @@ Here's how you can set up your local development environment to contribute:
 5. Install test requirements: `pip install -r requirements-dev.txt`
 6. Install docs requirements: `pip install -r docs/requirements-docs.txt`
 
+You should also install pre-commit:
+```
+pip install pre-commit
+pre-commit install
+```
+This will automatically format and lint your code before each commit, and it will block the commit if any issues are found."
+
 ## Running tests
 
 To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`.
