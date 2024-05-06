@@ -11,6 +11,7 @@ Seamlessly support both, without depending on either!
 - ✅ Support both **lazy** and eager execution
 - ✅ Use **Expressions**
 - ✅ Tested against pandas and Polars nightly builds!
+- ✅ Preserve your Index (if present) without it getting in the way!
 
 ## Who's this for?
 

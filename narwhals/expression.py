@@ -356,8 +356,8 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [2, 4], 'b': [5, 10]})
-            >>> df_pl = pl.DataFrame({'a': [15, 25], 'b': [9, 21]})
+            >>> df_pd = pd.DataFrame({'a': [5, 10], 'b': [50, 100]})
+            >>> df_pl = pl.DataFrame({'a': [5, 10], 'b': [50, 100]})
 
             Let's define a dataframe-agnostic function:
 
@@ -366,24 +366,56 @@ class Expr:
             ...     df = df.select(nw.col('a', 'b').sum())
             ...     return nw.to_native(df)
 
-            We can then pass either pandas or Polars to func:
+            We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                   a     b
-            0  6  15
+                a    b
+            0  15  150
             >>> func(df_pl)
             shape: (1, 2)
-            ┌───────┬──────┐
-            │ a     ┆ b    │
-            │ ---   ┆ ---  │
-            │ i64   ┆ i64  │
-            ╞═══════╪══════╡
-            │ 40    ┆ 30   │
-            └───────┴──────┘
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 15  ┆ 150 │
+            └─────┴─────┘
         """
         return self.__class__(lambda plx: self._call(plx).sum())
 
     def min(self) -> Expr:
+        """
+        Returns the minimum value(s) from a column(s).
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 3]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [4, 3]})
+
+            Let's define a dataframe-agnostic function:
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.min('a','b'))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  3
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            └─────┴─────┘
+        """
+
         return self.__class__(lambda plx: self._call(plx).min())
 
     def max(self) -> Expr:
@@ -447,6 +479,60 @@ class Expr:
         )
 
     def is_null(self) -> Expr:
+        """
+        Returns a boolean Series indicating which values are null.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame(
+            ...         {
+            ...             'a': [2, 4, None, 3, 5],
+            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
+            ...         }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...         {
+            ...             'a': [2, 4, None, 3, 5],
+            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
+            ...         }
+            ... )
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         a_is_null = nw.col('a').is_null(),
+            ...         b_is_null = nw.col('b').is_null()
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                 a    b  a_is_null  b_is_null
+            0  2.0  2.0      False      False
+            1  4.0  4.0      False      False
+            2  NaN  NaN       True       True
+            3  3.0  3.0      False      False
+            4  5.0  5.0      False      False
+
+            >>> func(df_pl)  # nan != null for polars
+            shape: (5, 4)
+            ┌──────┬─────┬───────────┬───────────┐
+            │ a    ┆ b   ┆ a_is_null ┆ b_is_null │
+            │ ---  ┆ --- ┆ ---       ┆ ---       │
+            │ i64  ┆ f64 ┆ bool      ┆ bool      │
+            ╞══════╪═════╪═══════════╪═══════════╡
+            │ 2    ┆ 2.0 ┆ false     ┆ false     │
+            │ 4    ┆ 4.0 ┆ false     ┆ false     │
+            │ null ┆ NaN ┆ true      ┆ false     │
+            │ 3    ┆ 3.0 ┆ false     ┆ false     │
+            │ 5    ┆ 5.0 ┆ false     ┆ false     │
+            └──────┴─────┴───────────┴───────────┘
+        """
         return self.__class__(lambda plx: self._call(plx).is_null())
 
     # --- partial reduction ---
