@@ -136,8 +136,6 @@ def test_add(df_raw: Any) -> None:
     [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
 def test_std(df_raw: Any) -> None:
-    if df_raw is None:
-        return
     df = nw.LazyFrame(df_raw)
     result = df.select(
         nw.col("a").std().alias("a_ddof_default"),
