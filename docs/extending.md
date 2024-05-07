@@ -33,8 +33,8 @@ Make sure that, in addition to the public Narwhals API, you also define:
 
   If your library doesn't distinguish between lazy and eager, then it's OK for your dataframe
   object to implement both `__narwhals_dataframe__` and `__narwhals_lazyframe__`. In fact,
-  that's currently what `narwhals._pandas_like.dataframe.PandasDataFrame`, so if you're stuck,
+  that's currently what `narwhals._pandas_like.dataframe.PandasDataFrame` does. So, if you're stuck,
   take a look at the source code to see how it's done!
 
-Note that the "extension" mechanism is still experimental. If you anything's not clear, or
+Note that the "extension" mechanism is still experimental. If you think that anything's not clear, or
 doesn't work, please do raise an issue or contact us on Discord (see the link on the README).

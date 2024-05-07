@@ -73,4 +73,4 @@ print(nw.to_native(df))
 
 If you keep these two rules in mind, then Narwhals will both help you avoid
 Index-related surprises whilst letting you preserve the Index for the subset
-of your users who consciously make great use it.
+of your users who consciously make great use of it.
