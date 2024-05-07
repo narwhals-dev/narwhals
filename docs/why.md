@@ -1,6 +1,6 @@
 # Why?
 
-You may think that pandas and Polars are quite similar. But are they really?
+You may think that pandas, Polars, and all dataframe libraries are quite similar. But are they really?
 
 For example, do the following produce the same output?
 

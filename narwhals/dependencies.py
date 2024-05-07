@@ -1,8 +1,6 @@
-"""
-pandas / Polars / etc. : if a user passes a dataframe from one of these
-libraries, it means they must already have imported the given module.
-So, we can just check sys.modules.
-"""
+# pandas / Polars / etc. : if a user passes a dataframe from one of these
+# libraries, it means they must already have imported the given module.
+# So, we can just check sys.modules.
 
 import sys
 from typing import Any
