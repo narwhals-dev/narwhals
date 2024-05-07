@@ -151,8 +151,8 @@ class PandasExpr:
     def mean(self) -> Self:
         return register_expression_call(self, "mean")
 
-    def std(self) -> Self:
-        return register_expression_call(self, "std")
+    def std(self, *, ddof: int = 1) -> Self:
+        return register_expression_call(self, "std", ddof=ddof)
 
     def any(self) -> Self:
         return register_expression_call(self, "any")

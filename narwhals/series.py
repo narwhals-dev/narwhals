@@ -116,8 +116,8 @@ class Series:
     def sum(self) -> Any:
         return self._series.sum()
 
-    def std(self) -> Any:
-        return self._series.std()
+    def std(self, *, ddof: int = 1) -> Any:
+        return self._series.std(ddof=ddof)
 
     def is_in(self, other: Any) -> Self:
         return self._from_series(self._series.is_in(self._extract_native(other)))

@@ -20,7 +20,7 @@ The general strategy will be:
 
 1. Initialise a Narwhals DataFrame or LazyFrame by passing your dataframe to `nw.from_native`.
    
-    Note: if you need eager execution, use `nw.DataFrame` instead.
+    Note: if you need eager execution, make sure to pass `eager_only=True` to `nw.from_native`.
 
 2. Express your logic using the subset of the Polars API supported by Narwhals.
 3. If you need to return a dataframe to the user in its original library, call `narwhals.to_native`.
@@ -45,8 +45,8 @@ Note that all the calculations here can stay lazy if the underlying library perm
 Unlike the `transform` method, `fit` cannot stay lazy, as we need to compute concrete values
 for the means and standard deviations.
 
-To be able to get `Series` out of our `DataFrame`, we'll need to use `narwhals.DataFrame` (as opposed to
-`narwhals.from_native`). This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
+To be able to get `Series` out of our `DataFrame`, we'll pass `eager_only=True` to `narwhals.from_native`.
+This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
 doesn't either.
 
 ```python
@@ -54,7 +54,7 @@ import narwhals as nw
 
 class StandardScalar:
     def fit(self, df):
-        df = nw.DataFrame(df)
+        df = nw.from_native(df, eager_only=True)
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 ```
@@ -67,7 +67,7 @@ import narwhals as nw
 
 class StandardScaler:
     def fit(self, df):
-        df = nw.DataFrame(df)
+        df = nw.from_native(df, eager_only=True)
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 

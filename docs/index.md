@@ -9,8 +9,9 @@ Seamlessly support both, without depending on either!
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
 - ✅ Support both **lazy** and eager execution
-- ✅ Use Polars **Expressions**
+- ✅ Use **Expressions**
 - ✅ Tested against pandas and Polars nightly builds!
+- ✅ Preserve your Index (if present) without it getting in the way!
 
 ## Who's this for?
 

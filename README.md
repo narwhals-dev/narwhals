@@ -8,18 +8,20 @@
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
-[![Docs](https://img.shields.io/badge/Docs-coolgreen?style=flat&link=https://marcogorelli.github.io/narwhals/)](https://marcogorelli.github.io/narwhals/)
-[![Chat with us! - Join Discord](https://img.shields.io/badge/Chat_with_us!-Join_Discord-coolgreen)](https://discord.gg/V3PqtB4VA4)
 
 Extremely lightweight and extensible compatibility layer between Polars, pandas, Modin, and cuDF (and more!).
+
+- [Read the documentation](https://narwhals-dev.github.io/narwhals/)
+- [Chat with us on Discord!](https://discord.gg/V3PqtB4VA4)
 
 Seamlessly support all, without depending on any!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
 - ✅ Separate **lazy** and eager APIs
-- ✅ Use Polars **Expressions**
+- ✅ Use **Expressions**
 - ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
+- ✅ Preserve your Index (if present) without it getting in the way!
 
 ## Used by
 
@@ -49,113 +51,23 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
 
-## Package size
+## What about Ibis?
 
 Like Ibis, Narwhals aims to enable dataframe-agnostic code. However, Narwhals comes with **zero** dependencies,
 is about as lightweight as it gets, and is aimed at library developers rather than at end users. It also does
-not aim to support as many backends, preferring to instead focus on dataframes.
+not aim to support as many backends, preferring to instead focus on dataframes. So, which should you use?
 
-The projects are not in competition, and the comparison is intended only to help you choose the right tool
-for the right task.
+- If you need to run complicated analyses and aren't too bothered about package size: Ibis!
+- If you're a library maintainer and want the thinnest-possible layer to get cross-dataframe library support: Narwhals!
 
 Here is the package size increase which would result from installing each tool in a non-pandas
 environment:
 
-<h1 align="center">
-	<img
-		width="800"
-		alt="Comparison between Narwhals (0.3 MB) and Ibis (~310 MB)"
-		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/641c1ad1-841c-47ab-876d-8f462f119482">
-</h1>
+![image](https://github.com/MarcoGorelli/narwhals/assets/33491632/a8dfba78-feb1-48c1-960a-5b9b03585fa5)
    
 ## Example
 
-Here's an example of a dataframe agnostic function:
-
-```python
-from typing import Any
-import pandas as pd
-import polars as pl
-
-import narwhals as nw
-
-
-def my_agnostic_function(
-    suppliers_native,
-    parts_native,
-):
-    suppliers = nw.from_native(suppliers_native)
-    parts = nw.from_native(parts_native)
-
-    result = (
-        suppliers.join(parts, left_on="city", right_on="city")
-        .filter(nw.col("weight") > 10)
-        .group_by("s")
-        .agg(
-            weight_mean=nw.col("weight").mean(),
-            weight_max=nw.col("weight").max(),
-        )
-        .sort("s")
-    )
-
-    return nw.to_native(result)
-```
-You can pass in a pandas or Polars dataframe, the output will be the same!
-Let's try it out:
-
-```python
-suppliers = {
-    "s": ["S1", "S2", "S3", "S4", "S5"],
-    "sname": ["Smith", "Jones", "Blake", "Clark", "Adams"],
-    "status": [20, 10, 30, 20, 30],
-    "city": ["London", "Paris", "Paris", "London", "Athens"],
-}
-parts = {
-    "p": ["P1", "P2", "P3", "P4", "P5", "P6"],
-    "pname": ["Nut", "Bolt", "Screw", "Screw", "Cam", "Cog"],
-    "color": ["Red", "Green", "Blue", "Red", "Blue", "Red"],
-    "weight": [12.0, 17.0, 17.0, 14.0, 12.0, 19.0],
-    "city": ["London", "Paris", "Oslo", "London", "Paris", "London"],
-}
-
-print("pandas output:")
-print(
-    my_agnostic_function(
-        pd.DataFrame(suppliers),
-        pd.DataFrame(parts),
-    )
-)
-print("\nPolars output:")
-print(
-    my_agnostic_function(
-        pl.LazyFrame(suppliers),
-        pl.LazyFrame(parts),
-    ).collect()
-)
-```
-
-```
-pandas output:
-    s  weight_mean  weight_max
-0  S1         15.0        19.0
-1  S2         14.5        17.0
-2  S3         14.5        17.0
-3  S4         15.0        19.0
-
-Polars output:
-shape: (4, 3)
-┌─────┬─────────────┬────────────┐
-│ s   ┆ weight_mean ┆ weight_max │
-│ --- ┆ ---         ┆ ---        │
-│ str ┆ f64         ┆ f64        │
-╞═════╪═════════════╪════════════╡
-│ S1  ┆ 15.0        ┆ 19.0       │
-│ S2  ┆ 14.5        ┆ 17.0       │
-│ S3  ┆ 14.5        ┆ 17.0       │
-│ S4  ┆ 15.0        ┆ 19.0       │
-└─────┴─────────────┴────────────┘
-```
-Magic! 🪄 
+See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
 
 ## Scope
 

@@ -124,14 +124,14 @@ def my_func(df):
 
 Now, we want to find the mean of column `'a'`, and we need it as a Python scalar.
 This means that computation cannot stay lazy - it must execute!
-Therefore, instead of `nw.from_native`, we'll use `nw.DataFrame`, and then, instead
+Therefore, we'll pass `eager_only=True` to `nw.from_native`, and then, instead
 of using expressions, we'll extract a `Series`.
 
 ```python exec="1" source="above" session="ex2"
 import narwhals as nw
 
 def my_func(df):
-    df_s = nw.DataFrame(df)
+    df_s = nw.from_native(df, eager_only=True)
     return df_s['a'].mean()
 ```
 
