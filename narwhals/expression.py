@@ -496,8 +496,8 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 2, 4, 6, 6]})
-            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 2, 4, 6, 6]})
+            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 4, 4, 6, 6]})
+            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 4, 4, 6, 6]})
 
             Let's define a dataframe-agnostic function:
 
