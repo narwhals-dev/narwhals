@@ -466,6 +466,52 @@ class Expr:
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Expr:
+        """
+        Check if this expression is between the given lower and upper bounds.
+
+        Arguments:
+            lower_bound: Lower bound value.
+
+            upper_bound: Upper bound value.
+
+            closed: Define which sides of the interval are closed (inclusive).
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2, 3, 4, 5]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2, 3, 4, 5]})
+
+            Let's define a dataframe-agnostic function:
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').is_between(2,4,'right'))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                   a
+            0  False
+            1  False
+            2   True
+            3   True
+            4  False
+            >>> func(df_pl)
+            shape: (5, 1)
+            ┌───────┐
+            │ a     │
+            │ ---   │
+            │ bool  │
+            ╞═══════╡
+            │ false │
+            │ false │
+            │ true  │
+            │ true  │
+            │ false │
+            └───────┘
+        """
         return self.__class__(
             lambda plx: self._call(plx).is_between(lower_bound, upper_bound, closed)
         )
