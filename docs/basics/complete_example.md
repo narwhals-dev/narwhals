@@ -23,7 +23,7 @@ The general strategy will be:
     Note: if you need eager execution, make sure to pass `eager_only=True` to `nw.from_native`.
 
 2. Express your logic using the subset of the Polars API supported by Narwhals.
-3. If you need to return a dataframe to the user in its original library, call `narwhals.to_native`.
+3. If you need to return a dataframe to the user in its original library, call `nw.to_native`.
 
 ```python
 import narwhals as nw
