@@ -1,13 +1,13 @@
 # Series
 
-In [dataframe.md](dataframe.md), you learned how to write a dataframe-agnostic function.
+In [dataframe](dataframe.md), you learned how to write a dataframe-agnostic function.
 
 We only used DataFrame methods there - but what if we need to operate on its columns?
 
 Note that Polars does not have lazy columns. If you need to operate on columns as part of
 a dataframe operation, you should use expressions - but if you need to extract a single
-column, you need to ensure that you start with an eager `DataFrame`. To do that, we'll
-use the `nw.DataFrame` constructor, as opposed to `nw.from_native`.
+column, you need to ensure that you start with an eager `DataFrame`. To do that, you need
+to pass `eager_only=True` to `nw.from_native`.
 
 ## Example 1: filter based on a column's values
 
