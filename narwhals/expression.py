@@ -82,13 +82,14 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
             >>> from datetime import date
             >>> df_pd = pd.DataFrame(
             ... {"foo": [1, 2, 3],
             ... "bar": [6.0, 7.0, 8.0],
             ... "ham": [date(2020, 1, 2), date(2021, 3, 4), date(2022, 5, 6)],})
-            >>> df_pl = pl.DataFrame
+            >>> df_pl = pl.DataFrame(
             ... {"foo": [1, 2, 3],
             ... "bar": [6.0, 7.0, 8.0],
             ... "ham": [date(2020, 1, 2), date(2021, 3, 4), date(2022, 5, 6)],})
@@ -97,25 +98,29 @@ class Expr:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar'): nw.UInt8))
-            ...     return nw.to_native(df)
+            ...     df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar').cast(nw.UInt8))
+            ...     native_df = nw.to_native(df)
+            ...     return native_df
+
+            We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                foo     bar           ham
-            0   1.0     6      2020-01-02
-            1   2.0     7      2021-03-04
-            1   3.0     8      2022-05-06
+               foo  bar
+            0  1.0    6
+            1  2.0    7
+            2  3.0    8
             >>> func(df_pl)
-            shape: (3, 3)
-            ┌─────┬─────┬────────────┐
-            │ foo ┆ bar ┆ ham        │
-            │ --- ┆ --- ┆ ---        │
-            │ f32 ┆ u8  ┆ date       │
-            ╞═════╪═════╪════════════╡
-            │ 1.0 ┆ 6   ┆ 2020-01-02 │
-            │ 2.0 ┆ 7   ┆ 2021-03-04 │
-            │ 3.0 ┆ 8   ┆ 2022-05-06 │
-            └─────┴─────┴────────────┘
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ f32 ┆ u8  │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 6   │
+            │ 2.0 ┆ 7   │
+            │ 3.0 ┆ 8   │
+            └─────┴─────┘
+
 
         """
 
