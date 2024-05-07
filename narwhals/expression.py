@@ -638,6 +638,51 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
+    def to_datetime(self, format: str) -> Expr:  # noqa: A002
+        """
+        Convert to Datetime dtype.
+
+        Notes:
+            pandas defaults to nanosecond time unit, Polars to microsecond.
+            Prior to pandas 2.0, nanoseconds were the only time unit supported
+            in pandas, with no ability to set any other one. The ability to
+            set the time unit in pandas, if the version permits, will arrive.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': ['2020-01-01', '2020-01-02']})
+            >>> df_pl = pl.DataFrame({'a': ['2020-01-01', '2020-01-02']})
+
+            We define a data-frame agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').str.to_datetime(format='%Y-%m-%d'))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                       a
+            0 2020-01-01
+            1 2020-01-02
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌─────────────────────┐
+            │ a                   │
+            │ ---                 │
+            │ datetime[μs]        │
+            ╞═════════════════════╡
+            │ 2020-01-01 00:00:00 │
+            │ 2020-01-02 00:00:00 │
+            └─────────────────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.to_datetime(format=format)
+        )
+
 
 class ExprDateTimeNamespace:
     def __init__(self, expr: Expr) -> None:

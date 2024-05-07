@@ -87,6 +87,8 @@ plugins = ["covdefaults"]
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
+  "if implementation == \"modin\"",
+  "if implementation == \"cudf\"",
 ]
 
 [tool.mypy]

@@ -6,6 +6,7 @@ from typing import Callable
 
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.utils import register_expression_call
+from narwhals._pandas_like.utils import to_datetime
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -244,6 +245,23 @@ class PandasExprStringNamespace:
             ],
             depth=self._expr._depth + 1,
             function_name=f"{self._expr._function_name}->str.ends_with",
+            root_names=self._expr._root_names,
+            output_names=self._expr._output_names,
+            implementation=self._expr._implementation,
+        )
+
+    def to_datetime(self, format: str | None = None) -> PandasExpr:  # noqa: A002
+        # TODO make a register_expression_call for namespaces
+        return PandasExpr(
+            lambda df: [
+                PandasSeries(
+                    to_datetime(df._implementation)(series._series, format=format),
+                    implementation=df._implementation,
+                )
+                for series in self._expr._call(df)
+            ],
+            depth=self._expr._depth + 1,
+            function_name=f"{self._expr._function_name}->str.to_datetime",
             root_names=self._expr._root_names,
             output_names=self._expr._output_names,
             implementation=self._expr._implementation,

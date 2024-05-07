@@ -6,6 +6,9 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
@@ -369,3 +372,13 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
         else:
             reindexed.append(s._series)
     return reindexed
+
+
+def to_datetime(implementation: str) -> Any:
+    if implementation == "pandas":
+        return get_pandas().to_datetime
+    if implementation == "modin":
+        return get_modin().to_datetime
+    if implementation == "cudf":
+        return get_cudf().to_datetime
+    raise AssertionError
