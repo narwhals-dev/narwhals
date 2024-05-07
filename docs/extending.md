@@ -36,5 +36,5 @@ Make sure that, in addition to the public Narwhals API, you also define:
   that's currently what `narwhals._pandas_like.dataframe.PandasDataFrame` does. So, if you're stuck,
   take a look at the source code to see how it's done!
 
-Note that the "extension" mechanism is still experimental. If you think that anything's not clear, or
+Note that the "extension" mechanism is still experimental. If anything is not clear, or
 doesn't work, please do raise an issue or contact us on Discord (see the link on the README).
