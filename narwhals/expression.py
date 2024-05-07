@@ -489,6 +489,42 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).n_unique())
 
     def unique(self) -> Expr:
+        """
+         Returns unique values
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 2, 4, 6, 6]})
+            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 2, 4, 6, 6]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...    df = nw.from_native(df_any)
+            ...    df = df.select(nw.col('a', 'b').unique())
+            ...    return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  2
+            1  3  4
+            2  5  6
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 2   │
+            │ 3   ┆ 4   │
+            │ 5   ┆ 6   │
+            └─────┴─────┘
+        """
         return self.__class__(lambda plx: self._call(plx).unique())
 
     def sort(self, *, descending: bool = False) -> Expr:
