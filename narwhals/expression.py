@@ -75,7 +75,7 @@ class Expr:
         dtype: Any,
     ) -> Expr:
         """
-        Redefine an objects data type.
+        Redefine an object's data type.
 
         Arguments:
             dtype: Data type that the object will be cast into.
