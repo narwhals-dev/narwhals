@@ -60,9 +60,7 @@ class BaseFrame:
             return arg._series
         if isinstance(arg, Expr):
             return arg._call(self.__narwhals_namespace__())
-        if (pl := get_polars()) is not None and isinstance(
-            arg, (pl.Series, pl.DataFrame, pl.LazyFrame, type(pl.col("")))
-        ):
+        if get_polars() is not None and "polars" in str(type(arg)):
             msg = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
                 "Perhaps you:\n"
