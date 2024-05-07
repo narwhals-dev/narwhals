@@ -123,6 +123,48 @@ class Series:
         return self._from_series(self._series.is_in(self._extract_native(other)))
 
     def drop_nulls(self) -> Self:
+        """
+        Drop all null values.
+
+        See Also:
+          drop_nans
+
+        Notes:
+          A null value is not the same as a NaN value.
+          To drop NaN values, use :func:`drop_nans`.
+
+        Examples:
+          >>> import pandas as pd
+          >>> import polars as pl
+          >>> import numpy as np
+          >>> import narwhals as nw
+          >>> df_pd = pd.DataFrame({'a': [1, None, 2], 'b': [4, 5, np.nan]})
+          >>> df_pl = pl.DataFrame({'a': [1, None, 2, ], 'b': [4, 5, float("nan")]})
+
+          Now define a dataframe-agnostic function with a `column` argument for the column to evaluate :
+
+          >>> def func(df_any, column):
+          ...   df = nw.from_native(df_any)
+          ...   df = df.select(nw.col(column).drop_nulls())
+          ...   return nw.to_native(df)
+
+          Then we can pass either dataframe (polars or pandas) to `func` with the columns specified:
+
+          >>> func(df_pd, "a")
+               a
+          0  1.0
+          2  2.0
+          >>> func(df_pl, "a")
+          shape: (2, 1)
+          ┌─────┐
+          │ a   │
+          │ --- │
+          │ i64 │
+          ╞═════╡
+          │ 1   │
+          │ 2   │
+          └─────┘
+        """
         return self._from_series(self._series.drop_nulls())
 
     def unique(self) -> Self:
