@@ -91,6 +91,17 @@ def from_native(
     native_dataframe: Any,
     *,
     strict: bool = ...,
+    eager_only: Literal[True],
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame: ...
+
+
+@overload
+def from_native(
+    native_dataframe: Any,
+    *,
+    strict: bool = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,

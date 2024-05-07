@@ -5,5 +5,6 @@
     options:
       members:
         - ends_with
+        - to_datetime
       show_source: false
       show_bases: false
