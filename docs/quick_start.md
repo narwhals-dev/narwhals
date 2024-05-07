@@ -37,3 +37,5 @@ print(my_function(df_polars))
 If you run `python t.py` then your output should look like the above. This is the simplest possible example of a dataframe-agnostic
 function - as we'll soon see, we can do much more advanced things.
 Let's learn about what you just did, and what Narwhals can do for you!
+
+Note: these examples are only using pandas and Polars. Please see the following to find the [supported libriaries](extending.md).
