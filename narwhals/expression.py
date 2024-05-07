@@ -461,8 +461,8 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 2, 3, 4, 5], 'b': [1, 2, 3, 4, 5]})
-            >>> df_pl = pl.DataFrame({'a': [1, 2, 3, 4, 5], 'b': [1, 2, 3, 4, 5]})
+            >>> df_pd = pd.DataFrame({'a': [1, 2, 3, 4, 5], 'b': [1, 1, 3, 3, 5]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2, 3, 4, 5], 'b': [1, 1, 3, 3, 5]})
 
             Let's define a dataframe-agnostic function:
 
@@ -475,7 +475,7 @@ class Expr:
 
             >>> func(df_pd)
                a  b
-            0  5  5
+            0  5  3
             >>> func(df_pl)
             shape: (1, 2)
             ┌─────┬─────┐
@@ -483,7 +483,7 @@ class Expr:
             │ --- ┆ --- │
             │ u32 ┆ u32 │
             ╞═════╪═════╡
-            │ 5   ┆ 5   │
+            │ 5   ┆ 3   │
             └─────┴─────┘
         """
         return self.__class__(lambda plx: self._call(plx).n_unique())
@@ -496,8 +496,8 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 2, 4, 6, 6]})
-            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 2, 4, 6, 6]})
+            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 4, 4, 6, 6]})
+            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 4, 4, 6, 6]})
 
             Let's define a dataframe-agnostic function:
 
