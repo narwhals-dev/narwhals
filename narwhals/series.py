@@ -138,32 +138,33 @@ class Series:
           >>> import polars as pl
           >>> import numpy as np
           >>> import narwhals as nw
-          >>> df_pd = pd.DataFrame({'a': [1, None, 2], 'b': [4, 5, np.nan]})
-          >>> df_pl = pl.DataFrame({'a': [1, None, 2, ], 'b': [4, 5, float("nan")]})
+          >>> s_pd = pd.Series([2, 4, None, 3, 5])
+          >>> s_pl = pl.Series('a', [2, 4, None, 3, 5])
 
           Now define a dataframe-agnostic function with a `column` argument for the column to evaluate :
 
-          >>> def func(df_any, column):
-          ...   df = nw.from_native(df_any)
-          ...   df = df.select(nw.col(column).drop_nulls())
-          ...   return nw.to_native(df)
+          >>> def func(s_any):
+          ...   s = nw.from_native(s_any, series_only=True)
+          ...   s = s.drop_nulls()
+          ...   return nw.to_native(s)
 
-          Then we can pass either dataframe (polars or pandas) to `func` with the columns specified:
+          Then we can pass either Series (polars or pandas) to `func`:
 
-          >>> func(df_pd, "a")
-               a
-          0  1.0
-          2  2.0
-          >>> func(df_pl, "a")
-          shape: (2, 1)
-          ┌─────┐
-          │ a   │
-          │ --- │
-          │ i64 │
-          ╞═════╡
-          │ 1   │
-          │ 2   │
-          └─────┘
+          >>> func(s_pd)
+          0    2.0
+          1    4.0
+          3    3.0
+          4    5.0
+          dtype: float64
+          >>> func(s_pl)
+          shape: (4,)
+          Series: 'a' [i64]
+          [
+             2
+             4
+             3
+             5
+          ]
         """
         return self._from_series(self._series.drop_nulls())
 
