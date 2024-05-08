@@ -725,39 +725,39 @@ class Expr:
         Remove missing values.
 
         Examples:
-        >>> import narwhals as nw
-        >>> import pandas as pd
-        >>> import polars as pl
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
 
-        >>> data = {"name": ['Alfred', 'Batman', 'Catwoman'],
-        ...           "toy": [None, 'Batmobile', 'Bullwhip'],
-        ...           "born": [None, pd.Timestamp("1940-04-25"),
-        ...                    None]}
+            >>> data = {"name": ['Alfred', 'Batman', 'Catwoman'],
+            ...           "toy": [None, 'Batmobile', 'Bullwhip'],
+            ...           "born": [None, pd.Timestamp("1940-04-25"),
+            ...                    None]}
 
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.DataFrame(data)
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
 
-        Let's define a dataframe-agnostic function:
+            Let's define a dataframe-agnostic function:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.col("born").drop_nulls())
-        ...     return nw.to_native(df)
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col("born").drop_nulls())
+            ...     return nw.to_native(df)
 
-        We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas or Polars to `func`:
 
-        >>> func(df_pd)
+            >>> func(df_pd)
                 born
-        1 1940-04-25
-        >>> func(df_pl)
-        shape: (1, 1)
-        ┌─────────────────────┐
-        │ born                │
-        │ ---                 │
-        │ datetime[μs]        │
-        ╞═════════════════════╡
-        │ 1940-04-25 00:00:00 │
-        └─────────────────────┘
+            1 1940-04-25
+            >>> func(df_pl)
+            shape: (1, 1)
+            ┌─────────────────────┐
+            │ born                │
+            │ ---                 │
+            │ datetime[μs]        │
+            ╞═════════════════════╡
+            │ 1940-04-25 00:00:00 │
+            └─────────────────────┘
         """
         return self.__class__(lambda plx: self._call(plx).drop_nulls())
 
