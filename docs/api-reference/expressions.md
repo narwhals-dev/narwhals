@@ -17,6 +17,7 @@
         - mean
         - min
         - n_unique
+        - over
         - unique
         - sample
         - sort

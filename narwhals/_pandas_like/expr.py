@@ -219,6 +219,28 @@ class PandasExpr:
             implementation=self._implementation,
         )
 
+    def over(self, keys: list[str]) -> Self:
+        def func(df: PandasDataFrame) -> list[PandasSeries]:
+            if self._output_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in over.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+            tmp = df.group_by(keys).agg(self)
+            tmp = df.select(keys).join(tmp, how="left", left_on=keys, right_on=keys)
+            return [tmp[name] for name in self._output_names]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->over",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            implementation=self._implementation,
+        )
+
     @property
     def str(self) -> PandasExprStringNamespace:
         return PandasExprStringNamespace(self)

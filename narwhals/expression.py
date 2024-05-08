@@ -620,6 +620,9 @@ class Expr:
             )
         )
 
+    def over(self, *keys: str | Iterable[str]) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
+
     @property
     def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
