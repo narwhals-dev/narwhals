@@ -7,6 +7,7 @@ from typing import Sequence
 
 from narwhals._pandas_like.utils import item
 from narwhals._pandas_like.utils import reverse_translate_dtype
+from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import parse_version
@@ -435,6 +436,11 @@ class PandasSeriesStringNamespace:
     def head(self, n: int = 5) -> PandasSeries:
         return self._series._from_series(
             self._series._series.str[:n],
+        )
+
+    def to_datetime(self, format: str | None = None) -> PandasSeries:  # noqa: A002
+        return self._series._from_series(
+            to_datetime(self._series._implementation)(self._series._series, format=format)
         )
 
 

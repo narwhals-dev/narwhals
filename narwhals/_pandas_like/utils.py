@@ -190,6 +190,24 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
     )
 
 
+def register_namespace_expression_call(
+    expr: ExprT, namespace: str, attr: str, *args: Any, **kwargs: Any
+) -> PandasExpr:
+    from narwhals._pandas_like.expr import PandasExpr
+
+    return PandasExpr(
+        lambda df: [
+            getattr(getattr(series, namespace), attr)(*args, **kwargs)
+            for series in expr._call(df)
+        ],
+        depth=expr._depth + 1,
+        function_name=f"{expr._function_name}->{namespace}.{attr}",
+        root_names=expr._root_names,
+        output_names=expr._output_names,
+        implementation=expr._implementation,
+    )
+
+
 def item(s: Any) -> Any:
     # cuDF doesn't have Series.item().
     if len(s) != 1:
