@@ -724,6 +724,10 @@ class Expr:
         """
         Remove missing values.
 
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -752,7 +756,7 @@ class Expr:
             1  4.0
             3  3.0
             4  5.0
-            >>> func(df_pl)
+            >>> func(df_pl)  # nan != null for polars
             shape: (5, 1)
             ┌─────┐
             │ b   │
