@@ -8,6 +8,7 @@
         - all
         - any
         - cast
+        - diff
         - drop_nulls
         - dtype
         - filter
