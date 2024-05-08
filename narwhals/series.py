@@ -122,19 +122,17 @@ class Series:
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
-            We define a data-frame agnostic function:
+            We define a library agnostic function:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.max()
-            ...     return nw.to_native(s)
+            ...     return s.max()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd) # doctest:+SKIP
-            0    3
-            dtype: int64
-            >>> func(s_pl) # doctest:+SKIP
+            >>> func(s_pd)
+            3
+            >>> func(s_pl)
             3
         """
         return self._series.max()
