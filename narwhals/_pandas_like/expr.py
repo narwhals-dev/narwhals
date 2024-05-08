@@ -178,6 +178,9 @@ class PandasExpr:
     def is_null(self) -> Self:
         return register_expression_call(self, "is_null")
 
+    def fill_null(self, value: Any) -> Self:
+        return register_expression_call(self, "fill_null", value)
+
     def is_in(self, other: Any) -> Self:
         return register_expression_call(self, "is_in", other)
 

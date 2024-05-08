@@ -335,6 +335,10 @@ class PandasSeries:
         ser = self._series
         return self._from_series(ser.isna())
 
+    def fill_null(self, value: Any) -> PandasSeries:
+        ser = self._series
+        return self._from_series(ser.fillna(value))
+
     def drop_nulls(self) -> PandasSeries:
         ser = self._series
         return self._from_series(ser.dropna())
