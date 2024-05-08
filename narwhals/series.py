@@ -156,7 +156,7 @@ class Series:
           3    3.0
           4    5.0
           dtype: float64
-          >>> func(s_pl)  # doctest:+SKIP
+          >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
           shape: (4,)
           Series: 'a' [i64]
           [
@@ -194,7 +194,7 @@ class Series:
             1    6
             2    9
             dtype: int64
-            >>> func(s_pl)  # doctest:+SKIP
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
@@ -245,7 +245,7 @@ class Series:
             1    2.0
             2   -1.0
             dtype: float64
-            >>> func(s_pl)  # doctest:+SKIP
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
@@ -366,8 +366,8 @@ class SeriesStringNamespace:
             2    taata
             3    zukky
             dtype: object
-            >>> func(s_pl)  # doctest: +SKIP
-            shape: (2,)
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
             Series: '' [str]
             [
                "Atata"
