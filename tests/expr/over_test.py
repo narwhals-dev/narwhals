@@ -38,3 +38,10 @@ def test_over_multiple(constructor: Any) -> None:
         "c_min": [5, 4, 1, 2, 1],
     }
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame])
+def test_over_invalid(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
+    with pytest.raises(ValueError, match="Anonymous expressions"):
+        df.with_columns(c_min=nw.all().min().over("a", "b"))
