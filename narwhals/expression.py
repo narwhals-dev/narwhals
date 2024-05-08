@@ -604,6 +604,10 @@ class Expr:
         """
         Returns a boolean Series indicating which values are null.
 
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -656,6 +660,64 @@ class Expr:
             └──────┴─────┴───────────┴───────────┘
         """
         return self.__class__(lambda plx: self._call(plx).is_null())
+
+    def fill_null(self, value: Any) -> Expr:
+        """
+        Fill null values with given value.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame(
+            ...         {
+            ...             'a': [2, 4, None, 3, 5],
+            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
+            ...         }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...         {
+            ...             'a': [2, 4, None, 3, 5],
+            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
+            ...         }
+            ... )
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(nw.col('a', 'b').fill_null(0))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                 a    b
+            0  2.0  2.0
+            1  4.0  4.0
+            2  0.0  0.0
+            3  3.0  3.0
+            4  5.0  5.0
+
+            >>> func(df_pl)  # nan != null for polars
+            shape: (5, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 2   ┆ 2.0 │
+            │ 4   ┆ 4.0 │
+            │ 0   ┆ NaN │
+            │ 3   ┆ 3.0 │
+            │ 5   ┆ 5.0 │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).fill_null(value))
 
     # --- partial reduction ---
     def drop_nulls(self) -> Expr:

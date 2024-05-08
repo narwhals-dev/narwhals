@@ -196,6 +196,9 @@ class Series:
     def is_null(self) -> Self:
         return self._from_series(self._series.is_null())
 
+    def fill_null(self, value: Any) -> Self:
+        return self._from_series(self._series.fill_null(value))
+
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
