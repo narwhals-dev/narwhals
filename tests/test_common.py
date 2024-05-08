@@ -604,6 +604,8 @@ def test_invalid() -> None:
         df.select(nw.all() + nw.all())
     with pytest.raises(TypeError, match="Perhaps you:"):
         df.select([pl.col("a")])  # type: ignore[list-item]
+    with pytest.raises(TypeError, match="Perhaps you:"):
+        df.select([nw.col("a").cast(pl.Int64)])
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas])

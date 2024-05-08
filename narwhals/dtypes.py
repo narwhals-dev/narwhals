@@ -70,6 +70,14 @@ class Date(TemporalType): ...
 
 
 def translate_dtype(plx: Any, dtype: DType) -> Any:
+    if "polars" in str(type(dtype)):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
     if dtype == Float64:
         return plx.Float64
     if dtype == Float32:
