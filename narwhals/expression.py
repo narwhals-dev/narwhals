@@ -729,10 +729,10 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
 
-            >>> data = {"name": ['Alfred', 'Batman', 'Catwoman'],
-            ...           "toy": [None, 'Batmobile', 'Bullwhip'],
-            ...           "born": [None, pd.Timestamp("1940-04-25"),
-            ...                    None]}
+            >>> data = {
+            ...             "a": [2, 4, None, 3, 5],
+            ...             "b": [2.0, 4.0, float("nan"), 3.0, 5.0]
+            ...         }
 
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
@@ -741,23 +741,30 @@ class Expr:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col("born").drop_nulls())
+            ...     df = df.select(nw.col("b").drop_nulls())
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                born
-            1 1940-04-25
+                 b
+            0  2.0
+            1  4.0
+            3  3.0
+            4  5.0
             >>> func(df_pl)
-            shape: (1, 1)
-            ┌─────────────────────┐
-            │ born                │
-            │ ---                 │
-            │ datetime[μs]        │
-            ╞═════════════════════╡
-            │ 1940-04-25 00:00:00 │
-            └─────────────────────┘
+            shape: (5, 1)
+            ┌─────┐
+            │ b   │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 2.0 │
+            │ 4.0 │
+            │ NaN │
+            │ 3.0 │
+            │ 5.0 │
+            └─────┘
         """
         return self.__class__(lambda plx: self._call(plx).drop_nulls())
 
