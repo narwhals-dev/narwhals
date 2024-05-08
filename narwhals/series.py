@@ -123,6 +123,49 @@ class Series:
         return self._from_series(self._series.is_in(self._extract_native(other)))
 
     def drop_nulls(self) -> Self:
+        """
+        Drop all null values.
+
+        See Also:
+          drop_nans
+
+        Notes:
+          A null value is not the same as a NaN value.
+          To drop NaN values, use :func:`drop_nans`.
+
+        Examples:
+          >>> import pandas as pd
+          >>> import polars as pl
+          >>> import numpy as np
+          >>> import narwhals as nw
+          >>> s_pd = pd.Series([2, 4, None, 3, 5])
+          >>> s_pl = pl.Series('a', [2, 4, None, 3, 5])
+
+          Now define a dataframe-agnostic function with a `column` argument for the column to evaluate :
+
+          >>> def func(s_any):
+          ...   s = nw.from_native(s_any, series_only=True)
+          ...   s = s.drop_nulls()
+          ...   return nw.to_native(s)
+
+          Then we can pass either Series (polars or pandas) to `func`:
+
+          >>> func(s_pd)
+          0    2.0
+          1    4.0
+          3    3.0
+          4    5.0
+          dtype: float64
+          >>> func(s_pl)  # doctest:+SKIP
+          shape: (4,)
+          Series: 'a' [i64]
+          [
+             2
+             4
+             3
+             5
+          ]
+        """
         return self._from_series(self._series.drop_nulls())
 
     def cum_sum(self) -> Self:
