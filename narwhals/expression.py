@@ -620,6 +620,53 @@ class Expr:
             )
         )
 
+    def over(self, *keys: str | Iterable[str]) -> Expr:
+        """
+        Compute expressions over the given groups.
+
+        Arguments:
+            keys: Names of columns to compute window expression over.
+                  Must be names of columns, as opposed to expressions -
+                  so, this is a bit less flexible than Polars' `Expr.over`.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {'a': [1, 2, 3], 'b': [1, 1, 2]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         a_min_per_group = nw.col('a').min().over('b')
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               a  b  a_min_per_group
+            0  1  1                1
+            1  2  1                1
+            2  3  2                3
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────────────────┐
+            │ a   ┆ b   ┆ a_min_per_group │
+            │ --- ┆ --- ┆ ---             │
+            │ i64 ┆ i64 ┆ i64             │
+            ╞═════╪═════╪═════════════════╡
+            │ 1   ┆ 1   ┆ 1               │
+            │ 2   ┆ 1   ┆ 1               │
+            │ 3   ┆ 2   ┆ 3               │
+            └─────┴─────┴─────────────────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
+
     @property
     def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
@@ -647,6 +694,11 @@ class ExprStringNamespace:
             Prior to pandas 2.0, nanoseconds were the only time unit supported
             in pandas, with no ability to set any other one. The ability to
             set the time unit in pandas, if the version permits, will arrive.
+
+        Arguments:
+            format: Format to parse strings with. Must be passed, as different
+                    dataframe libraries have different ways of auto-inferring
+                    formats.
 
         Examples:
             >>> import pandas as pd
