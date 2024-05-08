@@ -5,5 +5,6 @@
     options:
       members:
         - ends_with
+        - head
       show_source: false
       show_bases: false

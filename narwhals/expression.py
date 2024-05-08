@@ -685,6 +685,57 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
+    def head(self, n: int = 5) -> Expr:
+        """
+        Take the first n elements of each string.
+
+        Arguments:
+            n: Number of elements to take.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {'lyrics': ['Atatata', 'taata', 'taatatata', 'zukkyun']}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a data-frame agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(lyrics_head = nw.col('lyrics').str.head())
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                  lyrics lyrics_head
+            0    Atatata       Atata
+            1      taata       taata
+            2  taatatata       taata
+            3    zukkyun       zukky
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌───────────┬─────────────┐
+            │ lyrics    ┆ lyrics_head │
+            │ ---       ┆ ---         │
+            │ str       ┆ str         │
+            ╞═══════════╪═════════════╡
+            │ Atatata   ┆ Atata       │
+            │ taata     ┆ taata       │
+            │ taatatata ┆ taata       │
+            │ zukkyun   ┆ zukky       │
+            └───────────┴─────────────┘
+        """
+
+        def func(plx: Any) -> Any:
+            if plx is get_polars():
+                return self._expr._call(plx).str.slice(0, n)
+            return self._expr._call(plx).str.head(n)
+
+        return self._expr.__class__(func)
+
     def to_datetime(self, format: str) -> Expr:  # noqa: A002
         """
         Convert to Datetime dtype.
