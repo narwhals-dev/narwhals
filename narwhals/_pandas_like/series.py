@@ -357,11 +357,16 @@ class PandasSeries:
         ser = self._series
         return self._from_series(ser.sample(n=n, frac=fraction, replace=with_replacement))
 
-    def unique(self) -> PandasSeries:
+    def cum_sum(self) -> PandasSeries:
         return self._from_series(
             self._series.__class__(
-                self._series.unique(), dtype=self._series.dtype, name=self._series.name
+                self._series.cumsum(), dtype=self._series.dtype, name=self._series.name
             )
+        )
+
+    def unique(self) -> PandasSeries:
+        return self._from_series(
+            self._series.__class__(self._series.unique(), name=self._series.name)
         )
 
     def diff(self) -> PandasSeries:
