@@ -728,7 +728,13 @@ class ExprStringNamespace:
             │ zukkyun   ┆ zukky       │
             └───────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.head(n))
+
+        def func(plx: Any) -> Any:
+            if plx is get_polars():
+                return self._expr._call(plx).str.slice(0, n)
+            return self._expr._call(plx).str.head(n)
+
+        return self._expr.__class__(func)
 
     def to_datetime(self, format: str) -> Expr:  # noqa: A002
         """

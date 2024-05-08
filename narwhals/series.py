@@ -245,6 +245,8 @@ class SeriesStringNamespace:
                "zukky"
             ]
         """
+        if self._series._is_polars:
+            return self._series.__class__(self._series._series.str.slice(0, n))
         return self._series.__class__(self._series._series.str.head(n))
 
 
