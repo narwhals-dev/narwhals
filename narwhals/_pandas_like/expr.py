@@ -196,6 +196,9 @@ class PandasExpr:
     def n_unique(self) -> Self:
         return register_expression_call(self, "n_unique")
 
+    def cum_sum(self) -> Self:
+        return register_expression_call(self, "cum_sum")
+
     def unique(self) -> Self:
         return register_expression_call(self, "unique")
 

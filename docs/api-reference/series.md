@@ -8,6 +8,7 @@
         - all
         - any
         - cast
+        - cum_sum
         - diff
         - drop_nulls
         - dtype

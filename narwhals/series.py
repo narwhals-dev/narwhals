@@ -125,6 +125,43 @@ class Series:
     def drop_nulls(self) -> Self:
         return self._from_series(self._series.drop_nulls())
 
+    def cum_sum(self) -> Self:
+        """
+        Calculate the cumulative sum.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [2, 4, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a data-frame agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.cum_sum()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    2
+            1    6
+            2    9
+            dtype: int64
+            >>> func(s_pl)  # doctest:+SKIP
+            shape: (3,)
+            Series: '' [i64]
+            [
+               2
+               6
+               9
+            ]
+        """
+        return self._from_series(self._series.cum_sum())
+
     def unique(self) -> Self:
         return self._from_series(self._series.unique())
 
