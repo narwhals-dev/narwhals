@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -76,6 +77,9 @@ class BaseFrame:
             k: to_narwhals_dtype(v, is_polars=self._is_polars)
             for k, v in self._dataframe.schema.items()
         }
+
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        return function(self, *args, **kwargs)
 
     @property
     def columns(self) -> list[str]:
@@ -433,6 +437,46 @@ class DataFrame(BaseFrame):
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        """
+        Pipe function call.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1,2,3], 'ba': [4,5,6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.pipe(lambda _df: _df.select([x for x in _df.columns if len(x) == 1]))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               a
+            0  1
+            1  2
+            2  3
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+        """
+        return super().pipe(function, *args, **kwargs)
+
     @property
     def schema(self) -> dict[str, DType]:
         r"""
@@ -1342,6 +1386,46 @@ class LazyFrame(BaseFrame):
         )
 
     # inherited
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        """
+        Pipe function call.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1,2,3], 'ba': [4,5,6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.pipe(lambda _df: _df.select([x for x in _df.columns if len(x) == 1]))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               a
+            0  1
+            1  2
+            2  3
+            >>> func(df_pl).collect()
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+        """
+        return super().pipe(function, *args, **kwargs)
+
     @property
     def schema(self) -> dict[str, DType]:
         r"""
