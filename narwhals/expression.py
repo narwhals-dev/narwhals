@@ -764,6 +764,50 @@ class Expr:
 
     # --- partial reduction ---
     def drop_nulls(self) -> Expr:
+        """
+        Remove missing values.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            >>> df_pd = pd.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
+            >>> df_pl = pl.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col("a").drop_nulls())
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                 a
+            0  2.0
+            1  4.0
+            3  3.0
+            5  5.0
+            >>> func(df_pl)  # nan != null for polars
+            shape: (5, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 2.0 │
+            │ 4.0 │
+            │ NaN │
+            │ 3.0 │
+            │ 5.0 │
+            └─────┘
+        """
         return self.__class__(lambda plx: self._call(plx).drop_nulls())
 
     def sample(
