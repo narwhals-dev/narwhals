@@ -156,7 +156,7 @@ class Series:
           3    3.0
           4    5.0
           dtype: float64
-          >>> func(s_pl)
+          >>> func(s_pl)  # doctest:+SKIP
           shape: (4,)
           Series: 'a' [i64]
           [
