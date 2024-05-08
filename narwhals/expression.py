@@ -733,33 +733,28 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
 
-            >>> data = {
-            ...             "a": [2, 4, None, 3, 5],
-            ...             "b": [2.0, 4.0, float("nan"), 3.0, 5.0]
-            ...         }
-
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
+            >>> df_pd = pd.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
+            >>> df_pl = pl.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
 
             Let's define a dataframe-agnostic function:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col("b").drop_nulls())
+            ...     df = df.select(nw.col("a").drop_nulls())
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                 b
+                 a
             0  2.0
             1  4.0
             3  3.0
-            4  5.0
+            5  5.0
             >>> func(df_pl)  # nan != null for polars
             shape: (5, 1)
             ┌─────┐
-            │ b   │
+            │ a   │
             │ --- │
             │ f64 │
             ╞═════╡
