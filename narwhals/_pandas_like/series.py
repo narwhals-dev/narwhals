@@ -360,6 +360,11 @@ class PandasSeries:
             )
         )
 
+    def diff(self) -> PandasSeries:
+        return self._from_series(
+            self._series.__class__(self._series.diff(), name=self._series.name)
+        )
+
     def sort(
         self,
         *,

@@ -196,6 +196,9 @@ class PandasExpr:
     def unique(self) -> Self:
         return register_expression_call(self, "unique")
 
+    def diff(self) -> Self:
+        return register_expression_call(self, "diff")
+
     def sample(
         self,
         n: int | None = None,
