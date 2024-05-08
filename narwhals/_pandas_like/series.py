@@ -414,10 +414,13 @@ class PandasSeriesStringNamespace:
         self._series = series
 
     def ends_with(self, suffix: str) -> PandasSeries:
-        # TODO make a register_expression_call for namespaces
-
         return self._series._from_series(
             self._series._series.str.endswith(suffix),
+        )
+
+    def head(self, n: int = 5) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.str[:n],
         )
 
 

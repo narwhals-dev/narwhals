@@ -272,6 +272,16 @@ class PandasExprStringNamespace:
             implementation=self._expr._implementation,
         )
 
+    def head(self, n: int = 5) -> PandasExpr:
+        return PandasExpr(
+            lambda df: [series.str.head(n) for series in self._expr._call(df)],
+            depth=self._expr._depth + 1,
+            function_name=f"{self._expr._function_name}->str.head",
+            root_names=self._expr._root_names,
+            output_names=self._expr._output_names,
+            implementation=self._expr._implementation,
+        )
+
     def to_datetime(self, format: str | None = None) -> PandasExpr:  # noqa: A002
         # TODO make a register_expression_call for namespaces
         return PandasExpr(

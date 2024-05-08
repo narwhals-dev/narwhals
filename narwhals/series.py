@@ -205,6 +205,48 @@ class SeriesStringNamespace:
     def ends_with(self, suffix: str) -> Series:
         return self._series.__class__(self._series._series.str.ends_with(suffix))
 
+    def head(self, n: int = 5) -> Series:
+        """
+        Take the first n elements of each string.
+
+        Arguments:
+            n: Number of elements to take.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lyrics = ['Atatata', 'taata', 'taatatata', 'zukkyun']
+            >>> s_pd = pd.Series(lyrics)
+            >>> s_pl = pl.Series(lyrics)
+
+            We define a data-frame agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.str.head()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    Atata
+            1    taata
+            2    taata
+            3    zukky
+            dtype: object
+            >>> func(s_pl)  # doctest: +SKIP
+            shape: (2,)
+            Series: '' [str]
+            [
+               "Atata"
+               "taata"
+               "taata"
+               "zukky"
+            ]
+        """
+        return self._series.__class__(self._series._series.str.head(n))
+
 
 class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:
