@@ -12,6 +12,7 @@
         - head
         - join
         - lazy
+        - pipe
         - rename
         - schema
         - select
