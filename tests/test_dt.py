@@ -17,10 +17,10 @@ data = {
 
 @pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_dt_year(constructor: Any) -> None:
-    df = nw.LazyFrame(constructor(data))
+    df = nw.from_native(constructor(data), eager_only=True)
     result = nw.to_native(df.select(nw.col("a").dt.year()))
     expected = {"a": [2020, 2020, 2020]}
     compare_dicts(result, expected)
-    result = nw.to_native(df.select(df.collect()["a"].dt.year()))
+    result = nw.to_native(df.select(df["a"].dt.year()))
     expected = {"a": [2020, 2020, 2020]}
     compare_dicts(result, expected)
