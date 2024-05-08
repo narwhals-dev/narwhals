@@ -439,8 +439,8 @@ class PandasSeriesStringNamespace:
         )
 
     def to_datetime(self, format: str | None = None) -> PandasSeries:  # noqa: A002
-        return to_datetime(self._series._implementation)(  # type: ignore[no-any-return]
-            self._series._series, format=format
+        return self._series._from_series(
+            to_datetime(self._series._implementation)(self._series._series, format=format)
         )
 
 
