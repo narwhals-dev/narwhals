@@ -997,6 +997,24 @@ class ExprDateTimeNamespace:
     def year(self) -> Expr:
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
 
+    def month(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.month())
+
+    def day(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.day())
+
+    def hour(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.hour())
+
+    def minute(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.minute())
+
+    def second(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
+
+    def ordinal_day(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
+
 
 def col(*names: str | Iterable[str]) -> Expr:
     """

@@ -387,3 +387,21 @@ class SeriesDateTimeNamespace:
 
     def year(self) -> Series:
         return self._series.__class__(self._series._series.dt.year())
+
+    def month(self) -> Series:
+        return self._series.__class__(self._series._series.dt.month())
+
+    def day(self) -> Series:
+        return self._series.__class__(self._series._series.dt.day())
+
+    def hour(self) -> Series:
+        return self._series.__class__(self._series._series.dt.hour())
+
+    def minute(self) -> Series:
+        return self._series.__class__(self._series._series.dt.minute())
+
+    def second(self) -> Series:
+        return self._series.__class__(self._series._series.dt.second())
+
+    def ordinal_day(self) -> Series:
+        return self._series.__class__(self._series._series.dt.ordinal_day())
