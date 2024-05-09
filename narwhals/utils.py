@@ -4,9 +4,12 @@ import re
 from typing import Any
 from typing import Iterable
 from typing import Sequence
+from typing import TypeVar
 
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+
+T = TypeVar("T")
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -27,6 +30,12 @@ def flatten(args: Any) -> list[Any]:
     if len(args) == 1 and _is_iterable(args[0]):
         return args[0]  # type: ignore[no-any-return]
     return args  # type: ignore[no-any-return]
+
+
+def tupleify(arg: Any) -> Any:
+    if not isinstance(arg, (list, tuple)):
+        return (arg,)
+    return arg
 
 
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:

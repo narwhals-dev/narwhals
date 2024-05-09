@@ -6,6 +6,7 @@ from typing import Iterable
 from typing import Iterator
 
 from narwhals.utils import flatten
+from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -31,7 +32,7 @@ class GroupBy:
         import narwhals as nw
 
         yield from (
-            (key, nw.from_native(df, eager_only=True))
+            (tupleify(key), nw.from_native(df, eager_only=True))
             for (key, df) in self._grouped.__iter__()
         )
 
