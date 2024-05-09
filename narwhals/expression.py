@@ -214,7 +214,7 @@ class Expr:
             >>> df_pd = pd.DataFrame({'a': [True, False], 'b': [True, True]})
             >>> df_pl = pl.DataFrame({'a': [True, False], 'b': [True, True]})
 
-            We define a data-frame agnostic function:
+            We define a dataframe-agnostic function:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
@@ -903,7 +903,7 @@ class ExprStringNamespace:
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
-            We define a data-frame agnostic function:
+            We define a dataframe-agnostic function:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
@@ -961,7 +961,7 @@ class ExprStringNamespace:
             >>> df_pd = pd.DataFrame({'a': ['2020-01-01', '2020-01-02']})
             >>> df_pl = pl.DataFrame({'a': ['2020-01-01', '2020-01-02']})
 
-            We define a data-frame agnostic function:
+            We define a dataframe-agnostic function:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
@@ -1025,7 +1025,7 @@ class ExprDateTimeNamespace:
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
-            We define a data-frame agnostic function:
+            We define a dataframe-agnostic function:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)

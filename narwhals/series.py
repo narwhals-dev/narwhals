@@ -180,7 +180,7 @@ class Series:
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
-            We define a data-frame agnostic function:
+            We define a dataframe-agnostic function:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
@@ -231,7 +231,7 @@ class Series:
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
 
-            We define a data-frame agnostic function:
+            We define a dataframe-agnostic function:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
@@ -351,7 +351,7 @@ class SeriesStringNamespace:
             >>> s_pd = pd.Series(lyrics)
             >>> s_pl = pl.Series(lyrics)
 
-            We define a data-frame agnostic function:
+            We define a dataframe-agnostic function:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
