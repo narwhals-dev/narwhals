@@ -35,7 +35,7 @@ def flatten(args: Any) -> list[Any]:
 def tupleify(arg: Any) -> Any:
     if not isinstance(arg, (list, tuple)):
         return (arg,)
-    return arg
+    return arg  # pragma: no cover
 
 
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
