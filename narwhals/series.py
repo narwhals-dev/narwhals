@@ -361,9 +361,9 @@ class Series:
             shape: (3,)
             Series: '' [bool]
             [
-               False
-               False
-                True
+               false
+               false
+                true
             ]
         """
         return self._from_series(self._series.is_null())
