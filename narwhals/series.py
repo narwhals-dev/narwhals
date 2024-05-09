@@ -357,7 +357,7 @@ class Series:
             1    False
             2     True
             dtype: bool
-            >>> func(s_pl)
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
             [
