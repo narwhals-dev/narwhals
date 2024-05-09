@@ -1029,25 +1029,25 @@ class ExprDateTimeNamespace:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a').dt.ordinal_day())
+            ...     df = df.with_columns(a_ordinal_day=nw.col('a').dt.ordinal_day())
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                 a
-            0    1
-            1  216
+                       a  a_ordinal_day
+            0 2020-01-01              1
+            1 2020-08-03            216
             >>> func(df_pl)
-            shape: (2, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i16 │
-            ╞═════╡
-            │ 1   │
-            │ 216 │
-            └─────┘
+            shape: (2, 2)
+            ┌─────────────────────┬───────────────┐
+            │ a                   ┆ a_ordinal_day │
+            │ ---                 ┆ ---           │
+            │ datetime[μs]        ┆ i16           │
+            ╞═════════════════════╪═══════════════╡
+            │ 2020-01-01 00:00:00 ┆ 1             │
+            │ 2020-08-03 00:00:00 ┆ 216           │
+            └─────────────────────┴───────────────┘
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
 
