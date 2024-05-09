@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Iterator
 
 from narwhals._pandas_like.utils import is_simple_aggregation
 from narwhals._pandas_like.utils import item
@@ -24,22 +25,21 @@ class PandasGroupBy:
     def __init__(self, df: PandasDataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
+        self._grouped = self._df._dataframe.groupby(
+            list(self._keys),
+            sort=False,
+            as_index=True,
+        )
 
     def agg(
         self,
         *aggs: IntoPandasExpr | Iterable[IntoPandasExpr],
         **named_aggs: IntoPandasExpr,
     ) -> PandasDataFrame:
-        df = self._df._dataframe
         exprs = parse_into_exprs(
             self._df._implementation,
             *aggs,
             **named_aggs,
-        )
-        grouped = df.groupby(
-            list(self._keys),
-            sort=False,
-            as_index=True,
         )
         implementation: str = self._df._implementation
         output_names: list[str] = copy(self._keys)
@@ -54,7 +54,7 @@ class PandasGroupBy:
             output_names.extend(expr._output_names)
 
         return agg_pandas(
-            grouped,
+            self._grouped,
             exprs,
             self._keys,
             output_names,
@@ -69,6 +69,9 @@ class PandasGroupBy:
             df,
             implementation=self._df._implementation,
         )
+
+    def __iter__(self) -> Iterator[tuple[Any, PandasDataFrame]]:
+        return self._grouped.__iter__()  # type: ignore[no-any-return]
 
 
 def agg_pandas(  # noqa: PLR0913
