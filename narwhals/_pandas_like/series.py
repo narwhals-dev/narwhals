@@ -452,3 +452,40 @@ class PandasSeriesDateTimeNamespace:
         return self._series._from_series(
             self._series._series.dt.year,
         )
+
+    def month(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.month,
+        )
+
+    def day(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.day,
+        )
+
+    def hour(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.hour,
+        )
+
+    def minute(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.minute,
+        )
+
+    def second(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.second,
+        )
+
+    def ordinal_day(self) -> PandasSeries:
+        ser = self._series._series
+        year_start = ser.dt.year
+        result = (
+            ser.to_numpy().astype("datetime64[D]")
+            - (year_start.to_numpy() - 1970).astype("datetime64[Y]")
+        ).astype("int32") + 1
+        dtype = "Int64[pyarrow]" if "pyarrow" in str(ser.dtype) else "int32"
+        return self._series._from_series(
+            self._series._series.__class__(result, dtype=dtype, name=year_start.name)
+        )

@@ -294,3 +294,21 @@ class PandasExprDateTimeNamespace:
 
     def year(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "year")
+
+    def month(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "month")
+
+    def day(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "day")
+
+    def hour(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "hour")
+
+    def minute(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "minute")
+
+    def second(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "second")
+
+    def ordinal_day(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "ordinal_day")
