@@ -55,7 +55,12 @@ def test_ordinal_day(dates: datetime) -> None:
     result_pda = nw.from_native(
         pd.Series([dates]).convert_dtypes(dtype_backend="pyarrow"), series_only=True
     ).dt.ordinal_day()[0]
+    result_pdn = nw.from_native(
+        pd.Series([dates]).convert_dtypes(dtype_backend="numpy_nullable"),
+        series_only=True,
+    ).dt.ordinal_day()[0]
     result_pl = nw.from_native(pl.Series([dates]), series_only=True).dt.ordinal_day()[0]
     assert result_pd == result_pl
     assert result_pda == result_pl
+    assert result_pdn == result_pl
     assert result_pdms == result_pl
