@@ -149,7 +149,7 @@ class Series:
             ...     s = nw.from_native(s_any, series_only=True)
             ...     return s.min()
 
-            We can then pass pandas, Polars or any other library Series to `func`:
+            We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
             1
@@ -176,7 +176,7 @@ class Series:
             ...     s = nw.from_native(s_any, series_only=True)
             ...     return s.max()
 
-            We can then pass pandas, Polars or any other library Series to `func`:
+            We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
             3
