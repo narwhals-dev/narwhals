@@ -363,7 +363,7 @@ class Series:
             [
                false
                false
-                true
+               true
             ]
         """
         return self._from_series(self._series.is_null())
