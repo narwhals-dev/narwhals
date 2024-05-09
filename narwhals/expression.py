@@ -1013,6 +1013,42 @@ class ExprDateTimeNamespace:
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
 
     def ordinal_day(self) -> Expr:
+        """
+        Get ordinal day.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {'a': [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a data-frame agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').dt.ordinal_day())
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                 a
+            0    1
+            1  216
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i16 │
+            ╞═════╡
+            │ 1   │
+            │ 216 │
+            └─────┘
+        """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
 
 

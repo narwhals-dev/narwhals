@@ -404,4 +404,37 @@ class SeriesDateTimeNamespace:
         return self._series.__class__(self._series._series.dt.second())
 
     def ordinal_day(self) -> Series:
+        """
+        Get ordinal day.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = [datetime(2020, 1, 1), datetime(2020, 8, 3)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.ordinal_day()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0      1
+            1    216
+            dtype: int32
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i16]
+            [
+               1
+               216
+            ]
+        """
         return self._series.__class__(self._series._series.dt.ordinal_day())
