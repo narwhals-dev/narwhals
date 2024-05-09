@@ -111,6 +111,30 @@ class Series:
         return self._series.min()
 
     def max(self) -> Any:
+        """
+        Get the maximum value in this Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.max()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            3
+            >>> func(s_pl)
+            3
+        """
         return self._series.max()
 
     def sum(self) -> Any:
