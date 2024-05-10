@@ -23,6 +23,7 @@
         - over
         - unique
         - sample
+        - shift
         - sort
         - std
         - sum

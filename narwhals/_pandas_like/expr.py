@@ -205,6 +205,9 @@ class PandasExpr:
     def diff(self) -> Self:
         return register_expression_call(self, "diff")
 
+    def shift(self, n: int) -> Self:
+        return register_expression_call(self, "shift", n)
+
     def sample(
         self,
         n: int | None = None,

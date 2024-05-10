@@ -338,6 +338,54 @@ class Series:
         """
         return self._from_series(self._series.diff())
 
+    def shift(self, n: int) -> Self:
+        """
+        Shift values by `n` positions.
+
+        Notes:
+            pandas may change the dtype here, for example when introducing missing
+            values in an integer column. To ensure, that the dtype doesn't change,
+            you may want to use `fill_null` and `cast`. For example, to shift
+            and fill missing values with `0` in a Int64 column, you could
+            do:
+
+            ```python
+            s.shift(1).fill_null(0).cast(nw.Int64)
+            ```
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [2, 4, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.shift(1)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    NaN
+            1    2.0
+            2    4.0
+            dtype: float64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               null
+               2
+               4
+            ]
+        """
+        return self._from_series(self._series.shift(n))
+
     def sample(
         self,
         n: int | None = None,

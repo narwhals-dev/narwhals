@@ -98,6 +98,9 @@ class PandasDataFrame:
         )
         return self._from_dataframe(df)
 
+    def drop_nulls(self) -> Self:
+        return self._from_dataframe(self._dataframe.dropna(axis=0))
+
     def filter(
         self,
         *predicates: IntoPandasExpr | Iterable[IntoPandasExpr],
