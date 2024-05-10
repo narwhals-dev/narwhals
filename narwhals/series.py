@@ -618,7 +618,7 @@ class SeriesDateTimeNamespace:
 
     def second(self) -> Series:
         return self._series.__class__(self._series._series.dt.second())
-    
+
     def millisecond(self) -> Series:
         return self._series.__class__(self._series._series.dt.millisecond())
 

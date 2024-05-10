@@ -482,7 +482,7 @@ class PandasSeriesDateTimeNamespace:
         return self._series._from_series(
             self._series._series.dt.second,
         )
-    
+
     def millisecond(self) -> PandasSeries:
         return self._series._from_series(
             self._series._series.dt.millisecond,
