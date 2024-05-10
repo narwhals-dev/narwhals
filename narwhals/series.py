@@ -99,6 +99,30 @@ class Series:
         )
 
     def mean(self) -> Any:
+        """
+        Reduce this Series to the mean value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.mean()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            2.0
+            >>> func(s_pl)
+            2.0
+        """
         return self._series.mean()
 
     def any(self) -> Any:
@@ -108,6 +132,30 @@ class Series:
         return self._series.all()
 
     def min(self) -> Any:
+        """
+        Get the minimal value in this Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.min()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            1
+            >>> func(s_pl)
+            1
+        """
         return self._series.min()
 
     def max(self) -> Any:
