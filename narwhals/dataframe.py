@@ -81,6 +81,11 @@ class BaseFrame:
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         return function(self, *args, **kwargs)
 
+    def drop_nulls(self) -> Self:
+        return self._from_dataframe(
+            self._dataframe.drop_nulls(),
+        )
+
     @property
     def columns(self) -> list[str]:
         return self._dataframe.columns  # type: ignore[no-any-return]

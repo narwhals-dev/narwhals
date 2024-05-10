@@ -6,6 +6,7 @@
       members:
         - columns
         - drop
+        - drop_nulls
         - filter
         - group_by
         - head

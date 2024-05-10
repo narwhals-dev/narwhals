@@ -624,6 +624,60 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).diff())
 
+    def shift(self, n: int) -> Expr:
+        """
+        Returns the difference between each element and the previous one.
+
+        Notes:
+            pandas may change the dtype here, for example when introducing missing
+            values in an integer column. To ensure, that the dtype doesn't change,
+            you may want to use `fill_null` and `cast`. For example, to calculate
+            the diff and fill missing values with `0` in a Int64 column, you could
+            do:
+
+            ```python
+            nw.col('a').diff().fill_null(0).cast(nw.Int64)
+            ```
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5]})
+            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...    df = nw.from_native(df_any)
+            ...    df = df.select(a_diff=nw.col('a').diff())
+            ...    return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a_diff
+            0     NaN
+            1     0.0
+            2     2.0
+            3     2.0
+            4     0.0
+            >>> func(df_pl)
+            shape: (5, 1)
+            ┌────────┐
+            │ a_diff │
+            │ ---    │
+            │ i64    │
+            ╞════════╡
+            │ null   │
+            │ 0      │
+            │ 2      │
+            │ 2      │
+            │ 0      │
+            └────────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).shift(n))
+
     def sort(self, *, descending: bool = False) -> Expr:
         return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
 

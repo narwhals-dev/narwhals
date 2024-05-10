@@ -24,6 +24,7 @@
         - n_unique
         - sample
         - shape
+        - shift
         - sort
         - std
         - sum

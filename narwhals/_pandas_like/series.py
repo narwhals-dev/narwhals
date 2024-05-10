@@ -375,6 +375,11 @@ class PandasSeries:
             self._series.__class__(self._series.diff(), name=self._series.name)
         )
 
+    def shift(self, n: int) -> PandasSeries:
+        return self._from_series(
+            self._series.__class__(self._series.shift(n), name=self._series.name)
+        )
+
     def sort(
         self,
         *,
