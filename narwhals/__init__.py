@@ -1,5 +1,6 @@
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
+from narwhals.decorator import narwhalify
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Float32
@@ -58,4 +59,5 @@ __all__ = [
     "Boolean",
     "String",
     "Datetime",
+    "narwhalify",
 ]
