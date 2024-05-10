@@ -116,7 +116,7 @@ class Series:
             ...     s = nw.from_native(s_any, series_only=True)
             ...     return s.mean()
 
-            We can then pass pandas, Polars or any other library Series to `func`:
+            We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
             2.0
