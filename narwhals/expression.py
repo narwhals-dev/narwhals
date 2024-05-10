@@ -1061,9 +1061,106 @@ class ExprDateTimeNamespace:
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.hour())
 
     def minute(self) -> Expr:
+        """
+        Extract minutes from underlying DateTime representation.
+
+        Returns the minute number from 0 to 59.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1),
+            ...         datetime(2024, 10, 13, 5, 30),
+            ...         datetime(2065, 1, 1, 10, 20),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                         datetime  hour  minute
+            0 1978-01-01 01:01:00     1       1
+            1 2024-10-13 05:30:00     5      30
+            2 2065-01-01 10:20:00    10      20
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌─────────────────────┬──────┬────────┐
+            │ datetime            ┆ hour ┆ minute │
+            │ ---                 ┆ ---  ┆ ---    │
+            │ datetime[μs]        ┆ i8   ┆ i8     │
+            ╞═════════════════════╪══════╪════════╡
+            │ 1978-01-01 01:01:00 ┆ 1    ┆ 1      │
+            │ 2024-10-13 05:30:00 ┆ 5    ┆ 30     │
+            │ 2065-01-01 10:20:00 ┆ 10   ┆ 20     │
+            └─────────────────────┴──────┴────────┘
+        """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.minute())
 
     def second(self) -> Expr:
+        """
+        Extract seconds from underlying DateTime representation.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1, 1),
+            ...         datetime(2024, 10, 13, 5, 30, 14),
+            ...         datetime(2065, 1, 1, 10, 20, 30),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.second().alias("second"),
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                         datetime  hour  minute  second
+            0 1978-01-01 01:01:01     1       1       1
+            1 2024-10-13 05:30:14     5      30      14
+            2 2065-01-01 10:20:30    10      20      30
+            >>> func(df_pl)
+            shape: (3, 4)
+            ┌─────────────────────┬──────┬────────┬────────┐
+            │ datetime            ┆ hour ┆ minute ┆ second │
+            │ ---                 ┆ ---  ┆ ---    ┆ ---    │
+            │ datetime[μs]        ┆ i8   ┆ i8     ┆ i8     │
+            ╞═════════════════════╪══════╪════════╪════════╡
+            │ 1978-01-01 01:01:01 ┆ 1    ┆ 1      ┆ 1      │
+            │ 2024-10-13 05:30:14 ┆ 5    ┆ 30     ┆ 14     │
+            │ 2065-01-01 10:20:30 ┆ 10   ┆ 20     ┆ 30     │
+            └─────────────────────┴──────┴────────┴────────┘
+        """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
 
     def ordinal_day(self) -> Expr:
