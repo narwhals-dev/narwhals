@@ -493,6 +493,44 @@ class Series:
         return self._from_series(self._series.is_null())
 
     def fill_null(self, value: Any) -> Self:
+        """
+        Fill null values using the specified value.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, None]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.fill_null(5)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1.0
+            1    2.0
+            2    5.0
+            dtype: float64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               1
+               2
+               5
+            ]
+        """
         return self._from_series(self._series.fill_null(value))
 
     def is_between(
