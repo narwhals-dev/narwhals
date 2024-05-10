@@ -1065,6 +1065,9 @@ class ExprDateTimeNamespace:
 
     def second(self) -> Expr:
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
+    
+    def millisecond(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
 
     def ordinal_day(self) -> Expr:
         """

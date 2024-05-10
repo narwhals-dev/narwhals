@@ -482,6 +482,11 @@ class PandasSeriesDateTimeNamespace:
         return self._series._from_series(
             self._series._series.dt.second,
         )
+    
+    def millisecond(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.millisecond,
+        )
 
     def ordinal_day(self) -> PandasSeries:
         ser = self._series._series
