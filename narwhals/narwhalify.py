@@ -62,7 +62,7 @@ def narwhalify(
         >>> import pandas as pd
         >>> df = pd.DataFrame({'a': [1, 1, 2]})
         >>> func(df)
-            a_sum    a_mean    a_std
+           a_sum    a_mean    a_std
         0      4  1.333333  0.57735
 
         >>> import polars as pl
@@ -97,9 +97,13 @@ def narwhalify(
         └─────┴─────┴─────┘
 
         >>> join_on_key(frame1, frame2, 'a')  # tries to convert 'a' as well using nw.from_native
+        Traceback (most recent call last):
+        ...
         TypeError: Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'str'>
 
         >>> join_on_key(frame1, right=frame2, key='a')  # does not convert frame2 because passed as keyword
+        Traceback (most recent call last):
+        ...
         AttributeError: 'DataFrame' object has no attribute '_is_polars'
     """
     if func is None:
