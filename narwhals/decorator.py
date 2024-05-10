@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+import sys
 from functools import partial
 from functools import wraps
 from typing import Any
 from typing import Callable
-from typing import Concatenate
-from typing import ParamSpec
 from typing import TypeVar
 
 from narwhals.dataframe import DataFrame
@@ -13,6 +12,13 @@ from narwhals.dataframe import LazyFrame
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
+
+if sys.version_info >= (3, 10):
+    from typing import Concatenate  # pragma: no cover
+    from typing import ParamSpec
+else:
+    from typing_extensions import Concatenate  # pragma: no cover
+    from typing_extensions import ParamSpec
 
 T = DataFrame | LazyFrame | Series
 PS = ParamSpec("PS")
