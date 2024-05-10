@@ -373,7 +373,7 @@ class Series:
             >>> func(s_pd)
             0    NaN
             1    2.0
-            2   -1.0
+            2    4.0
             dtype: float64
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
@@ -381,7 +381,7 @@ class Series:
             [
                null
                2
-               -1
+               4
             ]
         """
         return self._from_series(self._series.shift(n))
