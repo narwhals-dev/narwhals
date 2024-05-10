@@ -340,17 +340,17 @@ class Series:
 
     def shift(self, n: int) -> Self:
         """
-        Calculate the difference with the previous element, for each element.
+        Shift values by `n` positions.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
             values in an integer column. To ensure, that the dtype doesn't change,
-            you may want to use `fill_null` and `cast`. For example, to calculate
-            the diff and fill missing values with `0` in a Int64 column, you could
+            you may want to use `fill_null` and `cast`. For example, to shift
+            and fill missing values with `0` in a Int64 column, you could
             do:
 
             ```python
-            s.diff().fill_null(0).cast(nw.Int64)
+            s.shift(1).fill_null(0).cast(nw.Int64)
             ```
 
         Examples:
@@ -365,7 +365,7 @@ class Series:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.diff()
+            ...     s = s.shift(1)
             ...     return nw.to_native(s)
 
             We can then pass either pandas or Polars to `func`:
