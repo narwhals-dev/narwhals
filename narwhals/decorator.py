@@ -15,10 +15,10 @@ from narwhals.translate import to_native
 
 if sys.version_info >= (3, 10):
     from typing import Concatenate  # pragma: no cover
-    from typing import ParamSpec
+    from typing import ParamSpec  # pragma: no cover
 else:
     from typing_extensions import Concatenate  # pragma: no cover
-    from typing_extensions import ParamSpec
+    from typing_extensions import ParamSpec  # pragma: no cover
 
 T = DataFrame | LazyFrame | Series
 PS = ParamSpec("PS")

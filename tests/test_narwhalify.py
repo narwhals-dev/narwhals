@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from contextlib import ContextManager
+from contextlib import AbstractContextManager
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 from typing import TypeVar
@@ -50,7 +50,7 @@ key = "a"
     ],
 )
 def test_narwhalify(
-    args: list[Any], kwargs: dict[str, Any], context: ContextManager
+    args: list[Any], kwargs: dict[str, Any], context: AbstractContextManager
 ) -> None:
     with context:
         assert join_on_key(*args, **kwargs) is not None
