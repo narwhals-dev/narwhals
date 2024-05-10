@@ -482,6 +482,50 @@ class DataFrame(BaseFrame):
         """
         return super().pipe(function, *args, **kwargs)
 
+    def drop_nulls(self) -> Self:
+        """
+        Drop null values.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1., 2., None], 'ba': [1, None, 2.]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.drop_nulls()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               a
+            0  1
+            1  2
+            2  3
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+        """
+        return super().drop_nulls()
+
     @property
     def schema(self) -> dict[str, DType]:
         r"""
@@ -1430,6 +1474,50 @@ class LazyFrame(BaseFrame):
             └─────┘
         """
         return super().pipe(function, *args, **kwargs)
+
+    def drop_nulls(self) -> Self:
+        """
+        Drop null values.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1., 2., None], 'ba': [1, None, 2.]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.drop_nulls()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               a
+            0  1
+            1  2
+            2  3
+            >>> func(df_pl).collect()
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+        """
+        return super().drop_nulls()
 
     @property
     def schema(self) -> dict[str, DType]:
