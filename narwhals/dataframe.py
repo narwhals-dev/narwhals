@@ -508,21 +508,17 @@ class DataFrame(BaseFrame):
             We can then pass either pandas or Polars:
 
             >>> func(df_pd)
-               a
-            0  1
-            1  2
-            2  3
+                 a   ba
+            0  1.0  1.0
             >>> func(df_pl)
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            │ 3   │
-            └─────┘
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ ba  │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 1.0 │
+            └─────┴─────┘
         """
         return super().drop_nulls()
 
@@ -1501,21 +1497,17 @@ class LazyFrame(BaseFrame):
             We can then pass either pandas or Polars:
 
             >>> func(df_pd)
-               a
-            0  1
-            1  2
-            2  3
+                 a   ba
+            0  1.0  1.0
             >>> func(df_pl).collect()
-            shape: (3, 1)
-            ┌─────┐
-            │ a   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            │ 3   │
-            └─────┘
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ ba  │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 1.0 │
+            └─────┴─────┘
         """
         return super().drop_nulls()
 
