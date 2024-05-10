@@ -335,6 +335,10 @@ class Series:
         """
         Returns a boolean Series indicating which values are null.
 
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
