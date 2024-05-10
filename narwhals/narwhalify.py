@@ -5,10 +5,8 @@ from functools import partial
 from functools import wraps
 from typing import Any
 from typing import Callable
+from typing import TypeVar
 
-from narwhals.dataframe import DataFrame
-from narwhals.dataframe import LazyFrame
-from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 
@@ -19,8 +17,7 @@ else:
     from typing_extensions import Concatenate  # pragma: no cover
     from typing_extensions import ParamSpec  # pragma: no cover
 
-T = DataFrame | LazyFrame | Series
-
+T = TypeVar("T")
 PS = ParamSpec("PS")
 
 
