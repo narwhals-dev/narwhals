@@ -452,6 +452,44 @@ class Series:
         return self._from_series(self._series.sort(descending=descending))
 
     def is_null(self) -> Self:
+        """
+        Returns a boolean Series indicating which values are null.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, None]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.is_null()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1    False
+            2     True
+            dtype: bool
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+            ]
+        """
         return self._from_series(self._series.is_null())
 
     def fill_null(self, value: Any) -> Self:
