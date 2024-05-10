@@ -1,6 +1,6 @@
 # `narwhals.narwhalify`
 
-::: narwhals.decorator.narwhalify
+::: narwhals.narhalify.narwhalify
     handler: python
     options:
       show_source: false

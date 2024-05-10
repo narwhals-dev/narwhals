@@ -1,6 +1,5 @@
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
-from narwhals.decorator import narwhalify
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Float32
@@ -24,6 +23,7 @@ from narwhals.expression import min
 from narwhals.expression import sum
 from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
+from narwhals.narwhalify import narwhalify
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native

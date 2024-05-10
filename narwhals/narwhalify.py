@@ -5,7 +5,6 @@ from functools import partial
 from functools import wraps
 from typing import Any
 from typing import Callable
-from typing import TypeVar
 
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
@@ -21,18 +20,15 @@ else:
     from typing_extensions import ParamSpec  # pragma: no cover
 
 T = DataFrame | LazyFrame | Series
+
 PS = ParamSpec("PS")
-AnyFrame = TypeVar("AnyFrame")
 
 
 def narwhalify(
-    func: Callable[Concatenate[tuple[T], PS], T] | None = None,
+    func: Callable[Concatenate[T, PS], T] | None = None,
     from_kwargs: dict[str, Any] | None = None,
     to_kwargs: dict[str, Any] | None = None,
-) -> (
-    Callable[Concatenate[tuple[AnyFrame], PS], AnyFrame]
-    | partial[Callable[Concatenate[tuple[AnyFrame], PS], AnyFrame]]
-):
+) -> Callable[Concatenate[Any, PS], Any] | Callable[[Any], Any]:
     """Decorator that wraps a dataframe agnostic function between `from_native` and `to_native` conversion.
 
     All the expressions used within `func` must be `narwhals` compatible, and we assume that only one
@@ -121,7 +117,7 @@ def narwhalify(
     to_kwargs = to_kwargs or {"strict": True}
 
     @wraps(func)
-    def wrapper(*frames: AnyFrame, **kwargs: PS.kwargs) -> AnyFrame:
+    def wrapper(*frames: Any, **kwargs: PS.kwargs) -> Any:
         nw_frames = [from_native(frame, **from_kwargs) for frame in frames]
         result = func(*nw_frames, **kwargs)
         return to_native(result, **to_kwargs)

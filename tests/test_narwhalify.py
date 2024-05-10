@@ -1,25 +1,23 @@
 from __future__ import annotations
 
-from contextlib import AbstractContextManager
 from contextlib import nullcontext as does_not_raise
 from typing import Any
-from typing import TypeVar
+from typing import ContextManager
 
 import polars as pl
 import pytest
 
 import narwhals as nw
-
-AnyFrame = TypeVar("AnyFrame")
+from narwhals import DataFrame
 
 
 @nw.narwhalify
-def join_on_key(left: AnyFrame, right: AnyFrame, key: str) -> AnyFrame:
+def join_on_key(left: DataFrame, right: DataFrame, key: str) -> DataFrame:
     return left.join(right, left_on=key, right_on=key)
 
 
-@nw.narwhalify(to_kwargs=False)
-def join_on_key_custom_kwargs(left: AnyFrame, right: AnyFrame, key: str) -> AnyFrame:
+@nw.narwhalify(to_kwargs={"strict": False})
+def join_on_key_custom_kwargs(left: DataFrame, right: DataFrame, key: str) -> DataFrame:
     return left.join(right, left_on=key, right_on=key)
 
 
@@ -50,7 +48,7 @@ key = "a"
     ],
 )
 def test_narwhalify(
-    args: list[Any], kwargs: dict[str, Any], context: AbstractContextManager
+    args: list[Any], kwargs: dict[str, Any], context: ContextManager[Any]
 ) -> None:
     with context:
         assert join_on_key(*args, **kwargs) is not None
