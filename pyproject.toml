@@ -22,8 +22,8 @@ pandas = ["pandas>=1.1.5"]
 polars = ["polars>=0.20.3"]
 
 [project.urls]
-"Homepage" = "https://github.com/MarcoGorelli/narwhals"
-"Bug Tracker" = "https://github.com/MarcoGorelli/narwhals"
+"Homepage" = "https://github.com/narwhals-dev/narwhals"
+"Bug Tracker" = "https://github.com/narwhals-dev/narwhals"
 
 [tool.ruff]
 line-length = 90
