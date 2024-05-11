@@ -99,6 +99,9 @@ class PandasSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
+    def __index__(self, idx: int) -> Any:
+        return self._series._series.index
+
     def __getitem__(self, idx: int) -> Any:
         return self._series.iloc[idx]
 

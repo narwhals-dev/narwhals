@@ -205,10 +205,24 @@ def from_native(
     return native_dataframe  # type: ignore[no-any-return]  # pragma: no cover (todo)
 
 
+def get_implementation(obj: Any) -> str:
+    if hasattr(obj, "__implementation__"):
+        return obj.__implementation__()
+    msg = "Expected object with __implementation__ attribute"
+    raise ValueError(msg)
+
+
+def get_index(obj: Any) -> str:
+    if hasattr(obj, "__index__"):
+        return obj.__index__()
+    return Series(range(len(obj)), implementation="polars")
+
+
 __all__ = [
     "get_pandas",
     "get_polars",
     "get_modin",
     "get_cudf",
     "to_native",
+    "get_implementation",
 ]

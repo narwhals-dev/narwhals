@@ -25,6 +25,8 @@ from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
 from narwhals.series import Series
 from narwhals.translate import from_native
+from narwhals.translate import get_implementation
+from narwhals.translate import get_index
 from narwhals.translate import to_native
 
 __version__ = "0.8.11"
@@ -33,6 +35,8 @@ __all__ = [
     "concat",
     "to_native",
     "from_native",
+    "get_index",
+    "get_implementation",
     "all",
     "col",
     "len",

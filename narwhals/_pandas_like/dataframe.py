@@ -37,6 +37,9 @@ class PandasDataFrame:
         self._dataframe = dataframe
         self._implementation = implementation
 
+    def __implementation__(self) -> str:
+        return self._implementation
+
     def __narwhals_dataframe__(self) -> Self:
         return self
 

@@ -37,6 +37,11 @@ class BaseFrame:
             return pl
         return self._dataframe.__narwhals_namespace__()
 
+    def __implementation__(self) -> str:
+        if self._is_polars:
+            return "polars"
+        return self._dataframe.__implementation__()
+
     def _from_dataframe(self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
