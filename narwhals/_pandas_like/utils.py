@@ -8,6 +8,7 @@ from typing import TypeVar
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
@@ -111,6 +112,19 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
         return plx._create_expr_from_series(into_expr)
     if isinstance(into_expr, str):
         return plx.col(into_expr)
+    if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
+        if implementation == "pandas":
+            pd = get_pandas()
+            series = pd.Series(into_expr, name="")
+        elif implementation == "modin":
+            mpd = get_modin()
+            series = mpd.Series(into_expr, name="")
+        elif implementation == "cudf":
+            cudf = get_cudf()
+            series = cudf.Series(into_expr, name="")
+        return plx._create_expr_from_series(
+            PandasSeries(series, implementation=implementation)
+        )
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 
