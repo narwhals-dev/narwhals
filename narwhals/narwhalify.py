@@ -90,6 +90,7 @@ def narwhalify(
         Traceback (most recent call last):
         ...
         TypeError: Cannot only use `eager_only` with polars.LazyFrame
+
     """
     if func is None:
         return partial(narwhalify, from_kwargs=from_kwargs, to_kwargs=to_kwargs)
@@ -103,9 +104,9 @@ def narwhalify(
     to_kwargs = to_kwargs or {"strict": True}
 
     @wraps(func)
-    def wrapper(*frames: Any, **kwargs: PS.kwargs) -> Any:
-        nw_frames = [from_native(frame, **from_kwargs) for frame in frames]
-        result = func(*nw_frames, **kwargs)
+    def wrapper(frame: Any, *args: PS.args, **kwargs: PS.kwargs) -> Any:
+        nw_frame = from_native(frame, **from_kwargs)
+        result = func(nw_frame, *args, **kwargs)
         return to_native(result, **to_kwargs)
 
     return wrapper
