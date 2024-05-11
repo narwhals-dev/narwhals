@@ -53,6 +53,30 @@ class Series:
 
     @property
     def shape(self) -> tuple[int]:
+        """
+        Get the shape of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.shape
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            (3,)
+            >>> func(s_pl)
+            (3,)
+        """
         return self._series.shape  # type: ignore[no-any-return]
 
     def _extract_native(self, arg: Any) -> Any:
@@ -88,6 +112,30 @@ class Series:
 
     @property
     def name(self) -> str:
+        """
+        Get the name of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name="foo")
+            >>> s_pl = pl.Series("foo", s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.name
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            'foo'
+            >>> func(s_pl)
+            'foo'
+        """
         return self._series.name  # type: ignore[no-any-return]
 
     def cast(
