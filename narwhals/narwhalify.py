@@ -18,6 +18,7 @@ else:
     from typing_extensions import ParamSpec  # pragma: no cover
 
 T = TypeVar("T")
+R = TypeVar("R")
 PS = ParamSpec("PS")
 
 

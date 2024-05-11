@@ -1,57 +1,50 @@
-# from __future__ import annotations
+from __future__ import annotations
 
-# from contextlib import nullcontext as does_not_raise
-# from typing import Any
-# from typing import ContextManager
+from contextlib import nullcontext as does_not_raise
+from typing import Any
+from typing import ContextManager
 
-# import polars as pl
-# import pytest
+import polars as pl
+import pytest
 
-# import narwhals as nw
-# from narwhals import DataFrame
-
-
-# @nw.narwhalify
-# def join_on_key(left: DataFrame, right: DataFrame, key: str) -> DataFrame:
-#     return left.join(right, left_on=key, right_on=key)
+import narwhals as nw
 
 
-# @nw.narwhalify(
-#     from_kwargs={'eager_only': True},
-#     to_kwargs={'strict': False},
-# )
-# def shape_greater_than(df_any, n=0):
-#     return df_any.shape[0] > n
-
-# frame1 = pl.DataFrame({"a": [1, 1, 2], "b": [0, 1, 2]})
-# frame2 = pl.DataFrame({"a": [1, 2], "c": ["x", "y"]})
-# key = "a"
+@nw.narwhalify(
+    from_kwargs={"eager_only": True},
+    to_kwargs={"strict": False},
+)
+def shape_greater_than(df_any: Any, n: int = 0) -> Any:
+    return df_any.shape[0] > n
 
 
-# @pytest.mark.parametrize(
-#     ("args", "kwargs", "context"),
-#     [
-#         ((frame1, frame2), {"key": key}, does_not_raise()),
-#         (
-#             (frame1, frame2, key),
-#             {},
-#             pytest.raises(
-#                 TypeError,
-#                 match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
-#             ),
-#         ),
-#         (
-#             (frame1,),
-#             {"key": key, "right": frame2},
-#             pytest.raises(
-#                 AttributeError, match="'DataFrame' object has no attribute '_is_polars'"
-#             ),
-#         ),
-#     ],
-# )
-# def test_narwhalify(
-#     args: list[Any], kwargs: dict[str, Any], context: ContextManager[Any]
-# ) -> None:
-#     with context:
-#         assert join_on_key(*args, **kwargs) is not None
-#         assert join_on_key_custom_kwargs(*args, **kwargs) is not None
+frame = pl.DataFrame({"a": [1, 1, 2], "b": [0, 1, 2]})
+
+
+@pytest.mark.parametrize(
+    ("args", "kwargs", "context"),
+    [
+        ((frame,), {}, does_not_raise()),
+        ((frame, 5), {}, does_not_raise()),
+        ((frame,), {"n": 5}, does_not_raise()),
+        (
+            (),
+            {"df_any": frame, "n": 5},
+            pytest.raises(
+                TypeError, match="missing 1 required positional argument: 'frame'"
+            ),
+        ),
+        (
+            (pl.LazyFrame(frame),),
+            {},
+            pytest.raises(
+                TypeError, match="Cannot only use `eager_only` with polars.LazyFrame"
+            ),
+        ),
+    ],
+)
+def test_narwhalify(
+    args: list[Any], kwargs: dict[str, Any], context: ContextManager[Any]
+) -> None:
+    with context:
+        assert shape_greater_than(*args, **kwargs) is not None
