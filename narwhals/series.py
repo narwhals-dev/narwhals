@@ -549,6 +549,12 @@ class Series:
     def to_pandas(self) -> Any:
         return self._series.to_pandas()
 
+    def __eq__(self, other: object) -> Series:  # type: ignore[override]
+        return self._from_series(self._series.__eq__(self._extract_native(other)))
+
+    def __ne__(self, other: object) -> Series:  # type: ignore[override]
+        return self._from_series(self._series.__ne__(self._extract_native(other)))
+
     def __gt__(self, other: Any) -> Series:
         return self._from_series(self._series.__gt__(self._extract_native(other)))
 
