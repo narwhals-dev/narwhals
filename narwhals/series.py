@@ -541,6 +541,30 @@ class Series:
         )
 
     def n_unique(self) -> int:
+        """
+        Count the number of unique values.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.n_unique()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            3
+            >>> func(s_pl)
+            3
+        """
         return self._series.n_unique()  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
