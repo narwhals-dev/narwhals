@@ -346,7 +346,7 @@ class PandasSeries:
 
     def n_unique(self) -> int:
         ser = self._series
-        return ser.nunique()  # type: ignore[no-any-return]
+        return ser.nunique(dropna=False)  # type: ignore[no-any-return]
 
     def sample(
         self,
