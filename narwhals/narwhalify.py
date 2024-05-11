@@ -22,23 +22,20 @@ PS = ParamSpec("PS")
 
 
 def narwhalify(
-    func: Callable[Concatenate[T, PS], T] | None = None,
+    func: Callable[Concatenate[T, PS], Any] | None = None,
     from_kwargs: dict[str, Any] | None = None,
     to_kwargs: dict[str, Any] | None = None,
 ) -> Callable[Concatenate[Any, PS], Any] | Callable[[Any], Any]:
     """Decorator that wraps a dataframe agnostic function between `from_native` and `to_native` conversion.
 
-    All the expressions used within `func` must be `narwhals` compatible, and we assume that only one
-    dataframe/series-like is returned from it.
+    All the expressions used within `func` must be `narwhals` compatible.
 
     Warning:
-        `func` can take an arbitrary number of dataframe/series objects which will be converted using `from_native`.
-        However, as these arguments are parsed as positional, make sure to:
+        We are making a few assumptions on `func`:
 
-        - Pass them as the first positional arguments.
-        - Explicitly pass any other argument as keyword.
-
-        Check examples section below to see an instance of that.
+        - The first position argument is a passed through `from_native`
+        - Then `func` is called as `func(nw_frame, *args, **kwargs)`
+        - Finally the result of `func` is passed to `to_native` and returned.
 
     Arguments:
         func: Narwhals compatible function to be wrapped
@@ -77,34 +74,25 @@ def narwhalify(
         │ 4     ┆ 1.333333 ┆ 0.57735 │
         └───────┴──────────┴─────────┘
 
-        >>> @nw.narwhalify
-        ... def join_on_key(left, right, key):
-        ...     return left.join(right, left_on=key, right_on=key)
+        >>> @nw.narwhalify(
+        ...     from_kwargs={'eager_only': True},
+        ...     to_kwargs={'strict': False},
+        ... )
+        ... def shape_greater_than(df_any, n=0):
+        ...     return df_any.shape[0] > n
 
-        >>> frame1 = pl.DataFrame({'a': [1, 1, 2], 'b': [0, 1, 2]})
-        >>> frame2 = pl.DataFrame({'a': [1, 2], 'c': ['x', 'y']})
-
-        >>> join_on_key(frame1, frame2, key='a')
-        shape: (3, 3)
-        ┌─────┬─────┬─────┐
-        │ a   ┆ b   ┆ c   │
-        │ --- ┆ --- ┆ --- │
-        │ i64 ┆ i64 ┆ str │
-        ╞═════╪═════╪═════╡
-        │ 1   ┆ 0   ┆ x   │
-        │ 1   ┆ 1   ┆ x   │
-        │ 2   ┆ 2   ┆ y   │
-        └─────┴─────┴─────┘
-
-        >>> join_on_key(frame1, frame2, 'a')  # tries to convert 'a' as well using nw.from_native
+        >>> shape_greater_than(df)
+        True
+        >>> shape_greater_than(df, 5)
+        False
+        >>> shape_greater_than(df_any=df, n=5)
         Traceback (most recent call last):
         ...
-        TypeError: Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'str'>
-
-        >>> join_on_key(frame1, right=frame2, key='a')  # does not convert frame2 because passed as keyword
+        TypeError: shape_greater_than() missing 1 required positional argument: 'frame'
+        >>> shape_greater_than(pl.LazyFrame(df))
         Traceback (most recent call last):
         ...
-        AttributeError: 'DataFrame' object has no attribute '_is_polars'
+        TypeError: Cannot only use `eager_only` with polars.LazyFrame
     """
     if func is None:
         return partial(narwhalify, from_kwargs=from_kwargs, to_kwargs=to_kwargs)
@@ -118,9 +106,9 @@ def narwhalify(
     to_kwargs = to_kwargs or {"strict": True}
 
     @wraps(func)
-    def wrapper(*frames: Any, **kwargs: PS.kwargs) -> Any:
-        nw_frames = [from_native(frame, **from_kwargs) for frame in frames]
-        result = func(*nw_frames, **kwargs)
+    def wrapper(frame: Any, *args: PS.args, **kwargs: PS.kwargs) -> Any:
+        nw_frame = from_native(frame, **from_kwargs)
+        result = func(nw_frame, *args, **kwargs)
         return to_native(result, **to_kwargs)
 
     return wrapper
