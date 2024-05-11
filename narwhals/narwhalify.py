@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import sys
 from functools import partial
 from functools import wraps
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import TypeVar
@@ -10,16 +10,12 @@ from typing import TypeVar
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 
-if sys.version_info >= (3, 10):
-    from typing import Concatenate  # pragma: no cover
-    from typing import ParamSpec  # pragma: no cover
-else:
+if TYPE_CHECKING:
     from typing_extensions import Concatenate  # pragma: no cover
     from typing_extensions import ParamSpec  # pragma: no cover
 
-T = TypeVar("T")
-R = TypeVar("R")
-PS = ParamSpec("PS")
+    T = TypeVar("T")
+    PS = ParamSpec("PS")
 
 
 def narwhalify(
@@ -107,9 +103,9 @@ def narwhalify(
     to_kwargs = to_kwargs or {"strict": True}
 
     @wraps(func)
-    def wrapper(frame: Any, *args: PS.args, **kwargs: PS.kwargs) -> Any:
-        nw_frame = from_native(frame, **from_kwargs)
-        result = func(nw_frame, *args, **kwargs)
+    def wrapper(*frames: Any, **kwargs: PS.kwargs) -> Any:
+        nw_frames = [from_native(frame, **from_kwargs) for frame in frames]
+        result = func(*nw_frames, **kwargs)
         return to_native(result, **to_kwargs)
 
     return wrapper
