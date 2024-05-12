@@ -28,6 +28,7 @@
         - sort
         - std
         - sum
+        - to_frame
         - to_numpy
         - to_pandas
         - unique

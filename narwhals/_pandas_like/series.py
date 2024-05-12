@@ -139,6 +139,13 @@ class PandasSeries:
     def item(self) -> Any:
         return item(self._series)
 
+    def to_frame(self) -> Any:
+        from narwhals._pandas_like.dataframe import PandasDataFrame
+
+        return PandasDataFrame(
+            self._series.to_frame(), implementation=self._implementation
+        )
+
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> PandasSeries:
@@ -346,7 +353,7 @@ class PandasSeries:
 
     def n_unique(self) -> int:
         ser = self._series
-        return ser.nunique()  # type: ignore[no-any-return]
+        return ser.nunique(dropna=False)  # type: ignore[no-any-return]
 
     def sample(
         self,

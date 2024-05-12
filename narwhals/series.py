@@ -5,12 +5,16 @@ from typing import Any
 
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
+from narwhals.translate import get_cudf
+from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
 
 if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
+
+    from narwhals.dataframe import DataFrame
 
 
 class Series:
@@ -35,14 +39,31 @@ class Series:
         if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
             self._series = PandasSeries(series, implementation="pandas")
             return
-        msg = f"Expected pandas or Polars Series, got: {type(series)}"  # pragma: no cover
+        if (pd := get_modin()) is not None and isinstance(
+            series, pd.Series
+        ):  # pragma: no cover
+            self._series = PandasSeries(series, implementation="modin")
+            return
+        if (pd := get_cudf()) is not None and isinstance(
+            series, pd.Series
+        ):  # pragma: no cover
+            self._series = PandasSeries(series, implementation="cudf")
+            return
+        msg = (  # pragma: no cover
+            f"Expected pandas, Polars, modin, or cuDF Series, got: {type(series)}. "
+            "If passing something which is not already a Series, but is convertible "
+            "to one, you must specify `implementation=` "
+            "(e.g. `nw.Series([1,2,3], implementation='polars')`)"
+        )
         raise TypeError(msg)  # pragma: no cover
 
     def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
         return self._series.to_numpy(*args, **kwargs)
 
-    def __getitem__(self, idx: int) -> Any:
-        return self._series[idx]
+    def __getitem__(self, idx: int | slice) -> Any:
+        if isinstance(idx, int):
+            return self._series[idx]
+        return self._from_series(self._series[idx])
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
@@ -53,6 +74,30 @@ class Series:
 
     @property
     def shape(self) -> tuple[int]:
+        """
+        Get the shape of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.shape
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            (3,)
+            >>> func(s_pl)
+            (3,)
+        """
         return self._series.shape  # type: ignore[no-any-return]
 
     def _extract_native(self, arg: Any) -> Any:
@@ -88,6 +133,30 @@ class Series:
 
     @property
     def name(self) -> str:
+        """
+        Get the name of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name="foo")
+            >>> s_pl = pl.Series("foo", s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.name
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            'foo'
+            >>> func(s_pl)
+            'foo'
+        """
         return self._series.name  # type: ignore[no-any-return]
 
     def cast(
@@ -97,6 +166,48 @@ class Series:
         return self._from_series(
             self._series.cast(translate_dtype(self.__narwhals_namespace__(), dtype))
         )
+
+    def to_frame(self) -> DataFrame:
+        """
+        Convert to dataframe.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name='a')
+            >>> s_pl = pl.Series('a', s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     df = s.to_frame()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+               a
+            0  1
+            1  2
+            2  3
+            >>> func(s_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+        """
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame(self._series.to_frame())
 
     def mean(self) -> Any:
         """
@@ -541,6 +652,30 @@ class Series:
         )
 
     def n_unique(self) -> int:
+        """
+        Count the number of unique values.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.n_unique()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            3
+            >>> func(s_pl)
+            3
+        """
         return self._series.n_unique()  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:

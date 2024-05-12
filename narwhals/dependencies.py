@@ -29,3 +29,8 @@ def get_cudf() -> Any:
 
 def get_pyarrow() -> Any:
     return sys.modules.get("pyarrow", None)
+
+
+def get_numpy() -> Any:
+    """Import numpy (if available - else return None)."""
+    return sys.modules.get("numpy", None)
