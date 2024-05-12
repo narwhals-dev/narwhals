@@ -161,3 +161,39 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
         msg = f"Expected `lhs` and `rhs` to have the same length, got {len(lhs_any)} and {len(rhs_any)}"
         raise ValueError(msg)
     return lhs
+
+
+def maybe_set_index(df: T, column_names: str | list[str]) -> T:
+    """
+    Set columns `columns` to be the index of `df`, if `df` is pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already aligns indices for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this is a no-op.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 5]})
+        >>> df = nw.from_native(df_pd)
+        >>> nw.to_native(nw.maybe_set_index(df, 'b'))  # doctest: +NORMALIZE_WHITESPACE
+           a
+        b
+        4  1
+        5  2
+    """
+    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals.dataframe import DataFrame
+
+    df_any = cast(Any, df)
+    if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
+        return DataFrame(  # type: ignore[return-value]
+            df_any._dataframe._from_dataframe(
+                df_any._dataframe._dataframe.set_index(column_names)
+            )
+        )
+    return df
