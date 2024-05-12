@@ -113,20 +113,25 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
     if isinstance(into_expr, str):
         return plx.col(into_expr)
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        if implementation == "pandas":
-            pd = get_pandas()
-            series = pd.Series(into_expr, name="")
-        elif implementation == "modin":
-            mpd = get_modin()
-            series = mpd.Series(into_expr, name="")
-        elif implementation == "cudf":
-            cudf = get_cudf()
-            series = cudf.Series(into_expr, name="")
-        return plx._create_expr_from_series(
-            PandasSeries(series, implementation=implementation)
-        )
+        series = create_native_series(into_expr, implementation=implementation)
+        return plx._create_expr_from_series(series)
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def create_native_series(iterable: Any, implementation: str) -> PandasSeries:
+    from narwhals._pandas_like.series import PandasSeries
+
+    if implementation == "pandas":
+        pd = get_pandas()
+        series = pd.Series(iterable, name="")
+    elif implementation == "modin":
+        mpd = get_modin()
+        series = mpd.Series(iterable, name="")
+    elif implementation == "cudf":
+        cudf = get_cudf()
+        series = cudf.Series(iterable, name="")
+    return PandasSeries(series, implementation=implementation)
 
 
 def evaluate_into_expr(

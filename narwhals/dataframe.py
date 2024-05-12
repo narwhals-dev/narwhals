@@ -13,6 +13,7 @@ from narwhals.dtypes import to_narwhals_dtype
 from narwhals.translate import get_cudf
 from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
+from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
@@ -80,6 +81,17 @@ class BaseFrame:
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         return function(self, *args, **kwargs)
+
+    def with_row_index(self, name: str = "index") -> Self:
+        if self._is_polars and parse_version(get_polars().__version__) < parse_version(
+            "0.20.4"
+        ):  # pragma: no cover
+            return self._from_dataframe(
+                self._dataframe.with_row_count(name),
+            )
+        return self._from_dataframe(
+            self._dataframe.with_row_index(name),
+        )
 
     def drop_nulls(self) -> Self:
         return self._from_dataframe(
@@ -521,6 +533,46 @@ class DataFrame(BaseFrame):
             └─────┴─────┘
         """
         return super().drop_nulls()
+
+    def with_row_index(self, name: str = "index") -> Self:
+        """
+        Insert column which enumerates rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1,2,3], 'b': [4,5,6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_row_index()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               index  a  b
+            0      0  1  4
+            1      1  2  5
+            2      2  3  6
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌───────┬─────┬─────┐
+            │ index ┆ a   ┆ b   │
+            │ ---   ┆ --- ┆ --- │
+            │ u32   ┆ i64 ┆ i64 │
+            ╞═══════╪═════╪═════╡
+            │ 0     ┆ 1   ┆ 4   │
+            │ 1     ┆ 2   ┆ 5   │
+            │ 2     ┆ 3   ┆ 6   │
+            └───────┴─────┴─────┘
+        """
+        return super().with_row_index(name)
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -1510,6 +1562,46 @@ class LazyFrame(BaseFrame):
             └─────┴─────┘
         """
         return super().drop_nulls()
+
+    def with_row_index(self, name: str = "index") -> Self:
+        """
+        Insert column which enumerates rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1,2,3], 'b': [4,5,6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_row_index()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               index  a  b
+            0      0  1  4
+            1      1  2  5
+            2      2  3  6
+            >>> func(df_pl).collect()
+            shape: (3, 3)
+            ┌───────┬─────┬─────┐
+            │ index ┆ a   ┆ b   │
+            │ ---   ┆ --- ┆ --- │
+            │ u32   ┆ i64 ┆ i64 │
+            ╞═══════╪═════╪═════╡
+            │ 0     ┆ 1   ┆ 4   │
+            │ 1     ┆ 2   ┆ 5   │
+            │ 2     ┆ 3   ┆ 6   │
+            └───────┴─────┴─────┘
+        """
+        return super().with_row_index(name)
 
     @property
     def schema(self) -> dict[str, DType]:

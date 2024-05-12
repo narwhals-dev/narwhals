@@ -23,5 +23,6 @@
         - to_pandas
         - unique
         - with_columns
+        - with_row_index
       show_source: false
       show_bases: false

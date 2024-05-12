@@ -5,6 +5,8 @@ from typing import Any
 
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
+from narwhals.translate import get_cudf
+from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
 from narwhals.translate import get_polars
 
@@ -35,7 +37,22 @@ class Series:
         if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
             self._series = PandasSeries(series, implementation="pandas")
             return
-        msg = f"Expected pandas or Polars Series, got: {type(series)}"  # pragma: no cover
+        if (pd := get_modin()) is not None and isinstance(
+            series, pd.Series
+        ):  # pragma: no cover
+            self._series = PandasSeries(series, implementation="modin")
+            return
+        if (pd := get_cudf()) is not None and isinstance(
+            series, pd.Series
+        ):  # pragma: no cover
+            self._series = PandasSeries(series, implementation="cudf")
+            return
+        msg = (  # pragma: no cover
+            f"Expected pandas, Polars, modin, or cuDF Series, got: {type(series)}. "
+            "If passing something which is not already a Series, but is convertible "
+            "to one, you must specify `implementation=` "
+            "(e.g. `nw.Series([1,2,3], implementation='polars')`)"
+        )
         raise TypeError(msg)  # pragma: no cover
 
     def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
