@@ -119,18 +119,22 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
     raise AssertionError(msg)
 
 
-def create_native_series(iterable: Any, implementation: str) -> PandasSeries:
+def create_native_series(
+    iterable: Any,
+    implementation: str,
+    index: Any = None,
+) -> PandasSeries:
     from narwhals._pandas_like.series import PandasSeries
 
     if implementation == "pandas":
         pd = get_pandas()
-        series = pd.Series(iterable, name="")
+        series = pd.Series(iterable, index=index, name="")
     elif implementation == "modin":
         mpd = get_modin()
-        series = mpd.Series(iterable, name="")
+        series = mpd.Series(iterable, index=index, name="")
     elif implementation == "cudf":
         cudf = get_cudf()
-        series = cudf.Series(iterable, name="")
+        series = cudf.Series(iterable, index=index, name="")
     return PandasSeries(series, implementation=implementation)
 
 

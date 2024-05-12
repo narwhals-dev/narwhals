@@ -205,10 +205,18 @@ def from_native(
     return native_dataframe  # type: ignore[no-any-return]  # pragma: no cover (todo)
 
 
+def get_native_namespace(obj: Any) -> Any:
+    # todo
+    if obj._is_polars:
+        return get_polars()
+    return get_pandas()
+
+
 __all__ = [
     "get_pandas",
     "get_polars",
     "get_modin",
     "get_cudf",
+    "get_native_namespace",
     "to_native",
 ]

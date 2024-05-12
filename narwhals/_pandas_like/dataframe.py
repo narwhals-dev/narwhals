@@ -49,6 +49,9 @@ class PandasDataFrame:
 
         return PandasNamespace(self._implementation)
 
+    def __len__(self) -> int:
+        return len(self._dataframe)
+
     def _validate_columns(self, columns: Sequence[str]) -> None:
         if len(columns) != len(set(columns)):
             counter = collections.Counter(columns)
@@ -104,7 +107,9 @@ class PandasDataFrame:
 
     def with_row_index(self, name: str) -> Self:
         row_index = create_native_series(
-            range(len(self._dataframe)), implementation=self._implementation
+            range(len(self._dataframe)),
+            index=self._dataframe.index,
+            implementation=self._implementation,
         ).alias(name)
         return self._from_dataframe(
             horizontal_concat(

@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
+from typing import cast
 
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -86,30 +87,44 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     """
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.series import PandasSeries
+    from narwhals.dataframe import DataFrame
+    from narwhals.series import Series
 
-    if isinstance(lhs._dataframe, PandasDataFrame) and isinstance(
-        rhs._dataframe, PandasDataFrame
+    lhs_any = cast(Any, lhs)
+    rhs_any = cast(Any, rhs)
+    if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
+        getattr(rhs_any, "_dataframe", None), PandasDataFrame
     ):
-        return lhs._dataframe._from_dataframe(
-            lhs._dataframe._dataframe.loc[rhs._dataframe._dataframe.index]
+        return DataFrame(  # type: ignore[return-value]
+            lhs_any._dataframelhs_any._dataframe._from_dataframe(
+                lhs_any._dataframe._dataframe.loc[rhs_any._dataframe._dataframe.index]
+            )
         )
-    if isinstance(lhs._dataframe, PandasDataFrame) and isinstance(
-        rhs._series, PandasSeries
+    if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
+        getattr(rhs_any, "_series", None), PandasSeries
     ):
-        return lhs._dataframe._from_dataframe(
-            lhs._dataframe._dataframe.loc[rhs._series._series.index]
+        return DataFrame(  # type: ignore[return-value]
+            lhs_any._dataframe._from_dataframe(
+                lhs_any._dataframe._dataframe.loc[rhs_any._series._series.index]
+            )
         )
-    if isinstance(lhs._series, PandasSeries) and isinstance(
-        rhs._dataframe, PandasDataFrame
+    if isinstance(getattr(lhs_any, "_series", None), PandasSeries) and isinstance(
+        getattr(rhs_any, "_dataframe", None), PandasDataFrame
     ):
-        return lhs._series._from_series(
-            lhs._series._series.loc[rhs._dataframe._dataframe.index]
+        return Series(  # type: ignore[return-value]
+            lhs_any._series._from_series(
+                lhs_any._series._series.loc[rhs_any._dataframe._dataframe.index]
+            )
         )
-    if isinstance(lhs._series, PandasSeries) and isinstance(rhs._series, PandasSeries):
-        return lhs._series._from_dataframe(
-            lhs._series._series.loc[rhs._series._series.index]
+    if isinstance(getattr(lhs_any, "_series", None), PandasSeries) and isinstance(
+        getattr(rhs_any, "_series", None), PandasSeries
+    ):
+        return Series(  # type: ignore[return-value]
+            lhs_any._series._from_dataframe(
+                lhs_any._series._series.loc[rhs_any._series._series.index]
+            )
         )
-    if len(lhs) != len(rhs):
-        msg = f"Expected `lhs` and `rhs` to have the same length, got {len(lhs)} and {len(rhs)}"
+    if len(lhs_any) != len(rhs_any):
+        msg = f"Expected `lhs` and `rhs` to have the same length, got {len(lhs_any)} and {len(rhs_any)}"
         raise ValueError(msg)
     return lhs

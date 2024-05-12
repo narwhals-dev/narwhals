@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
+    from narwhals.dataframe import DataFrame
+
 
 class Series:
     def __init__(
@@ -59,7 +61,7 @@ class Series:
         return self._series.to_numpy(*args, **kwargs)
 
     def __getitem__(self, idx: int) -> Any:
-        return self._series[idx]
+        return self._from_series(self._series[idx])
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
@@ -162,6 +164,11 @@ class Series:
         return self._from_series(
             self._series.cast(translate_dtype(self.__narwhals_namespace__(), dtype))
         )
+
+    def to_frame(self) -> DataFrame:
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame(self._series.to_frame())
 
     def mean(self) -> Any:
         """

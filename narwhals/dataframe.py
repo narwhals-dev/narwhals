@@ -31,6 +31,9 @@ class BaseFrame:
     _dataframe: Any
     _is_polars: bool
 
+    def __len__(self) -> Any:
+        return self._dataframe.__len__()
+
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
             import polars as pl

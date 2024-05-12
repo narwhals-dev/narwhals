@@ -25,6 +25,7 @@ from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
 from narwhals.series import Series
 from narwhals.translate import from_native
+from narwhals.translate import get_native_namespace
 from narwhals.translate import to_native
 from narwhals.utils import maybe_align_index
 
@@ -35,6 +36,7 @@ __all__ = [
     "to_native",
     "from_native",
     "maybe_align_index",
+    "get_native_namespace",
     "all",
     "col",
     "len",
