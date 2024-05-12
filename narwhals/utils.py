@@ -83,7 +83,28 @@ def validate_same_library(items: Iterable[Any]) -> None:
 
 def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     """
-    Align `lhs` to the Index of `rhs`, if they're both pandas-like.
+    Align `lhs` to the Index of `rhs, if they're both pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already aligns indices for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this only checks that `lhs` and `rhs`
+        are the same length.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({'a': [1, 2]}, index=[3, 4])
+        >>> s_pd = pd.Series([6, 7], index=[4, 3])
+        >>> df = nw.from_native(df_pd)
+        >>> s = nw.from_native(s_pd, series_only=True)
+        >>> nw.to_native(nw.maybe_align_index(df, s))
+           a
+        4  2
+        3  1
     """
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.series import PandasSeries
