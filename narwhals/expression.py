@@ -1209,7 +1209,7 @@ class ExprDateTimeNamespace:
         Notes:
             The function outputs the total minutes in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
-            consider using `fill_null()` in this case.
+            consider using `fill_null()` and `cast` in this case.
 
         Examples:
             >>> import pandas as pd
