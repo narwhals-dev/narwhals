@@ -26,6 +26,7 @@ from narwhals.functions import concat
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
+from narwhals.utils import maybe_align_index
 
 __version__ = "0.8.11"
 
@@ -33,6 +34,7 @@ __all__ = [
     "concat",
     "to_native",
     "from_native",
+    "maybe_align_index",
     "all",
     "col",
     "len",
