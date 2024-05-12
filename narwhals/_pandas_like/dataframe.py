@@ -12,6 +12,9 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
+from narwhals.translate import get_cudf
+from narwhals.translate import get_modin
+from narwhals.translate import get_pandas
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -48,6 +51,16 @@ class PandasDataFrame:
         from narwhals._pandas_like.namespace import PandasNamespace
 
         return PandasNamespace(self._implementation)
+
+    def __native_namespace__(self) -> Any:
+        if self._implementation == "pandas":
+            return get_pandas()
+        if self._implementation == "modin":
+            return get_modin()
+        if self._implementation == "cudf":
+            return get_cudf()
+        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"
+        raise AssertionError(msg)
 
     def __len__(self) -> int:
         return len(self._dataframe)

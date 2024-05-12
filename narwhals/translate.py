@@ -206,10 +206,7 @@ def from_native(
 
 
 def get_native_namespace(obj: Any) -> Any:
-    # todo
-    if obj._is_polars:
-        return get_polars()
-    return get_pandas()
+    return obj.__native_namespace__()
 
 
 __all__ = [
