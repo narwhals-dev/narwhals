@@ -96,7 +96,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
         getattr(rhs_any, "_dataframe", None), PandasDataFrame
     ):
         return DataFrame(  # type: ignore[return-value]
-            lhs_any._dataframelhs_any._dataframe._from_dataframe(
+            lhs_any._dataframe._from_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._dataframe._dataframe.index]
             )
         )
@@ -120,7 +120,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
         getattr(rhs_any, "_series", None), PandasSeries
     ):
         return Series(  # type: ignore[return-value]
-            lhs_any._series._from_dataframe(
+            lhs_any._series._from_series(
                 lhs_any._series._series.loc[rhs_any._series._series.index]
             )
         )
