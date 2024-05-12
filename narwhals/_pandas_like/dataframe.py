@@ -55,11 +55,11 @@ class PandasDataFrame:
     def __native_namespace__(self) -> Any:
         if self._implementation == "pandas":
             return get_pandas()
-        if self._implementation == "modin":
+        if self._implementation == "modin":  # pragma: no cover
             return get_modin()
-        if self._implementation == "cudf":
+        if self._implementation == "cudf":  # pragma: no cover
             return get_cudf()
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"
+        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
     def __len__(self) -> int:
