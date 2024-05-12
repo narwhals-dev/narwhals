@@ -11,5 +11,6 @@
         - hour
         - minute
         - second
+        - total_minutes
       show_source: false
       show_bases: false

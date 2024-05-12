@@ -1202,6 +1202,52 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
 
+    def total_minutes(self) -> Expr:
+        """
+        Get total minutes.
+
+        Notes:
+            The function outputs the total minutes in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` and `cast` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = {'a': [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...       a_total_minutes = nw.col('a').dt.total_minutes()
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                            a  a_total_minutes
+            0 0 days 00:10:00               10
+            1 0 days 00:20:40               20
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌──────────────┬─────────────────┐
+            │ a            ┆ a_total_minutes │
+            │ ---          ┆ ---             │
+            │ duration[μs] ┆ i64             │
+            ╞══════════════╪═════════════════╡
+            │ 10m          ┆ 10              │
+            │ 20m 40s      ┆ 20              │
+            └──────────────┴─────────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_minutes())
+
 
 def col(*names: str | Iterable[str]) -> Expr:
     """
