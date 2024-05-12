@@ -60,7 +60,9 @@ class Series:
     def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
         return self._series.to_numpy(*args, **kwargs)
 
-    def __getitem__(self, idx: int) -> Any:
+    def __getitem__(self, idx: int | slice) -> Any:
+        if isinstance(idx, int):
+            return self._series[idx]
         return self._from_series(self._series[idx])
 
     def __narwhals_namespace__(self) -> Any:
