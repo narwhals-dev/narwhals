@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Sequence
@@ -8,6 +9,10 @@ from typing import TypeVar
 
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+
+if TYPE_CHECKING:
+    from narwhals.dataframe import BaseFrame
+    from narwhals.series import Series
 
 T = TypeVar("T")
 
@@ -73,3 +78,38 @@ def validate_same_library(items: Iterable[Any]) -> None:
     ):
         return
     raise NotImplementedError("Cross-library comparisons aren't supported")
+
+
+def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
+    """
+    Align `lhs` to the Index of `rhs`, if they're both pandas-like.
+    """
+    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.series import PandasSeries
+
+    if isinstance(lhs._dataframe, PandasDataFrame) and isinstance(
+        rhs._dataframe, PandasDataFrame
+    ):
+        return lhs._dataframe._from_dataframe(
+            lhs._dataframe._dataframe.loc[rhs._dataframe._dataframe.index]
+        )
+    if isinstance(lhs._dataframe, PandasDataFrame) and isinstance(
+        rhs._series, PandasSeries
+    ):
+        return lhs._dataframe._from_dataframe(
+            lhs._dataframe._dataframe.loc[rhs._series._series.index]
+        )
+    if isinstance(lhs._series, PandasSeries) and isinstance(
+        rhs._dataframe, PandasDataFrame
+    ):
+        return lhs._series._from_series(
+            lhs._series._series.loc[rhs._dataframe._dataframe.index]
+        )
+    if isinstance(lhs._series, PandasSeries) and isinstance(rhs._series, PandasSeries):
+        return lhs._series._from_dataframe(
+            lhs._series._series.loc[rhs._series._series.index]
+        )
+    if len(lhs) != len(rhs):
+        msg = f"Expected `lhs` and `rhs` to have the same length, got {len(lhs)} and {len(rhs)}"
+        raise ValueError(msg)
+    return lhs
