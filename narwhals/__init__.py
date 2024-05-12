@@ -30,7 +30,7 @@ from narwhals.translate import to_native
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "0.8.11"
+__version__ = "0.8.12"
 
 __all__ = [
     "concat",
