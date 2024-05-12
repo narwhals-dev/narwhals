@@ -1,5 +1,6 @@
 import pandas as pd
 import polars as pl
+import pytest
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_series_equal
 
@@ -23,8 +24,17 @@ def test_maybe_align_index_pandas() -> None:
     assert_frame_equal(nw.to_native(result), expected)
 
 
+def test_non_unique_index() -> None:
+    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0]))
+    s = nw.from_native(pd.Series([1, 2, 3], index=[2, 2, 0]), series_only=True)
+    with pytest.raises(ValueError, match="unique"):
+        nw.maybe_align_index(df, s)
+
+
 def test_maybe_align_index_polars() -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = nw.maybe_align_index(df, s)
     assert result is df
+    with pytest.raises(ValueError, match="length"):
+        nw.maybe_align_index(df, s[1:])

@@ -90,11 +90,17 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     from narwhals.dataframe import DataFrame
     from narwhals.series import Series
 
+    def _validate_index(index: Any) -> None:
+        if not index.is_unique:
+            raise ValueError("given index doesn't have a unique index")
+
     lhs_any = cast(Any, lhs)
     rhs_any = cast(Any, rhs)
     if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
         getattr(rhs_any, "_dataframe", None), PandasDataFrame
     ):
+        _validate_index(lhs_any._dataframe._dataframe.index)
+        _validate_index(rhs_any._dataframe._dataframe.index)
         return DataFrame(  # type: ignore[return-value]
             lhs_any._dataframe._from_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._dataframe._dataframe.index]
@@ -103,6 +109,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
         getattr(rhs_any, "_series", None), PandasSeries
     ):
+        _validate_index(lhs_any._dataframe._dataframe.index)
+        _validate_index(rhs_any._series._series.index)
         return DataFrame(  # type: ignore[return-value]
             lhs_any._dataframe._from_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._series._series.index]
@@ -111,6 +119,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     if isinstance(getattr(lhs_any, "_series", None), PandasSeries) and isinstance(
         getattr(rhs_any, "_dataframe", None), PandasDataFrame
     ):
+        _validate_index(lhs_any._series._series.index)
+        _validate_index(rhs_any._dataframe._dataframe.index)
         return Series(  # type: ignore[return-value]
             lhs_any._series._from_series(
                 lhs_any._series._series.loc[rhs_any._dataframe._dataframe.index]
@@ -119,6 +129,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     if isinstance(getattr(lhs_any, "_series", None), PandasSeries) and isinstance(
         getattr(rhs_any, "_series", None), PandasSeries
     ):
+        _validate_index(lhs_any._series._series.index)
+        _validate_index(rhs_any._series._series.index)
         return Series(  # type: ignore[return-value]
             lhs_any._series._from_series(
                 lhs_any._series._series.loc[rhs_any._series._series.index]
