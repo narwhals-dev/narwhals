@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 
+from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import evaluate_into_exprs
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
@@ -103,6 +104,16 @@ class PandasDataFrame:
 
     def drop_nulls(self) -> Self:
         return self._from_dataframe(self._dataframe.dropna(axis=0))
+
+    def with_row_index(self, name: str) -> Self:
+        row_index = create_native_series(
+            range(len(self._dataframe)), implementation=self._implementation
+        ).alias(name)
+        return self._from_dataframe(
+            horizontal_concat(
+                [row_index._series, self._dataframe], implementation=self._implementation
+            )
+        )
 
     def filter(
         self,

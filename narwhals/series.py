@@ -21,27 +21,8 @@ class Series:
         series: Any,
         *,
         is_polars: bool = False,
-        implementation: str | None = None,
     ) -> None:
         from narwhals._pandas_like.series import PandasSeries
-
-        if implementation is not None:
-            if implementation == "polars":
-                self._series = pl.Series(series)
-                self._is_polars = True
-                return
-            elif implementation == "pandas":
-                pd = get_pandas()
-                self._series = PandasSeries(pd.Series(series), implementation="pandas")
-                return
-            elif implementation == "modin":
-                mpd = get_modin()
-                self._series = PandasSeries(mpd.Series(series), implementation="modin")
-                return
-            elif implementation == "cudf":
-                cudf = get_cudf()
-                self._series = PandasSeries(cudf.Series(series), implementation="cudf")
-                return
 
         self._is_polars = is_polars
         if hasattr(series, "__narwhals_series__"):
