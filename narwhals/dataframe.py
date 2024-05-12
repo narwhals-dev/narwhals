@@ -13,6 +13,7 @@ from narwhals.dtypes import to_narwhals_dtype
 from narwhals.translate import get_cudf
 from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
+from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
@@ -82,6 +83,10 @@ class BaseFrame:
         return function(self, *args, **kwargs)
 
     def with_row_index(self, name: str = "index") -> Self:
+        if self._is_polars and parse_version(get_polars()) < parse_version("0.20.4"):
+            return self._from_dataframe(
+                self._dataframe.with_row_count(name),
+            )
         return self._from_dataframe(
             self._dataframe.with_row_index(name),
         )
