@@ -85,7 +85,7 @@ class BaseFrame:
     def with_row_index(self, name: str = "index") -> Self:
         if self._is_polars and parse_version(get_polars().__version__) < parse_version(
             "0.20.4"
-        ):
+        ):  # pragma: no cover
             return self._from_dataframe(
                 self._dataframe.with_row_count(name),
             )
