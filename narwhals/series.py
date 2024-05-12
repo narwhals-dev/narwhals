@@ -787,3 +787,44 @@ class SeriesDateTimeNamespace:
             ]
         """
         return self._series.__class__(self._series._series.dt.ordinal_day())
+
+    def total_minutes(self) -> Series:
+        """
+        Get total minutes.
+
+        Notes:
+            The function outputs the total minutes in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.total_minutes()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    10
+            1    20
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i64]
+            [
+                    10
+                    20
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.total_minutes())

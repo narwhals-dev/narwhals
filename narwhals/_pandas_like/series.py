@@ -494,3 +494,13 @@ class PandasSeriesDateTimeNamespace:
         return self._series._from_series(
             self._series._series.__class__(result, dtype=dtype, name=year_start.name)
         )
+
+    def total_minutes(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds()
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 60
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)

@@ -315,3 +315,6 @@ class PandasExprDateTimeNamespace:
 
     def ordinal_day(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "ordinal_day")
+
+    def total_minutes(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_minutes")
