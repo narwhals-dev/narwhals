@@ -206,6 +206,20 @@ def from_native(
 
 
 def get_native_namespace(obj: Any) -> Any:
+    """
+    Get native namespace from object.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df = nw.from_native(pd.DataFrame({'a': [1,2,3]}))
+        >>> nw.get_native_namespace(df)
+        <module 'pandas'...>
+        >>> df = nw.from_native(pl.DataFrame({'a': [1,2,3]}))
+        >>> nw.get_native_namespace(df)
+        <module 'polars'...>
+    """
     return obj.__native_namespace__()
 
 
