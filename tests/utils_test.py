@@ -38,3 +38,10 @@ def test_maybe_align_index_polars() -> None:
     assert result is df
     with pytest.raises(ValueError, match="length"):
         nw.maybe_align_index(df, s[1:])
+
+
+def test_native_namespace() -> None:
+    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    assert nw.get_native_namespace(df) is pl
+    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
+    assert nw.get_native_namespace(df) is pd
