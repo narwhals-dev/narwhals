@@ -10,7 +10,9 @@ Here are the top-level functions available in Narwhals.
         - col
         - concat
         - from_native
+        - get_native_namespace
         - len
+        - maybe_align_index
         - max
         - mean
         - min

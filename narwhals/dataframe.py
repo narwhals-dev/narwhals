@@ -31,11 +31,17 @@ class BaseFrame:
     _dataframe: Any
     _is_polars: bool
 
+    def __len__(self) -> Any:
+        return self._dataframe.__len__()
+
+    def __native_namespace__(self) -> Any:
+        if self._is_polars:
+            return get_polars()
+        return self._dataframe.__native_namespace__()
+
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
-            import polars as pl
-
-            return pl
+            return get_polars()
         return self._dataframe.__narwhals_namespace__()
 
     def _from_dataframe(self, df: Any) -> Self:

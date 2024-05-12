@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
+    from narwhals.dataframe import DataFrame
+
 
 class Series:
     def __init__(
@@ -58,8 +60,10 @@ class Series:
     def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
         return self._series.to_numpy(*args, **kwargs)
 
-    def __getitem__(self, idx: int) -> Any:
-        return self._series[idx]
+    def __getitem__(self, idx: int | slice) -> Any:
+        if isinstance(idx, int):
+            return self._series[idx]
+        return self._from_series(self._series[idx])
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
@@ -162,6 +166,48 @@ class Series:
         return self._from_series(
             self._series.cast(translate_dtype(self.__narwhals_namespace__(), dtype))
         )
+
+    def to_frame(self) -> DataFrame:
+        """
+        Convert to dataframe.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name='a')
+            >>> s_pl = pl.Series('a', s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     df = s.to_frame()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+               a
+            0  1
+            1  2
+            2  3
+            >>> func(s_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+        """
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame(self._series.to_frame())
 
     def mean(self) -> Any:
         """

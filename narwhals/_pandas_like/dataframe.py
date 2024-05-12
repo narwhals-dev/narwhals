@@ -12,6 +12,9 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
+from narwhals.translate import get_cudf
+from narwhals.translate import get_modin
+from narwhals.translate import get_pandas
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -48,6 +51,19 @@ class PandasDataFrame:
         from narwhals._pandas_like.namespace import PandasNamespace
 
         return PandasNamespace(self._implementation)
+
+    def __native_namespace__(self) -> Any:
+        if self._implementation == "pandas":
+            return get_pandas()
+        if self._implementation == "modin":  # pragma: no cover
+            return get_modin()
+        if self._implementation == "cudf":  # pragma: no cover
+            return get_cudf()
+        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
+
+    def __len__(self) -> int:
+        return len(self._dataframe)
 
     def _validate_columns(self, columns: Sequence[str]) -> None:
         if len(columns) != len(set(columns)):
@@ -104,7 +120,9 @@ class PandasDataFrame:
 
     def with_row_index(self, name: str) -> Self:
         row_index = create_native_series(
-            range(len(self._dataframe)), implementation=self._implementation
+            range(len(self._dataframe)),
+            index=self._dataframe.index,
+            implementation=self._implementation,
         ).alias(name)
         return self._from_dataframe(
             horizontal_concat(
