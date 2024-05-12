@@ -180,7 +180,7 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 5]})
         >>> df = nw.from_native(df_pd)
-        >>> nw.to_native(nw.maybe_set_index(df, 'b'))
+        >>> nw.to_native(nw.maybe_set_index(df, 'b'))  # doctest: +NORMALIZE_WHITESPACE
            a
         b
         4  1
