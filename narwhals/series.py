@@ -37,10 +37,14 @@ class Series:
         if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
             self._series = PandasSeries(series, implementation="pandas")
             return
-        if (pd := get_modin()) is not None and isinstance(series, pd.Series):
+        if (pd := get_modin()) is not None and isinstance(
+            series, pd.Series
+        ):  # pragma: no cover
             self._series = PandasSeries(series, implementation="modin")
             return
-        if (pd := get_cudf()) is not None and isinstance(series, pd.Series):
+        if (pd := get_cudf()) is not None and isinstance(
+            series, pd.Series
+        ):  # pragma: no cover
             self._series = PandasSeries(series, implementation="cudf")
             return
         msg = (  # pragma: no cover
