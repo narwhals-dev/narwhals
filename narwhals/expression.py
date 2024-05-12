@@ -1049,12 +1049,159 @@ class ExprDateTimeNamespace:
         self._expr = expr
 
     def year(self) -> Expr:
+        """
+        Extract year from underlying DateTime representation.
+
+        Returns the year number in the calendar date.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...        "datetime": [
+            ...         datetime(1978, 6, 1),
+            ...         datetime(2024, 12, 13),
+            ...         datetime(2065, 1, 1),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.year().alias("year")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                datetime  year
+            0 1978-06-01  1978
+            1 2024-12-13  2024
+            2 2065-01-01  2065
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────────────────────┬──────┐
+            │ datetime            ┆ year │
+            │ ---                 ┆ ---  │
+            │ datetime[μs]        ┆ i32  │
+            ╞═════════════════════╪══════╡
+            │ 1978-06-01 00:00:00 ┆ 1978 │
+            │ 2024-12-13 00:00:00 ┆ 2024 │
+            │ 2065-01-01 00:00:00 ┆ 2065 │
+            └─────────────────────┴──────┘
+        """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
 
     def month(self) -> Expr:
+        """
+        Extract month from underlying DateTime representation.
+
+        Returns the month number starting from 1. The return value ranges from 1 to 12.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...        "datetime": [
+            ...         datetime(1978, 6, 1),
+            ...         datetime(2024, 12, 13),
+            ...         datetime(2065, 1, 1),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.year().alias("year"),
+            ...         nw.col("datetime").dt.month().alias("month")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                datetime  year  month
+            0 1978-06-01  1978      6
+            1 2024-12-13  2024     12
+            2 2065-01-01  2065      1
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌─────────────────────┬──────┬───────┐
+            │ datetime            ┆ year ┆ month │
+            │ ---                 ┆ ---  ┆ ---   │
+            │ datetime[μs]        ┆ i32  ┆ i8    │
+            ╞═════════════════════╪══════╪═══════╡
+            │ 1978-06-01 00:00:00 ┆ 1978 ┆ 6     │
+            │ 2024-12-13 00:00:00 ┆ 2024 ┆ 12    │
+            │ 2065-01-01 00:00:00 ┆ 2065 ┆ 1     │
+            └─────────────────────┴──────┴───────┘
+        """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.month())
 
     def day(self) -> Expr:
+        """
+        Extract day from underlying DateTime representation.
+
+        Returns the day of month starting from 1. The return value ranges from 1 to 31. (The last day of month differs by months.)
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...        "datetime": [
+            ...         datetime(1978, 6, 1),
+            ...         datetime(2024, 12, 13),
+            ...         datetime(2065, 1, 1),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.year().alias("year"),
+            ...         nw.col("datetime").dt.month().alias("month"),
+            ...         nw.col("datetime").dt.day().alias("day")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                datetime  year  month  day
+            0 1978-06-01  1978      6    1
+            1 2024-12-13  2024     12   13
+            2 2065-01-01  2065      1    1
+            >>> func(df_pl)
+            shape: (3, 4)
+            ┌─────────────────────┬──────┬───────┬─────┐   
+            │ datetime            ┆ year ┆ month ┆ day │   
+            │ ---                 ┆ ---  ┆ ---   ┆ --- │   
+            │ datetime[μs]        ┆ i32  ┆ i8    ┆ i8  │   
+            ╞═════════════════════╪══════╪═══════╪═════╡   
+            │ 1978-06-01 00:00:00 ┆ 1978 ┆ 6     ┆ 1   │   
+            │ 2024-12-13 00:00:00 ┆ 2024 ┆ 12    ┆ 13  │   
+            │ 2065-01-01 00:00:00 ┆ 2065 ┆ 1     ┆ 1   │   
+            └─────────────────────┴──────┴───────┴─────┘ 
+        """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.day())
 
     def hour(self) -> Expr:
