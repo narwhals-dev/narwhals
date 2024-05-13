@@ -781,6 +781,39 @@ class SeriesDateTimeNamespace:
         self._series = series
 
     def year(self) -> Series:
+        """
+        Get the year in a date series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = [datetime(2012, 1, 7), datetime(2023, 3, 10)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.year()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    2012
+            1    2023
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i32]
+            [
+               2012
+               2023
+            ]
+        """
         return self._series.__class__(self._series._series.dt.year())
 
     def month(self) -> Series:
