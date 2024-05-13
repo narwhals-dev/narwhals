@@ -101,8 +101,8 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     result_pd = nw.from_native(
         pd.Series([timedeltas]), series_only=True
     ).dt.total_minutes()[0]
-    result_pdms = nw.from_native(
-        pd.Series([timedeltas]).dt.as_unit("ms"), series_only=True
+    result_pdns = nw.from_native(
+        pd.Series([timedeltas]).dt.as_unit("ns"), series_only=True
     ).dt.total_minutes()[0]
     result_pda = nw.from_native(
         pd.Series([timedeltas]).convert_dtypes(dtype_backend="pyarrow"), series_only=True
@@ -117,4 +117,4 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     assert result_pd == result_pl
     assert result_pda == result_pl
     assert result_pdn == result_pl
-    assert result_pdms == result_pl
+    assert result_pdns == result_pl
