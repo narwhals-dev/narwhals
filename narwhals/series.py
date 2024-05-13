@@ -805,7 +805,7 @@ class SeriesDateTimeNamespace:
             >>> func(s_pd)
             0    2012
             1    2023
-            dtype: int...
+            dtype: int32
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [i32]
