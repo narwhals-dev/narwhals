@@ -871,6 +871,50 @@ class Expr:
         *,
         with_replacement: bool = False,
     ) -> Expr:
+        """
+        Sample randomly from this expression.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+
+            fraction: Fraction of items to return. Cannot be used with n.
+
+            with_replacement: Allow values to be sampled more than once.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').sample(fraction=1.0, with_replacement=True))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest:+SKIP
+               a
+            2  3
+            0  1
+            2  3
+            >>> func(df_pl)  # doctest:+SKIP
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 2   │
+            │ 3   │
+            │ 3   │
+            └─────┘
+        """
         return self.__class__(
             lambda plx: self._call(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement
