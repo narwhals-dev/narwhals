@@ -1357,6 +1357,155 @@ class DataFrame(BaseFrame):
         """
         return super().join(other, how=how, left_on=left_on, right_on=right_on)
 
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> Series:
+        r"""
+        Get a mask of all duplicated rows in this DataFrame.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> import pandas as pd
+
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+            >>> nw.to_native(nw.from_native(df_pl).is_duplicated())  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                true
+                false
+                false
+                true
+            ]
+
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+            >>> nw.to_native(nw.from_native(df_pd).is_duplicated())
+            0     True
+            1    False
+            2    False
+            3     True
+            dtype: bool
+        """
+        from narwhals.series import Series
+
+        return Series(self._dataframe.is_duplicated())
+
+    def is_empty(self: Self) -> bool:
+        r"""
+        Check if the dataframe is empty.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> import pandas as pd
+
+            >>> df_pl = nw.from_native(pl.DataFrame({"foo": [1, 2, 3], "bar": [4, 5, 6]}))
+            >>> df_pl.is_empty()
+            False
+            >>> df_pl.filter(nw.col("foo") > 99).is_empty()
+            True
+
+            >>> df_pd = nw.from_native(pd.DataFrame({"foo": [1, 2, 3], "bar": [4, 5, 6]}))
+            >>> df_pd.is_empty()
+            False
+            >>> df_pd.filter(nw.col("foo") > 99).is_empty()
+            True
+        """
+
+        return self._dataframe.is_empty()  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> Series:
+        r"""
+        Get a mask of all unique rows in this DataFrame.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> import pandas as pd
+
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+            >>> nw.to_native(nw.from_native(df_pl).is_unique())  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                false
+                true
+                true
+                false
+            ]
+
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+            >>> nw.to_native(nw.from_native(df_pd).is_unique())
+            0    False
+            1     True
+            2     True
+            3    False
+            dtype: bool
+        """
+        from narwhals.series import Series
+
+        return Series(self._dataframe.is_unique())
+
+    def null_count(self: Self) -> DataFrame:
+        r"""
+        Create a new DataFrame that shows the null counts per column.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> import pandas as pd
+
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, None, 3],
+            ...         "bar": [6, 7, None],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> nw.to_native(nw.from_native(df_pl).null_count())
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ u32 ┆ u32 ┆ u32 │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 1   ┆ 0   │
+            └─────┴─────┴─────┘
+
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "foo": [1, None, 3],
+            ...         "bar": [6, 7, None],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> nw.to_native(nw.from_native(df_pd).null_count())
+               foo  bar  ham
+            0    1    1    0
+        """
+
+        return DataFrame(self._dataframe.null_count())
+
 
 class LazyFrame(BaseFrame):
     r"""
