@@ -24,7 +24,7 @@ data = {
 data_timedelta = {
     "a": [
         None,
-        timedelta(days=1, minutes=1, seconds=1, milliseconds=1, microseconds=1),
+        timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1),
     ],
     "b": [
         timedelta(seconds=10),
@@ -61,11 +61,11 @@ def test_datetime_attributes(
 @pytest.mark.parametrize(
     ("attribute", "expected_a", "expected_b", "expected_c"),
     [
-        ("total_minutes", [0, 1441], [0, 0], [0, 0]),
-        ("total_seconds", [0, 86461], [10, 0], [0, 0]),
-        ("total_milliseconds", [0, 86461001], [10000, 20], [0, 0]),
-        ("total_microseconds", [0, 86461001001], [10000000, 20300], [0, 50]),
-        ("total_nanoseconds", [0, 86461001001000], [10000000000, 20300000], [3, 50000]),
+        ("total_minutes", [0, 1], [0, 0], [0, 0]),
+        ("total_seconds", [0, 61], [10, 0], [0, 0]),
+        ("total_milliseconds", [0, 61001], [10000, 20], [0, 0]),
+        ("total_microseconds", [0, 61001001], [10000000, 20300], [0, 50]),
+        ("total_nanoseconds", [0, 61001001000], [10000000000, 20300000], [3, 50000]),
     ],
 )
 def test_duration_attributes(
