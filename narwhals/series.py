@@ -129,6 +129,30 @@ class Series:
 
     @property
     def dtype(self) -> Any:
+        """
+        Get the data type of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.dtype
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            Int64
+            >>> func(s_pl)
+            Int64
+        """
         return to_narwhals_dtype(self._series.dtype, is_polars=self._is_polars)
 
     @property
@@ -557,6 +581,40 @@ class Series:
         )
 
     def alias(self, name: str) -> Self:
+        """
+        Rename the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name="foo")
+            >>> s_pl = pl.Series("foo", s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.alias("bar")
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            2    3
+            Name: bar, dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'bar' [i64]
+            [
+               1
+               2
+               3
+            ]
+        """
         return self._from_series(self._series.alias(name=name))
 
     def sort(self, *, descending: bool = False) -> Self:
@@ -781,12 +839,111 @@ class SeriesDateTimeNamespace:
         self._series = series
 
     def year(self) -> Series:
+        """
+        Get the year in a date series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = [datetime(2012, 1, 7), datetime(2023, 3, 10)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.year()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    2012
+            1    2023
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i32]
+            [
+               2012
+               2023
+            ]
+        """
         return self._series.__class__(self._series._series.dt.year())
 
     def month(self) -> Series:
+        """
+        Gets the month in a date series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = [datetime(2023, 2, 1), datetime(2023, 8, 3)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.month()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    2
+            1    8
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i8]
+            [
+               2
+               8
+            ]
+        """
         return self._series.__class__(self._series._series.dt.month())
 
     def day(self) -> Series:
+        """
+        Extracts the day in a date series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = [datetime(2022, 1, 1), datetime(2022, 1, 5)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.day()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    5
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i8]
+            [
+               1
+               5
+            ]
+        """
         return self._series.__class__(self._series._series.dt.day())
 
     def hour(self) -> Series:

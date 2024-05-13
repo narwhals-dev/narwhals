@@ -1357,6 +1357,194 @@ class DataFrame(BaseFrame):
         """
         return super().join(other, how=how, left_on=left_on, right_on=right_on)
 
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> Series:
+        r"""
+        Get a mask of all duplicated rows in this DataFrame.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     duplicated = df.is_duplicated()
+            ...     return nw.to_native(duplicated)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0     True
+            1    False
+            2    False
+            3     True
+            dtype: bool
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                true
+                false
+                false
+                true
+            ]
+        """
+        from narwhals.series import Series
+
+        return Series(self._dataframe.is_duplicated())
+
+    def is_empty(self: Self) -> bool:
+        r"""
+        Check if the dataframe is empty.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            Let's define a dataframe-agnostic function that filters rows in which "foo"
+            values are greater than 10, and then checks if the result is empty or not:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.filter(nw.col("foo")>10).is_empty()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> df_pd = pd.DataFrame({"foo": [1, 2, 3], "bar": [4, 5, 6]})
+            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3], "bar": [4, 5, 6]})
+            >>> func(df_pd), func(df_pl)
+            (True, True)
+
+            >>> df_pd = pd.DataFrame({"foo": [100, 2, 3], "bar": [4, 5, 6]})
+            >>> df_pl = pl.DataFrame({"foo": [100, 2, 3], "bar": [4, 5, 6]})
+            >>> func(df_pd), func(df_pl)
+            (False, False)
+        """
+
+        return self._dataframe.is_empty()  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> Series:
+        r"""
+        Get a mask of all unique rows in this DataFrame.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     unique = df.is_unique()
+            ...     return nw.to_native(unique)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0    False
+            1     True
+            2     True
+            3    False
+            dtype: bool
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                false
+                 true
+                 true
+                false
+            ]
+        """
+        from narwhals.series import Series
+
+        return Series(self._dataframe.is_unique())
+
+    def null_count(self: Self) -> DataFrame:
+        r"""
+        Create a new DataFrame that shows the null counts per column.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "foo": [1, None, 3],
+            ...         "bar": [6, 7, None],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, None, 3],
+            ...         "bar": [6, 7, None],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+
+            Let's define a dataframe-agnostic function that returns the null count of
+            each columns:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     null_counts = df.null_count()
+            ...     return nw.to_native(null_counts)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar  ham
+            0    1    1    0
+
+            >>> func(df_pl)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ u32 ┆ u32 ┆ u32 │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 1   ┆ 0   │
+            └─────┴─────┴─────┘
+        """
+
+        return DataFrame(self._dataframe.null_count())
+
 
 class LazyFrame(BaseFrame):
     r"""
