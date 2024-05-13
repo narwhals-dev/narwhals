@@ -261,6 +261,33 @@ class Series:
         return self._series.mean()
 
     def any(self) -> Any:
+        """
+        Return whether any of the values in the Series are True.
+
+        Notes:
+          Only works on Series of data type Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [False, True, False]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.any()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            True
+            >>> func(s_pl)
+            True
+        """
         return self._series.any()
 
     def all(self) -> Any:
