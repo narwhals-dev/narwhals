@@ -263,3 +263,29 @@ class PandasDataFrame:
         if self._implementation == "modin":  # pragma: no cover
             return self._dataframe._to_pandas()
         return self._dataframe.to_pandas()  # pragma: no cover
+
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> PandasSeries:
+        from narwhals._pandas_like.series import PandasSeries
+
+        return PandasSeries(
+            self._dataframe.duplicated(keep=False),
+            implementation=self._implementation,
+        )
+
+    def is_empty(self: Self) -> bool:
+        return self._dataframe.empty  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> PandasSeries:
+        from narwhals._pandas_like.series import PandasSeries
+
+        return PandasSeries(
+            ~self._dataframe.duplicated(keep=False),
+            implementation=self._implementation,
+        )
+
+    def null_count(self: Self) -> PandasDataFrame:
+        return PandasDataFrame(
+            self._dataframe.isnull().sum(axis=0).to_frame().transpose(),
+            implementation=self._implementation,
+        )
