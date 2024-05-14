@@ -68,6 +68,10 @@ def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
 
 
 def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
+    from narwhals.dtypes import DType
+
+    if isinstance(obj, DType):
+        return isinstance(obj, cls)
     return isinstance(obj, cls) or issubclass(obj, cls)
 
 
