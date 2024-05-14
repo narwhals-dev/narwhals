@@ -1031,3 +1031,170 @@ class SeriesDateTimeNamespace:
             ]
         """
         return self._series.__class__(self._series._series.dt.total_minutes())
+
+    def total_seconds(self) -> Series:
+        """
+        Get total seconds.
+
+        Notes:
+            The function outputs the total seconds in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.total_seconds()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    10
+            1    20
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i64]
+            [
+                    10
+                    20
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.total_seconds())
+
+    def total_milliseconds(self) -> Series:
+        """
+        Get total milliseconds.
+
+        Notes:
+            The function outputs the total milliseconds in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = [timedelta(milliseconds=10),
+            ...     timedelta(milliseconds=20, microseconds=40)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.total_milliseconds()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    10
+            1    20
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i64]
+            [
+                    10
+                    20
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.total_milliseconds())
+
+    def total_microseconds(self) -> Series:
+        """
+        Get total microseconds.
+
+        Notes:
+            The function outputs the total microseconds in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = [timedelta(microseconds=10),
+            ...     timedelta(milliseconds=1, microseconds=200)]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.total_microseconds()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0      10
+            1    1200
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i64]
+            [
+                    10
+                    1200
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.total_microseconds())
+
+    def total_nanoseconds(self) -> Series:
+        """
+        Get total nanoseconds.
+
+        Notes:
+            The function outputs the total nanoseconds in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = ['2024-01-01 00:00:00.000000001',
+            ...     '2024-01-01 00:00:00.000000002']
+            >>> s_pd = pd.to_datetime(pd.Series(data))
+            >>> s_pl = pl.Series(data).str.to_datetime(time_unit='ns')
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.diff().dt.total_nanoseconds()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    NaN
+            1    1.0
+            dtype: float64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i64]
+            [
+                    null
+                    1
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.total_nanoseconds())

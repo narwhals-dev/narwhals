@@ -1487,6 +1487,201 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_minutes())
 
+    def total_seconds(self) -> Expr:
+        """
+        Get total seconds.
+
+        Notes:
+            The function outputs the total seconds in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` and `cast` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = {'a': [timedelta(seconds=10),
+            ...     timedelta(seconds=20, milliseconds=40)]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...       a_total_seconds = nw.col('a').dt.total_seconds()
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                                   a  a_total_seconds
+            0        0 days 00:00:10               10
+            1 0 days 00:00:20.040000               20
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌──────────────┬─────────────────┐
+            │ a            ┆ a_total_seconds │
+            │ ---          ┆ ---             │
+            │ duration[μs] ┆ i64             │
+            ╞══════════════╪═════════════════╡
+            │ 10s          ┆ 10              │
+            │ 20s 40ms     ┆ 20              │
+            └──────────────┴─────────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_seconds())
+
+    def total_milliseconds(self) -> Expr:
+        """
+        Get total milliseconds.
+
+        Notes:
+            The function outputs the total milliseconds in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` and `cast` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = {'a': [timedelta(milliseconds=10),
+            ...     timedelta(milliseconds=20, microseconds=40)]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...       a_total_milliseconds = nw.col('a').dt.total_milliseconds()
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                                   a  a_total_milliseconds
+            0 0 days 00:00:00.010000                    10
+            1 0 days 00:00:00.020040                    20
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌──────────────┬──────────────────────┐
+            │ a            ┆ a_total_milliseconds │
+            │ ---          ┆ ---                  │
+            │ duration[μs] ┆ i64                  │
+            ╞══════════════╪══════════════════════╡
+            │ 10ms         ┆ 10                   │
+            │ 20040µs      ┆ 20                   │
+            └──────────────┴──────────────────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.total_milliseconds()
+        )
+
+    def total_microseconds(self) -> Expr:
+        """
+        Get total microseconds.
+
+        Notes:
+            The function outputs the total microseconds in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` and `cast` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = {'a': [timedelta(microseconds=10),
+            ...     timedelta(milliseconds=1, microseconds=200)]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...       a_total_microseconds = nw.col('a').dt.total_microseconds()
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                                   a  a_total_microseconds
+            0 0 days 00:00:00.000010                    10
+            1 0 days 00:00:00.001200                  1200
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌──────────────┬──────────────────────┐
+            │ a            ┆ a_total_microseconds │
+            │ ---          ┆ ---                  │
+            │ duration[μs] ┆ i64                  │
+            ╞══════════════╪══════════════════════╡
+            │ 10µs         ┆ 10                   │
+            │ 1200µs       ┆ 1200                 │
+            └──────────────┴──────────────────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.total_microseconds()
+        )
+
+    def total_nanoseconds(self) -> Expr:
+        """
+        Get total nanoseconds.
+
+        Notes:
+            The function outputs the total nanoseconds in the int dtype by default,
+            however, pandas may change the dtype to float when there are missing values,
+            consider using `fill_null()` and `cast` in this case.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import timedelta
+            >>> import narwhals as nw
+            >>> data = ['2024-01-01 00:00:00.000000001',
+            ...     '2024-01-01 00:00:00.000000002']
+            >>> df_pd = pd.DataFrame({'a': pd.to_datetime(data)})
+            >>> df_pl = (pl.DataFrame({'a': data}).with_columns(
+            ...     pl.col('a').str.to_datetime(time_unit='ns')))
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...       a_diff_total_nanoseconds = nw.col('a').diff().dt.total_nanoseconds()
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                                          a  a_diff_total_nanoseconds
+            0 2024-01-01 00:00:00.000000001                       NaN
+            1 2024-01-01 00:00:00.000000002                       1.0
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌───────────────────────────────┬──────────────────────────┐
+            │ a                             ┆ a_diff_total_nanoseconds │
+            │ ---                           ┆ ---                      │
+            │ datetime[ns]                  ┆ i64                      │
+            ╞═══════════════════════════════╪══════════════════════════╡
+            │ 2024-01-01 00:00:00.000000001 ┆ null                     │
+            │ 2024-01-01 00:00:00.000000002 ┆ 1                        │
+            └───────────────────────────────┴──────────────────────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.total_nanoseconds()
+        )
+
 
 def col(*names: str | Iterable[str]) -> Expr:
     """

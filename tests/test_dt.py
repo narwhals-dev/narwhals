@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Any
 
 import hypothesis.strategies as st
+import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
@@ -20,7 +21,17 @@ data = {
         datetime(2020, 1, 2, 2, 4, 14),
     ],
 }
-data_timedelta = {"a": [None, timedelta(days=1, minutes=10, seconds=40)]}
+data_timedelta = {
+    "a": [
+        None,
+        timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1),
+    ],
+    "b": [
+        timedelta(milliseconds=2),
+        timedelta(milliseconds=1, microseconds=300),
+    ],
+    "c": np.array([None, 20], dtype="timedelta64[ns]"),
+}
 
 
 @pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
@@ -48,19 +59,53 @@ def test_datetime_attributes(
 
 @pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize(
-    ("attribute", "expected"),
+    ("attribute", "expected_a", "expected_b"),
     [
-        ("total_minutes", [0, 1450]),
+        ("total_minutes", [0, 1], [0, 0]),
+        ("total_seconds", [0, 61], [0, 0]),
+        ("total_milliseconds", [0, 61001], [2, 1]),
     ],
 )
 def test_duration_attributes(
-    attribute: str, expected: list[int], constructor: Any
+    attribute: str,
+    expected_a: list[int],
+    expected_b: list[int],
+    constructor: Any,
 ) -> None:
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
-    result = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)().fill_null(0)))
-    compare_dicts(result, {"a": expected})
-    result = nw.to_native(df.select(getattr(df["a"].dt, attribute)().fill_null(0)))
-    compare_dicts(result, {"a": expected})
+    result_a = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)().fill_null(0)))
+    compare_dicts(result_a, {"a": expected_a})
+    result_a = nw.to_native(df.select(getattr(df["a"].dt, attribute)().fill_null(0)))
+    compare_dicts(result_a, {"a": expected_a})
+    result_b = nw.to_native(df.select(getattr(nw.col("b").dt, attribute)().fill_null(0)))
+    compare_dicts(result_b, {"b": expected_b})
+    result_b = nw.to_native(df.select(getattr(df["b"].dt, attribute)().fill_null(0)))
+    compare_dicts(result_b, {"b": expected_b})
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize(
+    ("attribute", "expected_b", "expected_c"),
+    [
+        ("total_microseconds", [2000, 1300], [0, 0]),
+        ("total_nanoseconds", [2000000, 1300000], [0, 20]),
+    ],
+)
+def test_duration_micro_nano(
+    attribute: str,
+    expected_b: list[int],
+    expected_c: list[int],
+    constructor: Any,
+) -> None:
+    df = nw.from_native(constructor(data_timedelta), eager_only=True)
+    result_b = nw.to_native(df.select(getattr(nw.col("b").dt, attribute)().fill_null(0)))
+    compare_dicts(result_b, {"b": expected_b})
+    result_b = nw.to_native(df.select(getattr(df["b"].dt, attribute)().fill_null(0)))
+    compare_dicts(result_b, {"b": expected_b})
+    result_c = nw.to_native(df.select(getattr(nw.col("c").dt, attribute)().fill_null(0)))
+    compare_dicts(result_c, {"c": expected_c})
+    result_c = nw.to_native(df.select(getattr(df["c"].dt, attribute)().fill_null(0)))
+    compare_dicts(result_c, {"c": expected_c})
 
 
 @given(dates=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)))  # type: ignore[misc]

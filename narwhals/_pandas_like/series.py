@@ -511,3 +511,43 @@ class PandasSeriesDateTimeNamespace:
         if ~s.isna().any():
             s_abs = s_abs.astype(int)
         return self._series._from_series(s_abs * s_sign)
+
+    def total_seconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds()
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_milliseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e3
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_microseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e6
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_nanoseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e9
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)

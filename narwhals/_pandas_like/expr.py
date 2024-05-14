@@ -318,3 +318,15 @@ class PandasExprDateTimeNamespace:
 
     def total_minutes(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "total_minutes")
+
+    def total_seconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_seconds")
+
+    def total_milliseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_milliseconds")
+
+    def total_microseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_microseconds")
+
+    def total_nanoseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_nanoseconds")
