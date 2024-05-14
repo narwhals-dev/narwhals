@@ -85,14 +85,8 @@ class Expr:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> from datetime import date
-            >>> df_pd = pd.DataFrame(
-            ... {"foo": [1, 2, 3],
-            ... "bar": [6.0, 7.0, 8.0],
-            ... "ham": [date(2020, 1, 2), date(2021, 3, 4), date(2022, 5, 6)],})
-            >>> df_pl = pl.DataFrame(
-            ... {"foo": [1, 2, 3],
-            ... "bar": [6.0, 7.0, 8.0],
-            ... "ham": [date(2020, 1, 2), date(2021, 3, 4), date(2022, 5, 6)],})
+            >>> df_pd = pd.DataFrame({"foo": [1, 2, 3],"bar": [6.0, 7.0, 8.0]})
+            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3],"bar": [6.0, 7.0, 8.0]})
 
             Let's define a dataframe-agnostic function:
 
