@@ -27,10 +27,10 @@ data_timedelta = {
         timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1),
     ],
     "b": [
-        timedelta(seconds=10),
-        timedelta(milliseconds=20, microseconds=300),
+        timedelta(milliseconds=2),
+        timedelta(milliseconds=1, microseconds=300),
     ],
-    "c": np.array([3, 50000], dtype="timedelta64[ns]"),
+    "c": np.array([None, 20], dtype="timedelta64[ns]"),
 }
 
 
@@ -59,20 +59,17 @@ def test_datetime_attributes(
 
 @pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize(
-    ("attribute", "expected_a", "expected_b", "expected_c"),
+    ("attribute", "expected_a", "expected_b"),
     [
-        ("total_minutes", [0, 1], [0, 0], [0, 0]),
-        ("total_seconds", [0, 61], [10, 0], [0, 0]),
-        ("total_milliseconds", [0, 61001], [10000, 20], [0, 0]),
-        ("total_microseconds", [0, 61001001], [10000000, 20300], [0, 50]),
-        ("total_nanoseconds", [0, 61001001000], [10000000000, 20300000], [3, 50000]),
+        ("total_minutes", [0, 1], [0, 0]),
+        ("total_seconds", [0, 61], [0, 0]),
+        ("total_milliseconds", [0, 61001], [2, 1]),
     ],
 )
 def test_duration_attributes(
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],
-    expected_c: list[int],
     constructor: Any,
 ) -> None:
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
@@ -80,6 +77,27 @@ def test_duration_attributes(
     compare_dicts(result_a, {"a": expected_a})
     result_a = nw.to_native(df.select(getattr(df["a"].dt, attribute)().fill_null(0)))
     compare_dicts(result_a, {"a": expected_a})
+    result_b = nw.to_native(df.select(getattr(nw.col("b").dt, attribute)().fill_null(0)))
+    compare_dicts(result_b, {"b": expected_b})
+    result_b = nw.to_native(df.select(getattr(df["b"].dt, attribute)().fill_null(0)))
+    compare_dicts(result_b, {"b": expected_b})
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize(
+    ("attribute", "expected_b", "expected_c"),
+    [
+        ("total_microseconds", [2000, 1300], [0, 0]),
+        ("total_nanoseconds", [2000000, 1300000], [0, 20]),
+    ],
+)
+def test_duration_micro_nano(
+    attribute: str,
+    expected_b: list[int],
+    expected_c: list[int],
+    constructor: Any,
+) -> None:
+    df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_b = nw.to_native(df.select(getattr(nw.col("b").dt, attribute)().fill_null(0)))
     compare_dicts(result_b, {"b": expected_b})
     result_b = nw.to_native(df.select(getattr(df["b"].dt, attribute)().fill_null(0)))
