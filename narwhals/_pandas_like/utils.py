@@ -353,6 +353,8 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.String()
     if dtype in ("bool", "boolean", "boolean[pyarrow]"):
         return dtypes.Boolean()
+    if dtype in ("category",):
+        return dtypes.Categorical()
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
@@ -397,6 +399,8 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "object"  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
+    if isinstance_or_issubclass(dtype, dtypes.Categorical):
+        return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # todo: different time units and time zones
         return "datetime64[us]"
