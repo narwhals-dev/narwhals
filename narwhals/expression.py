@@ -75,7 +75,7 @@ class Expr:
         dtype: Any,
     ) -> Expr:
         """
-        Redefine an objects data type.
+        Redefine an object's data type.
 
         Arguments:
             dtype: Data type that the object will be cast into.
@@ -114,8 +114,6 @@ class Expr:
             │ 2.0 ┆ 7   │
             │ 3.0 ┆ 8   │
             └─────┴─────┘
-
-
         """
 
         return self.__class__(
