@@ -983,6 +983,39 @@ class SeriesDateTimeNamespace:
         return self._series.__class__(self._series._series.dt.hour())
 
     def minute(self) -> Series:
+        """
+        Extracts the minute in a date series.
+
+        Examples:
+             >>> import pandas as pd
+             >>> import polars as pl
+             >>> from datetime import datetime
+             >>> import narwhals as nw
+             >>> data = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
+             >>> s_pd = pd.Series(data)
+             >>> s_pl = pl.Series(data)
+
+             We define a library agnostic function:
+
+             >>> def func(s_any):
+             ...     s = nw.from_native(s_any, series_only=True)
+             ...     s = s.dt.minute()
+             ...     return nw.to_native(s)
+
+             We can then pass either pandas or Polars to `func`:
+
+             >>> func(s_pd)
+             0     3
+             1    12
+             dtype: int...
+             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+             shape: (2,)
+             Series: '' [i8]
+             [
+                3
+                12
+             ]
+        """
         return self._series.__class__(self._series._series.dt.minute())
 
     def second(self) -> Series:
