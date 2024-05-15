@@ -722,8 +722,8 @@ class Expr:
             ╞══════╡
             │ null │
             │ 1    │
-            │ 2    |
-            │ 5    |
+            │ 2    │
+            │ 5    │
             └──────┘
 
             >>> func_descend(df_pd)
@@ -741,8 +741,8 @@ class Expr:
             ╞══════╡
             │ null │
             │ 5    │
-            │ 2    |
-            │ 1    |
+            │ 2    │
+            │ 1    │
             └──────┘
         """
         return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
