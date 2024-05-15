@@ -728,9 +728,9 @@ class Expr:
 
             >>> func_descend(df_pd)
                  a
-            2  5.0
+            0  5.0
             3  2.0
-            0  1.0
+            2  1.0
             1  NaN
             >>> func_descend(df_pl)
             shape: (4, 1)
