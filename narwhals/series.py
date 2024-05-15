@@ -261,6 +261,33 @@ class Series:
         return self._series.mean()
 
     def any(self) -> Any:
+        """
+        Return whether any of the values in the Series are True.
+
+        Notes:
+          Only works on Series of data type Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [False, True, False]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.any()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            True
+            >>> func(s_pl)
+            True
+        """
         return self._series.any()
 
     def all(self) -> Any:
@@ -947,9 +974,75 @@ class SeriesDateTimeNamespace:
         return self._series.__class__(self._series._series.dt.day())
 
     def hour(self) -> Series:
+        """
+         Extracts the hour in a date series.
+
+        Examples:
+             >>> import pandas as pd
+             >>> import polars as pl
+             >>> from datetime import datetime
+             >>> import narwhals as nw
+             >>> data = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
+             >>> s_pd = pd.Series(data)
+             >>> s_pl = pl.Series(data)
+
+             We define a library agnostic function:
+
+             >>> def func(s_any):
+             ...     s = nw.from_native(s_any, series_only=True)
+             ...     s = s.dt.hour()
+             ...     return nw.to_native(s)
+
+             We can then pass either pandas or Polars to `func`:
+
+             >>> func(s_pd)
+             0    5
+             1    9
+             dtype: int...
+             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+             shape: (2,)
+             Series: '' [i8]
+             [
+                5
+                9
+             ]
+        """
         return self._series.__class__(self._series._series.dt.hour())
 
     def minute(self) -> Series:
+        """
+        Extracts the minute in a date series.
+
+        Examples:
+             >>> import pandas as pd
+             >>> import polars as pl
+             >>> from datetime import datetime
+             >>> import narwhals as nw
+             >>> data = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
+             >>> s_pd = pd.Series(data)
+             >>> s_pl = pl.Series(data)
+
+             We define a library agnostic function:
+
+             >>> def func(s_any):
+             ...     s = nw.from_native(s_any, series_only=True)
+             ...     s = s.dt.minute()
+             ...     return nw.to_native(s)
+
+             We can then pass either pandas or Polars to `func`:
+
+             >>> func(s_pd)
+             0     3
+             1    12
+             dtype: int...
+             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+             shape: (2,)
+             Series: '' [i8]
+             [
+                3
+                12
+             ]
+        """
         return self._series.__class__(self._series._series.dt.minute())
 
     def second(self) -> Series:
