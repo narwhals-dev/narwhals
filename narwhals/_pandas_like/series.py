@@ -142,7 +142,17 @@ class PandasSeries:
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> PandasSeries:
         ser = self._series
-        return self._from_series(ser.between(lower_bound, upper_bound, inclusive=closed))
+        if closed == "left":
+            res = ser.ge(lower_bound) & ser.lt(upper_bound)
+        elif closed == "right":
+            res = ser.gt(lower_bound) & ser.le(upper_bound)
+        elif closed == "none":
+            res = ser.gt(lower_bound) & ser.lt(upper_bound)
+        elif closed == "both":
+            res = ser.ge(lower_bound) & ser.le(upper_bound)
+        else:  # pragma: no cover
+            raise AssertionError
+        return self._from_series(res)
 
     def is_in(self, other: Any) -> PandasSeries:
         import pandas as pd
