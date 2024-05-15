@@ -8,7 +8,10 @@
         - all
         - any
         - cast
+        - cum_sum
+        - diff
         - drop_nulls
+        - fill_null
         - filter
         - is_between
         - is_in
@@ -17,8 +20,10 @@
         - mean
         - min
         - n_unique
+        - over
         - unique
         - sample
+        - shift
         - sort
         - std
         - sum

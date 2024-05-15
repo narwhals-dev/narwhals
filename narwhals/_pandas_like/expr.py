@@ -6,6 +6,7 @@ from typing import Callable
 
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.utils import register_expression_call
+from narwhals._pandas_like.utils import register_namespace_expression_call
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -177,6 +178,9 @@ class PandasExpr:
     def is_null(self) -> Self:
         return register_expression_call(self, "is_null")
 
+    def fill_null(self, value: Any) -> Self:
+        return register_expression_call(self, "fill_null", value)
+
     def is_in(self, other: Any) -> Self:
         return register_expression_call(self, "is_in", other)
 
@@ -192,8 +196,17 @@ class PandasExpr:
     def n_unique(self) -> Self:
         return register_expression_call(self, "n_unique")
 
+    def cum_sum(self) -> Self:
+        return register_expression_call(self, "cum_sum")
+
     def unique(self) -> Self:
         return register_expression_call(self, "unique")
+
+    def diff(self) -> Self:
+        return register_expression_call(self, "diff")
+
+    def shift(self, n: int) -> Self:
+        return register_expression_call(self, "shift", n)
 
     def sample(
         self,
@@ -218,6 +231,28 @@ class PandasExpr:
             implementation=self._implementation,
         )
 
+    def over(self, keys: list[str]) -> Self:
+        def func(df: PandasDataFrame) -> list[PandasSeries]:
+            if self._output_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in over.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+            tmp = df.group_by(keys).agg(self)
+            tmp = df.select(keys).join(tmp, how="left", left_on=keys, right_on=keys)
+            return [tmp[name] for name in self._output_names]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->over",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            implementation=self._implementation,
+        )
+
     @property
     def str(self) -> PandasExprStringNamespace:
         return PandasExprStringNamespace(self)
@@ -232,21 +267,27 @@ class PandasExprStringNamespace:
         self._expr = expr
 
     def ends_with(self, suffix: str) -> PandasExpr:
-        # TODO make a register_expression_call for namespaces
+        return register_namespace_expression_call(
+            self._expr,
+            "str",
+            "ends_with",
+            suffix,
+        )
 
-        return PandasExpr(
-            lambda df: [
-                PandasSeries(
-                    series._series.str.endswith(suffix),
-                    implementation=df._implementation,
-                )
-                for series in self._expr._call(df)
-            ],
-            depth=self._expr._depth + 1,
-            function_name=f"{self._expr._function_name}->str.ends_with",
-            root_names=self._expr._root_names,
-            output_names=self._expr._output_names,
-            implementation=self._expr._implementation,
+    def head(self, n: int = 5) -> PandasExpr:
+        return register_namespace_expression_call(
+            self._expr,
+            "str",
+            "head",
+            n,
+        )
+
+    def to_datetime(self, format: str | None = None) -> PandasExpr:  # noqa: A002
+        return register_namespace_expression_call(
+            self._expr,
+            "str",
+            "to_datetime",
+            format,
         )
 
 
@@ -255,19 +296,37 @@ class PandasExprDateTimeNamespace:
         self._expr = expr
 
     def year(self) -> PandasExpr:
-        # TODO make a register_expression_call for namespaces
+        return register_namespace_expression_call(self._expr, "dt", "year")
 
-        return PandasExpr(
-            lambda df: [
-                PandasSeries(
-                    series._series.dt.year,
-                    implementation=df._implementation,
-                )
-                for series in self._expr._call(df)
-            ],
-            depth=self._expr._depth + 1,
-            function_name=f"{self._expr._function_name}->dt.year",
-            root_names=self._expr._root_names,
-            output_names=self._expr._output_names,
-            implementation=self._expr._implementation,
-        )
+    def month(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "month")
+
+    def day(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "day")
+
+    def hour(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "hour")
+
+    def minute(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "minute")
+
+    def second(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "second")
+
+    def ordinal_day(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "ordinal_day")
+
+    def total_minutes(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_minutes")
+
+    def total_seconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_seconds")
+
+    def total_milliseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_milliseconds")
+
+    def total_microseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_microseconds")
+
+    def total_nanoseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_nanoseconds")

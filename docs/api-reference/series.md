@@ -8,8 +8,11 @@
         - all
         - any
         - cast
+        - cum_sum
+        - diff
         - drop_nulls
         - dtype
+        - fill_null
         - filter
         - is_between
         - is_in
@@ -21,9 +24,11 @@
         - n_unique
         - sample
         - shape
+        - shift
         - sort
         - std
         - sum
+        - to_frame
         - to_numpy
         - to_pandas
         - unique

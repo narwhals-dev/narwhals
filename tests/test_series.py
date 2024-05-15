@@ -200,6 +200,8 @@ def test_cast() -> None:
             "k": [1],
             "l": [1],
             "m": [True],
+            "n": [True],
+            "o": ["a"],
         },
         schema={
             "a": pl.Int64,
@@ -215,6 +217,8 @@ def test_cast() -> None:
             "k": pl.String,
             "l": pl.Datetime,
             "m": pl.Boolean,
+            "n": pl.Boolean,
+            "o": pl.Categorical,
         },
     )
     df = nw.DataFrame(df_raw).select(
@@ -231,7 +235,8 @@ def test_cast() -> None:
         nw.col("k").cast(nw.String),
         nw.col("l").cast(nw.Datetime),
         nw.col("m").cast(nw.Int8),
-        n=nw.col("m").cast(nw.Boolean),
+        nw.col("n").cast(nw.Int8),
+        nw.col("o").cast(nw.String),
     )
     result = df.schema
     expected = {
@@ -248,7 +253,8 @@ def test_cast() -> None:
         "k": nw.String,
         "l": nw.Datetime,
         "m": nw.Int8,
-        "n": nw.Boolean,
+        "n": nw.Int8,
+        "o": nw.String,
     }
     assert result == expected
     result_pd = nw.DataFrame(df.to_pandas()).schema
@@ -267,7 +273,8 @@ def test_cast() -> None:
         df["k"].cast(nw.String),
         df["l"].cast(nw.Datetime),
         df["m"].cast(nw.Int8),
-        n=df["m"].cast(nw.Boolean),
+        df["n"].cast(nw.Boolean),
+        df["o"].cast(nw.Categorical),
     ).schema
     expected = {
         "a": nw.Int32,
@@ -284,6 +291,7 @@ def test_cast() -> None:
         "l": nw.Datetime,
         "m": nw.Int8,
         "n": nw.Boolean,
+        "o": nw.Categorical,
     }
     df = nw.from_native(df.to_pandas())  # type: ignore[assignment]
     result_pd = df.select(
@@ -300,7 +308,8 @@ def test_cast() -> None:
         df["k"].cast(nw.String),
         df["l"].cast(nw.Datetime),
         df["m"].cast(nw.Int8),
-        n=df["m"].cast(nw.Boolean),
+        df["n"].cast(nw.Boolean),
+        df["o"].cast(nw.Categorical),
     ).schema
     assert result == expected
 

@@ -91,6 +91,17 @@ def from_native(
     native_dataframe: Any,
     *,
     strict: bool = ...,
+    eager_only: Literal[True],
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame: ...
+
+
+@overload
+def from_native(
+    native_dataframe: Any,
+    *,
+    strict: bool = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
@@ -194,10 +205,29 @@ def from_native(
     return native_dataframe  # type: ignore[no-any-return]  # pragma: no cover (todo)
 
 
+def get_native_namespace(obj: Any) -> Any:
+    """
+    Get native namespace from object.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df = nw.from_native(pd.DataFrame({'a': [1,2,3]}))
+        >>> nw.get_native_namespace(df)
+        <module 'pandas'...>
+        >>> df = nw.from_native(pl.DataFrame({'a': [1,2,3]}))
+        >>> nw.get_native_namespace(df)
+        <module 'polars'...>
+    """
+    return obj.__native_namespace__()
+
+
 __all__ = [
     "get_pandas",
     "get_polars",
     "get_modin",
     "get_cudf",
+    "get_native_namespace",
     "to_native",
 ]

@@ -6,6 +6,10 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
@@ -108,8 +112,30 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
         return plx._create_expr_from_series(into_expr)
     if isinstance(into_expr, str):
         return plx.col(into_expr)
+    if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
+        series = create_native_series(into_expr, implementation=implementation)
+        return plx._create_expr_from_series(series)
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def create_native_series(
+    iterable: Any,
+    implementation: str,
+    index: Any = None,
+) -> PandasSeries:
+    from narwhals._pandas_like.series import PandasSeries
+
+    if implementation == "pandas":
+        pd = get_pandas()
+        series = pd.Series(iterable, index=index, name="")
+    elif implementation == "modin":
+        mpd = get_modin()
+        series = mpd.Series(iterable, index=index, name="")
+    elif implementation == "cudf":
+        cudf = get_cudf()
+        series = cudf.Series(iterable, index=index, name="")
+    return PandasSeries(series, implementation=implementation)
 
 
 def evaluate_into_expr(
@@ -184,6 +210,24 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
         output_names=expr._output_names,
+    )
+
+
+def register_namespace_expression_call(
+    expr: ExprT, namespace: str, attr: str, *args: Any, **kwargs: Any
+) -> PandasExpr:
+    from narwhals._pandas_like.expr import PandasExpr
+
+    return PandasExpr(
+        lambda df: [
+            getattr(getattr(series, namespace), attr)(*args, **kwargs)
+            for series in expr._call(df)
+        ],
+        depth=expr._depth + 1,
+        function_name=f"{expr._function_name}->{namespace}.{attr}",
+        root_names=expr._root_names,
+        output_names=expr._output_names,
+        implementation=expr._implementation,
     )
 
 
@@ -309,6 +353,8 @@ def translate_dtype(dtype: Any) -> DType:
         return dtypes.String()
     if dtype in ("bool", "boolean", "boolean[pyarrow]"):
         return dtypes.Boolean()
+    if dtype in ("category",):
+        return dtypes.Categorical()
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
@@ -353,6 +399,8 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "object"  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
+    if isinstance_or_issubclass(dtype, dtypes.Categorical):
+        return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # todo: different time units and time zones
         return "datetime64[us]"
@@ -369,3 +417,13 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
         else:
             reindexed.append(s._series)
     return reindexed
+
+
+def to_datetime(implementation: str) -> Any:
+    if implementation == "pandas":
+        return get_pandas().to_datetime
+    if implementation == "modin":
+        return get_modin().to_datetime
+    if implementation == "cudf":
+        return get_cudf().to_datetime
+    raise AssertionError

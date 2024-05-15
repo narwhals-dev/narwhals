@@ -7,6 +7,7 @@ from typing import Sequence
 
 from narwhals._pandas_like.utils import item
 from narwhals._pandas_like.utils import reverse_translate_dtype
+from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import parse_version
@@ -137,6 +138,13 @@ class PandasSeries:
 
     def item(self) -> Any:
         return item(self._series)
+
+    def to_frame(self) -> Any:
+        from narwhals._pandas_like.dataframe import PandasDataFrame
+
+        return PandasDataFrame(
+            self._series.to_frame(), implementation=self._implementation
+        )
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
@@ -345,13 +353,17 @@ class PandasSeries:
         ser = self._series
         return self._from_series(ser.isna())
 
+    def fill_null(self, value: Any) -> PandasSeries:
+        ser = self._series
+        return self._from_series(ser.fillna(value))
+
     def drop_nulls(self) -> PandasSeries:
         ser = self._series
         return self._from_series(ser.dropna())
 
     def n_unique(self) -> int:
         ser = self._series
-        return ser.nunique()  # type: ignore[no-any-return]
+        return ser.nunique(dropna=False)  # type: ignore[no-any-return]
 
     def sample(
         self,
@@ -363,11 +375,26 @@ class PandasSeries:
         ser = self._series
         return self._from_series(ser.sample(n=n, frac=fraction, replace=with_replacement))
 
-    def unique(self) -> PandasSeries:
+    def cum_sum(self) -> PandasSeries:
         return self._from_series(
             self._series.__class__(
-                self._series.unique(), dtype=self._series.dtype, name=self._series.name
+                self._series.cumsum(), dtype=self._series.dtype, name=self._series.name
             )
+        )
+
+    def unique(self) -> PandasSeries:
+        return self._from_series(
+            self._series.__class__(self._series.unique(), name=self._series.name)
+        )
+
+    def diff(self) -> PandasSeries:
+        return self._from_series(
+            self._series.__class__(self._series.diff(), name=self._series.name)
+        )
+
+    def shift(self, n: int) -> PandasSeries:
+        return self._from_series(
+            self._series.__class__(self._series.shift(n), name=self._series.name)
         )
 
     def sort(
@@ -424,10 +451,18 @@ class PandasSeriesStringNamespace:
         self._series = series
 
     def ends_with(self, suffix: str) -> PandasSeries:
-        # TODO make a register_expression_call for namespaces
-
         return self._series._from_series(
             self._series._series.str.endswith(suffix),
+        )
+
+    def head(self, n: int = 5) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.str[:n],
+        )
+
+    def to_datetime(self, format: str | None = None) -> PandasSeries:  # noqa: A002
+        return self._series._from_series(
+            to_datetime(self._series._implementation)(self._series._series, format=format)
         )
 
 
@@ -439,3 +474,90 @@ class PandasSeriesDateTimeNamespace:
         return self._series._from_series(
             self._series._series.dt.year,
         )
+
+    def month(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.month,
+        )
+
+    def day(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.day,
+        )
+
+    def hour(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.hour,
+        )
+
+    def minute(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.minute,
+        )
+
+    def second(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.second,
+        )
+
+    def ordinal_day(self) -> PandasSeries:
+        ser = self._series._series
+        year_start = ser.dt.year
+        result = (
+            ser.to_numpy().astype("datetime64[D]")
+            - (year_start.to_numpy() - 1970).astype("datetime64[Y]")
+        ).astype("int32") + 1
+        dtype = "Int64[pyarrow]" if "pyarrow" in str(ser.dtype) else "int32"
+        return self._series._from_series(
+            self._series._series.__class__(result, dtype=dtype, name=year_start.name)
+        )
+
+    def total_minutes(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds()
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 60
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_seconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds()
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_milliseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e3
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_microseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e6
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_nanoseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e9
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)

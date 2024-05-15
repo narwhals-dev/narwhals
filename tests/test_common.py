@@ -604,6 +604,8 @@ def test_invalid() -> None:
         df.select(nw.all() + nw.all())
     with pytest.raises(TypeError, match="Perhaps you:"):
         df.select([pl.col("a")])  # type: ignore[list-item]
+    with pytest.raises(TypeError, match="Perhaps you:"):
+        df.select([nw.col("a").cast(pl.Int64)])
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas])
@@ -646,3 +648,35 @@ def test_library(df_raw: Any, df_raw_right: Any) -> None:
         NotImplementedError, match="Cross-library comparisons aren't supported"
     ):
         df_left.join(df_right, left_on=["a"], right_on=["a"], how="inner")
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_duplicated(df_raw: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    result = nw.concat([df, df.head(1)]).is_duplicated()  # type: ignore [union-attr]
+    expected = np.array([True, False, False, True])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])
+def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    result = df.filter(nw.col("a") > threshold).is_empty()
+    assert result == expected
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_unique(df_raw: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    result = nw.concat([df, df.head(1)]).is_unique()  # type: ignore [union-attr]
+    expected = np.array([False, True, True, False])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na.collect()])
+def test_null_count(df_raw: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    result = nw.to_native(df.null_count())
+    expected = {"a": [1], "b": [0], "z": [1]}
+    compare_dicts(result, expected)

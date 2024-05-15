@@ -15,6 +15,7 @@
         - Float64
         - Float32
         - Boolean
+        - Categorical
         - String
         - Datetime
       show_root_heading: false

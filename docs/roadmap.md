@@ -1,23 +1,30 @@
 # Roadmap
 
-Where do we go from here? What are the project's priorities?
+Where do we go from here? What are the project's priorities? In no particular order:
 
-## 1. Tests and docs coverage
+## Tests and docs coverage
 
 Every method should have a good docstring with an example.
 
-Test coverage should be 100%.
-
 CI should test across a variety of pandas and Polars versions.
+Currently we just test latest and minimum versions.
 
-## 2. API coverage
+## API coverage
 
-Narwhals should be complete enough to be able to execute all the tpc-h queries.
+Narwhals should be complete enough to be able to execute all 22 tpc-h queries.
+Currently, it can execute the first 7.
 
-## 3. Other backends?
+## Other backends?
 
-Can we translate Narwhals to SQL / substrait and support, say, DuckDB?
+Narwhals is extesible - can we make it as easy as possible for backends to become
+compatible with it?
 
-## 4. Query optimisation
+## Query optimisation
 
 Can we insert a light layer to do some simple query optimisation for pandas?
+
+## Use cases
+
+We're currently investigating whether we can make scikit-lego dataframe-agnostic.
+
+Ideas for other projects we could support? If so, please post them [here](https://github.com/narwhals-dev/narwhals/issues/62).

@@ -32,6 +32,7 @@ class PandasNamespace:
     Float64 = dtypes.Float64
     Float32 = dtypes.Float32
     Boolean = dtypes.Boolean
+    Categorical = dtypes.Categorical
     String = dtypes.String
     Datetime = dtypes.Datetime
 
