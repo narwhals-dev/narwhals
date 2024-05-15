@@ -698,21 +698,27 @@ class Expr:
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
             ...     df = df.select(nw.col('a').sort())
+            ...     if isinstance(nw.to_native(df), pd.DataFrame):
+            ...         return nw.to_native(df).sort_values(by='a', na_position='first')
             ...     return nw.to_native(df)
 
             >>> def func_descend(df_any):
             ...     df = nw.from_native(df_any)
             ...     df = df.select(nw.col('a').sort(descending=True))
+            ...     if isinstance(nw.to_native(df), pd.DataFrame):
+            ...         return nw.to_native(df).sort_values(
+            ...             by='a', ascending=False, na_position='first'
+            ...         )
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
                  a
+            1  NaN
             2  1.0
             3  2.0
             0  5.0
-            1  NaN
             >>> func(df_pl)
             shape: (4, 1)
             ┌──────┐
@@ -728,10 +734,10 @@ class Expr:
 
             >>> func_descend(df_pd)
                  a
+            1  NaN
             0  5.0
             3  2.0
             2  1.0
-            1  NaN
             >>> func_descend(df_pl)
             shape: (4, 1)
             ┌──────┐
