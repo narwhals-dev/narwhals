@@ -708,7 +708,7 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-               a
+                 a
             2  1.0
             3  2.0
             0  5.0
@@ -727,7 +727,7 @@ class Expr:
             └──────┘
 
             >>> func_descend(df_pd)
-               a
+                 a
             2  5.0
             3  2.0
             0  1.0
