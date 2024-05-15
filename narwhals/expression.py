@@ -721,6 +721,72 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
     def sort(self, *, descending: bool = False) -> Expr:
+        """
+        Sort this column. Place null values first.
+
+        Arguments:
+            descending: Sort in descending order.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            >>> df_pd = pd.DataFrame({"a": [5, None, 1, 2]})
+            >>> df_pl = pl.DataFrame({"a": [5, None, 1, 2]})
+
+            Let's define dataframe-agnostic functions:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').sort())
+            ...     return nw.to_native(df)
+
+            >>> def func_descend(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').sort(descending=True))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                 a
+            1  NaN
+            2  1.0
+            3  2.0
+            0  5.0
+            >>> func(df_pl)
+            shape: (4, 1)
+            ┌──────┐
+            │ a    │
+            │ ---  │
+            │ i64  │
+            ╞══════╡
+            │ null │
+            │ 1    │
+            │ 2    │
+            │ 5    │
+            └──────┘
+
+            >>> func_descend(df_pd)
+                 a
+            1  NaN
+            0  5.0
+            3  2.0
+            2  1.0
+            >>> func_descend(df_pl)
+            shape: (4, 1)
+            ┌──────┐
+            │ a    │
+            │ ---  │
+            │ i64  │
+            ╞══════╡
+            │ null │
+            │ 5    │
+            │ 2    │
+            │ 1    │
+            └──────┘
+        """
         return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
 
     # --- transform ---
