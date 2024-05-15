@@ -74,6 +74,48 @@ class Expr:
         self,
         dtype: Any,
     ) -> Expr:
+        """
+        Redefine an object's data type.
+
+        Arguments:
+            dtype: Data type that the object will be cast into.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from datetime import date
+            >>> df_pd = pd.DataFrame({"foo": [1, 2, 3],"bar": [6.0, 7.0, 8.0]})
+            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3],"bar": [6.0, 7.0, 8.0]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar').cast(nw.UInt8))
+            ...     native_df = nw.to_native(df)
+            ...     return native_df
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar
+            0  1.0    6
+            1  2.0    7
+            2  3.0    8
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ f32 ┆ u8  │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 6   │
+            │ 2.0 ┆ 7   │
+            │ 3.0 ┆ 8   │
+            └─────┴─────┘
+        """
+
         return self.__class__(
             lambda plx: self._call(plx).cast(translate_dtype(plx, dtype)),
         )
