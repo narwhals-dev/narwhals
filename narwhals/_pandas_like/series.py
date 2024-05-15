@@ -394,7 +394,9 @@ class PandasSeries:
     ) -> PandasSeries:
         ser = self._series
         return self._from_series(
-            ser.sort_values(ascending=not descending).rename(self.name)
+            ser.sort_values(ascending=not descending, na_position="first").rename(
+                self.name
+            )
         )
 
     def alias(self, name: str) -> Self:
