@@ -85,6 +85,19 @@ def validate_same_library(items: Iterable[Any]) -> None:
     raise NotImplementedError("Cross-library comparisons aren't supported")
 
 
+def validate_laziness(items: Iterable[Any]) -> None:
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
+
+    if all(isinstance(item, DataFrame) for item in items) or (
+        all(isinstance(item, LazyFrame) for item in items)
+    ):
+        return
+    raise NotImplementedError(
+        "The items to concatenate should either all be eager, or all lazy"
+    )
+
+
 def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     """
     Align `lhs` to the Index of `rhs, if they're both pandas-like.
