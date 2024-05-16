@@ -74,6 +74,48 @@ class Expr:
         self,
         dtype: Any,
     ) -> Expr:
+        """
+        Redefine an object's data type.
+
+        Arguments:
+            dtype: Data type that the object will be cast into.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> from datetime import date
+            >>> df_pd = pd.DataFrame({"foo": [1, 2, 3],"bar": [6.0, 7.0, 8.0]})
+            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3],"bar": [6.0, 7.0, 8.0]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar').cast(nw.UInt8))
+            ...     native_df = nw.to_native(df)
+            ...     return native_df
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar
+            0  1.0    6
+            1  2.0    7
+            2  3.0    8
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ f32 ┆ u8  │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 6   │
+            │ 2.0 ┆ 7   │
+            │ 3.0 ┆ 8   │
+            └─────┴─────┘
+        """
+
         return self.__class__(
             lambda plx: self._call(plx).cast(translate_dtype(plx, dtype)),
         )
@@ -679,12 +721,124 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
     def sort(self, *, descending: bool = False) -> Expr:
+        """
+        Sort this column. Place null values first.
+
+        Arguments:
+            descending: Sort in descending order.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            >>> df_pd = pd.DataFrame({"a": [5, None, 1, 2]})
+            >>> df_pl = pl.DataFrame({"a": [5, None, 1, 2]})
+
+            Let's define dataframe-agnostic functions:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').sort())
+            ...     return nw.to_native(df)
+
+            >>> def func_descend(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').sort(descending=True))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                 a
+            1  NaN
+            2  1.0
+            3  2.0
+            0  5.0
+            >>> func(df_pl)
+            shape: (4, 1)
+            ┌──────┐
+            │ a    │
+            │ ---  │
+            │ i64  │
+            ╞══════╡
+            │ null │
+            │ 1    │
+            │ 2    │
+            │ 5    │
+            └──────┘
+
+            >>> func_descend(df_pd)
+                 a
+            1  NaN
+            0  5.0
+            3  2.0
+            2  1.0
+            >>> func_descend(df_pl)
+            shape: (4, 1)
+            ┌──────┐
+            │ a    │
+            │ ---  │
+            │ i64  │
+            ╞══════╡
+            │ null │
+            │ 5    │
+            │ 2    │
+            │ 1    │
+            └──────┘
+        """
         return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
 
     # --- transform ---
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Expr:
+        """
+        Check if this expression is between the given lower and upper bounds.
+
+        Arguments:
+            lower_bound: Lower bound value.
+
+            upper_bound: Upper bound value.
+
+            closed: Define which sides of the interval are closed (inclusive).
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2, 3, 4, 5]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2, 3, 4, 5]})
+
+            Let's define a dataframe-agnostic function:
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col('a').is_between(2,4,'right'))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                   a
+            0  False
+            1  False
+            2   True
+            3   True
+            4  False
+            >>> func(df_pl)
+            shape: (5, 1)
+            ┌───────┐
+            │ a     │
+            │ ---   │
+            │ bool  │
+            ╞═══════╡
+            │ false │
+            │ false │
+            │ true  │
+            │ true  │
+            │ false │
+            └───────┘
+        """
         return self.__class__(
             lambda plx: self._call(plx).is_between(lower_bound, upper_bound, closed)
         )
