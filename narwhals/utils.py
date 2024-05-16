@@ -85,7 +85,7 @@ def validate_same_library(items: Iterable[Any]) -> None:
     raise NotImplementedError("Cross-library comparisons aren't supported")
 
 
-def validate_lazines(items: Iterable[Any]) -> None:
+def validate_laziness(items: Iterable[Any]) -> None:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
 

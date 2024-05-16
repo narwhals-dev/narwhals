@@ -16,7 +16,7 @@ def test_native_vs_non_native() -> None:
         nw.from_native(df).filter(s > 1)
 
 
-def test_validate_lazines() -> None:
+def test_validate_laziness() -> None:
     df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(
         NotImplementedError,
