@@ -757,13 +757,13 @@ class Series:
                2
                5
             ]
-            >>> func_descend(df_pd)
+            >>> func_descend(s_pd)
             1    NaN
             0    5.0
             3    2.0
             2    1.0
             Name: , dtype: float64
-            >>> func_descend(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func_descend(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
             [
