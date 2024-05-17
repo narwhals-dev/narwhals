@@ -317,6 +317,9 @@ class PandasSeries:
         return ser.any()
 
     def all(self) -> Any:
+        """
+        Return whether all values in the column are True.
+        """
         ser = self._series
         return ser.all()
 
@@ -402,6 +405,12 @@ class PandasSeries:
         *,
         descending: bool | Sequence[bool] = False,
     ) -> PandasSeries:
+        """
+        Sort this column. Place null values first.
+
+        Arguments:
+            descending: Sort in descending order.
+        """
         ser = self._series
         return self._from_series(
             ser.sort_values(ascending=not descending, na_position="first").rename(
