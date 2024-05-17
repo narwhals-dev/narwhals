@@ -726,9 +726,9 @@ class Series:
             >>> import narwhals as nw
             >>> s = [5, None, 1, 2]
             >>> s_pd = pd.Series(s)
-            >>> s_pl = pd.Series(s)
+            >>> s_pl = pl.Series(s)
 
-            We define a library agnostic functions:
+            We define library agnostic functions:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
@@ -763,7 +763,7 @@ class Series:
             3    2.0
             2    1.0
             Name: , dtype: float64
-            >>> func_descend(df_pl)
+            >>> func_descend(df_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
             [
