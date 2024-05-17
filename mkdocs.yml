@@ -24,6 +24,7 @@ nav:
     - api-reference/series_str.md
     - api-reference/expressions.md
     - api-reference/expressions_dt.md
+    - api-reference/expressions_name.md
     - api-reference/expressions_str.md
     - api-reference/dtypes.md
     - api-reference/dependencies.md

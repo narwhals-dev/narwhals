@@ -352,15 +352,15 @@ class PandasExprNameNamespace:
         root_names = self._expr._root_names
         implementation = self._expr._implementation
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            if root_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in `.name.map`.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.map`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
 
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
             tmp = df.select(root_names)
             return [
                 PandasSeries(
@@ -382,15 +382,15 @@ class PandasExprNameNamespace:
         root_names = self._expr._root_names
         implementation = self._expr._implementation
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            if root_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in `.name.prefix`.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.prefix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
 
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
             tmp = df.select(root_names)
 
             return [
@@ -414,15 +414,15 @@ class PandasExprNameNamespace:
         root_names = self._expr._root_names
         implementation = self._expr._implementation
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            if root_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in `.name.suffix`.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.suffix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
 
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
             tmp = df.select(root_names)
 
             return [
@@ -446,15 +446,15 @@ class PandasExprNameNamespace:
         root_names = self._expr._root_names
         implementation = self._expr._implementation
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            if root_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
 
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
             tmp = df.select(root_names)
 
             return [
@@ -478,15 +478,15 @@ class PandasExprNameNamespace:
         root_names = self._expr._root_names
         implementation = self._expr._implementation
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            if root_names is None:
-                msg = (
-                    "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
-                    "Instead of `nw.all()`, try using a named expression, such as "
-                    "`nw.col('a', 'b')`\n"
-                )
-                raise ValueError(msg)
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
 
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
             tmp = df.select(root_names)
 
             return [
