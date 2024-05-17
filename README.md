@@ -27,7 +27,9 @@ Seamlessly support all, without depending on any!
 
 Join the party!
 
-- https://github.com/FBruzzesi/timebasedcv
+- [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+- [scikit-lego](https://github.com/koaning/scikit-lego) (work-in-progress, in `narwhals-development` branch)
+- [scikit-playtime](https://github.com/koaning/scikit-playtime)
 
 ## Installation
 
