@@ -785,9 +785,9 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
-            array([1, 2, 3], dtype=int64)
+            array([1, 2, 3]...)
             >>> func(s_pl)
-            array([1, 2, 3], dtype=int64)
+            array([1, 2, 3]...)
         """
         return self._series.to_numpy()
 
