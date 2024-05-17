@@ -328,6 +328,31 @@ class Series:
         return self._series.any()
 
     def all(self) -> Any:
+        """
+        Return whether all values in the Series are True.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [True, False, True]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s.all()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            False
+            >>> func(s_pl)
+            False
+
+        """
         return self._series.all()
 
     def min(self) -> Any:
@@ -689,6 +714,65 @@ class Series:
         return self._from_series(self._series.alias(name=name))
 
     def sort(self, *, descending: bool = False) -> Self:
+        """
+        Sort this Series. Place null values first.
+
+        Arguments:
+            descending: Sort in descending order.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [5, None, 1, 2]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pd.Series(s)
+
+            We define a library agnostic functions:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.sort()
+            ...     return nw.to_native(s)
+
+            >>> def func_descend(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.sort(descending=True)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            1    NaN
+            2    1.0
+            3    2.0
+            0    5.0
+            Name: , dtype: float64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               null
+               1
+               2
+               5
+            ]
+            >>> func_descend(df_pd)
+            1    NaN
+            0    5.0
+            3    2.0
+            2    1.0
+            Name: , dtype: float64
+            >>> func_descend(df_pl)
+            shape: (4,)
+            Series: '' [i64]
+            [
+               null
+               5
+               2
+               1
+            ]
+        """
         return self._from_series(self._series.sort(descending=descending))
 
     def is_null(self) -> Self:
