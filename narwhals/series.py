@@ -187,6 +187,43 @@ class Series:
         self,
         dtype: Any,
     ) -> Self:
+        """
+        Cast between data types.
+
+        Arguments:
+            dtype: Data type that the object will be cast into.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [True, False, True]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.cast(nw.Int64)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    0
+            2    1
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               1
+               0
+               1
+            ]
+        """
         return self._from_series(
             self._series.cast(translate_dtype(self.__narwhals_namespace__(), dtype))
         )
@@ -552,6 +589,10 @@ class Series:
         """
         Shift values by `n` positions.
 
+        Arguments:
+            n: Number of indices to shift forward. If a negative value is passed,
+                values are shifted in the opposite direction instead.
+
         Notes:
             pandas may change the dtype here, for example when introducing missing
             values in an integer column. To ensure, that the dtype doesn't change,
@@ -610,6 +651,9 @@ class Series:
     def alias(self, name: str) -> Self:
         """
         Rename the Series.
+
+        Arguments:
+            name: The new name.
 
         Examples:
             >>> import pandas as pd
@@ -691,6 +735,9 @@ class Series:
     def fill_null(self, value: Any) -> Self:
         """
         Fill null values using the specified value.
+
+        Arguments:
+            value: Value used to fill null values.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
