@@ -457,6 +457,11 @@ class PandasSeriesStringNamespace:
             self._series._series.str.endswith(suffix),
         )
 
+    def starts_with(self, prefix: str) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.str.startswith(prefix),
+        )
+
     def head(self, n: int = 5) -> PandasSeries:
         return self._series._from_series(
             self._series._series.str[:n],

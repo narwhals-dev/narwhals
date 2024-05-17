@@ -261,6 +261,10 @@ class PandasExpr:
     def dt(self) -> PandasExprDateTimeNamespace:
         return PandasExprDateTimeNamespace(self)
 
+    @property
+    def name(self) -> PandasExprNameNamespace:
+        return PandasExprNameNamespace(self)
+
 
 class PandasExprStringNamespace:
     def __init__(self, expr: PandasExpr) -> None:
@@ -272,6 +276,14 @@ class PandasExprStringNamespace:
             "str",
             "ends_with",
             suffix,
+        )
+
+    def starts_with(self, prefix: str) -> PandasExpr:
+        return register_namespace_expression_call(
+            self._expr,
+            "str",
+            "starts_with",
+            prefix,
         )
 
     def head(self, n: int = 5) -> PandasExpr:
@@ -330,3 +342,166 @@ class PandasExprDateTimeNamespace:
 
     def total_nanoseconds(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "total_nanoseconds")
+
+
+class PandasExprNameNamespace:
+    def __init__(self, expr: PandasExpr) -> None:
+        self._expr = expr
+
+    def map(self, function: Callable[[str], str]) -> PandasExpr:
+        root_names = self._expr._root_names
+        implementation = self._expr._implementation
+
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
+            if root_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in `.name.map`.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+
+            tmp = df.select(root_names)
+            return [
+                PandasSeries(
+                    tmp[n]._series.rename(function(n)), implementation=implementation
+                )
+                for n in root_names
+            ]
+
+        return self._expr.__class__(
+            mapper,
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=[function(name) for name in root_names],
+            implementation=implementation,
+        )
+
+    def prefix(self, prefix: str) -> PandasExpr:
+        root_names = self._expr._root_names
+        implementation = self._expr._implementation
+
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
+            if root_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in `.name.prefix`.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+
+            tmp = df.select(root_names)
+
+            return [
+                PandasSeries(
+                    tmp[n]._series.rename(prefix + tmp[n]._series.name),
+                    implementation=implementation,
+                )
+                for n in root_names
+            ]
+
+        return self._expr.__class__(
+            mapper,
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=[prefix + name for name in root_names],
+            implementation=implementation,
+        )
+
+    def suffix(self, suffix: str) -> PandasExpr:
+        root_names = self._expr._root_names
+        implementation = self._expr._implementation
+
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
+            if root_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in `.name.suffix`.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+
+            tmp = df.select(root_names)
+
+            return [
+                PandasSeries(
+                    tmp[n]._series.rename(tmp[n]._series.name + suffix),
+                    implementation=implementation,
+                )
+                for n in root_names
+            ]
+
+        return self._expr.__class__(
+            mapper,
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=[name + suffix for name in root_names],
+            implementation=implementation,
+        )
+
+    def to_lowercase(self) -> PandasExpr:
+        root_names = self._expr._root_names
+        implementation = self._expr._implementation
+
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
+            if root_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+
+            tmp = df.select(root_names)
+
+            return [
+                PandasSeries(
+                    tmp[n]._series.rename(tmp[n]._series.name.lower()),
+                    implementation=implementation,
+                )
+                for n in root_names
+            ]
+
+        return self._expr.__class__(
+            mapper,
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=[name.lower() for name in root_names],
+            implementation=implementation,
+        )
+
+    def to_uppercase(self) -> PandasExpr:
+        root_names = self._expr._root_names
+        implementation = self._expr._implementation
+
+        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
+            if root_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+
+            tmp = df.select(root_names)
+
+            return [
+                PandasSeries(
+                    tmp[n]._series.rename(tmp[n]._series.name.upper()),
+                    implementation=implementation,
+                )
+                for n in root_names
+            ]
+
+        return self._expr.__class__(
+            mapper,
+            depth=self._expr._depth + 1,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=[name.upper() for name in root_names],
+            implementation=implementation,
+        )

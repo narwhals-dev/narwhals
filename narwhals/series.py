@@ -919,6 +919,9 @@ class SeriesStringNamespace:
     def ends_with(self, suffix: str) -> Series:
         return self._series.__class__(self._series._series.str.ends_with(suffix))
 
+    def starts_with(self, suffix: str) -> Series:
+        return self._series.__class__(self._series._series.str.starts_with(suffix))
+
     def head(self, n: int = 5) -> Series:
         """
         Take the first n elements of each string.
