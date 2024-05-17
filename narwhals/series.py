@@ -343,7 +343,7 @@ class Series:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
-            ...     s.all()
+            ...     return s.all()
 
             We can then pass either pandas or Polars to `func`:
 
