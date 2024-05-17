@@ -764,6 +764,31 @@ class Series:
         return self._series.n_unique()  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
+        """
+        Convert to numpy.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name='a')
+            >>> s_pl = pl.Series('a', s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     df = s.to_numpy()
+            ...     return df
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            array([1, 2, 3]...)
+            >>> func(s_pl)
+            array([1, 2, 3]...)
+        """
         return self._series.to_numpy()
 
     def to_pandas(self) -> Any:
