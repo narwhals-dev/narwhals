@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import overload
 
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import evaluate_into_exprs
@@ -82,13 +83,31 @@ class PandasDataFrame:
             implementation=self._implementation,
         )
 
-    def __getitem__(self, column_name: str) -> PandasSeries:
-        from narwhals._pandas_like.series import PandasSeries
+    @overload
+    def __getitem__(self, item: str) -> PandasSeries: ...
 
-        return PandasSeries(
-            self._dataframe.loc[:, column_name],
-            implementation=self._implementation,
-        )
+    @overload
+    def __getitem__(self, item: range | slice) -> PandasDataFrame: ...
+
+    def __getitem__(self, item: str | range | slice) -> PandasSeries | PandasDataFrame:
+        if isinstance(item, str):
+            from narwhals._pandas_like.series import PandasSeries
+
+            return PandasSeries(
+                self._dataframe.loc[:, item],
+                implementation=self._implementation,
+            )
+
+        elif isinstance(item, (range, slice)):
+            from narwhals._pandas_like.dataframe import PandasDataFrame
+
+            return PandasDataFrame(
+                self._dataframe.iloc[item], implementation=self._implementation
+            )
+
+        else:  # pragma: no cover
+            msg = f"Expected str, range or slice, got: {type(item)}"
+            raise TypeError(msg)
 
     # --- properties ---
     @property

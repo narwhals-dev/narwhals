@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import overload
 
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals.dependencies import get_polars
@@ -368,10 +369,24 @@ class DataFrame(BaseFrame):
         """
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def __getitem__(self, col_name: str) -> Series:
-        from narwhals.series import Series
+    @overload
+    def __getitem__(self, item: str) -> Series: ...
 
-        return Series(self._dataframe[col_name])
+    @overload
+    def __getitem__(self, item: range | slice) -> DataFrame: ...
+
+    def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
+        if isinstance(item, str):
+            from narwhals.series import Series
+
+            return Series(self._dataframe[item])
+
+        elif isinstance(item, (range, slice)):
+            return DataFrame(self._dataframe[item])
+
+        else:
+            msg = f"Expected str, range or slice, got: {type(item)}"
+            raise TypeError(msg)
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
         r"""
@@ -1630,6 +1645,9 @@ class LazyFrame(BaseFrame):
             + "─" * length
             + "┘"
         )
+
+    def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
+        raise TypeError("Slicing is not supported on LazyFrame")
 
     def collect(self) -> DataFrame:
         r"""
