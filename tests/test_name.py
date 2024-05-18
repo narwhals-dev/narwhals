@@ -29,6 +29,7 @@ else:  # pragma: no cover
 
 base_err_msg = "Anonymous expressions are not supported in "
 
+
 @pytest.mark.parametrize(
     "df_raw",
     [df_pandas, df_polars, df_mpd],
@@ -66,7 +67,6 @@ def test_suffix(df_raw: Any) -> None:
             df.select(nw.all().name.suffix(suffix))
 
 
-
 @pytest.mark.parametrize(
     "df_raw",
     [df_pandas, df_polars, df_mpd],
@@ -85,7 +85,6 @@ def test_to_lowercase(df_raw: Any) -> None:
             df.select(nw.all().name.to_lowercase())
 
 
-
 @pytest.mark.parametrize(
     "df_raw",
     [df_pandas, df_polars, df_mpd],
@@ -102,6 +101,7 @@ def test_to_uppercase(df_raw: Any) -> None:
     if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
         with pytest.raises(ValueError, match=base_err_msg + "`.name.to_uppercase`."):
             df.select(nw.all().name.to_uppercase())
+
 
 @pytest.mark.parametrize(
     "df_raw",
