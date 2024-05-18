@@ -133,7 +133,9 @@ if missing := set(expr).difference(series).difference({"over"}):
 if (
     extra := set(series)
     .difference(expr)
-    .difference({"to_pandas", "to_numpy", "dtype", "name", "shape", "to_frame"})
+    .difference(
+        {"to_pandas", "to_numpy", "dtype", "name", "shape", "to_frame", "is_empty"}
+    )
 ):
     print("in series but not in expr")  # noqa: T201
     print(extra)  # noqa: T201

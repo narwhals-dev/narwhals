@@ -1122,6 +1122,21 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
 
+    def is_duplicated(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).is_duplicated())
+
+    def is_unique(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).is_unique())
+
+    def null_count(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).null_count())
+
+    def is_first_distinct(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).is_first_distinct())
+
+    def is_last_distinct(self) -> Expr:
+        return self.__class__(lambda plx: self._call(plx).is_last_distinct())
+
     @property
     def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
