@@ -27,6 +27,8 @@ else:  # pragma: no cover
     df_mpd = df_pandas.copy()
 
 
+base_err_msg = "Anonymous expressions are not supported in "
+
 @pytest.mark.parametrize(
     "df_raw",
     [df_pandas, df_polars, df_mpd],
@@ -37,9 +39,12 @@ def test_prefix(df_raw: Any) -> None:
     result = df.select(nw.col("foo", "BAR").name.prefix(prefix))
     result_native = nw.to_native(result)
     expected = [prefix + k for k in data]
-
     assert result.columns == expected
     assert list(result_native.columns) == expected
+
+    if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
+        with pytest.raises(ValueError, match=base_err_msg + "`.name.prefix`."):
+            df.select(nw.all().name.prefix(prefix))
 
 
 @pytest.mark.parametrize(
@@ -56,6 +61,11 @@ def test_suffix(df_raw: Any) -> None:
     assert result.columns == expected
     assert list(result_native.columns) == expected
 
+    if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
+        with pytest.raises(ValueError, match=base_err_msg + "`.name.suffix`."):
+            df.select(nw.all().name.suffix(suffix))
+
+
 
 @pytest.mark.parametrize(
     "df_raw",
@@ -69,6 +79,11 @@ def test_to_lowercase(df_raw: Any) -> None:
 
     assert result.columns == expected
     assert list(result_native.columns) == expected
+
+    if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
+        with pytest.raises(ValueError, match=base_err_msg + "`.name.to_lowercase`."):
+            df.select(nw.all().name.to_lowercase())
+
 
 
 @pytest.mark.parametrize(
@@ -84,6 +99,9 @@ def test_to_uppercase(df_raw: Any) -> None:
     assert result.columns == expected
     assert list(result_native.columns) == expected
 
+    if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
+        with pytest.raises(ValueError, match=base_err_msg + "`.name.to_uppercase`."):
+            df.select(nw.all().name.to_uppercase())
 
 @pytest.mark.parametrize(
     "df_raw",
@@ -99,3 +117,7 @@ def test_map(df_raw: Any) -> None:
 
     assert result.columns == expected
     assert list(result_native.columns) == expected
+
+    if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
+        with pytest.raises(ValueError, match=base_err_msg + "`.name.map`."):
+            df.select(nw.all().name.map(func))
