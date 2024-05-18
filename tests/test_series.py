@@ -321,3 +321,50 @@ def test_to_numpy() -> None:
     result = nw.Series(s).__array__()
     assert result.dtype == "float64"
     assert nw.Series(s).shape == (3,)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_duplicated(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.is_duplicated()  # type: ignore [union-attr]
+    expected = np.array([True, True, False])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])
+def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
+    series = nw.Series(df_raw["a"])
+    result = series.filter(series > threshold).is_empty()
+    assert result == expected
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_unique(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.is_unique()  # type: ignore [union-attr]
+    expected = np.array([False, False, True])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("s_raw", [pd.Series([1, 2, None]), pl.Series([1, 2, None])])
+def test_null_count(s_raw: Any) -> None:
+    series = nw.Series(s_raw)
+    result = series.null_count()
+    assert result == 1
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_first_distinct(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.is_first_distinct()  # type: ignore [union-attr]
+    expected = np.array([True, False, True])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_last_distinct(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.is_last_distinct()  # type: ignore [union-attr]
+    expected = np.array([False, True, True])
+    assert (result.to_numpy() == expected).all()

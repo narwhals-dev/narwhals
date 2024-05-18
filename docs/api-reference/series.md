@@ -15,12 +15,18 @@
         - fill_null
         - filter
         - is_between
+        - is_duplicated
+        - is_empty
+        - is_first_distinct
         - is_in
+        - is_last_distinct
         - is_null
+        - is_unique
         - max
         - mean
         - min
         - name
+        - null_count
         - n_unique
         - sample
         - shape

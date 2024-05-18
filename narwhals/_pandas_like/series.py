@@ -439,6 +439,25 @@ class PandasSeries:
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> Self:
+        return self._from_series(self._series.duplicated(keep=False))
+
+    def is_empty(self: Self) -> bool:
+        return self._series.empty  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep=False))
+
+    def null_count(self: Self) -> int:
+        return self._series.isnull().sum()  # type: ignore[no-any-return]
+
+    def is_first_distinct(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep="first"))
+
+    def is_last_distinct(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep="last"))
+
     @property
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)
