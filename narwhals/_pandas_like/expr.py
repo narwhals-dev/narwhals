@@ -350,7 +350,6 @@ class PandasExprNameNamespace:
 
     def map(self, function: Callable[[str], str]) -> PandasExpr:
         root_names = self._expr._root_names
-        implementation = self._expr._implementation
 
         if root_names is None:
             msg = (
@@ -360,28 +359,19 @@ class PandasExprNameNamespace:
             )
             raise ValueError(msg)
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            tmp = df.select(root_names)
-            return [
-                PandasSeries(
-                    tmp[n]._series.rename(function(n)), implementation=implementation
-                )
-                for n in root_names
-            ]
-
         return self._expr.__class__(
-            mapper,
-            depth=self._expr._depth + 1,
+            lambda df: [
+                series.alias(function(series.name)) for series in self._expr._call(df)
+            ],
+            depth=self._expr._depth,
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=[function(name) for name in root_names],
-            implementation=implementation,
+            implementation=self._expr._implementation,
         )
 
     def prefix(self, prefix: str) -> PandasExpr:
         root_names = self._expr._root_names
-        implementation = self._expr._implementation
-
         if root_names is None:
             msg = (
                 "Anonymous expressions are not supported in `.name.prefix`.\n"
@@ -390,29 +380,19 @@ class PandasExprNameNamespace:
             )
             raise ValueError(msg)
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            tmp = df.select(root_names)
-
-            return [
-                PandasSeries(
-                    tmp[n]._series.rename(prefix + tmp[n]._series.name),
-                    implementation=implementation,
-                )
-                for n in root_names
-            ]
-
         return self._expr.__class__(
-            mapper,
-            depth=self._expr._depth + 1,
+            lambda df: [
+                series.alias(prefix + series.name) for series in self._expr._call(df)
+            ],
+            depth=self._expr._depth,
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=[prefix + name for name in root_names],
-            implementation=implementation,
+            implementation=self._expr._implementation,
         )
 
     def suffix(self, suffix: str) -> PandasExpr:
         root_names = self._expr._root_names
-        implementation = self._expr._implementation
 
         if root_names is None:
             msg = (
@@ -422,29 +402,19 @@ class PandasExprNameNamespace:
             )
             raise ValueError(msg)
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            tmp = df.select(root_names)
-
-            return [
-                PandasSeries(
-                    tmp[n]._series.rename(tmp[n]._series.name + suffix),
-                    implementation=implementation,
-                )
-                for n in root_names
-            ]
-
         return self._expr.__class__(
-            mapper,
-            depth=self._expr._depth + 1,
+            lambda df: [
+                series.alias(series.name + suffix) for series in self._expr._call(df)
+            ],
+            depth=self._expr._depth,
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=[name + suffix for name in root_names],
-            implementation=implementation,
+            implementation=self._expr._implementation,
         )
 
     def to_lowercase(self) -> PandasExpr:
         root_names = self._expr._root_names
-        implementation = self._expr._implementation
 
         if root_names is None:
             msg = (
@@ -454,29 +424,19 @@ class PandasExprNameNamespace:
             )
             raise ValueError(msg)
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            tmp = df.select(root_names)
-
-            return [
-                PandasSeries(
-                    tmp[n]._series.rename(tmp[n]._series.name.lower()),
-                    implementation=implementation,
-                )
-                for n in root_names
-            ]
-
         return self._expr.__class__(
-            mapper,
-            depth=self._expr._depth + 1,
+            lambda df: [
+                series.alias(series.name.lower()) for series in self._expr._call(df)
+            ],
+            depth=self._expr._depth,
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=[name.lower() for name in root_names],
-            implementation=implementation,
+            implementation=self._expr._implementation,
         )
 
     def to_uppercase(self) -> PandasExpr:
         root_names = self._expr._root_names
-        implementation = self._expr._implementation
 
         if root_names is None:
             msg = (
@@ -486,22 +446,13 @@ class PandasExprNameNamespace:
             )
             raise ValueError(msg)
 
-        def mapper(df: PandasDataFrame) -> list[PandasSeries]:
-            tmp = df.select(root_names)
-
-            return [
-                PandasSeries(
-                    tmp[n]._series.rename(tmp[n]._series.name.upper()),
-                    implementation=implementation,
-                )
-                for n in root_names
-            ]
-
         return self._expr.__class__(
-            mapper,
-            depth=self._expr._depth + 1,
+            lambda df: [
+                series.alias(series.name.upper()) for series in self._expr._call(df)
+            ],
+            depth=self._expr._depth,
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=[name.upper() for name in root_names],
-            implementation=implementation,
+            implementation=self._expr._implementation,
         )

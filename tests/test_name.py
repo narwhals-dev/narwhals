@@ -9,6 +9,7 @@ import polars as pl
 import pytest
 
 import narwhals as nw
+from tests.utils import compare_dicts
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 df_pandas = pd.DataFrame(data)
@@ -34,14 +35,36 @@ base_err_msg = "Anonymous expressions are not supported in "
     "df_raw",
     [df_pandas, df_polars, df_mpd],
 )
+def test_map(df_raw: Any) -> None:
+    func = lambda s: s[::-1].lower()  # noqa: E731
+
+    df = nw.LazyFrame(df_raw)
+    result = df.select((nw.col("foo", "BAR") * 2).name.map(func))
+    result_native = nw.to_native(result)
+
+    expected = {func(k): [e * 2 for e in v] for k, v in data.items()}
+
+    compare_dicts(result_native, expected)
+
+    if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
+        with pytest.raises(ValueError, match=base_err_msg + "`.name.map`."):
+            df.select(nw.all().name.map(func))
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [df_pandas, df_polars, df_mpd],
+)
 def test_prefix(df_raw: Any) -> None:
     prefix = "pre_"
     df = nw.LazyFrame(df_raw)
-    result = df.select(nw.col("foo", "BAR").name.prefix(prefix))
+
+    result = df.select((nw.col("foo", "BAR") * 2).name.prefix(prefix))
     result_native = nw.to_native(result)
-    expected = [prefix + k for k in data]
-    assert result.columns == expected
-    assert list(result_native.columns) == expected
+
+    expected = {prefix + k: [e * 2 for e in v] for k, v in data.items()}
+
+    compare_dicts(result_native, expected)
 
     if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
         with pytest.raises(ValueError, match=base_err_msg + "`.name.prefix`."):
@@ -55,12 +78,11 @@ def test_prefix(df_raw: Any) -> None:
 def test_suffix(df_raw: Any) -> None:
     suffix = "_post"
     df = nw.LazyFrame(df_raw)
-    result = df.select(nw.col("foo", "BAR").name.suffix(suffix))
+    result = df.select((nw.col("foo", "BAR") * 2).name.suffix(suffix))
     result_native = nw.to_native(result)
-    expected = [k + suffix for k in data]
 
-    assert result.columns == expected
-    assert list(result_native.columns) == expected
+    expected = {k + suffix: [e * 2 for e in v] for k, v in data.items()}
+    compare_dicts(result_native, expected)
 
     if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
         with pytest.raises(ValueError, match=base_err_msg + "`.name.suffix`."):
@@ -73,12 +95,12 @@ def test_suffix(df_raw: Any) -> None:
 )
 def test_to_lowercase(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
-    result = df.select(nw.col("foo", "BAR").name.to_lowercase())
+    result = df.select((nw.col("foo", "BAR") * 2).name.to_lowercase())
     result_native = nw.to_native(result)
-    expected = [k.lower() for k in data]
 
-    assert result.columns == expected
-    assert list(result_native.columns) == expected
+    expected = {k.lower(): [e * 2 for e in v] for k, v in data.items()}
+
+    compare_dicts(result_native, expected)
 
     if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
         with pytest.raises(ValueError, match=base_err_msg + "`.name.to_lowercase`."):
@@ -91,33 +113,13 @@ def test_to_lowercase(df_raw: Any) -> None:
 )
 def test_to_uppercase(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
-    result = df.select(nw.col("foo", "BAR").name.to_uppercase())
+    result = df.select((nw.col("foo", "BAR") * 2).name.to_uppercase())
     result_native = nw.to_native(result)
-    expected = [k.upper() for k in data]
 
-    assert result.columns == expected
-    assert list(result_native.columns) == expected
+    expected = {k.upper(): [e * 2 for e in v] for k, v in data.items()}
+
+    compare_dicts(result_native, expected)
 
     if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
         with pytest.raises(ValueError, match=base_err_msg + "`.name.to_uppercase`."):
             df.select(nw.all().name.to_uppercase())
-
-
-@pytest.mark.parametrize(
-    "df_raw",
-    [df_pandas, df_polars, df_mpd],
-)
-def test_map(df_raw: Any) -> None:
-    func = lambda s: s[:2].lower()  # noqa: E731
-
-    df = nw.LazyFrame(df_raw)
-    result = df.select(nw.col("foo", "BAR").name.map(func))
-    result_native = nw.to_native(result)
-    expected = [func(k) for k in data]
-
-    assert result.columns == expected
-    assert list(result_native.columns) == expected
-
-    if not isinstance(df_raw, (pl.LazyFrame, pl.DataFrame)):
-        with pytest.raises(ValueError, match=base_err_msg + "`.name.map`."):
-            df.select(nw.all().name.map(func))
