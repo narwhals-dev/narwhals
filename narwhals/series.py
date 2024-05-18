@@ -991,6 +991,7 @@ class Series:
     def is_duplicated(self: Self) -> Series:
         r"""
         Get a mask of all duplicated rows in the Series.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -1028,6 +1029,7 @@ class Series:
     def is_empty(self: Self) -> bool:
         r"""
         Check if the series is empty.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -1205,6 +1207,88 @@ class Series:
             ]
         """
         return Series(self._series.is_last_distinct())
+
+    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+        r"""
+        Check if the Series is sorted.
+
+        Arguments:
+            descending: Check if the Series is sorted in descending order.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> unsorted_data = [1, 3, 2]
+            >>> sorted_data = [3, 2, 1]
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any, descending=False):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     return series.is_sorted(descending=descending)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(pl.Series(unsorted_data))
+            False
+            >>> func(pl.Series(sorted_data), descending=True)
+            True
+            >>> func(pd.Series(unsorted_data))
+            False
+            >>> func(pd.Series(sorted_data), descending=True)
+            True
+        """
+        return self._series.is_sorted(descending=descending)  # type: ignore[no-any-return]
+
+    def value_counts(
+        self: Self, *, sort: bool = False, parallel: bool = False
+    ) -> DataFrame:
+        r"""
+        Count the occurrences of unique values.
+
+        Arguments:
+            sort: Sort the output by count in descending order. If set to False (default),
+                the order of the output is random.
+            parallel: Execute the computation in parallel. Unused for pandas-like APIs.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
+            >>> s_pl = pl.Series(values=[1, 1, 2, 3, 2], name="s")
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     val_count = series.value_counts(sort=True)
+            ...     return nw.to_native(val_count)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+               s  count
+            0  1      2
+            1  2      2
+            2  3      1
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 2)
+            ┌─────┬───────┐
+            │ s   ┆ count │
+            │ --- ┆ ---   │
+            │ i64 ┆ u32   │
+            ╞═════╪═══════╡
+            │ 1   ┆ 2     │
+            │ 2   ┆ 2     │
+            │ 3   ┆ 1     │
+            └─────┴───────┘
+        """
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame(self._series.value_counts(sort=sort, parallel=parallel))
 
     @property
     def str(self) -> SeriesStringNamespace:

@@ -368,3 +368,30 @@ def test_is_last_distinct(df_raw: Any) -> None:
     result = series.is_last_distinct()
     expected = np.array([False, True, True])
     assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_value_counts(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.value_counts(sort=True)
+    expected = np.array([[4, 2], [6, 1]])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    ("col", "descending", "expected"),
+    [("a", False, False), ("z", False, True), ("z", True, False)],
+)
+def test_is_sorted(df_raw: Any, col: str, descending: bool, expected: bool) -> None:  # noqa: FBT001
+    series = nw.Series(df_raw[col])
+    result = series.is_sorted(descending=descending)
+    assert result == expected
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_sorted_invalid(df_raw: Any) -> None:
+    series = nw.Series(df_raw["z"])
+
+    with pytest.raises(TypeError):
+        series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]

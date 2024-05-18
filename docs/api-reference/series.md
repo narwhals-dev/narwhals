@@ -21,6 +21,7 @@
         - is_in
         - is_last_distinct
         - is_null
+        - is_sorted
         - is_unique
         - max
         - mean
@@ -38,5 +39,6 @@
         - to_numpy
         - to_pandas
         - unique
+        - value_counts
       show_source: false
       show_bases: false

@@ -458,6 +458,25 @@ class PandasSeries:
     def is_last_distinct(self: Self) -> Self:
         return self._from_series(~self._series.duplicated(keep="last"))
 
+    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+        if not isinstance(descending, bool):
+            msg = f"argument 'descending' should be boolean, found {type(descending)}"
+            raise TypeError(msg)
+
+        if descending:
+            return self._series.is_monotonic_decreasing  # type: ignore[no-any-return]
+        else:
+            return self._series.is_monotonic_increasing  # type: ignore[no-any-return]
+
+    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:
+        """Parallel is unused, exists for compatibility"""
+        from narwhals._pandas_like.dataframe import PandasDataFrame
+
+        return PandasDataFrame(
+            self._series.value_counts(dropna=False, sort=sort).reset_index(),
+            implementation=self._implementation,
+        )
+
     @property
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)
