@@ -373,9 +373,18 @@ def test_is_last_distinct(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_value_counts(df_raw: Any) -> None:
     series = nw.Series(df_raw["b"])
-    result = series.value_counts(sort=True)
+    sorted_result = series.value_counts(sort=True)
+    assert sorted_result.columns == ["b", "count"]
+
     expected = np.array([[4, 2], [6, 1]])
-    assert (result.to_numpy() == expected).all()
+    assert (sorted_result.to_numpy() == expected).all()
+
+    unsorted_result = series.value_counts(sort=False)
+    assert unsorted_result.columns == ["b", "count"]
+
+    a = unsorted_result.to_numpy()
+
+    assert (a[a[:, 0].argsort()] == expected).all()
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
