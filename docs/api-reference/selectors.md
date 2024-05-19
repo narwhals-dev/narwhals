@@ -1,6 +1,6 @@
 # `narwhals.selectors`
 
-::: narwhals.dtypes
+::: narwhals.selectors
     handler: python
     options:
       members:

@@ -7,7 +7,6 @@ from narwhals.expression import Expr
 from narwhals.utils import flatten
 
 
-# todo type dtypes
 def by_dtype(*dtypes: Any) -> Expr:
     """
     Select columns based on their dtype.
