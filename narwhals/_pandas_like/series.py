@@ -472,7 +472,7 @@ class PandasSeries:
         """Parallel is unused, exists for compatibility"""
         from narwhals._pandas_like.dataframe import PandasDataFrame
 
-        name_ = self._series.name or "index"
+        name_ = "index" if self._series.name is None else self._series.name
         val_count = self._series.value_counts(dropna=False, sort=False).reset_index()
         val_count.columns = [name_, "count"]
         if sort:
