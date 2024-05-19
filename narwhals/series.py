@@ -437,6 +437,34 @@ class Series:
         return self._series.sum()
 
     def std(self, *, ddof: int = 1) -> Any:
+        """
+        Get the standard deviation of this Series.
+
+        Arguments:
+            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.std()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            1.0
+            >>> func(s_pl)
+            1.0
+        """
         return self._series.std(ddof=ddof)
 
     def is_in(self, other: Any) -> Self:
