@@ -61,7 +61,6 @@ class BaseFrame:
 
     def _extract_native(self, arg: Any) -> Any:
         from narwhals.expression import Expr
-        from narwhals.selectors import Selector
         from narwhals.series import Series
 
         if isinstance(arg, BaseFrame):
@@ -69,8 +68,6 @@ class BaseFrame:
         if isinstance(arg, Series):
             return arg._series
         if isinstance(arg, Expr):
-            return arg._call(self.__narwhals_namespace__())
-        if isinstance(arg, Selector):
             return arg._call(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):
             msg = (
