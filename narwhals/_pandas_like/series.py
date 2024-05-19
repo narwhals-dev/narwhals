@@ -472,8 +472,14 @@ class PandasSeries:
         """Parallel is unused, exists for compatibility"""
         from narwhals._pandas_like.dataframe import PandasDataFrame
 
+        name_ = self._series.name or "index"
+        val_count = self._series.value_counts(dropna=False, sort=False).reset_index()
+        val_count.columns = [name_, "count"]
+        if sort:
+            val_count = val_count.sort_values(name_)
+
         return PandasDataFrame(
-            self._series.value_counts(dropna=False, sort=sort).reset_index(),
+            val_count,
             implementation=self._implementation,
         )
 
