@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from narwhals import dtypes
 from narwhals.dtypes import translate_dtype
 from narwhals.expression import Expr
 from narwhals.utils import flatten
@@ -53,4 +54,19 @@ def by_dtype(*dtypes: Any) -> Expr:
         lambda plx: plx.selectors.by_dtype(
             [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
         )
+    )
+
+
+def numeric() -> Expr:
+    return by_dtype(
+        dtypes.Int64,
+        dtypes.Int32,
+        dtypes.Int16,
+        dtypes.Int8,
+        dtypes.UInt64,
+        dtypes.UInt32,
+        dtypes.UInt16,
+        dtypes.UInt8,
+        dtypes.Float64,
+        dtypes.Float32,
     )
