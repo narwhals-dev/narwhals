@@ -1,10 +1,14 @@
-from narwhals.dtypes import DType
+from __future__ import annotations
+
+from typing import Any
+
 from narwhals.dtypes import translate_dtype
 from narwhals.expression import Expr
 from narwhals.utils import flatten
 
 
-def by_dtype(*dtypes: DType) -> Expr:
+# todo type dtypes
+def by_dtype(*dtypes: Any) -> Expr:
     """
     Select columns based on their dtype.
 
