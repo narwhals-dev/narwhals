@@ -463,8 +463,8 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
-            1    False
-            2     True
+            0    False
+            1     True
             2     True
             dtype: boolean
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
