@@ -150,7 +150,7 @@ def agg_pandas(  # noqa: PLR0913
             for result_keys in results_keys:
                 out_group.append(item(result_keys._series))
                 out_names.append(result_keys.name)
-        return plx.make_native_series(name="", data=out_group, index=out_names)
+        return plx._make_native_series(name="", data=out_group, index=out_names)
 
     if implementation == "pandas":
         import pandas as pd

@@ -102,6 +102,7 @@ def parse_into_exprs(
 def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.selectors import PandasTypeSelector
     from narwhals._pandas_like.series import PandasSeries
 
     plx = PandasNamespace(implementation=implementation)
@@ -112,6 +113,8 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
         return plx._create_expr_from_series(into_expr)
     if isinstance(into_expr, str):
         return plx.col(into_expr)
+    if isinstance(into_expr, PandasTypeSelector):
+        return plx._create_expr_from_type_selector(into_expr)
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
         series = create_native_series(into_expr, implementation=implementation)
         return plx._create_expr_from_series(series)

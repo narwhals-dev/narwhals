@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Iterable
 
 from narwhals import dtypes
+from narwhals._pandas_like import selectors
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.series import PandasSeries
@@ -36,7 +37,9 @@ class PandasNamespace:
     String = dtypes.String
     Datetime = dtypes.Datetime
 
-    def make_native_series(self, name: str, data: list[Any], index: Any) -> Any:
+    selectors = selectors
+
+    def _make_native_series(self, name: str, data: list[Any], index: Any) -> Any:
         if self._implementation == "pandas":
             import pandas as pd
 
@@ -54,6 +57,21 @@ class PandasNamespace:
     # --- not in spec ---
     def __init__(self, implementation: str) -> None:
         self._implementation = implementation
+
+    def _create_expr_from_type_selector(self, type_selector):
+        def func(df):
+            return [
+                df[col] for col in df.columns if df.schema[col] in type_selector._dtypes
+            ]
+
+        return PandasExpr(
+            func,
+            depth=0,
+            function_name="type_selector",
+            root_names=None,
+            output_names=None,
+            implementation=self._implementation,
+        )
 
     def _create_expr_from_callable(  # noqa: PLR0913
         self,
