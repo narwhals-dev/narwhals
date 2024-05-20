@@ -328,6 +328,31 @@ class Series:
         return self._series.any()
 
     def all(self) -> Any:
+        """
+        Return whether all values in the Series are True.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [True, False, True]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.all()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            False
+            >>> func(s_pl)
+            False
+
+        """
         return self._series.all()
 
     def min(self) -> Any:
@@ -412,6 +437,34 @@ class Series:
         return self._series.sum()
 
     def std(self, *, ddof: int = 1) -> Any:
+        """
+        Get the standard deviation of this Series.
+
+        Arguments:
+            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.std()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            1.0
+            >>> func(s_pl)
+            1.0
+        """
         return self._series.std(ddof=ddof)
 
     def is_in(self, other: Any) -> Self:
@@ -689,6 +742,65 @@ class Series:
         return self._from_series(self._series.alias(name=name))
 
     def sort(self, *, descending: bool = False) -> Self:
+        """
+        Sort this Series. Place null values first.
+
+        Arguments:
+            descending: Sort in descending order.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [5, None, 1, 2]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define library agnostic functions:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.sort()
+            ...     return nw.to_native(s)
+
+            >>> def func_descend(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.sort(descending=True)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            1    NaN
+            2    1.0
+            3    2.0
+            0    5.0
+            Name: , dtype: float64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               null
+               1
+               2
+               5
+            ]
+            >>> func_descend(s_pd)
+            1    NaN
+            0    5.0
+            3    2.0
+            2    1.0
+            Name: , dtype: float64
+            >>> func_descend(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               null
+               5
+               2
+               1
+            ]
+        """
         return self._from_series(self._series.sort(descending=descending))
 
     def is_null(self) -> Self:
@@ -902,6 +1014,309 @@ class Series:
 
     def filter(self, other: Any) -> Series:
         return self._from_series(self._series.filter(self._extract_native(other)))
+
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> Series:
+        r"""
+        Get a mask of all duplicated rows in the Series.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 2, 3, 1])
+            >>> s_pl = pl.Series([1, 2, 3, 1])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     duplicated = series.is_duplicated()
+            ...     return nw.to_native(duplicated)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0     True
+            1    False
+            2    False
+            3     True
+            dtype: bool
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                true
+                false
+                false
+                true
+            ]
+        """
+        return Series(self._series.is_duplicated())
+
+    def is_empty(self: Self) -> bool:
+        r"""
+        Check if the series is empty.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            Let's define a dataframe-agnostic function that filters rows in which "foo"
+            values are greater than 10, and then checks if the result is empty or not:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     return series.filter(series > 10).is_empty()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> s_pd = pd.Series([1, 2, 3])
+            >>> s_pl = pl.Series([1, 2, 3])
+            >>> func(s_pd), func(s_pl)
+            (True, True)
+
+            >>> s_pd = pd.Series([100, 2, 3])
+            >>> s_pl = pl.Series([100, 2, 3])
+            >>> func(s_pd), func(s_pl)
+            (False, False)
+        """
+        return self._series.is_empty()  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> Series:
+        r"""
+        Get a mask of all unique rows in the Series.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 2, 3, 1])
+            >>> s_pl = pl.Series([1, 2, 3, 1])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     unique = series.is_unique()
+            ...     return nw.to_native(unique)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0    False
+            1     True
+            2     True
+            3    False
+            dtype: bool
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                false
+                 true
+                 true
+                false
+            ]
+        """
+        return Series(self._series.is_unique())
+
+    def null_count(self: Self) -> int:
+        r"""
+        Create a new Series that shows the null counts per column.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, None, 3])
+            >>> s_pl = pl.Series([1, None, None])
+
+            Let's define a dataframe-agnostic function that returns the null count of
+            the series:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     return series.null_count()
+
+            We can then pass either pandas or Polars to `func`:
+            >>> func(s_pd)
+            1
+            >>> func(s_pl)
+            2
+        """
+
+        return self._series.null_count()  # type: ignore[no-any-return]
+
+    def is_first_distinct(self: Self) -> Series:
+        r"""
+        Return a boolean mask indicating the first occurrence of each distinct value.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 1, 2, 3, 2])
+            >>> s_pl = pl.Series([1, 1, 2, 3, 2])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     first_distinct = series.is_first_distinct()
+            ...     return nw.to_native(first_distinct)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0     True
+            1    False
+            2     True
+            3     True
+            4    False
+            dtype: bool
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+                true
+                false
+                true
+                true
+                false
+            ]
+        """
+        return Series(self._series.is_first_distinct())
+
+    def is_last_distinct(self: Self) -> Series:
+        r"""
+        Return a boolean mask indicating the last occurrence of each distinct value.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 1, 2, 3, 2])
+            >>> s_pl = pl.Series([1, 1, 2, 3, 2])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     last_distinct = series.is_last_distinct()
+            ...     return nw.to_native(last_distinct)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0    False
+            1     True
+            2    False
+            3     True
+            4     True
+            dtype: bool
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+                false
+                true
+                false
+                true
+                true
+            ]
+        """
+        return Series(self._series.is_last_distinct())
+
+    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+        r"""
+        Check if the Series is sorted.
+
+        Arguments:
+            descending: Check if the Series is sorted in descending order.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> unsorted_data = [1, 3, 2]
+            >>> sorted_data = [3, 2, 1]
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any, descending=False):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     return series.is_sorted(descending=descending)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(pl.Series(unsorted_data))
+            False
+            >>> func(pl.Series(sorted_data), descending=True)
+            True
+            >>> func(pd.Series(unsorted_data))
+            False
+            >>> func(pd.Series(sorted_data), descending=True)
+            True
+        """
+        return self._series.is_sorted(descending=descending)  # type: ignore[no-any-return]
+
+    def value_counts(
+        self: Self, *, sort: bool = False, parallel: bool = False
+    ) -> DataFrame:
+        r"""
+        Count the occurrences of unique values.
+
+        Arguments:
+            sort: Sort the output by count in descending order. If set to False (default),
+                the order of the output is random.
+            parallel: Execute the computation in parallel. Unused for pandas-like APIs.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
+            >>> s_pl = pl.Series(values=[1, 1, 2, 3, 2], name="s")
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     val_count = series.value_counts(sort=True)
+            ...     return nw.to_native(val_count)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+               s  count
+            0  1      2
+            1  2      2
+            2  3      1
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 2)
+            ┌─────┬───────┐
+            │ s   ┆ count │
+            │ --- ┆ ---   │
+            │ i64 ┆ u32   │
+            ╞═════╪═══════╡
+            │ 1   ┆ 2     │
+            │ 2   ┆ 2     │
+            │ 3   ┆ 1     │
+            └─────┴───────┘
+        """
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame(self._series.value_counts(sort=sort, parallel=parallel))
 
     @property
     def str(self) -> SeriesStringNamespace:

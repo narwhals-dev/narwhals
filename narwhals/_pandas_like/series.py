@@ -439,6 +439,50 @@ class PandasSeries:
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> Self:
+        return self._from_series(self._series.duplicated(keep=False))
+
+    def is_empty(self: Self) -> bool:
+        return self._series.empty  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep=False))
+
+    def null_count(self: Self) -> int:
+        return self._series.isnull().sum()  # type: ignore[no-any-return]
+
+    def is_first_distinct(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep="first"))
+
+    def is_last_distinct(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep="last"))
+
+    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+        if not isinstance(descending, bool):
+            msg = f"argument 'descending' should be boolean, found {type(descending)}"
+            raise TypeError(msg)
+
+        if descending:
+            return self._series.is_monotonic_decreasing  # type: ignore[no-any-return]
+        else:
+            return self._series.is_monotonic_increasing  # type: ignore[no-any-return]
+
+    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:
+        """Parallel is unused, exists for compatibility"""
+        from narwhals._pandas_like.dataframe import PandasDataFrame
+
+        name_ = "index" if self._series.name is None else self._series.name
+        val_count = self._series.value_counts(dropna=False, sort=False).reset_index()
+        val_count.columns = [name_, "count"]
+        if sort:
+            val_count = val_count.sort_values(name_)
+
+        return PandasDataFrame(
+            val_count,
+            implementation=self._implementation,
+        )
+
     @property
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)
