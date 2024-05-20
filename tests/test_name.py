@@ -36,7 +36,8 @@ base_err_msg = "Anonymous expressions are not supported in "
     [df_pandas, df_polars, df_mpd],
 )
 def test_map(df_raw: Any) -> None:
-    func = lambda s: s[::-1].lower()  # noqa: E731
+    def func(s: str) -> str:
+        return s[::-1].lower()
 
     df = nw.LazyFrame(df_raw)
     result = df.select((nw.col("foo", "BAR") * 2).name.map(func))

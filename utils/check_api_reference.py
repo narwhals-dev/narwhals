@@ -87,7 +87,11 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if missing := set(top_level_functions).difference(documented).difference({"dt", "str"}):
+if (
+    missing := set(top_level_functions)
+    .difference(documented)
+    .difference({"dt", "str", "name"})
+):
     print("Series: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
@@ -106,7 +110,11 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if missing := set(top_level_functions).difference(documented).difference({"str", "dt"}):
+if (
+    missing := set(top_level_functions)
+    .difference(documented)
+    .difference({"str", "dt", "name"})
+):
     print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
