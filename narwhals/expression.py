@@ -1127,6 +1127,214 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
 
+    def is_duplicated(self) -> Expr:
+        r"""
+        Return a boolean mask indicating duplicated values.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     duplicated = df.select(nw.all().is_duplicated())
+            ...     return nw.to_native(duplicated)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                   a      b
+            0   True   True
+            1  False   True
+            2  False  False
+            3   True  False
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ true  ┆ true  │
+            │ false ┆ true  │
+            │ false ┆ false │
+            │ true  ┆ false │
+            └───────┴───────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).is_duplicated())
+
+    def is_unique(self) -> Expr:
+        r"""
+        Return a boolean mask indicating unique values.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     unique = df.select(nw.all().is_unique())
+            ...     return nw.to_native(unique)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                   a      b
+            0  False  False
+            1   True  False
+            2   True   True
+            3  False   True
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ false ┆ false │
+            │ true  ┆ false │
+            │ true  ┆ true  │
+            │ false ┆ true  │
+            └───────┴───────┘
+        """
+
+        return self.__class__(lambda plx: self._call(plx).is_unique())
+
+    def null_count(self) -> Expr:
+        r"""
+        Count null values.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, None, 1], "b": ["a", None, "b", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     nulls = df.select(nw.all().null_count())
+            ...     return nw.to_native(nulls)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  2
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ u32 ┆ u32 │
+            ╞═════╪═════╡
+            │ 1   ┆ 2   │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).null_count())
+
+    def is_first_distinct(self) -> Expr:
+        r"""
+        Return a boolean mask indicating the first occurrence of each distinct value.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     first_distinct = df.select(nw.all().is_first_distinct())
+            ...     return nw.to_native(first_distinct)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                   a      b
+            0   True   True
+            1   True  False
+            2   True   True
+            3  False   True
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ true  ┆ true  │
+            │ true  ┆ false │
+            │ true  ┆ true  │
+            │ false ┆ true  │
+            └───────┴───────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).is_first_distinct())
+
+    def is_last_distinct(self) -> Expr:
+        r"""Return a boolean mask indicating the last occurrence of each distinct value.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     last_distinct = df.select(nw.all().is_last_distinct())
+            ...     return nw.to_native(last_distinct)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                   a      b
+            0  False  False
+            1   True   True
+            2   True   True
+            3   True   True
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ false ┆ false │
+            │ true  ┆ true  │
+            │ true  ┆ true  │
+            │ true  ┆ true  │
+            └───────┴───────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).is_last_distinct())
+
     @property
     def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)

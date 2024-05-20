@@ -126,6 +126,7 @@ expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] !
 series = [
     i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
 ]
+
 if missing := set(expr).difference(series).difference({"over"}):
     print("In expr but not in series")  # noqa: T201
     print(missing)  # noqa: T201
@@ -133,7 +134,19 @@ if missing := set(expr).difference(series).difference({"over"}):
 if (
     extra := set(series)
     .difference(expr)
-    .difference({"to_pandas", "to_numpy", "dtype", "name", "shape", "to_frame"})
+    .difference(
+        {
+            "to_pandas",
+            "to_numpy",
+            "dtype",
+            "name",
+            "shape",
+            "to_frame",
+            "is_empty",
+            "is_sorted",
+            "value_counts",
+        }
+    )
 ):
     print("in series but not in expr")  # noqa: T201
     print(extra)  # noqa: T201
