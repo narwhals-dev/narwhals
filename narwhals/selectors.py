@@ -58,6 +58,44 @@ def by_dtype(*dtypes: Any) -> Expr:
 
 
 def numeric() -> Expr:
+    """
+    Select numeric columns.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>>
+        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [4.1, 2.3]}
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pl = pl.DataFrame(data)
+
+        Let's define a dataframe-agnostic function to select numeric
+        dtypes and multiplies each value by 2:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(ncs.by_dtype(nw.Int64, nw.Float64)*2)
+        ...     return nw.to_native(df)
+
+        We can then pass either pandas or Polars dataframes:
+
+        >>> func(df_pd)
+           a    c
+        0  2  8.2
+        1  4  4.6
+        >>> func(df_pl)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ c   │
+        │ --- ┆ --- │
+        │ i64 ┆ f64 │
+        ╞═════╪═════╡
+        │ 2   ┆ 8.2 │
+        │ 4   ┆ 4.6 │
+        └─────┴─────┘
+    """
     return by_dtype(
         dtypes.Int64,
         dtypes.Int32,
