@@ -184,8 +184,12 @@ class PandasExpr:
     def is_in(self, other: Any) -> Self:
         return register_expression_call(self, "is_in", other)
 
-    def filter(self, other: Any) -> Self:
-        return register_expression_call(self, "filter", other)
+    def filter(self, *predicates: Any) -> Self:
+        from narwhals._pandas_like.namespace import PandasNamespace
+
+        plx = PandasNamespace(self._implementation)
+        expr = plx.all_horizontal(*predicates)
+        return register_expression_call(self, "filter", expr)
 
     def drop_nulls(self) -> Self:
         return register_expression_call(self, "drop_nulls")
