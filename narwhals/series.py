@@ -707,6 +707,11 @@ class Series:
 
             with_replacement: Allow values to be sampled more than once.
 
+        Notes:
+            The `sample` method returns a Series with a specified number of
+            randomly selected items chosen from this Series.
+            The results are not consistent across libraries.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -718,7 +723,7 @@ class Series:
             We define a library agnostic function:
 
             >>> def func(s_any):
-            ...     nw.from_native(s_any, series_only=True)
+            ...     s = nw.from_native(s_any, series_only=True)
             ...     s = s.sample(fraction=1.0, with_replacement=True)
             ...     return nw.to_native(s)
 
