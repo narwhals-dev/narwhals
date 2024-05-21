@@ -546,9 +546,6 @@ class PandasSeriesDateTimeNamespace:
             self._series._series.dt.second,
         )
 
-    def microsecond(self) -> PandasSeries:
-        return self._series._from_series(self._series._series.dt.microsecond)
-
     def nanosecond(self) -> PandasSeries:
         return self._series._from_series(
             ((self._series._series.dt.microsecond * 1e3).astype(int)),

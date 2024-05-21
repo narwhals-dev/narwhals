@@ -328,9 +328,6 @@ class PandasExprDateTimeNamespace:
     def second(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "second")
 
-    def microsecond(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "microsecond")
-
     def nanosecond(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "nanosecond")
 
