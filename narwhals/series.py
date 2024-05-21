@@ -441,7 +441,7 @@ class Series:
 
     def is_in(self, other: Any) -> Self:
         """
-        Check if elements of this sequence are present in the other Series.
+        Check if the elements of this Series are in the other sequence.
 
         Arguments:
             other: Sequence of primitive type.
