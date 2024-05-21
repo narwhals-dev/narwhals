@@ -1668,7 +1668,17 @@ class SeriesDateTimeNamespace:
             2    800
             3      0
             4    200
-            Name: datetime, dtype: int32
+            Name: datetime, dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: 'datetime' [i32]
+            [
+                400
+                600
+                800
+                0
+                200
+            ]
         """
         return self._series.__class__(self._series._series.dt.millisecond())
     
@@ -1707,7 +1717,7 @@ class SeriesDateTimeNamespace:
             2    800000
             3         0
             4    200000
-            Name: datetime, dtype: int32
+            Name: datetime, dtype: int...
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (5,)
             Series: 'datetime' [i32]
