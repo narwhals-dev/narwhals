@@ -330,7 +330,7 @@ class PandasExprDateTimeNamespace:
 
     def millisecond(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "millisecond")
-    
+
     def microsecond(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "microsecond")
 

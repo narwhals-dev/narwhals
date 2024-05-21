@@ -1815,7 +1815,7 @@ class ExprDateTimeNamespace:
             └─────────────────────────┴──────┴────────┴────────┴─────────────┘
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
-    
+
     def microsecond(self) -> Expr:
         """
         Extract microseconds from underlying DateTime representation.
@@ -1867,8 +1867,6 @@ class ExprDateTimeNamespace:
             └─────────────────────────┴──────┴────────┴────────┴─────────────┘
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
-       
-
 
     def ordinal_day(self) -> Expr:
         """
