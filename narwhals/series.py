@@ -1681,7 +1681,7 @@ class SeriesDateTimeNamespace:
             ]
         """
         return self._series.__class__(self._series._series.dt.millisecond())
-    
+
     def microsecond(self) -> Series:
         """
         Extracts the microseconds in a datetime series.
@@ -1730,7 +1730,6 @@ class SeriesDateTimeNamespace:
             ]
         """
         return self._series.__class__(self._series._series.dt.microsecond())
-
 
     def ordinal_day(self) -> Series:
         """
