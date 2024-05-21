@@ -441,10 +441,10 @@ class Series:
 
     def is_in(self, other: Any) -> Self:
         """
-        Check if elements of this Series are in the other Series.
+        Check if elements of this sequence are present in the other Series.
 
         Arguments:
-            other: Series or sequence of primitive type.
+            other: Sequence of primitive type.
 
         Examples:
             >>> import pandas as pd
@@ -457,7 +457,7 @@ class Series:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.is_in(pl.Series([3, 2, 8]))
+            ...     s = s.is_in([3, 2, 8])
             ...     return nw.to_native(s)
 
             We can then pass either pandas or Polars to `func`:
