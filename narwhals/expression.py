@@ -844,7 +844,12 @@ class Expr:
         )
 
     def is_in(self, other: Any) -> Expr:
-        return self.__class__(lambda plx: self._call(plx).is_in(other))
+        if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            return self.__class__(lambda plx: self._call(plx).is_in(other))
+        else:
+            raise NotImplementedError(
+                "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
+            )
 
     def filter(self, other: Any) -> Expr:
         return self.__class__(

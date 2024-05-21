@@ -468,6 +468,42 @@ class Series:
         return self._series.std(ddof=ddof)
 
     def is_in(self, other: Any) -> Self:
+        """
+        Check if the elements of this Series are in the other sequence.
+
+        Arguments:
+            other: Sequence of primitive type.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3])
+            >>> s_pl = pl.Series([1, 2, 3])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.is_in([3, 2, 8])
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1     True
+            2     True
+            dtype: boolean
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+               false
+               true
+               true
+            ]
+        """
         return self._from_series(self._series.is_in(self._extract_native(other)))
 
     def drop_nulls(self) -> Self:

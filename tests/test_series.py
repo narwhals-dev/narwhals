@@ -61,6 +61,18 @@ def test_is_in(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 @pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
+def test_is_in_other(df_raw: Any) -> None:
+    with pytest.raises(
+        NotImplementedError,
+        match=(
+            "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
+        ),
+    ):
+        nw.from_native(df_raw).with_columns(contains=nw.col("c").is_in("sets"))
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_filter(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
     expected = np.array([3, 2])
