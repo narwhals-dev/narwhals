@@ -139,11 +139,28 @@ class PandasSeries:
     def item(self) -> Any:
         return item(self._series)
 
+    def to_frame(self) -> Any:
+        from narwhals._pandas_like.dataframe import PandasDataFrame
+
+        return PandasDataFrame(
+            self._series.to_frame(), implementation=self._implementation
+        )
+
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> PandasSeries:
         ser = self._series
-        return self._from_series(ser.between(lower_bound, upper_bound, inclusive=closed))
+        if closed == "left":
+            res = ser.ge(lower_bound) & ser.lt(upper_bound)
+        elif closed == "right":
+            res = ser.gt(lower_bound) & ser.le(upper_bound)
+        elif closed == "none":
+            res = ser.gt(lower_bound) & ser.lt(upper_bound)
+        elif closed == "both":
+            res = ser.ge(lower_bound) & ser.le(upper_bound)
+        else:  # pragma: no cover
+            raise AssertionError
+        return self._from_series(res)
 
     def is_in(self, other: Any) -> PandasSeries:
         import pandas as pd
@@ -346,7 +363,7 @@ class PandasSeries:
 
     def n_unique(self) -> int:
         ser = self._series
-        return ser.nunique()  # type: ignore[no-any-return]
+        return ser.nunique(dropna=False)  # type: ignore[no-any-return]
 
     def sample(
         self,
@@ -387,7 +404,9 @@ class PandasSeries:
     ) -> PandasSeries:
         ser = self._series
         return self._from_series(
-            ser.sort_values(ascending=not descending).rename(self.name)
+            ser.sort_values(ascending=not descending, na_position="first").rename(
+                self.name
+            )
         )
 
     def alias(self, name: str) -> Self:
@@ -419,6 +438,50 @@ class PandasSeries:
             return self._series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
+
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> Self:
+        return self._from_series(self._series.duplicated(keep=False))
+
+    def is_empty(self: Self) -> bool:
+        return self._series.empty  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep=False))
+
+    def null_count(self: Self) -> int:
+        return self._series.isnull().sum()  # type: ignore[no-any-return]
+
+    def is_first_distinct(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep="first"))
+
+    def is_last_distinct(self: Self) -> Self:
+        return self._from_series(~self._series.duplicated(keep="last"))
+
+    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+        if not isinstance(descending, bool):
+            msg = f"argument 'descending' should be boolean, found {type(descending)}"
+            raise TypeError(msg)
+
+        if descending:
+            return self._series.is_monotonic_decreasing  # type: ignore[no-any-return]
+        else:
+            return self._series.is_monotonic_increasing  # type: ignore[no-any-return]
+
+    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:
+        """Parallel is unused, exists for compatibility"""
+        from narwhals._pandas_like.dataframe import PandasDataFrame
+
+        name_ = "index" if self._series.name is None else self._series.name
+        val_count = self._series.value_counts(dropna=False, sort=False).reset_index()
+        val_count.columns = [name_, "count"]
+        if sort:
+            val_count = val_count.sort_values(name_)
+
+        return PandasDataFrame(
+            val_count,
+            implementation=self._implementation,
+        )
 
     @property
     def str(self) -> PandasSeriesStringNamespace:
@@ -499,3 +562,53 @@ class PandasSeriesDateTimeNamespace:
         return self._series._from_series(
             self._series._series.__class__(result, dtype=dtype, name=year_start.name)
         )
+
+    def total_minutes(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds()
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 60
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_seconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds()
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_milliseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e3
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_microseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e6
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)
+
+    def total_nanoseconds(self) -> PandasSeries:
+        s = self._series._series.dt.total_seconds() * 1e9
+        s_sign = (
+            2 * (s > 0).astype(int) - 1
+        )  # this calculates the sign of each series element
+        s_abs = s.abs() // 1
+        if ~s.isna().any():
+            s_abs = s_abs.astype(int)
+        return self._series._from_series(s_abs * s_sign)

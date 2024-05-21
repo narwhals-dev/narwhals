@@ -253,6 +253,21 @@ class PandasExpr:
             implementation=self._implementation,
         )
 
+    def is_duplicated(self) -> Self:
+        return register_expression_call(self, "is_duplicated")
+
+    def is_unique(self) -> Self:
+        return register_expression_call(self, "is_unique")
+
+    def null_count(self) -> Self:
+        return register_expression_call(self, "null_count")
+
+    def is_first_distinct(self) -> Self:
+        return register_expression_call(self, "is_first_distinct")
+
+    def is_last_distinct(self) -> Self:
+        return register_expression_call(self, "is_last_distinct")
+
     @property
     def str(self) -> PandasExprStringNamespace:
         return PandasExprStringNamespace(self)
@@ -318,3 +333,18 @@ class PandasExprDateTimeNamespace:
 
     def ordinal_day(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "ordinal_day")
+
+    def total_minutes(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_minutes")
+
+    def total_seconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_seconds")
+
+    def total_milliseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_milliseconds")
+
+    def total_microseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_microseconds")
+
+    def total_nanoseconds(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "total_nanoseconds")

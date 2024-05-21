@@ -1,6 +1,7 @@
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Boolean
+from narwhals.dtypes import Categorical
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
@@ -25,14 +26,20 @@ from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
 from narwhals.series import Series
 from narwhals.translate import from_native
+from narwhals.translate import get_native_namespace
 from narwhals.translate import to_native
+from narwhals.utils import maybe_align_index
+from narwhals.utils import maybe_set_index
 
-__version__ = "0.8.9"
+__version__ = "0.8.15"
 
 __all__ = [
     "concat",
     "to_native",
     "from_native",
+    "maybe_align_index",
+    "maybe_set_index",
+    "get_native_namespace",
     "all",
     "col",
     "len",
@@ -56,6 +63,7 @@ __all__ = [
     "Float64",
     "Float32",
     "Boolean",
+    "Categorical",
     "String",
     "Datetime",
 ]

@@ -5,12 +5,17 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import overload
 
+from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import evaluate_into_exprs
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
+from narwhals.translate import get_cudf
+from narwhals.translate import get_modin
+from narwhals.translate import get_pandas
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -48,6 +53,19 @@ class PandasDataFrame:
 
         return PandasNamespace(self._implementation)
 
+    def __native_namespace__(self) -> Any:
+        if self._implementation == "pandas":
+            return get_pandas()
+        if self._implementation == "modin":  # pragma: no cover
+            return get_modin()
+        if self._implementation == "cudf":  # pragma: no cover
+            return get_cudf()
+        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
+
+    def __len__(self) -> int:
+        return len(self._dataframe)
+
     def _validate_columns(self, columns: Sequence[str]) -> None:
         if len(columns) != len(set(columns)):
             counter = collections.Counter(columns)
@@ -65,13 +83,31 @@ class PandasDataFrame:
             implementation=self._implementation,
         )
 
-    def __getitem__(self, column_name: str) -> PandasSeries:
-        from narwhals._pandas_like.series import PandasSeries
+    @overload
+    def __getitem__(self, item: str) -> PandasSeries: ...
 
-        return PandasSeries(
-            self._dataframe.loc[:, column_name],
-            implementation=self._implementation,
-        )
+    @overload
+    def __getitem__(self, item: range | slice) -> PandasDataFrame: ...
+
+    def __getitem__(self, item: str | range | slice) -> PandasSeries | PandasDataFrame:
+        if isinstance(item, str):
+            from narwhals._pandas_like.series import PandasSeries
+
+            return PandasSeries(
+                self._dataframe.loc[:, item],
+                implementation=self._implementation,
+            )
+
+        elif isinstance(item, (range, slice)):
+            from narwhals._pandas_like.dataframe import PandasDataFrame
+
+            return PandasDataFrame(
+                self._dataframe.iloc[item], implementation=self._implementation
+            )
+
+        else:  # pragma: no cover
+            msg = f"Expected str, range or slice, got: {type(item)}"
+            raise TypeError(msg)
 
     # --- properties ---
     @property
@@ -100,6 +136,18 @@ class PandasDataFrame:
 
     def drop_nulls(self) -> Self:
         return self._from_dataframe(self._dataframe.dropna(axis=0))
+
+    def with_row_index(self, name: str) -> Self:
+        row_index = create_native_series(
+            range(len(self._dataframe)),
+            index=self._dataframe.index,
+            implementation=self._implementation,
+        ).alias(name)
+        return self._from_dataframe(
+            horizontal_concat(
+                [row_index._series, self._dataframe], implementation=self._implementation
+            )
+        )
 
     def filter(
         self,
@@ -234,3 +282,29 @@ class PandasDataFrame:
         if self._implementation == "modin":  # pragma: no cover
             return self._dataframe._to_pandas()
         return self._dataframe.to_pandas()  # pragma: no cover
+
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> PandasSeries:
+        from narwhals._pandas_like.series import PandasSeries
+
+        return PandasSeries(
+            self._dataframe.duplicated(keep=False),
+            implementation=self._implementation,
+        )
+
+    def is_empty(self: Self) -> bool:
+        return self._dataframe.empty  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> PandasSeries:
+        from narwhals._pandas_like.series import PandasSeries
+
+        return PandasSeries(
+            ~self._dataframe.duplicated(keep=False),
+            implementation=self._implementation,
+        )
+
+    def null_count(self: Self) -> PandasDataFrame:
+        return PandasDataFrame(
+            self._dataframe.isnull().sum(axis=0).to_frame().transpose(),
+            implementation=self._implementation,
+        )

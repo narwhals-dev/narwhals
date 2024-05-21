@@ -17,6 +17,7 @@ def get_pandas() -> Any:
 
 
 def get_modin() -> Any:  # pragma: no cover
+    """Import modin (if available - else return None)."""
     modin = sys.modules.get("modin", None)
     if modin is not None:
         return modin.pandas
@@ -24,8 +25,15 @@ def get_modin() -> Any:  # pragma: no cover
 
 
 def get_cudf() -> Any:
+    """Import cudf (if available - else return None)."""
     return sys.modules.get("cudf", None)
 
 
 def get_pyarrow() -> Any:
+    """Import pyarrow (if available - else return None)."""
     return sys.modules.get("pyarrow", None)
+
+
+def get_numpy() -> Any:
+    """Import numpy (if available - else return None)."""
+    return sys.modules.get("numpy", None)

@@ -10,8 +10,12 @@
         - filter
         - group_by
         - head
+        - is_duplicated
+        - is_empty
+        - is_unique
         - join
         - lazy
+        - null_count
         - pipe
         - rename
         - schema
@@ -23,5 +27,6 @@
         - to_pandas
         - unique
         - with_columns
+        - with_row_index
       show_source: false
       show_bases: false

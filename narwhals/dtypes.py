@@ -66,6 +66,9 @@ class Boolean(DType): ...
 class Datetime(TemporalType): ...
 
 
+class Categorical(DType): ...
+
+
 class Date(TemporalType): ...
 
 
@@ -102,6 +105,8 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
         return plx.String
     if dtype == Boolean:
         return plx.Boolean
+    if dtype == Categorical:
+        return plx.Categorical
     if dtype == Datetime:
         return plx.Datetime
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
@@ -137,6 +142,8 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return String()
     if dtype == pl.Boolean:
         return Boolean()
+    if dtype == pl.Categorical:
+        return Categorical()
     if dtype == pl.Datetime:
         return Datetime()
     msg = f"Unexpected dtype, got: {type(dtype)}"  # pragma: no cover
