@@ -1,5 +1,5 @@
 site_name: Narwhals
-repo_url: https://github.com/MarcoGorelli/narwhals.git
+repo_url: https://github.com/narwhals-dev/narwhals.git
 nav:
   - Home: index.md
   - Why: why.md
@@ -27,6 +27,7 @@ nav:
     - api-reference/expressions_str.md
     - api-reference/dtypes.md
     - api-reference/dependencies.md
+    - api-reference/selectors.md
 theme:
   name: material
   font: false

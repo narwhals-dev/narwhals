@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import overload
 
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals.dependencies import get_polars
@@ -12,6 +14,7 @@ from narwhals.dtypes import to_narwhals_dtype
 from narwhals.translate import get_cudf
 from narwhals.translate import get_modin
 from narwhals.translate import get_pandas
+from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
@@ -29,11 +32,17 @@ class BaseFrame:
     _dataframe: Any
     _is_polars: bool
 
+    def __len__(self) -> Any:
+        return self._dataframe.__len__()
+
+    def __native_namespace__(self) -> Any:
+        if self._is_polars:
+            return get_polars()
+        return self._dataframe.__native_namespace__()
+
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
-            import polars as pl
-
-            return pl
+            return get_polars()
         return self._dataframe.__narwhals_namespace__()
 
     def _from_dataframe(self, df: Any) -> Self:
@@ -76,6 +85,25 @@ class BaseFrame:
             k: to_narwhals_dtype(v, is_polars=self._is_polars)
             for k, v in self._dataframe.schema.items()
         }
+
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        return function(self, *args, **kwargs)
+
+    def with_row_index(self, name: str = "index") -> Self:
+        if self._is_polars and parse_version(get_polars().__version__) < parse_version(
+            "0.20.4"
+        ):  # pragma: no cover
+            return self._from_dataframe(
+                self._dataframe.with_row_count(name),
+            )
+        return self._from_dataframe(
+            self._dataframe.with_row_index(name),
+        )
+
+    def drop_nulls(self) -> Self:
+        return self._from_dataframe(
+            self._dataframe.drop_nulls(),
+        )
 
     @property
     def columns(self) -> list[str]:
@@ -341,10 +369,24 @@ class DataFrame(BaseFrame):
         """
         return self._dataframe.shape  # type: ignore[no-any-return]
 
-    def __getitem__(self, col_name: str) -> Series:
-        from narwhals.series import Series
+    @overload
+    def __getitem__(self, item: str) -> Series: ...
 
-        return Series(self._dataframe[col_name])
+    @overload
+    def __getitem__(self, item: range | slice) -> DataFrame: ...
+
+    def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
+        if isinstance(item, str):
+            from narwhals.series import Series
+
+            return Series(self._dataframe[item])
+
+        elif isinstance(item, (range, slice)):
+            return DataFrame(self._dataframe[item])
+
+        else:
+            msg = f"Expected str, range or slice, got: {type(item)}"
+            raise TypeError(msg)
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
         r"""
@@ -433,6 +475,126 @@ class DataFrame(BaseFrame):
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        """
+        Pipe function call.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1,2,3], 'ba': [4,5,6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.pipe(lambda _df: _df.select([x for x in _df.columns if len(x) == 1]))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               a
+            0  1
+            1  2
+            2  3
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+        """
+        return super().pipe(function, *args, **kwargs)
+
+    def drop_nulls(self) -> Self:
+        """
+        Drop null values.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1., 2., None], 'ba': [1, None, 2.]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.drop_nulls()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+                 a   ba
+            0  1.0  1.0
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ ba  │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 1.0 │
+            └─────┴─────┘
+        """
+        return super().drop_nulls()
+
+    def with_row_index(self, name: str = "index") -> Self:
+        """
+        Insert column which enumerates rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1,2,3], 'b': [4,5,6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_row_index()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               index  a  b
+            0      0  1  4
+            1      1  2  5
+            2      2  3  6
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌───────┬─────┬─────┐
+            │ index ┆ a   ┆ b   │
+            │ ---   ┆ --- ┆ --- │
+            │ u32   ┆ i64 ┆ i64 │
+            ╞═══════╪═════╪═════╡
+            │ 0     ┆ 1   ┆ 4   │
+            │ 1     ┆ 2   ┆ 5   │
+            │ 2     ┆ 3   ┆ 6   │
+            └───────┴─────┴─────┘
+        """
+        return super().with_row_index(name)
+
     @property
     def schema(self) -> dict[str, DType]:
         r"""
@@ -1210,6 +1372,194 @@ class DataFrame(BaseFrame):
         """
         return super().join(other, how=how, left_on=left_on, right_on=right_on)
 
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> Series:
+        r"""
+        Get a mask of all duplicated rows in this DataFrame.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     duplicated = df.is_duplicated()
+            ...     return nw.to_native(duplicated)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0     True
+            1    False
+            2    False
+            3     True
+            dtype: bool
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                true
+                false
+                false
+                true
+            ]
+        """
+        from narwhals.series import Series
+
+        return Series(self._dataframe.is_duplicated())
+
+    def is_empty(self: Self) -> bool:
+        r"""
+        Check if the dataframe is empty.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            Let's define a dataframe-agnostic function that filters rows in which "foo"
+            values are greater than 10, and then checks if the result is empty or not:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.filter(nw.col("foo")>10).is_empty()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> df_pd = pd.DataFrame({"foo": [1, 2, 3], "bar": [4, 5, 6]})
+            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3], "bar": [4, 5, 6]})
+            >>> func(df_pd), func(df_pl)
+            (True, True)
+
+            >>> df_pd = pd.DataFrame({"foo": [100, 2, 3], "bar": [4, 5, 6]})
+            >>> df_pl = pl.DataFrame({"foo": [100, 2, 3], "bar": [4, 5, 6]})
+            >>> func(df_pd), func(df_pl)
+            (False, False)
+        """
+
+        return self._dataframe.is_empty()  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> Series:
+        r"""
+        Get a mask of all unique rows in this DataFrame.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 1],
+            ...         "b": ["x", "y", "z", "x"],
+            ...     }
+            ... )
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     unique = df.is_unique()
+            ...     return nw.to_native(unique)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0    False
+            1     True
+            2     True
+            3    False
+            dtype: bool
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                false
+                 true
+                 true
+                false
+            ]
+        """
+        from narwhals.series import Series
+
+        return Series(self._dataframe.is_unique())
+
+    def null_count(self: Self) -> DataFrame:
+        r"""
+        Create a new DataFrame that shows the null counts per column.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "foo": [1, None, 3],
+            ...         "bar": [6, 7, None],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, None, 3],
+            ...         "bar": [6, 7, None],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+
+            Let's define a dataframe-agnostic function that returns the null count of
+            each columns:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     null_counts = df.null_count()
+            ...     return nw.to_native(null_counts)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar  ham
+            0    1    1    0
+
+            >>> func(df_pl)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ u32 ┆ u32 ┆ u32 │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 1   ┆ 0   │
+            └─────┴─────┴─────┘
+        """
+
+        return DataFrame(self._dataframe.null_count())
+
 
 class LazyFrame(BaseFrame):
     r"""
@@ -1296,6 +1646,9 @@ class LazyFrame(BaseFrame):
             + "┘"
         )
 
+    def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
+        raise TypeError("Slicing is not supported on LazyFrame")
+
     def collect(self) -> DataFrame:
         r"""
         Materialize this LazyFrame into a DataFrame.
@@ -1342,6 +1695,126 @@ class LazyFrame(BaseFrame):
         )
 
     # inherited
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        """
+        Pipe function call.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1,2,3], 'ba': [4,5,6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.pipe(lambda _df: _df.select([x for x in _df.columns if len(x) == 1]))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               a
+            0  1
+            1  2
+            2  3
+            >>> func(df_pl).collect()
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+        """
+        return super().pipe(function, *args, **kwargs)
+
+    def drop_nulls(self) -> Self:
+        """
+        Drop null values.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1., 2., None], 'ba': [1, None, 2.]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.drop_nulls()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+                 a   ba
+            0  1.0  1.0
+            >>> func(df_pl).collect()
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ ba  │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 1.0 │
+            └─────┴─────┘
+        """
+        return super().drop_nulls()
+
+    def with_row_index(self, name: str = "index") -> Self:
+        """
+        Insert column which enumerates rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {'a': [1,2,3], 'b': [4,5,6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_row_index()
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars:
+
+            >>> func(df_pd)
+               index  a  b
+            0      0  1  4
+            1      1  2  5
+            2      2  3  6
+            >>> func(df_pl).collect()
+            shape: (3, 3)
+            ┌───────┬─────┬─────┐
+            │ index ┆ a   ┆ b   │
+            │ ---   ┆ --- ┆ --- │
+            │ u32   ┆ i64 ┆ i64 │
+            ╞═══════╪═════╪═════╡
+            │ 0     ┆ 1   ┆ 4   │
+            │ 1     ┆ 2   ┆ 5   │
+            │ 2     ┆ 3   ┆ 6   │
+            └───────┴─────┴─────┘
+        """
+        return super().with_row_index(name)
+
     @property
     def schema(self) -> dict[str, DType]:
         r"""

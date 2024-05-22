@@ -61,6 +61,18 @@ def test_is_in(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 @pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
+def test_is_in_other(df_raw: Any) -> None:
+    with pytest.raises(
+        NotImplementedError,
+        match=(
+            "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
+        ),
+    ):
+        nw.from_native(df_raw).with_columns(contains=nw.col("c").is_in("sets"))
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_filter(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
     expected = np.array([3, 2])
@@ -200,6 +212,8 @@ def test_cast() -> None:
             "k": [1],
             "l": [1],
             "m": [True],
+            "n": [True],
+            "o": ["a"],
         },
         schema={
             "a": pl.Int64,
@@ -215,6 +229,8 @@ def test_cast() -> None:
             "k": pl.String,
             "l": pl.Datetime,
             "m": pl.Boolean,
+            "n": pl.Boolean,
+            "o": pl.Categorical,
         },
     )
     df = nw.DataFrame(df_raw).select(
@@ -231,7 +247,8 @@ def test_cast() -> None:
         nw.col("k").cast(nw.String),
         nw.col("l").cast(nw.Datetime),
         nw.col("m").cast(nw.Int8),
-        n=nw.col("m").cast(nw.Boolean),
+        nw.col("n").cast(nw.Int8),
+        nw.col("o").cast(nw.String),
     )
     result = df.schema
     expected = {
@@ -248,7 +265,8 @@ def test_cast() -> None:
         "k": nw.String,
         "l": nw.Datetime,
         "m": nw.Int8,
-        "n": nw.Boolean,
+        "n": nw.Int8,
+        "o": nw.String,
     }
     assert result == expected
     result_pd = nw.DataFrame(df.to_pandas()).schema
@@ -267,7 +285,8 @@ def test_cast() -> None:
         df["k"].cast(nw.String),
         df["l"].cast(nw.Datetime),
         df["m"].cast(nw.Int8),
-        n=df["m"].cast(nw.Boolean),
+        df["n"].cast(nw.Boolean),
+        df["o"].cast(nw.Categorical),
     ).schema
     expected = {
         "a": nw.Int32,
@@ -284,6 +303,7 @@ def test_cast() -> None:
         "l": nw.Datetime,
         "m": nw.Int8,
         "n": nw.Boolean,
+        "o": nw.Categorical,
     }
     df = nw.from_native(df.to_pandas())  # type: ignore[assignment]
     result_pd = df.select(
@@ -300,7 +320,8 @@ def test_cast() -> None:
         df["k"].cast(nw.String),
         df["l"].cast(nw.Datetime),
         df["m"].cast(nw.Int8),
-        n=df["m"].cast(nw.Boolean),
+        df["n"].cast(nw.Boolean),
+        df["o"].cast(nw.Categorical),
     ).schema
     assert result == expected
 
@@ -312,3 +333,86 @@ def test_to_numpy() -> None:
     result = nw.Series(s).__array__()
     assert result.dtype == "float64"
     assert nw.Series(s).shape == (3,)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_duplicated(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.is_duplicated()
+    expected = np.array([True, True, False])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])
+def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
+    series = nw.Series(df_raw["a"])
+    result = series.filter(series > threshold).is_empty()
+    assert result == expected
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_unique(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.is_unique()
+    expected = np.array([False, False, True])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("s_raw", [pd.Series([1, 2, None]), pl.Series([1, 2, None])])
+def test_null_count(s_raw: Any) -> None:
+    series = nw.Series(s_raw)
+    result = series.null_count()
+    assert result == 1
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_first_distinct(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.is_first_distinct()
+    expected = np.array([True, False, True])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_last_distinct(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    result = series.is_last_distinct()
+    expected = np.array([False, True, True])
+    assert (result.to_numpy() == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_value_counts(df_raw: Any) -> None:
+    series = nw.Series(df_raw["b"])
+    sorted_result = series.value_counts(sort=True)
+    assert sorted_result.columns == ["b", "count"]
+
+    expected = np.array([[4, 2], [6, 1]])
+    assert (sorted_result.to_numpy() == expected).all()
+
+    unsorted_result = series.value_counts(sort=False)
+    assert unsorted_result.columns == ["b", "count"]
+
+    a = unsorted_result.to_numpy()
+
+    assert (a[a[:, 0].argsort()] == expected).all()
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    ("col", "descending", "expected"),
+    [("a", False, False), ("z", False, True), ("z", True, False)],
+)
+def test_is_sorted(df_raw: Any, col: str, descending: bool, expected: bool) -> None:  # noqa: FBT001
+    series = nw.Series(df_raw[col])
+    result = series.is_sorted(descending=descending)
+    assert result == expected
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_is_sorted_invalid(df_raw: Any) -> None:
+    series = nw.Series(df_raw["z"])
+
+    with pytest.raises(TypeError):
+        series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]

@@ -27,7 +27,9 @@ Seamlessly support all, without depending on any!
 
 Join the party!
 
-- https://github.com/FBruzzesi/timebasedcv
+- [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+- [scikit-lego](https://github.com/koaning/scikit-lego) (work-in-progress, in `narwhals-development` branch)
+- [scikit-playtime](https://github.com/koaning/scikit-playtime)
 
 ## Installation
 
@@ -42,7 +44,7 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
 1. use `narwhals.from_native` to wrap a pandas/Polars/Modin/cuDF
    DataFrame/LazyFrame in a Narwhals class
-2. use the [subset of the Polars API supported by Narwhals](https://marcogorelli.github.io/narwhals/api-reference/narwhals/)
+2. use the [subset of the Polars API supported by Narwhals](https://narwhals-dev.github.io/narwhals/api-reference/)
 3. use `narwhals.to_native` to return an object to the user in its original
    dataframe flavour. For example:
 
