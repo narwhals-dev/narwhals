@@ -851,9 +851,11 @@ class Expr:
                 "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
             )
 
-    def filter(self, other: Any) -> Expr:
+    def filter(self, *predicates: Any) -> Expr:
         return self.__class__(
-            lambda plx: self._call(plx).filter(extract_native(plx, other))
+            lambda plx: self._call(plx).filter(
+                *[extract_native(plx, pred) for pred in flatten(predicates)]
+            )
         )
 
     def is_null(self) -> Expr:
