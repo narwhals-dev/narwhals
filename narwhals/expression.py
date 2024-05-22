@@ -894,6 +894,44 @@ class Expr:
             )
 
     def filter(self, *predicates: Any) -> Expr:
+        """
+        Filters elements based on a condition, returning a new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
+            >>> df_pl = pl.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
+
+            Let's define a dataframe-agnostic function:
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(
+            ...             nw.col("a").filter(nw.col("a") > 4),
+            ...             nw.col("b").filter(nw.col("b") > 12)
+            ...             )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a   b
+            3  5  13
+            4  6  14
+            5  7  15
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 5   ┆ 13  │
+            │ 6   ┆ 14  │
+            │ 7   ┆ 15  │
+            └─────┴─────┘
+        """
         return self.__class__(
             lambda plx: self._call(plx).filter(
                 *[extract_native(plx, pred) for pred in flatten(predicates)]
