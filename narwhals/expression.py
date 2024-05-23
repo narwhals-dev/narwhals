@@ -909,7 +909,7 @@ class Expr:
             ...     df = nw.from_native(df_any)
             ...     df = df.select(
             ...             nw.col("a").filter(nw.col("a") > 4),
-            ...             nw.col("b").filter(nw.col("b") > 12)
+            ...             nw.col("b").filter(nw.col("b") < 13)
             ...             )
             ...     return nw.to_native(df)
 
@@ -917,9 +917,9 @@ class Expr:
 
             >>> func(df_pd)
                a   b
-            3  5  13
-            4  6  14
-            5  7  15
+            3  5  10
+            4  6  11
+            5  7  12
             >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
@@ -927,9 +927,9 @@ class Expr:
             │ --- ┆ --- │
             │ i64 ┆ i64 │
             ╞═════╪═════╡
-            │ 5   ┆ 13  │
-            │ 6   ┆ 14  │
-            │ 7   ┆ 15  │
+            │ 5   ┆ 10  │
+            │ 6   ┆ 11  │
+            │ 7   ┆ 12  │
             └─────┴─────┘
         """
         return self.__class__(
