@@ -844,11 +844,60 @@ class Expr:
         )
 
     def is_in(self, other: Any) -> Expr:
-        return self.__class__(lambda plx: self._call(plx).is_in(other))
+        """
+        Check if elements of this expression are present in the other iterable.
 
-    def filter(self, other: Any) -> Expr:
+        Arguments:
+            other: iterable
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2, 9, 10]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2, 9, 10]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...    df = nw.from_native(df_any)
+            ...    df = df.with_columns(b = nw.col('a').is_in([1, 2]))
+            ...    return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                a      b
+            0   1   True
+            1   2   True
+            2   9  False
+            3  10  False
+
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌─────┬───────┐
+            │ a   ┆ b     │
+            │ --- ┆ ---   │
+            │ i64 ┆ bool  │
+            ╞═════╪═══════╡
+            │ 1   ┆ true  │
+            │ 2   ┆ true  │
+            │ 9   ┆ false │
+            │ 10  ┆ false │
+            └─────┴───────┘
+        """
+        if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            return self.__class__(lambda plx: self._call(plx).is_in(other))
+        else:
+            raise NotImplementedError(
+                "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
+            )
+
+    def filter(self, *predicates: Any) -> Expr:
         return self.__class__(
-            lambda plx: self._call(plx).filter(extract_native(plx, other))
+            lambda plx: self._call(plx).filter(
+                *[extract_native(plx, pred) for pred in flatten(predicates)]
+            )
         )
 
     def is_null(self) -> Expr:

@@ -468,6 +468,42 @@ class Series:
         return self._series.std(ddof=ddof)
 
     def is_in(self, other: Any) -> Self:
+        """
+        Check if the elements of this Series are in the other sequence.
+
+        Arguments:
+            other: Sequence of primitive type.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3])
+            >>> s_pl = pl.Series([1, 2, 3])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.is_in([3, 2, 8])
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1     True
+            2     True
+            dtype: boolean
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+               false
+               true
+               true
+            ]
+        """
         return self._from_series(self._series.is_in(self._extract_native(other)))
 
     def drop_nulls(self) -> Self:
@@ -1061,6 +1097,40 @@ class Series:
         return self._from_series(self._series.__invert__())
 
     def filter(self, other: Any) -> Series:
+        """
+        Filter elements in the Series based on a condition.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [4, 10, 15, 34, 50]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.filter(s > 10)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            2    15
+            3    34
+            4    50
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               15
+               34
+               50
+            ]
+        """
         return self._from_series(self._series.filter(self._extract_native(other)))
 
     # --- descriptive ---
