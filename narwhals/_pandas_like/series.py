@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -166,14 +165,7 @@ class PandasSeries:
         import pandas as pd
 
         ser = self._series
-        with warnings.catch_warnings():
-            # np.find_common_type is deprecated.  Please use `np.result_type` or `np.promote_types`
-            warnings.filterwarnings(
-                "ignore",
-                message="np.find_common_type is deprecated.*",
-                category=DeprecationWarning,
-            )
-            res = ser.isin(other).convert_dtypes()
+        res = ser.isin(other)
         res[ser.isna()] = pd.NA
         return self._from_series(res)
 

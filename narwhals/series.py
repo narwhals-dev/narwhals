@@ -494,7 +494,7 @@ class Series:
             0    False
             1     True
             2     True
-            dtype: boolean
+            dtype: bool
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
