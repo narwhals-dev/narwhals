@@ -733,6 +733,54 @@ class Series:
         *,
         with_replacement: bool = False,
     ) -> Self:
+        """
+        Sample randomly from this Series.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+
+            fraction: Fraction of items to return. Cannot be used with n.
+
+            with_replacement: Allow values to be sampled more than once.
+
+        Notes:
+            The `sample` method returns a Series with a specified number of
+            randomly selected items chosen from this Series.
+            The results are not consistent across libraries.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            >>> s_pd = pd.Series([1, 2, 3, 4])
+            >>> s_pl = pl.Series([1, 2, 3, 4])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.sample(fraction=1.0, with_replacement=True)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+               a
+            2  3
+            1  2
+            3  4
+            3  4
+            >>> func(s_pl)  # doctest:+SKIP
+            shape: (4,)
+            Series: '' [i64]
+            [
+               1
+               4
+               3
+               4
+            ]
+        """
         return self._from_series(
             self._series.sample(n=n, fraction=fraction, with_replacement=with_replacement)
         )
