@@ -1851,6 +1851,110 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
 
+    def millisecond(self) -> Expr:
+        """
+        Extract milliseconds from underlying DateTime representation.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2024, 10, 13, 5, 30, 14, 505000),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.second().alias("second"),
+            ...         nw.col("datetime").dt.millisecond().alias("millisecond")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                             datetime  hour  minute  second  millisecond
+            0 1978-01-01 01:01:01.000     1       1       1            0
+            1 2024-10-13 05:30:14.505     5      30      14          505
+            2 2065-01-01 10:20:30.067    10      20      30           67
+            >>> func(df_pl)
+            shape: (3, 5)
+            ┌─────────────────────────┬──────┬────────┬────────┬─────────────┐
+            │ datetime                ┆ hour ┆ minute ┆ second ┆ millisecond │
+            │ ---                     ┆ ---  ┆ ---    ┆ ---    ┆ ---         │
+            │ datetime[μs]            ┆ i8   ┆ i8     ┆ i8     ┆ i32         │
+            ╞═════════════════════════╪══════╪════════╪════════╪═════════════╡
+            │ 1978-01-01 01:01:01     ┆ 1    ┆ 1      ┆ 1      ┆ 0           │
+            │ 2024-10-13 05:30:14.505 ┆ 5    ┆ 30     ┆ 14     ┆ 505         │
+            │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67          │
+            └─────────────────────────┴──────┴────────┴────────┴─────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
+
+    def microsecond(self) -> Expr:
+        """
+        Extract microseconds from underlying DateTime representation.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2024, 10, 13, 5, 30, 14, 505000),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.second().alias("second"),
+            ...         nw.col("datetime").dt.microsecond().alias("microsecond")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                             datetime  hour  minute  second  microsecond
+            0 1978-01-01 01:01:01.000     1       1       1            0
+            1 2024-10-13 05:30:14.505     5      30      14       505000
+            2 2065-01-01 10:20:30.067    10      20      30        67000
+            >>> func(df_pl)
+            shape: (3, 5)
+            ┌─────────────────────────┬──────┬────────┬────────┬─────────────┐
+            │ datetime                ┆ hour ┆ minute ┆ second ┆ microsecond │
+            │ ---                     ┆ ---  ┆ ---    ┆ ---    ┆ ---         │
+            │ datetime[μs]            ┆ i8   ┆ i8     ┆ i8     ┆ i32         │
+            ╞═════════════════════════╪══════╪════════╪════════╪═════════════╡
+            │ 1978-01-01 01:01:01     ┆ 1    ┆ 1      ┆ 1      ┆ 0           │
+            │ 2024-10-13 05:30:14.505 ┆ 5    ┆ 30     ┆ 14     ┆ 505000      │
+            │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67000       │
+            └─────────────────────────┴──────┴────────┴────────┴─────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
+
     def ordinal_day(self) -> Expr:
         """
         Get ordinal day.
