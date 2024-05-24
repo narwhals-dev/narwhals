@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import warnings
 from typing import Any
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -694,7 +695,9 @@ def test_null_count(df_raw: Any) -> None:
     ],
 )
 def test_quantile(
-    df_raw: Any, interpolation: str, expected: dict[str, list[float]]
+    df_raw: Any,
+    interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    expected: dict[str, list[float]],
 ) -> None:
     q = 0.3
 
