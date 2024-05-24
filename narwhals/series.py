@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
@@ -1436,7 +1437,11 @@ class Series:
 
         return DataFrame(self._series.value_counts(sort=sort, parallel=parallel))
 
-    def quantile(self, quantile: float, interpolation: str = "nearest") -> float | None:
+    def quantile(
+        self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> float | None:
         """
         Get quantile value of the series
 
@@ -1458,7 +1463,10 @@ class Series:
 
             >>> def func(s_any):
             ...     series = nw.from_native(s_any, allow_series=True)
-            ...     return [series.quantile(q) for q in (0.1, 0.25, 0.5, 0.75, 0.9)]
+            ...     return [
+            ...         series.quantile(quantile=q, interpolation='nearest')
+            ...         for q in (0.1, 0.25, 0.5, 0.75, 0.9)
+            ...         ]
 
             We can then pass either pandas or Polars to `func`:
 

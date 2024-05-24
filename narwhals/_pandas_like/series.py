@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 from typing import Sequence
 
 from narwhals._pandas_like.utils import item
@@ -476,7 +477,9 @@ class PandasSeries:
         )
 
     def quantile(
-        self: Self, quantile: float, interpolation: str = "nearest"
+        self: Self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> float | None:
         return self._series.quantile(q=quantile, interpolation=interpolation)  # type: ignore[no-any-return]
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import math
 from typing import Any
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -430,33 +430,14 @@ def test_is_sorted_invalid(df_raw: Any) -> None:
         ("nearest", 8.0),
     ],
 )
-def test_quantile(df_raw: Any, interpolation: str, expected: float) -> None:
+def test_quantile(
+    df_raw: Any,
+    interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    expected: float,
+) -> None:
     q = 0.3
 
     series = nw.from_native(df_raw["z"], allow_series=True)
     result = series.quantile(quantile=q, interpolation=interpolation)  # type: ignore[union-attr]
 
     assert result == expected
-
-
-def test_regression_quantile_interpolation_default() -> None:
-    """We are currently using the same default of polars for interpolation value.
-    However, there is the risk that this is going to change in the future (see
-    https://github.com/narwhals-dev/narwhals/issues/203).
-
-    This test aims to check if that's the case by running `.quantile(...)` with polars
-    and narwhals default interpolation values.
-
-    The data use are fabbricated in such a way that for each interpolation method we
-    obtain a different result for `quantile=0.3`. Namely we should get:
-
-    - lower 1.0
-    - higher 2.0
-    - midpoint 1.5
-    - linear 1.7999999999999998
-    - nearest 2.0
-    """
-    series = pl.Series([1, 1, 2, 3, 3, 4, 5])
-    q_pl: float = series.quantile(quantile=0.3)  # type: ignore[assignment]
-    q_nw: float = nw.from_native(series, series_only=True).quantile(quantile=0.3)  # type: ignore[assignment]
-    assert math.isclose(q_pl, q_nw)

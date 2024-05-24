@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Literal
 
 from narwhals.dependencies import get_polars
 from narwhals.dtypes import translate_dtype
@@ -1417,7 +1418,11 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).is_last_distinct())
 
-    def quantile(self, quantile: float, interpolation: str = "nearest") -> Expr:
+    def quantile(
+        self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Expr:
         r"""Get quantile value.
 
         Arguments:
@@ -1438,7 +1443,7 @@ class Expr:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     result = df.select(nw.col("a", "b").quantile(0.5))
+            ...     result = df.select(nw.col("a", "b").quantile(0.5, interpolation="nearest"))
             ...     return nw.to_native(result)
 
             We can then pass either pandas or Polars to `func`:
