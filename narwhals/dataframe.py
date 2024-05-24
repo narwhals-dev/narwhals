@@ -307,7 +307,7 @@ class DataFrame(BaseFrame):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df = {"foo": [1, 2, 3], "bar": [6.5, 7.0, 8.5], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
 
