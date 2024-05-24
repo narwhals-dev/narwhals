@@ -41,21 +41,6 @@ class PandasNamespace:
     def selectors(self) -> PandasSelector:
         return PandasSelector(self._implementation)
 
-    def _make_native_series(self, name: str, data: list[Any], index: Any) -> Any:
-        if self._implementation == "pandas":
-            import pandas as pd
-
-            return pd.Series(name=name, data=data, index=index)
-        if self._implementation == "modin":  # pragma: no cover
-            import modin.pandas as mpd
-
-            return mpd.Series(name=name, data=data, index=index)
-        if self._implementation == "cudf":  # pragma: no cover
-            import cudf
-
-            return cudf.Series(name=name, data=data, index=index)
-        raise NotImplementedError  # pragma: no cover
-
     # --- not in spec ---
     def __init__(self, implementation: str) -> None:
         self._implementation = implementation
