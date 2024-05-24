@@ -450,47 +450,47 @@ class DataFrame(BaseFrame):
             {'A': shape: (5,)
             Series: 'A' [i64]
             [
-               1
-               2
-               3
-               4
-               5
+                1
+                2
+                3
+                4
+                5
             ],
             'fruits': shape: (5,)
             Series: 'fruits' [str]
             [
-               "banana"
-               "banana"
-               "apple"
-               "apple"
-               "banana"
+                "banana"
+                "banana"
+                "apple"
+                "apple"
+                "banana"
             ],
             'B': shape: (5,)
             Series: 'B' [i64]
             [
-               5
-               4
-               3
-               2
-               1
+                5
+                4
+                3
+                2
+                1
             ],
             'cars': shape: (5,)
             Series: 'cars' [str]
             [
-               "beetle"
-               "audi"
-               "beetle"
-               "beetle"
-               "beetle"
+                "beetle"
+                "audi"
+                "beetle"
+                "beetle"
+                "beetle"
             ],
             'optional': shape: (5,)
             Series: 'optional' [i64]
             [
-               28
-               300
-               null
-               2
-               -30
+                28
+                300
+                null
+                2
+                -30
             ]}
             >>> func(df_pl, as_series=False)
             {'A': [1, 2, 3, 4, 5],
