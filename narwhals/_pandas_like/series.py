@@ -475,6 +475,11 @@ class PandasSeries:
             implementation=self._implementation,
         )
 
+    def quantile(
+        self: Self, quantile: float, interpolation: str = "nearest"
+    ) -> float | None:
+        return self._series.quantile(q=quantile, interpolation=interpolation)  # type: ignore[no-any-return]
+
     @property
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)

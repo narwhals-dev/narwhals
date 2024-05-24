@@ -26,11 +26,12 @@
         - null_count
         - n_unique
         - over
-        - unique
+        - quantile
         - sample
         - shift
         - sort
         - std
         - sum
+        - unique
       show_source: false
       show_bases: false

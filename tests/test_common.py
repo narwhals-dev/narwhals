@@ -680,3 +680,26 @@ def test_null_count(df_raw: Any) -> None:
     result = nw.to_native(df.null_count())
     expected = {"a": [1], "b": [0], "z": [1]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    ("interpolation", "expected"),
+    [
+        ("lower", {"a": [1.0], "b": [4.0], "z": [7.0]}),
+        ("higher", {"a": [2.0], "b": [4.0], "z": [8.0]}),
+        ("midpoint", {"a": [1.5], "b": [4.0], "z": [7.5]}),
+        ("linear", {"a": [1.6], "b": [4.0], "z": [7.6]}),
+        ("nearest", {"a": [2.0], "b": [4.0], "z": [8.0]}),
+    ],
+)
+def test_quantile(
+    df_raw: Any, interpolation: str, expected: dict[str, list[float]]
+) -> None:
+    q = 0.3
+
+    df = nw.from_native(df_raw)
+    result = nw.to_native(
+        df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
+    )
+    compare_dicts(result, expected)

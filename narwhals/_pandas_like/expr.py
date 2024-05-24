@@ -272,6 +272,9 @@ class PandasExpr:
     def is_last_distinct(self) -> Self:
         return register_expression_call(self, "is_last_distinct")
 
+    def quantile(self, quantile: float, interpolation: str = "nearest") -> Self:
+        return register_expression_call(self, "quantile", quantile, interpolation)
+
     @property
     def str(self) -> PandasExprStringNamespace:
         return PandasExprStringNamespace(self)

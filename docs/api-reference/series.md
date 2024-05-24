@@ -29,6 +29,7 @@
         - name
         - null_count
         - n_unique
+        - quantile
         - sample
         - shape
         - shift

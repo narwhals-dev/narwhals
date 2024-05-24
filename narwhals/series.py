@@ -1436,6 +1436,40 @@ class Series:
 
         return DataFrame(self._series.value_counts(sort=sort, parallel=parallel))
 
+    def quantile(self, quantile: float, interpolation: str = "nearest") -> float | None:
+        """
+        Get quantile value of the series
+
+        Arguments:
+            quantile : float
+                Quantile between 0.0 and 1.0.
+            interpolation : {'nearest', 'higher', 'lower', 'midpoint', 'linear'}
+                Interpolation method.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = list(range(50))
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     return [series.quantile(q) for q in (0.1, 0.25, 0.5, 0.75, 0.9)]
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            [5, 12, 24, 37, 44]
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            [5.0, 12.0, 25.0, 37.0, 44.0]
+        """
+        return self._series.quantile(quantile=quantile, interpolation=interpolation)  # type: ignore[no-any-return]
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
