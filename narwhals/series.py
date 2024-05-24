@@ -67,9 +67,7 @@ class Series:
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
-            import polars as pl
-
-            return pl
+            return get_polars()
         return self._series.__narwhals_namespace__()
 
     @property
