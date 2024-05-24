@@ -1004,11 +1004,11 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
-            0  False
-            1  False
-            2   True
-            3   True
-            4  False
+            0    False
+            1    False
+            2     True
+            3     True
+            4    False
             dtype: bool
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (5,)
