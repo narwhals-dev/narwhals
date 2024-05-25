@@ -1482,6 +1482,55 @@ class Series:
 
         return DataFrame(self._series.value_counts(sort=sort, parallel=parallel))
 
+    def zip_with(self, mask: Any, other: Any) -> Self:
+        """
+        Take values from self or other based on the given mask. Where mask evaluates true, take values from self. Where mask evaluates false, take values from other.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s1_pl = pl.Series([1, 2, 3, 4, 5])
+            >>> s2_pl = pl.Series([5, 4, 3, 2, 1])
+            >>> mask_pl = pl.Series([True, False, True, False, True])
+            >>> s1_pd = pd.Series([1, 2, 3, 4, 5])
+            >>> s2_pd = pd.Series([5, 4, 3, 2, 1])
+            >>> mask_pd = pd.Series([True, False, True, False, True])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s1_any, mask_any, s2_any):
+            ...     s1 = nw.from_native(s1_any, allow_series=True)
+            ...     mask = nw.from_native(mask_any, series_only=True)
+            ...     s2 = nw.from_native(s2_any, series_only=True)
+            ...     s = s1.zip_with(mask, s2)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s1_pl, mask_pl, s2_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [i64]
+            [
+               1
+               4
+               3
+               2
+               5
+            ]
+            >>> func(s1_pd, mask_pd, s2_pd)
+            0    1
+            1    4
+            2    3
+            3    2
+            4    5
+            dtype: int64
+        """
+
+        return self._from_series(
+            self._series.zip_with(self._extract_native(mask), self._extract_native(other))
+        )
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)

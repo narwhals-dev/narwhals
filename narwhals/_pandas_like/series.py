@@ -473,6 +473,11 @@ class PandasSeries:
             implementation=self._implementation,
         )
 
+    def zip_with(self: Self, mask: Any, other: Any) -> PandasSeries:
+        ser = self._series
+        res = ser.where(mask._series, other._series)
+        return self._from_series(res)
+
     @property
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)
