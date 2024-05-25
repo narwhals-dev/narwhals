@@ -393,8 +393,8 @@ class DataFrame(BaseFrame):
         Convert DataFrame to a dictionary mapping column name to values.
 
         Arguments:
-            as_series: If set to true ``True`` values are Series, otherwise
-                        values are Any.
+            as_series: If set to true ``True``, then the values are Narwhals Series,
+                        otherwise the values are Any.
 
         Examples:
             >>> import polars as pl
@@ -429,49 +429,15 @@ class DataFrame(BaseFrame):
             └─────┴────────┴─────┴────────┴──────────┘
             >>> df.to_dict(as_series=False)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
-            >>> df.to_dict(as_series=True) # doctest: +SKIP
-            {'A': shape: (5,)
-            Series: 'A' [i64]
-            [
-                1
-                2
-                3
-                4
-                5
-            ], 'fruits': shape: (5,)
-            Series: 'fruits' [str]
-            [
-                "banana"
-                "banana"
-                "apple"
-                "apple"
-                "banana"
-            ], 'B': shape: (5,)
-            Series: 'B' [i64]
-            [
-                5
-                4
-                3
-                2
-                1
-            ], 'cars': shape: (5,)
-            Series: 'cars' [str]
-            [
-                "beetle"
-                "audi"
-                "beetle"
-                "beetle"
-                "beetle"
-            ], 'optional': shape: (5,)
-            Series: 'optional' [i64]
-            [
-                28
-                300
-                null
-                2
-                -30
-            ]}
         """
+        from narwhals.series import Series
+
+        if as_series:
+            return {
+                key: Series(value)
+                for key, value in self._dataframe.to_dict(as_series=as_series).items()
+            }
+        # TODO: overload return type
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
