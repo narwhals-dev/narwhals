@@ -157,7 +157,7 @@ def agg_pandas(  # noqa: PLR0913
 
         if parse_version(pd.__version__) < parse_version("2.2.0"):  # pragma: no cover
             result_complex = grouped.apply(func)
-        else:  # pragma: no cover
+        else:
             result_complex = grouped.apply(func, include_groups=False)
     else:  # pragma: no cover
         result_complex = grouped.apply(func)
