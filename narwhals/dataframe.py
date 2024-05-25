@@ -383,8 +383,8 @@ class DataFrame(BaseFrame):
         Convert DataFrame to a dictionary mapping column name to values.
 
         Arguments:
-            as_series: If set to true ``True`` values are Series, otherwise
-                       values are Any.
+            as_series: If set to true ``True``, then the values are Narwhals Series,
+                        otherwise the values are Any.
 
         Examples:
             >>> import pandas as pd
@@ -402,103 +402,34 @@ class DataFrame(BaseFrame):
 
             We define a library agnostic function:
 
-            >>> def func(df_any, as_series=True):
+            >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.to_dict(as_series=as_series)
+            ...     df = df.to_dict(as_series=False)
             ...     return df
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-            {'A': 0    1
-            1    2
-            2    3
-            3    4
-            4    5
-            Name: A, dtype: int64,
-            'fruits': 0    banana
-            1    banana
-            2     apple
-            3     apple
-            4    banana
-            Name: fruits, dtype: object,
-            'B': 0    5
-            1    4
-            2    3
-            3    2
-            4    1
-            Name: B, dtype: int64,
-            'cars': 0    beetle
-            1      audi
-            2    beetle
-            3    beetle
-            4    beetle
-            Name: cars, dtype: object,
-            'optional': 0     28.0
-            1    300.0
-            2      NaN
-            3      2.0
-            4    -30.0
-            Name: optional, dtype: float64}
-            >>> func(df_pd, as_series=False)
             {'A': [1, 2, 3, 4, 5],
             'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'],
             'B': [5, 4, 3, 2, 1],
             'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'],
             'optional': [28.0, 300.0, nan, 2.0, -30.0]}
             >>> func(df_pl)
-            {'A': shape: (5,)
-            Series: 'A' [i64]
-            [
-                1
-                2
-                3
-                4
-                5
-            ],
-            'fruits': shape: (5,)
-            Series: 'fruits' [str]
-            [
-                "banana"
-                "banana"
-                "apple"
-                "apple"
-                "banana"
-            ],
-            'B': shape: (5,)
-            Series: 'B' [i64]
-            [
-                5
-                4
-                3
-                2
-                1
-            ],
-            'cars': shape: (5,)
-            Series: 'cars' [str]
-            [
-                "beetle"
-                "audi"
-                "beetle"
-                "beetle"
-                "beetle"
-            ],
-            'optional': shape: (5,)
-            Series: 'optional' [i64]
-            [
-                28
-                300
-                null
-                2
-                -30
-            ]}
-            >>> func(df_pl, as_series=False)
             {'A': [1, 2, 3, 4, 5],
             'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'],
             'B': [5, 4, 3, 2, 1],
             'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'],
             'optional': [28, 300, None, 2, -30]}
         """
+        from narwhals.series import Series
+
+        if as_series:
+            return {
+                key: Series(value)
+                for key, value in self._dataframe.to_dict(as_series=as_series).items()
+            }
+        # TODO: overload return type
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
