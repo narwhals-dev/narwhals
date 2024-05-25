@@ -23,11 +23,11 @@ The projects are not in competition and have different goals.
 [Presents itself as a dataframe standard](https://voltrondata.com/resources/open-source-standards), and
 dispatches to 20+ backends. Some differences with Narwhals are:
 
-- Narwhals is ~1000 times lighter
+- Narwhals is ~1000 times lighter and is aimed at library maintainers as opposed to end users
 - Narwhals only supports 4 backends, Ibis more than 20
-- Narwhals is limited to fundamental dataframe operations, Ibis includes more advanced and niche ones.
+- Narwhals is focused on fundamental dataframe operations, Ibis on SQL backends
 
-Again, the projects are not in competition and have different goals.
+The projects are not in competition and have different goals.
 
 ## Array API
 

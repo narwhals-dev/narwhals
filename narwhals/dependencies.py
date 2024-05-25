@@ -7,32 +7,32 @@ from typing import Any
 
 
 def get_polars() -> Any:
-    """Import Polars (if available - else return None)."""
+    """Get Polars module (if already imported - else return None)."""
     return sys.modules.get("polars", None)
 
 
 def get_pandas() -> Any:
-    """Import pandas (if available - else return None)."""
+    """Get pandas module (if already imported - else return None)."""
     return sys.modules.get("pandas", None)
 
 
 def get_modin() -> Any:  # pragma: no cover
-    """Import modin (if available - else return None)."""
+    """Get modin.pandas module (if already imported - else return None)."""
     if (modin := sys.modules.get("modin", None)) is not None:
         return modin.pandas
     return None
 
 
 def get_cudf() -> Any:
-    """Import cudf (if available - else return None)."""
+    """Get cudf module (if already imported - else return None)."""
     return sys.modules.get("cudf", None)
 
 
 def get_pyarrow() -> Any:
-    """Import pyarrow (if available - else return None)."""
+    """Get pyarrow module (if already imported - else return None)."""
     return sys.modules.get("pyarrow", None)
 
 
 def get_numpy() -> Any:
-    """Import numpy (if available - else return None)."""
+    """Get numpy module (if already imported - else return None)."""
     return sys.modules.get("numpy", None)

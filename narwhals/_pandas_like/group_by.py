@@ -12,6 +12,8 @@ from typing import Iterator
 from narwhals._pandas_like.utils import is_simple_aggregation
 from narwhals._pandas_like.utils import item
 from narwhals._pandas_like.utils import parse_into_exprs
+from narwhals._pandas_like.utils import series_from_iterable
+from narwhals.dependencies import get_pandas
 from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
@@ -88,9 +90,7 @@ def agg_pandas(  # noqa: PLR0913
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
     """
-    import pandas as pd
-
-    from narwhals._pandas_like.namespace import PandasNamespace
+    pd = get_pandas()
 
     all_simple_aggs = True
     for expr in exprs:
@@ -140,8 +140,6 @@ def agg_pandas(  # noqa: PLR0913
         stacklevel=2,
     )
 
-    plx = PandasNamespace(implementation=implementation)
-
     def func(df: Any) -> Any:
         out_group = []
         out_names = []
@@ -150,14 +148,16 @@ def agg_pandas(  # noqa: PLR0913
             for result_keys in results_keys:
                 out_group.append(item(result_keys._series))
                 out_names.append(result_keys.name)
-        return plx.make_native_series(name="", data=out_group, index=out_names)
+        return series_from_iterable(
+            out_group, index=out_names, name="", implementation=implementation
+        )
 
     if implementation == "pandas":
-        import pandas as pd
+        pd = get_pandas()
 
         if parse_version(pd.__version__) < parse_version("2.2.0"):  # pragma: no cover
             result_complex = grouped.apply(func)
-        else:  # pragma: no cover
+        else:
             result_complex = grouped.apply(func, include_groups=False)
     else:  # pragma: no cover
         result_complex = grouped.apply(func)

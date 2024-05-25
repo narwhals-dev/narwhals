@@ -28,4 +28,8 @@ repos:
       entry: python -m utils.check_api_reference
       language: python
       additional_dependencies: [polars]
-
+    - id: imports-are-banned
+      name: import are banned (use `get_pandas` instead of `import pandas`)
+      entry: (?<!>>> )import (pandas|polars|modin|cudf)
+      language: pygrep
+      files: ^narwhals/

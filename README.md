@@ -22,14 +22,15 @@ Seamlessly support all, without depending on any!
 - ✅ Use **Expressions**
 - ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
 - ✅ Preserve your Index (if present) without it getting in the way!
+- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have!
 
 ## Used by
 
 Join the party!
 
-- [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
-- [scikit-lego](https://github.com/koaning/scikit-lego) (work-in-progress, in `narwhals-development` branch)
+- [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
+- [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
 
 ## Installation
 

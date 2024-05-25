@@ -184,8 +184,12 @@ class PandasExpr:
     def is_in(self, other: Any) -> Self:
         return register_expression_call(self, "is_in", other)
 
-    def filter(self, other: Any) -> Self:
-        return register_expression_call(self, "filter", other)
+    def filter(self, *predicates: Any) -> Self:
+        from narwhals._pandas_like.namespace import PandasNamespace
+
+        plx = PandasNamespace(self._implementation)
+        expr = plx.all_horizontal(*predicates)
+        return register_expression_call(self, "filter", expr)
 
     def drop_nulls(self) -> Self:
         return register_expression_call(self, "drop_nulls")
@@ -253,6 +257,21 @@ class PandasExpr:
             implementation=self._implementation,
         )
 
+    def is_duplicated(self) -> Self:
+        return register_expression_call(self, "is_duplicated")
+
+    def is_unique(self) -> Self:
+        return register_expression_call(self, "is_unique")
+
+    def null_count(self) -> Self:
+        return register_expression_call(self, "null_count")
+
+    def is_first_distinct(self) -> Self:
+        return register_expression_call(self, "is_first_distinct")
+
+    def is_last_distinct(self) -> Self:
+        return register_expression_call(self, "is_last_distinct")
+
     @property
     def str(self) -> PandasExprStringNamespace:
         return PandasExprStringNamespace(self)
@@ -312,6 +331,12 @@ class PandasExprDateTimeNamespace:
 
     def second(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "second")
+
+    def millisecond(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "millisecond")
+
+    def microsecond(self) -> PandasExpr:
+        return register_namespace_expression_call(self._expr, "dt", "microsecond")
 
     def ordinal_day(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "ordinal_day")

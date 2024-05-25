@@ -9,6 +9,7 @@ from typing import Iterable
 from narwhals import dtypes
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals._pandas_like.expr import PandasExpr
+from narwhals._pandas_like.selectors import PandasSelector
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import parse_into_exprs
@@ -36,20 +37,9 @@ class PandasNamespace:
     String = dtypes.String
     Datetime = dtypes.Datetime
 
-    def make_native_series(self, name: str, data: list[Any], index: Any) -> Any:
-        if self._implementation == "pandas":
-            import pandas as pd
-
-            return pd.Series(name=name, data=data, index=index)
-        if self._implementation == "modin":  # pragma: no cover
-            import modin.pandas as mpd
-
-            return mpd.Series(name=name, data=data, index=index)
-        if self._implementation == "cudf":  # pragma: no cover
-            import cudf
-
-            return cudf.Series(name=name, data=data, index=index)
-        raise NotImplementedError  # pragma: no cover
+    @property
+    def selectors(self) -> PandasSelector:
+        return PandasSelector(self._implementation)
 
     # --- not in spec ---
     def __init__(self, implementation: str) -> None:

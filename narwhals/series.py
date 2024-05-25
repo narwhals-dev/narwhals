@@ -67,9 +67,7 @@ class Series:
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
-            import polars as pl
-
-            return pl
+            return get_polars()
         return self._series.__narwhals_namespace__()
 
     @property
@@ -437,9 +435,73 @@ class Series:
         return self._series.sum()
 
     def std(self, *, ddof: int = 1) -> Any:
+        """
+        Get the standard deviation of this Series.
+
+        Arguments:
+            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+                     where N represents the number of elements.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.std()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            1.0
+            >>> func(s_pl)
+            1.0
+        """
         return self._series.std(ddof=ddof)
 
     def is_in(self, other: Any) -> Self:
+        """
+        Check if the elements of this Series are in the other sequence.
+
+        Arguments:
+            other: Sequence of primitive type.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3])
+            >>> s_pl = pl.Series([1, 2, 3])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.is_in([3, 2, 8])
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1     True
+            2     True
+            dtype: bool
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+               false
+               true
+               true
+            ]
+        """
         return self._from_series(self._series.is_in(self._extract_native(other)))
 
     def drop_nulls(self) -> Self:
@@ -669,6 +731,54 @@ class Series:
         *,
         with_replacement: bool = False,
     ) -> Self:
+        """
+        Sample randomly from this Series.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+
+            fraction: Fraction of items to return. Cannot be used with n.
+
+            with_replacement: Allow values to be sampled more than once.
+
+        Notes:
+            The `sample` method returns a Series with a specified number of
+            randomly selected items chosen from this Series.
+            The results are not consistent across libraries.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            >>> s_pd = pd.Series([1, 2, 3, 4])
+            >>> s_pl = pl.Series([1, 2, 3, 4])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.sample(fraction=1.0, with_replacement=True)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+               a
+            2  3
+            1  2
+            3  4
+            3  4
+            >>> func(s_pl)  # doctest:+SKIP
+            shape: (4,)
+            Series: '' [i64]
+            [
+               1
+               4
+               3
+               4
+            ]
+        """
         return self._from_series(
             self._series.sample(n=n, fraction=fraction, with_replacement=with_replacement)
         )
@@ -863,6 +973,54 @@ class Series:
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
+        """
+        Get a boolean mask of the values that are between the given lower/upper bounds.
+
+        Arguments:
+            lower_bound: Lower bound value.
+
+            upper_bound: Upper bound value.
+
+            closed: Define which sides of the interval are closed (inclusive).
+
+        Notes:
+            If the value of the `lower_bound` is greater than that of the `upper_bound`,
+            then the values will be False, as no value can satisfy the condition.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3, 4, 5])
+            >>> s_pl = pl.Series([1, 2, 3, 4, 5])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.is_between(2, 4, 'right')
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1    False
+            2     True
+            3     True
+            4    False
+            dtype: bool
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+               true
+               false
+            ]
+        """
         return self._from_series(
             self._series.is_between(lower_bound, upper_bound, closed=closed)
         )
@@ -985,7 +1143,344 @@ class Series:
         return self._from_series(self._series.__invert__())
 
     def filter(self, other: Any) -> Series:
+        """
+        Filter elements in the Series based on a condition.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [4, 10, 15, 34, 50]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.filter(s > 10)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            2    15
+            3    34
+            4    50
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               15
+               34
+               50
+            ]
+        """
         return self._from_series(self._series.filter(self._extract_native(other)))
+
+    # --- descriptive ---
+    def is_duplicated(self: Self) -> Series:
+        r"""
+        Get a mask of all duplicated rows in the Series.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 2, 3, 1])
+            >>> s_pl = pl.Series([1, 2, 3, 1])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     duplicated = series.is_duplicated()
+            ...     return nw.to_native(duplicated)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0     True
+            1    False
+            2    False
+            3     True
+            dtype: bool
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                true
+                false
+                false
+                true
+            ]
+        """
+        return Series(self._series.is_duplicated())
+
+    def is_empty(self: Self) -> bool:
+        r"""
+        Check if the series is empty.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            Let's define a dataframe-agnostic function that filters rows in which "foo"
+            values are greater than 10, and then checks if the result is empty or not:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     return series.filter(series > 10).is_empty()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> s_pd = pd.Series([1, 2, 3])
+            >>> s_pl = pl.Series([1, 2, 3])
+            >>> func(s_pd), func(s_pl)
+            (True, True)
+
+            >>> s_pd = pd.Series([100, 2, 3])
+            >>> s_pl = pl.Series([100, 2, 3])
+            >>> func(s_pd), func(s_pl)
+            (False, False)
+        """
+        return self._series.is_empty()  # type: ignore[no-any-return]
+
+    def is_unique(self: Self) -> Series:
+        r"""
+        Get a mask of all unique rows in the Series.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 2, 3, 1])
+            >>> s_pl = pl.Series([1, 2, 3, 1])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     unique = series.is_unique()
+            ...     return nw.to_native(unique)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0    False
+            1     True
+            2     True
+            3    False
+            dtype: bool
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [bool]
+            [
+                false
+                 true
+                 true
+                false
+            ]
+        """
+        return Series(self._series.is_unique())
+
+    def null_count(self: Self) -> int:
+        r"""
+        Create a new Series that shows the null counts per column.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, None, 3])
+            >>> s_pl = pl.Series([1, None, None])
+
+            Let's define a dataframe-agnostic function that returns the null count of
+            the series:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     return series.null_count()
+
+            We can then pass either pandas or Polars to `func`:
+            >>> func(s_pd)
+            1
+            >>> func(s_pl)
+            2
+        """
+
+        return self._series.null_count()  # type: ignore[no-any-return]
+
+    def is_first_distinct(self: Self) -> Series:
+        r"""
+        Return a boolean mask indicating the first occurrence of each distinct value.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 1, 2, 3, 2])
+            >>> s_pl = pl.Series([1, 1, 2, 3, 2])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     first_distinct = series.is_first_distinct()
+            ...     return nw.to_native(first_distinct)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0     True
+            1    False
+            2     True
+            3     True
+            4    False
+            dtype: bool
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+                true
+                false
+                true
+                true
+                false
+            ]
+        """
+        return Series(self._series.is_first_distinct())
+
+    def is_last_distinct(self: Self) -> Series:
+        r"""
+        Return a boolean mask indicating the last occurrence of each distinct value.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 1, 2, 3, 2])
+            >>> s_pl = pl.Series([1, 1, 2, 3, 2])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     last_distinct = series.is_last_distinct()
+            ...     return nw.to_native(last_distinct)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0    False
+            1     True
+            2    False
+            3     True
+            4     True
+            dtype: bool
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+                false
+                true
+                false
+                true
+                true
+            ]
+        """
+        return Series(self._series.is_last_distinct())
+
+    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+        r"""
+        Check if the Series is sorted.
+
+        Arguments:
+            descending: Check if the Series is sorted in descending order.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> unsorted_data = [1, 3, 2]
+            >>> sorted_data = [3, 2, 1]
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any, descending=False):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     return series.is_sorted(descending=descending)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(pl.Series(unsorted_data))
+            False
+            >>> func(pl.Series(sorted_data), descending=True)
+            True
+            >>> func(pd.Series(unsorted_data))
+            False
+            >>> func(pd.Series(sorted_data), descending=True)
+            True
+        """
+        return self._series.is_sorted(descending=descending)  # type: ignore[no-any-return]
+
+    def value_counts(
+        self: Self, *, sort: bool = False, parallel: bool = False
+    ) -> DataFrame:
+        r"""
+        Count the occurrences of unique values.
+
+        Arguments:
+            sort: Sort the output by count in descending order. If set to False (default),
+                the order of the output is random.
+            parallel: Execute the computation in parallel. Unused for pandas-like APIs.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s_pd = pd.Series([1, 1, 2, 3, 2], name="s")
+            >>> s_pl = pl.Series(values=[1, 1, 2, 3, 2], name="s")
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s_any):
+            ...     series = nw.from_native(s_any, allow_series=True)
+            ...     val_count = series.value_counts(sort=True)
+            ...     return nw.to_native(val_count)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+               s  count
+            0  1      2
+            1  2      2
+            2  3      1
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 2)
+            ┌─────┬───────┐
+            │ s   ┆ count │
+            │ --- ┆ ---   │
+            │ i64 ┆ u32   │
+            ╞═════╪═══════╡
+            │ 1   ┆ 2     │
+            │ 2   ┆ 2     │
+            │ 3   ┆ 1     │
+            └─────┴───────┘
+        """
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame(self._series.value_counts(sort=sort, parallel=parallel))
 
     @property
     def str(self) -> SeriesStringNamespace:
@@ -1054,16 +1549,16 @@ class SeriesDateTimeNamespace:
 
     def year(self) -> Series:
         """
-        Get the year in a date series.
+        Get the year in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2012, 1, 7), datetime(2023, 3, 10)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2012, 1, 7), datetime(2023, 3, 10)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1090,16 +1585,16 @@ class SeriesDateTimeNamespace:
 
     def month(self) -> Series:
         """
-        Gets the month in a date series.
+        Gets the month in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2023, 2, 1), datetime(2023, 8, 3)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2023, 2, 1), datetime(2023, 8, 3)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1126,16 +1621,16 @@ class SeriesDateTimeNamespace:
 
     def day(self) -> Series:
         """
-        Extracts the day in a date series.
+        Extracts the day in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1), datetime(2022, 1, 5)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2022, 1, 1), datetime(2022, 1, 5)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1162,16 +1657,16 @@ class SeriesDateTimeNamespace:
 
     def hour(self) -> Series:
         """
-         Extracts the hour in a date series.
+         Extracts the hour in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1198,16 +1693,16 @@ class SeriesDateTimeNamespace:
 
     def minute(self) -> Series:
         """
-        Extracts the minute in a date series.
+        Extracts the minute in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1234,16 +1729,16 @@ class SeriesDateTimeNamespace:
 
     def second(self) -> Series:
         """
-        Extracts the second(s) in a date series.
+        Extracts the second(s) in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1, 5, 3, 10), datetime(2022, 1, 5, 9, 12, 4)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2022, 1, 1, 5, 3, 10), datetime(2022, 1, 5, 9, 12, 4)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1267,6 +1762,104 @@ class SeriesDateTimeNamespace:
             ]
         """
         return self._series.__class__(self._series._series.dt.second())
+
+    def millisecond(self) -> Series:
+        """
+        Extracts the milliseconds in a datetime series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [
+            ...     datetime(2023, 5, 21, 12, 55, 10, 400000),
+            ...     datetime(2023, 5, 21, 12, 55, 10, 600000),
+            ...     datetime(2023, 5, 21, 12, 55, 10, 800000),
+            ...     datetime(2023, 5, 21, 12, 55, 11, 0),
+            ...     datetime(2023, 5, 21, 12, 55, 11, 200000)
+            ... ]
+
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.millisecond().alias("datetime")
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    400
+            1    600
+            2    800
+            3      0
+            4    200
+            Name: datetime, dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: 'datetime' [i32]
+            [
+                400
+                600
+                800
+                0
+                200
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.millisecond())
+
+    def microsecond(self) -> Series:
+        """
+        Extracts the microseconds in a datetime series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [
+            ...     datetime(2023, 5, 21, 12, 55, 10, 400000),
+            ...     datetime(2023, 5, 21, 12, 55, 10, 600000),
+            ...     datetime(2023, 5, 21, 12, 55, 10, 800000),
+            ...     datetime(2023, 5, 21, 12, 55, 11, 0),
+            ...     datetime(2023, 5, 21, 12, 55, 11, 200000)
+            ... ]
+
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.microsecond().alias("datetime")
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    400000
+            1    600000
+            2    800000
+            3         0
+            4    200000
+            Name: datetime, dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: 'datetime' [i32]
+            [
+               400000
+               600000
+               800000
+               0
+               200000
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.microsecond())
 
     def ordinal_day(self) -> Series:
         """

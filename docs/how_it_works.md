@@ -43,7 +43,8 @@ def sum_horizontal_a_b(df):
 ```
 
 Note that although an expression may have multiple columns as input,
-those columns must all have been derived from the same dataframe.
+those columns must all have been derived from the same dataframe. This last sentence was
+quite important, you might want to re-read it to make sure it sunk in.
 
 By itself, an expression doesn't produce a value. It only produces a value once you give it to a
 DataFrame context. What happens to the value(s) it produces depends on which context you hand
@@ -70,7 +71,7 @@ df.select(nw.col('a')+1)
 ```
 
 `nw.col('a')` produces a `narwhals.expression.Expr` object, which has a private `_call` method.
-We can call `nw.col('a')._call(pl)`, then the result is actually `pl.col('a')`.
+Inside `DataFrame.select`, we call `nw.col('a')._call(pl)`, which produces `pl.col('a')`.
 
 We then let Polars do its thing. Which is nice, but also not particularly interesting.
 How about translating expressions to pandas? Well, it's
@@ -94,13 +95,13 @@ The result from the last line above is the same as we'd get from `pn.col('a')`, 
 a `narwhals._pandas_like.expression.PandasExpr` object, which we'll call `PandasExpr` for
 short.
 
-`PandasExpr` also have a `_call` method - but this one expects a `PandasDataFrame` as input.
+`PandasExpr` also has a `_call` method - but this one expects a `PandasDataFrame` as input.
 Recall from above that an expression is a function from a dataframe to a sequence of series.
 The `_call` method gives us that function! Let's see it in action.
 
-Note: the following examples uses `PandasDataFrame` and `PandasSeries`. These are wrappers
-around pandas DataFrame and pandas Series, which are Narwhals-compliant. To get the native
-pandas objects out from inside them, we access `PandasDataFrame._dataframe` and `PandasSeries._series`.
+Note: the following examples use `PandasDataFrame` and `PandasSeries`. These are backed
+by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
+underlying pandas objects via `PandasDataFrame._dataframe` and `PandasSeries._series`.
 
 ```python
 import narwhals as nw
@@ -140,3 +141,40 @@ than running pandas directly.
 Further attempts at demistifying Narwhals, refactoring code so it's clearer, and explaining
 this section better are 110% welcome.
 
+## Group-by
+
+Group-by is probably one of Polars' most significant innovations (on the syntax side) with respect
+to pandas. We can write something like
+```python
+df: pl.DataFrame
+df.group_by('a').agg((pl.col('c') > pl.col('b').mean()).max())
+```
+To do this in pandas, we need to either use `GroupBy.apply` (sloooow), or do some crazy manual
+optimisations to get it to work.
+
+In Narwhals, here's what we do:
+
+- if somebody uses a simple group-by aggregation (e.g. `df.group_by('a').agg(nw.col('b').mean())`),
+  then on the pandas side we translate it to
+  ```python
+
+  df: pd.DataFrame
+  df.groupby('a').agg({'b': ['mean']})
+  ```
+- if somebody passes a complex group-by aggregation, then we use `apply` and raise a `UserWarning`, warning
+  users of the performance penalty and advising them to refactor their code so that the aggregation they perform
+  ends up being a simple one.
+
+In order to tell whether an aggregation is simple, Narwhals uses the private `_depth` attribute of `PandasExpr`:
+
+```python
+>>> pn.col('a').mean()
+PandasExpr(depth=1, function_name=col->mean, root_names=['a'], output_names=['a']
+>>> (pn.col('a')+1).mean()
+PandasExpr(depth=2, function_name=col->__add__->mean, root_names=['a'], output_names=['a']
+>>> pn.mean('a')
+PandasExpr(depth=1, function_name=col->mean, root_names=['a'], output_names=['a']
+```
+
+For simple aggregations, Narwhals can just look at `_depth` and `function_name` and figure out
+which (efficient) elementary operation this corresponds to in pandas.

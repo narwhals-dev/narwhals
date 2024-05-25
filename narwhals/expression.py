@@ -844,11 +844,98 @@ class Expr:
         )
 
     def is_in(self, other: Any) -> Expr:
-        return self.__class__(lambda plx: self._call(plx).is_in(other))
+        """
+        Check if elements of this expression are present in the other iterable.
 
-    def filter(self, other: Any) -> Expr:
+        Arguments:
+            other: iterable
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2, 9, 10]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2, 9, 10]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...    df = nw.from_native(df_any)
+            ...    df = df.with_columns(b = nw.col('a').is_in([1, 2]))
+            ...    return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                a      b
+            0   1   True
+            1   2   True
+            2   9  False
+            3  10  False
+
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌─────┬───────┐
+            │ a   ┆ b     │
+            │ --- ┆ ---   │
+            │ i64 ┆ bool  │
+            ╞═════╪═══════╡
+            │ 1   ┆ true  │
+            │ 2   ┆ true  │
+            │ 9   ┆ false │
+            │ 10  ┆ false │
+            └─────┴───────┘
+        """
+        if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            return self.__class__(lambda plx: self._call(plx).is_in(other))
+        else:
+            raise NotImplementedError(
+                "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
+            )
+
+    def filter(self, *predicates: Any) -> Expr:
+        """
+        Filters elements based on a condition, returning a new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
+            >>> df_pl = pl.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
+
+            Let's define a dataframe-agnostic function:
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(
+            ...             nw.col("a").filter(nw.col("a") > 4),
+            ...             nw.col("b").filter(nw.col("b") < 13)
+            ...             )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a   b
+            3  5  10
+            4  6  11
+            5  7  12
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 5   ┆ 10  │
+            │ 6   ┆ 11  │
+            │ 7   ┆ 12  │
+            └─────┴─────┘
+        """
         return self.__class__(
-            lambda plx: self._call(plx).filter(extract_native(plx, other))
+            lambda plx: self._call(plx).filter(
+                *[extract_native(plx, pred) for pred in flatten(predicates)]
+            )
         )
 
     def is_null(self) -> Expr:
@@ -1121,6 +1208,214 @@ class Expr:
             └─────┴─────┴─────────────────┘
         """
         return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
+
+    def is_duplicated(self) -> Expr:
+        r"""
+        Return a boolean mask indicating duplicated values.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     duplicated = df.select(nw.all().is_duplicated())
+            ...     return nw.to_native(duplicated)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                   a      b
+            0   True   True
+            1  False   True
+            2  False  False
+            3   True  False
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ true  ┆ true  │
+            │ false ┆ true  │
+            │ false ┆ false │
+            │ true  ┆ false │
+            └───────┴───────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).is_duplicated())
+
+    def is_unique(self) -> Expr:
+        r"""
+        Return a boolean mask indicating unique values.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     unique = df.select(nw.all().is_unique())
+            ...     return nw.to_native(unique)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                   a      b
+            0  False  False
+            1   True  False
+            2   True   True
+            3  False   True
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ false ┆ false │
+            │ true  ┆ false │
+            │ true  ┆ true  │
+            │ false ┆ true  │
+            └───────┴───────┘
+        """
+
+        return self.__class__(lambda plx: self._call(plx).is_unique())
+
+    def null_count(self) -> Expr:
+        r"""
+        Count null values.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, None, 1], "b": ["a", None, "b", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     nulls = df.select(nw.all().null_count())
+            ...     return nw.to_native(nulls)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  2
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ u32 ┆ u32 │
+            ╞═════╪═════╡
+            │ 1   ┆ 2   │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).null_count())
+
+    def is_first_distinct(self) -> Expr:
+        r"""
+        Return a boolean mask indicating the first occurrence of each distinct value.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     first_distinct = df.select(nw.all().is_first_distinct())
+            ...     return nw.to_native(first_distinct)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                   a      b
+            0   True   True
+            1   True  False
+            2   True   True
+            3  False   True
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ true  ┆ true  │
+            │ true  ┆ false │
+            │ true  ┆ true  │
+            │ false ┆ true  │
+            └───────┴───────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).is_first_distinct())
+
+    def is_last_distinct(self) -> Expr:
+        r"""Return a boolean mask indicating the last occurrence of each distinct value.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     last_distinct = df.select(nw.all().is_last_distinct())
+            ...     return nw.to_native(last_distinct)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                   a      b
+            0  False  False
+            1   True   True
+            2   True   True
+            3   True   True
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4, 2)
+            ┌───────┬───────┐
+            │ a     ┆ b     │
+            │ ---   ┆ ---   │
+            │ bool  ┆ bool  │
+            ╞═══════╪═══════╡
+            │ false ┆ false │
+            │ true  ┆ true  │
+            │ true  ┆ true  │
+            │ true  ┆ true  │
+            └───────┴───────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).is_last_distinct())
 
     @property
     def str(self) -> ExprStringNamespace:
@@ -1555,6 +1850,110 @@ class ExprDateTimeNamespace:
             └─────────────────────┴──────┴────────┴────────┘
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
+
+    def millisecond(self) -> Expr:
+        """
+        Extract milliseconds from underlying DateTime representation.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2024, 10, 13, 5, 30, 14, 505000),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.second().alias("second"),
+            ...         nw.col("datetime").dt.millisecond().alias("millisecond")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                             datetime  hour  minute  second  millisecond
+            0 1978-01-01 01:01:01.000     1       1       1            0
+            1 2024-10-13 05:30:14.505     5      30      14          505
+            2 2065-01-01 10:20:30.067    10      20      30           67
+            >>> func(df_pl)
+            shape: (3, 5)
+            ┌─────────────────────────┬──────┬────────┬────────┬─────────────┐
+            │ datetime                ┆ hour ┆ minute ┆ second ┆ millisecond │
+            │ ---                     ┆ ---  ┆ ---    ┆ ---    ┆ ---         │
+            │ datetime[μs]            ┆ i8   ┆ i8     ┆ i8     ┆ i32         │
+            ╞═════════════════════════╪══════╪════════╪════════╪═════════════╡
+            │ 1978-01-01 01:01:01     ┆ 1    ┆ 1      ┆ 1      ┆ 0           │
+            │ 2024-10-13 05:30:14.505 ┆ 5    ┆ 30     ┆ 14     ┆ 505         │
+            │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67          │
+            └─────────────────────────┴──────┴────────┴────────┴─────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
+
+    def microsecond(self) -> Expr:
+        """
+        Extract microseconds from underlying DateTime representation.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2024, 10, 13, 5, 30, 14, 505000),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.second().alias("second"),
+            ...         nw.col("datetime").dt.microsecond().alias("microsecond")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                             datetime  hour  minute  second  microsecond
+            0 1978-01-01 01:01:01.000     1       1       1            0
+            1 2024-10-13 05:30:14.505     5      30      14       505000
+            2 2065-01-01 10:20:30.067    10      20      30        67000
+            >>> func(df_pl)
+            shape: (3, 5)
+            ┌─────────────────────────┬──────┬────────┬────────┬─────────────┐
+            │ datetime                ┆ hour ┆ minute ┆ second ┆ microsecond │
+            │ ---                     ┆ ---  ┆ ---    ┆ ---    ┆ ---         │
+            │ datetime[μs]            ┆ i8   ┆ i8     ┆ i8     ┆ i32         │
+            ╞═════════════════════════╪══════╪════════╪════════╪═════════════╡
+            │ 1978-01-01 01:01:01     ┆ 1    ┆ 1      ┆ 1      ┆ 0           │
+            │ 2024-10-13 05:30:14.505 ┆ 5    ┆ 30     ┆ 14     ┆ 505000      │
+            │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67000       │
+            └─────────────────────────┴──────┴────────┴────────┴─────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
 
     def ordinal_day(self) -> Expr:
         """
