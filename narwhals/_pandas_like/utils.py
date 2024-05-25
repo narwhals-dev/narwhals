@@ -256,17 +256,17 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     Should be in namespace.
     """
     if implementation == "pandas":
-        import pandas as pd
+        pd = get_pandas()
 
         if parse_version(pd.__version__) < parse_version("3.0.0"):
             return pd.concat(dfs, axis=1, copy=False)
         return pd.concat(dfs, axis=1)  # pragma: no cover
     if implementation == "cudf":  # pragma: no cover
-        import cudf
+        cudf = get_cudf()
 
         return cudf.concat(dfs, axis=1)
     if implementation == "modin":  # pragma: no cover
-        import modin.pandas as mpd
+        mpd = get_modin()
 
         return mpd.concat(dfs, axis=1)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
@@ -289,17 +289,17 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
     if implementation == "pandas":
-        import pandas as pd
+        pd = get_pandas()
 
         if parse_version(pd.__version__) < parse_version("3.0.0"):
             return pd.concat(dfs, axis=0, copy=False)
         return pd.concat(dfs, axis=0)  # pragma: no cover
     if implementation == "cudf":  # pragma: no cover
-        import cudf
+        cudf = get_cudf()
 
         return cudf.concat(dfs, axis=0)
     if implementation == "modin":  # pragma: no cover
-        import modin.pandas as mpd
+        mpd = get_modin()
 
         return mpd.concat(dfs, axis=0)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
@@ -311,15 +311,15 @@ def series_from_iterable(
 ) -> Any:
     """Return native series."""
     if implementation == "pandas":
-        import pandas as pd
+        pd = get_pandas()
 
         return pd.Series(data, name=name, index=index, copy=False)
     if implementation == "cudf":  # pragma: no cover
-        import cudf
+        cudf = get_cudf()
 
         return cudf.Series(data, name=name, index=index)
     if implementation == "modin":  # pragma: no cover
-        import modin.pandas as mpd
+        mpd = get_modin()
 
         return mpd.Series(data, name=name, index=index)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
@@ -390,9 +390,9 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
         return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
-        import pandas as pd
+        pd = get_pandas()
 
-        if parse_version(pd.__version__) >= parse_version("2.0.0"):
+        if pd is not None and parse_version(pd.__version__) >= parse_version("2.0.0"):
             if get_pyarrow() is not None:
                 return "string[pyarrow]"
             return "string[python]"  # pragma: no cover

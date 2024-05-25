@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.dependencies import get_polars
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -116,7 +117,7 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
 def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
     if not is_polars:
         return dtype  # type: ignore[no-any-return]
-    import polars as pl
+    pl = get_polars()
 
     if dtype == pl.Float64:
         return Float64()
