@@ -572,7 +572,7 @@ def test_to_dict() -> None:
         "z": pd.Series([7.0, 8, 9], name="z"),
     }
     for key in expected:
-        pd_assert_series_equal(result[key], expected[key])
+        pd_assert_series_equal(nw.to_native(result[key]), expected[key])
 
     df = nw.DataFrame(df_polars)
     result = df.to_dict(as_series=True)
@@ -582,7 +582,7 @@ def test_to_dict() -> None:
         "z": pl.Series("z", [7.0, 8, 9]),
     }
     for key in expected:
-        pl_assert_series_equal(result[key], expected[key])
+        pl_assert_series_equal(nw.to_native(result[key]), expected[key])
 
 
 @pytest.mark.parametrize(

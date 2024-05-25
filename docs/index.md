@@ -12,6 +12,7 @@ Seamlessly support both, without depending on either!
 - ✅ Use **Expressions**
 - ✅ Tested against pandas and Polars nightly builds!
 - ✅ Preserve your Index (if present) without it getting in the way!
+- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have!
 
 ## Who's this for?
 
