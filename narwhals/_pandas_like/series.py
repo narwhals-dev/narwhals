@@ -9,6 +9,7 @@ from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
+from narwhals.dependencies import get_pandas
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -81,7 +82,7 @@ class PandasSeries:
         self._implementation = implementation
         self._use_copy_false = False
         if self._implementation == "pandas":
-            import pandas as pd
+            pd = get_pandas()
 
             if parse_version(pd.__version__) < parse_version("3.0.0"):
                 self._use_copy_false = True
@@ -162,11 +163,8 @@ class PandasSeries:
         return self._from_series(res)
 
     def is_in(self, other: Any) -> PandasSeries:
-        import pandas as pd
-
         ser = self._series
         res = ser.isin(other)
-        res[ser.isna()] = pd.NA
         return self._from_series(res)
 
     # Binary comparisons

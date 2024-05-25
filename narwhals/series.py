@@ -67,9 +67,7 @@ class Series:
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
-            import polars as pl
-
-            return pl
+            return get_polars()
         return self._series.__narwhals_namespace__()
 
     @property
@@ -975,6 +973,54 @@ class Series:
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
+        """
+        Get a boolean mask of the values that are between the given lower/upper bounds.
+
+        Arguments:
+            lower_bound: Lower bound value.
+
+            upper_bound: Upper bound value.
+
+            closed: Define which sides of the interval are closed (inclusive).
+
+        Notes:
+            If the value of the `lower_bound` is greater than that of the `upper_bound`,
+            then the values will be False, as no value can satisfy the condition.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3, 4, 5])
+            >>> s_pl = pl.Series([1, 2, 3, 4, 5])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.is_between(2, 4, 'right')
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1    False
+            2     True
+            3     True
+            4    False
+            dtype: bool
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+               true
+               false
+            ]
+        """
         return self._from_series(
             self._series.is_between(lower_bound, upper_bound, closed=closed)
         )
