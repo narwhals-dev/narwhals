@@ -40,5 +40,6 @@
         - to_pandas
         - unique
         - value_counts
+        - zip_with
       show_source: false
       show_bases: false
