@@ -39,7 +39,7 @@ class GroupBy:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-             >>> df_pd = pd.DataFrame(
+            >>> df_pd = pd.DataFrame(
             ...     {
             ...         "a": ["a", "b", "a", "b", "c"],
             ...         "b": [1, 2, 1, 3, 3],
