@@ -70,10 +70,9 @@ class GroupBy:
 
             >>> func(df_pd)
                a  b
-            0  a  1
-            1  b  2
-            2  b  3
-            3  c  3
+            0  a  2
+            1  b  5
+            2  c  3
             >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
