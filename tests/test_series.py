@@ -416,3 +416,19 @@ def test_is_sorted_invalid(df_raw: Any) -> None:
 
     with pytest.raises(TypeError):
         series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("df_raw", "mask", "expected"),
+    [
+        (df_pandas, pd.Series([True, False, True]), pd.Series([1, 4, 2])),
+        (df_polars, pl.Series([True, False, True]), pl.Series([1, 4, 2])),
+    ],
+)
+def test_zip_with(df_raw: Any, mask: Any, expected: Any) -> None:
+    series1 = nw.Series(df_raw["a"])
+    series2 = nw.Series(df_raw["b"])
+    mask = nw.Series(mask)
+    result = series1.zip_with(mask, series2)
+    expected = nw.Series(expected)
+    assert result == expected
