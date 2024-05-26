@@ -97,10 +97,10 @@ class GroupBy:
             │ --- ┆ --- ┆ --- │
             │ str ┆ i64 ┆ i64 │
             ╞═════╪═════╪═════╡
-            │ b   ┆ 1   ┆ 8   │
+            │ a   ┆ 1   ┆ 8   │
             │ b   ┆ 2   ┆ 4   │
             │ b   ┆ 3   ┆ 2   │
-            │ a   ┆ 3   ┆ 1   │
+            │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
