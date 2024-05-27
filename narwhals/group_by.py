@@ -63,7 +63,7 @@ class GroupBy:
 
             >>> def func_mult_col(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.group_by(["a", "b"]).agg(nw.sum("c")).sort("a", "b")
+            ...     df = df.group_by("a", "b").agg(nw.sum("c")).sort("a", "b")
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func` and `func_mult_col`:
