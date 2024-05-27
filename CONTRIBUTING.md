@@ -30,6 +30,11 @@ To build the docs, run `mkdocs serve`, and then open the link provided in a brow
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then
 do `mkdocs build` and then `mkdocs serve`.
 
+## How it works
+
+If Narwhals looks like underwater unicorn magic to you, then please read
+[how it works](https://narwhals-dev.github.io/narwhals/roadmap/).
+
 ## Happy contributing!
 
 Please remember to abide by the code of conduct, else you'll be conducted away from this project.

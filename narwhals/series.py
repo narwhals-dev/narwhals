@@ -67,9 +67,7 @@ class Series:
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
-            import polars as pl
-
-            return pl
+            return get_polars()
         return self._series.__narwhals_namespace__()
 
     @property
@@ -494,7 +492,7 @@ class Series:
             0    False
             1     True
             2     True
-            dtype: boolean
+            dtype: bool
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [bool]
@@ -733,6 +731,54 @@ class Series:
         *,
         with_replacement: bool = False,
     ) -> Self:
+        """
+        Sample randomly from this Series.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+
+            fraction: Fraction of items to return. Cannot be used with n.
+
+            with_replacement: Allow values to be sampled more than once.
+
+        Notes:
+            The `sample` method returns a Series with a specified number of
+            randomly selected items chosen from this Series.
+            The results are not consistent across libraries.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            >>> s_pd = pd.Series([1, 2, 3, 4])
+            >>> s_pl = pl.Series([1, 2, 3, 4])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.sample(fraction=1.0, with_replacement=True)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+               a
+            2  3
+            1  2
+            3  4
+            3  4
+            >>> func(s_pl)  # doctest:+SKIP
+            shape: (4,)
+            Series: '' [i64]
+            [
+               1
+               4
+               3
+               4
+            ]
+        """
         return self._from_series(
             self._series.sample(n=n, fraction=fraction, with_replacement=with_replacement)
         )
@@ -927,6 +973,54 @@ class Series:
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
+        """
+        Get a boolean mask of the values that are between the given lower/upper bounds.
+
+        Arguments:
+            lower_bound: Lower bound value.
+
+            upper_bound: Upper bound value.
+
+            closed: Define which sides of the interval are closed (inclusive).
+
+        Notes:
+            If the value of the `lower_bound` is greater than that of the `upper_bound`,
+            then the values will be False, as no value can satisfy the condition.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3, 4, 5])
+            >>> s_pl = pl.Series([1, 2, 3, 4, 5])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.is_between(2, 4, 'right')
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1    False
+            2     True
+            3     True
+            4    False
+            dtype: bool
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+               true
+               false
+            ]
+        """
         return self._from_series(
             self._series.is_between(lower_bound, upper_bound, closed=closed)
         )
@@ -1388,6 +1482,55 @@ class Series:
 
         return DataFrame(self._series.value_counts(sort=sort, parallel=parallel))
 
+    def zip_with(self, mask: Any, other: Any) -> Self:
+        """
+        Take values from self or other based on the given mask. Where mask evaluates true, take values from self. Where mask evaluates false, take values from other.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s1_pl = pl.Series([1, 2, 3, 4, 5])
+            >>> s2_pl = pl.Series([5, 4, 3, 2, 1])
+            >>> mask_pl = pl.Series([True, False, True, False, True])
+            >>> s1_pd = pd.Series([1, 2, 3, 4, 5])
+            >>> s2_pd = pd.Series([5, 4, 3, 2, 1])
+            >>> mask_pd = pd.Series([True, False, True, False, True])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s1_any, mask_any, s2_any):
+            ...     s1 = nw.from_native(s1_any, allow_series=True)
+            ...     mask = nw.from_native(mask_any, series_only=True)
+            ...     s2 = nw.from_native(s2_any, series_only=True)
+            ...     s = s1.zip_with(mask, s2)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s1_pl, mask_pl, s2_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [i64]
+            [
+               1
+               4
+               3
+               2
+               5
+            ]
+            >>> func(s1_pd, mask_pd, s2_pd)
+            0    1
+            1    4
+            2    3
+            3    2
+            4    5
+            dtype: int64
+        """
+
+        return self._from_series(
+            self._series.zip_with(self._extract_native(mask), self._extract_native(other))
+        )
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
@@ -1455,16 +1598,16 @@ class SeriesDateTimeNamespace:
 
     def year(self) -> Series:
         """
-        Get the year in a date series.
+        Get the year in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2012, 1, 7), datetime(2023, 3, 10)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2012, 1, 7), datetime(2023, 3, 10)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1491,16 +1634,16 @@ class SeriesDateTimeNamespace:
 
     def month(self) -> Series:
         """
-        Gets the month in a date series.
+        Gets the month in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2023, 2, 1), datetime(2023, 8, 3)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2023, 2, 1), datetime(2023, 8, 3)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1527,16 +1670,16 @@ class SeriesDateTimeNamespace:
 
     def day(self) -> Series:
         """
-        Extracts the day in a date series.
+        Extracts the day in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1), datetime(2022, 1, 5)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2022, 1, 1), datetime(2022, 1, 5)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1563,16 +1706,16 @@ class SeriesDateTimeNamespace:
 
     def hour(self) -> Series:
         """
-         Extracts the hour in a date series.
+         Extracts the hour in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1599,16 +1742,16 @@ class SeriesDateTimeNamespace:
 
     def minute(self) -> Series:
         """
-        Extracts the minute in a date series.
+        Extracts the minute in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1635,16 +1778,16 @@ class SeriesDateTimeNamespace:
 
     def second(self) -> Series:
         """
-        Extracts the second(s) in a date series.
+        Extracts the second(s) in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1, 5, 3, 10), datetime(2022, 1, 5, 9, 12, 4)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [datetime(2022, 1, 1, 5, 3, 10), datetime(2022, 1, 5, 9, 12, 4)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1669,18 +1812,115 @@ class SeriesDateTimeNamespace:
         """
         return self._series.__class__(self._series._series.dt.second())
 
-    def nanosecond(self) -> Series:
+    def millisecond(self) -> Series:
         """
-        Extracts the second(s) in a date series.
+        Extracts the milliseconds in a datetime series.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = [datetime(2022, 1, 1, 5, 3, 10, 500000), datetime(2022, 1, 5, 9, 12, 4, 60000)]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> dates = [
+            ...     datetime(2023, 5, 21, 12, 55, 10, 400000),
+            ...     datetime(2023, 5, 21, 12, 55, 10, 600000),
+            ...     datetime(2023, 5, 21, 12, 55, 10, 800000),
+            ...     datetime(2023, 5, 21, 12, 55, 11, 0),
+            ...     datetime(2023, 5, 21, 12, 55, 11, 200000)
+            ... ]
+
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.millisecond().alias("datetime")
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+            >>> func(s_pd)
+            0    400
+            1    600
+            2    800
+            3      0
+            4    200
+            Name: datetime, dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: 'datetime' [i32]
+            [
+                400
+                600
+                800
+                0
+                200
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.millisecond())
+
+    def microsecond(self) -> Series:
+        """
+        Extracts the microseconds in a datetime series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [
+            ...     datetime(2023, 5, 21, 12, 55, 10, 400000),
+            ...     datetime(2023, 5, 21, 12, 55, 10, 600000),
+            ...     datetime(2023, 5, 21, 12, 55, 10, 800000),
+            ...     datetime(2023, 5, 21, 12, 55, 11, 0),
+            ...     datetime(2023, 5, 21, 12, 55, 11, 200000)
+            ... ]
+
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.microsecond().alias("datetime")
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    400000
+            1    600000
+            2    800000
+            3         0
+            4    200000
+            Name: datetime, dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: 'datetime' [i32]
+            [
+               400000
+               600000
+               800000
+               0
+               200000
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.microsecond())
+
+    def nanosecond(self) -> Series:
+        """
+        Extracts the nanosecond(s) in a date series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [datetime(2022, 1, 1, 5, 3, 10, 500000), datetime(2022, 1, 5, 9, 12, 4, 60000)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
 
@@ -1702,7 +1942,6 @@ class SeriesDateTimeNamespace:
                500000000
                60000000
             ]
-
         """
         return self._series.__class__(self._series._series.dt.nanosecond())
 

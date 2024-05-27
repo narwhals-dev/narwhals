@@ -145,6 +145,7 @@ if (
             "is_empty",
             "is_sorted",
             "value_counts",
+            "zip_with",
         }
     )
 ):

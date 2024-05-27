@@ -4,7 +4,8 @@
 
 Please start by following the [installation instructions](installation.md).
 
-Then, please install the following:
+To follow along with the examples which follow, please install the following (though note that
+they are not required dependencies - Narwhals only ever uses what the user passes in):
 
 - [pandas](https://pandas.pydata.org/docs/getting_started/install.html)
 - [Polars](https://pola-rs.github.io/polars/user-guide/installation/)

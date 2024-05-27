@@ -12,6 +12,7 @@ nav:
   - Other concepts:
     - other/pandas_index.md
   - extending.md
+  - how_it_works.md
   - Roadmap: roadmap.md
   - Related projects: related.md
   - API Reference:
@@ -28,6 +29,7 @@ nav:
     - api-reference/dtypes.md
     - api-reference/dependencies.md
     - api-reference/selectors.md
+    - api-reference/group_by.md
 theme:
   name: material
   font: false

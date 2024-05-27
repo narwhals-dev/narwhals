@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -10,6 +9,7 @@ from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
+from narwhals.dependencies import get_pandas
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -82,7 +82,7 @@ class PandasSeries:
         self._implementation = implementation
         self._use_copy_false = False
         if self._implementation == "pandas":
-            import pandas as pd
+            pd = get_pandas()
 
             if parse_version(pd.__version__) < parse_version("3.0.0"):
                 self._use_copy_false = True
@@ -163,18 +163,8 @@ class PandasSeries:
         return self._from_series(res)
 
     def is_in(self, other: Any) -> PandasSeries:
-        import pandas as pd
-
         ser = self._series
-        with warnings.catch_warnings():
-            # np.find_common_type is deprecated.  Please use `np.result_type` or `np.promote_types`
-            warnings.filterwarnings(
-                "ignore",
-                message="np.find_common_type is deprecated.*",
-                category=DeprecationWarning,
-            )
-            res = ser.isin(other).convert_dtypes()
-        res[ser.isna()] = pd.NA
+        res = ser.isin(other)
         return self._from_series(res)
 
     # Binary comparisons
@@ -483,6 +473,11 @@ class PandasSeries:
             implementation=self._implementation,
         )
 
+    def zip_with(self: Self, mask: Any, other: Any) -> PandasSeries:
+        ser = self._series
+        res = ser.where(mask._series, other._series)
+        return self._from_series(res)
+
     @property
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)
@@ -546,9 +541,20 @@ class PandasSeriesDateTimeNamespace:
             self._series._series.dt.second,
         )
 
+    def millisecond(self) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.dt.microsecond // 1000,
+        )
+
+    def microsecond(self) -> PandasSeries:
+        return self._series._from_series(self._series._series.dt.microsecond)
+
     def nanosecond(self) -> PandasSeries:
         return self._series._from_series(
-            ((self._series._series.dt.microsecond * 1e3).astype(int)),
+            (
+                (self._series._series.dt.microsecond * 1e3).astype(int)
+                + self._series._series.dt.nanosecond
+            ),
         )
 
     def ordinal_day(self) -> PandasSeries:

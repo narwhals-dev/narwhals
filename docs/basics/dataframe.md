@@ -62,6 +62,7 @@ Let's try it out:
 
 ## Example 2: group-by and mean
 
+Just like in Polars, we can pass expressions to `GroupBy.agg`.
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex2"
 import narwhals as nw

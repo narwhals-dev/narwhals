@@ -844,6 +844,48 @@ class Expr:
         )
 
     def is_in(self, other: Any) -> Expr:
+        """
+        Check if elements of this expression are present in the other iterable.
+
+        Arguments:
+            other: iterable
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [1, 2, 9, 10]})
+            >>> df_pl = pl.DataFrame({'a': [1, 2, 9, 10]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...    df = nw.from_native(df_any)
+            ...    df = df.with_columns(b = nw.col('a').is_in([1, 2]))
+            ...    return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                a      b
+            0   1   True
+            1   2   True
+            2   9  False
+            3  10  False
+
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌─────┬───────┐
+            │ a   ┆ b     │
+            │ --- ┆ ---   │
+            │ i64 ┆ bool  │
+            ╞═════╪═══════╡
+            │ 1   ┆ true  │
+            │ 2   ┆ true  │
+            │ 9   ┆ false │
+            │ 10  ┆ false │
+            └─────┴───────┘
+        """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(lambda plx: self._call(plx).is_in(other))
         else:
@@ -851,9 +893,49 @@ class Expr:
                 "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
             )
 
-    def filter(self, other: Any) -> Expr:
+    def filter(self, *predicates: Any) -> Expr:
+        """
+        Filters elements based on a condition, returning a new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
+            >>> df_pl = pl.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
+
+            Let's define a dataframe-agnostic function:
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(
+            ...             nw.col("a").filter(nw.col("a") > 4),
+            ...             nw.col("b").filter(nw.col("b") < 13)
+            ...             )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a   b
+            3  5  10
+            4  6  11
+            5  7  12
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 5   ┆ 10  │
+            │ 6   ┆ 11  │
+            │ 7   ┆ 12  │
+            └─────┴─────┘
+        """
         return self.__class__(
-            lambda plx: self._call(plx).filter(extract_native(plx, other))
+            lambda plx: self._call(plx).filter(
+                *[extract_native(plx, pred) for pred in flatten(predicates)]
+            )
         )
 
     def is_null(self) -> Expr:
@@ -1769,9 +1851,9 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
 
-    def nanosecond(self) -> Expr:
+    def millisecond(self) -> Expr:
         """
-        Extract Nanoseconds from underlying DateTime Representation
+        Extract milliseconds from underlying DateTime representation.
 
         Examples:
             >>> import pandas as pd
@@ -1781,8 +1863,57 @@ class ExprDateTimeNamespace:
             >>> data = {
             ...     "datetime": [
             ...         datetime(1978, 1, 1, 1, 1, 1, 0),
-            ...         datetime(2024, 10, 13, 5, 30, 14, 500000),
-            ...         datetime(2065, 1, 1, 10, 20, 30, 60000),
+            ...         datetime(2024, 10, 13, 5, 30, 14, 505000),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.second().alias("second"),
+            ...         nw.col("datetime").dt.millisecond().alias("millisecond")
+            ...     )
+            ...     return nw.to_native(df)
+
+            >>> func(df_pd)
+                             datetime  hour  minute  second  millisecond
+            0 1978-01-01 01:01:01.000     1       1       1            0
+            1 2024-10-13 05:30:14.505     5      30      14          505
+            2 2065-01-01 10:20:30.067    10      20      30           67
+            >>> func(df_pl)
+            shape: (3, 5)
+            ┌─────────────────────────┬──────┬────────┬────────┬─────────────┐
+            │ datetime                ┆ hour ┆ minute ┆ second ┆ millisecond │
+            │ ---                     ┆ ---  ┆ ---    ┆ ---    ┆ ---         │
+            │ datetime[μs]            ┆ i8   ┆ i8     ┆ i8     ┆ i32         │
+            ╞═════════════════════════╪══════╪════════╪════════╪═════════════╡
+            │ 1978-01-01 01:01:01     ┆ 1    ┆ 1      ┆ 1      ┆ 0           │
+            │ 2024-10-13 05:30:14.505 ┆ 5    ┆ 30     ┆ 14     ┆ 505         │
+            │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67          │
+            └─────────────────────────┴──────┴────────┴────────┴─────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
+
+    def microsecond(self) -> Expr:
+        """
+        Extract microseconds from underlying DateTime representation.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2024, 10, 13, 5, 30, 14, 505000),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
             ...     ]
             ... }
             >>> df_pd = pd.DataFrame(data)
@@ -1796,7 +1927,59 @@ class ExprDateTimeNamespace:
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
-            ...         nw.col("datetime").dt.nanosecond().alias("nanosecond"),
+            ...         nw.col("datetime").dt.microsecond().alias("microsecond")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                             datetime  hour  minute  second  microsecond
+            0 1978-01-01 01:01:01.000     1       1       1            0
+            1 2024-10-13 05:30:14.505     5      30      14       505000
+            2 2065-01-01 10:20:30.067    10      20      30        67000
+            >>> func(df_pl)
+            shape: (3, 5)
+            ┌─────────────────────────┬──────┬────────┬────────┬─────────────┐
+            │ datetime                ┆ hour ┆ minute ┆ second ┆ microsecond │
+            │ ---                     ┆ ---  ┆ ---    ┆ ---    ┆ ---         │
+            │ datetime[μs]            ┆ i8   ┆ i8     ┆ i8     ┆ i32         │
+            ╞═════════════════════════╪══════╪════════╪════════╪═════════════╡
+            │ 1978-01-01 01:01:01     ┆ 1    ┆ 1      ┆ 1      ┆ 0           │
+            │ 2024-10-13 05:30:14.505 ┆ 5    ┆ 30     ┆ 14     ┆ 505000      │
+            │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67000       │
+            └─────────────────────────┴──────┴────────┴────────┴─────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
+
+    def nanosecond(self) -> Expr:
+        """
+        Extract Nanoseconds from underlying DateTime Representation
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2024, 10, 13, 5, 30, 14, 500000),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 60000)
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.second().alias("second"),
+            ...         nw.col("datetime").dt.nanosecond().alias("nanosecond")
             ...     )
             ...     return nw.to_native(df)
 

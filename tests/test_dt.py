@@ -44,6 +44,8 @@ data_timedelta = {
         ("hour", [12, 2]),
         ("minute", [34, 4]),
         ("second", [56, 14]),
+        ("millisecond", [49, 715]),
+        ("microsecond", [49000, 715000]),
         ("nanosecond", [49000000, 715000000]),
         ("ordinal_day", [60, 2]),
     ],
