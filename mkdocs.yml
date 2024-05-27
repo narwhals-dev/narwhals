@@ -29,6 +29,7 @@ nav:
     - api-reference/dtypes.md
     - api-reference/dependencies.md
     - api-reference/selectors.md
+    - api-reference/group_by.md
 theme:
   name: material
   font: false
