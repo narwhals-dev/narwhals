@@ -68,9 +68,7 @@ class Series:
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
-            import polars as pl
-
-            return pl
+            return get_polars()
         return self._series.__narwhals_namespace__()
 
     @property
@@ -976,6 +974,54 @@ class Series:
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
+        """
+        Get a boolean mask of the values that are between the given lower/upper bounds.
+
+        Arguments:
+            lower_bound: Lower bound value.
+
+            upper_bound: Upper bound value.
+
+            closed: Define which sides of the interval are closed (inclusive).
+
+        Notes:
+            If the value of the `lower_bound` is greater than that of the `upper_bound`,
+            then the values will be False, as no value can satisfy the condition.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3, 4, 5])
+            >>> s_pl = pl.Series([1, 2, 3, 4, 5])
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.is_between(2, 4, 'right')
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1    False
+            2     True
+            3     True
+            4    False
+            dtype: bool
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+               true
+               false
+            ]
+        """
         return self._from_series(
             self._series.is_between(lower_bound, upper_bound, closed=closed)
         )
@@ -1441,7 +1487,7 @@ class Series:
         self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
-    ) -> float | None:
+    ) -> float:
         """
         Get quantile value of the series
 
@@ -1450,7 +1496,7 @@ class Series:
                 Quantile between 0.0 and 1.0.
             interpolation : {'nearest', 'higher', 'lower', 'midpoint', 'linear'}
                 Interpolation method.
-
+                
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -1476,7 +1522,56 @@ class Series:
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             [5.0, 12.0, 25.0, 37.0, 44.0]
         """
-        return self._series.quantile(quantile=quantile, interpolation=interpolation)  # type: ignore[no-any-return]
+        return self._series.quantile(quantile=quantile, interpolation=interpolation)
+
+def zip_with(self, mask: Any, other: Any) -> Self:
+        """
+        Take values from self or other based on the given mask. Where mask evaluates true, take values from self. Where mask evaluates false, take values from other.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> s1_pl = pl.Series([1, 2, 3, 4, 5])
+            >>> s2_pl = pl.Series([5, 4, 3, 2, 1])
+            >>> mask_pl = pl.Series([True, False, True, False, True])
+            >>> s1_pd = pd.Series([1, 2, 3, 4, 5])
+            >>> s2_pd = pd.Series([5, 4, 3, 2, 1])
+            >>> mask_pd = pd.Series([True, False, True, False, True])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(s1_any, mask_any, s2_any):
+            ...     s1 = nw.from_native(s1_any, allow_series=True)
+            ...     mask = nw.from_native(mask_any, series_only=True)
+            ...     s2 = nw.from_native(s2_any, series_only=True)
+            ...     s = s1.zip_with(mask, s2)
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s1_pl, mask_pl, s2_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [i64]
+            [
+               1
+               4
+               3
+               2
+               5
+            ]
+            >>> func(s1_pd, mask_pd, s2_pd)
+            0    1
+            1    4
+            2    3
+            3    2
+            4    5
+            dtype: int64
+        """
+
+        return self._from_series(
+            self._series.zip_with(self._extract_native(mask), self._extract_native(other))
+        )
 
     @property
     def str(self) -> SeriesStringNamespace:

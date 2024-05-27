@@ -266,88 +266,65 @@ class DataFrame(BaseFrame):
         )
 
     def to_pandas(self) -> Any:
-        r"""
+        """
         Convert this DataFrame to a pandas DataFrame.
 
-        Returns:
-            A pandas DataFrame.
-
-        Notes:
-            This operation requires that `pandas` is installed.
-
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> df.to_pandas()
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.to_pandas()
+            ...     return df
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-
-            Null values in numeric columns are converted to `NaN`.
-
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, None],
-            ...         "bar": [6.0, None, 8.0],
-            ...         "ham": [None, "b", "c"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> df.to_pandas()
-               foo  bar   ham
-            0  1.0  6.0  None
-            1  2.0  NaN     b
-            2  NaN  8.0     c
+            >>> func(df_pl)
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
         """
         return self._dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
-        r"""
+        """
         Convert this DataFrame to a NumPy ndarray.
 
-        Returns:
-            A NumPy ndarray.
-
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.5, 7.0, 8.5],
-            ...         "ham": ["a", "b", "c"],
-            ...     },
-            ...     schema_overrides={"foo": pl.UInt8, "bar": pl.Float32},
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
+            >>> df = {"foo": [1, 2, 3], "bar": [6.5, 7.0, 8.5], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
 
-            Export to a standard 2D numpy array.
+            We define a library agnostic function:
 
-            >>> df.to_numpy()
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.to_numpy()
+            ...     return df
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            array([[1, 6.5, 'a'],
+                   [2, 7.0, 'b'],
+                   [3, 8.5, 'c']], dtype=object)
+            >>> func(df_pl)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
@@ -356,15 +333,28 @@ class DataFrame(BaseFrame):
 
     @property
     def shape(self) -> tuple[int, int]:
-        r"""
+        """
         Get the shape of the DataFrame.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3, 4, 5]})
-            >>> df = nw.DataFrame(df_pl)
-            >>> df.shape
+            >>> df = {"foo": [1, 2, 3, 4, 5]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.shape
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            (5, 1)
+            >>> func(df_pl)
             (5, 1)
         """
         return self._dataframe.shape  # type: ignore[no-any-return]
@@ -389,89 +379,49 @@ class DataFrame(BaseFrame):
             raise TypeError(msg)
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
-        r"""
+        """
         Convert DataFrame to a dictionary mapping column name to values.
 
         Arguments:
-            as_series: If set to true ``True`` values are Series, otherwise
-                        values are Any.
+            as_series: If set to true ``True``, then the values are Narwhals Series,
+                        otherwise the values are Any.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "A": [1, 2, 3, 4, 5],
-            ...         "fruits": ["banana", "banana", "apple", "apple", "banana"],
-            ...         "B": [5, 4, 3, 2, 1],
-            ...         "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
-            ...         "optional": [28, 300, None, 2, -30],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(df)
-            shape: (5, 5)
-            ┌─────┬────────┬─────┬────────┬──────────┐
-            │ A   ┆ fruits ┆ B   ┆ cars   ┆ optional │
-            │ --- ┆ ---    ┆ --- ┆ ---    ┆ ---      │
-            │ i64 ┆ str    ┆ i64 ┆ str    ┆ i64      │
-            ╞═════╪════════╪═════╪════════╪══════════╡
-            │ 1   ┆ banana ┆ 5   ┆ beetle ┆ 28       │
-            │ 2   ┆ banana ┆ 4   ┆ audi   ┆ 300      │
-            │ 3   ┆ apple  ┆ 3   ┆ beetle ┆ null     │
-            │ 4   ┆ apple  ┆ 2   ┆ beetle ┆ 2        │
-            │ 5   ┆ banana ┆ 1   ┆ beetle ┆ -30      │
-            └─────┴────────┴─────┴────────┴──────────┘
-            >>> df.to_dict(as_series=False)
+            >>> df = {
+            ...    "A": [1, 2, 3, 4, 5],
+            ...    "fruits": ["banana", "banana", "apple", "apple", "banana"],
+            ...    "B": [5, 4, 3, 2, 1],
+            ...    "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+            ...    "optional": [28, 300, None, 2, -30]
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.to_dict(as_series=False)
+            ...     return df
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
+            >>> func(df_pl)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
-            >>> df.to_dict(as_series=True) # doctest: +SKIP
-            {'A': shape: (5,)
-            Series: 'A' [i64]
-            [
-                1
-                2
-                3
-                4
-                5
-            ], 'fruits': shape: (5,)
-            Series: 'fruits' [str]
-            [
-                "banana"
-                "banana"
-                "apple"
-                "apple"
-                "banana"
-            ], 'B': shape: (5,)
-            Series: 'B' [i64]
-            [
-                5
-                4
-                3
-                2
-                1
-            ], 'cars': shape: (5,)
-            Series: 'cars' [str]
-            [
-                "beetle"
-                "audi"
-                "beetle"
-                "beetle"
-                "beetle"
-            ], 'optional': shape: (5,)
-            Series: 'optional' [i64]
-            [
-                28
-                300
-                null
-                2
-                -30
-            ]}
         """
+        from narwhals.series import Series
+
+        if as_series:
+            return {
+                key: Series(value)
+                for key, value in self._dataframe.to_dict(as_series=as_series).items()
+            }
+        # TODO: overload return type
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
@@ -618,23 +568,28 @@ class DataFrame(BaseFrame):
 
     @property
     def columns(self) -> list[str]:
-        r"""
+        """
         Get column names.
 
         Examples:
-            Get column names.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df.columns
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.columns
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            ['foo', 'bar', 'ham']
+            >>> func(df_pl)
             ['foo', 'bar', 'ham']
         """
         return super().columns
@@ -807,26 +762,35 @@ class DataFrame(BaseFrame):
         return super().select(*exprs, **named_exprs)
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        r"""
+        """
         Rename column names.
 
         Arguments:
             mapping: Key value pairs that map from old name to new name.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> dframe = df.rename({"foo": "apple"})
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.rename({"foo": "apple"})
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               apple  bar ham
+            0      1    6   a
+            1      2    7   b
+            2      3    8   c
+            >>> func(df_pl)
             shape: (3, 3)
             ┌───────┬─────┬─────┐
             │ apple ┆ bar ┆ ham │
@@ -841,7 +805,7 @@ class DataFrame(BaseFrame):
         return super().rename(mapping)
 
     def head(self, n: int) -> Self:
-        r"""
+        """
         Get the first `n` rows.
 
         Arguments:
@@ -849,30 +813,28 @@ class DataFrame(BaseFrame):
                 except the last `abs(n)`.
 
         Examples:
-            Get column names.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3, 4, 5],
-            ...         "bar": [6, 7, 8, 9, 10],
-            ...         "ham": ["a", "b", "c", "d", "e"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> dframe = df.head(3)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {"foo": [1, 2, 3, 4, 5], "bar": [6, 7, 8, 9, 10], "ham": ["a", "b", "c", "d", "e"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.head(3)
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            1    2    7   b
+            2    3    8   c
+            >>> func(df_pl)
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -882,25 +844,6 @@ class DataFrame(BaseFrame):
             │ 1   ┆ 6   ┆ a   │
             │ 2   ┆ 7   ┆ b   │
             │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
-
-            Pass a negative value to get all rows `except` the last `abs(n)`.
-
-            >>> dframe = df.head(-3)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (2, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            │ 2   ┆ 7   ┆ b   │
             └─────┴─────┴─────┘
         """
         return super().head(n)
