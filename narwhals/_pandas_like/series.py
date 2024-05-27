@@ -478,7 +478,7 @@ class PandasSeries:
         self: Self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
-    ) -> float:
+    ) -> Any:
         return self._series.quantile(q=quantile, interpolation=interpolation)
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasSeries:

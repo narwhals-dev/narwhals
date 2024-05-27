@@ -1487,7 +1487,7 @@ class Series:
         self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
-    ) -> float:
+    ) -> Any:
         """
         Get quantile value of the series
 
@@ -1496,7 +1496,7 @@ class Series:
                 Quantile between 0.0 and 1.0.
             interpolation : {'nearest', 'higher', 'lower', 'midpoint', 'linear'}
                 Interpolation method.
-                
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -1524,7 +1524,7 @@ class Series:
         """
         return self._series.quantile(quantile=quantile, interpolation=interpolation)
 
-def zip_with(self, mask: Any, other: Any) -> Self:
+    def zip_with(self, mask: Any, other: Any) -> Self:
         """
         Take values from self or other based on the given mask. Where mask evaluates true, take values from self. Where mask evaluates false, take values from other.
 
