@@ -284,7 +284,9 @@ class PandasExpr:
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
-        return register_expression_call(self, "quantile", quantile, interpolation)
+        return reuse_series_implementation(
+            self, "quantile", quantile, interpolation, returns_scalar=True
+        )
 
     @property
     def str(self) -> PandasExprStringNamespace:
