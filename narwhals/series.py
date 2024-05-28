@@ -1489,7 +1489,10 @@ class Series:
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Any:
         """
-        Get quantile value of the series
+        Get quantile value of the series.
+
+        Note:
+            pandas and Polars may have implementation differences for a given interpolation method.
 
         Arguments:
             quantile : float
