@@ -46,14 +46,17 @@ class PandasExpr:
     def from_column_names(
         cls: type[Self], *column_names: str, implementation: str
     ) -> Self:
-        return cls(
-            lambda df: [
+        def func(df: PandasDataFrame) -> list[PandasSeries]:
+            return [
                 PandasSeries(
                     df._dataframe.loc[:, column_name],
                     implementation=df._implementation,
                 )
                 for column_name in column_names
-            ],
+            ]
+
+        return cls(
+            func,
             depth=0,
             function_name="col",
             root_names=list(column_names),
