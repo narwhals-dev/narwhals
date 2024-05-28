@@ -79,13 +79,13 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     raise AssertionError("Please report a bug")
 
 
-def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
-    """Evaluate expression if it's an expression, otherwise return it as is."""
+def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
+    """Evaluate `expr` if it's an expression, otherwise return it as is."""
     from narwhals._pandas_like.expr import PandasExpr
 
-    if isinstance(arg, PandasExpr):
-        return arg._call(df)
-    return arg
+    if isinstance(expr, PandasExpr):
+        return expr._call(df)
+    return expr
 
 
 def parse_into_exprs(
@@ -93,6 +93,8 @@ def parse_into_exprs(
     *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
     **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]:
+    """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
+    more details."""
     out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
     for name, expr in named_exprs.items():
         out.append(parse_into_expr(implementation, expr).alias(name))
@@ -100,6 +102,17 @@ def parse_into_exprs(
 
 
 def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
+    """Parse `into_expr` as an expression.
+
+    For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
+    We do the same in Narwhals:
+
+    - if `into_expr` is already an expression, just return it
+    - if it's a Series, then convert it to an expression
+    - if it's a numpy array, then convert it to a Series and then to an expression
+    - if it's a string, then convert it to an expression
+    - else, raise
+    """
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
@@ -259,6 +272,19 @@ def item(s: Any) -> Any:
 
 
 def is_simple_aggregation(expr: PandasExpr) -> bool:
+    """
+    Check if expr is a very simple one, such as:
+
+    - nw.col('a').mean()
+    - nw.mean('a')
+    - nw.len()
+
+    as opposed to, say
+
+    - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
+
+    because then, we can use a fastpath in pandas.
+    """
     return (
         expr._function_name is not None
         and expr._depth is not None
