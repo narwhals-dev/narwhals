@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.utils import reuse_series_implementation
@@ -277,6 +278,13 @@ class PandasExpr:
 
     def is_last_distinct(self) -> Self:
         return reuse_series_implementation(self, "is_last_distinct")
+
+    def quantile(
+        self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Self:
+        return register_expression_call(self, "quantile", quantile, interpolation)
 
     @property
     def str(self) -> PandasExprStringNamespace:

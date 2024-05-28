@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Literal
 
 from narwhals.dependencies import get_polars
 from narwhals.dtypes import translate_dtype
@@ -1416,6 +1417,57 @@ class Expr:
             └───────┴───────┘
         """
         return self.__class__(lambda plx: self._call(plx).is_last_distinct())
+
+    def quantile(
+        self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Expr:
+        r"""Get quantile value.
+
+        Note:
+            pandas and Polars may have implementation differences for a given interpolation method.
+
+        Arguments:
+            quantile : float
+                Quantile between 0.0 and 1.0.
+            interpolation : {'nearest', 'higher', 'lower', 'midpoint', 'linear'}
+                Interpolation method.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {'a': list(range(50)), 'b': list(range(50, 100))}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     result = df.select(nw.col('a', 'b').quantile(0.5, interpolation='linear'))
+            ...     return nw.to_native(result)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                a   b
+            0  24.5  74.5
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (1, 2)
+            ┌──────┬──────┐
+            │ a    ┆ b    │
+            │ ---  ┆ ---  │
+            │ f64  ┆ f64  │
+            ╞══════╪══════╡
+            │ 24.5 ┆ 74.5 │
+            └──────┴──────┘
+        """
+        return self.__class__(
+            lambda plx: self._call(plx).quantile(quantile, interpolation)
+        )
 
     @property
     def str(self) -> ExprStringNamespace:

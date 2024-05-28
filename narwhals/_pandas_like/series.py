@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 from typing import Sequence
 
 from narwhals._pandas_like.utils import item
@@ -472,6 +473,13 @@ class PandasSeries:
             val_count,
             implementation=self._implementation,
         )
+
+    def quantile(
+        self: Self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Any:
+        return self._series.quantile(q=quantile, interpolation=interpolation)
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasSeries:
         ser = self._series
