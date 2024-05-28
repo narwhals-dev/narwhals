@@ -283,9 +283,9 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
     """
     Check if expr is a very simple one, such as:
 
-    - nw.col('a').mean()
-    - nw.mean('a')
-    - nw.len()
+    - nw.col('a').mean()  # depth 1
+    - nw.mean('a')  # depth 1
+    - nw.len()  # depth 0
 
     as opposed to, say
 
@@ -293,7 +293,7 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
 
     because then, we can use a fastpath in pandas.
     """
-    return expr._function_name is not None and expr._depth is not None and expr._depth < 2
+    return expr._depth < 2
 
 
 def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
