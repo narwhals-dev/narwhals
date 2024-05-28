@@ -77,7 +77,7 @@ See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) fo
 - Do you maintain a dataframe-consuming library?
 - Do you have a specific Polars function in mind that you would like Narwhals to have in order to make your work easier?
 
-If you said yes to both, I'd love to hear from you!
+If you said yes to both, we'd love to hear from you!
 
 **Note**: You might suspect that this is a secret ploy to infiltrate the Polars API everywhere.
 Indeed, you may suspect that.
