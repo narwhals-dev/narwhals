@@ -19,12 +19,6 @@ Currently, it can execute the first 7.
 Narwhals is extesible - can we make it as easy as possible for backends to become
 compatible with it?
 
-## Query optimisation
-
-Can we insert a light layer to do some simple query optimisation for pandas?
-
 ## Use cases
 
-We're currently investigating whether we can make scikit-lego dataframe-agnostic.
-
-Ideas for other projects we could support? If so, please post them [here](https://github.com/narwhals-dev/narwhals/issues/62).
+Ideas for other projects where Narwhals might be useful? If so, please post them [here](https://github.com/narwhals-dev/narwhals/issues/62).
