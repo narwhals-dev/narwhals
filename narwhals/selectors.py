@@ -76,7 +76,7 @@ def numeric() -> Expr:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.by_dtype(nw.Int64, nw.Float64)*2)
+        ...     df = df.select(ncs.numeric()*2)
         ...     return nw.to_native(df)
 
         We can then pass either pandas or Polars dataframes:
@@ -107,4 +107,136 @@ def numeric() -> Expr:
         dtypes.UInt8,
         dtypes.Float64,
         dtypes.Float32,
+    )
+
+
+def boolean() -> Expr:
+    """
+    Select boolean columns.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>>
+        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pl = pl.DataFrame(data)
+
+        Let's define a dataframe-agnostic function to select boolean
+        dtypes:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(ncs.boolean())
+        ...     return nw.to_native(df)
+
+        We can then pass either pandas or Polars dataframes:
+
+        >>> func(df_pd)
+               c
+        0  False
+        1   True
+        >>> func(df_pl)
+        shape: (2, 1)
+        ┌───────┐
+        │ c     │
+        │ ---   │
+        │ bool  │
+        ╞═══════╡
+        │ false │
+        │ true  │
+        └───────┘
+    """
+    return by_dtype(
+        dtypes.Boolean,
+    )
+
+
+def string() -> Expr:
+    """
+    Select string columns.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>>
+        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pl = pl.DataFrame(data)
+
+        Let's define a dataframe-agnostic function to select string
+        dtypes:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(ncs.string())
+        ...     return nw.to_native(df)
+
+        We can then pass either pandas or Polars dataframes:
+
+        >>> func(df_pd)
+           b
+        0  x
+        1  y
+        >>> func(df_pl)
+        shape: (2, 1)
+        ┌─────┐
+        │ b   │
+        │ --- │
+        │ str │
+        ╞═════╡
+        │ x   │
+        │ y   │
+        └─────┘
+    """
+    return by_dtype(
+        dtypes.String,
+    )
+
+
+def categorical() -> Expr:
+    """
+    Select categorical columns.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>>
+        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
+        >>> df_pd = pd.DataFrame(data).astype({'b': 'category'})
+        >>> df_pl = pl.DataFrame(data, schema_overrides={'b': pl.Categorical})
+
+        Let's define a dataframe-agnostic function to select string
+        dtypes:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(ncs.categorical())
+        ...     return nw.to_native(df)
+
+        We can then pass either pandas or Polars dataframes:
+
+        >>> func(df_pd)
+           b
+        0  x
+        1  y
+        >>> func(df_pl)
+        shape: (2, 1)
+        ┌─────┐
+        │ b   │
+        │ --- │
+        │ cat │
+        ╞═════╡
+        │ x   │
+        │ y   │
+        └─────┘
+    """
+    return by_dtype(
+        dtypes.Categorical,
     )
