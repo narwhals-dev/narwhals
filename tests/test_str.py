@@ -45,3 +45,23 @@ def test_ends_with(df_raw: Any) -> None:
         "a": [True, False],
     }
     compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [df_pandas, df_polars, df_mpd],
+)
+def test_starts_with(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = df.select(nw.col("a").str.starts_with("fda"))
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [True, False],
+    }
+    compare_dicts(result_native, expected)
+    result = df.select(df.collect()["a"].str.starts_with("fda"))
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [True, False],
+    }
+    compare_dicts(result_native, expected)

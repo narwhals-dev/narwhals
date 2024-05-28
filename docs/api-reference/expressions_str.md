@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - starts_with
         - ends_with
         - head
         - to_datetime
