@@ -22,6 +22,10 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.typing import IntoPandasExpr
 
+POLARS_TO_PANDAS_AGGREGATIONS = {
+    "len": "size",
+}
+
 
 class PandasGroupBy:
     def __init__(self, df: PandasDataFrame, keys: list[str]) -> None:
@@ -102,15 +106,17 @@ def agg_pandas(  # noqa: PLR0913
         simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
             if expr._depth == 0:
-                # e.g. agg(pl.len())
+                # e.g. agg(nw.len())
                 assert expr._output_names is not None
+                function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
+                    expr._function_name, expr._function_name
+                )
                 for output_name in expr._output_names:
-                    simple_aggregations[output_name] = (
-                        keys[0],
-                        expr._function_name.replace("len", "size"),
-                    )
+                    simple_aggregations[output_name] = (keys[0], function_name)
                 continue
 
+            # e.g. agg(nw.mean('a'))
+            assert expr._depth == 1
             assert expr._root_names is not None
             assert expr._output_names is not None
             for root_name, output_name in zip(expr._root_names, expr._output_names):
