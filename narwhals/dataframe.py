@@ -53,6 +53,7 @@ class BaseFrame:
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
+        """Process `args` and `kwargs`, extracting underlying objects as we go."""
         from narwhals.utils import flatten
 
         args = [self._extract_native(v) for v in flatten(args)]  # type: ignore[assignment]
