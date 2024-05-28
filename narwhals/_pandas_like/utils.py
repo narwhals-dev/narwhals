@@ -219,26 +219,34 @@ def reuse_series_implementation(
             assert [s._series.name for s in out] == expr._output_names
         return out
 
-    # Try tracking root names by combining them from all expressions appearing
-    # in args and kwargs. If any anonymous expression appears (e.g. nw.all()),
-    # then give up on tracking root names and just set it to None.
+    # Try tracking root and output names by combining them from all
+    # expressions appearing in args and kwargs. If any anonymous
+    # expression appears (e.g. nw.all()), then give up on tracking root names
+    # and just set it to None.
     root_names = copy(expr._root_names)
+    output_names = expr._output_names
     for arg in list(args) + list(kwargs.values()):
         if root_names is not None and isinstance(arg, PandasExpr):
             if arg._root_names is not None:
                 root_names.extend(arg._root_names)
             else:
                 root_names = None
+                output_names = None
                 break
         elif root_names is None:
+            output_names = None
             break
+
+    assert (output_names is None and root_names is None) or (
+        output_names is not None and root_names is not None
+    )  # safety check
 
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
-        output_names=expr._output_names,
+        output_names=output_names,
     )
 
 
@@ -285,13 +293,7 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
 
     because then, we can use a fastpath in pandas.
     """
-    return (
-        expr._function_name is not None
-        and expr._depth is not None
-        and expr._depth < 2
-        # todo: avoid this one?
-        and (expr._root_names is not None or (expr._depth == 0))
-    )
+    return expr._function_name is not None and expr._depth is not None and expr._depth < 2
 
 
 def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
