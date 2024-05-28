@@ -168,10 +168,23 @@ def evaluate_into_exprs(
     return series
 
 
-def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
+def reuse_series_implementation(
+    expr: ExprT, attr: str, *args: Any, returns_scalar: bool = False, **kwargs: Any
+) -> ExprT:
+    """Reuse Series implementation for expression.
+
+    If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
+    leverage this method to do that for us.
+
+    Arguments
+        expr: expression object.
+        attr: name of method.
+        returns_scalar: whether the Series version returns a scalar. In this case,
+            the expression version should return a 1-row Series.
+        args, kwargs: arguments and keyword arguments to pass to function.
+    """
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
 
     plx = PandasNamespace(implementation=expr._implementation)
 
@@ -185,14 +198,17 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                     for arg_name, arg_value in kwargs.items()
                 },
             )
-            if isinstance(_out, PandasSeries):
-                out.append(_out)
-            else:
+            if returns_scalar:
                 out.append(plx._create_series_from_scalar(_out, column))
-        if expr._output_names is not None:
+            else:
+                out.append(_out)
+        if expr._output_names is not None:  # safety check
             assert [s._series.name for s in out] == expr._output_names
         return out
 
+    # Try tracking root names by combining them from all expressions appearing
+    # in args and kwargs. If any anonymous expression appears (e.g. nw.all()),
+    # then give up on tracking root names and just set it to None.
     root_names = copy(expr._root_names)
     for arg in list(args) + list(kwargs.values()):
         if root_names is not None and isinstance(arg, PandasExpr):
@@ -213,9 +229,12 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
     )
 
 
-def register_namespace_expression_call(
+def reuse_series_namespace_implementation(
     expr: ExprT, namespace: str, attr: str, *args: Any, **kwargs: Any
 ) -> PandasExpr:
+    """Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
+    of `Expr.foo`.
+    """
     from narwhals._pandas_like.expr import PandasExpr
 
     return PandasExpr(
