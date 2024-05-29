@@ -2283,7 +2283,43 @@ def mean(*columns: str) -> Expr:
 
 def min(*columns: str) -> Expr:
     """
-    Instantiate an expression representing the minimum of one or more columns, similar to `polars.min`.
+    Return the minimum value.
+
+    Note:
+       Syntactic sugar for nw.col(names).min().
+
+    Parameters:
+        *names
+           Name(s) of the columns to use in the aggregation function.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [5, 10]})
+        >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [5, 10]})
+
+        Let's define a dataframe-agnostic function:
+
+        >>> def func(df_any):
+        ...    df = nw.from_native(df_any)
+        ...    df = df.select(nw.min('b'))
+        ...    return nw.to_native(df)
+
+        We can then pass either pandas or Polars to `func`:
+
+        >>> func(df_pd)
+           b
+        0  5
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ b   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 5   │
+        └─────┘
     """
     return Expr(lambda plx: plx.min(*columns))
 
