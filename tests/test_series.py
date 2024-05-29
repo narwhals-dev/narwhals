@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -416,6 +417,29 @@ def test_is_sorted_invalid(df_raw: Any) -> None:
 
     with pytest.raises(TypeError):
         series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    ("interpolation", "expected"),
+    [
+        ("lower", 7.0),
+        ("higher", 8.0),
+        ("midpoint", 7.5),
+        ("linear", 7.6),
+        ("nearest", 8.0),
+    ],
+)
+def test_quantile(
+    df_raw: Any,
+    interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    expected: float,
+) -> None:
+    q = 0.3
+
+    series = nw.from_native(df_raw["z"], allow_series=True)
+    result = series.quantile(quantile=q, interpolation=interpolation)  # type: ignore[union-attr]
+    assert result == expected
 
 
 @pytest.mark.parametrize(

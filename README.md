@@ -20,9 +20,9 @@ Seamlessly support all, without depending on any!
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
 - ✅ Separate **lazy** and eager APIs
 - ✅ Use **Expressions**
-- ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
-- ✅ Preserve your Index (if present) without it getting in the way!
-- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have!
+- ✅ 100% branch coverage, tested against pandas and Polars nightly builds
+- ✅ Preserve your Index (if present) without it getting in the way
+- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have
 
 ## Used by
 
@@ -58,7 +58,7 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
 Like Ibis, Narwhals aims to enable dataframe-agnostic code. However, Narwhals comes with **zero** dependencies,
 is about as lightweight as it gets, and is aimed at library developers rather than at end users. It also does
-not aim to support as many backends, preferring to instead focus on dataframes. So, which should you use?
+not aim to support as many backends, instead preferring to focus on dataframes. So, which should you use?
 
 - If you need to run complicated analyses and aren't too bothered about package size: Ibis!
 - If you're a library maintainer and want the thinnest-possible layer to get cross-dataframe library support: Narwhals!
@@ -75,9 +75,9 @@ See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) fo
 ## Scope
 
 - Do you maintain a dataframe-consuming library?
-- Is there a Polars function which you'd like Narwhals to have, which would make your work easier?
+- Do you have a specific Polars function in mind that you would like Narwhals to have in order to make your work easier?
 
-If, I'd love to hear from you!
+If you said yes to both, we'd love to hear from you!
 
 **Note**: You might suspect that this is a secret ploy to infiltrate the Polars API everywhere.
 Indeed, you may suspect that.

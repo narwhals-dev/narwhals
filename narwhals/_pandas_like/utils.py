@@ -79,13 +79,13 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     raise AssertionError("Please report a bug")
 
 
-def maybe_evaluate_expr(df: PandasDataFrame, arg: Any) -> Any:
-    """Evaluate expression if it's an expression, otherwise return it as is."""
+def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
+    """Evaluate `expr` if it's an expression, otherwise return it as is."""
     from narwhals._pandas_like.expr import PandasExpr
 
-    if isinstance(arg, PandasExpr):
-        return arg._call(df)
-    return arg
+    if isinstance(expr, PandasExpr):
+        return expr._call(df)
+    return expr
 
 
 def parse_into_exprs(
@@ -93,6 +93,8 @@ def parse_into_exprs(
     *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
     **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]:
+    """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
+    more details."""
     out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
     for name, expr in named_exprs.items():
         out.append(parse_into_expr(implementation, expr).alias(name))
@@ -100,6 +102,17 @@ def parse_into_exprs(
 
 
 def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
+    """Parse `into_expr` as an expression.
+
+    For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
+    We do the same in Narwhals:
+
+    - if `into_expr` is already an expression, just return it
+    - if it's a Series, then convert it to an expression
+    - if it's a numpy array, then convert it to a Series and then to an expression
+    - if it's a string, then convert it to an expression
+    - else, raise
+    """
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
@@ -168,10 +181,23 @@ def evaluate_into_exprs(
     return series
 
 
-def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) -> ExprT:
+def reuse_series_implementation(
+    expr: ExprT, attr: str, *args: Any, returns_scalar: bool = False, **kwargs: Any
+) -> ExprT:
+    """Reuse Series implementation for expression.
+
+    If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
+    leverage this method to do that for us.
+
+    Arguments
+        expr: expression object.
+        attr: name of method.
+        returns_scalar: whether the Series version returns a scalar. In this case,
+            the expression version should return a 1-row Series.
+        args, kwargs: arguments and keyword arguments to pass to function.
+    """
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
 
     plx = PandasNamespace(implementation=expr._implementation)
 
@@ -185,37 +211,51 @@ def register_expression_call(expr: ExprT, attr: str, *args: Any, **kwargs: Any) 
                     for arg_name, arg_value in kwargs.items()
                 },
             )
-            if isinstance(_out, PandasSeries):
-                out.append(_out)
-            else:
+            if returns_scalar:
                 out.append(plx._create_series_from_scalar(_out, column))
-        if expr._output_names is not None:
+            else:
+                out.append(_out)
+        if expr._output_names is not None:  # safety check
             assert [s._series.name for s in out] == expr._output_names
         return out
 
+    # Try tracking root and output names by combining them from all
+    # expressions appearing in args and kwargs. If any anonymous
+    # expression appears (e.g. nw.all()), then give up on tracking root names
+    # and just set it to None.
     root_names = copy(expr._root_names)
+    output_names = expr._output_names
     for arg in list(args) + list(kwargs.values()):
         if root_names is not None and isinstance(arg, PandasExpr):
             if arg._root_names is not None:
                 root_names.extend(arg._root_names)
             else:
                 root_names = None
+                output_names = None
                 break
         elif root_names is None:
+            output_names = None
             break
+
+    assert (output_names is None and root_names is None) or (
+        output_names is not None and root_names is not None
+    )  # safety check
 
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
         root_names=root_names,
-        output_names=expr._output_names,
+        output_names=output_names,
     )
 
 
-def register_namespace_expression_call(
+def reuse_series_namespace_implementation(
     expr: ExprT, namespace: str, attr: str, *args: Any, **kwargs: Any
 ) -> PandasExpr:
+    """Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
+    of `Expr.foo`.
+    """
     from narwhals._pandas_like.expr import PandasExpr
 
     return PandasExpr(
@@ -240,13 +280,20 @@ def item(s: Any) -> Any:
 
 
 def is_simple_aggregation(expr: PandasExpr) -> bool:
-    return (
-        expr._function_name is not None
-        and expr._depth is not None
-        and expr._depth < 2
-        # todo: avoid this one?
-        and (expr._root_names is not None or (expr._depth == 0))
-    )
+    """
+    Check if expr is a very simple one, such as:
+
+    - nw.col('a').mean()  # depth 1
+    - nw.mean('a')  # depth 1
+    - nw.len()  # depth 0
+
+    as opposed to, say
+
+    - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
+
+    because then, we can use a fastpath in pandas.
+    """
+    return expr._depth < 2
 
 
 def horizontal_concat(dfs: list[Any], implementation: str) -> Any:

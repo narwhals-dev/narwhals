@@ -53,6 +53,7 @@ class BaseFrame:
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
+        """Process `args` and `kwargs`, extracting underlying objects as we go."""
         from narwhals.utils import flatten
 
         args = [self._extract_native(v) for v in flatten(args)]  # type: ignore[assignment]
@@ -568,23 +569,28 @@ class DataFrame(BaseFrame):
 
     @property
     def columns(self) -> list[str]:
-        r"""
+        """
         Get column names.
 
         Examples:
-            Get column names.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df.columns
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.columns
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            ['foo', 'bar', 'ham']
+            >>> func(df_pl)
             ['foo', 'bar', 'ham']
         """
         return super().columns
@@ -757,26 +763,35 @@ class DataFrame(BaseFrame):
         return super().select(*exprs, **named_exprs)
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        r"""
+        """
         Rename column names.
 
         Arguments:
             mapping: Key value pairs that map from old name to new name.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> dframe = df.rename({"foo": "apple"})
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.rename({"foo": "apple"})
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               apple  bar ham
+            0      1    6   a
+            1      2    7   b
+            2      3    8   c
+            >>> func(df_pl)
             shape: (3, 3)
             ┌───────┬─────┬─────┐
             │ apple ┆ bar ┆ ham │
@@ -791,7 +806,7 @@ class DataFrame(BaseFrame):
         return super().rename(mapping)
 
     def head(self, n: int) -> Self:
-        r"""
+        """
         Get the first `n` rows.
 
         Arguments:
@@ -799,30 +814,28 @@ class DataFrame(BaseFrame):
                 except the last `abs(n)`.
 
         Examples:
-            Get column names.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3, 4, 5],
-            ...         "bar": [6, 7, 8, 9, 10],
-            ...         "ham": ["a", "b", "c", "d", "e"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> dframe = df.head(3)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {"foo": [1, 2, 3, 4, 5], "bar": [6, 7, 8, 9, 10], "ham": ["a", "b", "c", "d", "e"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.head(3)
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            1    2    7   b
+            2    3    8   c
+            >>> func(df_pl)
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -832,25 +845,6 @@ class DataFrame(BaseFrame):
             │ 1   ┆ 6   ┆ a   │
             │ 2   ┆ 7   ┆ b   │
             │ 3   ┆ 8   ┆ c   │
-            └─────┴─────┴─────┘
-
-            Pass a negative value to get all rows `except` the last `abs(n)`.
-
-            >>> dframe = df.head(-3)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (2, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ i64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6   ┆ a   │
-            │ 2   ┆ 7   ┆ b   │
             └─────┴─────┴─────┘
         """
         return super().head(n)

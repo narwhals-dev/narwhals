@@ -128,7 +128,7 @@ Name: a, dtype: int64
 So indeed, our expression did what it said on the tin - it took some dataframe, took
 column 'a', and added 1 to it.
 
-If you search for `def register_expression_call`, you'll see that that's all
+If you search for `def reuse_series_implementation`, you'll see that that's all
 expressions do in Narwhals - they just keep rigorously applying the definition of
 expression.
 

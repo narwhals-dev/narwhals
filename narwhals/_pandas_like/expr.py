@@ -3,10 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 
 from narwhals._pandas_like.series import PandasSeries
-from narwhals._pandas_like.utils import register_expression_call
-from narwhals._pandas_like.utils import register_namespace_expression_call
+from narwhals._pandas_like.utils import reuse_series_implementation
+from narwhals._pandas_like.utils import reuse_series_namespace_implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -46,14 +47,17 @@ class PandasExpr:
     def from_column_names(
         cls: type[Self], *column_names: str, implementation: str
     ) -> Self:
-        return cls(
-            lambda df: [
+        def func(df: PandasDataFrame) -> list[PandasSeries]:
+            return [
                 PandasSeries(
                     df._dataframe.loc[:, column_name],
                     implementation=df._implementation,
                 )
                 for column_name in column_names
-            ],
+            ]
+
+        return cls(
+            func,
             depth=0,
             function_name="col",
             root_names=list(column_names),
@@ -65,152 +69,158 @@ class PandasExpr:
         self,
         dtype: Any,
     ) -> Self:
-        return register_expression_call(self, "cast", dtype)
+        return reuse_series_implementation(self, "cast", dtype=dtype)
 
     def __eq__(self, other: PandasExpr | Any) -> Self:  # type: ignore[override]
-        return register_expression_call(self, "__eq__", other)
+        return reuse_series_implementation(self, "__eq__", other=other)
 
     def __ne__(self, other: PandasExpr | Any) -> Self:  # type: ignore[override]
-        return register_expression_call(self, "__ne__", other)
+        return reuse_series_implementation(self, "__ne__", other=other)
 
     def __ge__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__ge__", other)
+        return reuse_series_implementation(self, "__ge__", other=other)
 
     def __gt__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__gt__", other)
+        return reuse_series_implementation(self, "__gt__", other=other)
 
     def __le__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__le__", other)
+        return reuse_series_implementation(self, "__le__", other=other)
 
     def __lt__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__lt__", other)
+        return reuse_series_implementation(self, "__lt__", other=other)
 
     def __and__(self, other: PandasExpr | bool | Any) -> Self:
-        return register_expression_call(self, "__and__", other)
+        return reuse_series_implementation(self, "__and__", other=other)
 
     def __rand__(self, other: Any) -> Self:
-        return register_expression_call(self, "__rand__", other)
+        return reuse_series_implementation(self, "__rand__", other=other)
 
     def __or__(self, other: PandasExpr | bool | Any) -> Self:
-        return register_expression_call(self, "__or__", other)
+        return reuse_series_implementation(self, "__or__", other=other)
 
     def __ror__(self, other: Any) -> Self:
-        return register_expression_call(self, "__ror__", other)
+        return reuse_series_implementation(self, "__ror__", other=other)
 
     def __add__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__add__", other)
+        return reuse_series_implementation(self, "__add__", other=other)
 
     def __radd__(self, other: Any) -> Self:
-        return register_expression_call(self, "__radd__", other)
+        return reuse_series_implementation(self, "__radd__", other=other)
 
     def __sub__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__sub__", other)
+        return reuse_series_implementation(self, "__sub__", other=other)
 
     def __rsub__(self, other: Any) -> Self:
-        return register_expression_call(self, "__rsub__", other)
+        return reuse_series_implementation(self, "__rsub__", other=other)
 
     def __mul__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__mul__", other)
+        return reuse_series_implementation(self, "__mul__", other=other)
 
     def __rmul__(self, other: Any) -> Self:
-        return register_expression_call(self, "__rmul__", other)
+        return reuse_series_implementation(self, "__rmul__", other=other)
 
     def __truediv__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__truediv__", other)
+        return reuse_series_implementation(self, "__truediv__", other=other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        return register_expression_call(self, "__rtruediv__", other)
+        return reuse_series_implementation(self, "__rtruediv__", other=other)
 
     def __floordiv__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__floordiv__", other)
+        return reuse_series_implementation(self, "__floordiv__", other=other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return register_expression_call(self, "__rfloordiv__", other)
+        return reuse_series_implementation(self, "__rfloordiv__", other=other)
 
     def __pow__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__pow__", other)
+        return reuse_series_implementation(self, "__pow__", other=other)
 
     def __rpow__(self, other: Any) -> Self:
-        return register_expression_call(self, "__rpow__", other)
+        return reuse_series_implementation(self, "__rpow__", other=other)
 
     def __mod__(self, other: PandasExpr | Any) -> Self:
-        return register_expression_call(self, "__mod__", other)
+        return reuse_series_implementation(self, "__mod__", other=other)
 
     def __rmod__(self, other: Any) -> Self:
-        return register_expression_call(self, "__rmod__", other)
+        return reuse_series_implementation(self, "__rmod__", other=other)
 
     # Unary
 
     def __invert__(self) -> Self:
-        return register_expression_call(self, "__invert__")
+        return reuse_series_implementation(self, "__invert__")
 
     # Reductions
+    def null_count(self) -> Self:
+        return reuse_series_implementation(self, "null_count", returns_scalar=True)
+
+    def n_unique(self) -> Self:
+        return reuse_series_implementation(self, "n_unique", returns_scalar=True)
 
     def sum(self) -> Self:
-        return register_expression_call(self, "sum")
+        return reuse_series_implementation(self, "sum", returns_scalar=True)
 
     def mean(self) -> Self:
-        return register_expression_call(self, "mean")
+        return reuse_series_implementation(self, "mean", returns_scalar=True)
 
     def std(self, *, ddof: int = 1) -> Self:
-        return register_expression_call(self, "std", ddof=ddof)
+        return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
     def any(self) -> Self:
-        return register_expression_call(self, "any")
+        return reuse_series_implementation(self, "any", returns_scalar=True)
 
     def all(self) -> Self:
-        return register_expression_call(self, "all")
+        return reuse_series_implementation(self, "all", returns_scalar=True)
 
     def max(self) -> Self:
-        return register_expression_call(self, "max")
+        return reuse_series_implementation(self, "max", returns_scalar=True)
 
     def min(self) -> Self:
-        return register_expression_call(self, "min")
+        return reuse_series_implementation(self, "min", returns_scalar=True)
 
     # Other
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
-        return register_expression_call(
-            self, "is_between", lower_bound, upper_bound, closed
+        return reuse_series_implementation(
+            self,
+            "is_between",
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            closed=closed,
         )
 
     def is_null(self) -> Self:
-        return register_expression_call(self, "is_null")
+        return reuse_series_implementation(self, "is_null")
 
     def fill_null(self, value: Any) -> Self:
-        return register_expression_call(self, "fill_null", value)
+        return reuse_series_implementation(self, "fill_null", value=value)
 
     def is_in(self, other: Any) -> Self:
-        return register_expression_call(self, "is_in", other)
+        return reuse_series_implementation(self, "is_in", other=other)
 
     def filter(self, *predicates: Any) -> Self:
         from narwhals._pandas_like.namespace import PandasNamespace
 
         plx = PandasNamespace(self._implementation)
         expr = plx.all_horizontal(*predicates)
-        return register_expression_call(self, "filter", expr)
+        return reuse_series_implementation(self, "filter", other=expr)
 
     def drop_nulls(self) -> Self:
-        return register_expression_call(self, "drop_nulls")
+        return reuse_series_implementation(self, "drop_nulls")
 
     def sort(self, *, descending: bool = False) -> Self:
-        return register_expression_call(self, "sort", descending=descending)
-
-    def n_unique(self) -> Self:
-        return register_expression_call(self, "n_unique")
+        return reuse_series_implementation(self, "sort", descending=descending)
 
     def cum_sum(self) -> Self:
-        return register_expression_call(self, "cum_sum")
+        return reuse_series_implementation(self, "cum_sum")
 
     def unique(self) -> Self:
-        return register_expression_call(self, "unique")
+        return reuse_series_implementation(self, "unique")
 
     def diff(self) -> Self:
-        return register_expression_call(self, "diff")
+        return reuse_series_implementation(self, "diff")
 
     def shift(self, n: int) -> Self:
-        return register_expression_call(self, "shift", n)
+        return reuse_series_implementation(self, "shift", n=n)
 
     def sample(
         self,
@@ -219,8 +229,8 @@ class PandasExpr:
         *,
         with_replacement: bool = False,
     ) -> Self:
-        return register_expression_call(
-            self, "sample", n, fraction=fraction, with_replacement=with_replacement
+        return reuse_series_implementation(
+            self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
         )
 
     def alias(self, name: str) -> Self:
@@ -258,19 +268,25 @@ class PandasExpr:
         )
 
     def is_duplicated(self) -> Self:
-        return register_expression_call(self, "is_duplicated")
+        return reuse_series_implementation(self, "is_duplicated")
 
     def is_unique(self) -> Self:
-        return register_expression_call(self, "is_unique")
-
-    def null_count(self) -> Self:
-        return register_expression_call(self, "null_count")
+        return reuse_series_implementation(self, "is_unique")
 
     def is_first_distinct(self) -> Self:
-        return register_expression_call(self, "is_first_distinct")
+        return reuse_series_implementation(self, "is_first_distinct")
 
     def is_last_distinct(self) -> Self:
-        return register_expression_call(self, "is_last_distinct")
+        return reuse_series_implementation(self, "is_last_distinct")
+
+    def quantile(
+        self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "quantile", quantile, interpolation, returns_scalar=True
+        )
 
     @property
     def str(self) -> PandasExprStringNamespace:
@@ -286,7 +302,7 @@ class PandasExprStringNamespace:
         self._expr = expr
 
     def ends_with(self, suffix: str) -> PandasExpr:
-        return register_namespace_expression_call(
+        return reuse_series_namespace_implementation(
             self._expr,
             "str",
             "ends_with",
@@ -294,7 +310,7 @@ class PandasExprStringNamespace:
         )
 
     def head(self, n: int = 5) -> PandasExpr:
-        return register_namespace_expression_call(
+        return reuse_series_namespace_implementation(
             self._expr,
             "str",
             "head",
@@ -302,7 +318,7 @@ class PandasExprStringNamespace:
         )
 
     def to_datetime(self, format: str | None = None) -> PandasExpr:  # noqa: A002
-        return register_namespace_expression_call(
+        return reuse_series_namespace_implementation(
             self._expr,
             "str",
             "to_datetime",
@@ -315,46 +331,52 @@ class PandasExprDateTimeNamespace:
         self._expr = expr
 
     def year(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "year")
+        return reuse_series_namespace_implementation(self._expr, "dt", "year")
 
     def month(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "month")
+        return reuse_series_namespace_implementation(self._expr, "dt", "month")
 
     def day(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "day")
+        return reuse_series_namespace_implementation(self._expr, "dt", "day")
 
     def hour(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "hour")
+        return reuse_series_namespace_implementation(self._expr, "dt", "hour")
 
     def minute(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "minute")
+        return reuse_series_namespace_implementation(self._expr, "dt", "minute")
 
     def second(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "second")
+        return reuse_series_namespace_implementation(self._expr, "dt", "second")
 
     def millisecond(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "millisecond")
+        return reuse_series_namespace_implementation(self._expr, "dt", "millisecond")
 
     def microsecond(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "microsecond")
+        return reuse_series_namespace_implementation(self._expr, "dt", "microsecond")
 
     def nanosecond(self) -> PandasExpr:
         return register_namespace_expression_call(self._expr, "dt", "nanosecond")
 
     def ordinal_day(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "ordinal_day")
+        return reuse_series_namespace_implementation(self._expr, "dt", "ordinal_day")
 
     def total_minutes(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "total_minutes")
+        return reuse_series_namespace_implementation(self._expr, "dt", "total_minutes")
 
     def total_seconds(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "total_seconds")
+        return reuse_series_namespace_implementation(self._expr, "dt", "total_seconds")
 
     def total_milliseconds(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "total_milliseconds")
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_milliseconds"
+        )
 
     def total_microseconds(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "total_microseconds")
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_microseconds"
+        )
 
     def total_nanoseconds(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "total_nanoseconds")
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_nanoseconds"
+        )
