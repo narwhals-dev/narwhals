@@ -1,3 +1,4 @@
+from narwhals import selectors
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Boolean
@@ -66,4 +67,5 @@ __all__ = [
     "Categorical",
     "String",
     "Datetime",
+    "selectors",
 ]
