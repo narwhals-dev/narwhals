@@ -355,7 +355,7 @@ class PandasExprDateTimeNamespace:
         return reuse_series_namespace_implementation(self._expr, "dt", "microsecond")
 
     def nanosecond(self) -> PandasExpr:
-        return register_namespace_expression_call(self._expr, "dt", "nanosecond")
+        return reuse_series_namespace_implementation(self._expr, "dt", "nanosecond")
 
     def ordinal_day(self) -> PandasExpr:
         return reuse_series_namespace_implementation(self._expr, "dt", "ordinal_day")
