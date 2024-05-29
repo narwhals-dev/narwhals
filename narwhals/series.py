@@ -1832,7 +1832,7 @@ class SeriesDateTimeNamespace:
             >>> s_pd = pd.Series(dates)
             >>> s_pl = pl.Series(dates)
 
-            We define a library agnostic function
+            We define a library agnostic function:
 
             >>> def func(s_any):
             ...     s = nw.from_native(s_any, series_only=True)
@@ -1840,6 +1840,7 @@ class SeriesDateTimeNamespace:
             ...     return nw.to_native(s)
 
             We can then pass either pandas or Polars to `func`:
+
             >>> func(s_pd)
             0    400
             1    600
