@@ -20,9 +20,9 @@ Seamlessly support all, without depending on any!
 - ✅ **No dependencies** (not even Polars), keep your library lightweight
 - ✅ Separate **lazy** and eager APIs
 - ✅ Use **Expressions**
-- ✅ 100% branch coverage, tested against pandas and Polars nightly builds!
-- ✅ Preserve your Index (if present) without it getting in the way!
-- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have!
+- ✅ 100% branch coverage, tested against pandas and Polars nightly builds
+- ✅ Preserve your Index (if present) without it getting in the way
+- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have
 
 ## Used by
 
