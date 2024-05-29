@@ -11,9 +11,9 @@
         - hour
         - minute
         - second
-        - nanoseconds
         - millisecond
         - microsecond
+        - nanosecond
         - total_minutes
         - total_seconds
         - total_milliseconds
