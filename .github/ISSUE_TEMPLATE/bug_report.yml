@@ -29,7 +29,7 @@ body:
        required: true 
 - type: textarea
   attributes:
-    label: Expected Results
+    label: Expected results
     description: >
        Please paste or describe the expected results.
     placeholder: >
@@ -38,7 +38,7 @@ body:
         required: true
 - type: textarea
   attributes:
-    label: Actual Results
+    label: Actual results
     description: |
       Please paste or describe the results you observe instead of the expected results. 
   validations:
