@@ -14,9 +14,9 @@
 - [ ] ✅ Test
 - [ ] 🐳 Other
 
-## Related Issues 
+## Related issues 
 
-- Related Issue # 
+- Related issue # 
 - Closes #
 
 ## Checklist
