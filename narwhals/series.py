@@ -1955,6 +1955,42 @@ class SeriesDateTimeNamespace:
         """
         return self._series.__class__(self._series._series.dt.microsecond())
 
+    def nanosecond(self) -> Series:
+        """
+        Extracts the nanosecond(s) in a date series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [datetime(2022, 1, 1, 5, 3, 10, 500000), datetime(2022, 1, 5, 9, 12, 4, 60000)]
+            >>> s_pd = pd.Series(dates)
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function:
+
+            >>> def func(s_any):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     s = s.dt.nanosecond()
+            ...     return nw.to_native(s)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    500000000
+            1     60000000
+            dtype: int...
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [i32]
+            [
+               500000000
+               60000000
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.nanosecond())
+
     def ordinal_day(self) -> Series:
         """
         Get ordinal day.

@@ -557,6 +557,14 @@ class PandasSeriesDateTimeNamespace:
     def microsecond(self) -> PandasSeries:
         return self._series._from_series(self._series._series.dt.microsecond)
 
+    def nanosecond(self) -> PandasSeries:
+        return self._series._from_series(
+            (
+                (self._series._series.dt.microsecond * 1_000)
+                + self._series._series.dt.nanosecond
+            ),
+        )
+
     def ordinal_day(self) -> PandasSeries:
         ser = self._series._series
         year_start = ser.dt.year
