@@ -2009,7 +2009,7 @@ class ExprDateTimeNamespace:
 
     def nanosecond(self) -> Expr:
         """
-        Extract Nanoseconds from underlying DateTime Representation
+        Extract Nanoseconds from underlying DateTime representation
 
         Examples:
             >>> import pandas as pd
