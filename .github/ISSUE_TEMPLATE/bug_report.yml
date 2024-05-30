@@ -48,7 +48,7 @@ body:
     render: shell
     description: |
       What version of Narwhals and dataframe libraries are you running?
-      You could run the following and provide the output bellow.
+      You could run the following and provide the output below.
       ```
       pip freeze | grep -E "narwhals|polars|pandas|modin|cudf"
       ```
