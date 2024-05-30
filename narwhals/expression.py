@@ -2373,82 +2373,14 @@ def len() -> Expr:
 
 def sum(*columns: str) -> Expr:
     """
-    Sum all Values
-
-    Note:
-    Syntactic sugar for nw.col('name').sum()
-
-    Parameters:
-    *names
-    Name(s) of the columns to use in the aggregation function
-
-    Example:
-    >>> import pandas as pd
-    >>> import polars as pl
-    >>> import narwhals as nw
-    >>> df_pl = pl.DataFrame({"a": [1, 2]})
-    >>> df_pd = pd.DataFrame({"a": [1, 2]})
-
-    We define a dataframe-agnostic function:
-
-    >>> def func(df_any):
-    ...     df = nw.from_native(df_any)
-    ...     df = df.select(nw.sum('a'))
-    ...     return nw.to_native(df)
-
-    We can then pass either pandas or polars to `func`:
-
-    >>> func(df_pd)
-       a
-    0  3
-    >>> func(df_pl)
-    shape: (1, 1)
-    ┌─────┐
-    │ a   │
-    │ --- │
-    │ i64 │
-    ╞═════╡
-    │ 3   │
-    └─────┘
-
+    Instantiate an expression representing the sum of one or more columns, similar to `polars.sum`.
     """
     return Expr(lambda plx: plx.sum(*columns))
 
 
 def mean(*columns: str) -> Expr:
     """
-    Get the mean value
-
-    Example:
-    >>> import pandas as pd
-    >>> import polars as pl
-    >>> import narwhals as nw
-    >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
-    >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
-
-    We define a dataframe agnostic function:
-
-    >>> def func(df_any):
-    ...     df = nw.from_native(df_any)
-    ...     df = df.select(nw.mean('a'))
-    ...     return nw.to_native(df)
-
-    We can then pass either pandas or Polars to `func`:
-
-    >>> func(df_pd)
-         a
-    0  4.0
-    >>> func(df_pl)
-    shape: (1, 1)
-    ┌─────┐
-    │ a   │
-    │ --- │
-    │ f64 │
-    ╞═════╡
-    │ 4.0 │
-    └─────┘
-
-
+    Instantiate an expression representing the mean of one or more columns, similar to `polars.mean`.
     """
     return Expr(lambda plx: plx.mean(*columns))
 
