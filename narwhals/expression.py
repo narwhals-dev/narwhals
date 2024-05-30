@@ -2376,7 +2376,7 @@ def sum(*columns: str) -> Expr:
     Sum all values
 
     Note:
-        Syntactic sugar for ``nw.col(column).sum()``
+        Syntactic sugar for ``nw.col(columns).sum()``
 
     Parameters:
         *column
@@ -2420,7 +2420,7 @@ def mean(*columns: str) -> Expr:
     Get the mean value
 
     Note:
-        Syntactic sugar for ``nw.col(column).mean()``
+        Syntactic sugar for ``nw.col(columns).mean()``
 
     Parameters:
         *column
