@@ -1,6 +1,5 @@
 name: Bug report
 description: Report to help us reproduce the bug
-labels: ['Needs Triage']
 title: "[Bug]: "
 
 body:
@@ -46,13 +45,17 @@ body:
 - type: textarea
   attributes:
     label: Versions
-    description: >
-      What version of Narwhals are you running?
+    render: shell
+    description: |
+      What version of Narwhals and dataframe libraries are you running?
+      You could run the following and provide the output bellow.
+      ```
+      pip freeze | grep -E "narwhals|polars|pandas|modin|cudf"
+      ```
   validations:
     required: true
 - type: textarea
   attributes:
     label: Relevant log output
-    description: |
-      Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
-      render: shell
+    description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+    render: shell
