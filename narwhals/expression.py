@@ -1923,6 +1923,7 @@ class ExprDateTimeNamespace:
             >>> df_pl = pl.DataFrame(data)
 
             We define a dataframe-agnostic function:
+
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
             ...     df = df.with_columns(
@@ -1932,6 +1933,8 @@ class ExprDateTimeNamespace:
             ...         nw.col("datetime").dt.millisecond().alias("millisecond")
             ...     )
             ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
                              datetime  hour  minute  second  millisecond
