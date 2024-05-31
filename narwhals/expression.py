@@ -2468,7 +2468,43 @@ def min(*columns: str) -> Expr:
 
 def max(*columns: str) -> Expr:
     """
-    Instantiate an expression representing the maximum of one or more columns, similar to `polars.max`.
+    Return the maximum value.
+
+    Note:
+       Syntactic sugar for ``nw.col(columns).max()``.
+
+    Parameters:
+        *columns
+           Name(s) of the columns to use in the aggregation function.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [5, 10]})
+        >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [5, 10]})
+
+        Let's define a dataframe-agnostic function:
+
+        >>> def func(df_any):
+        ...    df = nw.from_native(df_any)
+        ...    df = df.select(nw.max('a'))
+        ...    return nw.to_native(df)
+
+        We can then pass either pandas or Polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  2
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 2   │
+        └─────┘
     """
     return Expr(lambda plx: plx.max(*columns))
 
