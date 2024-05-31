@@ -2286,10 +2286,10 @@ def min(*columns: str) -> Expr:
     Return the minimum value.
 
     Note:
-       Syntactic sugar for nw.col(names).min().
+       Syntactic sugar for ``nw.col(columns).min()``.
 
     Parameters:
-        *names
+        *columns
            Name(s) of the columns to use in the aggregation function.
 
     Examples:
