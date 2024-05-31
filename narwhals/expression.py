@@ -2306,9 +2306,6 @@ def len() -> Expr:
     """
     Return the number of rows.
 
-    Note:
-       Syntactic sugar for ``nw.col(columns).len()``.
-
     Arguments:
         *columns: Name(s) of the columns to use in the aggregation function.
 
