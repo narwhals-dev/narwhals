@@ -2293,10 +2293,10 @@ def max(*columns: str) -> Expr:
     Return the maximum value.
 
     Note:
-       Syntactic sugar for ``nw.col(names).max()``.
+       Syntactic sugar for ``nw.col(columns).max()``.
 
     Parameters:
-        *names
+        *columns
            Name(s) of the columns to use in the aggregation function.
 
     Examples:
