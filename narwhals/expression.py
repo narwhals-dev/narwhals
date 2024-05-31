@@ -2304,7 +2304,43 @@ def all() -> Expr:
 
 def len() -> Expr:
     """
-    Instantiate an expression representing the length of a dataframe, similar to `polars.len`.
+    Return the number of rows.
+
+    Note:
+       Syntactic sugar for ``nw.col(columns).len()``.
+
+    Parameters:
+        *columns
+           Name(s) of the columns to use in the aggregation function.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [5, 10]})
+        >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [5, 10]})
+
+        Let's define a dataframe-agnostic function:
+
+        >>> def func(df_any):
+        ...    df = nw.from_native(df_any)
+        ...    df = df.select(nw.len())
+        ...    return nw.to_native(df)
+
+        We can then pass either pandas or Polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  2
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ len │
+        │ --- │
+        │ u32 │
+        ╞═════╡
+        │ 2   │
+        └─────┘
     """
 
     def func(plx: Any) -> Any:
