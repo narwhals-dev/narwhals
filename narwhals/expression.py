@@ -2293,7 +2293,7 @@ def max(*columns: str) -> Expr:
     Return the maximum value.
 
     Note:
-       Syntactic sugar for nw.col(names).max().
+       Syntactic sugar for ``nw.col(names).max()``.
 
     Parameters:
         *names
