@@ -2423,7 +2423,7 @@ def mean(*columns: str) -> Expr:
         Syntactic sugar for ``nw.col(columns).mean()``
 
     Parameters:
-        *column
+        *columns
             Name(s) of the columns to use in the aggregation function
 
     Example:
