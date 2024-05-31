@@ -2310,8 +2310,7 @@ def len() -> Expr:
        Syntactic sugar for ``nw.col(columns).len()``.
 
     Parameters:
-        *columns
-           Name(s) of the columns to use in the aggregation function.
+        *columns: Name(s) of the columns to use in the aggregation function.
 
     Examples:
         >>> import polars as pl
