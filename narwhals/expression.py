@@ -2373,7 +2373,7 @@ def len() -> Expr:
 
 def sum(*columns: str) -> Expr:
     """
-    Sum all values
+    Sum all values.
 
     Note:
         Syntactic sugar for ``nw.col(columns).sum()``
