@@ -2330,8 +2330,8 @@ def len() -> Expr:
         We can then pass either pandas or Polars to `func`:
 
         >>> func(df_pd)
-           a
-        0  2
+           len
+        0    2
         >>> func(df_pl)
         shape: (1, 1)
         ┌─────┐
