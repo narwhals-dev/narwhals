@@ -1,0 +1,39 @@
+name: Documentation improvement
+description: Report to improve the docs. You could also directly open a PR with your suggestions.
+title: "[Doc]: "
+
+body:
+- type: markdown
+  attibutes:
+    values: > 
+         ## Thanks for taking the time to fill out this form
+- type: dropdown
+  id: TYPE
+  attributes:
+    label: What type of report is this?
+    options: 
+      - 'Correction'
+      - 'Improvement'
+    validations:
+      required: true  
+- type: textarea
+  attributes:
+    label: Please describe the issue.
+    description: >
+      Tell us if something is unclear or incorrect, and where.
+    validations:
+      required: true
+- type: textarea
+  attributes:
+    label: If you have a suggestion on how it should be, add it below.
+    description: >
+      How can we improve it
+- type: dropdown
+  id: PR
+  attributes:
+    label: Would you want to open a pull request to fix it?
+    options:
+      - 'yes'
+      - 'no'
+      
+           
