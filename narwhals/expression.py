@@ -2309,7 +2309,7 @@ def len() -> Expr:
     Note:
        Syntactic sugar for ``nw.col(columns).len()``.
 
-    Parameters:
+    Arguments:
         *columns: Name(s) of the columns to use in the aggregation function.
 
     Examples:
