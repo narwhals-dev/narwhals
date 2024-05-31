@@ -2379,7 +2379,7 @@ def sum(*columns: str) -> Expr:
         Syntactic sugar for ``nw.col(columns).sum()``
 
     Parameters:
-        *column
+        *columns
             Name(s) of the columns to use in the aggregation function
 
     Example:
