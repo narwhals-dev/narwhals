@@ -1,0 +1,54 @@
+name: Feature request
+description: Form to request a new feature
+title: "[Enh]: "
+
+body:
+- type: markdown 
+  attributes:
+    value: >
+        ## Thanks for helping us improve Narwhals!
+- type: markdown 
+  attributes:
+    value: >
+       ### Before submitting a request, please check if it has already been discused in the  
+       [list of issues](https://github.com/narwhals-dev/narwhals/issues?q=is%3Aissue+is%3Aclosed%2Bopen+).
+- type: textarea
+  attributes:
+    label: >
+       We would like to learn about your use case. For example, if this feature is needed 
+       to adopt Narwhals in an open source project, could you please enter the link to it below?
+    description: >
+       Link to the project where this will be used if possible.
+- type: textarea
+  attributes:
+    label: Please describe the purpose of the new feature or describe the problem to solve.
+    description: >
+       A clear description of the objective.
+  validations:
+       required: true
+- type: textarea
+  attributes:
+    label: Suggest a solution if possible.
+    description: >
+       Please suggest a solution if you can.
+  validations:
+       required: false 
+- type: textarea
+  attributes:
+    label: If you have tried alternatives, please describe them below.
+    description: >
+       What you have tried if applicable.
+- type: dropdown
+  id: PR
+  attributes:
+    label: Would you want to open a pull request?
+    options:
+      - 'yes'
+      - 'no'
+  validations:
+      required: false
+- type: textarea
+  attributes:
+    label: Additional information that may help us understand your needs.
+    description: >
+       Context or useful information
