@@ -78,7 +78,7 @@ class PandasSeries:
             DataFrame this column originates from.
         """
 
-        self._name = str(series.name) if series.name is not None else ""
+        self._name = series.name
         self._series = series
         self._implementation = implementation
         self._use_copy_false = False
@@ -119,7 +119,7 @@ class PandasSeries:
 
     @property
     def name(self) -> str:
-        return self._name
+        return self._name  # type: ignore[no-any-return]
 
     @property
     def shape(self) -> tuple[int]:
