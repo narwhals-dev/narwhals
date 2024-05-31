@@ -10,7 +10,7 @@ python -m pip install narwhals
 Then, if you start the Python REPL and see the following:
 ```python
 >>> import narwhals
->>> narwhals
+>>> narwhals.__version__
 '0.8.19'
 ```
 then installation worked correctly!
