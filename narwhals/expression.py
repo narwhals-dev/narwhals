@@ -2378,11 +2378,10 @@ def sum(*columns: str) -> Expr:
     Note:
         Syntactic sugar for ``nw.col(columns).sum()``
 
-    Parameters:
-        *columns
-            Name(s) of the columns to use in the aggregation function
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function
 
-    Example:
+    Examples:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
@@ -2422,11 +2421,10 @@ def mean(*columns: str) -> Expr:
     Note:
         Syntactic sugar for ``nw.col(columns).mean()``
 
-    Parameters:
-        *columns
-            Name(s) of the columns to use in the aggregation function
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function
 
-    Example:
+    Examples:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
@@ -2466,9 +2464,8 @@ def min(*columns: str) -> Expr:
     Note:
        Syntactic sugar for ``nw.col(columns).min()``.
 
-    Parameters:
-        *columns
-           Name(s) of the columns to use in the aggregation function.
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function.
 
     Examples:
         >>> import polars as pl
@@ -2509,9 +2506,8 @@ def max(*columns: str) -> Expr:
     Note:
        Syntactic sugar for ``nw.col(columns).max()``.
 
-    Parameters:
-        *columns
-           Name(s) of the columns to use in the aggregation function.
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function.
 
     Examples:
         >>> import polars as pl

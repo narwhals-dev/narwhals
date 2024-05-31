@@ -27,10 +27,10 @@ class GroupBy:
         Compute aggregations for each group of a group by operation.
 
         Arguments:
-            *aggs: Aggregations to compute for each group of the group by operation,
-            specified as positional arguments.
+            aggs: Aggregations to compute for each group of the group by operation,
+                specified as positional arguments.
 
-            **named_aggs: Additional aggregations, specified as keyword arguments.
+            named_aggs: Additional aggregations, specified as keyword arguments.
 
         Examples:
             Group by one column or by multiple columns and call `agg` to compute
