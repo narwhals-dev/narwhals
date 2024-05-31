@@ -2007,6 +2007,58 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
 
+    def nanosecond(self) -> Expr:
+        """
+        Extract Nanoseconds from underlying DateTime representation
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "datetime": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2024, 10, 13, 5, 30, 14, 500000),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 60000)
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.with_columns(
+            ...         nw.col("datetime").dt.hour().alias("hour"),
+            ...         nw.col("datetime").dt.minute().alias("minute"),
+            ...         nw.col("datetime").dt.second().alias("second"),
+            ...         nw.col("datetime").dt.nanosecond().alias("nanosecond")
+            ...     )
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                             datetime  hour  minute  second  nanosecond
+            0 1978-01-01 01:01:01.000     1       1       1           0
+            1 2024-10-13 05:30:14.500     5      30      14   500000000
+            2 2065-01-01 10:20:30.060    10      20      30    60000000
+            >>> func(df_pl)
+            shape: (3, 5)
+            ┌─────────────────────────┬──────┬────────┬────────┬────────────┐
+            │ datetime                ┆ hour ┆ minute ┆ second ┆ nanosecond │
+            │ ---                     ┆ ---  ┆ ---    ┆ ---    ┆ ---        │
+            │ datetime[μs]            ┆ i8   ┆ i8     ┆ i8     ┆ i32        │
+            ╞═════════════════════════╪══════╪════════╪════════╪════════════╡
+            │ 1978-01-01 01:01:01     ┆ 1    ┆ 1      ┆ 1      ┆ 0          │
+            │ 2024-10-13 05:30:14.500 ┆ 5    ┆ 30     ┆ 14     ┆ 500000000  │
+            │ 2065-01-01 10:20:30.060 ┆ 10   ┆ 20     ┆ 30     ┆ 60000000   │
+            └─────────────────────────┴──────┴────────┴────────┴────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.nanosecond())
+
     def ordinal_day(self) -> Expr:
         """
         Get ordinal day.
@@ -2321,15 +2373,89 @@ def len() -> Expr:
 
 def sum(*columns: str) -> Expr:
     """
-    Instantiate an expression representing the sum of one or more columns, similar to `polars.sum`.
+    Sum all values.
+
+    Note:
+        Syntactic sugar for ``nw.col(columns).sum()``
+
+    Parameters:
+        *columns
+            Name(s) of the columns to use in the aggregation function
+
+    Example:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2]})
+
+    We define a dataframe-agnostic function:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(nw.sum('a'))
+        ...     return nw.to_native(df)
+
+    We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  3
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 3   │
+        └─────┘
     """
+
     return Expr(lambda plx: plx.sum(*columns))
 
 
 def mean(*columns: str) -> Expr:
     """
-    Instantiate an expression representing the mean of one or more columns, similar to `polars.mean`.
+    Get the mean value.
+
+    Note:
+        Syntactic sugar for ``nw.col(columns).mean()``
+
+    Parameters:
+        *columns
+            Name(s) of the columns to use in the aggregation function
+
+    Example:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
+        >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
+
+    We define a dataframe agnostic function:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(nw.mean('a'))
+        ...     return nw.to_native(df)
+
+    We can then pass either pandas or Polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  4.0
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 4.0 │
+        └─────┘
     """
+
     return Expr(lambda plx: plx.mean(*columns))
 
 
