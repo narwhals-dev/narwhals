@@ -2417,7 +2417,7 @@ def sum(*columns: str) -> Expr:
 
 def mean(*columns: str) -> Expr:
     """
-    Get the mean value
+    Get the mean value.
 
     Note:
         Syntactic sugar for ``nw.col(columns).mean()``
