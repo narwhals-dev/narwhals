@@ -195,15 +195,41 @@ class DataFrame(BaseFrame):
     Examples:
         Constructing a DataFrame from a dictionary:
 
+        >>> # Using Polars Dataframe
+
         >>> import polars as pl
         >>> import narwhals as nw
         >>> data = {"a": [1, 2], "b": [3, 4]}
         >>> df_pl = pl.DataFrame(data)
-        >>> df = nw.DataFrame(df_pl)
+        >>> df = nw.from_native(df_pl)
         >>> df
         ┌───────────────────────────────────────────────┐
         | Narwhals DataFrame                            |
-        | Use `narwhals.to_native` to see native output |
+        | Use `narwhals.to_native` to see native output | 
+        └───────────────────────────────────────────────┘
+        >>> nw.to_native(df)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+
+
+        >>> # Using Pandas Dataframe
+
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pd = pd.Dataframe(data)
+        >>> df = nw.from_native(df_pd)
+        >>> df
+        ┌───────────────────────────────────────────────┐
+        | Narwhals DataFrame                            |
+        | Use `narwhals.to_native` to see native output | 
         └───────────────────────────────────────────────┘
         >>> nw.to_native(df)
         shape: (2, 2)

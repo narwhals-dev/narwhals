@@ -1,0 +1,3 @@
+[mkdocs.plugins]
+autorefs = mkdocs_autorefs.plugin:AutorefsPlugin
+

@@ -1,0 +1,192 @@
+{#- Template for Python classes.
+
+This template renders a Python class.
+
+Context:
+  class (griffe.dataclasses.Class): The class to render.
+  root (bool): Whether this is the root object, injected with `:::` in a Markdown page.
+  heading_level (int): The HTML heading level to use.
+  config (dict): The configuration options.
+-#}
+
+{% block logs scoped %}
+  {#- Logging block.
+  
+  This block can be used to log debug messages, deprecation messages, warnings, etc.
+  -#}
+  {{ log.debug("Rendering " + class.path) }}
+{% endblock logs %}
+
+<div class="doc doc-object doc-class">
+  {% with obj = class, html_id = class.path %}
+
+    {% if root %}
+      {% set show_full_path = config.show_root_full_path %}
+      {% set root_members = True %}
+    {% elif root_members %}
+      {% set show_full_path = config.show_root_members_full_path or config.show_object_full_path %}
+      {% set root_members = False %}
+    {% else %}
+      {% set show_full_path = config.show_object_full_path %}
+    {% endif %}
+
+    {% set class_name = class.path if show_full_path else class.name %}
+
+    {% if not root or config.show_root_heading %}
+      {% filter heading(
+          heading_level,
+          role="class",
+          id=html_id,
+          class="doc doc-heading",
+          toc_label=('<code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;'|safe if config.show_symbol_type_toc else '') + class.name,
+        ) %}
+
+        {% block heading scoped %}
+          {#- Heading block.
+          
+          This block renders the heading for the class.
+          -#}
+          {% if config.show_symbol_type_heading %}<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>{% endif %}
+          {% if config.separate_signature %}
+            <span class="doc doc-object-name doc-class-name">{{ class_name }}</span>
+          {% elif config.merge_init_into_class and "__init__" in class.all_members %}
+            {% with function = class.all_members["__init__"] %}
+              {%+ filter highlight(language="python", inline=True) %}
+                {{ class_name }}{% include "signature"|get_template with context %}
+              {% endfilter %}
+            {% endwith %}
+          {% else %}
+            <code>{{ class_name }}</code>
+          {% endif %}
+        {% endblock heading %}
+
+        {% block labels scoped %}
+          {#- Labels block.
+          
+          This block renders the labels for the class.
+          -#}
+          {% with labels = class.labels %}
+            {% include "labels"|get_template with context %}
+          {% endwith %}
+        {% endblock labels %}
+
+      {% endfilter %}
+
+      {% block signature scoped %}
+        {#- Signature block.
+        
+        This block renders the signature for the class.
+        -#}
+        {% if config.separate_signature and config.merge_init_into_class %}
+          {% if "__init__" in class.all_members %}
+            {% with function = class.all_members["__init__"] %}
+              {% filter format_signature(function, config.line_length, crossrefs=config.signature_crossrefs) %}
+                {{ class.name }}
+              {% endfilter %}
+            {% endwith %}
+          {% endif %}
+        {% endif %}
+      {% endblock signature %}
+
+    {% else %}
+      {% if config.show_root_toc_entry %}
+        {% filter heading(heading_level,
+            role="class",
+            id=html_id,
+            toc_label=('<code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;'|safe if config.show_symbol_type_toc else '') + class.name,
+            hidden=True,
+          ) %}
+        {% endfilter %}
+      {% endif %}
+      {% set heading_level = heading_level - 1 %}
+    {% endif %}
+
+    <div class="doc doc-contents {% if root %}first{% endif %}">
+      {% block contents scoped %}
+        {#- Contents block.
+        
+        This block renders the contents of the class.
+        It contains other blocks that users can override.
+        Overriding the contents block allows to rearrange the order of the blocks.
+        -#}
+        {% block bases scoped %}
+          {#- Class bases block.
+          
+          This block renders the bases for the class.
+          -#}
+          {% if config.show_bases and class.bases %}
+            <p class="doc doc-class-bases">
+              Bases: {% for expression in class.bases -%}
+                <code>{% include "expression"|get_template with context %}</code>{% if not loop.last %}, {% endif %}
+              {% endfor -%}
+            </p>
+          {% endif %}
+        {% endblock bases %}
+
+        {% block docstring scoped %}
+          {#- Docstring block.
+          
+          This block renders the docstring for the class.
+          -#}
+          {% with docstring_sections = class.docstring.parsed %}
+            {% include "docstring"|get_template with context %}
+          {% endwith %}
+          {% if config.merge_init_into_class %}
+            {% if "__init__" in class.all_members and class.all_members["__init__"].has_docstring %}
+              {% with docstring_sections = class.all_members["__init__"].docstring.parsed %}
+                {% include "docstring"|get_template with context %}
+              {% endwith %}
+            {% endif %}
+          {% endif %}
+        {% endblock docstring %}
+
+        {% block source scoped %}
+          {#- Source block.
+          
+          This block renders the source code for the class.
+          -#}
+          {% if config.show_source %}
+            {% if config.merge_init_into_class %}
+              {% if "__init__" in class.all_members and class.all_members["__init__"].source %}
+                {% with init = class.all_members["__init__"] %}
+                  <details class="quote">
+                    <summary>Source code in <code>
+                      {%- if init.relative_filepath.is_absolute() -%}
+                        {{ init.relative_package_filepath }}
+                      {%- else -%}
+                        {{ init.relative_filepath }}
+                      {%- endif -%}
+                    </code></summary>
+                    {{ init.source|highlight(language="python", linestart=init.lineno or 0, linenums=True) }}
+                  </details>
+                {% endwith %}
+              {% endif %}
+            {% elif class.source %}
+              <details class="quote">
+                <summary>Source code in <code>
+                  {%- if class.relative_filepath.is_absolute() -%}
+                    {{ class.relative_package_filepath }}
+                  {%- else -%}
+                    {{ class.relative_filepath }}
+                  {%- endif -%}
+                </code></summary>
+                {{ class.source|highlight(language="python", linestart=class.lineno or 0, linenums=True) }}
+              </details>
+            {% endif %}
+          {% endif %}
+        {% endblock source %}
+
+        {% block children scoped %}
+          {#- Children block.
+          
+          This block renders the children (members) of the class.
+          -#}
+          {% set root = False %}
+          {% set heading_level = heading_level + 1 %}
+          {% include "children"|get_template with context %}
+        {% endblock children %}
+      {% endblock contents %}
+    </div>
+
+  {% endwith %}
+</div>

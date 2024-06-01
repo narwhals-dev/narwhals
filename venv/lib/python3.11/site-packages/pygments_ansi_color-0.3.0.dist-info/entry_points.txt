@@ -1,0 +1,2 @@
+[pygments.lexers]
+ansi_color = pygments_ansi_color:AnsiColorLexer

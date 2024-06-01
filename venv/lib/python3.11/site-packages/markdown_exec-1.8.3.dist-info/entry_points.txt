@@ -1,0 +1,3 @@
+[mkdocs.plugins]
+markdown-exec = markdown_exec.mkdocs_plugin:MarkdownExecPlugin
+
