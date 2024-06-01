@@ -96,18 +96,7 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return by_dtype(
-        dtypes.Int64,
-        dtypes.Int32,
-        dtypes.Int16,
-        dtypes.Int8,
-        dtypes.UInt64,
-        dtypes.UInt32,
-        dtypes.UInt16,
-        dtypes.UInt8,
-        dtypes.Float64,
-        dtypes.Float32,
-    )
+    return Expr(lambda plx: plx.selectors.numeric())
 
 
 def boolean() -> Expr:
