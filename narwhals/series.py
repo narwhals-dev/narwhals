@@ -858,7 +858,7 @@ class Series:
             2    1.0
             3    2.0
             0    5.0
-            Name: , dtype: float64
+            dtype: float64
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
@@ -873,7 +873,7 @@ class Series:
             0    5.0
             3    2.0
             2    1.0
-            Name: , dtype: float64
+            dtype: float64
             >>> func_descend(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
