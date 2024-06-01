@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from narwhals import dtypes
 from narwhals.dtypes import translate_dtype
 from narwhals.expression import Expr
 from narwhals.utils import flatten
@@ -138,9 +137,7 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-    return by_dtype(
-        dtypes.Boolean,
-    )
+    return Expr(lambda plx: plx.selectors.boolean())
 
 
 def string() -> Expr:
@@ -182,9 +179,7 @@ def string() -> Expr:
         │ y   │
         └─────┘
     """
-    return by_dtype(
-        dtypes.String,
-    )
+    return Expr(lambda plx: plx.selectors.string())
 
 
 def categorical() -> Expr:
@@ -226,6 +221,4 @@ def categorical() -> Expr:
         │ y   │
         └─────┘
     """
-    return by_dtype(
-        dtypes.Categorical,
-    )
+    return Expr(lambda plx: plx.selectors.categorical())

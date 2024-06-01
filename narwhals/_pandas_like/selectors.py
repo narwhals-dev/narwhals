@@ -43,3 +43,12 @@ class PandasSelector:
                 dtypes.Float32,
             ]
         )
+
+    def boolean(self) -> PandasExpr:
+        return self.by_dtype([dtypes.Boolean])
+
+    def string(self) -> PandasExpr:
+        return self.by_dtype([dtypes.String])
+
+    def categorical(self) -> PandasExpr:
+        return self.by_dtype([dtypes.Categorical])
