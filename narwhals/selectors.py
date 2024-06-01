@@ -3,9 +3,19 @@ from __future__ import annotations
 from typing import Any
 
 from narwhals import dtypes
+from narwhals.dtypes import DType
 from narwhals.dtypes import translate_dtype
 from narwhals.expression import Expr
 from narwhals.utils import flatten
+
+
+class Selector(Expr):
+    selection: list[DType]
+
+    @classmethod
+    def from_selection(cls, selection: list[DType]):
+        cls.selection = selection
+        call = by_dtype(selection)
 
 
 def by_dtype(*dtypes: Any) -> Expr:
@@ -50,7 +60,7 @@ def by_dtype(*dtypes: Any) -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Expr(
+    return Selector(
         lambda plx: plx.selectors.by_dtype(
             [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
         )
@@ -96,17 +106,19 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return by_dtype(
-        dtypes.Int64,
-        dtypes.Int32,
-        dtypes.Int16,
-        dtypes.Int8,
-        dtypes.UInt64,
-        dtypes.UInt32,
-        dtypes.UInt16,
-        dtypes.UInt8,
-        dtypes.Float64,
-        dtypes.Float32,
+    return Selector.from_selection(
+        [
+            dtypes.Int64,
+            dtypes.Int32,
+            dtypes.Int16,
+            dtypes.Int8,
+            dtypes.UInt64,
+            dtypes.UInt32,
+            dtypes.UInt16,
+            dtypes.UInt8,
+            dtypes.Float64,
+            dtypes.Float32,
+        ]
     )
 
 
