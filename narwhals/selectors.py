@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Sequence
 
 from narwhals import dtypes
 from narwhals.dtypes import DType
@@ -10,12 +11,29 @@ from narwhals.utils import flatten
 
 
 class Selector(Expr):
-    selection: list[DType]
+    selection: Sequence[DType | type[DType]]
 
-    @classmethod
-    def from_selection(cls, selection: list[DType]):
-        cls.selection = selection
-        call = by_dtype(selection)
+    def __init__(self, selection: Sequence[DType | type[DType]]) -> None:
+        self.selection = selection
+        super().__init__(
+            lambda plx: plx.selectors.by_dtype(
+                [translate_dtype(plx, dtype) for dtype in flatten(selection)]
+            )
+        )
+
+    def __sub__(self, other: Selector) -> Selector | Expr:
+        if isinstance(other, Selector):
+            selection = list(set(self.selection).difference(other.selection))
+            return Selector(selection)
+        else:
+            return Expr(self._call) - other
+
+    def __add__(self, other: Selector) -> Selector | Expr:
+        if isinstance(other, Selector):
+            selection = list(set(self.selection).union(other.selection))
+            return Selector(selection)
+        else:
+            return Expr(self._call) + other
 
 
 def by_dtype(*dtypes: Any) -> Expr:
@@ -60,11 +78,7 @@ def by_dtype(*dtypes: Any) -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector(
-        lambda plx: plx.selectors.by_dtype(
-            [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
-        )
-    )
+    return Selector(flatten(dtypes))
 
 
 def numeric() -> Expr:
@@ -106,7 +120,7 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector.from_selection(
+    return Selector(
         [
             dtypes.Int64,
             dtypes.Int32,
