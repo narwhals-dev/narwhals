@@ -850,37 +850,35 @@ class DataFrame(BaseFrame):
         return super().head(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        r"""
+        """
         Remove columns from the dataframe.
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
 
         Examples:
-            Drop a single column by passing the name of that column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> dframe = df.drop("ham")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.drop("ham")
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar
+            0    1  6.0
+            1    2  7.0
+            2    3  8.0
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -891,77 +889,37 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7.0 │
             │ 3   ┆ 8.0 │
             └─────┴─────┘
-
-            Drop multiple columns by passing a list of column names.
-
-            >>> dframe = df.drop(["bar", "ham"])
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (3, 1)
-            ┌─────┐
-            │ foo │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            │ 3   │
-            └─────┘
-
-            Use positional arguments to drop multiple columns.
-
-            >>> dframe = df.drop("foo", "ham")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (3, 1)
-            ┌─────┐
-            │ bar │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 6.0 │
-            │ 7.0 │
-            │ 8.0 │
-            └─────┘
         """
         return super().drop(*columns)
 
     def unique(self, subset: str | list[str]) -> Self:
-        r"""
+        """
         Drop duplicate rows from this dataframe.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
 
-        Returns:
-            DataFrame: DataFrame with unique rows.
-
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3, 1],
-            ...         "bar": ["a", "a", "a", "a"],
-            ...         "ham": ["b", "b", "b", "b"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> dframe = df.unique(["bar", "ham"])
-            >>> nw.to_native(dframe)
+            >>> df = {"foo": [1, 2, 3, 1], "bar": ["a", "a", "a", "a"], "ham": ["b", "b", "b", "b"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.unique(["bar", "ham"])
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo bar ham
+            0    1   a   b
+            >>> func(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -969,18 +927,6 @@ class DataFrame(BaseFrame):
             │ i64 ┆ str ┆ str │
             ╞═════╪═════╪═════╡
             │ 1   ┆ a   ┆ b   │
-            └─────┴─────┴─────┘
-            >>> dframe = df.unique("foo").sort("foo")
-            >>> nw.to_native(dframe)
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ str ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ a   ┆ b   │
-            │ 2   ┆ a   ┆ b   │
-            │ 3   ┆ a   ┆ b   │
             └─────┴─────┴─────┘
         """
         return super().unique(subset)
