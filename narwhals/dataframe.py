@@ -917,8 +917,8 @@ class DataFrame(BaseFrame):
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-               foo  bar ham
-            0    1    a   b
+               foo bar ham
+            0    1   a   b
             >>> func(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
