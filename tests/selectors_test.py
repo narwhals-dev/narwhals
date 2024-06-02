@@ -87,3 +87,13 @@ def test_set_ops(
     df = nw.from_native(constructor(data))
     result = df.select(selector).columns
     assert sorted(result) == expected
+
+
+def test_set_ops_invalid() -> None:
+    df = nw.from_native(pd.DataFrame(data))
+    with pytest.raises(NotImplementedError):
+        df.select(1 - numeric())
+    with pytest.raises(NotImplementedError):
+        df.select(1 | numeric())
+    with pytest.raises(NotImplementedError):
+        df.select(1 & numeric())

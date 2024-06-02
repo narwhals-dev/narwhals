@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import NoReturn
 
 from narwhals import dtypes
 from narwhals._pandas_like.expr import PandasExpr
@@ -147,3 +148,12 @@ class PandasSelector(PandasExpr):
 
     def __invert__(self) -> PandasSelector:
         return PandasSelectorNamespace(self._implementation).all() - self
+
+    def __rsub__(self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __rand__(self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __ror__(self, other: Any) -> NoReturn:
+        raise NotImplementedError
