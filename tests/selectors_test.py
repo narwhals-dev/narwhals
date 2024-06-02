@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import pandas as pd
@@ -5,6 +7,7 @@ import polars as pl
 import pytest
 
 import narwhals as nw
+from narwhals.selectors import all
 from narwhals.selectors import boolean
 from narwhals.selectors import by_dtype
 from narwhals.selectors import categorical
@@ -61,3 +64,26 @@ def test_categorical() -> None:
     result = nw.to_native(df.select(categorical()))
     expected = {"b": ["a", "b", "c"]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize(
+    ("selector", "expected"),
+    [
+        (numeric() | boolean(), ["a", "c", "d"]),
+        (numeric() & boolean(), []),
+        (numeric() & by_dtype(nw.Int64), ["a"]),
+        (numeric() | by_dtype(nw.Int64), ["a", "c"]),
+        (~numeric(), ["b", "d"]),
+        (boolean() & True, ["d"]),
+        (boolean() | True, ["d"]),
+        (numeric() - 1, ["a", "c"]),
+        (all(), ["a", "b", "c", "d"]),
+    ],
+)
+def test_set_ops(
+    constructor: Any, selector: nw.selectors.Selector, expected: list[str]
+) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(selector).columns
+    assert sorted(result) == expected

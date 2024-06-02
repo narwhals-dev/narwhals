@@ -69,8 +69,14 @@ class PandasSelectorNamespace:
 
 
 class PandasSelector(PandasExpr):
-    def __repr__(self) -> str:
-        return "PandasSelector"
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"PandasSelector("
+            f"depth={self._depth}, "
+            f"function_name={self._function_name}, "
+            f"root_names={self._root_names}, "
+            f"output_names={self._output_names}"
+        )
 
     def _to_expr(self) -> PandasExpr:
         return PandasExpr(
@@ -140,4 +146,4 @@ class PandasSelector(PandasExpr):
             return self._to_expr() & other
 
     def __invert__(self) -> PandasSelector:
-        return self.all() - self
+        return PandasSelectorNamespace(self._implementation).all() - self
