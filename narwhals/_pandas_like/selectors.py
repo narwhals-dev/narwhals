@@ -26,7 +26,33 @@ def by_dtype(dtypes: list[DType | type[DType]], implementation: str) -> PandasEx
 
 
 def numeric(implementation):
-    return by_dtype([dtypes.Int64, dtypes.Float64], implementation=implementation)
+    return by_dtype(
+        [
+            dtypes.Int64,
+            dtypes.Int32,
+            dtypes.Int16,
+            dtypes.Int8,
+            dtypes.UInt64,
+            dtypes.UInt32,
+            dtypes.UInt16,
+            dtypes.UInt8,
+            dtypes.Float64,
+            dtypes.Float32,
+        ],
+        implementation=implementation,
+    )
+
+
+def categorical(implementation):
+    return by_dtype([dtypes.Categorical], implementation=implementation)
+
+
+def string(implementation):
+    return by_dtype([dtypes.String], implementation=implementation)
+
+
+def boolean(implementation):
+    return by_dtype([dtypes.Boolean], implementation=implementation)
 
 
 def all(implementation):

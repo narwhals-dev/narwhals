@@ -153,7 +153,13 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-    return Expr(lambda plx: plx.selectors.boolean())
+
+    def func(plx):
+        if hasattr(plx, "_implementation"):
+            return plx.selectors.boolean(plx._implementation)
+        return plx.selectors.boolean()
+
+    return Selector(func)
 
 
 def string() -> Expr:
@@ -195,7 +201,13 @@ def string() -> Expr:
         │ y   │
         └─────┘
     """
-    return Expr(lambda plx: plx.selectors.string())
+
+    def func(plx):
+        if hasattr(plx, "_implementation"):
+            return plx.selectors.string(plx._implementation)
+        return plx.selectors.string()
+
+    return Selector(func)
 
 
 def categorical() -> Expr:
@@ -237,4 +249,10 @@ def categorical() -> Expr:
         │ y   │
         └─────┘
     """
-    return Expr(lambda plx: plx.selectors.categorical())
+
+    def func(plx):
+        if hasattr(plx, "_implementation"):
+            return plx.selectors.categorical(plx._implementation)
+        return plx.selectors.categorical()
+
+    return Selector(func)
