@@ -246,24 +246,24 @@ def all() -> Expr:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.categorical())
+        ...     df = df.select(ncs.all())
         ...     return nw.to_native(df)
 
         We can then pass either pandas or Polars dataframes:
 
         >>> func(df_pd)
-           b
-        0  x
-        1  y
+           a  b      c
+        0  1  x  False
+        1  2  y   True
         >>> func(df_pl)
-        shape: (2, 1)
-        ┌─────┐
-        │ b   │
-        │ --- │
-        │ cat │
-        ╞═════╡
-        │ x   │
-        │ y   │
-        └─────┘
+        shape: (2, 3)
+        ┌─────┬─────┬───────┐
+        │ a   ┆ b   ┆ c     │
+        │ --- ┆ --- ┆ ---   │
+        │ i64 ┆ cat ┆ bool  │
+        ╞═════╪═════╪═══════╡
+        │ 1   ┆ x   ┆ false │
+        │ 2   ┆ y   ┆ true  │
+        └─────┴─────┴───────┘
     """
     return Selector(lambda plx: plx.selectors.all())
