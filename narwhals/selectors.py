@@ -140,7 +140,7 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-    return Selector(lambda plx: plx.boolean())
+    return Selector(lambda plx: plx.selectors.boolean())
 
 
 def string() -> Expr:
