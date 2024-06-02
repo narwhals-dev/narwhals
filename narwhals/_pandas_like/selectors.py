@@ -11,44 +11,30 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-class PandasSelector:
-    def __init__(self, implementation: str) -> None:
-        self._implementation = implementation
+def by_dtype(dtypes: list[DType | type[DType]], implementation: str) -> PandasExpr:
+    def func(df: PandasDataFrame) -> list[PandasSeries]:
+        return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
-    def by_dtype(self, dtypes: list[DType | type[DType]]) -> PandasExpr:
-        def func(df: PandasDataFrame) -> list[PandasSeries]:
-            return [df[col] for col in df.columns if df.schema[col] in dtypes]
+    return PandasSelector(
+        func,
+        depth=0,
+        function_name="type_selector",
+        root_names=None,
+        output_names=None,
+        implementation=implementation,
+    )
 
-        return PandasExpr(
-            func,
-            depth=0,
-            function_name="type_selector",
-            root_names=None,
-            output_names=None,
-            implementation=self._implementation,
-        )
 
-    def numeric(self) -> PandasExpr:
-        return self.by_dtype(
-            [
-                dtypes.Int64,
-                dtypes.Int32,
-                dtypes.Int16,
-                dtypes.Int8,
-                dtypes.UInt64,
-                dtypes.UInt32,
-                dtypes.UInt16,
-                dtypes.UInt8,
-                dtypes.Float64,
-                dtypes.Float32,
-            ]
-        )
+def numeric(implementation):
+    return by_dtype([dtypes.Int64, dtypes.Float64], implementation=implementation)
 
-    def boolean(self) -> PandasExpr:
-        return self.by_dtype([dtypes.Boolean])
 
-    def string(self) -> PandasExpr:
-        return self.by_dtype([dtypes.String])
+class PandasSelector(PandasExpr):
+    def __sub__(self, other):
+        if isinstance(other, PandasSelector):
 
-    def categorical(self) -> PandasExpr:
-        return self.by_dtype([dtypes.Categorical])
+            def func(plx):
+                breakpoint()
+                return self._call(plx) - other._call(plx)
+
+            return PandasSelector(func)

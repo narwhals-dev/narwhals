@@ -7,6 +7,17 @@ from narwhals.expression import Expr
 from narwhals.utils import flatten
 
 
+class Selector(Expr):
+    def __sub__(self, other):
+        if isinstance(other, Selector):
+
+            def func(plx):
+                breakpoint()
+                return self._call(plx) - other._call(plx)
+
+            return Selector(func)
+
+
 def by_dtype(*dtypes: Any) -> Expr:
     """
     Select columns based on their dtype.
@@ -49,11 +60,18 @@ def by_dtype(*dtypes: Any) -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Expr(
-        lambda plx: plx.selectors.by_dtype(
+
+    def func(plx):
+        if hasattr(plx, "_implementation"):
+            return plx.selectors.by_dtype(
+                [translate_dtype(plx, dtype) for dtype in flatten(dtypes)],
+                implementation=plx._implementation,
+            )
+        return plx.selectors.by_dtype(
             [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
         )
-    )
+
+    return Selector(func)
 
 
 def numeric() -> Expr:
@@ -95,7 +113,13 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Expr(lambda plx: plx.selectors.numeric())
+
+    def func(plx):
+        if hasattr(plx, "_implementation"):
+            return plx.selectors.numeric(plx._implementation)
+        return plx.selectors.numeric()
+
+    return Selector(func)
 
 
 def boolean() -> Expr:
