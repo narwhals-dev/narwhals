@@ -127,6 +127,9 @@ class PandasDataFrame:
         **named_exprs: IntoPandasExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        if not new_series:
+            # return empty dataframe, like Polars does
+            return self._from_dataframe(self._dataframe.__class__())
         new_series = validate_indices(new_series)
         df = horizontal_concat(
             new_series,

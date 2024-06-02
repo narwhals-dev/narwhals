@@ -7,15 +7,7 @@ from narwhals.expression import Expr
 from narwhals.utils import flatten
 
 
-class Selector(Expr):
-    def __sub__(self, other):
-        if isinstance(other, Selector):
-
-            def func(plx):
-                breakpoint()
-                return self._call(plx) - other._call(plx)
-
-            return Selector(func)
+class Selector(Expr): ...
 
 
 def by_dtype(*dtypes: Any) -> Expr:
