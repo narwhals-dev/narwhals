@@ -16,20 +16,20 @@ nav:
   - Roadmap: roadmap.md
   - Related projects: related.md
   - API Reference:
-    - api-reference/index.md
-    - api-reference/narwhals.md
     - api-reference/dataframe.md
+    - api-reference/expressions.md
+    - api-reference/expressions_dt.md
+    - api-reference/expressions_str.md
+    - api-reference/group_by.md
     - api-reference/lazyframe.md
     - api-reference/series.md
     - api-reference/series_dt.md
     - api-reference/series_str.md
-    - api-reference/expressions.md
-    - api-reference/expressions_dt.md
-    - api-reference/expressions_str.md
-    - api-reference/dtypes.md
     - api-reference/dependencies.md
+    - api-reference/dtypes.md
+    - api-reference/index.md
+    - api-reference/narwhals.md
     - api-reference/selectors.md
-    - api-reference/group_by.md
 theme:
   name: material
   font: false
