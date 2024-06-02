@@ -1,3 +1,4 @@
+from narwhals import selectors
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Boolean
@@ -34,6 +35,7 @@ from narwhals.utils import maybe_set_index
 __version__ = "0.8.21"
 
 __all__ = [
+    "selectors",
     "concat",
     "to_native",
     "from_native",

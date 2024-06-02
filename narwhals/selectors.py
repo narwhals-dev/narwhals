@@ -52,18 +52,11 @@ def by_dtype(*dtypes: Any) -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-
-    def func(plx):
-        if hasattr(plx, "_implementation"):
-            return plx.selectors.by_dtype(
-                [translate_dtype(plx, dtype) for dtype in flatten(dtypes)],
-                implementation=plx._implementation,
-            )
-        return plx.selectors.by_dtype(
+    return Selector(
+        lambda plx: plx.selectors.by_dtype(
             [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
         )
-
-    return Selector(func)
+    )
 
 
 def numeric() -> Expr:
@@ -105,13 +98,7 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-
-    def func(plx):
-        if hasattr(plx, "_implementation"):
-            return plx.selectors.numeric(plx._implementation)
-        return plx.selectors.numeric()
-
-    return Selector(func)
+    return Selector(lambda plx: plx.selectors.numeric())
 
 
 def boolean() -> Expr:
@@ -153,13 +140,7 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-
-    def func(plx):
-        if hasattr(plx, "_implementation"):
-            return plx.selectors.boolean(plx._implementation)
-        return plx.selectors.boolean()
-
-    return Selector(func)
+    return Selector(lambda plx: plx.boolean())
 
 
 def string() -> Expr:
@@ -201,13 +182,7 @@ def string() -> Expr:
         │ y   │
         └─────┘
     """
-
-    def func(plx):
-        if hasattr(plx, "_implementation"):
-            return plx.selectors.string(plx._implementation)
-        return plx.selectors.string()
-
-    return Selector(func)
+    return Selector(lambda plx: plx.selectors.string())
 
 
 def categorical() -> Expr:
@@ -249,10 +224,46 @@ def categorical() -> Expr:
         │ y   │
         └─────┘
     """
+    return Selector(lambda plx: plx.selectors.categorical())
 
-    def func(plx):
-        if hasattr(plx, "_implementation"):
-            return plx.selectors.categorical(plx._implementation)
-        return plx.selectors.categorical()
 
-    return Selector(func)
+def all() -> Expr:
+    """
+    Select all columns.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>>
+        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
+        >>> df_pd = pd.DataFrame(data).astype({'b': 'category'})
+        >>> df_pl = pl.DataFrame(data, schema_overrides={'b': pl.Categorical})
+
+        Let's define a dataframe-agnostic function to select string
+        dtypes:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(ncs.categorical())
+        ...     return nw.to_native(df)
+
+        We can then pass either pandas or Polars dataframes:
+
+        >>> func(df_pd)
+           b
+        0  x
+        1  y
+        >>> func(df_pl)
+        shape: (2, 1)
+        ┌─────┐
+        │ b   │
+        │ --- │
+        │ cat │
+        ╞═════╡
+        │ x   │
+        │ y   │
+        └─────┘
+    """
+    return Selector(lambda plx: plx.selectors.all())
