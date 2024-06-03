@@ -344,6 +344,8 @@ def test_cast() -> None:
         df["o"].cast(nw.Categorical),
     ).schema
     assert result == expected
+    if parse_version(pd.__version__) < parse_version("2.0.0"):  # pragma: no cover
+        return
     df = nw.from_native(df.to_pandas().convert_dtypes(dtype_backend="pyarrow"))  # type: ignore[assignment]
     result_pd = df.select(
         df["a"].cast(nw.Int32),
