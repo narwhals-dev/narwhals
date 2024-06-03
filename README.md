@@ -17,12 +17,12 @@ Extremely lightweight and extensible compatibility layer between Polars, pandas,
 Seamlessly support all, without depending on any!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
-- ✅ **No dependencies** (not even Polars), keep your library lightweight
-- ✅ Separate **lazy** and eager APIs
-- ✅ Use **Expressions**
-- ✅ 100% branch coverage, tested against pandas and Polars nightly builds
-- ✅ Preserve your Index (if present) without it getting in the way
-- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have
+- ✅ **Zero dependencies**, **zero 3rd-party imports**: Narwhals only uses what
+  the user passes in, so you can keep your library lightweight
+- ✅ Separate **lazy** and eager APIs, use **expressions**
+- ✅ Support pandas' complicated type system and index, without
+  either getting in the way
+- ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
 
 ## Used by
 
@@ -34,10 +34,14 @@ Join the party!
 
 ## Installation
 
-```
-pip install narwhals
-```
-Or just vendor it, it's only a bunch of pure-Python files.
+- pip (recommended, as it's the most up-to-date)
+  ```
+  pip install narwhals
+  ```
+- conda-forge (also fine, but the latest version may take longer to appear)
+  ```
+  conda install -c conda-forge narwhals
+  ```
 
 ## Usage
 
