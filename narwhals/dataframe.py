@@ -205,7 +205,7 @@ class DataFrame(BaseFrame):
         >>> df
         ┌───────────────────────────────────────────────┐
         | Narwhals DataFrame                            |
-        | Use `narwhals.to_native` to see native output | 
+        | Use `narwhals.to_native` to see native output |
         └───────────────────────────────────────────────┘
         >>> nw.to_native(df)
         shape: (2, 2)
@@ -229,7 +229,7 @@ class DataFrame(BaseFrame):
         >>> df
         ┌───────────────────────────────────────────────┐
         | Narwhals DataFrame                            |
-        | Use `narwhals.to_native` to see native output | 
+        | Use `narwhals.to_native` to see native output |
         └───────────────────────────────────────────────┘
         >>> nw.to_native(df)
         shape: (2, 2)
