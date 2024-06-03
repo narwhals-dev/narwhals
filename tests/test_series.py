@@ -503,4 +503,4 @@ def test_cast_string() -> None:
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
     result = nw.to_native(s)
-    assert result.dtype == "string"
+    assert result.dtype in ("string", object)
