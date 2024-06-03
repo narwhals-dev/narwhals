@@ -404,6 +404,10 @@ def translate_dtype(dtype: Any) -> DType:
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
+    if str(dtype).startswith("timestamp["):
+        # pyarrow-backed datetime
+        # todo: different time units and time zones
+        return dtypes.Datetime()
     if dtype == "object":
         return dtypes.String()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
@@ -419,9 +423,12 @@ def get_dtype_backend(dtype: Any, implementation: str) -> str:
         try:
             if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
                 return "pandas-nullable"
-        except AttributeError:
+        except AttributeError:  # pragma: no cover
+            # defensive check for old pandas versions
             pass
-    return "numpy"
+        return "numpy"
+    else:  # pragma: no cover
+        return "numpy"
 
 
 def reverse_translate_dtype(  # noqa: PLR0915
@@ -516,16 +523,15 @@ def reverse_translate_dtype(  # noqa: PLR0915
         else:
             return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        if dtype_backend == "pyarrow-nullable":
-            return "Category[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "Category"
-        else:
-            return "category"
+        # todo: is there no pyarrow-backed categorical?
+        # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
+        # convert to it?
+        return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # todo: different time units and time zones
-        # todo: different backends
-        return "datetime64[us]"
+        if dtype_backend == "pyarrow-nullable":
+            return "timestamp[ns][pyarrow]"
+        return "datetime64[ns]"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

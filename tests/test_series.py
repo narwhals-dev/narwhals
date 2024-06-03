@@ -325,6 +325,44 @@ def test_cast() -> None:
         df["o"].cast(nw.Categorical),
     ).schema
     assert result == expected
+    df = nw.from_native(df.to_pandas().convert_dtypes())  # type: ignore[assignment]
+    result_pd = df.select(
+        df["a"].cast(nw.Int32),
+        df["b"].cast(nw.Int16),
+        df["c"].cast(nw.Int8),
+        df["d"].cast(nw.Int64),
+        df["e"].cast(nw.UInt32),
+        df["f"].cast(nw.UInt16),
+        df["g"].cast(nw.UInt8),
+        df["h"].cast(nw.UInt64),
+        df["i"].cast(nw.Float32),
+        df["j"].cast(nw.Float64),
+        df["k"].cast(nw.String),
+        df["l"].cast(nw.Datetime),
+        df["m"].cast(nw.Int8),
+        df["n"].cast(nw.Boolean),
+        df["o"].cast(nw.Categorical),
+    ).schema
+    assert result == expected
+    df = nw.from_native(df.to_pandas().convert_dtypes(dtype_backend="pyarrow"))  # type: ignore[assignment]
+    result_pd = df.select(
+        df["a"].cast(nw.Int32),
+        df["b"].cast(nw.Int16),
+        df["c"].cast(nw.Int8),
+        df["d"].cast(nw.Int64),
+        df["e"].cast(nw.UInt32),
+        df["f"].cast(nw.UInt16),
+        df["g"].cast(nw.UInt8),
+        df["h"].cast(nw.UInt64),
+        df["i"].cast(nw.Float32),
+        df["j"].cast(nw.Float64),
+        df["k"].cast(nw.String),
+        df["l"].cast(nw.Datetime),
+        df["m"].cast(nw.Int8),
+        df["n"].cast(nw.Boolean),
+        df["o"].cast(nw.Categorical),
+    ).schema
+    assert result == expected
 
 
 def test_to_numpy() -> None:
@@ -456,3 +494,11 @@ def test_zip_with(df_raw: Any, mask: Any, expected: Any) -> None:
     result = series1.zip_with(mask, series2)
     expected = nw.Series(expected)
     assert result == expected
+
+
+def test_cast_string() -> None:
+    s_pd = pd.Series([1, 2]).convert_dtypes()
+    s = nw.from_native(s_pd, series_only=True)
+    s = s.cast(nw.String)
+    result = nw.to_native(s)
+    assert result.dtype == "string"
