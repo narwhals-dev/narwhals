@@ -587,7 +587,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> df.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
@@ -656,7 +656,7 @@ class DataFrame(BaseFrame):
             ...         "c": [True, True, False, True],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> dframe = df.with_columns((nw.col("a") * 2).alias("a*2"))
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -706,7 +706,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> dframe = df.select("foo")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -894,7 +894,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> df
             ┌───────────────────────────────────────────────┐
             | Narwhals DataFrame                            |
@@ -980,7 +980,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["b", "b", "b", "b"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> df
             ┌───────────────────────────────────────────────┐
             | Narwhals DataFrame                            |
@@ -1030,7 +1030,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> df
             ┌───────────────────────────────────────────────┐
             | Narwhals DataFrame                            |
@@ -1137,7 +1137,7 @@ class DataFrame(BaseFrame):
             ...         "c": [5, 4, 3, 2, 1],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> df
             ┌───────────────────────────────────────────────┐
             | Narwhals DataFrame                            |
@@ -1217,7 +1217,7 @@ class DataFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> dframe = df.sort("a")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1321,8 +1321,8 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "d"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> other_df = nw.DataFrame(other_df_pl)
+            >>> df = nw.from_native(df_pl)
+            >>> other_df = nw.from_native(other_df_pl)
             >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
             >>> dframe
             ┌───────────────────────────────────────────────┐
