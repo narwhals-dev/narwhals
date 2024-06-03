@@ -886,7 +886,11 @@ class DataFrame(BaseFrame):
             Drop a single column by passing the name of that column.
 
             >>> import polars as pl
+            >>> import pandas as pd
             >>> import narwhals as nw
+
+            >>> # Example: Using Polars
+
             >>> df_pl = pl.DataFrame(
             ...     {
             ...         "foo": [1, 2, 3],
@@ -894,6 +898,19 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
+
+            >>> df_pl
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+
             >>> df = nw.from_native(df_pl)
             >>> df
             ┌───────────────────────────────────────────────┐
@@ -957,6 +974,70 @@ class DataFrame(BaseFrame):
             │ 7.0 │
             │ 8.0 │
             └─────┘
+
+            >>> # Example: Using Pandas
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+
+            >>> df_pd
+                    foo  bar ham
+                0    1  6.0   a
+                1    2  7.0   b
+                2    3  8.0   c
+
+            >>> df = nw.from_native(df_pd)
+            >>> df
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> dframe = df.drop("ham")
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+
+            >>> nw.to_native(dframe)
+               foo  bar
+            0    1  6.0
+            1    2  7.0
+            2    3  8.0
+
+            
+            Drop multiple columns by passing a list of column names.
+
+            >>> dframe = df.drop(["bar", "ham"])
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+               foo
+            0    1
+            1    2
+            2    3
+
+            Use positional arguments to drop multiple columns.
+
+            >>> dframe = df.drop("foo", "ham")
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+                bar
+            0    6.0
+            1    7.0
+            2    8.0
+
         """
         return super().drop(*columns)
 
