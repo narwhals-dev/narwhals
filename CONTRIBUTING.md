@@ -23,6 +23,7 @@ This will automatically format and lint your code before each commit, and it wil
 ## Running tests
 
 To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`.
+To run tests on the docset-module, use `pytest narwhals --doctest-modules`.
 
 ## Building docs
 
