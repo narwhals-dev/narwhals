@@ -195,11 +195,13 @@ class DataFrame(BaseFrame):
     Examples:
         Constructing a DataFrame from a dictionary:
 
+        >>> # Using Polars Dataframe
+
         >>> import polars as pl
         >>> import narwhals as nw
         >>> data = {"a": [1, 2], "b": [3, 4]}
         >>> df_pl = pl.DataFrame(data)
-        >>> df = nw.DataFrame(df_pl)
+        >>> df = nw.from_native(df_pl)
         >>> df
         ┌───────────────────────────────────────────────┐
         | Narwhals DataFrame                            |
@@ -215,6 +217,24 @@ class DataFrame(BaseFrame):
         │ 1   ┆ 3   │
         │ 2   ┆ 4   │
         └─────┴─────┘
+
+
+        >>> # Using Pandas Dataframe
+
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pd = pd.DataFrame(data)
+        >>> df = nw.from_native(df_pd)
+        >>> df
+        ┌───────────────────────────────────────────────┐
+        | Narwhals DataFrame                            |
+        | Use `narwhals.to_native` to see native output |
+        └───────────────────────────────────────────────┘
+        >>> nw.to_native(df)
+           a  b
+        0  1  3
+        1  2  4
     """
 
     def __init__(
@@ -561,7 +581,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> df.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
@@ -630,7 +650,7 @@ class DataFrame(BaseFrame):
             ...         "c": [True, True, False, True],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> dframe = df.with_columns((nw.col("a") * 2).alias("a*2"))
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -680,7 +700,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> dframe = df.select("foo")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -857,28 +877,47 @@ class DataFrame(BaseFrame):
             *columns: Names of the columns that should be removed from the dataframe.
 
         Examples:
-            >>> import pandas as pd
+            Drop a single column by passing the name of that column.
+
             >>> import polars as pl
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
 
-            We define a library agnostic function:
+            >>> # Example: Using Polars
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.drop("ham")
-            ...     return nw.to_native(df)
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
 
-            We can then pass either pandas or Polars to `func`:
+            >>> df_pl
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
 
-            >>> func(df_pd)
-               foo  bar
-            0    1  6.0
-            1    2  7.0
-            2    3  8.0
-            >>> func(df_pl)
+            >>> df = nw.from_native(df_pl)
+            >>> df
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> dframe = df.drop("ham")
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -889,6 +928,109 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7.0 │
             │ 3   ┆ 8.0 │
             └─────┴─────┘
+
+            Drop multiple columns by passing a list of column names.
+
+            >>> dframe = df.drop(["bar", "ham"])
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 1)
+            ┌─────┐
+            │ foo │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+
+            Use positional arguments to drop multiple columns.
+
+            >>> dframe = df.drop("foo", "ham")
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+            shape: (3, 1)
+            ┌─────┐
+            │ bar │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 6.0 │
+            │ 7.0 │
+            │ 8.0 │
+            └─────┘
+
+            >>> # Example: Using Pandas
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+
+            >>> df_pd
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+
+            >>> df = nw.from_native(df_pd)
+            >>> df
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> dframe = df.drop("ham")
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+
+            >>> nw.to_native(dframe)
+               foo  bar
+            0    1  6.0
+            1    2  7.0
+            2    3  8.0
+
+
+            Drop multiple columns by passing a list of column names.
+
+            >>> dframe = df.drop(["bar", "ham"])
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+               foo
+            0    1
+            1    2
+            2    3
+
+            Use positional arguments to drop multiple columns.
+
+            >>> dframe = df.drop(["foo", "ham"])
+            >>> dframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(dframe)
+               bar
+            0  6.0
+            1  7.0
+            2  8.0
         """
         return super().drop(*columns)
 
@@ -899,27 +1041,27 @@ class DataFrame(BaseFrame):
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
 
+        Returns:
+            DataFrame: DataFrame with unique rows.
+
         Examples:
-            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3, 1], "bar": ["a", "a", "a", "a"], "ham": ["b", "b", "b", "b"]}
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
-
-            We define a library agnostic function:
-
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.unique(["bar", "ham"])
-            ...     return nw.to_native(df)
-
-            We can then pass either pandas or Polars to `func`:
-
-            >>> func(df_pd)
-               foo bar ham
-            0    1   a   b
-            >>> func(df_pl)
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "foo": [1, 2, 3, 1],
+            ...         "bar": ["a", "a", "a", "a"],
+            ...         "ham": ["b", "b", "b", "b"],
+            ...     }
+            ... )
+            >>> df = nw.from_native(df_pl)
+            >>> df
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> dframe = df.unique(["bar", "ham"])
+            >>> nw.to_native(dframe)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -927,6 +1069,18 @@ class DataFrame(BaseFrame):
             │ i64 ┆ str ┆ str │
             ╞═════╪═════╪═════╡
             │ 1   ┆ a   ┆ b   │
+            └─────┴─────┴─────┘
+            >>> dframe = df.unique("foo").sort("foo")
+            >>> nw.to_native(dframe)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ str ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ a   ┆ b   │
+            │ 2   ┆ a   ┆ b   │
+            │ 3   ┆ a   ┆ b   │
             └─────┴─────┴─────┘
         """
         return super().unique(subset)
@@ -950,7 +1104,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> df
             ┌───────────────────────────────────────────────┐
             | Narwhals DataFrame                            |
@@ -1057,7 +1211,7 @@ class DataFrame(BaseFrame):
             ...         "c": [5, 4, 3, 2, 1],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> df
             ┌───────────────────────────────────────────────┐
             | Narwhals DataFrame                            |
@@ -1137,7 +1291,7 @@ class DataFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> dframe = df.sort("a")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1241,8 +1395,8 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "d"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> other_df = nw.DataFrame(other_df_pl)
+            >>> df = nw.from_native(df_pl)
+            >>> other_df = nw.from_native(other_df_pl)
             >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
             >>> dframe
             ┌───────────────────────────────────────────────┐
