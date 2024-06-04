@@ -884,7 +884,7 @@ class DataFrame(BaseFrame):
 
         Examples:
             Drop a single column by passing the name of that column.
-            
+
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1009,7 +1009,7 @@ class DataFrame(BaseFrame):
             1    2  7.0
             2    3  8.0
 
-            
+
             Drop multiple columns by passing a list of column names.
 
             >>> dframe = df.drop(["bar", "ham"])
