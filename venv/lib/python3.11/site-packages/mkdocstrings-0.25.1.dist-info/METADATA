@@ -1,0 +1,169 @@
+Metadata-Version: 2.1
+Name: mkdocstrings
+Version: 0.25.1
+Summary: Automatic documentation from sources, for MkDocs.
+Keywords: mkdocs,mkdocs-plugin,docstrings,autodoc,documentation
+Author-Email: =?utf-8?q?Timoth=C3=A9e_Mazzucotelli?= <dev@pawamoy.fr>
+License: ISC
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Documentation
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Documentation
+Classifier: Topic :: Utilities
+Classifier: Typing :: Typed
+Project-URL: Homepage, https://mkdocstrings.github.io
+Project-URL: Documentation, https://mkdocstrings.github.io
+Project-URL: Changelog, https://mkdocstrings.github.io/changelog
+Project-URL: Repository, https://github.com/mkdocstrings/mkdocstrings
+Project-URL: Issues, https://github.com/mkdocstrings/mkdocstrings/issues
+Project-URL: Discussions, https://github.com/mkdocstrings/mkdocstrings/discussions
+Project-URL: Gitter, https://gitter.im/mkdocstrings/community
+Project-URL: Funding, https://github.com/sponsors/pawamoy
+Requires-Python: >=3.8
+Requires-Dist: click>=7.0
+Requires-Dist: Jinja2>=2.11.1
+Requires-Dist: Markdown>=3.3
+Requires-Dist: MarkupSafe>=1.1
+Requires-Dist: mkdocs>=1.4
+Requires-Dist: mkdocs-autorefs>=0.3.1
+Requires-Dist: platformdirs>=2.2.0
+Requires-Dist: pymdown-extensions>=6.3
+Requires-Dist: importlib-metadata>=4.6; python_version < "3.10"
+Requires-Dist: typing-extensions>=4.1; python_version < "3.10"
+Requires-Dist: mkdocstrings-crystal>=0.3.4; extra == "crystal"
+Requires-Dist: mkdocstrings-python-legacy>=0.2.1; extra == "python-legacy"
+Requires-Dist: mkdocstrings-python>=0.5.2; extra == "python"
+Provides-Extra: crystal
+Provides-Extra: python-legacy
+Provides-Extra: python
+Description-Content-Type: text/markdown
+
+# mkdocstrings
+
+[![ci](https://github.com/mkdocstrings/mkdocstrings/workflows/ci/badge.svg)](https://github.com/mkdocstrings/mkdocstrings/actions?query=workflow%3Aci)
+[![documentation](https://img.shields.io/badge/docs-mkdocs%20material-blue.svg?style=flat)](https://mkdocstrings.github.io/)
+[![pypi version](https://img.shields.io/pypi/v/mkdocstrings.svg)](https://pypi.org/project/mkdocstrings/)
+[![conda version](https://img.shields.io/conda/vn/conda-forge/mkdocstrings)](https://anaconda.org/conda-forge/mkdocstrings)
+[![gitpod](https://img.shields.io/badge/gitpod-workspace-blue.svg?style=flat)](https://gitpod.io/#https://github.com/mkdocstrings/mkdocstrings)
+[![gitter](https://badges.gitter.im/join%20chat.svg)](https://app.gitter.im/#/room/#mkdocstrings:gitter.im)
+
+Automatic documentation from sources, for [MkDocs](https://www.mkdocs.org/).
+Come have a chat or ask questions on our [Gitter channel](https://gitter.im/mkdocstrings/community).
+
+---
+
+**[Features](#features)** - **[Installation](#installation)** - **[Quick usage](#quick-usage)**
+
+![mkdocstrings_gif1](https://user-images.githubusercontent.com/3999221/77157604-fb807480-6aa1-11ea-99e0-d092371d4de0.gif)
+
+## Features
+
+- [**Language-agnostic:**](https://mkdocstrings.github.io/handlers/overview/)
+  just like *MkDocs*, *mkdocstrings* is written in Python but is language-agnostic.
+  It means you can use it with any programming language, as long as there is a
+  [**handler**](https://mkdocstrings.github.io/reference/handlers/base/) for it.
+  We currently have [handlers](https://mkdocstrings.github.io/handlers/overview/)
+  for the [Crystal](https://mkdocstrings.github.io/crystal/), [Python](https://mkdocstrings.github.io/python/),
+  and [VBA](https://pypi.org/project/mkdocstrings-vba/) languages,
+  as well as for [shell scripts/libraries](https://mkdocstrings.github.io/shell/).
+  Maybe you'd like to add another one to the list? :wink:
+
+- [**Multiple themes support:**](https://mkdocstrings.github.io/theming/)
+  each handler can offer multiple themes. Currently, we offer the
+  :star: [Material theme](https://squidfunk.github.io/mkdocs-material/) :star:
+  as well as basic support for the ReadTheDocs and MkDocs themes for the Python handler.
+
+- [**Cross-references across pages:**](https://mkdocstrings.github.io/usage/#cross-references)
+  *mkdocstrings* makes it possible to reference headings in other Markdown files with the classic Markdown linking
+  syntax: `[identifier][]` or `[title][identifier]` -- and you don't need to remember which exact page this object was
+  on. This works for any heading that's produced by a *mkdocstrings* language handler, and you can opt to include
+  *any* Markdown heading into the global referencing scheme.
+
+    **Note**: in versions prior to 0.15 *all* Markdown headers were included, but now you need to
+    [opt in](https://mkdocstrings.github.io/usage/#cross-references-to-any-markdown-heading).
+
+- [**Cross-references across sites:**](https://mkdocstrings.github.io/usage/#cross-references-to-other-projects-inventories)
+  similarly to [Sphinx's intersphinx extension](https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html),
+  *mkdocstrings* can reference API items from other libraries, given they provide an inventory and you load
+  that inventory in your MkDocs configuration.
+
+- [**Inline injection in Markdown:**](https://mkdocstrings.github.io/usage/)
+  instead of generating Markdown files, *mkdocstrings* allows you to inject
+  documentation anywhere in your Markdown contents. The syntax is simple: `::: identifier` followed by a 4-spaces
+  indented YAML block. The identifier and YAML configuration will be passed to the appropriate handler
+  to collect and render documentation.
+
+- [**Global and local configuration:**](https://mkdocstrings.github.io/usage/#global-options)
+  each handler can be configured globally in `mkdocs.yml`, and locally for each
+  "autodoc" instruction.
+
+- **Reasonable defaults:**
+  you should be able to just drop the plugin in your configuration and enjoy your auto-generated docs.
+
+## Used by
+
+*mkdocstrings* is used by well-known companies, projects and scientific teams:
+[Ansible](https://molecule.readthedocs.io/configuration/),
+[Apache](https://streampipes.apache.org/docs/docs/python/latest/reference/client/client/),
+[Google](https://docs.kidger.site/jaxtyping/api/runtime-type-checking/),
+[Jitsi](https://jitsi.github.io/jiwer/reference/alignment/),
+[Microsoft](https://microsoft.github.io/presidio/api/analyzer_python/),
+[Prefect](https://docs.prefect.io/2.10.12/api-ref/prefect/agent/),
+[Pydantic](https://docs.pydantic.dev/dev-v2/api/main/),
+[and more...](https://github.com/mkdocstrings/mkdocstrings/network/dependents)
+
+## Installation
+
+With `pip`:
+
+```bash
+pip install mkdocstrings
+```
+
+You can install support for specific languages using extras, for example:
+
+```bash
+pip install 'mkdocstrings[crystal,python]'
+```
+
+See the [available language handlers](https://mkdocstrings.github.io/handlers/overview/).
+
+With `conda`:
+
+```bash
+conda install -c conda-forge mkdocstrings
+```
+
+## Quick usage
+
+In `mkdocs.yml`:
+
+```yaml
+site_name: "My Library"
+
+theme:
+  name: "material"
+
+plugins:
+- search
+- mkdocstrings
+```
+
+In one of your markdown files:
+
+```markdown
+# Reference
+
+::: my_library.my_module.my_class
+```
+
+See the [Usage](https://mkdocstrings.github.io/usage) section of the docs for more examples!

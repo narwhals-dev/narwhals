@@ -1,0 +1,92 @@
+{#- Template for signatures.
+
+This template renders the signature of a function or method.
+It iterates over the parameters of the function to rebuild the signature.
+The signature is the list of parameters of a function or method, including their names, default values, and annotations.
+
+Context:
+  function (griffe.dataclasses.Function): The function or method to render.
+  config (dict): The configuration options.
+-#}
+
+{%- if config.show_signature -%}
+  {%- block logs scoped -%}
+    {#- Logging block.
+    
+    This block can be used to log debug messages, deprecation messages, warnings, etc.
+    -#}
+    {{ log.debug("Rendering signature") }}
+  {%- endblock logs -%}
+  {%- with -%}
+
+    {%- set ns = namespace(
+        has_pos_only=False,
+        render_pos_only_separator=True,
+        render_kw_only_separator=True,
+        annotation="",
+        equal="=",
+      ) -%}
+
+    (
+    {%- for parameter in function.parameters -%}
+      {%- if parameter.name not in ("self", "cls") or loop.index0 > 0 or not (function.parent and function.parent.is_class) -%}
+
+        {#- Handle parameter kind. -#}
+        {%- if parameter.kind.value == "positional-only" -%}
+          {%- set ns.has_pos_only = True -%}
+        {%- else -%}
+          {%- if ns.has_pos_only and ns.render_pos_only_separator -%}
+            {%- set ns.render_pos_only_separator = False %}/, {% endif -%}
+          {%- if parameter.kind.value == "keyword-only" -%}
+            {%- if ns.render_kw_only_separator -%}
+              {%- set ns.render_kw_only_separator = False %}*, {% endif -%}
+          {%- endif -%}
+        {%- endif -%}
+
+        {#- Prepare type annotation. -#}
+        {%- if config.show_signature_annotations and parameter.annotation is not none -%}
+          {%- set ns.equal = " = " -%}
+          {%- if config.separate_signature and config.signature_crossrefs -%}
+            {%- with expression = parameter.annotation -%}
+              {%- set ns.annotation -%}: {% include "expression"|get_template with context %}{%- endset -%}
+            {%- endwith -%}
+          {%- else -%}
+            {%- set ns.annotation = ": " + parameter.annotation|safe -%}
+          {%- endif -%}
+        {%- else -%}
+          {%- set ns.equal = "=" -%}
+          {%- set ns.annotation = "" -%}
+        {%- endif -%}
+
+        {#- Prepare default value. -#}
+        {%- if parameter.default is not none and parameter.kind.value != "variadic positional" and parameter.kind.value != "variadic keyword" -%}
+          {%- set default = ns.equal + parameter.default|safe -%}
+        {%- endif -%}
+
+        {#- TODO: Move inside kind handling above? -#}
+        {%- if parameter.kind.value == "variadic positional" -%}
+          {%- set ns.render_kw_only_separator = False -%}
+        {%- endif -%}
+
+        {#- Render name, annotation and default. -#}
+        {% if parameter.kind.value == "variadic positional" %}*{% elif parameter.kind.value == "variadic keyword" %}**{% endif -%}
+        {{ parameter.name }}{{ ns.annotation }}{{ default }}
+        {%- if not loop.last %}, {% endif -%}
+
+      {%- endif -%}
+    {%- endfor -%}
+    )
+
+    {#- Render return type. -#}
+    {%- if config.show_signature_annotations
+        and function.annotation
+        and not (config.merge_init_into_class and function.name == "__init__" )
+      %} -> {% if config.separate_signature and config.signature_crossrefs -%}
+        {%- with expression = function.annotation %}{% include "expression"|get_template with context %}{%- endwith -%}
+      {%- else -%}
+        {{ function.annotation|safe }}
+      {%- endif -%}
+    {%- endif -%}
+
+  {%- endwith -%}
+{%- endif -%}
