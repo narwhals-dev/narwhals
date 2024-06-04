@@ -437,7 +437,6 @@ def reverse_translate_dtype(  # noqa: PLR0915
     from narwhals import dtypes
 
     dtype_backend = get_dtype_backend(starting_dtype, implementation)
-
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow-nullable":
             return "Float64[pyarrow]"
@@ -514,7 +513,7 @@ def reverse_translate_dtype(  # noqa: PLR0915
         if dtype_backend == "pandas-nullable":
             return "string"
         else:
-            return object
+            return str
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         if dtype_backend == "pyarrow-nullable":
             return "boolean[pyarrow]"
