@@ -2358,9 +2358,6 @@ def len() -> Expr:
     """
     Return the number of rows.
 
-    Arguments:
-        *columns: Name(s) of the columns to use in the aggregation function.
-
     Examples:
         >>> import polars as pl
         >>> import pandas as pd

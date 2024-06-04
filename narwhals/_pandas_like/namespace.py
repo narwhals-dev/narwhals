@@ -9,7 +9,7 @@ from typing import Iterable
 from narwhals import dtypes
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals._pandas_like.expr import PandasExpr
-from narwhals._pandas_like.selectors import PandasSelector
+from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import parse_into_exprs
@@ -38,8 +38,8 @@ class PandasNamespace:
     Datetime = dtypes.Datetime
 
     @property
-    def selectors(self) -> PandasSelector:
-        return PandasSelector(self._implementation)
+    def selectors(self) -> PandasSelectorNamespace:
+        return PandasSelectorNamespace(self._implementation)
 
     # --- not in spec ---
     def __init__(self, implementation: str) -> None:
