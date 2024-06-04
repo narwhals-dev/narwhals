@@ -224,7 +224,7 @@ class DataFrame(BaseFrame):
         >>> import pandas as pd
         >>> import narwhals as nw
         >>> data = {"a": [1, 2], "b": [3, 4]}
-        >>> df_pd = pd.Dataframe(data)
+        >>> df_pd = pd.DataFrame(data)
         >>> df = nw.from_native(df_pd)
         >>> df
         ┌───────────────────────────────────────────────┐
