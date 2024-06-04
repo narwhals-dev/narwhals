@@ -22,15 +22,12 @@ Make a Python file with the following content:
 import narwhals as nw
 
 def func(df_any):
-    # 1. Create a Narwhals dataframe
     df = nw.from_native(df_any)
-    # 2. Use the subset of the Polars API supported by Narwhals
     df = df.select(
         a_sum=nw.col('a').sum(),
         a_mean=nw.col('a').mean(),
         a_std=nw.col('a').std(),
     )
-    # 3. Return a library from the user's original library
     return nw.to_native(df)
 ```
 Let's try it out:
@@ -68,11 +65,8 @@ Make a Python file with the following content:
 import narwhals as nw
 
 def func(df_any):
-    # 1. Create a Narwhals dataframe
     df = nw.from_native(df_any)
-    # 2. Use the subset of the Polars API supported by Narwhals
     df = df.group_by('a').agg(nw.col('b').mean()).sort('a')
-    # 3. Return a library from the user's original library
     return nw.to_native(df)
 ```
 Let's try it out:
@@ -112,11 +106,8 @@ Make a Python file with the following content:
 import narwhals as nw
 
 def func(df_any):
-    # 1. Create a Narwhals dataframe
     df = nw.from_native(df_any)
-    # 2. Use the subset of the Polars API supported by Narwhals
     df = df.with_columns(a_plus_b=nw.sum_horizontal('a', 'b'))
-    # 3. Return a library from the user's original library
     return nw.to_native(df)
 ```
 Let's try it out:

@@ -134,7 +134,7 @@ class PandasSeries:
         dtype: Any,
     ) -> Self:
         ser = self._series
-        dtype = reverse_translate_dtype(dtype)
+        dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
         return self._from_series(ser.astype(dtype))
 
     def item(self) -> Any:

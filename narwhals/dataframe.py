@@ -876,7 +876,7 @@ class DataFrame(BaseFrame):
         return super().head(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        r"""
+        """
         Remove columns from the dataframe.
 
         Arguments:
@@ -1009,7 +1009,7 @@ class DataFrame(BaseFrame):
             1    2  7.0
             2    3  8.0
 
-            
+
             Drop multiple columns by passing a list of column names.
 
             >>> dframe = df.drop(["bar", "ham"])
@@ -1037,12 +1037,11 @@ class DataFrame(BaseFrame):
             0    6.0
             1    7.0
             2    8.0
-
         """
         return super().drop(*columns)
 
     def unique(self, subset: str | list[str]) -> Self:
-        r"""
+        """
         Drop duplicate rows from this dataframe.
 
         Arguments:
