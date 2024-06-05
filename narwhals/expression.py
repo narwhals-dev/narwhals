@@ -2575,7 +2575,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Sum all values horizontally across columns
 
     Arguments:
-        columns: Name(s) of the columns to use in the aggregation function. Accepts expression input. Strings are parsed as column names, other non-expression inputs are parsed as literals.
+        columns: Name(s) of the columns to use in the aggregation function. Accepts expression input. Strings are parsed as column names, other non-expression
+                 inputs are parsed as literals.
 
     Examples:
         >>> import pandas as pd
