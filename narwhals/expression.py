@@ -2342,7 +2342,42 @@ class ExprDateTimeNamespace:
 
 def col(*names: str | Iterable[str]) -> Expr:
     """
-    Instantiate an expression, similar to `polars.col`.
+    Creates an expression that references one or more columns by their name(s).
+
+    Arguments:
+        columns: str or list of str
+            The name(s) of the column(s) to use in the aggregation function.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+    We define a dataframe-agnostic function:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(nw.col('a') * nw.col('b'))
+        ...     return nw.to_native(df)
+
+    We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  3
+        1  8
+        >>> func(df_pl)
+        shape: (2, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 3   │
+        │ 8   │
+        └─────┘
     """
     return Expr(lambda plx: plx.col(*names))
 
