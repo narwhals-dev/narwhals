@@ -2572,7 +2572,44 @@ def max(*columns: str) -> Expr:
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
-    Instantiate an expression representing the horizontal sum of one or more expressions, similar to `polars.sum_horizontal`.
+    Sum all values horizontally across columns
+
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function. Accepts expression input. Strings are parsed as column names, other non-expression inputs are parsed as literals.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+
+    We define a dataframe-agnostic function:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(nw.sum_horizontal('a', 'b'))
+        ...     return nw.to_native(df)
+
+    We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+            a
+        0   6
+        1  12
+        2  18
+        >>> func(df_pl)
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 6   │
+        │ 12  │
+        │ 18  │
+        └─────┘
+
     """
     return Expr(
         lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)])
