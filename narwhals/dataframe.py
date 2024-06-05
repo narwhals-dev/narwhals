@@ -195,19 +195,28 @@ class DataFrame(BaseFrame):
     Examples:
         Constructing a DataFrame from a dictionary:
 
-        >>> # Using Polars Dataframe
-
+        >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
         >>> data = {"a": [1, 2], "b": [3, 4]}
         >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
         >>> df = nw.from_native(df_pl)
         >>> df
         ┌───────────────────────────────────────────────┐
         | Narwhals DataFrame                            |
         | Use `narwhals.to_native` to see native output |
         └───────────────────────────────────────────────┘
-        >>> nw.to_native(df)
+
+        Define a library-agnostic function:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     return nw.to_native(df)
+
+        Show that you can pass either pandas or Polars to the function `func`:
+
+        >>> func(df_pl)
         shape: (2, 2)
         ┌─────┬─────┐
         │ a   ┆ b   │
@@ -218,23 +227,11 @@ class DataFrame(BaseFrame):
         │ 2   ┆ 4   │
         └─────┴─────┘
 
-
-        >>> # Using Pandas Dataframe
-
-        >>> import pandas as pd
-        >>> import narwhals as nw
-        >>> data = {"a": [1, 2], "b": [3, 4]}
-        >>> df_pd = pd.DataFrame(data)
-        >>> df = nw.from_native(df_pd)
-        >>> df
-        ┌───────────────────────────────────────────────┐
-        | Narwhals DataFrame                            |
-        | Use `narwhals.to_native` to see native output |
-        └───────────────────────────────────────────────┘
-        >>> nw.to_native(df)
+        >>> func(df_pd)
            a  b
         0  1  3
         1  2  4
+
     """
 
     def __init__(
@@ -291,6 +288,8 @@ class DataFrame(BaseFrame):
         Convert this DataFrame to a pandas DataFrame.
 
         Examples:
+            Construct pandas and polars DataFranes:
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
@@ -325,6 +324,9 @@ class DataFrame(BaseFrame):
         Convert this DataFrame to a NumPy ndarray.
 
         Examples:
+            Construct pandas and polars DataFranes:
+
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
@@ -358,6 +360,8 @@ class DataFrame(BaseFrame):
         Get the shape of the DataFrame.
 
         Examples:
+            Construct pandas and polars DataFrames:
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
@@ -531,6 +535,8 @@ class DataFrame(BaseFrame):
         Insert column which enumerates rows.
 
         Examples:
+            Construct pandas as polars DataFrames:
+
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1744,8 +1750,8 @@ class LazyFrame(BaseFrame):
         Pipe function call.
 
         Examples:
-            >>> import polars as pl
             >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
             >>> data = {'a': [1,2,3], 'ba': [4,5,6]}
             >>> df_pd = pd.DataFrame(data)
@@ -1978,23 +1984,27 @@ class LazyFrame(BaseFrame):
         Examples:
             Pass the name of a column to select that column.
 
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
+            >>> df ={
             ...         "foo": [1, 2, 3],
             ...         "bar": [6, 7, 8],
             ...         "ham": ["a", "b", "c"],
             ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.select("foo").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select("foo")
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ foo │
@@ -2005,16 +2015,21 @@ class LazyFrame(BaseFrame):
             │ 2   │
             │ 3   │
             └─────┘
+            >>> func(df_pd)
+               foo
+            0    1
+            1    2
+            2    3
+
 
             Multiple columns can be selected by passing a list of column names.
 
-            >>> lframe = lf.select(["foo", "bar"]).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(["foo", "bar"])
+            ...     return nw.to_native(df)
+
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -2025,17 +2040,22 @@ class LazyFrame(BaseFrame):
             │ 2   ┆ 7   │
             │ 3   ┆ 8   │
             └─────┴─────┘
+            >>> func(df_pd)
+               foo  bar
+            0    1    6
+            1    2    7
+            2    3    8
+
 
             Multiple columns can also be selected using positional arguments instead of a
             list. Expressions are also accepted.
 
-            >>> lframe = lf.select(nw.col("foo"), nw.col("bar") + 1).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.col("foo"), nw.col("bar") + 1)
+            ...     return nw.to_native(df)
+
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -2046,16 +2066,19 @@ class LazyFrame(BaseFrame):
             │ 2   ┆ 8   │
             │ 3   ┆ 9   │
             └─────┴─────┘
+            >>> func(df_pd)
+               foo  bar
+            0    1    7
+            1    2    8
+            2    3    9
 
             Use keyword arguments to easily name your expression inputs.
 
-            >>> lframe = lf.select(threshold=nw.col('foo')*2).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(threshold=nw.col("foo")*2)
+            ...     return nw.to_native(df)
+            >>> func(df_pl)
             shape: (3, 1)
             ┌───────────┐
             │ threshold │
@@ -2066,6 +2089,12 @@ class LazyFrame(BaseFrame):
             │ 4         │
             │ 6         │
             └───────────┘
+
+            >>> func(df_pd)
+               threshold
+            0          2
+            1          4
+            2          6
         """
         return super().select(*exprs, **named_exprs)
 
