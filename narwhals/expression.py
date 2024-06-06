@@ -2346,7 +2346,7 @@ def col(*names: str | Iterable[str]) -> Expr:
 
     Arguments:
         columns: str or list of str
-            The name(s) of the column(s) to use in the aggregation function.
+            The name(s) of the column(s) to use.
 
     Examples:
         >>> import pandas as pd
