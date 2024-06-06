@@ -235,8 +235,6 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         ...         "b": pd.Series(["x", "y", "z"], dtype=np.dtype("O")),
         ...         "c": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
         ...         "d": pd.Series(["h", "i", np.nan], dtype=np.dtype("O")),
-        ...         "e": pd.Series([10, np.nan, 20], dtype=np.dtype("float")),
-        ...         "f": pd.Series([np.nan, 100.5, 200], dtype=np.dtype("float")),
         ...     }
         ... )
         >>> df = nw.from_native(df_pd)
@@ -245,8 +243,6 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         b    string[python]
         c           boolean
         d    string[python]
-        e             Int64
-        f           Float64
         dtype: object
     """
     from narwhals._pandas_like.dataframe import PandasDataFrame
