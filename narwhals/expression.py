@@ -2425,8 +2425,8 @@ def len() -> Expr:
 
     def func(plx: Any) -> Any:
         if (
-            not hasattr(plx, "_implementation")
-            and (pl := get_polars()) is not None
+            (pl := get_polars()) is not None
+            and plx is pl
             and parse_version(pl.__version__) < parse_version("0.20.4")
         ):  # pragma: no cover
             return plx.count().alias("len")
