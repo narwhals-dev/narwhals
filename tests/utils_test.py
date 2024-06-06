@@ -65,9 +65,9 @@ def test_maybe_set_index_polars() -> None:
 def test_maybe_convert_dtypes_pandas() -> None:
     import numpy as np
 
-    df = nw.from_native(pd.DataFrame({"a": [1.1, np.nan]}, dtype=np.dtype("float64")))
+    df = nw.from_native(pd.DataFrame({"a": [1, np.nan]}, dtype=np.dtype("float64")))
     result = nw.to_native(nw.maybe_convert_dtypes(df))
-    expected = pd.DataFrame({"a": [1.1, pd.NA]}, dtype="Float64")
+    expected = pd.DataFrame({"a": [1, pd.NA]}, dtype="Int64")
     pd.testing.assert_frame_equal(result, expected)
 
 
