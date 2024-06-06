@@ -780,7 +780,7 @@ class DataFrame(BaseFrame):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df: nw.DataFrame | nw.LazyFrame):
+            ... def func(df):
             ...     return df.rename({"foo": "apple"})
 
             We can then pass either pandas or Polars to `func`:
