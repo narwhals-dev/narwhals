@@ -67,7 +67,7 @@ def test_maybe_convert_dtypes_pandas() -> None:
 
     df = nw.from_native(pd.DataFrame({"a": [1.1, np.nan]}, dtype=np.dtype("float64")))
     result = nw.to_native(nw.maybe_convert_dtypes(df))
-    expected = pd.DataFrame({"a": [1.1, pd.NA]}, dtype=pd.Float64Dtype())
+    expected = pd.DataFrame({"a": [1.1, pd.NA]}, dtype="Float64")
     pd.testing.assert_frame_equal(result, expected)
 
 
