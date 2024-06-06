@@ -17,6 +17,7 @@ Here are the top-level functions available in Narwhals.
         - max
         - mean
         - min
+        - narwhalify
         - sum
         - sum_horizontal
         - to_native

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Literal
 from typing import overload
 
@@ -223,6 +225,26 @@ def get_native_namespace(obj: Any) -> Any:
     return obj.__native_namespace__()
 
 
+def narwhalify(
+    func: Callable[..., Any] | None = None, *, eager_only: bool = False
+) -> Callable[..., Any]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapper(df_any: Any, *args: Any, **kwargs: Any) -> Any:
+            df = from_native(df_any, eager_only=eager_only)  # type: ignore[call-overload]
+            result = func(df, *args, **kwargs)
+            return to_native(result)
+
+        return wrapper
+
+    # If func is None, it means the decorator is used with arguments
+    if func is None:
+        return decorator
+    else:
+        # If func is not None, it means the decorator is used without arguments
+        return decorator(func)
+
+
 __all__ = [
     "get_pandas",
     "get_polars",
@@ -230,4 +252,5 @@ __all__ = [
     "get_cudf",
     "get_native_namespace",
     "to_native",
+    "narwhalify",
 ]
