@@ -214,3 +214,85 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
             )
         )
     return df
+
+
+def maybe_convert_dtypes(  # noqa: PLR0913
+    df: T,
+    infer_objects: bool = True,  # noqa: FBT001, FBT002
+    convert_string: bool = True,  # noqa: FBT001, FBT002
+    convert_integer: bool = True,  # noqa: FBT001, FBT002
+    convert_boolean: bool = True,  # noqa: FBT001, FBT002
+    convert_floating: bool = True,  # noqa: FBT001, FBT002
+    dtype_backend: str = "numpy_nullable",
+) -> T:
+    """
+    Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+
+    Notes:
+        For non-pandas-like inputs, this is a no-op.
+
+    Arguments:
+        infer_objects : bool, default True
+            Whether object dtypes should be converted to the best possible types.
+        convert_string : bool, default True
+            Whether object dtypes should be converted to ``StringDtype()``.
+        convert_integer : bool, default True
+            Whether, if possible, conversion can be done to integer extension types.
+        convert_boolean : bool, defaults True
+            Whether object dtypes should be converted to ``BooleanDtypes()``.
+        convert_floating : bool, defaults True
+            Whether, if possible, conversion can be done to floating extension types.
+            If `convert_integer` is also True, preference will be give to integer
+            dtypes if the floats can be faithfully casted to integers.
+        dtype_backend : {'numpy_nullable', 'pyarrow'}, default 'numpy_nullable'
+            Back-end data type applied to the resultant :class:`DataFrame`
+            (still experimental). Behaviour is as follows:
+
+            * ``"numpy_nullable"``: returns nullable-dtype-backed :class:`DataFrame`
+              (default).
+            * ``"pyarrow"``: returns pyarrow-backed nullable :class:`ArrowDtype`
+              DataFrame.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> import numpy as np
+        >>> df_pd = pd.DataFrame(
+        ...     {
+        ...         "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
+        ...         "b": pd.Series(["x", "y", "z"], dtype=np.dtype("O")),
+        ...         "c": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
+        ...         "d": pd.Series(["h", "i", np.nan], dtype=np.dtype("O")),
+        ...         "e": pd.Series([10, np.nan, 20], dtype=np.dtype("float")),
+        ...         "f": pd.Series([np.nan, 100.5, 200], dtype=np.dtype("float")),
+        ...     }
+        ... )
+        >>> df = nw.from_native(df_pd)
+        >>> nw.to_native(nw.maybe_convert_dtypes(df)).dtypes  # doctest: +NORMALIZE_WHITESPACE
+        a             Int32
+        b    string[python]
+        c           boolean
+        d    string[python]
+        e             Int64
+        f           Float64
+        dtype: object
+    """
+    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals.dataframe import DataFrame
+
+    df_any = cast(Any, df)
+    if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
+        return DataFrame(  # type: ignore[return-value]
+            df_any._dataframe._from_dataframe(
+                df_any._dataframe._dataframe.convert_dtypes(
+                    infer_objects=infer_objects,
+                    convert_string=convert_string,
+                    convert_integer=convert_integer,
+                    convert_boolean=convert_boolean,
+                    convert_floating=convert_floating,
+                    dtype_backend=dtype_backend,
+                )
+            )
+        )
+    return df

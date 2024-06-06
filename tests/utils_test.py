@@ -60,3 +60,20 @@ def test_maybe_set_index_polars() -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, "b")
     assert result is df
+
+
+def test_maybe_convert_dtypes_pandas() -> None:
+    import numpy as np
+
+    df = nw.from_native(pd.DataFrame({"a": [1.1, np.nan]}, dtype=np.dtype("float64")))
+    result = nw.to_native(nw.maybe_convert_dtypes(df))
+    expected = pd.DataFrame({"a": [1.1, pd.NA]}, dtype=pd.Float64Dtype())
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_maybe_convert_dtypes_polars() -> None:
+    import numpy as np
+
+    df = nw.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
+    result = nw.maybe_convert_dtypes(df)
+    assert result is df
