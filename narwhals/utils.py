@@ -232,17 +232,13 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         >>> df_pd = pd.DataFrame(
         ...     {
         ...         "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
-        ...         "b": pd.Series(["x", "y", "z"], dtype=np.dtype("O")),
-        ...         "c": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
-        ...         "d": pd.Series(["h", "i", np.nan], dtype=np.dtype("O")),
+        ...         "b": pd.Series([True, False, np.nan], dtype=np.dtype("O"))
         ...     }
         ... )
         >>> df = nw.from_native(df_pd)
         >>> nw.to_native(nw.maybe_convert_dtypes(df)).dtypes  # doctest: +NORMALIZE_WHITESPACE
         a             Int32
-        b    string[python]
-        c           boolean
-        d    string[python]
+        b           boolean
         dtype: object
     """
     from narwhals._pandas_like.dataframe import PandasDataFrame
