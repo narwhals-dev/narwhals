@@ -14,6 +14,7 @@ Here are the top-level functions available in Narwhals.
         - len
         - maybe_align_index
         - maybe_set_index
+        - maybe_convert_dtypes
         - max
         - mean
         - min
