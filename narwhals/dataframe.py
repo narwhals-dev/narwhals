@@ -208,7 +208,7 @@ class DataFrame(BaseFrame):
         ...     df = nw.from_native(df_any)
         ...     return nw.to_native(df)
 
-        Show that you can pass either pandas or Polars to the function `func`:
+        You can pass either pandas or Polars to the function `func`:
 
         >>> func(df_pl)
         shape: (2, 2)
@@ -282,7 +282,7 @@ class DataFrame(BaseFrame):
         Convert this DataFrame to a pandas DataFrame.
 
         Examples:
-            Construct pandas and polars DataFrames:
+            Construct pandas and Polars DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
@@ -319,7 +319,6 @@ class DataFrame(BaseFrame):
 
         Examples:
             Construct pandas and polars DataFranes:
-
 
             >>> import pandas as pd
             >>> import polars as pl
@@ -573,16 +572,28 @@ class DataFrame(BaseFrame):
 
         Examples:
             >>> import polars as pl
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
+            >>> data = {
             ...         "foo": [1, 2, 3],
             ...         "bar": [6.0, 7.0, 8.0],
             ...         "ham": ["a", "b", "c"],
             ...     }
-            ... )
-            >>> df = nw.from_native(df_pl)
-            >>> df.schema  # doctest: +SKIP
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.schema
+
+            You can pass either pandas or Polars to `func`:
+
+            >>> df_pd_schema = func(df_pd)
+            >>> df_pd_schema = func(df_pl)
+
+            Both pandas and Polars returns the same output:
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().schema
