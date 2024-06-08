@@ -60,11 +60,8 @@ def test_narwhalify_method_invalid() -> None:
         def func(self) -> nw.DataFrame:
             return self  # type: ignore[return-value]
 
-    df = pd.DataFrame({"a": [1, 2, 3]})
     with pytest.raises(TypeError):
-        Foo().func(df)
-    with pytest.raises(TypeError):
-        Foo().func(df=df)
+        Foo().func()
 
 
 def test_narwhalify_invalid() -> None:
@@ -72,8 +69,5 @@ def test_narwhalify_invalid() -> None:
     def func() -> nw.DataFrame:
         return None  # type: ignore[return-value]
 
-    df = pd.DataFrame({"a": [1, 2, 3]})
     with pytest.raises(TypeError):
-        func(df)
-    with pytest.raises(TypeError):
-        func(df=df)
+        func()

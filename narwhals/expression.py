@@ -1568,6 +1568,7 @@ class ExprDateTimeNamespace:
 
     def year(self) -> Expr:
         """
+        Extract year from underlying DateTime representation.
 
         Returns the year number in the calendar date.
 
