@@ -71,6 +71,17 @@ def from_native(
     native_dataframe: Any,
     *,
     strict: bool = ...,
+    eager_only: Literal[True],
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame: ...
+
+
+@overload
+def from_native(
+    native_dataframe: Any,
+    *,
+    strict: bool = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
@@ -94,20 +105,20 @@ def from_native(
     *,
     strict: bool = ...,
     eager_only: Literal[True],
-    series_only: None = ...,
-    allow_series: None = ...,
-) -> DataFrame: ...
+    series_only: bool | None = ...,
+    allow_series: bool | None = ...,
+) -> DataFrame | Series: ...
 
 
 @overload
 def from_native(
     native_dataframe: Any,
     *,
-    strict: bool = ...,
-    eager_only: None = ...,
-    series_only: None = ...,
-    allow_series: None = ...,
-) -> DataFrame | LazyFrame: ...
+    strict: bool,
+    eager_only: bool | None,
+    series_only: bool | None,
+    allow_series: bool | None,
+) -> DataFrame | LazyFrame | Series: ...
 
 
 def from_native(
@@ -226,12 +237,23 @@ def get_native_namespace(obj: Any) -> Any:
 
 
 def narwhalify(
-    func: Callable[..., Any] | None = None, *, eager_only: bool = False
+    func: Callable[..., Any] | None = None,
+    *,
+    strict: bool = True,
+    eager_only: bool | None = None,
+    series_only: bool | None = None,
+    allow_series: bool | None = None,
 ) -> Callable[..., Any]:
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(df_any: Any, *args: Any, **kwargs: Any) -> Any:
-            df = from_native(df_any, eager_only=eager_only)  # type: ignore[call-overload]
+            df = from_native(
+                df_any,
+                strict=strict,
+                eager_only=eager_only,
+                series_only=series_only,
+                allow_series=allow_series,
+            )
             result = func(df, *args, **kwargs)
             return to_native(result)
 
