@@ -57,7 +57,7 @@ def test_narwhalify_method_called() -> None:
 def test_narwhalify_method_invalid() -> None:
     class Foo:
         @nw.narwhalify_method(eager_only=True)
-        def func(self) -> nw.DataFrame:
+        def func(self) -> nw.DataFrame:  # pragma: no cover
             return self  # type: ignore[return-value]
 
     with pytest.raises(TypeError):
@@ -66,7 +66,7 @@ def test_narwhalify_method_invalid() -> None:
 
 def test_narwhalify_invalid() -> None:
     @nw.narwhalify(eager_only=True)
-    def func() -> nw.DataFrame:
+    def func() -> nw.DataFrame:  # pragma: no cover
         return None  # type: ignore[return-value]
 
     with pytest.raises(TypeError):
