@@ -103,6 +103,17 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
+    strict: bool = ...,
+    eager_only: None = ...,
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame | LazyFrame: ...
+
+
+@overload
+def from_native(
+    native_dataframe: Any,
+    *,
     strict: bool,
     eager_only: bool | None,
     series_only: bool | None,
