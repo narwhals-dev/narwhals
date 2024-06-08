@@ -16,7 +16,9 @@ stored them in attributes `self.means` and `self.std_devs`.
 
 ## Transform method
 
-This is going to look like this:
+We're going to take in a dataframe, and return a dataframe of the same type.
+Therefore, we use `@nw.narwhalify_method` (the counterpart to `@nw.narwhalify` which is
+meant to be used for methods):
 
 ```python
 import narwhals as nw
@@ -31,9 +33,8 @@ class StandardScaler:
 ```
 
 Note that all the calculations here can stay lazy if the underlying library permits it,
-so we just use `@nw.narwhalify_method` with the default settings (note: we need to use
-`narwhalify_method`, as opposed to `narwhalify`, as `StandardScaler.transform` is a method
-of `StandardScaler`, not a free-standing function).
+so we don't pass in any extra keyword-arguments such as `eager_only`, we just use the
+default `eager_only=False`.
 
 ## Fit method
 
@@ -44,9 +45,9 @@ To be able to get `Series` out of our `DataFrame`, we'll pass `eager_only=True` 
 This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
 doesn't either.
 
-Note how here, we're not returning a dataframe to the user, meaning that we're skipping the
-`nw.to_native` step - therefore, we use `nw.from_native` explicitly, as opposed to using the
-utility `@nw.narwhalify` decorator.
+Note how here, we're not returning a dataframe to the user - we just take a dataframe in, and
+store some internal state. Therefore, we use `nw.from_native` explicitly, as opposed to using the
+utility `@nw.narwhalify_method` decorator.
 
 ```python
 import narwhals as nw

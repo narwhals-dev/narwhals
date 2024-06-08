@@ -259,10 +259,9 @@ class Expr:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a', 'b').any())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.select(nw.col('a', 'b').any())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1504,10 +1503,9 @@ class ExprStringNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(lyrics_head = nw.col('lyrics').str.head())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(lyrics_head = nw.col('lyrics').str.head())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1562,10 +1560,9 @@ class ExprStringNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a').str.to_datetime(format='%Y-%m-%d'))
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a').str.to_datetime(format='%Y-%m-%d'))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1616,12 +1613,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.year().alias("year")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1667,13 +1663,12 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.year().alias("year"),
             ...         nw.col("datetime").dt.month().alias("month")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1719,14 +1714,13 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.year().alias("year"),
             ...         nw.col("datetime").dt.month().alias("month"),
             ...         nw.col("datetime").dt.day().alias("day")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1772,12 +1766,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1823,13 +1816,12 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1873,14 +1865,13 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1924,15 +1915,14 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
             ...         nw.col("datetime").dt.millisecond().alias("millisecond")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1976,15 +1966,14 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
             ...         nw.col("datetime").dt.microsecond().alias("microsecond")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2028,15 +2017,14 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
             ...         nw.col("datetime").dt.nanosecond().alias("nanosecond")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2074,10 +2062,9 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(a_ordinal_day=nw.col('a').dt.ordinal_day())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(a_ordinal_day=nw.col('a').dt.ordinal_day())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2118,12 +2105,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...       a_total_minutes = nw.col('a').dt.total_minutes()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2165,12 +2151,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...       a_total_seconds = nw.col('a').dt.total_seconds()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2212,12 +2197,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...       a_total_milliseconds = nw.col('a').dt.total_milliseconds()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2261,12 +2245,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...       a_total_microseconds = nw.col('a').dt.total_microseconds()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2311,12 +2294,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df.with_columns(
             ...       a_diff_total_nanoseconds = nw.col('a').diff().dt.total_nanoseconds()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
