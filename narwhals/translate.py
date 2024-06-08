@@ -103,17 +103,6 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
-    strict: bool = ...,
-    eager_only: Literal[True],
-    series_only: bool | None = ...,
-    allow_series: bool | None = ...,
-) -> DataFrame | Series: ...
-
-
-@overload
-def from_native(
-    native_dataframe: Any,
-    *,
     strict: bool,
     eager_only: bool | None,
     series_only: bool | None,
