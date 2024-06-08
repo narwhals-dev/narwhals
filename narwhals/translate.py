@@ -233,9 +233,58 @@ def narwhalify(
     series_only: bool | None = None,
     allow_series: bool | None = None,
 ) -> Callable[..., Any]:
+    """
+    Decorate a function so that the first argument gets narwhalified with `strict=False`.
+
+    Using
+
+    ```python
+    import narwhals as nw
+
+    @nw.narwhalify
+    def func(df):
+        return df.group_by('a').agg(nw.col('b').sum())
+    ```
+
+    is shorthand for
+
+    ```python
+    import narwhals as nw
+
+    def func(df_any):
+        df = nw.from_native(df_any, strict=False)
+        df = df.group_by('a').agg(nw.col('b').sum())
+        return nw.to_native(df)
+    ```
+
+    Arguments:
+        native_dataframe: Raw dataframe from user.
+            Depending on the other arguments, input object can be:
+
+            - pandas.DataFrame
+            - polars.DataFrame
+            - polars.LazyFrame
+            - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
+            - pandas.Series
+            - polars.Series
+            - anything with a `__narwhals_series__` method
+        strict: Whether to raise if object can't be converted (default) or
+            to just leave it as-is.
+        eager_only: Whether to only allow eager objects.
+        series_only: Whether to only allow series.
+        allow_series: Whether to allow series (default is only dataframe / lazyframe).
+    """
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(df_any: Any, *args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            if args:
+                df_any = args[0]
+            elif kwargs:
+                first_key = next(iter(kwargs.keys()))
+                df_any = kwargs[first_key]
+            else:
+                raise TypeError("Expected function which takes at least one argument.")
             df = from_native(
                 df_any,
                 strict=strict,
@@ -243,7 +292,95 @@ def narwhalify(
                 series_only=series_only,
                 allow_series=allow_series,
             )
-            result = func(df, *args, **kwargs)
+            if args:
+                result = func(df, *args[1:], **kwargs)
+            else:
+                kwargs[first_key] = df
+                result = func(**kwargs)
+            return to_native(result)
+
+        return wrapper
+
+    # If func is None, it means the decorator is used with arguments
+    if func is None:
+        return decorator
+    else:
+        # If func is not None, it means the decorator is used without arguments
+        return decorator(func)
+
+
+def narwhalify_method(
+    func: Callable[..., Any] | None = None,
+    *,
+    strict: bool = True,
+    eager_only: bool | None = None,
+    series_only: bool | None = None,
+    allow_series: bool | None = None,
+) -> Callable[..., Any]:
+    """
+    Decorate a function so that all arguments get narwhalified with `strict=False`.
+
+    Using
+
+    ```python
+    import narwhals as nw
+
+    @nw.narwhalify
+    def func(df):
+        return df.group_by('a').agg(nw.col('b').sum())
+    ```
+
+    is shorthand for
+
+    ```python
+    import narwhals as nw
+
+    def func(df_any):
+        df = nw.from_native(df_any, strict=False)
+        df = df.group_by('a').agg(nw.col('b').sum())
+        return nw.to_native(df)
+    ```
+
+    Arguments:
+        native_dataframe: Raw dataframe from user.
+            Depending on the other arguments, input object can be:
+
+            - pandas.DataFrame
+            - polars.DataFrame
+            - polars.LazyFrame
+            - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
+            - pandas.Series
+            - polars.Series
+            - anything with a `__narwhals_series__` method
+        strict: Whether to raise if object can't be converted (default) or
+            to just leave it as-is.
+        eager_only: Whether to only allow eager objects.
+        series_only: Whether to only allow series.
+        allow_series: Whether to allow series (default is only dataframe / lazyframe).
+    """
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+            if args:
+                df_any = args[0]
+            elif kwargs:
+                first_key = next(iter(kwargs.keys()))
+                df_any = kwargs[first_key]
+            else:
+                raise TypeError("Expected function which takes at least one argument.")
+            df = from_native(
+                df_any,
+                strict=strict,
+                eager_only=eager_only,
+                series_only=series_only,
+                allow_series=allow_series,
+            )
+            if args:
+                result = func(self, df, *args[1:], **kwargs)
+            else:
+                kwargs[first_key] = df
+                result = func(self, **kwargs)
             return to_native(result)
 
         return wrapper

@@ -2345,7 +2345,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     Creates an expression that references one or more columns by their name(s).
 
     Arguments:
-        columns: str or list of str
+        columns
             The name(s) of the column(s) to use.
 
     Examples:

@@ -29,6 +29,7 @@ from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
+from narwhals.translate import narwhalify_method
 from narwhals.translate import to_native
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_set_index
@@ -70,4 +71,5 @@ __all__ = [
     "String",
     "Datetime",
     "narwhalify",
+    "narwhalify_method",
 ]
