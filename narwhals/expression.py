@@ -265,8 +265,8 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-                >>> func(df_pd)
-                  a     b
+            >>> func(df_pd)
+                a     b
             0  True  True
             >>> func(df_pl)
             shape: (1, 2)
@@ -2312,13 +2312,13 @@ def col(*names: str | Iterable[str]) -> Expr:
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
 
-    We define a dataframe-agnostic function:
+        We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
         ... def func(df):
         ...     return df.select(nw.col('a') * nw.col('b'))
 
-    We can then pass either pandas or polars to `func`:
+        We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
            a
@@ -2407,12 +2407,12 @@ def sum(*columns: str) -> Expr:
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
 
-    We define a dataframe-agnostic function:
+        We define a dataframe-agnostic function:
 
         >>> def func(df_any):
         ...     return df.select(nw.sum('a'))
 
-    We can then pass either pandas or polars to `func`:
+        We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
            a
@@ -2448,14 +2448,14 @@ def mean(*columns: str) -> Expr:
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
 
-    We define a dataframe agnostic function:
+        We define a dataframe agnostic function:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
         ...     df = df.select(nw.mean('a'))
         ...     return nw.to_native(df)
 
-    We can then pass either pandas or Polars to `func`:
+        We can then pass either pandas or Polars to `func`:
 
         >>> func(df_pd)
              a
