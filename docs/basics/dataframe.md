@@ -10,7 +10,7 @@ To write a dataframe-agnostic function, the steps you'll want to follow are:
 2. Express your logic using the subset of the Polars API supported by Narwhals.
 3. If you need to return a dataframe to the user in its original library, call `nw.to_native`.
 
-Steps 1 and 3 are so common that we provide a utily `@nw.narwhalify` decorator, which allows you
+Steps 1 and 3 are so common that we provide a utility `@nw.narwhalify` decorator, which allows you
 to only explicitly write step 2.
 
 Let's explore this with some simple examples.
@@ -72,7 +72,7 @@ def func(df_any):
     return nw.to_native(df)
 ```
 
-In general, we think `@nw.narwhalify` is more legibile, so we'll use that wherever possible.
+In general, we think `@nw.narwhalify` is more legible, so we'll use that wherever possible.
 
 ## Example 2: group-by and mean
 

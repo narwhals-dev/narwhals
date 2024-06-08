@@ -245,19 +245,9 @@ def narwhalify(
     allow_series: bool | None = None,
 ) -> Callable[..., Any]:
     """
-    Decorate a function so that the first argument gets narwhalified with `strict=False`.
+    Decorate a function so that the first argument gets narwhalified.
 
-    Using
-
-    ```python
-    import narwhals as nw
-
-    @nw.narwhalify
-    def func(df):
-        return df.group_by('a').agg(nw.col('b').sum())
-    ```
-
-    is shorthand for
+    Instead of writing
 
     ```python
     import narwhals as nw
@@ -268,22 +258,26 @@ def narwhalify(
         return nw.to_native(df)
     ```
 
-    Arguments:
-        native_dataframe: Raw dataframe from user.
-            Depending on the other arguments, input object can be:
+    you can just write
 
-            - pandas.DataFrame
-            - polars.DataFrame
-            - polars.LazyFrame
-            - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
-            - pandas.Series
-            - polars.Series
-            - anything with a `__narwhals_series__` method
+    ```python
+    import narwhals as nw
+
+    @nw.narwhalify
+    def func(df):
+        return df.group_by('a').agg(nw.col('b').sum())
+    ```
+
+    Arguments:
+        func: Function to wrap in a `from_native`-`to_native` block.
         strict: Whether to raise if object can't be converted (default) or
             to just leave it as-is.
         eager_only: Whether to only allow eager objects.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
+
+    See Also:
+        narwhalify_decorator: If you want narwhalify a class method, use that instead.
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -329,40 +323,33 @@ def narwhalify_method(
     allow_series: bool | None = None,
 ) -> Callable[..., Any]:
     """
-    Decorate a function so that all arguments get narwhalified with `strict=False`.
+    Decorate a function so that the first argument (other than `self`) gets narwhalified.
 
-    Using
+    Instead of writing
 
     ```python
     import narwhals as nw
 
-    @nw.narwhalify
-    def func(df):
-        return df.group_by('a').agg(nw.col('b').sum())
+    class Foo:
+        def func(self, df_any):
+            df = nw.from_native(df_any, strict=False)
+            df = df.group_by('a').agg(nw.col('b').sum())
+            return nw.to_native(df)
     ```
 
-    is shorthand for
+    you can just write
 
     ```python
     import narwhals as nw
 
-    def func(df_any):
-        df = nw.from_native(df_any, strict=False)
-        df = df.group_by('a').agg(nw.col('b').sum())
-        return nw.to_native(df)
+    class Foo:
+        @nw.narwhalify_method
+        def func(self, df):
+            return df.group_by('a').agg(nw.col('b').sum())
     ```
 
     Arguments:
-        native_dataframe: Raw dataframe from user.
-            Depending on the other arguments, input object can be:
-
-            - pandas.DataFrame
-            - polars.DataFrame
-            - polars.LazyFrame
-            - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
-            - pandas.Series
-            - polars.Series
-            - anything with a `__narwhals_series__` method
+        func: Function to wrap in a `from_native`-`to_native` block.
         strict: Whether to raise if object can't be converted (default) or
             to just leave it as-is.
         eager_only: Whether to only allow eager objects.

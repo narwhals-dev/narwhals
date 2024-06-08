@@ -2303,8 +2303,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     Creates an expression that references one or more columns by their name(s).
 
     Arguments:
-        columns
-            The name(s) of the column(s) to use.
+        names: Name(s) of the columns to use in the aggregation function.
 
     Examples:
         >>> import pandas as pd
@@ -2563,7 +2562,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Sum all values horizontally across columns
 
     Arguments:
-        columns: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
 
     Examples:
         >>> import pandas as pd
