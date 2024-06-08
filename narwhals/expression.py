@@ -265,7 +265,7 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
+                >>> func(df_pd)
                   a     b
             0  True  True
             >>> func(df_pl)
@@ -1568,7 +1568,6 @@ class ExprDateTimeNamespace:
 
     def year(self) -> Expr:
         """
-        Extract year from underlying DateTime representation.
 
         Returns the year number in the calendar date.
 
@@ -2411,9 +2410,7 @@ def sum(*columns: str) -> Expr:
     We define a dataframe-agnostic function:
 
         >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.sum('a'))
-        ...     return nw.to_native(df)
+        ...     return df.select(nw.sum('a'))
 
     We can then pass either pandas or polars to `func`:
 
@@ -2573,14 +2570,12 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
 
-    We define a dataframe-agnostic function:
+        We define a dataframe-agnostic function:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.sum_horizontal('a', 'b'))
-        ...     return nw.to_native(df)
+        >>> def func(df):
+        ...     return df.select(nw.sum_horizontal('a', 'b'))
 
-    We can then pass either pandas or polars to `func`:
+        We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
             a
