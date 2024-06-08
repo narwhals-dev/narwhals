@@ -278,7 +278,7 @@ class DataFrame(BaseFrame):
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
 
-            We define a library agnostic function:
+            Define a library agnostic function:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
