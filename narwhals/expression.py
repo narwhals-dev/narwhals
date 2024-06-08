@@ -266,7 +266,7 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                a     b
+                  a     b
             0  True  True
             >>> func(df_pl)
             shape: (1, 2)
@@ -2409,7 +2409,8 @@ def sum(*columns: str) -> Expr:
 
         We define a dataframe-agnostic function:
 
-        >>> def func(df_any):
+        >>> @nw.narwhalify
+        ... def func(df):
         ...     return df.select(nw.sum('a'))
 
         We can then pass either pandas or polars to `func`:
@@ -2572,7 +2573,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
         We define a dataframe-agnostic function:
 
-        >>> def func(df):
+        >>> @nw.narwhalify
+        ... def func(df):
         ...     return df.select(nw.sum_horizontal('a', 'b'))
 
         We can then pass either pandas or polars to `func`:
