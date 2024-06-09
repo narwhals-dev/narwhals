@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 import pytest
 
@@ -64,8 +66,19 @@ def test_narwhalify_method_invalid() -> None:
         def func(self) -> nw.DataFrame:  # pragma: no cover
             return self  # type: ignore[return-value]
 
+        @nw.narwhalify(eager_only=True)
+        def fun2(self, df: Any) -> nw.DataFrame:  # pragma: no cover
+            return df  # type: ignore[no-any-return]
+
     with pytest.raises(TypeError):
         Foo().func()
+
+    @nw.narwhalify_method(eager_only=True)
+    def func(_df: Any, a: int = 1) -> nw.DataFrame:  # pragma: no cover
+        return a  # type: ignore[return-value]
+
+    with pytest.raises(TypeError, match="is meant to be called"):
+        func(pd.DataFrame(), a=pd.DataFrame())
 
 
 def test_narwhalify_invalid() -> None:

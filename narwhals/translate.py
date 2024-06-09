@@ -297,11 +297,6 @@ def narwhalify(
             elif kwargs:
                 params = list(inspect.signature(func).parameters.keys())
                 first_key = params[0]
-                if first_key == "self":
-                    raise TypeError(
-                        "It looks like you're trying to call `@nw.narwhalify` on a class method - please "
-                        "use `@nw.narwhalify_method` instead."
-                    )
                 df_any = kwargs[first_key]
             else:
                 raise TypeError("Expected function which takes at least one argument.")
