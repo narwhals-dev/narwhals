@@ -302,7 +302,7 @@ def narwhalify(
             else:
                 kwargs[first_key] = df
                 result = func(**kwargs)
-            return to_native(result)
+            return to_native(result, strict=strict)
 
         return wrapper
 
@@ -379,7 +379,7 @@ def narwhalify_method(
             else:
                 kwargs[first_key] = df
                 result = func(self, **kwargs)
-            return to_native(result)
+            return to_native(result, strict=strict)
 
         return wrapper
 
