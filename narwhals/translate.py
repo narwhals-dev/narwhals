@@ -245,7 +245,7 @@ def narwhalify(
     allow_series: bool | None = None,
 ) -> Callable[..., Any]:
     """
-    Decorate a function so that the first argument gets narwhalified.
+    Decorate function so it becomes dataframe-agnostic.
 
     Instead of writing
 
@@ -267,6 +267,14 @@ def narwhalify(
     def func(df):
         return df.group_by('a').agg(nw.col('b').sum())
     ```
+
+    You can also pass in extra arguments, e.g.
+
+    ```python
+    @nw.narhwalify(eager_only=True)
+    ```
+
+    that will get passed down to `nw.from_native`.
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
@@ -323,7 +331,7 @@ def narwhalify_method(
     allow_series: bool | None = None,
 ) -> Callable[..., Any]:
     """
-    Decorate a function so that the first argument (other than `self`) gets narwhalified.
+    Decorate method so it becomes dataframe-agnostic.
 
     Instead of writing
 
@@ -347,6 +355,14 @@ def narwhalify_method(
         def func(self, df):
             return df.group_by('a').agg(nw.col('b').sum())
     ```
+
+    You can also pass in extra arguments, e.g.
+
+    ```python
+    @nw.narhwalify_method(eager_only=True)
+    ```
+
+    that will get passed down to `nw.from_native`.
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
