@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
@@ -294,7 +295,13 @@ def narwhalify(
             if args:
                 df_any = args[0]
             elif kwargs:
-                first_key = next(iter(kwargs.keys()))
+                params = list(inspect.signature(func).parameters.keys())
+                first_key = params[0]
+                if first_key == "self":
+                    raise TypeError(
+                        "It looks like you're trying to call `@nw.narwhalify` on a class method - please "
+                        "use `@nw.narwhalify_method` instead."
+                    )
                 df_any = kwargs[first_key]
             else:
                 raise TypeError("Expected function which takes at least one argument.")
@@ -379,7 +386,15 @@ def narwhalify_method(
             if args:
                 df_any = args[0]
             elif kwargs:
-                first_key = next(iter(kwargs.keys()))
+                params = list(inspect.signature(func).parameters.keys())
+                if params[0] not in ("cls", "self"):
+                    msg = (
+                        "`@nw.narwhalify_method` is meant to be called on class methods, "
+                        "where the first argument is typically `cls` or `self` - however, yours "
+                        f"is: {params[0]}."
+                    )
+                    raise TypeError(msg)
+                first_key = params[1]
                 df_any = kwargs[first_key]
             else:
                 raise TypeError("Expected function which takes at least one argument.")

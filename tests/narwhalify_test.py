@@ -18,39 +18,43 @@ def test_narwhalify() -> None:
 
 def test_narwhalify_called() -> None:
     @nw.narwhalify()
-    def func(df: nw.DataFrame) -> nw.DataFrame:
-        return df.with_columns(nw.all() + 1)
+    def func(df: nw.DataFrame, a: int = 1) -> nw.DataFrame:
+        return df.with_columns(nw.all() + a)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
     result = func(df)
     pd.testing.assert_frame_equal(result, pd.DataFrame({"a": [2, 3, 4]}))
     result = func(df=df)
     pd.testing.assert_frame_equal(result, pd.DataFrame({"a": [2, 3, 4]}))
+    result = func(a=1, df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame({"a": [2, 3, 4]}))
 
 
 def test_narwhalify_method() -> None:
     class Foo:
         @nw.narwhalify_method
-        def func(self, df: nw.DataFrame) -> nw.DataFrame:
-            return df.with_columns(nw.all() + 1)
+        def func(self, df: nw.DataFrame, a: int = 1) -> nw.DataFrame:
+            return df.with_columns(nw.all() + a)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
     result = Foo().func(df)
     pd.testing.assert_frame_equal(result, pd.DataFrame({"a": [2, 3, 4]}))
-    result = Foo().func(df=df)
+    result = Foo().func(a=1, df=df)
     pd.testing.assert_frame_equal(result, pd.DataFrame({"a": [2, 3, 4]}))
 
 
 def test_narwhalify_method_called() -> None:
     class Foo:
         @nw.narwhalify_method(eager_only=True)
-        def func(self, df: nw.DataFrame) -> nw.DataFrame:
-            return df.with_columns(nw.all() + 1)
+        def func(self, df: nw.DataFrame, a: int = 1) -> nw.DataFrame:
+            return df.with_columns(nw.all() + a)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
     result = Foo().func(df)
     pd.testing.assert_frame_equal(result, pd.DataFrame({"a": [2, 3, 4]}))
     result = Foo().func(df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame({"a": [2, 3, 4]}))
+    result = Foo().func(a=1, df=df)
     pd.testing.assert_frame_equal(result, pd.DataFrame({"a": [2, 3, 4]}))
 
 
