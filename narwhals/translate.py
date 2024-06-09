@@ -277,7 +277,7 @@ def narwhalify(
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
 
     See Also:
-        narwhalify_decorator: If you want narwhalify a class method, use that instead.
+        narwhalify_decorator: If you want to narwhalify a class method, use that instead.
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
