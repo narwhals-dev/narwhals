@@ -195,17 +195,22 @@ class DataFrame(BaseFrame):
     Examples:
         Constructing a DataFrame from a dictionary:
 
+        >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
         >>> data = {"a": [1, 2], "b": [3, 4]}
         >>> df_pl = pl.DataFrame(data)
-        >>> df = nw.DataFrame(df_pl)
-        >>> df
-        ┌───────────────────────────────────────────────┐
-        | Narwhals DataFrame                            |
-        | Use `narwhals.to_native` to see native output |
-        └───────────────────────────────────────────────┘
-        >>> nw.to_native(df)
+        >>> df_pd = pd.DataFrame(data)
+
+        we define a library-agnostic function:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     return nw.to_native(df)
+
+        You can pass either pandas or Polars to the function `func`:
+
+        >>> func(df_pl)
         shape: (2, 2)
         ┌─────┬─────┐
         │ a   ┆ b   │
@@ -215,6 +220,12 @@ class DataFrame(BaseFrame):
         │ 1   ┆ 3   │
         │ 2   ┆ 4   │
         └─────┴─────┘
+
+        >>> func(df_pd)
+           a  b
+        0  1  3
+        1  2  4
+
     """
 
     def __init__(
