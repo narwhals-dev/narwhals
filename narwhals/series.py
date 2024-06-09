@@ -482,10 +482,9 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.is_in([3, 2, 8])
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.is_in([3, 2, 8])
 
             We can then pass either pandas or Polars to `func`:
 
@@ -526,10 +525,9 @@ class Series:
 
           Now define a dataframe-agnostic function with a `column` argument for the column to evaluate :
 
-          >>> def func(s_any):
-          ...   s = nw.from_native(s_any, series_only=True)
-          ...   s = s.drop_nulls()
-          ...   return nw.to_native(s)
+          >>> @nw.narwhalify(series_only=True)
+          ... def func(s):
+          ...   return s.drop_nulls()
 
           Then we can pass either Series (polars or pandas) to `func`:
 
@@ -565,10 +563,9 @@ class Series:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.cum_sum()
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.cum_sum()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -602,10 +599,9 @@ class Series:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...    s = nw.from_native(s_any, series_only=True)
-            ...    s = s.unique()
-            ...    return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...    return s.unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -650,10 +646,9 @@ class Series:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.diff()
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.diff()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -702,10 +697,9 @@ class Series:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.shift(1)
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.shift(1)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -757,10 +751,9 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.sample(fraction=1.0, with_replacement=True)
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.sample(fraction=1.0, with_replacement=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -801,10 +794,9 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.alias("bar")
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.alias("bar")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -841,15 +833,13 @@ class Series:
 
             We define library agnostic functions:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.sort()
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.sort()
 
-            >>> def func_descend(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.sort(descending=True)
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func_descend(s):
+            ...     return s.sort(descending=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -904,10 +894,9 @@ class Series:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.is_null()
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.is_null()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -948,10 +937,9 @@ class Series:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.fill_null(5)
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.fill_null(5)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -997,10 +985,9 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.is_between(2, 4, 'right')
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.is_between(2, 4, 'right')
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1157,10 +1144,9 @@ class Series:
 
             We define a library agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.filter(s > 10)
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.filter(s > 10)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1194,10 +1180,9 @@ class Series:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     series = nw.from_native(s_any, allow_series=True)
-            ...     duplicated = series.is_duplicated()
-            ...     return nw.to_native(duplicated)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.is_duplicated()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1262,10 +1247,9 @@ class Series:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     series = nw.from_native(s_any, allow_series=True)
-            ...     unique = series.is_unique()
-            ...     return nw.to_native(unique)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.is_unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1332,10 +1316,9 @@ class Series:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     series = nw.from_native(s_any, allow_series=True)
-            ...     first_distinct = series.is_first_distinct()
-            ...     return nw.to_native(first_distinct)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.is_first_distinct()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1373,10 +1356,9 @@ class Series:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     series = nw.from_native(s_any, allow_series=True)
-            ...     last_distinct = series.is_last_distinct()
-            ...     return nw.to_native(last_distinct)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.is_last_distinct()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1454,10 +1436,9 @@ class Series:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     series = nw.from_native(s_any, allow_series=True)
-            ...     val_count = series.value_counts(sort=True)
-            ...     return nw.to_native(val_count)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.value_counts(sort=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1609,10 +1590,9 @@ class SeriesStringNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(s_any):
-            ...     s = nw.from_native(s_any, series_only=True)
-            ...     s = s.str.head()
-            ...     return nw.to_native(s)
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.str.head()
 
             We can then pass either pandas or Polars to `func`:
 
