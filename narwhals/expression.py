@@ -2340,7 +2340,39 @@ def col(*names: str | Iterable[str]) -> Expr:
 
 def all() -> Expr:
     """
-    Instantiate an expression representing all columns, similar to `polars.all`.
+    Instantiate an expression representing all columns.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        >>> df_pl = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...    return df.select(nw.all() * 2)
+
+        We can then pass either pandas or Polars to `func`:
+
+        >>> func(df_pd)
+           a   b
+        0  2   8
+        1  4  10
+        2  6  12
+        >>> func(df_pl)
+        shape: (3, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 2   ┆ 8   │
+        │ 4   ┆ 10  │
+        │ 6   ┆ 12  │
+        └─────┴─────┘
     """
     return Expr(lambda plx: plx.all())
 
