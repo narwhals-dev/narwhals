@@ -940,6 +940,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
+            
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.drop("ham").collect()
             >>> lframe
