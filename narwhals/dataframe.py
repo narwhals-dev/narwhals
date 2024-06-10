@@ -706,22 +706,27 @@ class DataFrame(BaseFrame):
             Pass the name of a column to select that column.
 
             >>> import polars as pl
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
+            >>> data ={
             ...         "foo": [1, 2, 3],
             ...         "bar": [6, 7, 8],
             ...         "ham": ["a", "b", "c"],
             ...     }
-            ... )
-            >>> df = nw.from_native(df_pl)
-            >>> dframe = df.select("foo")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df_select = df.select("foo")
+            ...     return nw.to_native(df_select)
+                
+            You can pass either pandas or Polars to the function `func`:
+
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ foo │
@@ -733,15 +738,24 @@ class DataFrame(BaseFrame):
             │ 3   │
             └─────┘
 
+            >>> func(df_pd)
+               foo
+            0    1
+            1    2
+            2    3
+
             Multiple columns can be selected by passing a list of column names.
 
-            >>> dframe = df.select(["foo", "bar"])
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df_select = df.select(["foo", "bar"])
+            ...     return nw.to_native(df_select)
+
+            You can pass either pandas or Polars to the function `func`:
+
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -753,16 +767,25 @@ class DataFrame(BaseFrame):
             │ 3   ┆ 8   │
             └─────┴─────┘
 
+            >>> func(df_pd)
+               foo  bar
+            0    1    6
+            1    2    7
+            2    3    8
+
             Multiple columns can also be selected using positional arguments instead of a
             list. Expressions are also accepted.
 
-            >>> dframe = df.select(nw.col("foo"), nw.col("bar") + 1)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df_select = df.select(nw.col("foo"), nw.col("bar") + 1)
+            ...     return nw.to_native(df_select)
+            
+            You can pass either pandas or Polars to the function `func`:
+
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -774,15 +797,24 @@ class DataFrame(BaseFrame):
             │ 3   ┆ 9   │
             └─────┴─────┘
 
+            >>> func(df_pd)
+               foo  bar
+            0    1    7
+            1    2    8
+            2    3    9
+
             Use keyword arguments to easily name your expression inputs.
 
-            >>> dframe = df.select(threshold=nw.col('foo')*2)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            we define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df_select = df.select(threshold = nw.col("foo") * 2)
+            ...     return nw.to_native(df_select)            
+
+            You can pass either pandas or Polars to the function `func`:
+
+            >>> func(df_pl)
             shape: (3, 1)
             ┌───────────┐
             │ threshold │
@@ -793,6 +825,12 @@ class DataFrame(BaseFrame):
             │ 4         │
             │ 6         │
             └───────────┘
+
+            >>> func(df_pd)
+               threshold
+            0          2
+            1          4
+            2          6
         """
         return super().select(*exprs, **named_exprs)
 
@@ -883,64 +921,33 @@ class DataFrame(BaseFrame):
         return super().head(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        """
-        Remove columns from the dataframe.
+        r"""
+        Remove columns from the LazyFrame.
 
         Arguments:
-            *columns: Names of the columns that should be removed from the dataframe.
+            *columns: Names of the columns that should be removed from the
+                      dataframe. Accepts column selector input.
 
         Examples:
             Drop a single column by passing the name of that column.
 
             >>> import polars as pl
-            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
             ...         "foo": [1, 2, 3],
             ...         "bar": [6.0, 7.0, 8.0],
             ...         "ham": ["a", "b", "c"],
             ...     }
-
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-
-            >>> df_pl
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ f64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6.0 ┆ a   │
-            │ 2   ┆ 7.0 ┆ b   │
-            │ 3   ┆ 8.0 ┆ c   │
-            └─────┴─────┴─────┘
-
-            >>> df_pd
-               foo  bar ham
-            0    1  6.0   a
-            1    2  7.0   b
-            2    3  8.0   c
-
-
-            Define a library-agnostic function:
-
-            >>> def func(data_any):
-            ...     df = nw.from_native(data_any)
-            ...     df = df.drop("ham")
-            ...     return nw.to_native(df)
-
-
-            >>> pd_dframe = func(df_pd)
-            >>> pd_dframe
-               foo  bar
-            0    1  6.0
-            1    2  7.0
-            2    3  8.0
-
-
-            >>> pl_dframe = func(df_pl)
-            >>> pl_dframe
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.drop("ham").collect()
+            >>> lframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -952,51 +959,15 @@ class DataFrame(BaseFrame):
             │ 3   ┆ 8.0 │
             └─────┴─────┘
 
-            Drop multiple columns by passing a list of column names.
-
-            >>> def func(data_any):
-            ...     df = nw.from_native(data_any)
-            ...     df = df.drop(["bar", "ham"])
-            ...     return nw.to_native(df)
-
-
-            >>> pd_dframe = func(df_pd)
-            >>> pd_dframe
-               foo
-            0    1
-            1    2
-            2    3
-
-
-            >>> pl_dframe = func(df_pl)
-            >>> pl_dframe
-            shape: (3, 1)
-            ┌─────┐
-            │ foo │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 1   │
-            │ 2   │
-            │ 3   │
-            └─────┘
-
             Use positional arguments to drop multiple columns.
 
-            >>> def func(data_any):
-            ...     df = nw.from_native(data_any)
-            ...     df = df.drop(["foo", "ham"])
-            ...     return nw.to_native(df)
-
-            >>> pd_dframe = func(df_pd)
-            >>> pd_dframe
-               bar
-            0  6.0
-            1  7.0
-            2  8.0
-
-            >>> pl_dframe = func(df_pl)
-            >>> pl_dframe
+            >>> lframe = lf.drop("foo", "ham").collect()
+            >>> lframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
             shape: (3, 1)
             ┌─────┐
             │ bar │
@@ -1007,7 +978,6 @@ class DataFrame(BaseFrame):
             │ 7.0 │
             │ 8.0 │
             └─────┘
-
         """
         return super().drop(*columns)
 
