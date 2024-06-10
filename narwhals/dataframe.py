@@ -318,11 +318,7 @@ class DataFrame(BaseFrame):
         Convert this DataFrame to a NumPy ndarray.
 
         Examples:
-<<<<<<< HEAD
-            Construct pandas and polars DataFranes:
-=======
             Construct pandas and polars DataFrames:
->>>>>>> upstream/main
 
             >>> import pandas as pd
             >>> import polars as pl
