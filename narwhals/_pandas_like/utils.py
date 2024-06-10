@@ -373,9 +373,9 @@ def series_from_iterable(
 
 
 def set_axis(obj: T, index: Any, implementation: str) -> T:
-    if implementation == "pandas" and parse_version(get_pandas()) >= parse_version(
-        "1.5.0"
-    ):
+    if implementation == "pandas" and parse_version(
+        get_pandas().__version__
+    ) >= parse_version("1.5.0"):
         return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
     else:  # pragma: no cover
         return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
