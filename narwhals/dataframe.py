@@ -921,8 +921,10 @@ class DataFrame(BaseFrame):
         return super().head(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        r"""
+        """
         Remove columns from the LazyFrame.
+
+        This is a test line to check if changes are actually being pushed.
 
         Arguments:
             *columns: Names of the columns that should be removed from the
@@ -979,7 +981,6 @@ class DataFrame(BaseFrame):
             │ 7.0 │
             │ 8.0 │
             └─────┘
-        This is a test line to check if changes are actually being pushed.
 
         """
         return super().drop(*columns)
