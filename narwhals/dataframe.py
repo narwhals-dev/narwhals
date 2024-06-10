@@ -183,49 +183,13 @@ class BaseFrame:
 
 
 class DataFrame(BaseFrame):
-    r"""
-    Two-dimensional data structure representing data as a table with rows and columns.
+    """
+    Narwhals DataFrame, backed by a native dataframe.
 
-    Arguments:
-        df: A pandas-like dataframe (Pandas, cuDF or Modin), a Polars dataframe,
-             a narwhals DataFrame or a narwhals LazyFrame.
+    The native dataframe might be pandas.DataFrame, polars.DataFrame, ...
 
-        is_polars: if set to `True`, assume the dataframe to be of Polars type.
-
-    Examples:
-        Constructing a DataFrame from a dictionary:
-
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> data = {"a": [1, 2], "b": [3, 4]}
-        >>> df_pl = pl.DataFrame(data)
-        >>> df_pd = pd.DataFrame(data)
-
-        we define a library-agnostic function:
-
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     return nw.to_native(df)
-
-        You can pass either pandas or Polars to the function `func`:
-
-        >>> func(df_pl)
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
-
-        >>> func(df_pd)
-           a  b
-        0  1  3
-        1  2  4
-
+    This class is not meant to be instantiated directly - instead, use
+    `narwhals.from_native`.
     """
 
     def __init__(
@@ -1485,45 +1449,13 @@ class DataFrame(BaseFrame):
 
 
 class LazyFrame(BaseFrame):
-    r"""
-    Representation of a Lazy computation graph/query against a DataFrame.
+    """
+    Narwhals DataFrame, backed by a native dataframe.
 
-    This allows for whole-query optimisation in addition to parallelism, and
-    is the preferred (and highest-performance) mode of operation for narwhals.
+    The native dataframe might be pandas.DataFrame, polars.LazyFrame, ...
 
-    Arguments:
-        df: A pandas-like dataframe (Pandas, cuDF or Modin), a Polars dataframe,
-             a Polars lazyframe, a narwhals DataFrame or a narwhals LazyFrame.
-
-        is_polars: if set to `True`, assume the dataframe to be of Polars type.
-
-    Note:
-        Initialising `LazyFrame(...)` directly is equivalent to `DataFrame(...).lazy()`.
-
-    Examples:
-        Constructing a LazyFrame directly from a dictionary:
-
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> data = {"a": [1, 2], "b": [3, 4]}
-        >>> lf_pl = pl.LazyFrame(data)
-        >>> lf = nw.LazyFrame(lf_pl)
-        >>> dframe = lf.collect()
-        >>> dframe
-        ┌───────────────────────────────────────────────┐
-        | Narwhals DataFrame                            |
-        | Use `narwhals.to_native` to see native output |
-        └───────────────────────────────────────────────┘
-        >>> nw.to_native(dframe)
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
+    This class is not meant to be instantiated directly - instead, use
+    `narwhals.from_native`.
     """
 
     def __init__(
