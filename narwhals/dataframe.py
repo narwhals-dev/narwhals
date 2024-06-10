@@ -591,7 +591,12 @@ class DataFrame(BaseFrame):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema = func(df_pl)
+            >>> df_pd_schema
+            {'foo': Int64, 'bar': Float64, 'ham': String}
+
+            >>> df_pl_schema = func(df_pl)
+            >>> df_pl_schema
+            {'foo': Int64, 'bar': Float64, 'ham': String}
 
             Both pandas and Polars returns the same output:
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
