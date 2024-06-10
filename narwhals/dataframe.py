@@ -315,35 +315,35 @@ class DataFrame(BaseFrame):
 
     def to_numpy(self) -> Any:
         """
-                Convert this DataFrame to a NumPy ndarray.
+        Convert this DataFrame to a NumPy ndarray.
 
-                Examples:
-                    Construct pandas and polars DataFrames:
+        Examples:
+            Construct pandas and polars DataFrames:
 
-                    >>> import pandas as pd
-                    >>> import polars as pl
-                    >>> import narwhals as nw
-                    >>> df = {"foo": [1, 2, 3], "bar": [6.5, 7.0, 8.5], "ham": ["a", "b", "c"]}
-                    >>> df_pd = pd.DataFrame(df)
-                    >>> df_pl = pl.DataFrame(df)
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.5, 7.0, 8.5], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
 
-                    We define a library agnostic function:
+            We define a library agnostic function:
 
-                    >>> def func(df_any):
-                    ...     df = nw.from_native(df_any)
-                    ...     df = df.to_numpy()
-                    ...     return df
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.to_numpy()
+            ...     return df
 
-                    We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas or Polars to `func`:
 
-                    >>> func(df_pd)
-                    array([[1, 6.5, 'a'],
-                           [2, 7.0, 'b'],
-                           [3, 8.5, 'c']], dtype=object)
-                    >>> func(df_pl)
-                    array([[1, 6.5, 'a'],
-                           [2, 7.0, 'b'],
-                           [3, 8.5, 'c']], dtype=object)
+            >>> func(df_pd)
+            array([[1, 6.5, 'a'],
+                   [2, 7.0, 'b'],
+                   [3, 8.5, 'c']], dtype=object)
+            >>> func(df_pl)
+            array([[1, 6.5, 'a'],
+                   [2, 7.0, 'b'],
+                   [3, 8.5, 'c']], dtype=object)
         """
         return self._dataframe.to_numpy()
 
