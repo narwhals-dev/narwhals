@@ -374,8 +374,9 @@ def series_from_iterable(
 
 def set_axis(obj: T, index: Any, implementation: str) -> T:
     if implementation == "pandas":
-        return obj.set_axis(index, axis=0, copy=False)
-    return obj.set_axis(index, axis=0)  # pragma: no cover
+        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
+    else:  # pragma: no cover
+        return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
 
 
 def translate_dtype(dtype: Any) -> DType:
