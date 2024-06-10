@@ -52,7 +52,7 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             # broadcast
             return other.item()
         if other._series.index is not index:
-            return other._series.set_axis(index, axis=0)
+            return set_axis(other._series, index, implementation=other._implementation)
         return other._series
     return other
 
@@ -370,6 +370,15 @@ def series_from_iterable(
         return mpd.Series(data, name=name, index=index)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
+
+
+def set_axis(obj: T, index: Any, implementation: str) -> T:
+    if implementation == "pandas" and parse_version(
+        get_pandas().__version__
+    ) >= parse_version("1.5.0"):
+        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
+    else:  # pragma: no cover
+        return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
 
 
 def translate_dtype(dtype: Any) -> DType:
