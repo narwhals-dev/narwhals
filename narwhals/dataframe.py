@@ -979,6 +979,8 @@ class DataFrame(BaseFrame):
             │ 7.0 │
             │ 8.0 │
             └─────┘
+        This is a test line to check if changes are actually being pushed.
+
         """
         return super().drop(*columns)
 
