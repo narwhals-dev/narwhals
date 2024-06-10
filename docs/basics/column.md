@@ -16,10 +16,9 @@ This can stay lazy, so we just use `nw.from_native` and expressions:
 ```python exec="1" source="above" session="ex1"
 import narwhals as nw
 
+@nw.narwhalify
 def my_func(df):
-    df_s = nw.from_native(df)
-    df_s = df_s.filter(nw.col('a') > 0)
-    return nw.to_native(df_s)
+    return df.filter(nw.col('a') > 0)
 ```
 
 === "pandas"
@@ -54,10 +53,9 @@ Let's write a dataframe-agnostic function which multiplies the values in column
 ```python exec="1" source="above" session="ex2"
 import narwhals as nw
 
+@nw.narwhalify
 def my_func(df):
-    df_s = nw.from_native(df)
-    df_s = df_s.with_columns(nw.col('a')*2)
-    return nw.to_native(df_s)
+    return df.with_columns(nw.col('a')*2)
 ```
 
 === "pandas"
@@ -90,10 +88,9 @@ values multiplied by 2, we could have used `Expr.alias`:
 ```python exec="1" source="above" session="ex2.1"
 import narwhals as nw
 
+@nw.narwhalify
 def my_func(df):
-    df_s = nw.from_native(df)
-    df_s = df_s.with_columns((nw.col('a')*2).alias('c'))
-    return nw.to_native(df_s)
+    return df.with_columns((nw.col('a')*2).alias('c'))
 ```
 
 === "pandas"
@@ -150,3 +147,9 @@ def my_func(df):
     df = pl.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
     print(my_func(df))
     ```
+
+Note that, this time, we couldn't use `@nw.narwhalify`, as the final step in
+our function wasn't `nw.to_native`, so we had to explicitly use `nw.from_native`
+as the first step. In general, we recommend using the decorator where possible,
+as it looks a lot cleaner, and only using `nw.from_native` / `nw.to_native` explicitly
+when you need them.

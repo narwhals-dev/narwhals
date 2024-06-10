@@ -259,10 +259,9 @@ class Expr:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a', 'b').any())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a', 'b').any())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -294,10 +293,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a', 'b').all())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a', 'b').all())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -329,10 +327,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.select(nw.col('a', 'b').mean())
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.select(nw.col('a', 'b').mean())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -368,10 +365,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.select(nw.col('a', 'b').std(ddof=0))
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.select(nw.col('a', 'b').std(ddof=0))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -404,10 +400,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a', 'b').sum())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a', 'b').sum())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -438,10 +433,9 @@ class Expr:
             >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [4, 3]})
 
             Let's define a dataframe-agnostic function:
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.min('a','b'))
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.min('a','b'))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -474,10 +468,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.select(nw.max('a', 'b'))
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.select(nw.max('a', 'b'))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -509,10 +502,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.select(nw.col('a', 'b').n_unique())
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.select(nw.col('a', 'b').n_unique())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -544,10 +536,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.select(nw.col('a', 'b').unique())
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.select(nw.col('a', 'b').unique())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -583,10 +574,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.select(nw.col('a', 'b').cum_sum())
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.select(nw.col('a', 'b').cum_sum())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -637,10 +627,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.select(a_diff=nw.col('a').diff())
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.select(a_diff=nw.col('a').diff())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -691,10 +680,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.select(a_shift=nw.col('a').shift(n=1))
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.select(a_shift=nw.col('a').shift(n=1))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -738,10 +726,9 @@ class Expr:
 
             Let's define dataframe-agnostic functions:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a').sort())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a').sort())
 
             >>> def func_descend(df_any):
             ...     df = nw.from_native(df_any)
@@ -812,10 +799,10 @@ class Expr:
             >>> df_pl = pl.DataFrame({'a': [1, 2, 3, 4, 5]})
 
             Let's define a dataframe-agnostic function:
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a').is_between(2,4,'right'))
-            ...     return nw.to_native(df)
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a').is_between(2,4,'right'))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -860,10 +847,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...    df = nw.from_native(df_any)
-            ...    df = df.with_columns(b = nw.col('a').is_in([1, 2]))
-            ...    return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...    return df.with_columns(b = nw.col('a').is_in([1, 2]))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -906,13 +892,13 @@ class Expr:
             >>> df_pl = pl.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
 
             Let's define a dataframe-agnostic function:
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(
             ...             nw.col("a").filter(nw.col("a") > 4),
             ...             nw.col("b").filter(nw.col("b") < 13)
             ...             )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -966,13 +952,12 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         a_is_null = nw.col('a').is_null(),
             ...         b_is_null = nw.col('b').is_null()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1027,10 +1012,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(nw.col('a', 'b').fill_null(0))
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(nw.col('a', 'b').fill_null(0))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1077,10 +1061,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col("a").drop_nulls())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").drop_nulls())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1133,10 +1116,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a').sample(fraction=1.0, with_replacement=True))
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a').sample(fraction=1.0, with_replacement=True))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1182,12 +1164,11 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         a_min_per_group = nw.col('a').min().over('b')
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars:
 
@@ -1224,10 +1205,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     duplicated = df.select(nw.all().is_duplicated())
-            ...     return nw.to_native(duplicated)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all().is_duplicated())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1266,10 +1246,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     unique = df.select(nw.all().is_unique())
-            ...     return nw.to_native(unique)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all().is_unique())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1313,10 +1292,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     nulls = df.select(nw.all().null_count())
-            ...     return nw.to_native(nulls)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all().null_count())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1349,10 +1327,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     first_distinct = df.select(nw.all().is_first_distinct())
-            ...     return nw.to_native(first_distinct)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all().is_first_distinct())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1390,10 +1367,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     last_distinct = df.select(nw.all().is_last_distinct())
-            ...     return nw.to_native(last_distinct)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all().is_last_distinct())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1444,10 +1420,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     result = df.select(nw.col('a', 'b').quantile(0.5, interpolation='linear'))
-            ...     return nw.to_native(result)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a', 'b').quantile(0.5, interpolation='linear'))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1504,10 +1479,9 @@ class ExprStringNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(lyrics_head = nw.col('lyrics').str.head())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(lyrics_head = nw.col('lyrics').str.head())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1562,10 +1536,9 @@ class ExprStringNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a').str.to_datetime(format='%Y-%m-%d'))
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col('a').str.to_datetime(format='%Y-%m-%d'))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1616,12 +1589,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.year().alias("year")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1667,13 +1639,12 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.year().alias("year"),
             ...         nw.col("datetime").dt.month().alias("month")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1719,14 +1690,13 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.year().alias("year"),
             ...         nw.col("datetime").dt.month().alias("month"),
             ...         nw.col("datetime").dt.day().alias("day")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1772,12 +1742,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1823,13 +1792,12 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1873,14 +1841,13 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1924,15 +1891,14 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
             ...         nw.col("datetime").dt.millisecond().alias("millisecond")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1976,15 +1942,14 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
             ...         nw.col("datetime").dt.microsecond().alias("microsecond")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2028,15 +1993,14 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
             ...         nw.col("datetime").dt.nanosecond().alias("nanosecond")
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2074,10 +2038,9 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(a_ordinal_day=nw.col('a').dt.ordinal_day())
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(a_ordinal_day=nw.col('a').dt.ordinal_day())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2118,12 +2081,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...       a_total_minutes = nw.col('a').dt.total_minutes()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2165,12 +2127,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...       a_total_seconds = nw.col('a').dt.total_seconds()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2212,12 +2173,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...       a_total_milliseconds = nw.col('a').dt.total_milliseconds()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2261,12 +2221,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...       a_total_microseconds = nw.col('a').dt.total_microseconds()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2311,12 +2270,11 @@ class ExprDateTimeNamespace:
 
             We define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.with_columns(
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
             ...       a_diff_total_nanoseconds = nw.col('a').diff().dt.total_nanoseconds()
             ...     )
-            ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2345,8 +2303,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     Creates an expression that references one or more columns by their name(s).
 
     Arguments:
-        columns: str or list of str
-            The name(s) of the column(s) to use.
+        names: Name(s) of the columns to use in the aggregation function.
 
     Examples:
         >>> import pandas as pd
@@ -2355,14 +2312,13 @@ def col(*names: str | Iterable[str]) -> Expr:
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
 
-    We define a dataframe-agnostic function:
+        We define a dataframe-agnostic function:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.col('a') * nw.col('b'))
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.col('a') * nw.col('b'))
 
-    We can then pass either pandas or polars to `func`:
+        We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
            a
@@ -2402,10 +2358,9 @@ def len() -> Expr:
 
         Let's define a dataframe-agnostic function:
 
-        >>> def func(df_any):
-        ...    df = nw.from_native(df_any)
-        ...    df = df.select(nw.len())
-        ...    return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...    return df.select(nw.len())
 
         We can then pass either pandas or Polars to `func`:
 
@@ -2452,14 +2407,13 @@ def sum(*columns: str) -> Expr:
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
 
-    We define a dataframe-agnostic function:
+        We define a dataframe-agnostic function:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.sum('a'))
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.sum('a'))
 
-    We can then pass either pandas or polars to `func`:
+        We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
            a
@@ -2495,14 +2449,14 @@ def mean(*columns: str) -> Expr:
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
 
-    We define a dataframe agnostic function:
+        We define a dataframe agnostic function:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
         ...     df = df.select(nw.mean('a'))
         ...     return nw.to_native(df)
 
-    We can then pass either pandas or Polars to `func`:
+        We can then pass either pandas or Polars to `func`:
 
         >>> func(df_pd)
              a
@@ -2540,10 +2494,9 @@ def min(*columns: str) -> Expr:
 
         Let's define a dataframe-agnostic function:
 
-        >>> def func(df_any):
-        ...    df = nw.from_native(df_any)
-        ...    df = df.select(nw.min('b'))
-        ...    return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...    return df.select(nw.min('b'))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -2582,10 +2535,9 @@ def max(*columns: str) -> Expr:
 
         Let's define a dataframe-agnostic function:
 
-        >>> def func(df_any):
-        ...    df = nw.from_native(df_any)
-        ...    df = df.select(nw.max('a'))
-        ...    return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...    return df.select(nw.max('a'))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -2610,7 +2562,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Sum all values horizontally across columns
 
     Arguments:
-        columns: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
 
     Examples:
         >>> import pandas as pd
@@ -2619,14 +2571,13 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
 
-    We define a dataframe-agnostic function:
+        We define a dataframe-agnostic function:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.sum_horizontal('a', 'b'))
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.sum_horizontal('a', 'b'))
 
-    We can then pass either pandas or polars to `func`:
+        We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
             a

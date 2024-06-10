@@ -51,7 +51,7 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other.item()
-        if other._series.index is not index and not (other._series.index == index).all():
+        if other._series.index is not index:
             return other._series.set_axis(index, axis=0)
         return other._series
     return other
