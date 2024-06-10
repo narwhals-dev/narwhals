@@ -282,6 +282,8 @@ class DataFrame(BaseFrame):
         Convert this DataFrame to a pandas DataFrame.
 
         Examples:
+            Construct pandas and Polars DataFrames:
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
@@ -316,6 +318,8 @@ class DataFrame(BaseFrame):
         Convert this DataFrame to a NumPy ndarray.
 
         Examples:
+            Construct pandas and polars DataFranes:
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
