@@ -353,6 +353,8 @@ class DataFrame(BaseFrame):
         Get the shape of the DataFrame.
 
         Examples:
+            Construct pandas and polars DataFrames:
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
@@ -526,6 +528,8 @@ class DataFrame(BaseFrame):
         Insert column which enumerates rows.
 
         Examples:
+            Construct pandas as polars DataFrames:
+
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -568,17 +572,32 @@ class DataFrame(BaseFrame):
 
         Examples:
             >>> import polars as pl
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
+            >>> data = {
             ...         "foo": [1, 2, 3],
             ...         "bar": [6.0, 7.0, 8.0],
             ...         "ham": ["a", "b", "c"],
             ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df.schema  # doctest: +SKIP
-            OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.schema
+
+            You can pass either pandas or Polars to `func`:
+
+            >>> df_pd_schema = func(df_pd)
+            >>> df_pd_schema
+            {'foo': Int64, 'bar': Float64, 'ham': String}
+
+            >>> df_pl_schema = func(df_pl)
+            >>> df_pl_schema
+            {'foo': Int64, 'bar': Float64, 'ham': String}
+
         """
         return super().schema
 
@@ -645,7 +664,7 @@ class DataFrame(BaseFrame):
             ...         "c": [True, True, False, True],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> dframe = df.with_columns((nw.col("a") * 2).alias("a*2"))
             >>> dframe
             ┌───────────────────────────────────────────────┐
