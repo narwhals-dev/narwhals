@@ -714,7 +714,7 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl)
             >>> dframe = df.select("foo")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -890,28 +890,57 @@ class DataFrame(BaseFrame):
             *columns: Names of the columns that should be removed from the dataframe.
 
         Examples:
-            >>> import pandas as pd
+            Drop a single column by passing the name of that column.
+
             >>> import polars as pl
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
+            >>> data = {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
 
-            We define a library agnostic function:
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
+            >>> df_pl
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+
+            >>> df_pd
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+
+
+            Define a library-agnostic function:
+
+            >>> def func(data_any):
+            ...     df = nw.from_native(data_any)
             ...     df = df.drop("ham")
             ...     return nw.to_native(df)
 
-            We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
+            >>> pd_dframe = func(df_pd)
+            >>> pd_dframe
                foo  bar
             0    1  6.0
             1    2  7.0
             2    3  8.0
-            >>> func(df_pl)
+
+
+            >>> pl_dframe = func(df_pl)
+            >>> pl_dframe
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -922,6 +951,63 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7.0 │
             │ 3   ┆ 8.0 │
             └─────┴─────┘
+
+            Drop multiple columns by passing a list of column names.
+
+            >>> def func(data_any):
+            ...     df = nw.from_native(data_any)
+            ...     df = df.drop(["bar", "ham"])
+            ...     return nw.to_native(df)
+
+
+            >>> pd_dframe = func(df_pd)
+            >>> pd_dframe
+               foo
+            0    1
+            1    2
+            2    3
+
+
+            >>> pl_dframe = func(df_pl)
+            >>> pl_dframe
+            shape: (3, 1)
+            ┌─────┐
+            │ foo │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+
+            Use positional arguments to drop multiple columns.
+
+            >>> def func(data_any):
+            ...     df = nw.from_native(data_any)
+            ...     df = df.drop(["foo", "ham"])
+            ...     return nw.to_native(df)
+
+            >>> pd_dframe = func(df_pd)
+            >>> pd_dframe
+               bar
+            0  6.0
+            1  7.0
+            2  8.0
+
+            >>> pl_dframe = func(df_pl)
+            >>> pl_dframe
+            shape: (3, 1)
+            ┌─────┐
+            │ bar │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 6.0 │
+            │ 7.0 │
+            │ 8.0 │
+            └─────┘
+
         """
         return super().drop(*columns)
 
