@@ -598,8 +598,6 @@ class DataFrame(BaseFrame):
             >>> df_pl_schema
             {'foo': Int64, 'bar': Float64, 'ham': String}
 
-            Both pandas and Polars returns the same output:
-            OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().schema
 
