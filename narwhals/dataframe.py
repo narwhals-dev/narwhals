@@ -723,7 +723,7 @@ class DataFrame(BaseFrame):
             ...     df = nw.from_native(df_any)
             ...     df_select = df.select("foo")
             ...     return nw.to_native(df_select)
-                
+
             You can pass either pandas or Polars to the function `func`:
 
             >>> func(df_pl)
@@ -782,7 +782,7 @@ class DataFrame(BaseFrame):
             ...     df = nw.from_native(df_any)
             ...     df_select = df.select(nw.col("foo"), nw.col("bar") + 1)
             ...     return nw.to_native(df_select)
-            
+
             You can pass either pandas or Polars to the function `func`:
 
             >>> func(df_pl)
@@ -810,7 +810,7 @@ class DataFrame(BaseFrame):
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
             ...     df_select = df.select(threshold = nw.col("foo") * 2)
-            ...     return nw.to_native(df_select)            
+            ...     return nw.to_native(df_select)
 
             You can pass either pandas or Polars to the function `func`:
 
