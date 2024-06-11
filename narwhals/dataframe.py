@@ -18,6 +18,9 @@ from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
+    from io import BytesIO
+    from pathlib import Path
+
     import numpy as np
     from typing_extensions import Self
 
@@ -276,6 +279,33 @@ class DataFrame(BaseFrame):
             2    3  8.0   c
         """
         return self._dataframe.to_pandas()
+
+    def write_parquet(self, file: str | Path | BytesIO) -> Any:
+        """
+        Write dataframe to parquet file.
+
+        Examples:
+            Construct pandas and Polars DataFrames:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df.write_parquet('foo.parquet')
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pl)  # doctest:+SKIP
+        """
+        self._dataframe.write_parquet(file)
 
     def to_numpy(self) -> Any:
         """
