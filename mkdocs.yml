@@ -11,6 +11,7 @@ nav:
     - basics/complete_example.md
   - Other concepts:
     - other/pandas_index.md
+  - overhead.md
   - extending.md
   - how_it_works.md
   - Roadmap: roadmap.md

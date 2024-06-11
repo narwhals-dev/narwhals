@@ -23,6 +23,7 @@ Seamlessly support all, without depending on any!
 - ✅ Support pandas' complicated type system and index, without
   either getting in the way
 - ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
+- ✅ **Negligible overhead**, see [overhead](https://narwhals-dev.github.io/narwhals/overhead/)
 
 ## Used by
 
@@ -64,14 +65,14 @@ Like Ibis, Narwhals aims to enable dataframe-agnostic code. However, Narwhals co
 is about as lightweight as it gets, and is aimed at library developers rather than at end users. It also does
 not aim to support as many backends, instead preferring to focus on dataframes. So, which should you use?
 
-- If you need to run complicated analyses and aren't too bothered about package size: Ibis!
-- If you're a library maintainer and want the thinnest-possible layer to get cross-dataframe library support: Narwhals!
+- If you need a SQL frontend: Ibis!
+- If you're a library maintainer and want a lightweight and minimal-overhead layer to get cross-dataframe library support: Narwhals!
 
 Here is the package size increase which would result from installing each tool in a non-pandas
 environment:
 
 ![image](https://github.com/MarcoGorelli/narwhals/assets/33491632/a8dfba78-feb1-48c1-960a-5b9b03585fa5)
-   
+
 ## Example
 
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
