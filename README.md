@@ -65,7 +65,7 @@ Like Ibis, Narwhals aims to enable dataframe-agnostic code. However, Narwhals co
 is about as lightweight as it gets, and is aimed at library developers rather than at end users. It also does
 not aim to support as many backends, instead preferring to focus on dataframes. So, which should you use?
 
-- If you need a SQL frontend: Ibis!
+- If you need a SQL frontend in Python: Ibis!
 - If you're a library maintainer and want a lightweight and minimal-overhead layer to get cross-dataframe library support: Narwhals!
 
 Here is the package size increase which would result from installing each tool in a non-pandas
