@@ -1102,6 +1102,45 @@ class Series:
         """
         return self._series.to_pandas()
 
+    def __add__(self, other: object) -> Series:
+        return self._from_series(self._series.__add__(self._extract_native(other)))
+
+    def __radd__(self, other: object) -> Series:
+        return self._from_series(self._series.__radd__(self._extract_native(other)))
+
+    def __sub__(self, other: object) -> Series:
+        return self._from_series(self._series.__sub__(self._extract_native(other)))
+
+    def __rsub__(self, other: object) -> Series:
+        return self._from_series(self._series.__rsub__(self._extract_native(other)))
+
+    def __mul__(self, other: object) -> Series:
+        return self._from_series(self._series.__mul__(self._extract_native(other)))
+
+    def __rmul__(self, other: object) -> Series:
+        return self._from_series(self._series.__rmul__(self._extract_native(other)))
+
+    def __truediv__(self, other: object) -> Series:
+        return self._from_series(self._series.__truediv__(self._extract_native(other)))
+
+    def __floordiv__(self, other: object) -> Series:
+        return self._from_series(self._series.__floordiv__(self._extract_native(other)))
+
+    def __rfloordiv__(self, other: object) -> Series:
+        return self._from_series(self._series.__rfloordiv__(self._extract_native(other)))
+
+    def __pow__(self, other: object) -> Series:
+        return self._from_series(self._series.__pow__(self._extract_native(other)))
+
+    def __rpow__(self, other: object) -> Series:
+        return self._from_series(self._series.__rpow__(self._extract_native(other)))
+
+    def __mod__(self, other: object) -> Series:
+        return self._from_series(self._series.__mod__(self._extract_native(other)))
+
+    def __rmod__(self, other: object) -> Series:
+        return self._from_series(self._series.__rmod__(self._extract_native(other)))
+
     def __eq__(self, other: object) -> Series:  # type: ignore[override]
         return self._from_series(self._series.__eq__(self._extract_native(other)))
 
