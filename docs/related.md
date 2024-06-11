@@ -28,7 +28,8 @@ dispatches to 20+ backends. Some differences with Narwhals are:
   from non-pandas environments, the difference in the relative size increase is ~1000x
 - Narwhals only supports 4 backends, Ibis more than 20
 - Narwhals is focused on fundamental dataframe operations, Ibis on SQL backends
-- Narwhals has negligible overhead for dataframe backends, Ibis a noticeable cost
+- Narwhals has negligible overhead for dataframe backends, while
+  [Ibis' overhead is significant](https://github.com/ibis-project/ibis/issues/9345)
 
 The projects are not in competition and have different goals.
 
