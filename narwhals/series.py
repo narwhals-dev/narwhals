@@ -2253,3 +2253,45 @@ class SeriesDateTimeNamespace:
             ]
         """
         return self._series.__class__(self._series._series.dt.total_nanoseconds())
+
+    def strftime(self, format: str) -> Series:  # noqa: A002
+        """
+        Convert a Date/Time/Datetime series into a String series with the given format.
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = [
+            ...     datetime(2020, 3, 1),
+            ...     datetime(2020, 4, 1),
+            ...     datetime(2020, 5, 1),
+            ... ]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(allow_series=True)
+            ... def func(s):
+            ...     return s.dt.strftime("%Y/%m/%d %H:%M:%S")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    2020/03/01 00:00:00
+            1    2020/04/01 00:00:00
+            2    2020/05/01 00:00:00
+            dtype: object
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [str]
+            [
+               "2020/03/01 00:00:00"
+               "2020/04/01 00:00:00"
+               "2020/05/01 00:00:00"
+            ]
+        """
+        return self._series.__class__(self._series._series.dt.strftime(format))

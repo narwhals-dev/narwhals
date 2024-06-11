@@ -380,3 +380,6 @@ class PandasExprDateTimeNamespace:
         return reuse_series_namespace_implementation(
             self._expr, "dt", "total_nanoseconds"
         )
+
+    def strftime(self, format: str) -> PandasExpr:  # noqa: A002
+        return reuse_series_namespace_implementation(self._expr, "dt", "strftime", format)
