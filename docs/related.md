@@ -7,7 +7,7 @@ Standardised way of interchanging data between libraries, see
 
 ## DataFrame API Standard
 
-Project which aims to "provide a standard interface that encapsulates implementation details of dataframe libraries. This will allow users and third-party libraries to write code that interacts and operates with a standard dataframe, and not with specific implementations.", see [here](https://data-apis.org/dataframe-api/draft/).
+Now-discontinued project which aimed to "provide a standard interface that encapsulates implementation details of dataframe libraries. This will allow users and third-party libraries to write code that interacts and operates with a standard dataframe, and not with specific implementations.", see [here](https://data-apis.org/dataframe-api/draft/).
 
 The Narwhals author was originally involved, but left due to irreconcilable differences in vision.
 
@@ -28,6 +28,8 @@ dispatches to 20+ backends. Some differences with Narwhals are:
   from non-pandas environments, the difference in the relative size increase is ~1000x
 - Narwhals only supports 4 backends, Ibis more than 20
 - Narwhals is focused on fundamental dataframe operations, Ibis on SQL backends
+- Narwhals has negligible overhead for dataframe backends, while
+  [Ibis' overhead is significant](https://github.com/ibis-project/ibis/issues/9345)
 
 The projects are not in competition and have different goals.
 
