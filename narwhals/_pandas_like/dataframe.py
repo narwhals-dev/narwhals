@@ -286,6 +286,9 @@ class PandasDataFrame:
             return self._dataframe._to_pandas()
         return self._dataframe.to_pandas()  # pragma: no cover
 
+    def write_parquet(self, file: Any) -> Any:
+        self._dataframe.to_parquet(file)
+
     # --- descriptive ---
     def is_duplicated(self: Self) -> PandasSeries:
         from narwhals._pandas_like.series import PandasSeries
