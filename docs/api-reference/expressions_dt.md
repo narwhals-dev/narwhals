@@ -14,6 +14,7 @@
         - millisecond
         - microsecond
         - nanosecond
+        - strftime
         - total_minutes
         - total_seconds
         - total_milliseconds
