@@ -924,8 +924,6 @@ class DataFrame(BaseFrame):
         """
         Remove columns from the LazyFrame.
 
-        This is a test line to check if changes are actually being pushed.
-
         Arguments:
             *columns: Names of the columns that should be removed from the
                       dataframe. Accepts column selector input.
@@ -942,7 +940,6 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-
             >>> lf = nw.LazyFrame(lf_pl)
             >>> lframe = lf.drop("ham").collect()
             >>> lframe
