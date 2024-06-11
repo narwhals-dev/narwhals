@@ -18,8 +18,3 @@ the data sources.
 On some runs, the Narwhals code makes things marginally faster, on others
 marginally slower. The overall picture is clear: with Narwhals, you
 can support both Polars and pandas APIs with little to no impact on either.
-
-A fairly common question we receive is "why not just use Ibis". We believe
-that Ibis works well as a SQL frontend, but find [its overhead when translating
-dataframe APIs](https://github.com/ibis-project/ibis/issues/9345) to be unacceptably high -
-that's why we created something new.
