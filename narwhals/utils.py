@@ -114,7 +114,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({'a': [1, 2]}, index=[3, 4])
+        >>> df_pd = pd.DataFrame({"a": [1, 2]}, index=[3, 4])
         >>> s_pd = pd.Series([6, 7], index=[4, 3])
         >>> df = nw.from_native(df_pd)
         >>> s = nw.from_native(s_pd, series_only=True)
@@ -195,9 +195,9 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 5]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
         >>> df = nw.from_native(df_pd)
-        >>> nw.to_native(nw.maybe_set_index(df, 'b'))  # doctest: +NORMALIZE_WHITESPACE
+        >>> nw.to_native(nw.maybe_set_index(df, "b"))  # doctest: +NORMALIZE_WHITESPACE
            a
         b
         4  1
@@ -232,7 +232,7 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         >>> df_pd = pd.DataFrame(
         ...     {
         ...         "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
-        ...         "b": pd.Series([True, False, np.nan], dtype=np.dtype("O"))
+        ...         "b": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
         ...     }
         ... )
         >>> df = nw.from_native(df_pd)
