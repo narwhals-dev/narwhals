@@ -922,44 +922,44 @@ class DataFrame(BaseFrame):
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         """
-       Remove columns from the dataframe.
+        Remove columns from the dataframe.
 
-        Arguments:
-            *columns: Names of the columns that should be removed from the dataframe.
+         Arguments:
+             *columns: Names of the columns that should be removed from the dataframe.
 
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
+         Examples:
+             >>> import pandas as pd
+             >>> import polars as pl
+             >>> import narwhals as nw
+             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+             >>> df_pd = pd.DataFrame(df)
+             >>> df_pl = pl.DataFrame(df)
 
-            We define a library agnostic function:
+             We define a library agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.drop("ham")
-            ...     return nw.to_native(df)
+             >>> def func(df_any):
+             ...     df = nw.from_native(df_any)
+             ...     df = df.drop("ham")
+             ...     return nw.to_native(df)
 
-            We can then pass either pandas or Polars to `func`:
+             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
-               foo  bar
-            0    1  6.0
-            1    2  7.0
-            2    3  8.0
-            >>> func(df_pl)
-            shape: (3, 2)
-            ┌─────┬─────┐
-            │ foo ┆ bar │
-            │ --- ┆ --- │
-            │ i64 ┆ f64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 6.0 │
-            │ 2   ┆ 7.0 │
-            │ 3   ┆ 8.0 │
-            └─────┴─────┘
+             >>> func(df_pd)
+                foo  bar
+             0    1  6.0
+             1    2  7.0
+             2    3  8.0
+             >>> func(df_pl)
+             shape: (3, 2)
+             ┌─────┬─────┐
+             │ foo ┆ bar │
+             │ --- ┆ --- │
+             │ i64 ┆ f64 │
+             ╞═════╪═════╡
+             │ 1   ┆ 6.0 │
+             │ 2   ┆ 7.0 │
+             │ 3   ┆ 8.0 │
+             └─────┴─────┘
 
         """
         return super().drop(*columns)
