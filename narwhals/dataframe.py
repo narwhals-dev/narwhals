@@ -922,32 +922,34 @@ class DataFrame(BaseFrame):
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         """
-        Remove columns from the LazyFrame.
+           Remove columns from the dataframe.
 
         Arguments:
-            *columns: Names of the columns that should be removed from the
-                      dataframe. Accepts column selector input.
+            *columns: Names of the columns that should be removed from the dataframe.
 
         Examples:
-            Drop a single column by passing the name of that column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.drop("ham").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.drop("ham")
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar
+            0    1  6.0
+            1    2  7.0
+            2    3  8.0
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -958,26 +960,6 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7.0 │
             │ 3   ┆ 8.0 │
             └─────┴─────┘
-
-            Use positional arguments to drop multiple columns.
-
-            >>> lframe = lf.drop("foo", "ham").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (3, 1)
-            ┌─────┐
-            │ bar │
-            │ --- │
-            │ f64 │
-            ╞═════╡
-            │ 6.0 │
-            │ 7.0 │
-            │ 8.0 │
-            └─────┘
 
         """
         return super().drop(*columns)
