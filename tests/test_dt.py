@@ -173,8 +173,8 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 def test_dt_to_string(constructor: Any, fmt: str) -> None:
-    input_frame = nw.from_native(constructor(data))
-    input_series: nw.Series = input_frame["a"]  # type: ignore[assignment]
+    input_frame = nw.from_native(constructor(data), eager_only=True)
+    input_series = input_frame["a"]
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
