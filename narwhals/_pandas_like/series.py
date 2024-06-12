@@ -627,5 +627,5 @@ class PandasSeriesDateTimeNamespace:
             s_abs = s_abs.astype(int)
         return self._series._from_series(s_abs * s_sign)
 
-    def strftime(self, format: str) -> PandasSeries:  # noqa: A002
+    def to_string(self, format: str) -> PandasSeries:  # noqa: A002
         return self._series._from_series(self._series._series.dt.strftime(format))

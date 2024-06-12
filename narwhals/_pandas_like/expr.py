@@ -381,5 +381,7 @@ class PandasExprDateTimeNamespace:
             self._expr, "dt", "total_nanoseconds"
         )
 
-    def strftime(self, format: str) -> PandasExpr:  # noqa: A002
-        return reuse_series_namespace_implementation(self._expr, "dt", "strftime", format)
+    def to_string(self, format: str) -> PandasExpr:  # noqa: A002
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "to_string", format
+        )

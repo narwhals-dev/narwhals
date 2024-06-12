@@ -172,14 +172,14 @@ def test_total_minutes(timedeltas: timedelta) -> None:
 @pytest.mark.parametrize(
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
-def test_dt_strftime(constructor: Any, fmt: str) -> None:
+def test_dt_to_string(constructor: Any, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data))
     input_series: nw.Series = input_frame["a"]  # type: ignore[assignment]
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
-    assert nw.to_native(input_series.dt.strftime(fmt)).to_list() == expected_col
+    assert nw.to_native(input_series.dt.to_string(fmt)).to_list() == expected_col
     assert (
-        nw.to_native(input_frame.select(nw.col("a").dt.strftime(fmt))["a"]).to_list()
+        nw.to_native(input_frame.select(nw.col("a").dt.to_string(fmt))["a"]).to_list()
         == expected_col
     )

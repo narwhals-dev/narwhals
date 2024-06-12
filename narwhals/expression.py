@@ -2297,7 +2297,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.total_nanoseconds()
         )
 
-    def strftime(self, format: str) -> Expr:  # noqa: A002
+    def to_string(self, format: str) -> Expr:  # noqa: A002
         """
         Convert a Date/Time/Datetime column into a String column with the given format.
 
@@ -2318,7 +2318,7 @@ class ExprDateTimeNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a').dt.strftime("%Y/%m/%d %H:%M:%S"))
+            ...     return df.select(nw.col('a').dt.to_string("%Y/%m/%d %H:%M:%S"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2340,7 +2340,9 @@ class ExprDateTimeNamespace:
             │ 2020/05/01 00:00:00 │
             └─────────────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.strftime(format))
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.to_string(format)
+        )
 
 
 def col(*names: str | Iterable[str]) -> Expr:

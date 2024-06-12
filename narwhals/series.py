@@ -2254,7 +2254,7 @@ class SeriesDateTimeNamespace:
         """
         return self._series.__class__(self._series._series.dt.total_nanoseconds())
 
-    def strftime(self, format: str) -> Series:  # noqa: A002
+    def to_string(self, format: str) -> Series:  # noqa: A002
         """
         Convert a Date/Time/Datetime series into a String series with the given format.
 
@@ -2275,7 +2275,7 @@ class SeriesDateTimeNamespace:
 
             >>> @nw.narwhalify(allow_series=True)
             ... def func(s):
-            ...     return s.dt.strftime("%Y/%m/%d")
+            ...     return s.dt.to_string("%Y/%m/%d")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2294,4 +2294,4 @@ class SeriesDateTimeNamespace:
                "2020/05/01"
             ]
         """
-        return self._series.__class__(self._series._series.dt.strftime(format))
+        return self._series.__class__(self._series._series.dt.to_string(format))
