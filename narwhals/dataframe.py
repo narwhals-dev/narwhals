@@ -922,7 +922,7 @@ class DataFrame(BaseFrame):
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         """
-           Remove columns from the dataframe.
+       Remove columns from the dataframe.
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
