@@ -2275,23 +2275,23 @@ class SeriesDateTimeNamespace:
 
             >>> @nw.narwhalify(allow_series=True)
             ... def func(s):
-            ...     return s.dt.strftime("%Y/%m/%d %H:%M:%S")
+            ...     return s.dt.strftime("%Y/%m/%d")
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
-            0    2020/03/01 00:00:00
-            1    2020/04/01 00:00:00
-            2    2020/05/01 00:00:00
+            0    2020/03/01
+            1    2020/04/01
+            2    2020/05/01
             dtype: object
 
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [str]
             [
-               "2020/03/01 00:00:00"
-               "2020/04/01 00:00:00"
-               "2020/05/01 00:00:00"
+               "2020/03/01"
+               "2020/04/01"
+               "2020/05/01"
             ]
         """
         return self._series.__class__(self._series._series.dt.strftime(format))
