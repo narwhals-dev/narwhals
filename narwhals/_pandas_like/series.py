@@ -137,8 +137,8 @@ class PandasSeries:
         dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
         return self._from_series(ser.astype(dtype))
 
-    def item(self) -> Any:
-        return item(self._series)
+    def item(self, index: int | None = None) -> Any:
+        return item(self._series, index=index)
 
     def to_frame(self) -> Any:
         from narwhals._pandas_like.dataframe import PandasDataFrame

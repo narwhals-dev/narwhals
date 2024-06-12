@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import warnings
 from typing import Any
 from typing import Literal
@@ -706,3 +707,42 @@ def test_quantile(
         df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
     )
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    ("row", "column", "expected"),
+    [(0, 2, 7), (1, "z", 8)],
+)
+def test_item(
+    df_raw: Any,
+    row: int | None,
+    column: int | str | None,
+    expected: Any,
+) -> None:
+    df = nw.from_native(df_raw, eager_only=True)
+    assert df.item(row, column) == expected
+    assert df.select("a").head(1).item() == 1
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    ("row", "column", "err_msg"),
+    [
+        (0, None, re.escape("cannot call `.item()` with only one of `row` or `column`")),
+        (None, 0, re.escape("cannot call `.item()` with only one of `row` or `column`")),
+        (
+            None,
+            None,
+            re.escape("can only call `.item()` if the dataframe is of shape (1, 1)"),
+        ),
+    ],
+)
+def test_item_value_error(
+    df_raw: Any,
+    row: int | None,
+    column: int | str | None,
+    err_msg: str,
+) -> None:
+    with pytest.raises(ValueError, match=err_msg):
+        nw.from_native(df_raw, eager_only=True).item(row, column)

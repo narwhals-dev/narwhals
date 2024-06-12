@@ -1487,6 +1487,38 @@ class DataFrame(BaseFrame):
 
         return DataFrame(self._dataframe.null_count())
 
+    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+        r"""
+        Return the DataFrame as a scalar, or return the element at the given row/column.
+
+        Notes:
+            If row/col not provided, this is equivalent to df[0,0], with a check that the shape is (1,1).
+            With row/col, this is equivalent to df[row,col].
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function that returns item at given row/column
+
+            >>> def func(df_any, row, column):
+            ...     df = nw.from_native(df_any)
+            ...     return df.item(row, column)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd, 1, 1), func(df_pl, 1, 1)
+            (5, 5)
+
+            >>> func(df_pd, 2, "b"), func(df_pl, 2, "b")
+            (6, 6)
+        """
+        return self._dataframe.item(row=row, column=column)
+
 
 class LazyFrame(BaseFrame):
     """

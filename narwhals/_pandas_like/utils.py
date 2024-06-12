@@ -270,12 +270,17 @@ def reuse_series_namespace_implementation(
     )
 
 
-def item(s: Any) -> Any:
+def item(s: Any, index: int | None = None) -> Any:
     # cuDF doesn't have Series.item().
-    if len(s) != 1:
-        msg = "Can only convert a Series of length 1 to a scalar"  # pragma: no cover
-        raise AssertionError(msg)
-    return s.iloc[0]
+    if index is None:
+        if len(s) != 1:
+            msg = (
+                "can only call '.item()' if the Series is of length 1,"
+                f" or an explicit index is provided (Series is of length {len(s)})"
+            )
+            raise ValueError(msg)
+        return s.iloc[0]
+    return s.iloc[index]
 
 
 def is_simple_aggregation(expr: PandasExpr) -> bool:

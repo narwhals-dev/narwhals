@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 from typing import Literal
 
@@ -504,3 +505,21 @@ def test_cast_string() -> None:
     s = s.cast(nw.String)
     result = nw.to_native(s)
     assert result.dtype in ("string", object)
+
+
+df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(("index", "expected"), [(0, 1), (1, 3)])
+def test_item(df_raw: Any, index: int, expected: int) -> None:
+    s = nw.Series(df_raw["a"])
+    result = s.item(index)
+    assert result == expected
+    assert nw.Series(df_raw["a"].head(1)).item() == 1
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("can only call '.item()' if the Series is of length 1,"),
+    ):
+        s.item(None)
