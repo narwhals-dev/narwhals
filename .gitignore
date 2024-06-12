@@ -4,3 +4,4 @@ todo.md
 .coverage
 site/
 .coverage.*
+.nox

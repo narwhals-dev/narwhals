@@ -31,6 +31,17 @@ If you add code that should be tested, please add tests.
 To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`.
 To run tests on the docset-module, use `pytest narwhals --doctest-modules`.
 
+If you want to have less surprises when opening a PR, you can take advantage of [nox](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
+
+To do so, you will first need to install nox and then run the `nox` command in the root of the repository:
+
+```bash
+python -m pip install nox  # python -m pip install "nox[uv]"
+nox
+```
+
+Notice that nox will also require to have all the python versions that are defined in the `noxfile.py` installed in your system.
+
 ## Building docs
 
 To build the docs, run `mkdocs serve`, and then open the link provided in a browser.

@@ -14,10 +14,10 @@ from tests.utils import compare_dicts
 df_pandas = pd.DataFrame({"a": ["fdas", "edfas"]})
 df_polars = pl.LazyFrame({"a": ["fdas", "edfas"]})
 
-if os.environ.get("CI", None):
+if os.environ.get("CI", None):  # pragma: no cover
     try:
         import modin.pandas as mpd
-    except ImportError:  # pragma: no cover
+    except ImportError:
         df_mpd = df_pandas.copy()
     else:
         with warnings.catch_warnings():
