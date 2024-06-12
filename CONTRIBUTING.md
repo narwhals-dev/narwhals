@@ -20,6 +20,12 @@ pre-commit install
 ```
 This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
+## Working on your issue
+
+Create a new git branch from the `main` branch in your local repository.
+Note that your work cannot be merged if the test below fail.
+If you add code that should be tested, please add tests.
+
 ## Running tests
 
 To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`.
@@ -30,6 +36,16 @@ To run tests on the docset-module, use `pytest narwhals --doctest-modules`.
 To build the docs, run `mkdocs serve`, and then open the link provided in a browser.
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then
 do `mkdocs build` and then `mkdocs serve`.
+
+## Pull requests
+
+When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.
+
+Please adhere to the following guidelines:
+
+1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).
+2. Use a descriptive title starting with an uppercase letter. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
+3. Please follow the instructions in the pull request form and submit. 
 
 ## How it works
 
