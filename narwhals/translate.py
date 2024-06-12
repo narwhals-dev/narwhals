@@ -227,10 +227,10 @@ def get_native_namespace(obj: Any) -> Any:
         >>> import polars as pl
         >>> import pandas as pd
         >>> import narwhals as nw
-        >>> df = nw.from_native(pd.DataFrame({'a': [1,2,3]}))
+        >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
         >>> nw.get_native_namespace(df)
         <module 'pandas'...>
-        >>> df = nw.from_native(pl.DataFrame({'a': [1,2,3]}))
+        >>> df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
         >>> nw.get_native_namespace(df)
         <module 'polars'...>
     """
@@ -253,9 +253,10 @@ def narwhalify(
     ```python
     import narwhals as nw
 
+
     def func(df_any):
         df = nw.from_native(df_any, strict=False)
-        df = df.group_by('a').agg(nw.col('b').sum())
+        df = df.group_by("a").agg(nw.col("b").sum())
         return nw.to_native(df)
     ```
 
@@ -264,9 +265,10 @@ def narwhalify(
     ```python
     import narwhals as nw
 
+
     @nw.narwhalify
     def func(df):
-        return df.group_by('a').agg(nw.col('b').sum())
+        return df.group_by("a").agg(nw.col("b").sum())
     ```
 
     You can also pass in extra arguments, e.g.
@@ -340,10 +342,11 @@ def narwhalify_method(
     ```python
     import narwhals as nw
 
+
     class Foo:
         def func(self, df_any):
             df = nw.from_native(df_any, strict=False)
-            df = df.group_by('a').agg(nw.col('b').sum())
+            df = df.group_by("a").agg(nw.col("b").sum())
             return nw.to_native(df)
     ```
 
@@ -352,10 +355,11 @@ def narwhalify_method(
     ```python
     import narwhals as nw
 
+
     class Foo:
         @nw.narwhalify_method
         def func(self, df):
-            return df.group_by('a').agg(nw.col('b').sum())
+            return df.group_by("a").agg(nw.col("b").sum())
     ```
 
     You can also pass in extra arguments, e.g.

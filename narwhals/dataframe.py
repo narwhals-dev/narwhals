@@ -298,7 +298,7 @@ class DataFrame(BaseFrame):
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df.write_parquet('foo.parquet')
+            ...     df.write_parquet("foo.parquet")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -403,11 +403,11 @@ class DataFrame(BaseFrame):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df = {
-            ...    "A": [1, 2, 3, 4, 5],
-            ...    "fruits": ["banana", "banana", "apple", "apple", "banana"],
-            ...    "B": [5, 4, 3, 2, 1],
-            ...    "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
-            ...    "optional": [28, 300, None, 2, -30]
+            ...     "A": [1, 2, 3, 4, 5],
+            ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
+            ...     "B": [5, 4, 3, 2, 1],
+            ...     "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+            ...     "optional": [28, 300, None, 2, -30],
             ... }
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
@@ -445,7 +445,7 @@ class DataFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {'a': [1,2,3], 'ba': [4,5,6]}
+            >>> data = {"a": [1, 2, 3], "ba": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -453,7 +453,9 @@ class DataFrame(BaseFrame):
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.pipe(lambda _df: _df.select([x for x in _df.columns if len(x) == 1]))
+            ...     df = df.pipe(
+            ...         lambda _df: _df.select([x for x in _df.columns if len(x) == 1])
+            ...     )
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars:
@@ -489,7 +491,7 @@ class DataFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {'a': [1., 2., None], 'ba': [1, None, 2.]}
+            >>> data = {"a": [1.0, 2.0, None], "ba": [1, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -527,7 +529,7 @@ class DataFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {'a': [1,2,3], 'b': [4,5,6]}
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -569,10 +571,10 @@ class DataFrame(BaseFrame):
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> data = {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -770,7 +772,7 @@ class DataFrame(BaseFrame):
 
             Use keyword arguments to easily name your expression inputs.
 
-            >>> dframe = df.select(threshold=nw.col('foo')*2)
+            >>> dframe = df.select(threshold=nw.col("foo") * 2)
             >>> dframe
             ┌───────────────────────────────────────────────┐
             | Narwhals DataFrame                            |
@@ -844,7 +846,11 @@ class DataFrame(BaseFrame):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3, 4, 5], "bar": [6, 7, 8, 9, 10], "ham": ["a", "b", "c", "d", "e"]}
+            >>> df = {
+            ...     "foo": [1, 2, 3, 4, 5],
+            ...     "bar": [6, 7, 8, 9, 10],
+            ...     "ham": ["a", "b", "c", "d", "e"],
+            ... }
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
 
@@ -930,7 +936,11 @@ class DataFrame(BaseFrame):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3, 1], "bar": ["a", "a", "a", "a"], "ham": ["b", "b", "b", "b"]}
+            >>> df = {
+            ...     "foo": [1, 2, 3, 1],
+            ...     "bar": ["a", "a", "a", "a"],
+            ...     "ham": ["b", "b", "b", "b"],
+            ... }
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
 
@@ -1116,7 +1126,7 @@ class DataFrame(BaseFrame):
             | Narwhals DataFrame                            |
             | Use `narwhals.to_native` to see native output |
             └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe) # doctest: +SKIP
+            >>> nw.to_native(dframe)  # doctest: +SKIP
             shape: (4, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
@@ -1355,7 +1365,7 @@ class DataFrame(BaseFrame):
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     return df.filter(nw.col("foo")>10).is_empty()
+            ...     return df.filter(nw.col("foo") > 10).is_empty()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1588,7 +1598,7 @@ class LazyFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {'a': [1,2,3], 'ba': [4,5,6]}
+            >>> data = {"a": [1, 2, 3], "ba": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.LazyFrame(data)
 
@@ -1596,7 +1606,9 @@ class LazyFrame(BaseFrame):
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.pipe(lambda _df: _df.select([x for x in _df.columns if len(x) == 1]))
+            ...     df = df.pipe(
+            ...         lambda _df: _df.select([x for x in _df.columns if len(x) == 1])
+            ...     )
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars:
@@ -1632,7 +1644,7 @@ class LazyFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {'a': [1., 2., None], 'ba': [1, None, 2.]}
+            >>> data = {"a": [1.0, 2.0, None], "ba": [1, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.LazyFrame(data)
 
@@ -1668,7 +1680,7 @@ class LazyFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {'a': [1,2,3], 'b': [4,5,6]}
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.LazyFrame(data)
 
@@ -1716,7 +1728,7 @@ class LazyFrame(BaseFrame):
             ...     }
             ... )
             >>> lf = nw.LazyFrame(lf_pl)
-            >>> lf.schema # doctest: +SKIP
+            >>> lf.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().schema
@@ -1890,7 +1902,7 @@ class LazyFrame(BaseFrame):
 
             Use keyword arguments to easily name your expression inputs.
 
-            >>> lframe = lf.select(threshold=nw.col('foo')*2).collect()
+            >>> lframe = lf.select(threshold=nw.col("foo") * 2).collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
             | Narwhals DataFrame                            |

@@ -69,8 +69,8 @@ lint.ignore = [
 [tool.ruff.lint.isort]
 force-single-line = true
 
-[tool.black]
-line-length = 90
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.pytest.ini_options]
 filterwarnings = [

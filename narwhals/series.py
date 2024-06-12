@@ -236,8 +236,8 @@ class Series:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> s = [1, 2, 3]
-            >>> s_pd = pd.Series(s, name='a')
-            >>> s_pl = pl.Series('a', s)
+            >>> s_pd = pd.Series(s, name="a")
+            >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
@@ -521,13 +521,13 @@ class Series:
           >>> import numpy as np
           >>> import narwhals as nw
           >>> s_pd = pd.Series([2, 4, None, 3, 5])
-          >>> s_pl = pl.Series('a', [2, 4, None, 3, 5])
+          >>> s_pl = pl.Series("a", [2, 4, None, 3, 5])
 
           Now define a dataframe-agnostic function with a `column` argument for the column to evaluate :
 
           >>> @nw.narwhalify(series_only=True)
           ... def func(s):
-          ...   return s.drop_nulls()
+          ...     return s.drop_nulls()
 
           Then we can pass either Series (polars or pandas) to `func`:
 
@@ -601,7 +601,7 @@ class Series:
 
             >>> @nw.narwhalify(series_only=True)
             ... def func(s):
-            ...    return s.unique()
+            ...     return s.unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -987,7 +987,7 @@ class Series:
 
             >>> @nw.narwhalify(series_only=True)
             ... def func(s):
-            ...     return s.is_between(2, 4, 'right')
+            ...     return s.is_between(2, 4, "right")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1049,8 +1049,8 @@ class Series:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> s = [1, 2, 3]
-            >>> s_pd = pd.Series(s, name='a')
-            >>> s_pl = pl.Series('a', s)
+            >>> s_pd = pd.Series(s, name="a")
+            >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
@@ -1077,8 +1077,8 @@ class Series:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> s = [1, 2, 3]
-            >>> s_pd = pd.Series(s, name='a')
-            >>> s_pl = pl.Series('a', s)
+            >>> s_pd = pd.Series(s, name="a")
+            >>> s_pl = pl.Series("a", s)
 
             We define a library agnostic function:
 
@@ -1533,9 +1533,9 @@ class Series:
             >>> def func(s_any):
             ...     series = nw.from_native(s_any, allow_series=True)
             ...     return [
-            ...         series.quantile(quantile=q, interpolation='nearest')
+            ...         series.quantile(quantile=q, interpolation="nearest")
             ...         for q in (0.1, 0.25, 0.5, 0.75, 0.9)
-            ...         ]
+            ...     ]
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1623,7 +1623,7 @@ class SeriesStringNamespace:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lyrics = ['Atatata', 'taata', 'taatatata', 'zukkyun']
+            >>> lyrics = ["Atatata", "taata", "taatatata", "zukkyun"]
             >>> s_pd = pd.Series(lyrics)
             >>> s_pl = pl.Series(lyrics)
 
@@ -1890,7 +1890,7 @@ class SeriesDateTimeNamespace:
             ...     datetime(2023, 5, 21, 12, 55, 10, 600000),
             ...     datetime(2023, 5, 21, 12, 55, 10, 800000),
             ...     datetime(2023, 5, 21, 12, 55, 11, 0),
-            ...     datetime(2023, 5, 21, 12, 55, 11, 200000)
+            ...     datetime(2023, 5, 21, 12, 55, 11, 200000),
             ... ]
 
             >>> s_pd = pd.Series(dates)
@@ -1939,7 +1939,7 @@ class SeriesDateTimeNamespace:
             ...     datetime(2023, 5, 21, 12, 55, 10, 600000),
             ...     datetime(2023, 5, 21, 12, 55, 10, 800000),
             ...     datetime(2023, 5, 21, 12, 55, 11, 0),
-            ...     datetime(2023, 5, 21, 12, 55, 11, 200000)
+            ...     datetime(2023, 5, 21, 12, 55, 11, 200000),
             ... ]
 
             >>> s_pd = pd.Series(dates)
@@ -1983,7 +1983,10 @@ class SeriesDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> dates = [datetime(2022, 1, 1, 5, 3, 10, 500000), datetime(2022, 1, 5, 9, 12, 4, 60000)]
+            >>> dates = [
+            ...     datetime(2022, 1, 1, 5, 3, 10, 500000),
+            ...     datetime(2022, 1, 5, 9, 12, 4, 60000),
+            ... ]
             >>> s_pd = pd.Series(dates)
             >>> s_pl = pl.Series(dates)
 
@@ -2142,8 +2145,10 @@ class SeriesDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
-            >>> data = [timedelta(milliseconds=10),
-            ...     timedelta(milliseconds=20, microseconds=40)]
+            >>> data = [
+            ...     timedelta(milliseconds=10),
+            ...     timedelta(milliseconds=20, microseconds=40),
+            ... ]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
 
@@ -2184,8 +2189,10 @@ class SeriesDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
-            >>> data = [timedelta(microseconds=10),
-            ...     timedelta(milliseconds=1, microseconds=200)]
+            >>> data = [
+            ...     timedelta(microseconds=10),
+            ...     timedelta(milliseconds=1, microseconds=200),
+            ... ]
             >>> s_pd = pd.Series(data)
             >>> s_pl = pl.Series(data)
 
@@ -2226,10 +2233,9 @@ class SeriesDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
-            >>> data = ['2024-01-01 00:00:00.000000001',
-            ...     '2024-01-01 00:00:00.000000002']
+            >>> data = ["2024-01-01 00:00:00.000000001", "2024-01-01 00:00:00.000000002"]
             >>> s_pd = pd.to_datetime(pd.Series(data))
-            >>> s_pl = pl.Series(data).str.to_datetime(time_unit='ns')
+            >>> s_pl = pl.Series(data).str.to_datetime(time_unit="ns")
 
             We define a library agnostic function:
 

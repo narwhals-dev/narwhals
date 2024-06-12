@@ -42,14 +42,14 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 5]})
-            >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [4, 5]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 5]})
 
             Let's define a dataframe-agnostic function:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.select((nw.col('b')+10).alias('c'))
+            ...     df = df.select((nw.col("b") + 10).alias("c"))
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
@@ -86,14 +86,16 @@ class Expr:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> from datetime import date
-            >>> df_pd = pd.DataFrame({"foo": [1, 2, 3],"bar": [6.0, 7.0, 8.0]})
-            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3],"bar": [6.0, 7.0, 8.0]})
+            >>> df_pd = pd.DataFrame({"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]})
+            >>> df_pl = pl.DataFrame({"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]})
 
             Let's define a dataframe-agnostic function:
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('foo').cast(nw.Float32), nw.col('bar').cast(nw.UInt8))
+            ...     df = df.select(
+            ...         nw.col("foo").cast(nw.Float32), nw.col("bar").cast(nw.UInt8)
+            ...     )
             ...     native_df = nw.to_native(df)
             ...     return native_df
 
@@ -254,14 +256,14 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [True, False], 'b': [True, True]})
-            >>> df_pl = pl.DataFrame({'a': [True, False], 'b': [True, True]})
+            >>> df_pd = pd.DataFrame({"a": [True, False], "b": [True, True]})
+            >>> df_pl = pl.DataFrame({"a": [True, False], "b": [True, True]})
 
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a', 'b').any())
+            ...     return df.select(nw.col("a", "b").any())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -288,14 +290,14 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [True, False], 'b': [True, True]})
-            >>> df_pl = pl.DataFrame({'a': [True, False], 'b': [True, True]})
+            >>> df_pd = pd.DataFrame({"a": [True, False], "b": [True, True]})
+            >>> df_pl = pl.DataFrame({"a": [True, False], "b": [True, True]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a', 'b').all())
+            ...     return df.select(nw.col("a", "b").all())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -322,14 +324,14 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [-1, 0, 1], 'b': [2, 4, 6]})
-            >>> df_pl = pl.DataFrame({'a': [-1, 0, 1], 'b': [2, 4, 6]})
+            >>> df_pd = pd.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df_pl = pl.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.select(nw.col('a', 'b').mean())
+            ...     return df.select(nw.col("a", "b").mean())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -360,14 +362,14 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [20, 25, 60], 'b': [1.5, 1, -1.4]})
-            >>> df_pl = pl.DataFrame({'a': [20, 25, 60], 'b': [1.5, 1, -1.4]})
+            >>> df_pd = pd.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df_pl = pl.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.select(nw.col('a', 'b').std(ddof=0))
+            ...     return df.select(nw.col("a", "b").std(ddof=0))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -395,14 +397,14 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [5, 10], 'b': [50, 100]})
-            >>> df_pl = pl.DataFrame({'a': [5, 10], 'b': [50, 100]})
+            >>> df_pd = pd.DataFrame({"a": [5, 10], "b": [50, 100]})
+            >>> df_pl = pl.DataFrame({"a": [5, 10], "b": [50, 100]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a', 'b').sum())
+            ...     return df.select(nw.col("a", "b").sum())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -429,13 +431,13 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [4, 3]})
-            >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [4, 3]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 3]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 3]})
 
             Let's define a dataframe-agnostic function:
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.min('a','b'))
+            ...     return df.select(nw.min("a", "b"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -463,14 +465,14 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [10, 20], 'b': [50, 100]})
-            >>> df_pl = pl.DataFrame({'a': [10, 20], 'b': [50, 100]})
+            >>> df_pd = pd.DataFrame({"a": [10, 20], "b": [50, 100]})
+            >>> df_pl = pl.DataFrame({"a": [10, 20], "b": [50, 100]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.select(nw.max('a', 'b'))
+            ...     return df.select(nw.max("a", "b"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -497,14 +499,14 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 2, 3, 4, 5], 'b': [1, 1, 3, 3, 5]})
-            >>> df_pl = pl.DataFrame({'a': [1, 2, 3, 4, 5], 'b': [1, 1, 3, 3, 5]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.select(nw.col('a', 'b').n_unique())
+            ...     return df.select(nw.col("a", "b").n_unique())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -531,14 +533,14 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 4, 4, 6, 6]})
-            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 4, 4, 6, 6]})
+            >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
+            >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.select(nw.col('a', 'b').unique())
+            ...     return df.select(nw.col("a", "b").unique())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -569,14 +571,14 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 4, 4, 6, 6]})
-            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5], 'b': [2, 4, 4, 6, 6]})
+            >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
+            >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.select(nw.col('a', 'b').cum_sum())
+            ...     return df.select(nw.col("a", "b").cum_sum())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -615,21 +617,21 @@ class Expr:
             do:
 
             ```python
-            nw.col('a').diff().fill_null(0).cast(nw.Int64)
+            nw.col("a").diff().fill_null(0).cast(nw.Int64)
             ```
 
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5]})
-            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5]})
+            >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5]})
+            >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.select(a_diff=nw.col('a').diff())
+            ...     return df.select(a_diff=nw.col("a").diff())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -668,21 +670,21 @@ class Expr:
             do:
 
             ```python
-            nw.col('a').shift(1).fill_null(0).cast(nw.Int64)
+            nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
             ```
 
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 1, 3, 5, 5]})
-            >>> df_pl = pl.DataFrame({'a': [1, 1, 3, 5, 5]})
+            >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5]})
+            >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.select(a_shift=nw.col('a').shift(n=1))
+            ...     return df.select(a_shift=nw.col("a").shift(n=1))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -728,11 +730,11 @@ class Expr:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a').sort())
+            ...     return df.select(nw.col("a").sort())
 
             >>> def func_descend(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.select(nw.col('a').sort(descending=True))
+            ...     df = df.select(nw.col("a").sort(descending=True))
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars to `func`:
@@ -795,14 +797,14 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 2, 3, 4, 5]})
-            >>> df_pl = pl.DataFrame({'a': [1, 2, 3, 4, 5]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a').is_between(2,4,'right'))
+            ...     return df.select(nw.col("a").is_between(2, 4, "right"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -842,14 +844,14 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [1, 2, 9, 10]})
-            >>> df_pl = pl.DataFrame({'a': [1, 2, 9, 10]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 9, 10]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 9, 10]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...    return df.with_columns(b = nw.col('a').is_in([1, 2]))
+            ...     return df.with_columns(b=nw.col("a").is_in([1, 2]))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -888,17 +890,17 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
-            >>> df_pl = pl.DataFrame({'a': [2, 3, 4, 5, 6, 7], 'b': [10, 11, 12, 13, 14, 15]})
+            >>> df_pd = pd.DataFrame({"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]})
+            >>> df_pl = pl.DataFrame({"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]})
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.select(
-            ...             nw.col("a").filter(nw.col("a") > 4),
-            ...             nw.col("b").filter(nw.col("b") < 13)
-            ...             )
+            ...         nw.col("a").filter(nw.col("a") > 4),
+            ...         nw.col("b").filter(nw.col("b") < 13),
+            ...     )
 
             We can then pass either pandas or Polars to `func`:
 
@@ -938,16 +940,10 @@ class Expr:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame(
-            ...         {
-            ...             'a': [2, 4, None, 3, 5],
-            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
-            ...         }
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
             >>> df_pl = pl.DataFrame(
-            ...         {
-            ...             'a': [2, 4, None, 3, 5],
-            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
-            ...         }
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
 
             Let's define a dataframe-agnostic function:
@@ -955,8 +951,7 @@ class Expr:
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.with_columns(
-            ...         a_is_null = nw.col('a').is_null(),
-            ...         b_is_null = nw.col('b').is_null()
+            ...         a_is_null=nw.col("a").is_null(), b_is_null=nw.col("b").is_null()
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -998,23 +993,17 @@ class Expr:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame(
-            ...         {
-            ...             'a': [2, 4, None, 3, 5],
-            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
-            ...         }
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
             >>> df_pl = pl.DataFrame(
-            ...         {
-            ...             'a': [2, 4, None, 3, 5],
-            ...             'b': [2.0, 4.0, float("nan"), 3.0, 5.0]
-            ...         }
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
 
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(nw.col('a', 'b').fill_null(0))
+            ...     return df.with_columns(nw.col("a", "b").fill_null(0))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1118,7 +1107,7 @@ class Expr:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a').sample(fraction=1.0, with_replacement=True))
+            ...     return df.select(nw.col("a").sample(fraction=1.0, with_replacement=True))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1158,7 +1147,7 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
-            >>> data = {'a': [1, 2, 3], 'b': [1, 1, 2]}
+            >>> data = {"a": [1, 2, 3], "b": [1, 1, 2]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -1166,9 +1155,7 @@ class Expr:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(
-            ...         a_min_per_group = nw.col('a').min().over('b')
-            ...     )
+            ...     return df.with_columns(a_min_per_group=nw.col("a").min().over("b"))
 
             We can then pass either pandas or Polars:
 
@@ -1414,7 +1401,7 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
-            >>> data = {'a': list(range(50)), 'b': list(range(50, 100))}
+            >>> data = {"a": list(range(50)), "b": list(range(50, 100))}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -1422,7 +1409,7 @@ class Expr:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a', 'b').quantile(0.5, interpolation='linear'))
+            ...     return df.select(nw.col("a", "b").quantile(0.5, interpolation="linear"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1473,7 +1460,7 @@ class ExprStringNamespace:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> data = {'lyrics': ['Atatata', 'taata', 'taatatata', 'zukkyun']}
+            >>> data = {"lyrics": ["Atatata", "taata", "taatatata", "zukkyun"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -1481,7 +1468,7 @@ class ExprStringNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(lyrics_head = nw.col('lyrics').str.head())
+            ...     return df.with_columns(lyrics_head=nw.col("lyrics").str.head())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1531,14 +1518,14 @@ class ExprStringNamespace:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({'a': ['2020-01-01', '2020-01-02']})
-            >>> df_pl = pl.DataFrame({'a': ['2020-01-01', '2020-01-02']})
+            >>> df_pd = pd.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
+            >>> df_pl = pl.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
 
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a').str.to_datetime(format='%Y-%m-%d'))
+            ...     return df.select(nw.col("a").str.to_datetime(format="%Y-%m-%d"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1578,7 +1565,7 @@ class ExprDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> data = {
-            ...        "datetime": [
+            ...     "datetime": [
             ...         datetime(1978, 6, 1),
             ...         datetime(2024, 12, 13),
             ...         datetime(2065, 1, 1),
@@ -1591,9 +1578,7 @@ class ExprDateTimeNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(
-            ...         nw.col("datetime").dt.year().alias("year")
-            ...     )
+            ...     return df.with_columns(nw.col("datetime").dt.year().alias("year"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1628,7 +1613,7 @@ class ExprDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> data = {
-            ...        "datetime": [
+            ...     "datetime": [
             ...         datetime(1978, 6, 1),
             ...         datetime(2024, 12, 13),
             ...         datetime(2065, 1, 1),
@@ -1643,7 +1628,7 @@ class ExprDateTimeNamespace:
             ... def func(df):
             ...     return df.with_columns(
             ...         nw.col("datetime").dt.year().alias("year"),
-            ...         nw.col("datetime").dt.month().alias("month")
+            ...         nw.col("datetime").dt.month().alias("month"),
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -1679,7 +1664,7 @@ class ExprDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> data = {
-            ...        "datetime": [
+            ...     "datetime": [
             ...         datetime(1978, 6, 1),
             ...         datetime(2024, 12, 13),
             ...         datetime(2065, 1, 1),
@@ -1695,7 +1680,7 @@ class ExprDateTimeNamespace:
             ...     return df.with_columns(
             ...         nw.col("datetime").dt.year().alias("year"),
             ...         nw.col("datetime").dt.month().alias("month"),
-            ...         nw.col("datetime").dt.day().alias("day")
+            ...         nw.col("datetime").dt.day().alias("day"),
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -1744,9 +1729,7 @@ class ExprDateTimeNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(
-            ...         nw.col("datetime").dt.hour().alias("hour")
-            ...     )
+            ...     return df.with_columns(nw.col("datetime").dt.hour().alias("hour"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1897,7 +1880,7 @@ class ExprDateTimeNamespace:
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
-            ...         nw.col("datetime").dt.millisecond().alias("millisecond")
+            ...         nw.col("datetime").dt.millisecond().alias("millisecond"),
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -1948,7 +1931,7 @@ class ExprDateTimeNamespace:
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
-            ...         nw.col("datetime").dt.microsecond().alias("microsecond")
+            ...         nw.col("datetime").dt.microsecond().alias("microsecond"),
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -1985,7 +1968,7 @@ class ExprDateTimeNamespace:
             ...     "datetime": [
             ...         datetime(1978, 1, 1, 1, 1, 1, 0),
             ...         datetime(2024, 10, 13, 5, 30, 14, 500000),
-            ...         datetime(2065, 1, 1, 10, 20, 30, 60000)
+            ...         datetime(2065, 1, 1, 10, 20, 30, 60000),
             ...     ]
             ... }
             >>> df_pd = pd.DataFrame(data)
@@ -1999,7 +1982,7 @@ class ExprDateTimeNamespace:
             ...         nw.col("datetime").dt.hour().alias("hour"),
             ...         nw.col("datetime").dt.minute().alias("minute"),
             ...         nw.col("datetime").dt.second().alias("second"),
-            ...         nw.col("datetime").dt.nanosecond().alias("nanosecond")
+            ...         nw.col("datetime").dt.nanosecond().alias("nanosecond"),
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -2032,7 +2015,7 @@ class ExprDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> data = {'a': [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
+            >>> data = {"a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -2040,7 +2023,7 @@ class ExprDateTimeNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(a_ordinal_day=nw.col('a').dt.ordinal_day())
+            ...     return df.with_columns(a_ordinal_day=nw.col("a").dt.ordinal_day())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2075,7 +2058,7 @@ class ExprDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
-            >>> data = {'a': [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]}
+            >>> data = {"a": [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -2083,9 +2066,7 @@ class ExprDateTimeNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(
-            ...       a_total_minutes = nw.col('a').dt.total_minutes()
-            ...     )
+            ...     return df.with_columns(a_total_minutes=nw.col("a").dt.total_minutes())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2120,8 +2101,7 @@ class ExprDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
-            >>> data = {'a': [timedelta(seconds=10),
-            ...     timedelta(seconds=20, milliseconds=40)]}
+            >>> data = {"a": [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -2129,9 +2109,7 @@ class ExprDateTimeNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(
-            ...       a_total_seconds = nw.col('a').dt.total_seconds()
-            ...     )
+            ...     return df.with_columns(a_total_seconds=nw.col("a").dt.total_seconds())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2166,8 +2144,12 @@ class ExprDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
-            >>> data = {'a': [timedelta(milliseconds=10),
-            ...     timedelta(milliseconds=20, microseconds=40)]}
+            >>> data = {
+            ...     "a": [
+            ...         timedelta(milliseconds=10),
+            ...         timedelta(milliseconds=20, microseconds=40),
+            ...     ]
+            ... }
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -2176,7 +2158,7 @@ class ExprDateTimeNamespace:
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.with_columns(
-            ...       a_total_milliseconds = nw.col('a').dt.total_milliseconds()
+            ...         a_total_milliseconds=nw.col("a").dt.total_milliseconds()
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -2214,8 +2196,12 @@ class ExprDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
-            >>> data = {'a': [timedelta(microseconds=10),
-            ...     timedelta(milliseconds=1, microseconds=200)]}
+            >>> data = {
+            ...     "a": [
+            ...         timedelta(microseconds=10),
+            ...         timedelta(milliseconds=1, microseconds=200),
+            ...     ]
+            ... }
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -2224,7 +2210,7 @@ class ExprDateTimeNamespace:
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.with_columns(
-            ...       a_total_microseconds = nw.col('a').dt.total_microseconds()
+            ...         a_total_microseconds=nw.col("a").dt.total_microseconds()
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -2262,18 +2248,18 @@ class ExprDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import timedelta
             >>> import narwhals as nw
-            >>> data = ['2024-01-01 00:00:00.000000001',
-            ...     '2024-01-01 00:00:00.000000002']
-            >>> df_pd = pd.DataFrame({'a': pd.to_datetime(data)})
-            >>> df_pl = (pl.DataFrame({'a': data}).with_columns(
-            ...     pl.col('a').str.to_datetime(time_unit='ns')))
+            >>> data = ["2024-01-01 00:00:00.000000001", "2024-01-01 00:00:00.000000002"]
+            >>> df_pd = pd.DataFrame({"a": pd.to_datetime(data)})
+            >>> df_pl = pl.DataFrame({"a": data}).with_columns(
+            ...     pl.col("a").str.to_datetime(time_unit="ns")
+            ... )
 
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.with_columns(
-            ...       a_diff_total_nanoseconds = nw.col('a').diff().dt.total_nanoseconds()
+            ...         a_diff_total_nanoseconds=nw.col("a").diff().dt.total_nanoseconds()
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -2311,14 +2297,14 @@ class ExprDateTimeNamespace:
             ...     datetime(2020, 4, 1),
             ...     datetime(2020, 5, 1),
             ... ]
-            >>> df_pd = pd.DataFrame({'a': data})
-            >>> df_pl = pl.DataFrame({'a': data})
+            >>> df_pd = pd.DataFrame({"a": data})
+            >>> df_pl = pl.DataFrame({"a": data})
 
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col('a').dt.to_string("%Y/%m/%d %H:%M:%S"))
+            ...     return df.select(nw.col("a").dt.to_string("%Y/%m/%d %H:%M:%S"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2363,7 +2349,7 @@ def col(*names: str | Iterable[str]) -> Expr:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.select(nw.col('a') * nw.col('b'))
+        ...     return df.select(nw.col("a") * nw.col("b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -2393,14 +2379,14 @@ def all() -> Expr:
         >>> import polars as pl
         >>> import pandas as pd
         >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-        >>> df_pl = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...    return df.select(nw.all() * 2)
+        ...     return df.select(nw.all() * 2)
 
         We can then pass either pandas or Polars to `func`:
 
@@ -2432,14 +2418,14 @@ def len() -> Expr:
         >>> import polars as pl
         >>> import pandas as pd
         >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [5, 10]})
-        >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [5, 10]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...    return df.select(nw.len())
+        ...     return df.select(nw.len())
 
         We can then pass either pandas or Polars to `func`:
 
@@ -2490,7 +2476,7 @@ def sum(*columns: str) -> Expr:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.select(nw.sum('a'))
+        ...     return df.select(nw.sum("a"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -2532,7 +2518,7 @@ def mean(*columns: str) -> Expr:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.mean('a'))
+        ...     df = df.select(nw.mean("a"))
         ...     return nw.to_native(df)
 
         We can then pass either pandas or Polars to `func`:
@@ -2568,14 +2554,14 @@ def min(*columns: str) -> Expr:
         >>> import polars as pl
         >>> import pandas as pd
         >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [5, 10]})
-        >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [5, 10]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...    return df.select(nw.min('b'))
+        ...     return df.select(nw.min("b"))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -2609,14 +2595,14 @@ def max(*columns: str) -> Expr:
         >>> import polars as pl
         >>> import pandas as pd
         >>> import narwhals as nw
-        >>> df_pd = pd.DataFrame({'a': [1, 2], 'b': [5, 10]})
-        >>> df_pl = pl.DataFrame({'a': [1, 2], 'b': [5, 10]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...    return df.select(nw.max('a'))
+        ...     return df.select(nw.max("a"))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -2654,7 +2640,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.select(nw.sum_horizontal('a', 'b'))
+        ...     return df.select(nw.sum_horizontal("a", "b"))
 
         We can then pass either pandas or polars to `func`:
 
