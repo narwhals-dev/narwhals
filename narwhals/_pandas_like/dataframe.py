@@ -314,3 +314,21 @@ class PandasDataFrame:
             self._dataframe.isnull().sum(axis=0).to_frame().transpose(),
             implementation=self._implementation,
         )
+
+    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+        if row is None and column is None:
+            if self.shape != (1, 1):
+                msg = (
+                    "can only call `.item()` if the dataframe is of shape (1, 1),"
+                    " or if explicit row/col values are provided;"
+                    f" frame has shape {self.shape!r}"
+                )
+                raise ValueError(msg)
+            return self._dataframe.iat[0, 0]
+
+        elif row is None or column is None:
+            msg = "cannot call `.item()` with only one of `row` or `column`"
+            raise ValueError(msg)
+
+        _col = self.columns.index(column) if isinstance(column, str) else column
+        return self._dataframe.iat[row, _col]

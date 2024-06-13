@@ -1596,6 +1596,34 @@ class Series:
             self._series.zip_with(self._extract_native(mask), self._extract_native(other))
         )
 
+    def item(self: Self, index: int | None = None) -> Any:
+        r"""
+        Return the Series as a scalar, or return the element at the given index.
+
+        If no index is provided, this is equivalent to `s[0]`, with a check
+        that the shape is (1,). With an index, this is equivalent to `s[index]`.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+
+            Let's define a dataframe-agnostic function that returns item at given index
+
+            >>> def func(s_any, index=None):
+            ...     s = nw.from_native(s_any, series_only=True)
+            ...     return s.item(index)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)
+            (1, 1)
+
+            >>> func(pl.Series("a", [9, 8, 7]), -1), func(pd.Series([9, 8, 7]), -2)
+            (7, 8)
+        """
+        return self._series.item(index=index)
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)

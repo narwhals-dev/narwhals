@@ -5,7 +5,6 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
-from narwhals._pandas_like.utils import item
 from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
@@ -137,8 +136,17 @@ class PandasSeries:
         dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
         return self._from_series(ser.astype(dtype))
 
-    def item(self) -> Any:
-        return item(self._series)
+    def item(self: Self, index: int | None = None) -> Any:
+        # cuDF doesn't have Series.item().
+        if index is None:
+            if len(self) != 1:
+                msg = (
+                    "can only call '.item()' if the Series is of length 1,"
+                    f" or an explicit index is provided (Series is of length {len(self)})"
+                )
+                raise ValueError(msg)
+            return self._series.iloc[0]
+        return self._series.iloc[index]
 
     def to_frame(self) -> Any:
         from narwhals._pandas_like.dataframe import PandasDataFrame
