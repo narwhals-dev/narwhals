@@ -1447,7 +1447,7 @@ class Expr:
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
-            Let's define a dataframe-agnostic function:
+            Let's define a dataframe-agnostic function that returns the first 3 rows:
 
             >>> @nw.narwhalify
             ... def func(df):
@@ -1460,7 +1460,6 @@ class Expr:
             0  0
             1  1
             2  2
-
             >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 1)
             ┌─────┐
@@ -1492,7 +1491,7 @@ class Expr:
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
-            Let's define a dataframe-agnostic function:
+            Let's define a dataframe-agnostic function that returns the last 3 rows:
 
             >>> @nw.narwhalify
             ... def func(df):
@@ -1505,7 +1504,6 @@ class Expr:
             7  7
             8  8
             9  9
-
             >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 1)
             ┌─────┐

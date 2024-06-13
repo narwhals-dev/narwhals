@@ -288,10 +288,10 @@ class PandasExpr:
             self, "quantile", quantile, interpolation, returns_scalar=True
         )
 
-    def head(self, n: int = 10) -> Self:
+    def head(self, n: int) -> Self:
         return reuse_series_implementation(self, "head", n)
 
-    def tail(self, n: int = 10) -> Self:
+    def tail(self, n: int) -> Self:
         return reuse_series_implementation(self, "tail", n)
 
     @property

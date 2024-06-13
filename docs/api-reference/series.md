@@ -24,6 +24,7 @@
         - is_null
         - is_sorted
         - is_unique
+        - item
         - max
         - mean
         - min

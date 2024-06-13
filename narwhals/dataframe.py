@@ -837,7 +837,7 @@ class DataFrame(BaseFrame):
         """
         return super().rename(mapping)
 
-    def head(self, n: int = 10) -> Self:
+    def head(self, n: int = 5) -> Self:
         """
         Get the first `n` rows.
 
@@ -857,12 +857,11 @@ class DataFrame(BaseFrame):
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
 
-            We define a library agnostic function:
+            Let's define a dataframe-agnostic function that gets the first 3 rows.
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.head(3)
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.head(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -883,6 +882,7 @@ class DataFrame(BaseFrame):
             │ 3   ┆ 8   ┆ c   │
             └─────┴─────┴─────┘
         """
+
         return super().head(n)
 
     def tail(self, n: int = 5) -> Self:
@@ -894,7 +894,7 @@ class DataFrame(BaseFrame):
                 except the first `abs(n)`.
 
         Examples:
-            >>> import pandas as pd
+             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df = {
@@ -905,12 +905,11 @@ class DataFrame(BaseFrame):
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
 
-            We define a library agnostic function:
+            Let's define a dataframe-agnostic function that gets the last 3 rows.
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.tail(3)
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.tail(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1538,6 +1537,38 @@ class DataFrame(BaseFrame):
 
         return DataFrame(self._dataframe.null_count())
 
+    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+        r"""
+        Return the DataFrame as a scalar, or return the element at the given row/column.
+
+        Notes:
+            If row/col not provided, this is equivalent to df[0,0], with a check that the shape is (1,1).
+            With row/col, this is equivalent to df[row,col].
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function that returns item at given row/column
+
+            >>> def func(df_any, row, column):
+            ...     df = nw.from_native(df_any)
+            ...     return df.item(row, column)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd, 1, 1), func(df_pl, 1, 1)
+            (5, 5)
+
+            >>> func(df_pd, 2, "b"), func(df_pl, 2, "b")
+            (6, 6)
+        """
+        return self._dataframe.item(row=row, column=column)
+
 
 class LazyFrame(BaseFrame):
     """
@@ -2018,7 +2049,7 @@ class LazyFrame(BaseFrame):
         """
         return super().rename(mapping)
 
-    def head(self, n: int) -> Self:
+    def head(self, n: int = 5) -> Self:
         r"""
         Get the first `n` rows.
 
@@ -2026,23 +2057,32 @@ class LazyFrame(BaseFrame):
             n: Number of rows to return.
 
         Examples:
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 4, 5, 6],
-            ...         "b": [7, 8, 9, 10, 11, 12],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.head(5).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (5, 2)
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": [1, 2, 3, 4, 5, 6],
+            ...     "b": [7, 8, 9, 10, 11, 12],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function that gets the first 3 rows.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.head(3)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  7
+            1  2  8
+            2  3  9
+            >>> func(df_pl)
+            shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
@@ -2051,17 +2091,9 @@ class LazyFrame(BaseFrame):
             │ 1   ┆ 7   │
             │ 2   ┆ 8   │
             │ 3   ┆ 9   │
-            │ 4   ┆ 10  │
-            │ 5   ┆ 11  │
             └─────┴─────┘
-            >>> lframe = lf.head(2).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (2, 2)
+            >>> func(lf_pl).collect()
+            shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
@@ -2069,11 +2101,12 @@ class LazyFrame(BaseFrame):
             ╞═════╪═════╡
             │ 1   ┆ 7   │
             │ 2   ┆ 8   │
+            │ 3   ┆ 9   │
             └─────┴─────┘
         """
         return super().head(n)
 
-    def tail(self, n: int) -> Self:
+    def tail(self, n: int = 5) -> Self:
         r"""
         Get the last `n` rows.
 
@@ -2081,47 +2114,49 @@ class LazyFrame(BaseFrame):
             n: Number of rows to return.
 
         Examples:
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 4, 5, 6],
-            ...         "b": [7, 8, 9, 10, 11, 12],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.tail(5).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (5, 2)
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": [1, 2, 3, 4, 5, 6],
+            ...     "b": [7, 8, 9, 10, 11, 12],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function that gets the last 3 rows.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.tail(3)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a   b
+            3  4  10
+            4  5  11
+            5  6  12
+            >>> func(df_pl)
+            shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
             │ i64 ┆ i64 │
             ╞═════╪═════╡
-            │ 2   ┆ 8   │
-            │ 3   ┆ 9   │
             │ 4   ┆ 10  │
             │ 5   ┆ 11  │
             │ 6   ┆ 12  │
             └─────┴─────┘
-            >>> lframe = lf.tail(2).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (2, 2)
+            >>> func(lf_pl).collect()
+            shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
             │ i64 ┆ i64 │
             ╞═════╪═════╡
+            │ 4   ┆ 10  │
             │ 5   ┆ 11  │
             │ 6   ┆ 12  │
             └─────┴─────┘

@@ -10,7 +10,6 @@ from typing import Iterable
 from typing import Iterator
 
 from narwhals._pandas_like.utils import is_simple_aggregation
-from narwhals._pandas_like.utils import item
 from narwhals._pandas_like.utils import parse_into_exprs
 from narwhals._pandas_like.utils import series_from_iterable
 from narwhals.dependencies import get_pandas
@@ -152,7 +151,7 @@ def agg_pandas(  # noqa: PLR0913
         for expr in exprs:
             results_keys = expr._call(from_dataframe(df))
             for result_keys in results_keys:
-                out_group.append(item(result_keys._series))
+                out_group.append(result_keys._series.item())
                 out_names.append(result_keys.name)
         return series_from_iterable(
             out_group, index=out_names, name="", implementation=implementation

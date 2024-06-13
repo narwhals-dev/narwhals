@@ -13,6 +13,7 @@
         - is_duplicated
         - is_empty
         - is_unique
+        - item
         - join
         - lazy
         - null_count
