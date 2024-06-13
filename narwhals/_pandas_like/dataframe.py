@@ -244,6 +244,9 @@ class PandasDataFrame:
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))
 
+    def tail(self, n: int) -> Self:
+        return self._from_dataframe(self._dataframe.tail(n))
+
     def unique(self, subset: str | list[str]) -> Self:
         subset = flatten(subset)
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))

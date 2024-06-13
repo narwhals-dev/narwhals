@@ -495,6 +495,25 @@ def test_head(df_raw: Any) -> None:
     result = nw.to_native(df.collect().head(2))
     expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
     compare_dicts(result, expected)
+    result = nw.to_native(df.collect().select(nw.col("a").head(2)))
+    expected = {"a": [1, 3]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
+def test_tail(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.tail(2))
+    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.collect().tail(2))
+    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.collect().select(nw.col("a").tail(2)))
+    expected = {"a": [3, 2]}
+    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize(

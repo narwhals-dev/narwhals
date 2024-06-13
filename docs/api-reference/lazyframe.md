@@ -18,6 +18,7 @@
         - schema
         - select
         - sort
+        - tail
         - unique
         - with_columns
         - with_row_index

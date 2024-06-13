@@ -142,6 +142,9 @@ class BaseFrame:
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))
 
+    def tail(self, n: int) -> Self:
+        return self._from_dataframe(self._dataframe.tail(n))
+
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_dataframe(self._dataframe.drop(*columns))
 
@@ -834,7 +837,7 @@ class DataFrame(BaseFrame):
         """
         return super().rename(mapping)
 
-    def head(self, n: int) -> Self:
+    def head(self, n: int = 5) -> Self:
         """
         Get the first `n` rows.
 
@@ -854,12 +857,11 @@ class DataFrame(BaseFrame):
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
 
-            We define a library agnostic function:
+            Let's define a dataframe-agnostic function that gets the first 3 rows.
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.head(3)
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.head(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -880,7 +882,55 @@ class DataFrame(BaseFrame):
             │ 3   ┆ 8   ┆ c   │
             └─────┴─────┴─────┘
         """
+
         return super().head(n)
+
+    def tail(self, n: int = 5) -> Self:
+        """
+        Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return. If a negative value is passed, return all rows
+                except the first `abs(n)`.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {
+            ...     "foo": [1, 2, 3, 4, 5],
+            ...     "bar": [6, 7, 8, 9, 10],
+            ...     "ham": ["a", "b", "c", "d", "e"],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            Let's define a dataframe-agnostic function that gets the last 3 rows.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.tail(3)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar ham
+            2    3    8   c
+            3    4    9   d
+            4    5   10   e
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 3   ┆ 8   ┆ c   │
+            │ 4   ┆ 9   ┆ d   │
+            │ 5   ┆ 10  ┆ e   │
+            └─────┴─────┴─────┘
+        """
+        return super().tail(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         """
@@ -1999,7 +2049,7 @@ class LazyFrame(BaseFrame):
         """
         return super().rename(mapping)
 
-    def head(self, n: int) -> Self:
+    def head(self, n: int = 5) -> Self:
         r"""
         Get the first `n` rows.
 
@@ -2007,23 +2057,32 @@ class LazyFrame(BaseFrame):
             n: Number of rows to return.
 
         Examples:
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 4, 5, 6],
-            ...         "b": [7, 8, 9, 10, 11, 12],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.head(5).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (5, 2)
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": [1, 2, 3, 4, 5, 6],
+            ...     "b": [7, 8, 9, 10, 11, 12],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function that gets the first 3 rows.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.head(3)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  7
+            1  2  8
+            2  3  9
+            >>> func(df_pl)
+            shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
@@ -2032,17 +2091,9 @@ class LazyFrame(BaseFrame):
             │ 1   ┆ 7   │
             │ 2   ┆ 8   │
             │ 3   ┆ 9   │
-            │ 4   ┆ 10  │
-            │ 5   ┆ 11  │
             └─────┴─────┘
-            >>> lframe = lf.head(2).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (2, 2)
+            >>> func(lf_pl).collect()
+            shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
@@ -2050,9 +2101,67 @@ class LazyFrame(BaseFrame):
             ╞═════╪═════╡
             │ 1   ┆ 7   │
             │ 2   ┆ 8   │
+            │ 3   ┆ 9   │
             └─────┴─────┘
         """
         return super().head(n)
+
+    def tail(self, n: int = 5) -> Self:
+        r"""
+        Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": [1, 2, 3, 4, 5, 6],
+            ...     "b": [7, 8, 9, 10, 11, 12],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function that gets the last 3 rows.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.tail(3)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a   b
+            3  4  10
+            4  5  11
+            5  6  12
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 4   ┆ 10  │
+            │ 5   ┆ 11  │
+            │ 6   ┆ 12  │
+            └─────┴─────┘
+            >>> func(lf_pl).collect()
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 4   ┆ 10  │
+            │ 5   ┆ 11  │
+            │ 6   ┆ 12  │
+            └─────┴─────┘
+        """
+        return super().tail(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         r"""

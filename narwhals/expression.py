@@ -1431,6 +1431,94 @@ class Expr:
             lambda plx: self._call(plx).quantile(quantile, interpolation)
         )
 
+    def head(self, n: int = 10) -> Expr:
+        r"""
+        Get the first `n` rows.
+
+        Arguments
+            n : int
+                Number of rows to return.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": list(range(10))}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function that returns the first 3 rows:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").head(3))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+               a
+            0  0
+            1  1
+            2  2
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 0   │
+            │ 1   │
+            │ 2   │
+            └─────┘
+        """
+
+        return self.__class__(lambda plx: self._call(plx).head(n))
+
+    def tail(self, n: int = 10) -> Expr:
+        r"""
+        Get the last `n` rows.
+
+        Arguments
+            n : int
+                Number of rows to return.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": list(range(10))}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function that returns the last 3 rows:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").tail(3))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                 a
+            7  7
+            8  8
+            9  9
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 7   │
+            │ 8   │
+            │ 9   │
+            └─────┘
+        """
+
+        return self.__class__(lambda plx: self._call(plx).tail(n))
+
     @property
     def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
