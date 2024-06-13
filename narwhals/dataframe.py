@@ -142,6 +142,9 @@ class BaseFrame:
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))
 
+    def tail(self, n: int) -> Self:
+        return self._from_dataframe(self._dataframe.tail(n))
+
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_dataframe(self._dataframe.drop(*columns))
 
@@ -834,7 +837,7 @@ class DataFrame(BaseFrame):
         """
         return super().rename(mapping)
 
-    def head(self, n: int) -> Self:
+    def head(self, n: int = 10) -> Self:
         """
         Get the first `n` rows.
 
@@ -881,6 +884,54 @@ class DataFrame(BaseFrame):
             └─────┴─────┴─────┘
         """
         return super().head(n)
+
+    def tail(self, n: int = 5) -> Self:
+        """
+        Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return. If a negative value is passed, return all rows
+                except the first `abs(n)`.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {
+            ...     "foo": [1, 2, 3, 4, 5],
+            ...     "bar": [6, 7, 8, 9, 10],
+            ...     "ham": ["a", "b", "c", "d", "e"],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.tail(3)
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar ham
+            2    3    8   c
+            3    4    9   d
+            4    5   10   e
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 3   ┆ 8   ┆ c   │
+            │ 4   ┆ 9   ┆ d   │
+            │ 5   ┆ 10  ┆ e   │
+            └─────┴─────┴─────┘
+        """
+        return super().tail(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         """
@@ -2021,6 +2072,61 @@ class LazyFrame(BaseFrame):
             └─────┴─────┘
         """
         return super().head(n)
+
+    def tail(self, n: int) -> Self:
+        r"""
+        Get the last `n` rows.
+
+        Arguments:
+            n: Number of rows to return.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": [1, 2, 3, 4, 5, 6],
+            ...         "b": [7, 8, 9, 10, 11, 12],
+            ...     }
+            ... )
+            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lframe = lf.tail(5).collect()
+            >>> lframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (5, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 2   ┆ 8   │
+            │ 3   ┆ 9   │
+            │ 4   ┆ 10  │
+            │ 5   ┆ 11  │
+            │ 6   ┆ 12  │
+            └─────┴─────┘
+            >>> lframe = lf.tail(2).collect()
+            >>> lframe
+            ┌───────────────────────────────────────────────┐
+            | Narwhals DataFrame                            |
+            | Use `narwhals.to_native` to see native output |
+            └───────────────────────────────────────────────┘
+            >>> nw.to_native(lframe)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 5   ┆ 11  │
+            │ 6   ┆ 12  │
+            └─────┴─────┘
+        """
+        return super().tail(n)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         r"""

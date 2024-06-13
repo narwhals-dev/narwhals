@@ -1596,6 +1596,90 @@ class Series:
             self._series.zip_with(self._extract_native(mask), self._extract_native(other))
         )
 
+    def head(self: Self, n: int = 10) -> Self:
+        r"""
+        Get the first `n` rows.
+
+        Arguments
+            n : int
+                Number of rows to return.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = list(range(10))
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(allow_series=True)
+            ... def func(s):
+            ...     return s.head(3)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0    0
+            1    1
+            2    2
+            dtype: int64
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               0
+               1
+               2
+            ]
+        """
+
+        return self._from_series(self._series.head(n))
+
+    def tail(self: Self, n: int = 10) -> Self:
+        r"""
+        Get the last `n` rows.
+
+        Arguments
+            n : int
+                Number of rows to return.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = list(range(10))
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(allow_series=True)
+            ... def func(s):
+            ...     return s.tail(3)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            7    7
+            8    8
+            9    9
+            dtype: int64
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               7
+               8
+               9
+            ]
+        """
+
+        return self._from_series(self._series.tail(n))
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)

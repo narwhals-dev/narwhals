@@ -486,6 +486,12 @@ class PandasSeries:
         res = ser.where(mask._series, other._series)
         return self._from_series(res)
 
+    def head(self: Self, n: int = 10) -> Self:
+        return self._from_series(self._series.head(n))
+
+    def tail(self: Self, n: int = 10) -> Self:
+        return self._from_series(self._series.tail(n))
+
     @property
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)

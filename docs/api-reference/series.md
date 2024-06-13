@@ -14,6 +14,7 @@
         - dtype
         - fill_null
         - filter
+        - head
         - is_between
         - is_duplicated
         - is_empty
@@ -36,6 +37,7 @@
         - sort
         - std
         - sum
+        - tail
         - to_frame
         - to_numpy
         - to_pandas

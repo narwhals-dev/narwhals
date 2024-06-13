@@ -22,6 +22,7 @@
         - select
         - shape
         - sort
+        - tail
         - to_dict
         - to_numpy
         - to_pandas
