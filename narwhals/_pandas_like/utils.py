@@ -71,7 +71,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasSeries):
         if other.len() == 1:
             # broadcast
-            return item(other._series)
+            return other._series.item()
         if other._series.index is not index and not (other._series.index == index).all():
             return other._series.set_axis(index, axis=0)
         return other._series
@@ -268,19 +268,6 @@ def reuse_series_namespace_implementation(
         output_names=expr._output_names,
         implementation=expr._implementation,
     )
-
-
-def item(s: Any, index: int | None = None) -> Any:
-    # cuDF doesn't have Series.item().
-    if index is None:
-        if len(s) != 1:
-            msg = (
-                "can only call '.item()' if the Series is of length 1,"
-                f" or an explicit index is provided (Series is of length {len(s)})"
-            )
-            raise ValueError(msg)
-        return s.iloc[0]
-    return s.iloc[index]
 
 
 def is_simple_aggregation(expr: PandasExpr) -> bool:
