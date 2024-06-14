@@ -1520,9 +1520,9 @@ class ExprStringNamespace:
                 return self._expr._call(plx).str.contains(pattern, literal)
             else:
                 if literal == True:
-                    return self._expr._call(plx).str.contains(pattern, regex=False)
+                    return self._expr._call(plx).str.contains(pat=pattern, regex=False)
                 else:
-                    return self._expr._call(plx).str.contains(pattern)     
+                    return self._expr._call(plx).str.contains(pat=pattern)     
         return self._expr.__class__(func)
 
     def head(self, n: int = 5) -> Expr:

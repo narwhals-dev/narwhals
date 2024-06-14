@@ -1618,9 +1618,9 @@ class SeriesStringNamespace:
         
         if self._series._is_polars == False:
             if literal == True:
-                return self._series.__class__(self._series._series.str.contains(pattern, regex=False))
+                return self._series.__class__(self._series._series.str.contains(pat=pattern, regex=False))
             else:
-                return self._series.__class__(self._series._series.str.contains(pattern))
+                return self._series.__class__(self._series._series.str.contains(pat=pattern))
 
     def head(self, n: int = 5) -> Series:
         """
