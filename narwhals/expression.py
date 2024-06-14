@@ -1462,7 +1462,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
-    def contains(self, pattern: str | Expr, literal: bool = False) -> Expr:
+    def contains(self, pattern: str, literal: bool = False) -> Expr:
         """
         Check if string contains a substring that matches a pattern.
 
