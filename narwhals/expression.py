@@ -6,7 +6,7 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 
-from narwhals.dependencies import get_polars, get_pandas
+from narwhals.dependencies import get_polars
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
