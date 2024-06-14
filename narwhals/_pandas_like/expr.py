@@ -315,7 +315,7 @@ class PandasExprStringNamespace:
             "str",
             "contains",
             pat=pattern,
-            regex= not literal,
+            regex=not literal,
         )
 
     def head(self, n: int = 5) -> PandasExpr:
