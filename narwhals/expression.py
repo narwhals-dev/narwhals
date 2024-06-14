@@ -6,7 +6,7 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 
-from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_polars, get_pandas
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
@@ -1461,6 +1461,69 @@ class ExprStringNamespace:
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
+    
+    def contains(self, pattern: str, literal: bool = False) -> Expr:
+        """
+        Check if string contains a substring that matches a pattern.
+
+        Arguments:
+            pattern: A Character sequence or valid regular expression pattern.
+
+            literal: If True, treats the pattern as a literal string.
+                     If False, assumes the pattern is a regular expression.
+
+        Example:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...     default_match = nw.col("pets").str.contains("parrot|Dove"),
+            ...     case_insensitive_match = nw.col("pets").str.contains("(?i)parrot|Dove"),
+            ...     literal_match = nw.col("pets").str.contains("parrot|Dove", literal=True)
+            ...     )
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                            pets default_match case_insensitive_match literal_match
+            0                cat         False                  False         False
+            1                dog         False                  False         False
+            2  rabbit and parrot          True                   True          True
+            3               dove         False                   True          True
+            4               None          None                   None          None
+            >>> func(df_pl)
+            shape: (5, 4)
+            ┌───────────────────┬───────────────┬────────────────────────┬───────────────┐
+            │ pets              ┆ default_match ┆ case_insensitive_match ┆ literal_match │
+            │ ---               ┆ ---           ┆ ---                    ┆ ---           │
+            │ str               ┆ bool          ┆ bool                   ┆ bool          │
+            ╞═══════════════════╪═══════════════╪════════════════════════╪═══════════════╡
+            │ cat               ┆ false         ┆ false                  ┆ false         │
+            │ dog               ┆ false         ┆ false                  ┆ false         │
+            │ rabbit and parrot ┆ true          ┆ true                   ┆ false         │
+            │ dove              ┆ true          ┆ true                   ┆ false         │
+            │ null              ┆ null          ┆ null                   ┆ null          │
+            └───────────────────┴───────────────┴────────────────────────┴───────────────┘
+
+        """
+
+        def func(plx: Any) -> Any:
+            if plx is get_polars():
+                return self._expr._call(plx).str.contains(pattern, literal)
+            else:
+                if literal == True:
+                    return self._expr._call(plx).str.contains(pattern, regex=False)
+                else:
+                    return self._expr._call(plx).str.contains(pattern)     
+        return self._expr.__class__(func)
 
     def head(self, n: int = 5) -> Expr:
         """
