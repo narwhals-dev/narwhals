@@ -1645,7 +1645,7 @@ class SeriesStringNamespace:
             3     True
             4     None
             dtype: object
-            >>> func(s_pl) # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (5,)
             Series: '' [bool]
             [
