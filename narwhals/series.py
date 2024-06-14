@@ -1612,7 +1612,7 @@ class SeriesStringNamespace:
     def ends_with(self, suffix: str) -> Series:
         return self._series.__class__(self._series._series.str.ends_with(suffix))
 
-    def contains(self, pattern: str, literal: bool = False) -> Series:
+    def contains(self, pattern: str | Expr, literal: bool = False) -> Series:
         return self._series.__class__(
             self._series._series.str.contains(pattern, literal=literal)
         )
