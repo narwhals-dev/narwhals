@@ -308,7 +308,7 @@ class PandasExprStringNamespace:
             "ends_with",
             suffix,
         )
-    
+
     def contains(self, pat: str, regex: bool = True) -> PandasExpr:
         return reuse_series_namespace_implementation(
             self._expr,

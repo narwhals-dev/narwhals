@@ -1461,7 +1461,7 @@ class ExprStringNamespace:
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
-    
+
     def contains(self, pattern: str, literal: bool = False) -> Expr:
         """
         Check if string contains a substring that matches a pattern.
@@ -1485,9 +1485,11 @@ class ExprStringNamespace:
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.with_columns(
-            ...     default_match = nw.col("pets").str.contains("parrot|Dove"),
-            ...     case_insensitive_match = nw.col("pets").str.contains("(?i)parrot|Dove"),
-            ...     literal_match = nw.col("pets").str.contains("parrot|Dove", literal=True)
+            ...         default_match=nw.col("pets").str.contains("parrot|Dove"),
+            ...         case_insensitive_match=nw.col("pets").str.contains("(?i)parrot|Dove"),
+            ...         literal_match=nw.col("pets").str.contains(
+            ...             "parrot|Dove", literal=True
+            ...         ),
             ...     )
 
             We can then pass either pandas or Polars to `func`:
@@ -1522,7 +1524,8 @@ class ExprStringNamespace:
                 if literal == True:
                     return self._expr._call(plx).str.contains(pat=pattern, regex=False)
                 else:
-                    return self._expr._call(plx).str.contains(pat=pattern)     
+                    return self._expr._call(plx).str.contains(pat=pattern)
+
         return self._expr.__class__(func)
 
     def head(self, n: int = 5) -> Expr:

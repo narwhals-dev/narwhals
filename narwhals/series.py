@@ -1611,16 +1611,22 @@ class SeriesStringNamespace:
 
     def ends_with(self, suffix: str) -> Series:
         return self._series.__class__(self._series._series.str.ends_with(suffix))
-    
+
     def contains(self, pattern: str, literal: bool = False) -> Series:
         if self._series._is_polars:
-            return self._series.__class__(self._series._series.str.contains(pattern, literal))
-        
+            return self._series.__class__(
+                self._series._series.str.contains(pattern, literal)
+            )
+
         if self._series._is_polars == False:
             if literal == True:
-                return self._series.__class__(self._series._series.str.contains(pat=pattern, regex=False))
+                return self._series.__class__(
+                    self._series._series.str.contains(pat=pattern, regex=False)
+                )
             else:
-                return self._series.__class__(self._series._series.str.contains(pat=pattern))
+                return self._series.__class__(
+                    self._series._series.str.contains(pat=pattern)
+                )
 
     def head(self, n: int = 5) -> Series:
         """
