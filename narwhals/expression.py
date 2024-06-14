@@ -1498,8 +1498,8 @@ class ExprStringNamespace:
                             pets default_match case_insensitive_match literal_match
             0                cat         False                  False         False
             1                dog         False                  False         False
-            2  rabbit and parrot          True                   True          True
-            3               dove         False                   True          True
+            2  rabbit and parrot          True                   True         False
+            3               dove         False                   True         False
             4               None          None                   None          None
             >>> func(df_pl)
             shape: (5, 4)
@@ -1511,22 +1511,15 @@ class ExprStringNamespace:
             │ cat               ┆ false         ┆ false                  ┆ false         │
             │ dog               ┆ false         ┆ false                  ┆ false         │
             │ rabbit and parrot ┆ true          ┆ true                   ┆ false         │
-            │ dove              ┆ true          ┆ true                   ┆ false         │
+            │ dove              ┆ false         ┆ true                   ┆ false         │
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
 
         """
 
-        def func(plx: Any) -> Any:
-            if plx is get_polars():
-                return self._expr._call(plx).str.contains(pattern, literal)
-            else:
-                if literal == True:
-                    return self._expr._call(plx).str.contains(pat=pattern, regex=False)
-                else:
-                    return self._expr._call(plx).str.contains(pat=pattern)
-
-        return self._expr.__class__(func)
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
+        )
 
     def head(self, n: int = 5) -> Expr:
         """
