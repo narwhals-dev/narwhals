@@ -518,6 +518,11 @@ class PandasSeriesStringNamespace:
             self._series._series.str.endswith(suffix),
         )
 
+    def contains(self, pattern: str, *, literal: bool = False) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.str.contains(pat=pattern, regex=not literal)
+        )
+
     def head(self, n: int = 5) -> PandasSeries:
         return self._series._from_series(
             self._series._series.str[:n],

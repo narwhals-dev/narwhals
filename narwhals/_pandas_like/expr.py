@@ -315,6 +315,15 @@ class PandasExprStringNamespace:
             suffix,
         )
 
+    def contains(self, pattern: str, *, literal: bool) -> PandasExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "contains",
+            pattern,
+            literal=literal,
+        )
+
     def head(self, n: int = 5) -> PandasExpr:
         return reuse_series_namespace_implementation(
             self._expr,

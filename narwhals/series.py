@@ -1723,6 +1723,54 @@ class SeriesStringNamespace:
     def ends_with(self, suffix: str) -> Series:
         return self._series.__class__(self._series._series.str.ends_with(suffix))
 
+    def contains(self, pattern: str, *, literal: bool = False) -> Series:
+        """
+        Check if string contains a substring that matches a pattern.
+
+        Arguments:
+            pattern: A Character sequence or valid regular expression pattern.
+
+            literal: If True, treats the pattern as a literal string.
+                     If False, assumes the pattern is a regular expression.
+
+        Example:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> pets = ["cat", "dog", "rabbit and parrot", "dove", None]
+            >>> s_pd = pd.Series(pets)
+            >>> s_pl = pl.Series(pets)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.str.contains("parrot|dove")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1    False
+            2     True
+            3     True
+            4     None
+            dtype: object
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [bool]
+            [
+               false
+               false
+               true
+               true
+               null
+            ]
+        """
+        return self._series.__class__(
+            self._series._series.str.contains(pattern, literal=literal)
+        )
+
     def head(self, n: int = 5) -> Series:
         """
         Take the first n elements of each string.

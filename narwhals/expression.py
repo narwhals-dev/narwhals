@@ -1537,6 +1537,65 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
+    def contains(self, pattern: str, *, literal: bool = False) -> Expr:
+        """
+        Check if string contains a substring that matches a pattern.
+
+        Arguments:
+            pattern: A Character sequence or valid regular expression pattern.
+
+            literal: If True, treats the pattern as a literal string.
+                     If False, assumes the pattern is a regular expression.
+
+        Example:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         default_match=nw.col("pets").str.contains("parrot|Dove"),
+            ...         case_insensitive_match=nw.col("pets").str.contains("(?i)parrot|Dove"),
+            ...         literal_match=nw.col("pets").str.contains(
+            ...             "parrot|Dove", literal=True
+            ...         ),
+            ...     )
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                            pets default_match case_insensitive_match literal_match
+            0                cat         False                  False         False
+            1                dog         False                  False         False
+            2  rabbit and parrot          True                   True         False
+            3               dove         False                   True         False
+            4               None          None                   None          None
+            >>> func(df_pl)
+            shape: (5, 4)
+            ┌───────────────────┬───────────────┬────────────────────────┬───────────────┐
+            │ pets              ┆ default_match ┆ case_insensitive_match ┆ literal_match │
+            │ ---               ┆ ---           ┆ ---                    ┆ ---           │
+            │ str               ┆ bool          ┆ bool                   ┆ bool          │
+            ╞═══════════════════╪═══════════════╪════════════════════════╪═══════════════╡
+            │ cat               ┆ false         ┆ false                  ┆ false         │
+            │ dog               ┆ false         ┆ false                  ┆ false         │
+            │ rabbit and parrot ┆ true          ┆ true                   ┆ false         │
+            │ dove              ┆ false         ┆ true                   ┆ false         │
+            │ null              ┆ null          ┆ null                   ┆ null          │
+            └───────────────────┴───────────────┴────────────────────────┴───────────────┘
+
+        """
+
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
+        )
+
     def head(self, n: int = 5) -> Expr:
         """
         Take the first n elements of each string.
