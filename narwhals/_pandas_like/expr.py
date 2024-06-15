@@ -309,13 +309,13 @@ class PandasExprStringNamespace:
             suffix,
         )
 
-    def contains(self, pattern: str, literal: bool) -> PandasExpr:
+    def contains(self, pattern: str, *, literal: bool = False) -> PandasExpr:
         return reuse_series_namespace_implementation(
             self._expr,
             "str",
             "contains",
             pattern,
-            literal,
+            literal=literal,
         )
 
     def head(self, n: int = 5) -> PandasExpr:

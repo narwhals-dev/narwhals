@@ -504,7 +504,7 @@ class PandasSeriesStringNamespace:
             self._series._series.str.endswith(suffix),
         )
 
-    def contains(self, pattern: str, literal: bool = False) -> PandasSeries:
+    def contains(self, pattern: str, *, literal: bool = False) -> PandasSeries:
         return self._series._from_series(
             self._series._series.str.contains(pat=pattern, regex=not literal)
         )
