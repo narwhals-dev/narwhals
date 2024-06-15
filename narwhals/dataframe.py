@@ -652,25 +652,33 @@ class DataFrame(BaseFrame):
             existing data.
 
         Examples:
-            Pass an expression to add it as a new column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 4],
-            ...         "b": [0.5, 4, 10, 13],
-            ...         "c": [True, True, False, True],
-            ...     }
-            ... )
-            >>> df = nw.from_native(df_pl)
-            >>> dframe = df.with_columns((nw.col("a") * 2).alias("a*2"))
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {
+            ...     "a": [1, 2, 3, 4],
+            ...     "b": [0.5, 4, 10, 13],
+            ...     "c": [True, True, False, True],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            Let's define a dataframe-agnostic function in which we pass an expression
+            to add it as a new column:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns((nw.col("a") * 2).alias("a*2"))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a     b      c  a*2
+            0  1   0.5   True    2
+            1  2   4.0   True    4
+            2  3  10.0  False    6
+            3  4  13.0   True    8
+            >>> func(df_pl)
             shape: (4, 4)
             ┌─────┬──────┬───────┬─────┐
             │ a   ┆ b    ┆ c     ┆ a*2 │
@@ -1861,25 +1869,46 @@ class LazyFrame(BaseFrame):
             existing data.
 
         Examples:
-            Pass an expression to add it as a new column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": [1, 2, 3, 4],
-            ...         "b": [0.5, 4, 10, 13],
-            ...         "c": [True, True, False, True],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.with_columns((nw.col("a") * 2).alias("2a")).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> df = {
+            ...     "a": [1, 2, 3, 4],
+            ...     "b": [0.5, 4, 10, 13],
+            ...     "c": [True, True, False, True],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+            >>> lf_pl = pl.LazyFrame(df)
+
+            Let's define a dataframe-agnostic function in which we pass an expression
+            to add it as a new column:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns((nw.col("a") * 2).alias("2a"))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a     b      c  2a
+            0  1   0.5   True   2
+            1  2   4.0   True   4
+            2  3  10.0  False   6
+            3  4  13.0   True   8
+            >>> func(df_pl)
+            shape: (4, 4)
+            ┌─────┬──────┬───────┬─────┐
+            │ a   ┆ b    ┆ c     ┆ 2a  │
+            │ --- ┆ ---  ┆ ---   ┆ --- │
+            │ i64 ┆ f64  ┆ bool  ┆ i64 │
+            ╞═════╪══════╪═══════╪═════╡
+            │ 1   ┆ 0.5  ┆ true  ┆ 2   │
+            │ 2   ┆ 4.0  ┆ true  ┆ 4   │
+            │ 3   ┆ 10.0 ┆ false ┆ 6   │
+            │ 4   ┆ 13.0 ┆ true  ┆ 8   │
+            └─────┴──────┴───────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (4, 4)
             ┌─────┬──────┬───────┬─────┐
             │ a   ┆ b    ┆ c     ┆ 2a  │
