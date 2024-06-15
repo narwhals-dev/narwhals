@@ -4,8 +4,8 @@ title: "[Doc]: "
 
 body:
 - type: markdown
-  attibutes:
-    values: > 
+  attributes:
+    value: > 
          ## Thanks for taking the time to fill out this form
 - type: dropdown
   id: TYPE
@@ -14,14 +14,14 @@ body:
     options: 
       - 'Correction'
       - 'Improvement'
-    validations:
+  validations:
       required: true  
 - type: textarea
   attributes:
     label: Please describe the issue.
     description: >
       Tell us if something is unclear or incorrect, and where.
-    validations:
+  validations:
       required: true
 - type: textarea
   attributes:
@@ -35,5 +35,3 @@ body:
     options:
       - 'yes'
       - 'no'
-      
-           
