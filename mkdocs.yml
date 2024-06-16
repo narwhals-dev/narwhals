@@ -1,5 +1,7 @@
 site_name: Narwhals
 repo_url: https://github.com/narwhals-dev/narwhals.git
+watch:
+  - narwhals
 nav:
   - Home: index.md
   - Why: why.md

@@ -1532,22 +1532,106 @@ class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
+    def starts_with(self, prefix: str) -> Expr:
+        r"""
+        Check if string values start with a substring.
+
+        Arguments:
+            prefix: prefix substring
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "mango", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(has_prefix=nw.col("fruits").str.starts_with("app"))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+              fruits has_prefix
+            0  apple       True
+            1  mango      False
+            2   None       None
+
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌────────┬────────────┐
+            │ fruits ┆ has_prefix │
+            │ ---    ┆ ---        │
+            │ str    ┆ bool       │
+            ╞════════╪════════════╡
+            │ apple  ┆ true       │
+            │ mango  ┆ false      │
+            │ null   ┆ null       │
+            └────────┴────────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.starts_with(prefix)
+        )
+
     def ends_with(self, suffix: str) -> Expr:
+        r"""
+        Check if string values end with a substring.
+
+        Arguments:
+            suffix: suffix substring
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "mango", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(has_suffix=nw.col("fruits").str.ends_with("ngo"))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+              fruits has_suffix
+            0  apple      False
+            1  mango       True
+            2   None       None
+
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌────────┬────────────┐
+            │ fruits ┆ has_suffix │
+            │ ---    ┆ ---        │
+            │ str    ┆ bool       │
+            ╞════════╪════════════╡
+            │ apple  ┆ false      │
+            │ mango  ┆ true       │
+            │ null   ┆ null       │
+            └────────┴────────────┘
+        """
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
     def contains(self, pattern: str, *, literal: bool = False) -> Expr:
-        """
+        r"""
         Check if string contains a substring that matches a pattern.
 
         Arguments:
             pattern: A Character sequence or valid regular expression pattern.
-
             literal: If True, treats the pattern as a literal string.
                      If False, assumes the pattern is a regular expression.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
@@ -1597,7 +1681,7 @@ class ExprStringNamespace:
         )
 
     def head(self, n: int = 5) -> Expr:
-        """
+        r"""
         Take the first n elements of each string.
 
         Arguments:
@@ -1625,6 +1709,7 @@ class ExprStringNamespace:
             1      taata       taata
             2  taatatata       taata
             3    zukkyun       zukky
+
             >>> func(df_pl)
             shape: (4, 2)
             ┌───────────┬─────────────┐
@@ -1639,12 +1724,52 @@ class ExprStringNamespace:
             └───────────┴─────────────┘
         """
 
-        def func(plx: Any) -> Any:
-            if plx is get_polars():
-                return self._expr._call(plx).str.slice(0, n)
-            return self._expr._call(plx).str.head(n)
+        return self._expr.__class__(lambda plx: self._expr._call(plx).str.head(n=n))
 
-        return self._expr.__class__(func)
+    def tail(self, n: int = 5) -> Expr:
+        r"""
+        Take the last n elements of each string.
+
+        Arguments:
+            n: Number of elements to take.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"lyrics": ["Atatata", "taata", "taatatata", "zukkyun"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(lyrics_tail=nw.col("lyrics").str.tail())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                  lyrics lyrics_tail
+            0    Atatata       atata
+            1      taata       taata
+            2  taatatata       atata
+            3    zukkyun       kkyun
+
+            >>> func(df_pl)
+            shape: (4, 2)
+            ┌───────────┬─────────────┐
+            │ lyrics    ┆ lyrics_tail │
+            │ ---       ┆ ---         │
+            │ str       ┆ str         │
+            ╞═══════════╪═════════════╡
+            │ Atatata   ┆ atata       │
+            │ taata     ┆ taata       │
+            │ taatatata ┆ atata       │
+            │ zukkyun   ┆ kkyun       │
+            └───────────┴─────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).str.tail(n=n))
 
     def to_datetime(self, format: str) -> Expr:  # noqa: A002
         """

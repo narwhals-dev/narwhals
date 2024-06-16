@@ -1720,16 +1720,92 @@ class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
         self._series = series
 
+    def starts_with(self, prefix: str) -> Series:
+        r"""
+        Check if string values start with a substring.
+
+        Arguments:
+            prefix: prefix substring
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["apple", "mango", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(allow_series=True)
+            ... def func(series):
+            ...     return series.str.starts_with("app")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0     True
+            1    False
+            2     None
+            dtype: object
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+               true
+               false
+               null
+            ]
+        """
+        return self._series.__class__(self._series._series.str.starts_with(prefix))
+
     def ends_with(self, suffix: str) -> Series:
+        r"""
+        Check if string values end with a substring.
+
+        Arguments:
+            suffix: suffix substring
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["apple", "mango", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(allow_series=True)
+            ... def func(series):
+            ...     return series.str.ends_with("ngo")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    False
+            1     True
+            2     None
+            dtype: object
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+               false
+               true
+               null
+            ]
+        """
         return self._series.__class__(self._series._series.str.ends_with(suffix))
 
     def contains(self, pattern: str, *, literal: bool = False) -> Series:
-        """
+        r"""
         Check if string contains a substring that matches a pattern.
 
         Arguments:
             pattern: A Character sequence or valid regular expression pattern.
-
             literal: If True, treats the pattern as a literal string.
                      If False, assumes the pattern is a regular expression.
 
@@ -1772,7 +1848,7 @@ class SeriesStringNamespace:
         )
 
     def head(self, n: int = 5) -> Series:
-        """
+        r"""
         Take the first n elements of each string.
 
         Arguments:
@@ -1813,6 +1889,47 @@ class SeriesStringNamespace:
         if self._series._is_polars:
             return self._series.__class__(self._series._series.str.slice(0, n))
         return self._series.__class__(self._series._series.str.head(n))
+
+    def tail(self, n: int = 5) -> Series:
+        r"""
+        Take the last n elements of each string.
+
+        Arguments:
+            n: Number of elements to take.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lyrics = ["Atatata", "taata", "taatatata", "zukkyun"]
+            >>> s_pd = pd.Series(lyrics)
+            >>> s_pl = pl.Series(lyrics)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.str.tail()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    atata
+            1    taata
+            2    atata
+            3    kkyun
+            dtype: object
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [str]
+            [
+               "atata"
+               "taata"
+               "atata"
+               "kkyun"
+            ]
+        """
+        return self._series.__class__(self._series._series.str.tail(n))
 
 
 class SeriesDateTimeNamespace:

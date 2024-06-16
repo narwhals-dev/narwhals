@@ -513,6 +513,11 @@ class PandasSeriesStringNamespace:
     def __init__(self, series: PandasSeries) -> None:
         self._series = series
 
+    def starts_with(self, prefix: str) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.str.startswith(prefix),
+        )
+
     def ends_with(self, suffix: str) -> PandasSeries:
         return self._series._from_series(
             self._series._series.str.endswith(suffix),
@@ -523,9 +528,14 @@ class PandasSeriesStringNamespace:
             self._series._series.str.contains(pat=pattern, regex=not literal)
         )
 
-    def head(self, n: int = 5) -> PandasSeries:
+    def head(self, n: int) -> PandasSeries:
         return self._series._from_series(
             self._series._series.str[:n],
+        )
+
+    def tail(self, n: int) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.str[-n:],
         )
 
     def to_datetime(self, format: str | None = None) -> PandasSeries:  # noqa: A002
