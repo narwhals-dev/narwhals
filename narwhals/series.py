@@ -1707,6 +1707,54 @@ class Series:
 
         return self._from_series(self._series.tail(n))
 
+    def round(self: Self, decimals: int = 0) -> Self:
+        r"""
+        Round underlying floating point data by `decimals` digits.
+
+        Arguments
+            decimals: Number of decimals to round by.
+
+        Notes:
+            For values exactly halfway between rounded decimal values pandas and Polars behave differently.
+
+            pandas rounds to the nearest even value (e.g. -0.5 and 0.5 round to 0.0, 1.5 and 2.5 round to 2.0, 3.5 and
+            4.5 to 4.0, etc..).
+
+            Polars rounds away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1.12345, 2.56789, 3.901234]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            Let's define a dataframe-agnostic function that rounds to the first decimal:
+
+            >>> @nw.narwhalify(allow_series=True)
+            ... def func(s):
+            ...     return s.round(1)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0    1.1
+            1    2.6
+            2    3.9
+            dtype: float64
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [f64]
+            [
+               1.1
+               2.6
+               3.9
+            ]
+        """
+        return self._from_series(self._series.round(decimals))
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
