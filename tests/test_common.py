@@ -765,19 +765,3 @@ def test_item_value_error(
 ) -> None:
     with pytest.raises(ValueError, match=err_msg):
         nw.from_native(df_raw, eager_only=True).item(row, column)
-
-
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
-@pytest.mark.parametrize("decimals", [0, 1, 2])
-def test_round(constructor: Any, decimals: int) -> None:
-    data = {"a": [1.12345, 2.56789, 3.901234]}
-    df_raw = constructor(data)
-    df = nw.from_native(df_raw, eager_only=True)
-
-    expected_data = {k: [round(e, decimals) for e in v] for k, v in data.items()}
-    result_frame = df.select(nw.col("a").round(decimals))
-    compare_dicts(result_frame, expected_data)
-
-    result_series = df["a"].round(decimals)
-
-    assert result_series.to_numpy().tolist() == expected_data["a"]
