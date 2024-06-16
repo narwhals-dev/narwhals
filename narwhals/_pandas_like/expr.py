@@ -294,7 +294,7 @@ class PandasExpr:
     def tail(self, n: int) -> Self:
         return reuse_series_implementation(self, "tail", n)
 
-    def round(self: Self, decimals: int = 0) -> Self:
+    def round(self: Self, decimals: int) -> Self:
         return reuse_series_implementation(self, "round", decimals)
 
     @property
