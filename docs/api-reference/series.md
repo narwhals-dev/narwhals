@@ -32,6 +32,7 @@
         - null_count
         - n_unique
         - quantile
+        - round
         - sample
         - shape
         - shift

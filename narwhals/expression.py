@@ -1519,6 +1519,49 @@ class Expr:
 
         return self.__class__(lambda plx: self._call(plx).tail(n))
 
+    def round(self, decimals: int = 0) -> Expr:
+        r"""
+        Round underlying floating point data by `decimals` digits.
+
+        Arguments
+            decimals: Number of decimals to round by.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1.12345, 2.56789, 3.901234]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function that rounds to the first decimal:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").round(1))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                 a
+            0  1.1
+            1  2.6
+            2  3.9
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 1.1 │
+            │ 2.6 │
+            │ 3.9 │
+            └─────┘
+        """
+
+        return self.__class__(lambda plx: self._call(plx).round(decimals))
+
     @property
     def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)

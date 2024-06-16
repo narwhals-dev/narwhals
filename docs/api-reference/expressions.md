@@ -28,6 +28,7 @@
         - n_unique
         - over
         - quantile
+        - round
         - sample
         - shift
         - sort
