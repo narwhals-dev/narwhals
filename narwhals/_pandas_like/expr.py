@@ -307,6 +307,14 @@ class PandasExprStringNamespace:
     def __init__(self, expr: PandasExpr) -> None:
         self._expr = expr
 
+    def starts_with(self, prefix: str) -> PandasExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "starts_with",
+            prefix,
+        )
+
     def ends_with(self, suffix: str) -> PandasExpr:
         return reuse_series_namespace_implementation(
             self._expr,
@@ -324,12 +332,9 @@ class PandasExprStringNamespace:
             literal=literal,
         )
 
-    def head(self, n: int = 5) -> PandasExpr:
+    def slice(self, offset: int, length: int | None = None) -> PandasExpr:
         return reuse_series_namespace_implementation(
-            self._expr,
-            "str",
-            "head",
-            n,
+            self._expr, "str", "slice", offset, length
         )
 
     def to_datetime(self, format: str | None = None) -> PandasExpr:  # noqa: A002
