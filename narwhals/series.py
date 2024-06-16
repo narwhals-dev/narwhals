@@ -1714,6 +1714,14 @@ class Series:
         Arguments
             decimals: Number of decimals to round by.
 
+        Notes:
+            For values exactly halfway between rounded decimal values pandas and Polars behave differently.
+
+            pandas rounds to the nearest even value (e.g. -0.5 and 0.5 round to 0.0, 1.5 and 2.5 round to 2.0, 3.5 and
+            4.5 to 4.0, etc..).
+
+            Polars rounds towards the larger integer (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
