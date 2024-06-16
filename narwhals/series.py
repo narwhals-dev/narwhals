@@ -1847,12 +1847,86 @@ class SeriesStringNamespace:
             self._series._series.str.contains(pattern, literal=literal)
         )
 
+    def slice(self, offset: int, length: int | None = None) -> Series:
+        r"""
+        Create subslices of the string values of a Series.
+
+        Arguments:
+            offset: Start index. Negative indexing is supported.
+            length: Length of the slice. If set to `None` (default), the slice is taken to the
+                end of the string.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["pear", None, "papaya", "dragonfruit"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.str.slice(4, length=3)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0
+            1    None
+            2      ya
+            3     onf
+            dtype: object
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [str]
+            [
+               ""
+               null
+               "ya"
+               "onf"
+            ]
+
+            Using negative indexes:
+
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.str.slice(-3)
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0     ear
+            1    None
+            2     aya
+            3     uit
+            dtype: object
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [str]
+            [
+                "ear"
+                null
+                "aya"
+                "uit"
+            ]
+        """
+        return self._series.__class__(
+            self._series._series.str.slice(offset=offset, length=length)
+        )
+
     def head(self, n: int = 5) -> Series:
         r"""
         Take the first n elements of each string.
 
         Arguments:
-            n: Number of elements to take.
+            n: Number of elements to take. Negative indexing is supported (see note (1.))
+
+        Notes:
+            1. When the `n` input is negative, `head` returns characters up to the n-th from the end of the string.
+                For example, if `n = -3`, then all characters except the last three are returned.
+            2. If the length of the string has fewer than `n` characters, the full string is returned.
 
         Examples:
             >>> import pandas as pd
@@ -1886,16 +1960,19 @@ class SeriesStringNamespace:
                "zukky"
             ]
         """
-        if self._series._is_polars:
-            return self._series.__class__(self._series._series.str.slice(0, n))
-        return self._series.__class__(self._series._series.str.head(n))
+        return self._series.__class__(self._series._series.str.slice(0, n))
 
     def tail(self, n: int = 5) -> Series:
         r"""
         Take the last n elements of each string.
 
         Arguments:
-            n: Number of elements to take.
+            n: Number of elements to take. Negative indexing is supported (see note (1.))
+
+        Notes:
+            1. When the `n` input is negative, `tail` returns characters starting from the n-th from the beginning of
+                the string. For example, if `n = -3`, then all characters except the first three are returned.
+            2. If the length of the string has fewer than `n` characters, the full string is returned.
 
         Examples:
             >>> import pandas as pd
@@ -1929,7 +2006,7 @@ class SeriesStringNamespace:
                "kkyun"
             ]
         """
-        return self._series.__class__(self._series._series.str.tail(n))
+        return self._series.__class__(self._series._series.str.slice(-n))
 
 
 class SeriesDateTimeNamespace:

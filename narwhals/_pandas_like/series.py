@@ -528,14 +528,10 @@ class PandasSeriesStringNamespace:
             self._series._series.str.contains(pat=pattern, regex=not literal)
         )
 
-    def head(self, n: int) -> PandasSeries:
+    def slice(self, offset: int, length: int | None = None) -> PandasSeries:
+        stop = offset + length if length else None
         return self._series._from_series(
-            self._series._series.str[:n],
-        )
-
-    def tail(self, n: int) -> PandasSeries:
-        return self._series._from_series(
-            self._series._series.str[-n:],
+            self._series._series.str.slice(start=offset, stop=stop),
         )
 
     def to_datetime(self, format: str | None = None) -> PandasSeries:  # noqa: A002
