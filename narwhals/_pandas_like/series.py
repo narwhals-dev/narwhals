@@ -500,7 +500,7 @@ class PandasSeries:
     def tail(self: Self, n: int) -> Self:
         return self._from_series(self._series.tail(n))
 
-    def round(self: Self, decimals: int = 0) -> Self:
+    def round(self: Self, decimals: int) -> Self:
         return self._from_series(self._series.round(decimals=decimals))
 
     @property
