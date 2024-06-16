@@ -1809,7 +1809,7 @@ class SeriesStringNamespace:
             literal: If True, treats the pattern as a literal string.
                      If False, assumes the pattern is a regular expression.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
@@ -1832,6 +1832,7 @@ class SeriesStringNamespace:
             3     True
             4     None
             dtype: object
+
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (5,)
             Series: '' [bool]

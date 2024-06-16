@@ -1673,7 +1673,6 @@ class ExprStringNamespace:
             │ dove              ┆ false         ┆ true                   ┆ false         │
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
-
         """
 
         return self._expr.__class__(
