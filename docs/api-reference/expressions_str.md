@@ -7,6 +7,7 @@
         - contains
         - ends_with
         - head
+        - slice
         - starts_with
         - tail
         - to_datetime
