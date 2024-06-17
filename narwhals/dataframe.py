@@ -188,7 +188,7 @@ class BaseFrame:
             left_on: str | list[str],
             right_on: str | list[str],
     ) -> Self:
-        validate_same_library([slef, other])
+        validate_same_library([self, other])
         return self._from_dataframe(
             self._dataframe.join(
                 self._extract_native(other),
