@@ -167,16 +167,32 @@ class PandasDataFrame:
 
     def with_columns(
         self,
-        *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+        *exprs: IntoPandasExpr,
         **named_exprs: IntoPandasExpr,
     ) -> Self:
+        index = self._dataframe.index
+        fast_path = True
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        df = self._dataframe.assign(
-            **{
-                series.name: validate_dataframe_comparand(self._dataframe.index, series)
-                for series in new_series
-            }
-        )
+        if not all(s.len() == len(self._dataframe) for s in new_series):
+            fast_path = False
+
+        if fast_path:
+            new_names = [s.name for s in new_series]
+            df = horizontal_concat(
+                [
+                    *[
+                        self._dataframe.loc[:, s]
+                        for s in self._dataframe.columns
+                        if s not in new_names
+                    ],
+                    *[validate_dataframe_comparand(index, s) for s in new_series],
+                ],
+                implementation=self._implementation,
+            )
+        else:
+            df = self._dataframe.assign(
+                **{s.name: validate_dataframe_comparand(index, s) for s in new_series}
+            )
         return self._from_dataframe(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:

@@ -24,6 +24,15 @@ def test_maybe_align_index_pandas() -> None:
     assert_frame_equal(nw.to_native(result), expected)
 
 
+def test_with_columns_sort() -> None:
+    # Check that, unlike in pandas, we don't change the index
+    # when sorting
+    df = nw.from_native(pd.DataFrame({"a": [2, 1, 3]}))
+    result = df.with_columns(a_sorted=nw.col("a").sort()).pipe(nw.to_native)
+    expected = pd.DataFrame({"a": [2, 1, 3], "a_sorted": [1, 2, 3]})
+    assert_frame_equal(result, expected)
+
+
 def test_non_unique_index() -> None:
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0]))
     s = nw.from_native(pd.Series([1, 2, 3], index=[2, 2, 0]), series_only=True)
