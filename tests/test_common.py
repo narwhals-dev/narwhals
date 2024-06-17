@@ -770,5 +770,7 @@ def test_item_value_error(
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_with_columns_order(df_raw: Any) -> None:
     df = nw.from_native(df_raw)
-    df = df.with_columns(nw.col("a") + 1)
-    assert df.columns == ["a", "b", "z"]
+    result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
+    assert result.columns == ["a", "b", "z", "d"]
+    expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8, 9], "d": [0, 2, 1]}
+    compare_dicts(result, expected)
