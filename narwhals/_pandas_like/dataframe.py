@@ -175,7 +175,7 @@ class PandasDataFrame:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         # If the inputs are all Series (and not scalars), we can use
         # a fast path (concat, instead of assign)
-        fast_path = all(s.len() == len(self._dataframe) for s in new_series)
+        fast_path = all(s.len() > 1 for s in new_series)
 
         if fast_path:
             new_names = {s.name: s for s in new_series}
