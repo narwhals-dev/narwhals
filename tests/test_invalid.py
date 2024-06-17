@@ -37,5 +37,5 @@ def test_memmap() -> None:
     x = nw.from_native(x_any)
     x = x.with_columns(y=nw.from_native(y_any, series_only=True))
 
-    check_X_y(nw.to_native(x), nw.to_native(x["y"]))
+    # check this doesn't raise
     check_X_y(nw.to_native(x), nw.to_native(x["y"]))
