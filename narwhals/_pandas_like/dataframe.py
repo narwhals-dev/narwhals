@@ -173,8 +173,9 @@ class PandasDataFrame:
         index = self._dataframe.index
         fast_path = True
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        if not all(s.len() == len(self._dataframe) for s in new_series):
-            fast_path = False
+        # If the inputs are all Series (and not scalars), we can use
+        # a fast path (concat, instead of assign)
+        fast_path = all(s.len() == len(self._dataframe) for s in new_series)
 
         if fast_path:
             new_names = [s.name for s in new_series]
