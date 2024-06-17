@@ -765,3 +765,10 @@ def test_item_value_error(
 ) -> None:
     with pytest.raises(ValueError, match=err_msg):
         nw.from_native(df_raw, eager_only=True).item(row, column)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_with_columns_order(df_raw: Any) -> None:
+    df = nw.from_native(df_raw)
+    df = df.with_columns(nw.col("a") + 1)
+    assert df.columns == ["a", "b", "z"]

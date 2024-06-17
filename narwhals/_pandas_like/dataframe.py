@@ -178,16 +178,22 @@ class PandasDataFrame:
         fast_path = all(s.len() == len(self._dataframe) for s in new_series)
 
         if fast_path:
-            new_names = [s.name for s in new_series]
+            new_names = {s.name: s for s in new_series}
+            to_concat = []
+            # Make sure to preserve column order
+            for s in self._dataframe.columns:
+                if s in new_names:
+                    to_concat.append(
+                        validate_dataframe_comparand(index, new_names.pop(s))
+                    )
+                else:
+                    to_concat.append(self._dataframe.loc[:, s])
+            to_concat.extend(
+                validate_dataframe_comparand(index, new_names[s]) for s in new_names
+            )
+
             df = horizontal_concat(
-                [
-                    *[
-                        self._dataframe.loc[:, s]
-                        for s in self._dataframe.columns
-                        if s not in new_names
-                    ],
-                    *[validate_dataframe_comparand(index, s) for s in new_series],
-                ],
+                to_concat,
                 implementation=self._implementation,
             )
         else:
