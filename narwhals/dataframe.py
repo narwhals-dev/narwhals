@@ -180,13 +180,13 @@ class BaseFrame:
                 right_on=right_on,
             )
         )
-    
+
     def left_join(
-            self,
-            other: Self,
-            *,
-            left_on: str | list[str],
-            right_on: str | list[str],
+        self,
+        other: Self,
+        *,
+        left_on: str | list[str],
+        right_on: str | list[str],
     ) -> Self:
         validate_same_library([slef, other])
         return self._from_dataframe(
@@ -194,7 +194,7 @@ class BaseFrame:
                 self._extract_native(other),
                 how="left",
                 left_on=left_on,
-                right_on=right_on
+                right_on=right_on,
             )
         )
 
