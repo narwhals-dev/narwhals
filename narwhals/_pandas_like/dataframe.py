@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import Literal
 from typing import overload
 
+from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import evaluate_into_exprs
 from narwhals._pandas_like.utils import horizontal_concat
@@ -170,8 +171,6 @@ class PandasDataFrame:
         *exprs: IntoPandasExpr,
         **named_exprs: IntoPandasExpr,
     ) -> Self:
-        from narwhals._pandas_like.expr import PandasExpr
-
         index = self._dataframe.index
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         # If the inputs are all Expressions which return full columns
