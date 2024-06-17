@@ -173,12 +173,12 @@ class PandasDataFrame:
         from narwhals._pandas_like.expr import PandasExpr
 
         index = self._dataframe.index
-        fast_path = True
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        # If the inputs are all Series (and not scalars), we can use
-        # a fast path (concat, instead of assign).
-        # Only use fastpath if all inputs are expressions
-        # (todo: reproduce scikit-learn failure)
+        # If the inputs are all Expressions which return full columns
+        # (as opposed to scalars), we can use a fast path (concat, instead of assign).
+        # We can't use the fastpath if any input is not an expression (e.g.
+        # if it's a Series) because then we might be changing its flags.
+        # See `test_memmap` for an example of where this is necessary.
         fast_path = (
             all(s.len() > 1 for s in new_series)
             and all(isinstance(x, PandasExpr) for x in exprs)
