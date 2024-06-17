@@ -170,12 +170,20 @@ class PandasDataFrame:
         *exprs: IntoPandasExpr,
         **named_exprs: IntoPandasExpr,
     ) -> Self:
+        from narwhals._pandas_like.expr import PandasExpr
+
         index = self._dataframe.index
         fast_path = True
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         # If the inputs are all Series (and not scalars), we can use
-        # a fast path (concat, instead of assign)
-        fast_path = all(s.len() > 1 for s in new_series)
+        # a fast path (concat, instead of assign).
+        # Only use fastpath if all inputs are expressions
+        # (todo: reproduce scikit-learn failure)
+        fast_path = (
+            all(s.len() > 1 for s in new_series)
+            and all(isinstance(x, PandasExpr) for x in exprs)
+            and all(isinstance(x, PandasExpr) for (_, x) in named_exprs.items())
+        )
 
         if fast_path:
             new_names = {s.name: s for s in new_series}
