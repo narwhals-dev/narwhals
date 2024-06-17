@@ -180,13 +180,13 @@ class BaseFrame:
                 right_on=right_on,
             )
         )
-    
+
     def left_join(
-            self,
-            other: Self,
-            *,
-            left_on: str | list[str],
-            right_on: str | list[str],
+        self,
+        other: Self,
+        *,
+        left_on: str | list[str],
+        right_on: str | list[str],
     ) -> Self:
         validate_same_library([self, other])
         return self._from_dataframe(
@@ -197,7 +197,8 @@ class BaseFrame:
                 right_on=right_on,
             )
         )
-    
+
+
 class DataFrame(BaseFrame):
     r"""
     Two-dimensional data structure representing data as a table with rows and columns.
