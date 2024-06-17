@@ -6,3 +6,5 @@ pyarrow
 pytest
 pytest-cov
 hypothesis
+scikit-learn
+
