@@ -180,7 +180,8 @@ class BaseFrame:
                 right_on=right_on,
             )
         )
-    
+
+
 class DataFrame(BaseFrame):
     r"""
     Two-dimensional data structure representing data as a table with rows and columns.
