@@ -752,7 +752,6 @@ class DataFrame(BaseFrame):
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.select(["foo", "bar"])
-
             >>> func(df_pd)
             foo  bar
             0    1    6
@@ -776,7 +775,6 @@ class DataFrame(BaseFrame):
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.select(nw.col("foo"), nw.col("bar") + 1)
-
             >>> func(df_pd)
             foo  bar
             0    1    7
@@ -799,7 +797,6 @@ class DataFrame(BaseFrame):
             >>> @nw.narwhalify
             ... def func(df):
             ...     return df.select(threshold=nw.col("foo") * 2)
-
             >>> func(df_pd)
             threshold
             0          2
