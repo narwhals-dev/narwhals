@@ -71,6 +71,7 @@ df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
         ),
     ],
 )
+@pytest.mark.filterwarnings("ignore::FutureWarning")
 def test_rows(
     df_raw: Any,
     named: bool,  # noqa: FBT001
