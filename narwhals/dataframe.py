@@ -165,34 +165,17 @@ class BaseFrame:
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
+        how: Literal["inner", "left"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
-        if how != "inner":
-            raise NotImplementedError("Only inner joins are supported for now")
+        if how not in ["inner", "left"]:
+            raise NotImplementedError(f"{how} joins is not supported for now")
         validate_same_library([self, other])
         return self._from_dataframe(
             self._dataframe.join(
                 self._extract_native(other),
                 how=how,
-                left_on=left_on,
-                right_on=right_on,
-            )
-        )
-    
-    def left_join(
-            self,
-            other: Self,
-            *,
-            left_on: str | list[str],
-            right_on: str | list[str],
-    ) -> Self:
-        validate_same_library([self, other])
-        return self._from_dataframe(
-            self._dataframe.join(
-                self._extract_native(other),
-                how="left",
                 left_on=left_on,
                 right_on=right_on,
             )
