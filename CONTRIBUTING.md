@@ -66,3 +66,10 @@ If Narwhals looks like underwater unicorn magic to you, then please read
 ## Happy contributing!
 
 Please remember to abide by the code of conduct, else you'll be conducted away from this project.
+
+## Community Calendar
+
+We have a community call every 2 weeks, all welcome to attend.
+
+[Subscribe to our calendar](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com&ctz=Europe%2FLondon).
+
