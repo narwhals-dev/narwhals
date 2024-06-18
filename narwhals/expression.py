@@ -3090,7 +3090,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.select(nw.lit(3).alias("b"))
+        ...     return df.with_columns(nw.lit(3).alias("b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -3103,7 +3103,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         ┌─────┬─────┐
         │ a   ┆ b   │
         │ --- ┆ --- │
-        │ i64 ┆ i64 │
+        │ i64 ┆ i32 │
         ╞═════╪═════╡
         │ 1   ┆ 3   │
         │ 2   ┆ 3   │
