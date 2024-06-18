@@ -314,6 +314,39 @@ def test_columns(df_raw: Any) -> None:
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_mpd, df_polars]
+)
+@pytest.mark.parametrize(
+    ("named", "expected"),
+    [
+        (False, [(1, 4, 7.0), (3, 4, 8.0), (2, 6, 9.0)]),
+        (
+            True,
+            [
+                {"a": 1, "b": 4, "z": 7.0},
+                {"a": 3, "b": 4, "z": 8.0},
+                {"a": 2, "b": 6, "z": 9.0},
+            ],
+        ),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
+def test_rows(
+    df_raw: Any,
+    named: bool,  # noqa: FBT001
+    expected: list[tuple[Any, ...]] | list[dict[str, Any]],
+) -> None:
+    # GIVEN
+    df = nw.DataFrame(df_raw)
+
+    # WHEN
+    result = df.rows(named=named)
+
+    # THEN
+    assert result == expected
+
+
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
 def test_lazy_instantiation(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw)

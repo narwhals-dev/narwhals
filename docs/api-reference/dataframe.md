@@ -19,6 +19,7 @@
         - null_count
         - pipe
         - rename
+        - rows
         - schema
         - select
         - shape

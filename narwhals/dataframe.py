@@ -628,6 +628,42 @@ class DataFrame(BaseFrame):
         """
         return super().columns
 
+    def rows(
+        self, *, named: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        """
+        Returns all data in the DataFrame as a list of rows of python-native values.
+
+        By default, each row is returned as a tuple of values given in the same order
+        as the frame columns. Setting named=True will return rows of dictionaries instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any, named):
+            ...     df = nw.from_native(df_any)
+            ...     return df.rows(named=named)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd, False)
+            [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
+            >>> func(df_pd, True)
+            [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
+            >>> func(df_pl, False)
+            [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
+            >>> func(df_pl, True)
+            [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
+        """
+        return self._dataframe.rows(named=named)  # type: ignore[no-any-return]
+
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
