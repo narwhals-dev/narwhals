@@ -108,6 +108,31 @@ class PandasNamespace:
             implementation=self._implementation,
         )
 
+    def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasExpr:
+        def safe_cast(s: PandasSeries) -> PandasSeries:
+            return s.cast(dtype) if dtype else s
+
+        return PandasExpr(
+            lambda df: [
+                safe_cast(
+                    PandasSeries(
+                        series_from_iterable(
+                            [value for _ in range(len(df._dataframe))],
+                            name="lit",
+                            index=df._dataframe.index,
+                            implementation=self._implementation,
+                        ),
+                        implementation=self._implementation,
+                    )
+                ),
+            ],
+            depth=0,
+            function_name="lit",
+            root_names=None,
+            output_names=["lit"],
+            implementation=self._implementation,
+        )
+
     # --- reduction ---
     def sum(self, *column_names: str) -> PandasExpr:
         return PandasExpr.from_column_names(
