@@ -731,7 +731,7 @@ class DataFrame(BaseFrame):
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-            foo
+               foo
             0    1
             1    2
             2    3
@@ -753,7 +753,7 @@ class DataFrame(BaseFrame):
             ... def func(df):
             ...     return df.select(["foo", "bar"])
             >>> func(df_pd)
-            foo  bar
+               foo  bar
             0    1    6
             1    2    7
             2    3    8
@@ -776,7 +776,7 @@ class DataFrame(BaseFrame):
             ... def func(df):
             ...     return df.select(nw.col("foo"), nw.col("bar") + 1)
             >>> func(df_pd)
-            foo  bar
+               foo  bar
             0    1    7
             1    2    8
             2    3    9
@@ -798,7 +798,7 @@ class DataFrame(BaseFrame):
             ... def func(df):
             ...     return df.select(threshold=nw.col("foo") * 2)
             >>> func(df_pd)
-            threshold
+               threshold
             0          2
             1          4
             2          6
