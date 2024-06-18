@@ -647,19 +647,19 @@ class DataFrame(BaseFrame):
 
             We define a library agnostic function:
 
-            >>> def func(df_any, named):
+            >>> def func(df_any, *, named):
             ...     df = nw.from_native(df_any)
             ...     return df.rows(named=named)
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd, False)
+            >>> func(df_pd, named=False)
             [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
-            >>> func(df_pd, True)
+            >>> func(df_pd, named=True)
             [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
-            >>> func(df_pl, False)
+            >>> func(df_pl, named=False)
             [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
-            >>> func(df_pl, True)
+            >>> func(df_pl, named=True)
             [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
         """
         return self._dataframe.rows(named=named)  # type: ignore[no-any-return]
