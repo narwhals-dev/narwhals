@@ -375,11 +375,7 @@ class PandasSeries:
         return self._from_series(ser.sample(n=n, frac=fraction, replace=with_replacement))
 
     def cum_sum(self) -> PandasSeries:
-        return self._from_series(
-            self._series.__class__(
-                self._series.cumsum(), dtype=self._series.dtype, name=self._series.name
-            )
-        )
+        return self._from_series(self._series.cumsum())
 
     def unique(self) -> PandasSeries:
         return self._from_series(
@@ -387,14 +383,10 @@ class PandasSeries:
         )
 
     def diff(self) -> PandasSeries:
-        return self._from_series(
-            self._series.__class__(self._series.diff(), name=self._series.name)
-        )
+        return self._from_series(self._series.diff())
 
     def shift(self, n: int) -> PandasSeries:
-        return self._from_series(
-            self._series.__class__(self._series.shift(n), name=self._series.name)
-        )
+        return self._from_series(self._series.shift(n))
 
     def sort(
         self,
