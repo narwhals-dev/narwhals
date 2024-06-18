@@ -66,6 +66,7 @@ def _get_deps_info() -> dict[str, str]:
         "pandas",
         "polars",
         "pyarrow",
+        "scikit-learn",
     ]
 
     from . import __version__
@@ -91,7 +92,7 @@ def show_versions() -> None:
 
     Examples:
 
-        >>> from narwhals.utils import show_versions  # doctest:+SKIP
+        >>> from narwhals import show_versions
         >>> show_versions()  # doctest:+SKIP
     """
 
