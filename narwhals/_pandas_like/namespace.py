@@ -112,9 +112,9 @@ class PandasNamespace:
         def _lit_pandas_series(df: PandasDataFrame) -> PandasSeries:
             pandas_series = PandasSeries(
                 series_from_iterable(
-                    [value for _ in range(len(df._dataframe.index))],
+                    [value],
                     name="lit",
-                    index=df._dataframe.index,
+                    index=df._dataframe.index[0:1],
                     implementation=self._implementation,
                 ),
                 implementation=self._implementation,
