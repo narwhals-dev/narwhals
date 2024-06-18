@@ -331,7 +331,6 @@ def test_columns(df_raw: Any) -> None:
         ),
     ],
 )
-@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_rows(
     df_raw: Any,
     named: bool,  # noqa: FBT001
