@@ -285,6 +285,8 @@ def test_join(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
+# todo: https://github.com/narwhals-dev/narwhals/issues/313
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
@@ -303,6 +305,8 @@ def test_schema(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
+# todo: https://github.com/narwhals-dev/narwhals/issues/313
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.columns
@@ -765,3 +769,22 @@ def test_item_value_error(
 ) -> None:
     with pytest.raises(ValueError, match=err_msg):
         nw.from_native(df_raw, eager_only=True).item(row, column)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_with_columns_order(df_raw: Any) -> None:
+    df = nw.from_native(df_raw)
+    result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
+    assert result.columns == ["a", "b", "z", "d"]
+    expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8, 9], "d": [0, 2, 1]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_with_columns_order_single_row(df_raw: Any) -> None:
+    df = nw.from_native(df_raw[:1])
+    assert len(df) == 1
+    result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
+    assert result.columns == ["a", "b", "z", "d"]
+    expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
+    compare_dicts(result, expected)
