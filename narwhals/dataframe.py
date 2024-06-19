@@ -710,25 +710,32 @@ class DataFrame(BaseFrame):
                             The columns will be renamed to the keyword used.
 
         Examples:
-            Pass the name of a column to select that column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> dframe = df.select("foo")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6, 7, 8],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            Let's define a dataframe-agnostic function in which we pass the name of a
+            column to select that column.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select("foo")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo
+            0    1
+            1    2
+            2    3
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ foo │
@@ -742,13 +749,15 @@ class DataFrame(BaseFrame):
 
             Multiple columns can be selected by passing a list of column names.
 
-            >>> dframe = df.select(["foo", "bar"])
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(["foo", "bar"])
+            >>> func(df_pd)
+               foo  bar
+            0    1    6
+            1    2    7
+            2    3    8
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -763,13 +772,15 @@ class DataFrame(BaseFrame):
             Multiple columns can also be selected using positional arguments instead of a
             list. Expressions are also accepted.
 
-            >>> dframe = df.select(nw.col("foo"), nw.col("bar") + 1)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("foo"), nw.col("bar") + 1)
+            >>> func(df_pd)
+               foo  bar
+            0    1    7
+            1    2    8
+            2    3    9
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -783,13 +794,15 @@ class DataFrame(BaseFrame):
 
             Use keyword arguments to easily name your expression inputs.
 
-            >>> dframe = df.select(threshold=nw.col("foo") * 2)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(threshold=nw.col("foo") * 2)
+            >>> func(df_pd)
+               threshold
+            0          2
+            1          4
+            2          6
+            >>> func(df_pl)
             shape: (3, 1)
             ┌───────────┐
             │ threshold │
@@ -1940,25 +1953,44 @@ class LazyFrame(BaseFrame):
                             The columns will be renamed to the keyword used.
 
         Examples:
-            Pass the name of a column to select that column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.select("foo").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> df = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6, 7, 8],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+            >>> lf_pl = pl.LazyFrame(df)
+
+            Let's define a dataframe-agnostic function in which we pass the name of a
+            column to select that column.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select("foo")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo
+            0    1
+            1    2
+            2    3
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ foo │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+            >>> func(lf_pl).collect()
             shape: (3, 1)
             ┌─────┐
             │ foo │
@@ -1972,13 +2004,26 @@ class LazyFrame(BaseFrame):
 
             Multiple columns can be selected by passing a list of column names.
 
-            >>> lframe = lf.select(["foo", "bar"]).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(["foo", "bar"])
+            >>> func(df_pd)
+               foo  bar
+            0    1    6
+            1    2    7
+            2    3    8
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 6   │
+            │ 2   ┆ 7   │
+            │ 3   ┆ 8   │
+            └─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -1993,13 +2038,26 @@ class LazyFrame(BaseFrame):
             Multiple columns can also be selected using positional arguments instead of a
             list. Expressions are also accepted.
 
-            >>> lframe = lf.select(nw.col("foo"), nw.col("bar") + 1).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("foo"), nw.col("bar") + 1)
+            >>> func(df_pd)
+               foo  bar
+            0    1    7
+            1    2    8
+            2    3    9
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 7   │
+            │ 2   ┆ 8   │
+            │ 3   ┆ 9   │
+            └─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -2013,13 +2071,26 @@ class LazyFrame(BaseFrame):
 
             Use keyword arguments to easily name your expression inputs.
 
-            >>> lframe = lf.select(threshold=nw.col("foo") * 2).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(threshold=nw.col("foo") * 2)
+            >>> func(df_pd)
+               threshold
+            0          2
+            1          4
+            2          6
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌───────────┐
+            │ threshold │
+            │ ---       │
+            │ i64       │
+            ╞═══════════╡
+            │ 2         │
+            │ 4         │
+            │ 6         │
+            └───────────┘
+            >>> func(lf_pl).collect()
             shape: (3, 1)
             ┌───────────┐
             │ threshold │
