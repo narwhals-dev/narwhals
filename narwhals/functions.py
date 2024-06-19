@@ -41,6 +41,8 @@ def _get_sys_info() -> dict[str, str]:
 
     Returns system and Python version information
 
+    Copied from sklearn
+
     """
     python = sys.version.replace("\n", " ")
 
@@ -61,11 +63,18 @@ def _get_deps_info() -> dict[str, str]:
 
     Returns version information on relevant Python libraries
 
+    This function and show_versions were copied from sklearn and adapted
+
     """
     deps = [
+        "covdefaults",
         "pandas",
         "polars",
+        "pre-commit",
         "pyarrow",
+        "pytest",
+        "pytest-cov",
+        "hypothesis",
         "scikit-learn",
     ]
 

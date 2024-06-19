@@ -12,8 +12,11 @@ import polars as pl
 import pytest
 from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
+from sklearn.utils._testing import ignore_warnings
 
 import narwhals as nw
+from narwhals.functions import _get_deps_info
+from narwhals.functions import _get_sys_info
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
@@ -788,3 +791,27 @@ def test_with_columns_order_single_row(df_raw: Any) -> None:
     assert result.columns == ["a", "b", "z", "d"]
     expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
     compare_dicts(result, expected)
+
+
+def test_get_sys_info() -> None:
+    with ignore_warnings():
+        sys_info = _get_sys_info()
+
+    assert "python" in sys_info
+    assert "executable" in sys_info
+    assert "machine" in sys_info
+
+
+def test_get_deps_info() -> None:
+    with ignore_warnings():
+        deps_info = _get_deps_info()
+
+    assert "covdefaults" in deps_info
+    assert "pandas" in deps_info
+    assert "polars" in deps_info
+    assert "pre-commit" in deps_info
+    assert "pyarrow" in deps_info
+    assert "pytest" in deps_info
+    assert "pytest-cov" in deps_info
+    assert "hypothesis" in deps_info
+    assert "scikit-learn" in deps_info
