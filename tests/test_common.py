@@ -250,6 +250,17 @@ def test_lit(df_raw: Any, dtype: dtypes.DType | None, expected_lit: list[Any]) -
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
+def test_lit_valuerror_numpy(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    with pytest.raises(
+        ValueError, match="numpy arrays are not supported as literal values"
+    ):
+        _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))
+
+
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
 def test_double_selected(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.select(nw.col("a", "b") * 2)

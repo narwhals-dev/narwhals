@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
 from narwhals.dtypes import DType
 from narwhals.dtypes import translate_dtype
@@ -3110,6 +3111,12 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         └─────┴─────┘
 
     """
+    if (np := get_numpy()) is not None and isinstance(value, np.ndarray):
+        raise ValueError(
+            "numpy arrays are not supported as literal values. "
+            "Consider using `with_columns` to create a new column from the array."
+        )
+
     if dtype is None:
         return Expr(lambda plx: plx.lit(value, dtype))
     return Expr(lambda plx: plx.lit(value, translate_dtype(plx, dtype)))
