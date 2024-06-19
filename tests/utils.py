@@ -21,7 +21,11 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
         for key in result.columns:
             assert key in expected
     for key in expected:
-        for lhs, rhs in zip_longest(result[key], expected[key]):
+        result_key = (
+            result[key].to_list() if hasattr(result[key], "to_list") else result[key]
+        )
+
+        for lhs, rhs in zip_longest(result_key, expected[key]):
             if isinstance(lhs, float) and not math.isnan(lhs):
                 assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
             elif isinstance(lhs, float) and math.isnan(lhs):
