@@ -17,6 +17,7 @@ from sklearn.utils._testing import ignore_warnings
 import narwhals as nw
 from narwhals.functions import _get_deps_info
 from narwhals.functions import _get_sys_info
+from narwhals.functions import show_versions
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
@@ -806,8 +807,8 @@ def test_get_deps_info() -> None:
     with ignore_warnings():
         deps_info = _get_deps_info()
 
+    assert "narwhals" in deps_info
     assert "covdefaults" in deps_info
-    assert "pandas" in deps_info
     assert "polars" in deps_info
     assert "pre-commit" in deps_info
     assert "pyarrow" in deps_info
@@ -815,3 +816,10 @@ def test_get_deps_info() -> None:
     assert "pytest-cov" in deps_info
     assert "hypothesis" in deps_info
     assert "scikit-learn" in deps_info
+
+
+def test_show_versions(capsys: Any) -> None:
+    with ignore_warnings():
+        show_versions()
+        out, err = capsys.readouterr()
+    assert "python" in out
