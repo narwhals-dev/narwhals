@@ -822,4 +822,9 @@ def test_show_versions(capsys: Any) -> None:
     with ignore_warnings():
         show_versions()
         out, err = capsys.readouterr()
+
     assert "python" in out
+    assert "machine" in out
+    assert "covdefaults" in out
+    assert "pandas" in out
+    assert "polars" in out
