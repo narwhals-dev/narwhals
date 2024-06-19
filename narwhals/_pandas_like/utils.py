@@ -10,7 +10,6 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -52,8 +51,8 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other.item()
-        if other._series.index is not index and not (other._series.index == index).all():
-            return other._series.set_axis(index, axis=0)
+        if other._series.index is not index:
+            return set_axis(other._series, index, implementation=other._implementation)
         return other._series
     return other
 
@@ -72,7 +71,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasSeries):
         if other.len() == 1:
             # broadcast
-            return item(other._series)
+            return other._series.item()
         if other._series.index is not index and not (other._series.index == index).all():
             return other._series.set_axis(index, axis=0)
         return other._series
@@ -271,14 +270,6 @@ def reuse_series_namespace_implementation(
     )
 
 
-def item(s: Any) -> Any:
-    # cuDF doesn't have Series.item().
-    if len(s) != 1:
-        msg = "Can only convert a Series of length 1 to a scalar"  # pragma: no cover
-        raise AssertionError(msg)
-    return s.iloc[0]
-
-
 def is_simple_aggregation(expr: PandasExpr) -> bool:
     """
     Check if expr is a very simple one, such as:
@@ -373,6 +364,15 @@ def series_from_iterable(
     raise TypeError(msg)  # pragma: no cover
 
 
+def set_axis(obj: T, index: Any, implementation: str) -> T:
+    if implementation == "pandas" and parse_version(
+        get_pandas().__version__
+    ) >= parse_version("1.5.0"):
+        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
+    else:  # pragma: no cover
+        return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
+
+
 def translate_dtype(dtype: Any) -> DType:
     from narwhals import dtypes
 
@@ -405,52 +405,133 @@ def translate_dtype(dtype: Any) -> DType:
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
+    if str(dtype).startswith("timestamp["):
+        # pyarrow-backed datetime
+        # todo: different time units and time zones
+        return dtypes.Datetime()
     if dtype == "object":
         return dtypes.String()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
 
-def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
-    # Use the default pandas dtype here
-    # TODO: maybe this could be configurable?
+def get_dtype_backend(dtype: Any, implementation: str) -> str:
+    if implementation == "pandas":
+        pd = get_pandas()
+        if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
+            return "pyarrow-nullable"
+
+        try:
+            if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
+                return "pandas-nullable"
+        except AttributeError:  # pragma: no cover
+            # defensive check for old pandas versions
+            pass
+        return "numpy"
+    else:  # pragma: no cover
+        return "numpy"
+
+
+def reverse_translate_dtype(  # noqa: PLR0915
+    dtype: DType | type[DType], starting_dtype: Any, implementation: str
+) -> Any:
     from narwhals import dtypes
 
+    dtype_backend = get_dtype_backend(starting_dtype, implementation)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return "float64"
+        if dtype_backend == "pyarrow-nullable":
+            return "Float64[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "Float64"
+        else:
+            return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return "float32"
+        if dtype_backend == "pyarrow-nullable":
+            return "Float32[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "Float32"
+        else:
+            return "float32"
     if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return "int64"
+        if dtype_backend == "pyarrow-nullable":
+            return "Int64[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "Int64"
+        else:
+            return "int64"
     if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return "int32"
+        if dtype_backend == "pyarrow-nullable":
+            return "Int32[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "Int32"
+        else:
+            return "int32"
     if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return "int16"
+        if dtype_backend == "pyarrow-nullable":
+            return "Int16[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "Int16"
+        else:
+            return "int16"
     if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return "int8"
+        if dtype_backend == "pyarrow-nullable":
+            return "Int8[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "Int8"
+        else:
+            return "int8"
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return "uint64"
+        if dtype_backend == "pyarrow-nullable":
+            return "UInt64[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "UInt64"
+        else:
+            return "uint64"
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return "uint32"
+        if dtype_backend == "pyarrow-nullable":
+            return "UInt32[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "UInt32"
+        else:
+            return "uint32"
     if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        return "uint16"
+        if dtype_backend == "pyarrow-nullable":
+            return "UInt16[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "UInt16"
+        else:
+            return "uint16"
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return "uint8"
+        if dtype_backend == "pyarrow-nullable":
+            return "UInt8[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "UInt8"
+        else:
+            return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
-        pd = get_pandas()
-
-        if pd is not None and parse_version(pd.__version__) >= parse_version("2.0.0"):
-            if get_pyarrow() is not None:
-                return "string[pyarrow]"
-            return "string[python]"  # pragma: no cover
-        return "object"  # pragma: no cover
+        if dtype_backend == "pyarrow-nullable":
+            return "string[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "string"
+        else:
+            return str
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return "bool"
+        if dtype_backend == "pyarrow-nullable":
+            return "boolean[pyarrow]"
+        if dtype_backend == "pandas-nullable":
+            return "boolean"
+        else:
+            return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
+        # todo: is there no pyarrow-backed categorical?
+        # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
+        # convert to it?
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # todo: different time units and time zones
-        return "datetime64[us]"
+        if dtype_backend == "pyarrow-nullable":
+            return "timestamp[ns][pyarrow]"
+        return "datetime64[ns]"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

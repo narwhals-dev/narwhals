@@ -14,10 +14,14 @@ Here are the top-level functions available in Narwhals.
         - len
         - maybe_align_index
         - maybe_set_index
+        - maybe_convert_dtypes
         - max
         - mean
         - min
+        - narwhalify
+        - narwhalify_method
         - sum
         - sum_horizontal
+        - show_versions
         - to_native
       show_source: false

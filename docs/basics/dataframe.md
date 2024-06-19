@@ -10,7 +10,10 @@ To write a dataframe-agnostic function, the steps you'll want to follow are:
 2. Express your logic using the subset of the Polars API supported by Narwhals.
 3. If you need to return a dataframe to the user in its original library, call `nw.to_native`.
 
-Let's try writing a simple example.
+Steps 1 and 3 are so common that we provide a utility `@nw.narwhalify` decorator, which allows you
+to only explicitly write step 2.
+
+Let's explore this with some simple examples.
 
 ## Example 1: descriptive statistics
 
@@ -21,17 +24,13 @@ Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex1"
 import narwhals as nw
 
-def func(df_any):
-    # 1. Create a Narwhals dataframe
-    df = nw.from_native(df_any)
-    # 2. Use the subset of the Polars API supported by Narwhals
-    df = df.select(
+@nw.narwhalify
+def func(df):
+    return df.select(
         a_sum=nw.col('a').sum(),
         a_mean=nw.col('a').mean(),
         a_std=nw.col('a').std(),
     )
-    # 3. Return a library from the user's original library
-    return nw.to_native(df)
 ```
 Let's try it out:
 
@@ -59,6 +58,21 @@ Let's try it out:
     print(func(df).collect())
     ```
 
+Alternatively, we could have opted for the more explicit version:
+```python
+import narwhals as nw
+
+def func(df_any):
+    df = nw.from_native(df_any)
+    df = df.select(
+        a_sum=nw.col('a').sum(),
+        a_mean=nw.col('a').mean(),
+        a_std=nw.col('a').std(),
+    )
+    return nw.to_native(df)
+```
+
+In general, we think `@nw.narwhalify` is more legible, so we'll use that wherever possible.
 
 ## Example 2: group-by and mean
 
@@ -67,13 +81,9 @@ Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex2"
 import narwhals as nw
 
-def func(df_any):
-    # 1. Create a Narwhals dataframe
-    df = nw.from_native(df_any)
-    # 2. Use the subset of the Polars API supported by Narwhals
-    df = df.group_by('a').agg(nw.col('b').mean()).sort('a')
-    # 3. Return a library from the user's original library
-    return nw.to_native(df)
+@nw.narwhalify
+def func(df):
+    return df.group_by('a').agg(nw.col('b').mean()).sort('a')
 ```
 Let's try it out:
 
@@ -111,13 +121,9 @@ Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex3"
 import narwhals as nw
 
-def func(df_any):
-    # 1. Create a Narwhals dataframe
-    df = nw.from_native(df_any)
-    # 2. Use the subset of the Polars API supported by Narwhals
-    df = df.with_columns(a_plus_b=nw.sum_horizontal('a', 'b'))
-    # 3. Return a library from the user's original library
-    return nw.to_native(df)
+@nw.narwhalify
+def func(df):
+    return df.with_columns(a_plus_b=nw.sum_horizontal('a', 'b'))
 ```
 Let's try it out:
 

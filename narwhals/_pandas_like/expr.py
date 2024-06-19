@@ -288,6 +288,15 @@ class PandasExpr:
             self, "quantile", quantile, interpolation, returns_scalar=True
         )
 
+    def head(self, n: int) -> Self:
+        return reuse_series_implementation(self, "head", n)
+
+    def tail(self, n: int) -> Self:
+        return reuse_series_implementation(self, "tail", n)
+
+    def round(self: Self, decimals: int) -> Self:
+        return reuse_series_implementation(self, "round", decimals)
+
     @property
     def str(self) -> PandasExprStringNamespace:
         return PandasExprStringNamespace(self)
@@ -301,6 +310,14 @@ class PandasExprStringNamespace:
     def __init__(self, expr: PandasExpr) -> None:
         self._expr = expr
 
+    def starts_with(self, prefix: str) -> PandasExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "starts_with",
+            prefix,
+        )
+
     def ends_with(self, suffix: str) -> PandasExpr:
         return reuse_series_namespace_implementation(
             self._expr,
@@ -309,12 +326,18 @@ class PandasExprStringNamespace:
             suffix,
         )
 
-    def head(self, n: int = 5) -> PandasExpr:
+    def contains(self, pattern: str, *, literal: bool) -> PandasExpr:
         return reuse_series_namespace_implementation(
             self._expr,
             "str",
-            "head",
-            n,
+            "contains",
+            pattern,
+            literal=literal,
+        )
+
+    def slice(self, offset: int, length: int | None = None) -> PandasExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "slice", offset, length
         )
 
     def to_datetime(self, format: str | None = None) -> PandasExpr:  # noqa: A002
@@ -379,4 +402,9 @@ class PandasExprDateTimeNamespace:
     def total_nanoseconds(self) -> PandasExpr:
         return reuse_series_namespace_implementation(
             self._expr, "dt", "total_nanoseconds"
+        )
+
+    def to_string(self, format: str) -> PandasExpr:  # noqa: A002
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "to_string", format
         )

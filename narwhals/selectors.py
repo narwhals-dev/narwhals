@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from narwhals import dtypes
 from narwhals.dtypes import translate_dtype
 from narwhals.expression import Expr
 from narwhals.utils import flatten
+
+
+class Selector(Expr): ...
 
 
 def by_dtype(*dtypes: Any) -> Expr:
@@ -21,7 +23,7 @@ def by_dtype(*dtypes: Any) -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [4.1, 2.3]}
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [4.1, 2.3]}
         >>> df_pd = pd.DataFrame(data)
         >>> df_pl = pl.DataFrame(data)
 
@@ -30,7 +32,7 @@ def by_dtype(*dtypes: Any) -> Expr:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.by_dtype(nw.Int64, nw.Float64)*2)
+        ...     df = df.select(ncs.by_dtype(nw.Int64, nw.Float64) * 2)
         ...     return nw.to_native(df)
 
         We can then pass either pandas or Polars dataframes:
@@ -50,7 +52,7 @@ def by_dtype(*dtypes: Any) -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Expr(
+    return Selector(
         lambda plx: plx.selectors.by_dtype(
             [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
         )
@@ -67,7 +69,7 @@ def numeric() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [4.1, 2.3]}
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [4.1, 2.3]}
         >>> df_pd = pd.DataFrame(data)
         >>> df_pl = pl.DataFrame(data)
 
@@ -76,7 +78,7 @@ def numeric() -> Expr:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.numeric()*2)
+        ...     df = df.select(ncs.numeric() * 2)
         ...     return nw.to_native(df)
 
         We can then pass either pandas or Polars dataframes:
@@ -96,18 +98,7 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return by_dtype(
-        dtypes.Int64,
-        dtypes.Int32,
-        dtypes.Int16,
-        dtypes.Int8,
-        dtypes.UInt64,
-        dtypes.UInt32,
-        dtypes.UInt16,
-        dtypes.UInt8,
-        dtypes.Float64,
-        dtypes.Float32,
-    )
+    return Selector(lambda plx: plx.selectors.numeric())
 
 
 def boolean() -> Expr:
@@ -120,7 +111,7 @@ def boolean() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [False, True]}
         >>> df_pd = pd.DataFrame(data)
         >>> df_pl = pl.DataFrame(data)
 
@@ -149,9 +140,7 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-    return by_dtype(
-        dtypes.Boolean,
-    )
+    return Selector(lambda plx: plx.selectors.boolean())
 
 
 def string() -> Expr:
@@ -164,7 +153,7 @@ def string() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [False, True]}
         >>> df_pd = pd.DataFrame(data)
         >>> df_pl = pl.DataFrame(data)
 
@@ -193,9 +182,7 @@ def string() -> Expr:
         │ y   │
         └─────┘
     """
-    return by_dtype(
-        dtypes.String,
-    )
+    return Selector(lambda plx: plx.selectors.string())
 
 
 def categorical() -> Expr:
@@ -208,9 +195,9 @@ def categorical() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
-        >>> df_pd = pd.DataFrame(data).astype({'b': 'category'})
-        >>> df_pl = pl.DataFrame(data, schema_overrides={'b': pl.Categorical})
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [False, True]}
+        >>> df_pd = pd.DataFrame(data).astype({"b": "category"})
+        >>> df_pl = pl.DataFrame(data, schema_overrides={"b": pl.Categorical})
 
         Let's define a dataframe-agnostic function to select string
         dtypes:
@@ -237,6 +224,46 @@ def categorical() -> Expr:
         │ y   │
         └─────┘
     """
-    return by_dtype(
-        dtypes.Categorical,
-    )
+    return Selector(lambda plx: plx.selectors.categorical())
+
+
+def all() -> Expr:
+    """
+    Select all columns.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>>
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [False, True]}
+        >>> df_pd = pd.DataFrame(data).astype({"b": "category"})
+        >>> df_pl = pl.DataFrame(data, schema_overrides={"b": pl.Categorical})
+
+        Let's define a dataframe-agnostic function to select string
+        dtypes:
+
+        >>> def func(df_any):
+        ...     df = nw.from_native(df_any)
+        ...     df = df.select(ncs.all())
+        ...     return nw.to_native(df)
+
+        We can then pass either pandas or Polars dataframes:
+
+        >>> func(df_pd)
+           a  b      c
+        0  1  x  False
+        1  2  y   True
+        >>> func(df_pl)
+        shape: (2, 3)
+        ┌─────┬─────┬───────┐
+        │ a   ┆ b   ┆ c     │
+        │ --- ┆ --- ┆ ---   │
+        │ i64 ┆ cat ┆ bool  │
+        ╞═════╪═════╪═══════╡
+        │ 1   ┆ x   ┆ false │
+        │ 2   ┆ y   ┆ true  │
+        └─────┴─────┴───────┘
+    """
+    return Selector(lambda plx: plx.selectors.all())

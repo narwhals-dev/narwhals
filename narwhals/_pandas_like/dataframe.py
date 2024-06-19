@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import Literal
 from typing import overload
 
+from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import evaluate_into_exprs
 from narwhals._pandas_like.utils import horizontal_concat
@@ -127,6 +128,9 @@ class PandasDataFrame:
         **named_exprs: IntoPandasExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        if not new_series:
+            # return empty dataframe, like Polars does
+            return self._from_dataframe(self._dataframe.__class__())
         new_series = validate_indices(new_series)
         df = horizontal_concat(
             new_series,
@@ -164,16 +168,45 @@ class PandasDataFrame:
 
     def with_columns(
         self,
-        *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+        *exprs: IntoPandasExpr,
         **named_exprs: IntoPandasExpr,
     ) -> Self:
+        index = self._dataframe.index
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        df = self._dataframe.assign(
-            **{
-                series.name: validate_dataframe_comparand(self._dataframe.index, series)
-                for series in new_series
-            }
+        # If the inputs are all Expressions which return full columns
+        # (as opposed to scalars), we can use a fast path (concat, instead of assign).
+        # We can't use the fastpath if any input is not an expression (e.g.
+        # if it's a Series) because then we might be changing its flags.
+        # See `test_memmap` for an example of where this is necessary.
+        fast_path = (
+            all(s.len() > 1 for s in new_series)
+            and all(isinstance(x, PandasExpr) for x in exprs)
+            and all(isinstance(x, PandasExpr) for (_, x) in named_exprs.items())
         )
+
+        if fast_path:
+            new_names = {s.name: s for s in new_series}
+            to_concat = []
+            # Make sure to preserve column order
+            for s in self._dataframe.columns:
+                if s in new_names:
+                    to_concat.append(
+                        validate_dataframe_comparand(index, new_names.pop(s))
+                    )
+                else:
+                    to_concat.append(self._dataframe.loc[:, s])
+            to_concat.extend(
+                validate_dataframe_comparand(index, new_names[s]) for s in new_names
+            )
+
+            df = horizontal_concat(
+                to_concat,
+                implementation=self._implementation,
+            )
+        else:
+            df = self._dataframe.assign(
+                **{s.name: validate_dataframe_comparand(index, s) for s in new_series}
+            )
         return self._from_dataframe(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:
@@ -241,6 +274,9 @@ class PandasDataFrame:
     def head(self, n: int) -> Self:
         return self._from_dataframe(self._dataframe.head(n))
 
+    def tail(self, n: int) -> Self:
+        return self._from_dataframe(self._dataframe.tail(n))
+
     def unique(self, subset: str | list[str]) -> Self:
         subset = flatten(subset)
         return self._from_dataframe(self._dataframe.drop_duplicates(subset=subset))
@@ -283,6 +319,9 @@ class PandasDataFrame:
             return self._dataframe._to_pandas()
         return self._dataframe.to_pandas()  # pragma: no cover
 
+    def write_parquet(self, file: Any) -> Any:
+        self._dataframe.to_parquet(file)
+
     # --- descriptive ---
     def is_duplicated(self: Self) -> PandasSeries:
         from narwhals._pandas_like.series import PandasSeries
@@ -308,3 +347,21 @@ class PandasDataFrame:
             self._dataframe.isnull().sum(axis=0).to_frame().transpose(),
             implementation=self._implementation,
         )
+
+    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+        if row is None and column is None:
+            if self.shape != (1, 1):
+                msg = (
+                    "can only call `.item()` if the dataframe is of shape (1, 1),"
+                    " or if explicit row/col values are provided;"
+                    f" frame has shape {self.shape!r}"
+                )
+                raise ValueError(msg)
+            return self._dataframe.iat[0, 0]
+
+        elif row is None or column is None:
+            msg = "cannot call `.item()` with only one of `row` or `column`"
+            raise ValueError(msg)
+
+        _col = self.columns.index(column) if isinstance(column, str) else column
+        return self._dataframe.iat[row, _col]

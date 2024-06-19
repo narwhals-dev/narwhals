@@ -13,6 +13,7 @@
         - drop_nulls
         - fill_null
         - filter
+        - head
         - is_between
         - is_duplicated
         - is_first_distinct
@@ -27,11 +28,13 @@
         - n_unique
         - over
         - quantile
+        - round
         - sample
         - shift
         - sort
         - std
         - sum
+        - tail
         - unique
       show_source: false
       show_bases: false

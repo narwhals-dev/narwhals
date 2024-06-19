@@ -7,12 +7,13 @@ Extremely lightweight compatibility layer between Polars, pandas, and more.
 Seamlessly support both, without depending on either!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
-- ✅ **No dependencies** (not even Polars), keep your library lightweight
-- ✅ Support both **lazy** and eager execution
-- ✅ Use **Expressions**
-- ✅ Tested against pandas and Polars nightly builds!
-- ✅ Preserve your Index (if present) without it getting in the way!
-- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have!
+- ✅ **Zero dependencies**, **zero 3rd-party imports**: Narwhals only uses what
+  the user passes in, so you can keep your library lightweight
+- ✅ Separate **lazy** and eager APIs, use **expressions**
+- ✅ Support pandas' complicated type system and index, without
+  either getting in the way
+- ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
+- ✅ **Negligible overhead**, see [overhead](https://narwhals-dev.github.io/narwhals/overhead/)
 
 ## Who's this for?
 

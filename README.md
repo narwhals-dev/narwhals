@@ -4,7 +4,7 @@
 	<img
 		width="400"
 		alt="narwhals_small"
-		src="https://github.com/MarcoGorelli/narwhals/assets/33491632/26be901e-5383-49f2-9fbd-5c97b7696f27">
+		src="https://github.com/narwhals-dev/narwhals/assets/33491632/26be901e-5383-49f2-9fbd-5c97b7696f27">
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
@@ -13,16 +13,18 @@ Extremely lightweight and extensible compatibility layer between Polars, pandas,
 
 - [Read the documentation](https://narwhals-dev.github.io/narwhals/)
 - [Chat with us on Discord!](https://discord.gg/V3PqtB4VA4)
+- [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com&ctz=Europe%2FLondon).
 
 Seamlessly support all, without depending on any!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
-- ✅ **No dependencies** (not even Polars), keep your library lightweight
-- ✅ Separate **lazy** and eager APIs
-- ✅ Use **Expressions**
-- ✅ 100% branch coverage, tested against pandas and Polars nightly builds
-- ✅ Preserve your Index (if present) without it getting in the way
-- ✅ **Zero 3rd party imports**, Narwhals only uses what you already have
+- ✅ **Zero dependencies**, **zero 3rd-party imports**: Narwhals only uses what
+  the user passes in, so you can keep your library lightweight
+- ✅ Separate **lazy** and eager APIs, use **expressions**
+- ✅ Support pandas' complicated type system and index, without
+  either getting in the way
+- ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
+- ✅ **Negligible overhead**, see [overhead](https://narwhals-dev.github.io/narwhals/overhead/)
 
 ## Used by
 
@@ -34,10 +36,14 @@ Join the party!
 
 ## Installation
 
-```
-pip install narwhals
-```
-Or just vendor it, it's only a bunch of pure-Python files.
+- pip (recommended, as it's the most up-to-date)
+  ```
+  pip install narwhals
+  ```
+- conda-forge (also fine, but the latest version may take longer to appear)
+  ```
+  conda install -c conda-forge narwhals
+  ```
 
 ## Usage
 
@@ -60,14 +66,14 @@ Like Ibis, Narwhals aims to enable dataframe-agnostic code. However, Narwhals co
 is about as lightweight as it gets, and is aimed at library developers rather than at end users. It also does
 not aim to support as many backends, instead preferring to focus on dataframes. So, which should you use?
 
-- If you need to run complicated analyses and aren't too bothered about package size: Ibis!
-- If you're a library maintainer and want the thinnest-possible layer to get cross-dataframe library support: Narwhals!
+- If you need a SQL frontend in Python: Ibis!
+- If you're a library maintainer and want a lightweight and minimal-overhead layer to get cross-dataframe library support: Narwhals!
 
 Here is the package size increase which would result from installing each tool in a non-pandas
 environment:
 
 ![image](https://github.com/MarcoGorelli/narwhals/assets/33491632/a8dfba78-feb1-48c1-960a-5b9b03585fa5)
-   
+
 ## Example
 
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!

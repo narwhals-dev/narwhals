@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import warnings
 from typing import Any
 from typing import Literal
@@ -11,8 +12,12 @@ import polars as pl
 import pytest
 from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
+from sklearn.utils._testing import ignore_warnings
 
 import narwhals as nw
+from narwhals.functions import _get_deps_info
+from narwhals.functions import _get_sys_info
+from narwhals.functions import show_versions
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
@@ -46,10 +51,10 @@ df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9
 df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 
-if os.environ.get("CI", None):
+if os.environ.get("CI", None):  # pragma: no cover
     try:
         import modin.pandas as mpd
-    except ImportError:  # pragma: no cover
+    except ImportError:
         df_mpd = df_pandas.copy()
     else:
         with warnings.catch_warnings():
@@ -286,6 +291,8 @@ def test_join(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
+# todo: https://github.com/narwhals-dev/narwhals/issues/313
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
@@ -304,6 +311,8 @@ def test_schema(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
+# todo: https://github.com/narwhals-dev/narwhals/issues/313
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     result = df.columns
@@ -495,6 +504,25 @@ def test_head(df_raw: Any) -> None:
     compare_dicts(result, expected)
     result = nw.to_native(df.collect().head(2))
     expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.collect().select(nw.col("a").head(2)))
+    expected = {"a": [1, 3]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+)
+def test_tail(df_raw: Any) -> None:
+    df = nw.LazyFrame(df_raw)
+    result = nw.to_native(df.tail(2))
+    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.collect().tail(2))
+    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
+    compare_dicts(result, expected)
+    result = nw.to_native(df.collect().select(nw.col("a").tail(2)))
+    expected = {"a": [3, 2]}
     compare_dicts(result, expected)
 
 
@@ -708,3 +736,94 @@ def test_quantile(
         df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
     )
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    ("row", "column", "expected"),
+    [(0, 2, 7), (1, "z", 8)],
+)
+def test_item(
+    df_raw: Any,
+    row: int | None,
+    column: int | str | None,
+    expected: Any,
+) -> None:
+    df = nw.from_native(df_raw, eager_only=True)
+    assert df.item(row, column) == expected
+    assert df.select("a").head(1).item() == 1
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(
+    ("row", "column", "err_msg"),
+    [
+        (0, None, re.escape("cannot call `.item()` with only one of `row` or `column`")),
+        (None, 0, re.escape("cannot call `.item()` with only one of `row` or `column`")),
+        (
+            None,
+            None,
+            re.escape("can only call `.item()` if the dataframe is of shape (1, 1)"),
+        ),
+    ],
+)
+def test_item_value_error(
+    df_raw: Any,
+    row: int | None,
+    column: int | str | None,
+    err_msg: str,
+) -> None:
+    with pytest.raises(ValueError, match=err_msg):
+        nw.from_native(df_raw, eager_only=True).item(row, column)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_with_columns_order(df_raw: Any) -> None:
+    df = nw.from_native(df_raw)
+    result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
+    assert result.columns == ["a", "b", "z", "d"]
+    expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8, 9], "d": [0, 2, 1]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_with_columns_order_single_row(df_raw: Any) -> None:
+    df = nw.from_native(df_raw[:1])
+    assert len(df) == 1
+    result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
+    assert result.columns == ["a", "b", "z", "d"]
+    expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
+    compare_dicts(result, expected)
+
+
+def test_get_sys_info() -> None:
+    with ignore_warnings():
+        sys_info = _get_sys_info()
+
+    assert "python" in sys_info
+    assert "executable" in sys_info
+    assert "machine" in sys_info
+
+
+def test_get_deps_info() -> None:
+    with ignore_warnings():
+        deps_info = _get_deps_info()
+
+    assert "narwhals" in deps_info
+    assert "pandas" in deps_info
+    assert "polars" in deps_info
+    assert "cudf" in deps_info
+    assert "modin" in deps_info
+    assert "pyarrow" in deps_info
+    assert "numpy" in deps_info
+
+
+def test_show_versions(capsys: Any) -> None:
+    with ignore_warnings():
+        show_versions()
+        out, err = capsys.readouterr()
+
+    assert "python" in out
+    assert "machine" in out
+    assert "pandas" in out
+    assert "polars" in out

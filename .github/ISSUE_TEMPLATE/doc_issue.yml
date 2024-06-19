@@ -4,8 +4,8 @@ title: "[Doc]: "
 
 body:
 - type: markdown
-  attibutes:
-    values: > 
+  attributes:
+    value: > 
          ## Thanks for taking the time to fill out this form
 - type: dropdown
   id: TYPE
@@ -14,26 +14,22 @@ body:
     options: 
       - 'Correction'
       - 'Improvement'
-    validations:
+  validations:
       required: true  
 - type: textarea
   attributes:
     label: Please describe the issue.
     description: >
       Tell us if something is unclear or incorrect, and where.
-    validations:
+  validations:
       required: true
 - type: textarea
   attributes:
     label: If you have a suggestion on how it should be, add it below.
     description: >
       How can we improve it
-- type: dropdown
-  id: PR
+- type: markdown
   attributes:
-    label: Would you want to open a pull request to fix it?
-    options:
-      - 'yes'
-      - 'no'
+    value: > 
+        ### If you'd be interested in opening a pull request to fix this, please let us know!
       
-           

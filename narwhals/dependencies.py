@@ -28,7 +28,7 @@ def get_cudf() -> Any:
     return sys.modules.get("cudf", None)
 
 
-def get_pyarrow() -> Any:
+def get_pyarrow() -> Any:  # pragma: no cover
     """Get pyarrow module (if already imported - else return None)."""
     return sys.modules.get("pyarrow", None)
 

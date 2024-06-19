@@ -5,7 +5,6 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
-from narwhals._pandas_like.utils import item
 from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
@@ -134,11 +133,20 @@ class PandasSeries:
         dtype: Any,
     ) -> Self:
         ser = self._series
-        dtype = reverse_translate_dtype(dtype)
+        dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
         return self._from_series(ser.astype(dtype))
 
-    def item(self) -> Any:
-        return item(self._series)
+    def item(self: Self, index: int | None = None) -> Any:
+        # cuDF doesn't have Series.item().
+        if index is None:
+            if len(self) != 1:
+                msg = (
+                    "can only call '.item()' if the Series is of length 1,"
+                    f" or an explicit index is provided (Series is of length {len(self)})"
+                )
+                raise ValueError(msg)
+            return self._series.iloc[0]
+        return self._series.iloc[index]
 
     def to_frame(self) -> Any:
         from narwhals._pandas_like.dataframe import PandasDataFrame
@@ -486,6 +494,15 @@ class PandasSeries:
         res = ser.where(mask._series, other._series)
         return self._from_series(res)
 
+    def head(self: Self, n: int) -> Self:
+        return self._from_series(self._series.head(n))
+
+    def tail(self: Self, n: int) -> Self:
+        return self._from_series(self._series.tail(n))
+
+    def round(self: Self, decimals: int) -> Self:
+        return self._from_series(self._series.round(decimals=decimals))
+
     @property
     def str(self) -> PandasSeriesStringNamespace:
         return PandasSeriesStringNamespace(self)
@@ -499,14 +516,25 @@ class PandasSeriesStringNamespace:
     def __init__(self, series: PandasSeries) -> None:
         self._series = series
 
+    def starts_with(self, prefix: str) -> PandasSeries:
+        return self._series._from_series(
+            self._series._series.str.startswith(prefix),
+        )
+
     def ends_with(self, suffix: str) -> PandasSeries:
         return self._series._from_series(
             self._series._series.str.endswith(suffix),
         )
 
-    def head(self, n: int = 5) -> PandasSeries:
+    def contains(self, pattern: str, *, literal: bool = False) -> PandasSeries:
         return self._series._from_series(
-            self._series._series.str[:n],
+            self._series._series.str.contains(pat=pattern, regex=not literal)
+        )
+
+    def slice(self, offset: int, length: int | None = None) -> PandasSeries:
+        stop = offset + length if length else None
+        return self._series._from_series(
+            self._series._series.str.slice(start=offset, stop=stop),
         )
 
     def to_datetime(self, format: str | None = None) -> PandasSeries:  # noqa: A002
@@ -626,3 +654,6 @@ class PandasSeriesDateTimeNamespace:
         if ~s.isna().any():
             s_abs = s_abs.astype(int)
         return self._series._from_series(s_abs * s_sign)
+
+    def to_string(self, format: str) -> PandasSeries:  # noqa: A002
+        return self._series._from_series(self._series._series.dt.strftime(format))

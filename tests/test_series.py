@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 from typing import Literal
 
@@ -156,7 +157,7 @@ def test_dtypes() -> None:
             "h": [1],
             "i": [1],
             "j": [1],
-            "k": [1],
+            "k": ["1"],
             "l": [1],
             "m": [True],
         },
@@ -210,7 +211,7 @@ def test_cast() -> None:
             "h": [1],
             "i": [1],
             "j": [1],
-            "k": [1],
+            "k": ["1"],
             "l": [1],
             "m": [True],
             "n": [True],
@@ -307,6 +308,46 @@ def test_cast() -> None:
         "o": nw.Categorical,
     }
     df = nw.from_native(df.to_pandas())  # type: ignore[assignment]
+    result_pd = df.select(
+        df["a"].cast(nw.Int32),
+        df["b"].cast(nw.Int16),
+        df["c"].cast(nw.Int8),
+        df["d"].cast(nw.Int64),
+        df["e"].cast(nw.UInt32),
+        df["f"].cast(nw.UInt16),
+        df["g"].cast(nw.UInt8),
+        df["h"].cast(nw.UInt64),
+        df["i"].cast(nw.Float32),
+        df["j"].cast(nw.Float64),
+        df["k"].cast(nw.String),
+        df["l"].cast(nw.Datetime),
+        df["m"].cast(nw.Int8),
+        df["n"].cast(nw.Boolean),
+        df["o"].cast(nw.Categorical),
+    ).schema
+    assert result == expected
+    df = nw.from_native(df.to_pandas().convert_dtypes())  # type: ignore[assignment]
+    result_pd = df.select(
+        df["a"].cast(nw.Int32),
+        df["b"].cast(nw.Int16),
+        df["c"].cast(nw.Int8),
+        df["d"].cast(nw.Int64),
+        df["e"].cast(nw.UInt32),
+        df["f"].cast(nw.UInt16),
+        df["g"].cast(nw.UInt8),
+        df["h"].cast(nw.UInt64),
+        df["i"].cast(nw.Float32),
+        df["j"].cast(nw.Float64),
+        df["k"].cast(nw.String),
+        df["l"].cast(nw.Datetime),
+        df["m"].cast(nw.Int8),
+        df["n"].cast(nw.Boolean),
+        df["o"].cast(nw.Categorical),
+    ).schema
+    assert result == expected
+    if parse_version(pd.__version__) < parse_version("2.0.0"):  # pragma: no cover
+        return
+    df = nw.from_native(df.to_pandas().convert_dtypes(dtype_backend="pyarrow"))  # type: ignore[assignment]
     result_pd = df.select(
         df["a"].cast(nw.Int32),
         df["b"].cast(nw.Int16),
@@ -456,3 +497,47 @@ def test_zip_with(df_raw: Any, mask: Any, expected: Any) -> None:
     result = series1.zip_with(mask, series2)
     expected = nw.Series(expected)
     assert result == expected
+
+
+def test_cast_string() -> None:
+    s_pd = pd.Series([1, 2]).convert_dtypes()
+    s = nw.from_native(s_pd, series_only=True)
+    s = s.cast(nw.String)
+    result = nw.to_native(s)
+    assert result.dtype in ("string", object)
+
+
+df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize(("index", "expected"), [(0, 1), (1, 3)])
+def test_item(df_raw: Any, index: int, expected: int) -> None:
+    s = nw.Series(df_raw["a"])
+    result = s.item(index)
+    assert result == expected
+    assert nw.Series(df_raw["a"].head(1)).item() == 1
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("can only call '.item()' if the Series is of length 1,"),
+    ):
+        s.item(None)
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize("n", [1, 2, 3, 10])
+def test_head(df_raw: Any, n: int) -> None:
+    s_raw = df_raw["z"]
+    s = nw.from_native(s_raw, allow_series=True)
+
+    assert s.head(n) == nw.Series(s_raw.head(n))
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize("n", [1, 2, 3, 10])
+def test_tail(df_raw: Any, n: int) -> None:
+    s_raw = df_raw["z"]
+    s = nw.from_native(s_raw, allow_series=True)
+
+    assert s.tail(n) == nw.Series(s_raw.tail(n))

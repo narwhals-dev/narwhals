@@ -1,3 +1,4 @@
+from narwhals import selectors
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Boolean
@@ -24,20 +25,26 @@ from narwhals.expression import min
 from narwhals.expression import sum
 from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
+from narwhals.functions import show_versions
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
+from narwhals.translate import narwhalify
+from narwhals.translate import narwhalify_method
 from narwhals.translate import to_native
 from narwhals.utils import maybe_align_index
+from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "0.8.21"
+__version__ = "0.9.12"
 
 __all__ = [
+    "selectors",
     "concat",
     "to_native",
     "from_native",
     "maybe_align_index",
+    "maybe_convert_dtypes",
     "maybe_set_index",
     "get_native_namespace",
     "all",
@@ -66,4 +73,7 @@ __all__ = [
     "Categorical",
     "String",
     "Datetime",
+    "narwhalify",
+    "narwhalify_method",
+    "show_versions",
 ]
