@@ -186,7 +186,8 @@ class BaseFrame:
                 right_on=right_on,
             )
         )
-    
+
+
 class DataFrame(BaseFrame):
     """
     Narwhals DataFrame, backed by a native dataframe.
