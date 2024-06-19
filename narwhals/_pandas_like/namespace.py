@@ -110,18 +110,11 @@ class PandasNamespace:
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasExpr:
         def _lit_pandas_series(df: PandasDataFrame) -> PandasSeries:
-            if isinstance(value, (list, tuple)):
-                data = [value for _ in range(len(df._dataframe))]
-                index = df._dataframe.index
-            else:
-                data = [value]
-                index = [0]
-
             pandas_series = PandasSeries(
                 series_from_iterable(
-                    data=data,
+                    data=[value],
                     name="lit",
-                    index=index,
+                    index=df._dataframe.index[0:1],
                     implementation=self._implementation,
                 ),
                 implementation=self._implementation,

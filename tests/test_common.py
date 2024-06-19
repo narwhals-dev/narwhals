@@ -250,34 +250,20 @@ def test_lit(df_raw: Any, dtype: dtypes.DType | None, expected_lit: list[Any]) -
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-def test_lit_list_tuple(df_raw: Any) -> None:
-    df = nw.LazyFrame(df_raw)
-    result = df.with_columns(nw.lit([1, 2]).alias("list"), nw.lit((1, 2)).alias("tuple"))
-    result_native = nw.to_native(result)
-    expected_tuple = (
-        [[1, 2] for _ in range(3)]
-        if isinstance(df._dataframe, pl.LazyFrame)
-        else [(1, 2) for _ in range(3)]  # type: ignore[misc]
-    )
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "list": [[1, 2] for _ in range(3)],
-        "tuple": expected_tuple,
-    }
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_lit_valuerror_numpy(df_raw: Any) -> None:
+def test_lit_error(df_raw: Any) -> None:
     df = nw.LazyFrame(df_raw)
     with pytest.raises(
         ValueError, match="numpy arrays are not supported as literal values"
     ):
         _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))
+    with pytest.raises(
+        NotImplementedError, match="Nested datatypes are not supported yet."
+    ):
+        _ = df.with_columns(nw.lit((1, 2)).alias("lit"))
+    with pytest.raises(
+        NotImplementedError, match="Nested datatypes are not supported yet."
+    ):
+        _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
 
 
 @pytest.mark.parametrize(

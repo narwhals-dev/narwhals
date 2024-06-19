@@ -3117,6 +3117,10 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
             "Consider using `with_columns` to create a new column from the array."
         )
 
+    if isinstance(value, (list, tuple)):
+        msg = f"Nested datatypes are not supported yet. Got {value}"
+        raise NotImplementedError(msg)
+
     if dtype is None:
         return Expr(lambda plx: plx.lit(value, dtype))
     return Expr(lambda plx: plx.lit(value, translate_dtype(plx, dtype)))
