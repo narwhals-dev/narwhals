@@ -67,15 +67,12 @@ def _get_deps_info() -> dict[str, str]:
 
     """
     deps = [
-        "covdefaults",
         "pandas",
         "polars",
-        "pre-commit",
+        "cudf",
+        "modin",
         "pyarrow",
-        "pytest",
-        "pytest-cov",
-        "hypothesis",
-        "scikit-learn",
+        "numpy",
     ]
 
     from . import __version__

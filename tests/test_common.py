@@ -808,14 +808,12 @@ def test_get_deps_info() -> None:
         deps_info = _get_deps_info()
 
     assert "narwhals" in deps_info
-    assert "covdefaults" in deps_info
+    assert "pandas" in deps_info
     assert "polars" in deps_info
-    assert "pre-commit" in deps_info
+    assert "cudf" in deps_info
+    assert "modin" in deps_info
     assert "pyarrow" in deps_info
-    assert "pytest" in deps_info
-    assert "pytest-cov" in deps_info
-    assert "hypothesis" in deps_info
-    assert "scikit-learn" in deps_info
+    assert "numpy" in deps_info
 
 
 def test_show_versions(capsys: Any) -> None:
@@ -825,6 +823,5 @@ def test_show_versions(capsys: Any) -> None:
 
     assert "python" in out
     assert "machine" in out
-    assert "covdefaults" in out
     assert "pandas" in out
     assert "polars" in out
