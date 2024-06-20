@@ -19,6 +19,7 @@ from narwhals.expression import Expr
 from narwhals.expression import all
 from narwhals.expression import col
 from narwhals.expression import len
+from narwhals.expression import lit
 from narwhals.expression import max
 from narwhals.expression import mean
 from narwhals.expression import min
@@ -36,7 +37,7 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "0.9.12"
+__version__ = "0.9.13"
 
 __all__ = [
     "selectors",
@@ -50,6 +51,7 @@ __all__ = [
     "all",
     "col",
     "len",
+    "lit",
     "min",
     "max",
     "mean",

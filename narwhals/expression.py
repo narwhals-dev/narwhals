@@ -6,7 +6,9 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
+from narwhals.dtypes import DType
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
@@ -3068,6 +3070,60 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)])
     )
+
+
+def lit(value: Any, dtype: DType | None = None) -> Expr:
+    """
+    Return an expression representing a literal value.
+
+    Arguments:
+        value: The value to use as literal.
+        dtype: The data type of the literal value. If not provided, the data type will be inferred.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2]})
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.with_columns(nw.lit(3).alias("b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a  b
+        0  1  3
+        1  2  3
+        >>> func(df_pl)
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i32 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 3   │
+        └─────┴─────┘
+
+    """
+    if (np := get_numpy()) is not None and isinstance(value, np.ndarray):
+        raise ValueError(
+            "numpy arrays are not supported as literal values. "
+            "Consider using `with_columns` to create a new column from the array."
+        )
+
+    if isinstance(value, (list, tuple)):
+        msg = f"Nested datatypes are not supported yet. Got {value}"
+        raise NotImplementedError(msg)
+
+    if dtype is None:
+        return Expr(lambda plx: plx.lit(value, dtype))
+    return Expr(lambda plx: plx.lit(value, translate_dtype(plx, dtype)))
 
 
 __all__ = [
