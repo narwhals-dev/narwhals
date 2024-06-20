@@ -44,13 +44,13 @@ body:
     required: true
 - type: textarea
   attributes:
-    label: Versions
+    label: Please run narwhals.show_version() and enter the output below.
     render: shell
     description: |
-      What version of Narwhals and dataframe libraries are you running?
-      You could run the following and provide the output below.
-      ```
-      pip freeze | grep -E "narwhals|polars|pandas|modin|cudf"
+      You could do:
+      ```python
+      import narwhals
+      narwhals.show_versions()
       ```
   validations:
     required: true
