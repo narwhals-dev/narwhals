@@ -297,6 +297,9 @@ class PandasExpr:
     def round(self: Self, decimals: int) -> Self:
         return reuse_series_implementation(self, "round", decimals)
 
+    def len(self: Self) -> Self:
+        return reuse_series_implementation(self, "len", returns_scalar=True)
+
     @property
     def str(self) -> PandasExprStringNamespace:
         return PandasExprStringNamespace(self)
