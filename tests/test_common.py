@@ -321,6 +321,7 @@ def test_join(df_raw: Any) -> None:
         "z_right": [7.0, 8.0, 9.0],
     }
     compare_dicts(result_native, expected)
+    result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
 
     with pytest.raises(NotImplementedError):
         result = df.join(df_right, left_on="a", right_on="a", how="right")  # type: ignore[arg-type]
