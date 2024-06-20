@@ -316,7 +316,8 @@ def test_join(df_raw: Any) -> None:
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
-        "b_right": [7.0, 8, 9],
+        "z": [7.0, 8, 9],
+        "b_right": [4, 4, 6],
         "z_right": [7.0, 8.0, 9.0],
     }
     compare_dicts(result_native, expected)
