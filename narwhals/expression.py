@@ -1573,6 +1573,46 @@ class Expr:
 
         return self.__class__(lambda plx: self._call(plx).round(decimals))
 
+    def len(self) -> Expr:
+        r"""
+        Return the number of elements in the column.
+
+        Null values count towards the total.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": ["x", "y", "z"], "b": [1, 2, 1]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function that computes the len over different values of "b" column:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(
+            ...         nw.col("a").filter(nw.col("b") == 1).len().alias("a1"),
+            ...         nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),
+            ...     )
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                a1  a2
+            0    2   1
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a1  ┆ a2  │
+            │ --- ┆ --- │
+            │ u32 ┆ u32 │
+            ╞═════╪═════╡
+            │ 2   ┆ 1   │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).len())
+
     @property
     def str(self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
