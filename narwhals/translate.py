@@ -1,30 +1,29 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Sequence
-from collections.abc import Set as AbstractSet
 from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
-from typing import TypeVar
 from typing import overload
+from warnings import warn
 
+from narwhals.dataframe import BaseFrame
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.series import Series
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
-    from narwhals.series import Series
 
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
+if sys.version_info >= (3, 10):  # pragma: no cover
+    pass
+else:  # pragma: no cover
+    pass
 
 
 def to_native(
@@ -40,8 +39,6 @@ def to_native(
     Returns:
         Object of class that user started with.
     """
-    from narwhals.dataframe import BaseFrame
-    from narwhals.series import Series
 
     if isinstance(narwhals_object, BaseFrame):
         return (
@@ -245,20 +242,26 @@ def get_native_namespace(obj: Any) -> Any:
     return obj.__native_namespace__()
 
 
-PS = ParamSpec("PS")
-R = TypeVar("R", bound=Any)
-
-
 def narwhalify(
-    func: Callable[PS, R] | None = None,
+    func: Callable[..., Any] | None = None,
     *,
     strict: bool = False,
     eager_only: bool | None = False,
     series_only: bool | None = False,
     allow_series: bool | None = True,
-) -> Callable[PS, R]:
+) -> Callable[..., Any]:
     """
     Decorate function so it becomes dataframe-agnostic.
+
+    `narwhalify` will try to convert any dataframe/series-like object into the narwhal
+    respective DataFrame/Series, while leaving the other parameters as they are.
+
+    Similarly, if the output of the function is a narwhals DataFrame or Series, it will be
+    converted back to the original dataframe/series type, while if the output is another
+    type it will be left as is.
+
+    By setting `strict=True`, then every input and every output will be required to be a
+    dataframe/series-like object.
 
     Instead of writing
 
@@ -293,8 +296,8 @@ def narwhalify(
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
-        strict: Whether to raise if object can't be converted (default) or
-            to just leave it as-is.
+        strict: Whether to raise if object can't be converted or to just leave it as-is
+            (default).
         eager_only: Whether to only allow eager objects.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
@@ -303,9 +306,9 @@ def narwhalify(
         narwhalify_method: If you want to narwhalify a class method, use that instead.
     """
 
-    def decorator(func: Callable[PS, R]) -> Callable[PS, R]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(*args: PS.args, **kwargs: PS.kwargs) -> R:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             args = [
                 from_native(
                     arg,
@@ -315,7 +318,7 @@ def narwhalify(
                     allow_series=allow_series,
                 )
                 for arg in args
-            ]
+            ]  # type: ignore[assignment]
 
             kwargs = {
                 name: from_native(
@@ -327,13 +330,9 @@ def narwhalify(
                 )
                 for name, value in kwargs.items()
             }
+
+            # (todo) validate same backend?!
             result = func(*args, **kwargs)
-
-            if isinstance(result, (str, bytes)):
-                return result
-
-            if isinstance(result, (Sequence, AbstractSet)):
-                return type(result)(to_native(r, strict=strict) for r in result)
 
             return to_native(result, strict=strict)
 
@@ -344,6 +343,30 @@ def narwhalify(
     else:
         # If func is not None, it means the decorator is used without arguments
         return decorator(func)
+
+
+def narwhalify_method(  # pragma: no cover
+    func: Callable[..., Any] | None = None,
+    *,
+    strict: bool = False,
+    eager_only: bool | None = None,
+    series_only: bool | None = None,
+    allow_series: bool | None = None,
+) -> Callable[..., Any]:
+    warn(
+        "Please use `narwhalify` instead of `narwhalify_method`, `narwhalify_method` "
+        "will be deprecated in future versions",
+        DeprecationWarning,
+        stacklevel=1,
+    )
+
+    return narwhalify(
+        func,
+        strict=strict,
+        eager_only=eager_only,
+        series_only=series_only,
+        allow_series=allow_series,
+    )
 
 
 __all__ = [

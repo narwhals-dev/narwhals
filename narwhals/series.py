@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_polars
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
-from narwhals.translate import get_cudf
-from narwhals.translate import get_modin
-from narwhals.translate import get_pandas
-from narwhals.translate import get_polars
 
 if TYPE_CHECKING:
     import numpy as np

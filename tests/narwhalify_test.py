@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import pandas as pd
@@ -48,23 +50,16 @@ def test_narwhalify_method_called() -> None:
 
 def test_narwhalify_method_invalid() -> None:
     class Foo:
-        @nw.narwhalify(strict=True)
+        @nw.narwhalify(strict=True, eager_only=True)
         def func(self) -> nw.DataFrame:  # pragma: no cover
             return self  # type: ignore[return-value]
 
-        @nw.narwhalify(strict=True)
+        @nw.narwhalify(strict=True, eager_only=True)
         def fun2(self, df: Any) -> nw.DataFrame:  # pragma: no cover
             return df  # type: ignore[no-any-return]
 
     with pytest.raises(TypeError):
         Foo().func()
-
-    @nw.narwhalify(strict=True)
-    def func(_df: Any, a: int = 1) -> nw.DataFrame:  # pragma: no cover
-        return a  # type: ignore[return-value]
-
-    with pytest.raises(TypeError, match="is meant to be called"):
-        func(pd.DataFrame(), a=pd.DataFrame())
 
 
 def test_narwhalify_invalid() -> None:

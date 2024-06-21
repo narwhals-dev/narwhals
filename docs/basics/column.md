@@ -127,9 +127,9 @@ of using expressions, we'll extract a `Series`.
 ```python exec="1" source="above" session="ex2"
 import narwhals as nw
 
-def my_func(df):
-    df_s = nw.from_native(df, eager_only=True)
-    return df_s['a'].mean()
+@nw.narwhalify(strict=False)
+def my_func(df_any):
+    return df_any['a'].mean()
 ```
 
 === "pandas"
@@ -148,8 +148,8 @@ def my_func(df):
     print(my_func(df))
     ```
 
-Note that, this time, we couldn't use `@nw.narwhalify`, as the final step in
-our function wasn't `nw.to_native`, so we had to explicitly use `nw.from_native`
-as the first step. In general, we recommend using the decorator where possible,
-as it looks a lot cleaner, and only using `nw.from_native` / `nw.to_native` explicitly
-when you need them.
+Note that, even though the output of our function is not a dataframe nor a series, we can
+still use `narwhalify` with `strict=False` flag (which is actually the default behavior).
+
+In general, we recommend using the decorator where possible, as it looks a lot cleaner,
+and only using `nw.from_native` / `nw.to_native` explicitly when you need them.

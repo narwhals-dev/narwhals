@@ -20,11 +20,15 @@ We're going to take in a dataframe, and return a dataframe of the same type.
 Therefore, we use `@nw.narwhalify_method` (the counterpart to `@nw.narwhalify` which is
 meant to be used for methods):
 
+!!! info
+    As of version 0.y.z, `@nw.narwhalify_method` has been deprecated, and `nw.narwhalify`
+    can be used on methods as well.
+
 ```python
 import narwhals as nw
 
 class StandardScaler:
-    @nw.narwhalify_method
+    @nw.narwhalify_method  # since v0.y.z, this is deprecated in favor of @nw.narwhalify
     def transform(self, df):
         return df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
