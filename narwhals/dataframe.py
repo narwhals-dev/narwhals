@@ -631,17 +631,17 @@ class DataFrame(BaseFrame):
 
     @overload
     def iter_rows(
-        self, *, named: Literal[False], buffer_size: int
+        self, *, named: Literal[False], buffer_size: int = ...
     ) -> Iterator[tuple[Any, ...]]: ...
 
     @overload
     def iter_rows(
-        self, *, named: Literal[True], buffer_size: int
+        self, *, named: Literal[True], buffer_size: int = ...
     ) -> Iterator[dict[str, Any]]: ...
 
     @overload
     def iter_rows(
-        self, *, named: bool, buffer_size: int
+        self, *, named: bool, buffer_size: int = ...
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]: ...
 
     def iter_rows(
