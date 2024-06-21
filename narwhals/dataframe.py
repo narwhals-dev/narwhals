@@ -655,7 +655,7 @@ class DataFrame(BaseFrame):
             Setting named=True will return rows of dictionaries instead.
         :param buffer_size:
             Determines the number of rows that are buffered internally while iterating over the data.
-        :see: https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
+            :see: https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
 
         Examples:
             >>> import pandas as pd
