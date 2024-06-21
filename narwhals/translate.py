@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
@@ -9,21 +8,15 @@ from typing import Literal
 from typing import overload
 from warnings import warn
 
-from narwhals.dataframe import BaseFrame
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
-from narwhals.series import Series
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
-
-if sys.version_info >= (3, 10):  # pragma: no cover
-    pass
-else:  # pragma: no cover
-    pass
+    from narwhals.series import Series
 
 
 def to_native(
@@ -39,6 +32,8 @@ def to_native(
     Returns:
         Object of class that user started with.
     """
+    from narwhals.dataframe import BaseFrame
+    from narwhals.series import Series
 
     if isinstance(narwhals_object, BaseFrame):
         return (
