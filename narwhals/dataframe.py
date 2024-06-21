@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -629,22 +630,32 @@ class DataFrame(BaseFrame):
         return super().columns
 
     @overload
-    def rows(self, *, named: Literal[False]) -> list[tuple[Any, ...]]: ...
+    def iter_rows(
+        self, *, named: Literal[False], buffer_size: int
+    ) -> Iterator[tuple[Any, ...]]: ...
 
     @overload
-    def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
+    def iter_rows(
+        self, *, named: Literal[True], buffer_size: int
+    ) -> Iterator[dict[str, Any]]: ...
 
     @overload
-    def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+    def iter_rows(
+        self, *, named: bool, buffer_size: int
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]: ...
 
-    def rows(
-        self, *, named: bool = False
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+    def iter_rows(
+        self, *, named: bool = False, buffer_size: int = 512
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         """
-        Returns all data in the DataFrame as a list of rows of python-native values.
+        Returns an iterator over the DataFrame of rows of python-native values.
 
-        By default, each row is returned as a tuple of values given in the same order
-        as the frame columns. Setting named=True will return rows of dictionaries instead.
+        :param named:
+            By default, each row is returned as a tuple of values given in the same order as the frame columns.
+            Setting named=True will return rows of dictionaries instead.
+        :param buffer_size:
+            Determines the number of rows that are buffered internally while iterating over the data.
+        :see: https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
 
         Examples:
             >>> import pandas as pd
@@ -658,20 +669,20 @@ class DataFrame(BaseFrame):
 
             >>> def func(df_any, *, named):
             ...     df = nw.from_native(df_any)
-            ...     return df.rows(named=named)
+            ...     return df.iter_rows(named=named)
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd, named=False)
+            >>> [row for row in func(df_pd, named=False)]
             [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
-            >>> func(df_pd, named=True)
+            >>> [row for row in func(df_pd, named=True)]
             [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
-            >>> func(df_pl, named=False)
+            >>> [row for row in func(df_pl, named=False)]
             [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
-            >>> func(df_pl, named=True)
+            >>> [row for row in func(df_pl, named=True)]
             [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
         """
-        return self._dataframe.rows(named=named)  # type: ignore[no-any-return]
+        return self._dataframe.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[no-any-return]
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr

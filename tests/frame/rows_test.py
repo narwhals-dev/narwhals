@@ -81,7 +81,7 @@ def test_rows(
     df = nw.DataFrame(df_raw)
 
     # WHEN
-    result = df.rows(named=named)
+    result = list(df.iter_rows(named=named))
 
     # THEN
     assert result == expected
@@ -93,7 +93,7 @@ def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)
 
     # WHEN
-    result = df.rows(named=False)
+    result = list(df.iter_rows(named=False))
 
     # THEN
     expected = [(None, 4, 7.0), (3, 4, None), (2, 6, 9.0)]
@@ -112,7 +112,7 @@ def test_rows_with_nulls_named(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)
 
     # WHEN
-    result = df.rows(named=True)
+    result = list(df.iter_rows(named=True))
 
     # THEN
     expected: list[dict[str, Any]] = [
