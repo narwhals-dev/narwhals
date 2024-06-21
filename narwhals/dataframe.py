@@ -1049,31 +1049,31 @@ class DataFrame(BaseFrame):
             predicates: Expression(s) that evaluates to a boolean Series.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
+            >>> df = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6, 7, 8],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
 
-            Filter on one condition:
+            Let's define a dataframe-agnostic function in which we filter on
+            one condition.
 
-            >>> dframe = df.filter(nw.col("foo") > 1)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter(nw.col("foo") > 1)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar ham
+            1    2    7   b
+            2    3    8   c
+            >>> func(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1086,13 +1086,13 @@ class DataFrame(BaseFrame):
 
             Filter on multiple conditions, combined with and/or operators:
 
-            >>> dframe = df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            >>> func(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1102,13 +1102,14 @@ class DataFrame(BaseFrame):
             │ 1   ┆ 6   ┆ a   │
             └─────┴─────┴─────┘
 
-            >>> dframe = df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            2    3    8   c
+            >>> func(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1121,16 +1122,17 @@ class DataFrame(BaseFrame):
 
             Provide multiple filters using `*args` syntax:
 
-            >>> dframe = df.filter(
-            ...     nw.col("foo") <= 2,
-            ...     ~nw.col("ham").is_in(["b", "c"]),
-            ... )
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     dframe = df.filter(
+            ...         nw.col("foo") <= 2,
+            ...         ~nw.col("ham").is_in(["b", "c"]),
+            ...     )
+            ...     return dframe
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            >>> func(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2391,26 +2393,42 @@ class LazyFrame(BaseFrame):
             *predicates: Expression that evaluates to a boolean Series.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
+            >>> df = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6, 7, 8],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+            >>> lf_pl = pl.LazyFrame(df)
 
-            Filter on one condition:
+            Let's define a dataframe-agnostic function in which we filter on
+            one condition.
 
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.filter(nw.col("foo") > 1).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter(nw.col("foo") > 1)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar ham
+            1    2    7   b
+            2    3    8   c
+            >>> func(df_pl)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 2   ┆ 7   ┆ b   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2423,13 +2441,22 @@ class LazyFrame(BaseFrame):
 
             Filter on multiple conditions:
 
-            >>> lframe = lf.filter((nw.col("foo") < 3) & (nw.col("ham") == "a")).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            >>> func(df_pl)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2441,16 +2468,26 @@ class LazyFrame(BaseFrame):
 
             Provide multiple filters using `*args` syntax:
 
-            >>> lframe = lf.filter(
-            ...     nw.col("foo") == 1,
-            ...     nw.col("ham") == "a",
-            ... ).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     dframe = df.filter(
+            ...         nw.col("foo") == 1,
+            ...         nw.col("ham") == "a",
+            ...     )
+            ...     return dframe
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            >>> func(df_pl)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2462,13 +2499,24 @@ class LazyFrame(BaseFrame):
 
             Filter on an OR condition:
 
-            >>> lframe = lf.filter((nw.col("foo") == 1) | (nw.col("ham") == "c")).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            2    3    8   c
+            >>> func(df_pl)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │

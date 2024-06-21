@@ -25,6 +25,7 @@
         - is_sorted
         - is_unique
         - item
+        - len
         - max
         - mean
         - min

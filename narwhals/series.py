@@ -126,6 +126,34 @@ class Series:
     def __len__(self) -> int:
         return len(self._series)
 
+    def len(self) -> int:
+        r"""
+        Return the number of elements in the Series.
+
+        Null values count towards the total.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1, 2, None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            Let's define a dataframe-agnostic function that computes the len of the series:
+
+            >>> def func(s):
+            ...     return nw.from_native(s, allow_series=True).len()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            3
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            3
+        """
+        return len(self._series)
+
     @property
     def dtype(self) -> Any:
         """

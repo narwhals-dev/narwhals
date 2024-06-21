@@ -21,6 +21,7 @@
         - is_last_distinct
         - is_null
         - is_unique
+        - len
         - max
         - mean
         - min

@@ -48,6 +48,8 @@ df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 def test_len(df_raw: Any) -> None:
     result = len(nw.Series(df_raw["a"]))
     assert result == 3
+    result = nw.Series(df_raw["a"]).len()
+    assert result == 3
     result = len(nw.LazyFrame(df_raw).collect()["a"])
     assert result == 3
 
