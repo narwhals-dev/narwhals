@@ -339,16 +339,16 @@ def test_join(df_raw: Any) -> None:
 
 
 # Sample data
-df_pandas = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-df_right_pandas = pd.DataFrame({'a': [1, 2, 3], 'c': [4, 5, 6]})
+df_pandas = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+df_right_pandas = pd.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
 
-df_polars = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-df_right_polars = pl.DataFrame({'a': [1, 2, 3], 'c': [4, 5, 6]})
+df_polars = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+df_right_polars = pl.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
 
-@pytest.mark.parametrize("df_left, df_right", [
-    (df_pandas, df_right_pandas),
-    (df_polars, df_right_polars)
-])
+
+@pytest.mark.parametrize(
+    "df_left, df_right", [(df_pandas, df_right_pandas), (df_polars, df_right_polars)]
+)
 def test_coalesce_overlapping_names(df_left, df_right):
     if isinstance(df_left, pd.DataFrame):
         # Perform the join operation in pandas
@@ -359,18 +359,16 @@ def test_coalesce_overlapping_names(df_left, df_right):
     else:
         # Perform the join operation in narwhals (using polars underneath)
         df_left_nw = nw.DataFrame(df_left)
-        df_right_nw = nw.DataFrame                                (df_right)
-        result_polars = df_left_nw.join(df_right_nw, left_on="b", right_on="c", how="left")
+        df_right_nw = nw.DataFrame(df_right)
+        result_polars = df_left_nw.join(
+            df_right_nw, left_on="b", right_on="c", how="left"
+        )
         result = nw.to_native(result_polars)
         result = result.rename({"a": "a_left"}).to_pandas().to_dict(orient="list")
 
-    expected = {
-        "a_left": [1, 2, 3],
-        "b": [4, 5, 6],
-        "a_right": [1, 2, 3],
-        "c": [4, 5, 6]
-    }
+    expected = {"a_left": [1, 2, 3], "b": [4, 5, 6], "a_right": [1, 2, 3], "c": [4, 5, 6]}
     compare_dicts(result, expected)
+
 
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
