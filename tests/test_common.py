@@ -311,7 +311,7 @@ def test_join(df_raw: Any) -> None:
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
     compare_dicts(result_native, expected)
 
-    result = df.join(df_right, left_on="a", right_on="a", how="left") #type: ignore[arg-type]
+    result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
     result_native = nw.to_native(result)
     expected = {
         "a": [1, 3, 2],
