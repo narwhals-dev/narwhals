@@ -359,7 +359,7 @@ def test_coalesce_overlapping_names(df_left, df_right):
     else:
         # Perform the join operation in narwhals (using polars underneath)
         df_left_nw = nw.DataFrame(df_left)
-        df_right_nw = nw.DataFrame                                (df_right)
+        df_right_nw = nw.DataFrame(df_right)
         result_polars = df_left_nw.join(df_right_nw, left_on="b", right_on="c", how="left")
         result = nw.to_native(result_polars)
         result = result.rename({"a": "a_left"}).to_pandas().to_dict(orient="list")
