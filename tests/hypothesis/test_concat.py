@@ -44,14 +44,16 @@ def test_concat(  # pragma: no cover
 
     if how == "horizontal":
         df_pl = (
-            nw.from_native(df_polars).lazy()
+            nw.from_native(df_polars)
+            .lazy()
             .collect()
             .rename({"a": "d", "b": "e"})
             .lazy()
             .drop("c")
         )
         df_pd = (
-            nw.from_native(df_pandas).lazy()
+            nw.from_native(df_pandas)
+            .lazy()
             .collect()
             .rename({"a": "d", "b": "e"})
             .lazy()
