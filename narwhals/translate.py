@@ -129,6 +129,7 @@ def from_native(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
+    api_version: str | None = None,
 ) -> DataFrame | LazyFrame | Series:
     """
     Convert dataframe to Narwhals DataFrame, LazyFrame, or Series.
@@ -164,13 +165,13 @@ def from_native(
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with polars.DataFrame")
-        return DataFrame(native_dataframe)
+        return DataFrame(native_dataframe, api_version=api_version or "0.20")
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with polars.LazyFrame")
         if eager_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `eager_only` with polars.LazyFrame")
-        return LazyFrame(native_dataframe)
+        return LazyFrame(native_dataframe, api_version=api_version or "0.20")
     elif (
         (pd := get_pandas()) is not None
         and isinstance(native_dataframe, pd.DataFrame)
@@ -181,7 +182,7 @@ def from_native(
     ):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
-        return DataFrame(native_dataframe)
+        return DataFrame(native_dataframe, api_version=api_version)
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
@@ -191,7 +192,7 @@ def from_native(
             raise TypeError("Cannot only use `series_only` with lazyframe")
         if eager_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `eager_only` with lazyframe")
-        return LazyFrame(native_dataframe.__narwhals_lazyframe__())
+        return LazyFrame(native_dataframe.__narwhals_lazyframe__(), api_version="0.20")
     elif (
         (pl := get_polars()) is not None
         and isinstance(native_dataframe, pl.Series)

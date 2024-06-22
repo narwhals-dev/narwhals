@@ -295,7 +295,7 @@ class Series:
         """
         from narwhals.dataframe import DataFrame
 
-        return DataFrame(self._series.to_frame())
+        return DataFrame(self._series.to_frame(), api_version=self._api_version)
 
     def mean(self) -> Any:
         """
@@ -1797,8 +1797,9 @@ class Series:
 
 
 class SeriesCatNamespace:
-    def __init__(self, series: Series) -> None:
+    def __init__(self, series: Series, *, api_version: str) -> None:
         self._series = series
+        self._api_version = api_version
 
     def get_categories(self) -> Series:
         """

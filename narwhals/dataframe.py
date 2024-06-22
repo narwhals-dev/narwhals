@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 class BaseFrame:
     _dataframe: Any
     _is_polars: bool
+    _api_version: str
 
     def __len__(self) -> Any:
         return self._dataframe.__len__()
@@ -54,6 +55,7 @@ class BaseFrame:
         return self.__class__(  # type: ignore[call-arg]
             df,
             is_polars=self._is_polars,
+            api_version=self._api_version,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -115,9 +117,7 @@ class BaseFrame:
         return self._dataframe.columns  # type: ignore[no-any-return]
 
     def lazy(self) -> LazyFrame:
-        return LazyFrame(
-            self._dataframe.lazy(),
-        )
+        return LazyFrame(self._dataframe.lazy(), api_version=self._api_version)
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
@@ -204,8 +204,10 @@ class DataFrame(BaseFrame):
         df: Any,
         *,
         is_polars: bool = False,
+        api_version: str,
     ) -> None:
         self._is_polars = is_polars
+        self._api_version = api_version
         if hasattr(df, "__narwhals_dataframe__"):
             self._dataframe: Any = df.__narwhals_dataframe__()
         elif is_polars or (
@@ -388,7 +390,7 @@ class DataFrame(BaseFrame):
             return Series(self._dataframe[item])
 
         elif isinstance(item, (range, slice)):
-            return DataFrame(self._dataframe[item])
+            return self._from_dataframe(self._dataframe[item])
 
         else:
             msg = f"Expected str, range or slice, got: {type(item)}"
@@ -1271,7 +1273,7 @@ class DataFrame(BaseFrame):
         """
         from narwhals.group_by import GroupBy
 
-        return GroupBy(self, *keys)
+        return GroupBy(self, *keys, api_version=self._api_version)
 
     def sort(
         self,
@@ -1665,8 +1667,10 @@ class LazyFrame(BaseFrame):
         df: Any,
         *,
         is_polars: bool = False,
+        api_version: str,
     ) -> None:
         self._is_polars = is_polars
+        self._api_version = api_version
         if hasattr(df, "__narwhals_lazyframe__"):
             self._dataframe: Any = df.__narwhals_lazyframe__()
         elif is_polars or (
@@ -1747,9 +1751,7 @@ class LazyFrame(BaseFrame):
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        return DataFrame(
-            self._dataframe.collect(),
-        )
+        return DataFrame(self._dataframe.collect(), api_version=self._api_version)
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:

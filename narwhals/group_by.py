@@ -15,10 +15,13 @@ if TYPE_CHECKING:
 
 
 class GroupBy:
-    def __init__(self, df: DataFrame, *keys: str | Iterable[str]) -> None:
+    def __init__(
+        self, df: DataFrame, *keys: str | Iterable[str], api_version: str
+    ) -> None:
         self._df = df
         self._keys = flatten(keys)
         self._grouped = self._df._dataframe.group_by(self._keys)
+        self._api_version = api_version
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
@@ -105,7 +108,7 @@ class GroupBy:
         """
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
         return self._df.__class__(
-            self._grouped.agg(*aggs, **named_aggs),
+            self._grouped.agg(*aggs, **named_aggs), api_version=self._api_version
         )
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrame]]:
@@ -118,10 +121,13 @@ class GroupBy:
 
 
 class LazyGroupBy:
-    def __init__(self, df: LazyFrame, *keys: str | Iterable[str]) -> None:
+    def __init__(
+        self, df: LazyFrame, *keys: str | Iterable[str], api_version: str
+    ) -> None:
         self._df = df
         self._keys = keys
         self._grouped = self._df._dataframe.group_by(*self._keys)
+        self._api_version = api_version
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
