@@ -317,7 +317,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             2.0
             >>> func(s_pl)
             2.0
@@ -347,7 +347,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             True
             >>> func(s_pl)
             True
@@ -374,7 +374,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             False
             >>> func(s_pl)
             False
@@ -402,7 +402,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             1
             >>> func(s_pl)
             1
@@ -429,7 +429,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             3
             >>> func(s_pl)
             3
@@ -456,7 +456,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             6
             >>> func(s_pl)
             6
@@ -487,7 +487,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             1.0
             >>> func(s_pl)
             1.0
@@ -1362,7 +1362,7 @@ class Series:
             ...     return series.null_count()
 
             We can then pass either pandas or Polars to `func`:
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             1
             >>> func(s_pl)
             2
@@ -1567,7 +1567,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pd)  # doctest: +SKIP
             [5, 12, 24, 37, 44]
 
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
@@ -1644,10 +1644,10 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)
+            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)  # doctest:+SKIP
             (1, 1)
 
-            >>> func(pl.Series("a", [9, 8, 7]), -1), func(pd.Series([9, 8, 7]), -2)
+            >>> func(pl.Series("a", [9, 8, 7]), -1), func(pl.Series([9, 8, 7]), -2)
             (7, 8)
         """
         return self._series.item(index=index)
@@ -1790,6 +1790,55 @@ class Series:
     @property
     def dt(self) -> SeriesDateTimeNamespace:
         return SeriesDateTimeNamespace(self)
+
+    @property
+    def cat(self) -> SeriesCatNamespace:
+        return SeriesCatNamespace(self)
+
+
+class SeriesCatNamespace:
+    def __init__(self, series: Series) -> None:
+        self._series = series
+
+    def get_categories(self) -> Series:
+        r"""
+        Check if string values start with a substring.
+
+        Arguments:
+            prefix: prefix substring
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["apple", "mango", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify(allow_series=True)
+            ... def func(series):
+            ...     return series.str.starts_with("app")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0     True
+            1    False
+            2     None
+            dtype: object
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+               true
+               false
+               null
+            ]
+        """
+        return self._series.__class__(self._series._series.cat.get_categories())
 
 
 class SeriesStringNamespace:

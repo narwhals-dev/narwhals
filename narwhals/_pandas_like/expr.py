@@ -308,6 +308,22 @@ class PandasExpr:
     def dt(self) -> PandasExprDateTimeNamespace:
         return PandasExprDateTimeNamespace(self)
 
+    @property
+    def cat(self) -> PandasExprCatNamespace:
+        return PandasExprCatNamespace(self)
+
+
+class PandasExprCatNamespace:
+    def __init__(self, expr: PandasExpr) -> None:
+        self._expr = expr
+
+    def get_categories(self) -> PandasExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "cat",
+            "get_categories",
+        )
+
 
 class PandasExprStringNamespace:
     def __init__(self, expr: PandasExpr) -> None:

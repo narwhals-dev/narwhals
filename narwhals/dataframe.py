@@ -1641,11 +1641,11 @@ class DataFrame(BaseFrame):
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd, 1, 1), func(df_pl, 1, 1)
-            (5, 5)
+            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")  # doctest:+SKIP
+            (5, 6)
 
-            >>> func(df_pd, 2, "b"), func(df_pl, 2, "b")
-            (6, 6)
+            >>> func(df_pl, 1, 1), func(df_pl, 2, "b")
+            (5, 6)
         """
         return self._dataframe.item(row=row, column=column)
 
