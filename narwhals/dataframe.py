@@ -436,7 +436,7 @@ class DataFrame(BaseFrame):
 
         if as_series:
             return {
-                key: Series(value)
+                key: Series(value, api_version=self._api_version)
                 for key, value in self._dataframe.to_dict(as_series=as_series).items()
             }
         # TODO: overload return type
@@ -1481,7 +1481,7 @@ class DataFrame(BaseFrame):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_duplicated())
+        return Series(self._dataframe.is_duplicated(), api_version=self._api_version)
 
     def is_empty(self: Self) -> bool:
         r"""
@@ -1563,7 +1563,7 @@ class DataFrame(BaseFrame):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_unique())
+        return Series(self._dataframe.is_unique(), api_version=self._api_version)
 
     def null_count(self: Self) -> DataFrame:
         r"""
@@ -1617,7 +1617,7 @@ class DataFrame(BaseFrame):
             └─────┴─────┴─────┘
         """
 
-        return DataFrame(self._dataframe.null_count())
+        return self._from_dataframe(self._dataframe.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""
@@ -2652,7 +2652,7 @@ class LazyFrame(BaseFrame):
         """
         from narwhals.group_by import LazyGroupBy
 
-        return LazyGroupBy(self, *keys)
+        return LazyGroupBy(self, *keys, api_version=self._api_version)
 
     def sort(
         self,

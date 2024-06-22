@@ -182,17 +182,21 @@ def from_native(  # noqa: PLR0913
     ):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
-        return DataFrame(native_dataframe, api_version=api_version)
+        return DataFrame(native_dataframe, api_version=api_version or "0.20")
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
-        return DataFrame(native_dataframe.__narwhals_dataframe__())
+        return DataFrame(
+            native_dataframe.__narwhals_dataframe__(), api_version=api_version or "0.20"
+        )
     elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with lazyframe")
         if eager_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `eager_only` with lazyframe")
-        return LazyFrame(native_dataframe.__narwhals_lazyframe__(), api_version="0.20")
+        return LazyFrame(
+            native_dataframe.__narwhals_lazyframe__(), api_version=api_version or "0.20"
+        )
     elif (
         (pl := get_polars()) is not None
         and isinstance(native_dataframe, pl.Series)
@@ -209,11 +213,13 @@ def from_native(  # noqa: PLR0913
     ):
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
-        return Series(native_dataframe)
+        return Series(native_dataframe, api_version=api_version or "0.20")
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
-        return Series(native_dataframe.__narwhals_series__())
+        return Series(
+            native_dataframe.__narwhals_series__(), api_version=api_version or "0.20"
+        )
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)

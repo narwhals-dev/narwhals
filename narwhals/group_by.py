@@ -135,4 +135,5 @@ class LazyGroupBy:
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
         return self._df.__class__(
             self._grouped.agg(*aggs, **named_aggs),
+            api_version=self._api_version,
         )

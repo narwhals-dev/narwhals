@@ -33,6 +33,7 @@ def concat(
     return first_item.__class__(
         plx.concat([df._dataframe for df in items], how=how),
         is_polars=first_item._is_polars,
+        api_version=first_item._api_version,
     )
 
 

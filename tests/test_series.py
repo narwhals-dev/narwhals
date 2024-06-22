@@ -46,9 +46,9 @@ df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     "df_raw", [df_pandas, df_polars, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_len(df_raw: Any) -> None:
-    result = len(nw.Series(df_raw["a"]))
+    result = len(nw.from_native(df_raw["a"], series_only=True))
     assert result == 3
-    result = nw.Series(df_raw["a"]).len()
+    result = nw.from_native(df_raw["a"], series_only=True).len()
     assert result == 3
     result = len(nw.from_native(df_raw).lazy().collect()["a"])
     assert result == 3
@@ -81,14 +81,16 @@ def test_filter(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
     expected = np.array([3, 2])
     assert (result.to_numpy() == expected).all()
-    result = nw.from_native(df_raw, eager_only=True).select(nw.col("a").filter(nw.col("a") > 1))["a"]
+    result = nw.from_native(df_raw, eager_only=True).select(
+        nw.col("a").filter(nw.col("a") > 1)
+    )["a"]
     expected = np.array([3, 2])
     assert (result.to_numpy() == expected).all()
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_gt(df_raw: Any) -> None:
-    s = nw.Series(df_raw["a"])
+    s = nw.from_native(df_raw["a"], series_only=True)
     result = s > s  # noqa: PLR0124
     assert not result[0]
     assert not result[1]
@@ -372,16 +374,16 @@ def test_cast() -> None:
 
 def test_to_numpy() -> None:
     s = pd.Series([1, 2, None], dtype="Int64")
-    result = nw.Series(s).to_numpy()
+    result = nw.from_native(s, series_only=True).to_numpy()
     assert result.dtype == "float64"
-    result = nw.Series(s).__array__()
+    result = nw.from_native(s, series_only=True).__array__()
     assert result.dtype == "float64"
-    assert nw.Series(s).shape == (3,)
+    assert nw.from_native(s, series_only=True).shape == (3,)
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_duplicated(df_raw: Any) -> None:
-    series = nw.Series(df_raw["b"])
+    series = nw.from_native(df_raw["b"], series_only=True)
     result = series.is_duplicated()
     expected = np.array([True, True, False])
     assert (result.to_numpy() == expected).all()
@@ -390,14 +392,14 @@ def test_is_duplicated(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 @pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])
 def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
-    series = nw.Series(df_raw["a"])
+    series = nw.from_native(df_raw["a"], series_only=True)
     result = series.filter(series > threshold).is_empty()
     assert result == expected
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_unique(df_raw: Any) -> None:
-    series = nw.Series(df_raw["b"])
+    series = nw.from_native(df_raw["b"], series_only=True)
     result = series.is_unique()
     expected = np.array([False, False, True])
     assert (result.to_numpy() == expected).all()
@@ -405,14 +407,14 @@ def test_is_unique(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("s_raw", [pd.Series([1, 2, None]), pl.Series([1, 2, None])])
 def test_null_count(s_raw: Any) -> None:
-    series = nw.Series(s_raw)
+    series = nw.from_native(s_raw, series_only=True)
     result = series.null_count()
     assert result == 1
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_first_distinct(df_raw: Any) -> None:
-    series = nw.Series(df_raw["b"])
+    series = nw.from_native(df_raw["b"], series_only=True)
     result = series.is_first_distinct()
     expected = np.array([True, False, True])
     assert (result.to_numpy() == expected).all()
@@ -420,7 +422,7 @@ def test_is_first_distinct(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_last_distinct(df_raw: Any) -> None:
-    series = nw.Series(df_raw["b"])
+    series = nw.from_native(df_raw["b"], series_only=True)
     result = series.is_last_distinct()
     expected = np.array([False, True, True])
     assert (result.to_numpy() == expected).all()
@@ -428,7 +430,7 @@ def test_is_last_distinct(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_value_counts(df_raw: Any) -> None:
-    series = nw.Series(df_raw["b"])
+    series = nw.from_native(df_raw["b"], series_only=True)
     sorted_result = series.value_counts(sort=True)
     assert sorted_result.columns == ["b", "count"]
 
@@ -449,14 +451,14 @@ def test_value_counts(df_raw: Any) -> None:
     [("a", False, False), ("z", False, True), ("z", True, False)],
 )
 def test_is_sorted(df_raw: Any, col: str, descending: bool, expected: bool) -> None:  # noqa: FBT001
-    series = nw.Series(df_raw[col])
+    series = nw.from_native(df_raw[col], series_only=True)
     result = series.is_sorted(descending=descending)
     assert result == expected
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_sorted_invalid(df_raw: Any) -> None:
-    series = nw.Series(df_raw["z"])
+    series = nw.from_native(df_raw["z"], series_only=True)
 
     with pytest.raises(TypeError):
         series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]
@@ -493,11 +495,11 @@ def test_quantile(
     ],
 )
 def test_zip_with(df_raw: Any, mask: Any, expected: Any) -> None:
-    series1 = nw.Series(df_raw["a"])
-    series2 = nw.Series(df_raw["b"])
-    mask = nw.Series(mask)
+    series1 = nw.from_native(df_raw["a"], series_only=True)
+    series2 = nw.from_native(df_raw["b"], series_only=True)
+    mask = nw.from_native(mask, series_only=True)
     result = series1.zip_with(mask, series2)
-    expected = nw.Series(expected)
+    expected = nw.from_native(expected, series_only=True)
     assert result == expected
 
 
@@ -515,10 +517,10 @@ df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 @pytest.mark.parametrize(("index", "expected"), [(0, 1), (1, 3)])
 def test_item(df_raw: Any, index: int, expected: int) -> None:
-    s = nw.Series(df_raw["a"])
+    s = nw.from_native(df_raw["a"], series_only=True)
     result = s.item(index)
     assert result == expected
-    assert nw.Series(df_raw["a"].head(1)).item() == 1
+    assert nw.from_native(df_raw["a"].head(1), series_only=True).item() == 1
 
     with pytest.raises(
         ValueError,
@@ -533,7 +535,7 @@ def test_head(df_raw: Any, n: int) -> None:
     s_raw = df_raw["z"]
     s = nw.from_native(s_raw, allow_series=True)
 
-    assert s.head(n) == nw.Series(s_raw.head(n))
+    assert s.head(n) == nw.from_native(s_raw.head(n, series_only=True))
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
@@ -542,4 +544,4 @@ def test_tail(df_raw: Any, n: int) -> None:
     s_raw = df_raw["z"]
     s = nw.from_native(s_raw, allow_series=True)
 
-    assert s.tail(n) == nw.Series(s_raw.tail(n))
+    assert s.tail(n) == nw.from_native(s_raw.tail(n), series_only=True)
