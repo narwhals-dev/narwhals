@@ -5,6 +5,7 @@ from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterable
 from typing import Literal
 from typing import overload
 
@@ -12,10 +13,12 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.expression import col
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.expression import Expr
     from narwhals.series import Series
 
 
@@ -64,6 +67,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
+    api_version: str | None = ...,
 ) -> DataFrame | Series: ...
 
 
@@ -75,6 +79,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
+    api_version: str | None = ...,
 ) -> DataFrame: ...
 
 
@@ -86,6 +91,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
+    api_version: str | None = ...,
 ) -> DataFrame | LazyFrame | Series: ...
 
 
@@ -97,6 +103,7 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
+    api_version: str | None = ...,
 ) -> Series: ...
 
 
@@ -108,6 +115,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
+    api_version: str | None = ...,
 ) -> DataFrame | LazyFrame: ...
 
 
@@ -115,10 +123,11 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
-    strict: bool,
-    eager_only: bool | None,
-    series_only: bool | None,
-    allow_series: bool | None,
+    strict: bool = ...,
+    eager_only: bool | None = ...,
+    series_only: bool | None = ...,
+    allow_series: bool | None = ...,
+    api_version: str | None = ...,
 ) -> DataFrame | LazyFrame | Series: ...
 
 
@@ -426,6 +435,39 @@ def narwhalify_method(
     else:
         # If func is not None, it means the decorator is used without arguments
         return decorator(func)
+
+
+class StableAPI:
+    api_version: str
+
+    def __init__(self, api_version: str) -> None:
+        self.api_version = api_version
+
+    def from_native(  # noqa: PLR0913
+        self,
+        native_dataframe: Any,
+        *,
+        strict: bool = True,
+        eager_only: bool | None = None,
+        series_only: bool | None = None,
+        allow_series: bool | None = None,
+    ) -> DataFrame | LazyFrame | Series:
+        return from_native(
+            native_dataframe,
+            strict=strict,
+            eager_only=eager_only,
+            series_only=series_only,
+            allow_series=allow_series,
+            api_version=self.api_version,
+        )
+
+    def to_native(
+        self, narwhals_object: LazyFrame | DataFrame | Series, *, strict: bool = True
+    ) -> Any:
+        return to_native(narwhals_object, strict=strict)
+
+    def col(self, *names: str | Iterable[str], api_version: str | None = None) -> Expr:
+        return col(*names, api_version=self.api_version)
 
 
 __all__ = [

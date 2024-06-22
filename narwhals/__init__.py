@@ -28,6 +28,7 @@ from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
 from narwhals.functions import show_versions
 from narwhals.series import Series
+from narwhals.translate import StableAPI
 from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
@@ -78,4 +79,5 @@ __all__ = [
     "narwhalify",
     "narwhalify_method",
     "show_versions",
+    "StableAPI",
 ]
