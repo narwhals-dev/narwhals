@@ -347,7 +347,8 @@ df_polars_right = pl.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
 
 
 @pytest.mark.parametrize(
-    "df_left, df_right", [(df_pandas_left, df_pandas_right), (df_polars_left, df_polars_right)]
+    "df_left, df_right",
+    [(df_pandas_left, df_pandas_right), (df_polars_left, df_polars_right)],
 )
 def test_coalesce_overlapping_names(df_left, df_right):
     if isinstance(df_left, pd.DataFrame):
@@ -370,11 +371,7 @@ def test_coalesce_overlapping_names(df_left, df_right):
         result_dict = result_native.to_dict(orient="list")
 
     # Expected result dictionary
-    expected = {
-        "a": [1, 2, 3],
-        "b": [4, 5, 6],
-        "a_right": [1, 2, 3]
-    }
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "a_right": [1, 2, 3]}
 
     # Perform the comparison
     compare_dicts(result_dict, expected)
