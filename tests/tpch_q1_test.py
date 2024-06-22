@@ -91,7 +91,7 @@ def test_q1_w_generic_funcs(library: str) -> None:
     else:
         df_raw = pl.read_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(

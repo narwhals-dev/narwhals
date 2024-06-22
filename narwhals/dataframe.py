@@ -387,7 +387,7 @@ class DataFrame(BaseFrame):
         if isinstance(item, str):
             from narwhals.series import Series
 
-            return Series(self._dataframe[item])
+            return Series(self._dataframe[item], api_version=self._api_version)
 
         elif isinstance(item, (range, slice)):
             return self._from_dataframe(self._dataframe[item])

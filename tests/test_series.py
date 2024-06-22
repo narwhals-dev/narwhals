@@ -81,7 +81,7 @@ def test_filter(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
     expected = np.array([3, 2])
     assert (result.to_numpy() == expected).all()
-    result = nw.DataFrame(df_raw).select(nw.col("a").filter(nw.col("a") > 1))["a"]
+    result = nw.from_native(df_raw, eager_only=True).select(nw.col("a").filter(nw.col("a") > 1))["a"]
     expected = np.array([3, 2])
     assert (result.to_numpy() == expected).all()
 
@@ -179,7 +179,7 @@ def test_dtypes() -> None:
             "m": pl.Boolean,
         },
     )
-    result = nw.DataFrame(df).schema
+    result = nw.from_native(df, eager_only=True).schema
     expected = {
         "a": nw.Int64,
         "b": nw.Int32,
@@ -196,7 +196,7 @@ def test_dtypes() -> None:
         "m": nw.Boolean,
     }
     assert result == expected
-    result_pd = nw.DataFrame(df.to_pandas()).schema
+    result_pd = nw.from_native(df.to_pandas(), eager_only=True).schema
     assert result_pd == expected
 
 
@@ -237,7 +237,7 @@ def test_cast() -> None:
             "o": pl.Categorical,
         },
     )
-    df = nw.DataFrame(df_raw).select(
+    df = nw.from_native(df_raw, eager_only=True).select(
         nw.col("a").cast(nw.Int32),
         nw.col("b").cast(nw.Int16),
         nw.col("c").cast(nw.Int8),
@@ -273,7 +273,7 @@ def test_cast() -> None:
         "o": nw.String,
     }
     assert result == expected
-    result_pd = nw.DataFrame(df.to_pandas()).schema
+    result_pd = nw.from_native(df.to_pandas(), eager_only=True).schema
     assert result_pd == expected
     result = df.select(
         df["a"].cast(nw.Int32),

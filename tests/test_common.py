@@ -108,7 +108,7 @@ def test_filter(df_raw: Any) -> None:
     [df_pandas, df_polars],
 )
 def test_filter_series(df_raw: Any) -> None:
-    df = nw.DataFrame(df_raw).with_columns(mask=nw.col("a") > 1)
+    df = nw.from_native(df_raw, eager_only=True).with_columns(mask=nw.col("a") > 1)
     result = df.filter(df["mask"]).drop("mask")
     result_native = nw.to_native(result)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
@@ -371,12 +371,12 @@ def test_lazy_instantiation_error(df_raw: Any) -> None:
     with pytest.raises(
         TypeError, match="Can't instantiate DataFrame from Polars LazyFrame."
     ):
-        _ = nw.DataFrame(df_raw).shape
+        _ = nw.from_native(df_raw, eager_only=True).shape
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
 def test_eager_instantiation(df_raw: Any) -> None:
-    result = nw.DataFrame(df_raw)
+    result = nw.from_native(df_raw, eager_only=True)
     result_native = nw.to_native(result)
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     compare_dicts(result_native, expected)
@@ -388,7 +388,7 @@ def test_accepted_dataframes() -> None:
         TypeError,
         match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
     ):
-        nw.DataFrame(array)
+        nw.from_native(array, eager_only=True)
     with pytest.raises(
         TypeError,
         match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
@@ -411,18 +411,18 @@ def test_convert_pandas(df_raw: Any) -> None:
     r"ignore:np\.find_common_type is deprecated\.:DeprecationWarning"
 )
 def test_convert_numpy(df_raw: Any) -> None:
-    result = nw.DataFrame(df_raw).to_numpy()
+    result = nw.from_native(df_raw, eager_only=True).to_numpy()
     expected = np.array([[1, 3, 2], [4, 4, 6], [7.0, 8, 9]]).T
     np.testing.assert_array_equal(result, expected)
     assert result.dtype == "float64"
-    result = nw.DataFrame(df_raw).__array__()
+    result = nw.from_native(df_raw, eager_only=True).__array__()
     np.testing.assert_array_equal(result, expected)
     assert result.dtype == "float64"
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
 def test_shape(df_raw: Any) -> None:
-    result = nw.DataFrame(df_raw).shape
+    result = nw.from_native(df_raw, eager_only=True).shape
     expected = (3, 3)
     assert result == expected
 
@@ -627,13 +627,13 @@ def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_lazy(df_raw: Any) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     result = df.lazy()
     assert isinstance(result, nw.LazyFrame)
 
 
 def test_to_dict() -> None:
-    df = nw.DataFrame(df_pandas)
+    df = nw.from_native(df_pandas, eager_only=True)
     result = df.to_dict(as_series=True)
     expected = {
         "a": pd.Series([1, 3, 2], name="a"),
@@ -643,7 +643,7 @@ def test_to_dict() -> None:
     for key in expected:
         pd_assert_series_equal(nw.to_native(result[key]), expected[key])
 
-    df = nw.DataFrame(df_polars)
+    df = nw.from_native(df_polars, eager_only=True)
     result = df.to_dict(as_series=True)
     expected = {
         "a": pl.Series("a", [1, 3, 2]),
@@ -668,7 +668,7 @@ def test_any_all(df_raw: Any) -> None:
 
 
 def test_invalid() -> None:
-    df = nw.LazyFrame(df_pandas)
+    df = nw.from_native(df_pandas).lazy()
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
     with pytest.raises(TypeError, match="Perhaps you:"):
@@ -679,7 +679,7 @@ def test_invalid() -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas])
 def test_reindex(df_raw: Any) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     result = df.select("b", df["a"].sort(descending=True))
     expected = {"b": [4, 4, 6], "a": [3, 2, 1]}
     compare_dicts(result, expected)
@@ -721,7 +721,7 @@ def test_library(df_raw: Any, df_raw_right: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_duplicated(df_raw: Any) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     result = nw.concat([df, df.head(1)]).is_duplicated()  # type: ignore [union-attr]
     expected = np.array([True, False, False, True])
     assert (result.to_numpy() == expected).all()
@@ -730,14 +730,14 @@ def test_is_duplicated(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 @pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])
 def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     result = df.filter(nw.col("a") > threshold).is_empty()
     assert result == expected
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_unique(df_raw: Any) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     result = nw.concat([df, df.head(1)]).is_unique()  # type: ignore [union-attr]
     expected = np.array([False, True, True, False])
     assert (result.to_numpy() == expected).all()
@@ -745,7 +745,7 @@ def test_is_unique(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na.collect()])
 def test_null_count(df_raw: Any) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     result = nw.to_native(df.null_count())
     expected = {"a": [1], "b": [0], "z": [1]}
     compare_dicts(result, expected)

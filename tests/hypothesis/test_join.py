@@ -50,14 +50,14 @@ def test_join(  # pragma: no cover
 
     df_polars = pl.DataFrame(data)
     df_polars2 = pl.DataFrame(data)
-    df_pl = nw.DataFrame(df_polars)
-    other_pl = nw.DataFrame(df_polars2)
+    df_pl = nw.from_native(df_polars, eager_only=True)
+    other_pl = nw.from_native(df_polars2, eager_only=True)
     dframe_pl = df_pl.join(other_pl, left_on=cols, right_on=cols, how="inner")
 
     df_pandas = pd.DataFrame(data)
     df_pandas2 = pd.DataFrame(data)
-    df_pd = nw.DataFrame(df_pandas)
-    other_pd = nw.DataFrame(df_pandas2)
+    df_pd = nw.from_native(df_pandas, eager_only=True)
+    other_pd = nw.from_native(df_pandas2, eager_only=True)
     dframe_pd = df_pd.join(other_pd, left_on=cols, right_on=cols, how="inner")
 
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()

@@ -144,17 +144,17 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     ):
         _validate_index(lhs_any._dataframe._dataframe.index)
         _validate_index(rhs_any._dataframe._dataframe.index)
-        return DataFrame(  # type: ignore[return-value]
+        return lhs._from_dataframe(  # type: ignore[no-any-return, attr-defined]
             lhs_any._dataframe._from_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._dataframe._dataframe.index]
-            )
+            ),
         )
     if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
         getattr(rhs_any, "_series", None), PandasSeries
     ):
         _validate_index(lhs_any._dataframe._dataframe.index)
         _validate_index(rhs_any._series._series.index)
-        return DataFrame(  # type: ignore[return-value]
+        return lhs._from_dataframe(  # type: ignore[no-any-return, attr-defined]
             lhs_any._dataframe._from_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._series._series.index]
             )

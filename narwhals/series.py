@@ -19,15 +19,11 @@ if TYPE_CHECKING:
 
 
 class Series:
-    def __init__(
-        self,
-        series: Any,
-        *,
-        is_polars: bool = False,
-    ) -> None:
+    def __init__(self, series: Any, *, is_polars: bool = False, api_version: str) -> None:
         from narwhals._pandas_like.series import PandasSeries
 
         self._is_polars = is_polars
+        self._api_version = api_version
         if hasattr(series, "__narwhals_series__"):
             self._series = series.__narwhals_series__()
             return
@@ -107,7 +103,9 @@ class Series:
         return arg
 
     def _from_series(self, series: Any) -> Self:
-        return self.__class__(series, is_polars=self._is_polars)
+        return self.__class__(
+            series, is_polars=self._is_polars, api_version=self._api_version
+        )
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals Series                                 "
@@ -1785,15 +1783,15 @@ class Series:
 
     @property
     def str(self) -> SeriesStringNamespace:
-        return SeriesStringNamespace(self)
+        return SeriesStringNamespace(self, api_version=self._api_version)
 
     @property
     def dt(self) -> SeriesDateTimeNamespace:
-        return SeriesDateTimeNamespace(self)
+        return SeriesDateTimeNamespace(self, api_version=self._api_version)
 
     @property
     def cat(self) -> SeriesCatNamespace:
-        return SeriesCatNamespace(self)
+        return SeriesCatNamespace(self, api_version=self._api_version)
 
 
 class SeriesCatNamespace:
@@ -1836,11 +1834,14 @@ class SeriesCatNamespace:
                "mango"
             ]
         """
-        return self._series.__class__(self._series._series.cat.get_categories())
+        return self._series.__class__(
+            self._series._series.cat.get_categories(), api_version=self._api_version
+        )
 
 
 class SeriesStringNamespace:
-    def __init__(self, series: Series) -> None:
+    def __init__(self, series: Series, *, api_version: str) -> None:
+        self._api_version = api_version
         self._series = series
 
     def starts_with(self, prefix: str) -> Series:
@@ -1968,7 +1969,8 @@ class SeriesStringNamespace:
             ]
         """
         return self._series.__class__(
-            self._series._series.str.contains(pattern, literal=literal)
+            self._series._series.str.contains(pattern, literal=literal),
+            api_version=self._api_version,
         )
 
     def slice(self, offset: int, length: int | None = None) -> Series:
@@ -2037,7 +2039,8 @@ class SeriesStringNamespace:
             ]
         """
         return self._series.__class__(
-            self._series._series.str.slice(offset=offset, length=length)
+            self._series._series.str.slice(offset=offset, length=length),
+            api_version=self._api_version,
         )
 
     def head(self, n: int = 5) -> Series:
@@ -2084,7 +2087,9 @@ class SeriesStringNamespace:
                "zukky"
             ]
         """
-        return self._series.__class__(self._series._series.str.slice(0, n))
+        return self._series.__class__(
+            self._series._series.str.slice(0, n), api_version=self._api_version
+        )
 
     def tail(self, n: int = 5) -> Series:
         r"""
@@ -2134,7 +2139,8 @@ class SeriesStringNamespace:
 
 
 class SeriesDateTimeNamespace:
-    def __init__(self, series: Series) -> None:
+    def __init__(self, series: Series, *, api_version: str) -> None:
+        self._api_version = api_version
         self._series = series
 
     def year(self) -> Series:

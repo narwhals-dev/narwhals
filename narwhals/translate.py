@@ -122,7 +122,7 @@ def from_native(
 ) -> DataFrame | LazyFrame | Series: ...
 
 
-def from_native(
+def from_native(  # noqa: PLR0913
     native_dataframe: Any,
     *,
     strict: bool = True,
