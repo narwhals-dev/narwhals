@@ -1801,41 +1801,38 @@ class SeriesCatNamespace:
         self._series = series
 
     def get_categories(self) -> Series:
-        r"""
-        Check if string values start with a substring.
-
-        Arguments:
-            prefix: prefix substring
+        """
+        Get unique categories from column.
 
         Examples:
+            Let's create some series:
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> data = ["apple", "mango", None]
-            >>> s_pd = pd.Series(data)
-            >>> s_pl = pl.Series(data)
+            >>> data = ["apple", "mango", "mango"]
+            >>> s_pd = pd.Series(data, dtype="category")
+            >>> s_pl = pl.Series(data, dtype=pl.Categorical)
 
-            We define a dataframe-agnostic function:
+            We define a dataframe-agnostic function to get unique categories
+            from column 'fruits':
 
-            >>> @nw.narwhalify(allow_series=True)
-            ... def func(series):
-            ...     return series.str.starts_with("app")
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.cat.get_categories()
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
-            0     True
-            1    False
-            2     None
+            0    apple
+            1    mango
             dtype: object
-
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (3,)
-            Series: '' [bool]
+            shape: (2,)
+            Series: '' [str]
             [
-               true
-               false
-               null
+               "apple"
+               "mango"
             ]
         """
         return self._series.__class__(self._series._series.cat.get_categories())
