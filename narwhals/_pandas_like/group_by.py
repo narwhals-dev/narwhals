@@ -118,9 +118,12 @@ def agg_pandas(  # noqa: PLR0913
             assert expr._depth == 1
             assert expr._root_names is not None
             assert expr._output_names is not None
+            function_name = remove_prefix(expr._function_name, "col->")
+            function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
+                function_name, function_name
+            )
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                name = remove_prefix(expr._function_name, "col->")
-                simple_aggregations[output_name] = (root_name, name)
+                simple_aggregations[output_name] = (root_name, function_name)
 
         aggs = collections.defaultdict(list)
         name_mapping = {}
