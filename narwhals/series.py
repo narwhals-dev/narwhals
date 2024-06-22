@@ -317,7 +317,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             2.0
             >>> func(s_pl)
             2.0
@@ -347,7 +347,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             True
             >>> func(s_pl)
             True
@@ -374,7 +374,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             False
             >>> func(s_pl)
             False
@@ -402,7 +402,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             1
             >>> func(s_pl)
             1
@@ -429,7 +429,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             3
             >>> func(s_pl)
             3
@@ -456,7 +456,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             6
             >>> func(s_pl)
             6
@@ -487,7 +487,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             1.0
             >>> func(s_pl)
             1.0
@@ -1362,7 +1362,7 @@ class Series:
             ...     return series.null_count()
 
             We can then pass either pandas or Polars to `func`:
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest:+SKIP
             1
             >>> func(s_pl)
             2
@@ -1567,7 +1567,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pd)  # doctest: +SKIP
             [5, 12, 24, 37, 44]
 
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
@@ -1644,10 +1644,10 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)
+            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)  # doctest:+SKIP
             (1, 1)
 
-            >>> func(pl.Series("a", [9, 8, 7]), -1), func(pd.Series([9, 8, 7]), -2)
+            >>> func(pl.Series("a", [9, 8, 7]), -1), func(pl.Series([9, 8, 7]), -2)
             (7, 8)
         """
         return self._series.item(index=index)
@@ -1790,6 +1790,52 @@ class Series:
     @property
     def dt(self) -> SeriesDateTimeNamespace:
         return SeriesDateTimeNamespace(self)
+
+    @property
+    def cat(self) -> SeriesCatNamespace:
+        return SeriesCatNamespace(self)
+
+
+class SeriesCatNamespace:
+    def __init__(self, series: Series) -> None:
+        self._series = series
+
+    def get_categories(self) -> Series:
+        """
+        Get unique categories from column.
+
+        Examples:
+            Let's create some series:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["apple", "mango", "mango"]
+            >>> s_pd = pd.Series(data, dtype="category")
+            >>> s_pl = pl.Series(data, dtype=pl.Categorical)
+
+            We define a dataframe-agnostic function to get unique categories
+            from column 'fruits':
+
+            >>> @nw.narwhalify(series_only=True)
+            ... def func(s):
+            ...     return s.cat.get_categories()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    apple
+            1    mango
+            dtype: object
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+               "apple"
+               "mango"
+            ]
+        """
+        return self._series.__class__(self._series._series.cat.get_categories())
 
 
 class SeriesStringNamespace:

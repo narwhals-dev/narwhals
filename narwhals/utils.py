@@ -53,7 +53,12 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     if (pl := get_polars()) is not None and isinstance(
         arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
     ):
-        msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
+        msg = (
+            f"Expected Narwhals class or scalar, got: {type(arg)}.\n\n"
+            "Hint: Perhaps you\n"
+            "- forgot a `nw.from_native` somewhere?\n"
+            "- used `pl.col` instead of `nw.col`?"
+        )
         raise TypeError(msg)
 
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))

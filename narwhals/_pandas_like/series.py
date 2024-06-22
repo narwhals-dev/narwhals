@@ -503,6 +503,19 @@ class PandasSeries:
     def dt(self) -> PandasSeriesDateTimeNamespace:
         return PandasSeriesDateTimeNamespace(self)
 
+    @property
+    def cat(self) -> PandasSeriesCatNamespace:
+        return PandasSeriesCatNamespace(self)
+
+
+class PandasSeriesCatNamespace:
+    def __init__(self, series: PandasSeries) -> None:
+        self._series = series
+
+    def get_categories(self) -> PandasSeries:
+        s = self._series._series
+        return self._series._from_series(s.__class__(s.cat.categories, name=s.name))
+
 
 class PandasSeriesStringNamespace:
     def __init__(self, series: PandasSeries) -> None:
