@@ -371,7 +371,7 @@ def test_lazy_instantiation_error(df_raw: Any) -> None:
     with pytest.raises(
         TypeError, match="Can't instantiate DataFrame from Polars LazyFrame."
     ):
-        _ = nw.from_native(df_raw, eager_only=True).shape
+        _ = nw.DataFrame(df_raw, api_version="0.20").shape
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
@@ -393,7 +393,7 @@ def test_accepted_dataframes() -> None:
         TypeError,
         match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
     ):
-        nw.from_native(array).lazy()
+        nw.LazyFrame(array, api_version="0.20")
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
@@ -429,26 +429,30 @@ def test_shape(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
 def test_expr_binary(df_raw: Any) -> None:
-    result = nw.from_native(df_raw).lazy().with_columns(
-        a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
-        b=nw.col("z") / (2 - nw.col("b")),
-        c=nw.col("a") + nw.col("b") / 2,
-        d=nw.col("a") - nw.col("b"),
-        e=((nw.col("a") > nw.col("b")) & (nw.col("a") >= nw.col("z"))).cast(nw.Int64),
-        f=(
-            (nw.col("a") < nw.col("b"))
-            | (nw.col("a") <= nw.col("z"))
-            | (nw.col("a") == 1)
-        ).cast(nw.Int64),
-        g=nw.col("a") != 1,
-        h=(False & (nw.col("a") != 1)),
-        i=(False | (nw.col("a") != 1)),
-        j=2 ** nw.col("a"),
-        k=2 // nw.col("a"),
-        l=nw.col("a") // 2,
-        m=nw.col("a") ** 2,
-        n=nw.col("a") % 2,
-        o=2 % nw.col("a"),
+    result = (
+        nw.from_native(df_raw)
+        .lazy()
+        .with_columns(
+            a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
+            b=nw.col("z") / (2 - nw.col("b")),
+            c=nw.col("a") + nw.col("b") / 2,
+            d=nw.col("a") - nw.col("b"),
+            e=((nw.col("a") > nw.col("b")) & (nw.col("a") >= nw.col("z"))).cast(nw.Int64),
+            f=(
+                (nw.col("a") < nw.col("b"))
+                | (nw.col("a") <= nw.col("z"))
+                | (nw.col("a") == 1)
+            ).cast(nw.Int64),
+            g=nw.col("a") != 1,
+            h=(False & (nw.col("a") != 1)),
+            i=(False | (nw.col("a") != 1)),
+            j=2 ** nw.col("a"),
+            k=2 // nw.col("a"),
+            l=nw.col("a") // 2,
+            m=nw.col("a") ** 2,
+            n=nw.col("a") % 2,
+            o=2 % nw.col("a"),
+        )
     )
     result_native = nw.to_native(result)
     expected = {
@@ -492,8 +496,10 @@ def test_expr_unary(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
 def test_expr_transform(df_raw: Any) -> None:
-    result = nw.from_native(df_raw).lazy().with_columns(
-        a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5])
+    result = (
+        nw.from_native(df_raw)
+        .lazy()
+        .with_columns(a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5]))
     )
     result_native = nw.to_native(result)
     expected = {"a": [True, False, False], "b": [True, True, False], "z": [7, 8, 9]}
@@ -613,7 +619,14 @@ def test_concat_horizontal(df_raw: Any, df_raw_right: Any) -> None:
     ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
 )
 def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
-    df_left = nw.from_native(df_raw).lazy().collect().rename({"a": "c", "b": "d"}).lazy().drop("z")
+    df_left = (
+        nw.from_native(df_raw)
+        .lazy()
+        .collect()
+        .rename({"a": "c", "b": "d"})
+        .lazy()
+        .drop("z")
+    )
     df_right = nw.from_native(df_raw_right).lazy()
     result = nw.concat([df_left, df_right], how="vertical")
     result_native = nw.to_native(result)

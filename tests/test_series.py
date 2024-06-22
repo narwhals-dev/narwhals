@@ -535,7 +535,7 @@ def test_head(df_raw: Any, n: int) -> None:
     s_raw = df_raw["z"]
     s = nw.from_native(s_raw, allow_series=True)
 
-    assert s.head(n) == nw.from_native(s_raw.head(n, series_only=True))
+    assert s.head(n) == nw.from_native(s_raw.head(n), series_only=True)
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
