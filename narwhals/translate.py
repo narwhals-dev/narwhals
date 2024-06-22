@@ -9,11 +9,17 @@ from typing import Iterable
 from typing import Literal
 from typing import overload
 
+from narwhals.dataframe import DataFrame
+from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.expression import Expr
 from narwhals.expression import col
+from narwhals.series import Series
+from narwhals.utils import maybe_align_index
+from narwhals.utils import maybe_set_index
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -440,6 +446,11 @@ def narwhalify_method(
 class StableAPI:
     api_version: str
 
+    DataFrame = DataFrame
+    LazyFrame = LazyFrame
+    Series = Series
+    Expr = Expr
+
     def __init__(self, api_version: str) -> None:
         self.api_version = api_version
 
@@ -468,6 +479,15 @@ class StableAPI:
 
     def col(self, *names: str | Iterable[str], api_version: str | None = None) -> Expr:
         return col(*names, api_version=self.api_version)
+
+    def maybe_align_index(self, lhs: T, rhs: Series | BaseFrame):
+        return maybe_align_index(lhs, rhs)
+
+    def get_native_namespace(self, obj: Any) -> Any:
+        return get_native_namespace(obj)
+
+    def maybe_set_index(self, df: T, column_names: str | list[str]) -> T:
+        return maybe_set_index(df, column_names)
 
 
 __all__ = [
