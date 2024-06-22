@@ -339,35 +339,45 @@ def test_join(df_raw: Any) -> None:
 
 
 # Sample data
-df_pandas = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-df_right_pandas = pd.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
+df_pandas_left = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+df_pandas_right = pd.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
 
-df_polars = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-df_right_polars = pl.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
+df_polars_left = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+df_polars_right = pl.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
 
 
 @pytest.mark.parametrize(
-    "df_left, df_right", [(df_pandas, df_right_pandas), (df_polars, df_right_polars)]
+    "df_left, df_right", [(df_pandas_left, df_pandas_right), (df_polars_left, df_polars_right)]
 )
 def test_coalesce_overlapping_names(df_left, df_right):
     if isinstance(df_left, pd.DataFrame):
-        # Perform the join operation in pandas
-        result_pandas = df_left.merge(df_right, left_on="b", right_on="c", how="left")
-        # Adjust the pandas result to match the expected column names
-        result_pandas = result_pandas.rename(columns={"a_x": "a_left", "a_y": "a_right"})
-        result = result_pandas.to_dict(orient="list")
-    else:
-        # Perform the join operation in narwhals (using polars underneath)
-        df_left_nw = nw.DataFrame(df_left)
-        df_right_nw = nw.DataFrame(df_right)
-        result_polars = df_left_nw.join(
-            df_right_nw, left_on="b", right_on="c", how="left"
-        )
-        result = nw.to_native(result_polars)
-        result = result.rename({"a": "a_left"}).to_pandas().to_dict(orient="list")
+        # Convert Pandas to Polars for uniformity in processing
+        df_left = pl.DataFrame(df_left)
+        df_right = pl.DataFrame(df_right)
 
-    expected = {"a_left": [1, 2, 3], "b": [4, 5, 6], "a_right": [1, 2, 3], "c": [4, 5, 6]}
-    compare_dicts(result, expected)
+    result = df_left.join(df_right, left_on="b", right_on="c", how="left")
+
+    if isinstance(df_left, pd.DataFrame):
+        result_native = result.to_pandas()
+    else:
+        result_native = result
+
+    if isinstance(result_native, pd.DataFrame):
+        result_native = result_native.rename(columns={"a_x": "a", "a_y": "a_right"})
+        result_dict = result_native.to_dict(orient="list")
+    else:
+        result_native = result_native.rename({"a": "a", "a_right": "a_right"}).to_pandas()
+        result_dict = result_native.to_dict(orient="list")
+
+    # Expected result dictionary
+    expected = {
+        "a": [1, 2, 3],
+        "b": [4, 5, 6],
+        "a_right": [1, 2, 3]
+    }
+
+    # Perform the comparison
+    compare_dicts(result_dict, expected)
 
 
 @pytest.mark.parametrize(
