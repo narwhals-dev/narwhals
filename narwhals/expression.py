@@ -14,6 +14,8 @@ from narwhals.utils import flatten
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.typing import IntoExpr
 
 
@@ -28,9 +30,13 @@ def extract_native(expr: Expr, other: Any) -> Any:
 
 
 class Expr:
-    def __init__(self, call: Callable[[Any], Any]) -> None:
+    def __init__(self, call: Callable[[Any], Any], api_version: str) -> None:
         # callable from namespace to expr
         self._call = call
+        self._api_version = api_version
+
+    def _from_expr(self, call: Callable[[Any], Any]) -> Self:
+        return self.__class__(call, api_version=self._api_version)
 
     # --- convert ---
     def alias(self, name: str) -> Expr:
@@ -71,7 +77,7 @@ class Expr:
             │ 15  │
             └─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).alias(name))
+        return self._from_expr(lambda plx: self._call(plx).alias(name))
 
     def cast(
         self,
@@ -121,134 +127,134 @@ class Expr:
             └─────┴─────┘
         """
 
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).cast(translate_dtype(plx, dtype)),
         )
 
     # --- binary ---
     def __eq__(self, other: object) -> Expr:  # type: ignore[override]
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__eq__(extract_native(plx, other))
         )
 
     def __ne__(self, other: object) -> Expr:  # type: ignore[override]
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__ne__(extract_native(plx, other))
         )
 
     def __and__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__and__(extract_native(plx, other))
         )
 
     def __rand__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__rand__(extract_native(plx, other))
         )
 
     def __or__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__or__(extract_native(plx, other))
         )
 
     def __ror__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__ror__(extract_native(plx, other))
         )
 
     def __add__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__add__(extract_native(plx, other))
         )
 
     def __radd__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__radd__(extract_native(plx, other))
         )
 
     def __sub__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__sub__(extract_native(plx, other))
         )
 
     def __rsub__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__rsub__(extract_native(plx, other))
         )
 
     def __truediv__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__truediv__(extract_native(plx, other))
         )
 
     def __rtruediv__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__rtruediv__(extract_native(plx, other))
         )
 
     def __mul__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__mul__(extract_native(plx, other))
         )
 
     def __rmul__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__rmul__(extract_native(plx, other))
         )
 
     def __le__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__le__(extract_native(plx, other))
         )
 
     def __lt__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__lt__(extract_native(plx, other))
         )
 
     def __gt__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__gt__(extract_native(plx, other))
         )
 
     def __ge__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__ge__(extract_native(plx, other))
         )
 
     def __pow__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__pow__(extract_native(plx, other))
         )
 
     def __rpow__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__rpow__(extract_native(plx, other))
         )
 
     def __floordiv__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__floordiv__(extract_native(plx, other))
         )
 
     def __rfloordiv__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__rfloordiv__(extract_native(plx, other))
         )
 
     def __mod__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__mod__(extract_native(plx, other))
         )
 
     def __rmod__(self, other: Any) -> Expr:
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).__rmod__(extract_native(plx, other))
         )
 
     # --- unary ---
     def __invert__(self) -> Expr:
-        return self.__class__(lambda plx: self._call(plx).__invert__())
+        return self._from_expr(lambda plx: self._call(plx).__invert__())
 
     def any(self) -> Expr:
         """
@@ -282,7 +288,7 @@ class Expr:
             │ true ┆ true │
             └──────┴──────┘
         """
-        return self.__class__(lambda plx: self._call(plx).any())
+        return self._from_expr(lambda plx: self._call(plx).any())
 
     def all(self) -> Expr:
         """
@@ -316,7 +322,7 @@ class Expr:
             │ false ┆ true │
             └───────┴──────┘
         """
-        return self.__class__(lambda plx: self._call(plx).all())
+        return self._from_expr(lambda plx: self._call(plx).all())
 
     def mean(self) -> Expr:
         """
@@ -350,7 +356,7 @@ class Expr:
             │ 0.0 ┆ 4.0 │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).mean())
+        return self._from_expr(lambda plx: self._call(plx).mean())
 
     def std(self, *, ddof: int = 1) -> Expr:
         """
@@ -389,7 +395,7 @@ class Expr:
             └──────────┴──────────┘
 
         """
-        return self.__class__(lambda plx: self._call(plx).std(ddof=ddof))
+        return self._from_expr(lambda plx: self._call(plx).std(ddof=ddof))
 
     def sum(self) -> Expr:
         """
@@ -423,7 +429,7 @@ class Expr:
             │ 15  ┆ 150 │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).sum())
+        return self._from_expr(lambda plx: self._call(plx).sum())
 
     def min(self) -> Expr:
         """
@@ -457,7 +463,7 @@ class Expr:
             └─────┴─────┘
         """
 
-        return self.__class__(lambda plx: self._call(plx).min())
+        return self._from_expr(lambda plx: self._call(plx).min())
 
     def max(self) -> Expr:
         """
@@ -491,7 +497,7 @@ class Expr:
             │ 20  ┆ 100 │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).max())
+        return self._from_expr(lambda plx: self._call(plx).max())
 
     def n_unique(self) -> Expr:
         """
@@ -525,7 +531,7 @@ class Expr:
             │ 5   ┆ 3   │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).n_unique())
+        return self._from_expr(lambda plx: self._call(plx).n_unique())
 
     def unique(self) -> Expr:
         """
@@ -563,7 +569,7 @@ class Expr:
             │ 5   ┆ 6   │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).unique())
+        return self._from_expr(lambda plx: self._call(plx).unique())
 
     def cum_sum(self) -> Expr:
         """
@@ -605,7 +611,7 @@ class Expr:
             │ 15  ┆ 22  │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).cum_sum())
+        return self._from_expr(lambda plx: self._call(plx).cum_sum())
 
     def diff(self) -> Expr:
         """
@@ -658,7 +664,7 @@ class Expr:
             │ 0      │
             └────────┘
         """
-        return self.__class__(lambda plx: self._call(plx).diff())
+        return self._from_expr(lambda plx: self._call(plx).diff())
 
     def shift(self, n: int) -> Expr:
         """
@@ -711,7 +717,7 @@ class Expr:
             │ 5       │
             └─────────┘
         """
-        return self.__class__(lambda plx: self._call(plx).shift(n))
+        return self._from_expr(lambda plx: self._call(plx).shift(n))
 
     def sort(self, *, descending: bool = False) -> Expr:
         """
@@ -779,7 +785,7 @@ class Expr:
             │ 1    │
             └──────┘
         """
-        return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
+        return self._from_expr(lambda plx: self._call(plx).sort(descending=descending))
 
     # --- transform ---
     def is_between(
@@ -831,7 +837,7 @@ class Expr:
             │ false │
             └───────┘
         """
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).is_between(lower_bound, upper_bound, closed)
         )
 
@@ -878,7 +884,7 @@ class Expr:
             └─────┴───────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            return self.__class__(lambda plx: self._call(plx).is_in(other))
+            return self._from_expr(lambda plx: self._call(plx).is_in(other))
         else:
             raise NotImplementedError(
                 "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
@@ -923,7 +929,7 @@ class Expr:
             │ 7   ┆ 12  │
             └─────┴─────┘
         """
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).filter(
                 *[extract_native(plx, pred) for pred in flatten(predicates)]
             )
@@ -980,7 +986,7 @@ class Expr:
             │ 5    ┆ 5.0 ┆ false     ┆ false     │
             └──────┴─────┴───────────┴───────────┘
         """
-        return self.__class__(lambda plx: self._call(plx).is_null())
+        return self._from_expr(lambda plx: self._call(plx).is_null())
 
     def fill_null(self, value: Any) -> Expr:
         """
@@ -1031,7 +1037,7 @@ class Expr:
             │ 5   ┆ 5.0 │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).fill_null(value))
+        return self._from_expr(lambda plx: self._call(plx).fill_null(value))
 
     # --- partial reduction ---
     def drop_nulls(self) -> Expr:
@@ -1078,7 +1084,7 @@ class Expr:
             │ 5.0 │
             └─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).drop_nulls())
+        return self._from_expr(lambda plx: self._call(plx).drop_nulls())
 
     def sample(
         self,
@@ -1130,7 +1136,7 @@ class Expr:
             │ 3   │
             └─────┘
         """
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement
             )
@@ -1178,7 +1184,7 @@ class Expr:
             │ 3   ┆ 2   ┆ 3               │
             └─────┴─────┴─────────────────┘
         """
-        return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
+        return self._from_expr(lambda plx: self._call(plx).over(flatten(keys)))
 
     def is_duplicated(self) -> Expr:
         r"""
@@ -1219,7 +1225,7 @@ class Expr:
             │ true  ┆ false │
             └───────┴───────┘
         """
-        return self.__class__(lambda plx: self._call(plx).is_duplicated())
+        return self._from_expr(lambda plx: self._call(plx).is_duplicated())
 
     def is_unique(self) -> Expr:
         r"""
@@ -1261,7 +1267,7 @@ class Expr:
             └───────┴───────┘
         """
 
-        return self.__class__(lambda plx: self._call(plx).is_unique())
+        return self._from_expr(lambda plx: self._call(plx).is_unique())
 
     def null_count(self) -> Expr:
         r"""
@@ -1300,7 +1306,7 @@ class Expr:
             │ 1   ┆ 2   │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).null_count())
+        return self._from_expr(lambda plx: self._call(plx).null_count())
 
     def is_first_distinct(self) -> Expr:
         r"""
@@ -1341,7 +1347,7 @@ class Expr:
             │ false ┆ true  │
             └───────┴───────┘
         """
-        return self.__class__(lambda plx: self._call(plx).is_first_distinct())
+        return self._from_expr(lambda plx: self._call(plx).is_first_distinct())
 
     def is_last_distinct(self) -> Expr:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
@@ -1381,7 +1387,7 @@ class Expr:
             │ true  ┆ true  │
             └───────┴───────┘
         """
-        return self.__class__(lambda plx: self._call(plx).is_last_distinct())
+        return self._from_expr(lambda plx: self._call(plx).is_last_distinct())
 
     def quantile(
         self,
@@ -1429,7 +1435,7 @@ class Expr:
             │ 24.5 ┆ 74.5 │
             └──────┴──────┘
         """
-        return self.__class__(
+        return self._from_expr(
             lambda plx: self._call(plx).quantile(quantile, interpolation)
         )
 
@@ -1475,7 +1481,7 @@ class Expr:
             └─────┘
         """
 
-        return self.__class__(lambda plx: self._call(plx).head(n))
+        return self._from_expr(lambda plx: self._call(plx).head(n))
 
     def tail(self, n: int = 10) -> Expr:
         r"""
@@ -1519,7 +1525,7 @@ class Expr:
             └─────┘
         """
 
-        return self.__class__(lambda plx: self._call(plx).tail(n))
+        return self._from_expr(lambda plx: self._call(plx).tail(n))
 
     def round(self, decimals: int = 0) -> Expr:
         r"""
@@ -1571,7 +1577,7 @@ class Expr:
             └─────┘
         """
 
-        return self.__class__(lambda plx: self._call(plx).round(decimals))
+        return self._from_expr(lambda plx: self._call(plx).round(decimals))
 
     def len(self) -> Expr:
         r"""
@@ -1611,7 +1617,7 @@ class Expr:
             │ 2   ┆ 1   │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).len())
+        return self._from_expr(lambda plx: self._call(plx).len())
 
     @property
     def str(self) -> ExprStringNamespace:
@@ -1668,7 +1674,7 @@ class ExprCatNamespace:
             │ mango  │
             └────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).cat.get_categories()
         )
 
@@ -1718,7 +1724,7 @@ class ExprStringNamespace:
             │ null   ┆ null       │
             └────────┴────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).str.starts_with(prefix)
         )
 
@@ -1763,7 +1769,7 @@ class ExprStringNamespace:
             │ null   ┆ null       │
             └────────┴────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
@@ -1819,8 +1825,7 @@ class ExprStringNamespace:
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
         """
-
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
         )
 
@@ -1895,7 +1900,7 @@ class ExprStringNamespace:
             │ dragonfruit ┆ uit      │
             └─────────────┴──────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).str.slice(offset=offset, length=length)
         )
 
@@ -1945,7 +1950,7 @@ class ExprStringNamespace:
             │ zukkyun   ┆ zukky       │
             └───────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(0, n))
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).str.slice(0, n))
 
     def tail(self, n: int = 5) -> Expr:
         r"""
@@ -1993,7 +1998,7 @@ class ExprStringNamespace:
             │ zukkyun   ┆ kkyun       │
             └───────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).str.slice(-n))
 
     def to_datetime(self, format: str) -> Expr:  # noqa: A002
         """
@@ -2040,7 +2045,7 @@ class ExprStringNamespace:
             │ 2020-01-02 00:00:00 │
             └─────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)
         )
 
@@ -2095,7 +2100,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 00:00:00 ┆ 2065 │
             └─────────────────────┴──────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.year())
 
     def month(self) -> Expr:
         """
@@ -2146,7 +2151,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 00:00:00 ┆ 2065 ┆ 1     │
             └─────────────────────┴──────┴───────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.month())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.month())
 
     def day(self) -> Expr:
         """
@@ -2198,7 +2203,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 00:00:00 ┆ 2065 ┆ 1     ┆ 1   │
             └─────────────────────┴──────┴───────┴─────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.day())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.day())
 
     def hour(self) -> Expr:
         """
@@ -2246,7 +2251,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 10:00:00 ┆ 10   │
             └─────────────────────┴──────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.hour())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.hour())
 
     def minute(self) -> Expr:
         """
@@ -2297,7 +2302,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 10:20:00 ┆ 10   ┆ 20     │
             └─────────────────────┴──────┴────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.minute())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.minute())
 
     def second(self) -> Expr:
         """
@@ -2347,7 +2352,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 10:20:30 ┆ 10   ┆ 20     ┆ 30     │
             └─────────────────────┴──────┴────────┴────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.second())
 
     def millisecond(self) -> Expr:
         """
@@ -2398,7 +2403,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67          │
             └─────────────────────────┴──────┴────────┴────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.millisecond())
 
     def microsecond(self) -> Expr:
         """
@@ -2449,7 +2454,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 10:20:30.067 ┆ 10   ┆ 20     ┆ 30     ┆ 67000       │
             └─────────────────────────┴──────┴────────┴────────┴─────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.microsecond())
 
     def nanosecond(self) -> Expr:
         """
@@ -2500,7 +2505,7 @@ class ExprDateTimeNamespace:
             │ 2065-01-01 10:20:30.060 ┆ 10   ┆ 20     ┆ 30     ┆ 60000000   │
             └─────────────────────────┴──────┴────────┴────────┴────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.nanosecond())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.nanosecond())
 
     def ordinal_day(self) -> Expr:
         """
@@ -2538,7 +2543,7 @@ class ExprDateTimeNamespace:
             │ 2020-08-03 00:00:00 ┆ 216           │
             └─────────────────────┴───────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.ordinal_day())
 
     def total_minutes(self) -> Expr:
         """
@@ -2581,7 +2586,7 @@ class ExprDateTimeNamespace:
             │ 20m 40s      ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_minutes())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.total_minutes())
 
     def total_seconds(self) -> Expr:
         """
@@ -2624,7 +2629,7 @@ class ExprDateTimeNamespace:
             │ 20s 40ms     ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_seconds())
+        return self._expr._from_expr(lambda plx: self._expr._call(plx).dt.total_seconds())
 
     def total_milliseconds(self) -> Expr:
         """
@@ -2674,7 +2679,7 @@ class ExprDateTimeNamespace:
             │ 20040µs      ┆ 20                   │
             └──────────────┴──────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).dt.total_milliseconds()
         )
 
@@ -2726,7 +2731,7 @@ class ExprDateTimeNamespace:
             │ 1200µs       ┆ 1200                 │
             └──────────────┴──────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).dt.total_microseconds()
         )
 
@@ -2775,7 +2780,7 @@ class ExprDateTimeNamespace:
             │ 2024-01-01 00:00:00.000000002 ┆ 1                        │
             └───────────────────────────────┴──────────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).dt.total_nanoseconds()
         )
 
@@ -2822,12 +2827,12 @@ class ExprDateTimeNamespace:
             │ 2020/05/01 00:00:00 │
             └─────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._from_expr(
             lambda plx: self._expr._call(plx).dt.to_string(format)
         )
 
 
-def col(*names: str | Iterable[str]) -> Expr:
+def col(*names: str | Iterable[str], api_version: str | None = None) -> Expr:
     """
     Creates an expression that references one or more columns by their name(s).
 
@@ -2864,10 +2869,10 @@ def col(*names: str | Iterable[str]) -> Expr:
         │ 8   │
         └─────┘
     """
-    return Expr(lambda plx: plx.col(*names))
+    return Expr(lambda plx: plx.col(*names), api_version=api_version or "0.20")
 
 
-def all() -> Expr:
+def all(api_version: str | None = None) -> Expr:
     """
     Instantiate an expression representing all columns.
 
@@ -2903,10 +2908,10 @@ def all() -> Expr:
         │ 6   ┆ 12  │
         └─────┴─────┘
     """
-    return Expr(lambda plx: plx.all())
+    return Expr(lambda plx: plx.all(), api_version=api_version or "0.20")
 
 
-def len() -> Expr:
+def len(api_version: str | None = None) -> Expr:
     """
     Return the number of rows.
 
@@ -2948,10 +2953,10 @@ def len() -> Expr:
             return plx.count().alias("len")
         return plx.len()
 
-    return Expr(func)
+    return Expr(func, api_version=api_version or "0.20")
 
 
-def sum(*columns: str) -> Expr:
+def sum(*columns: str, api_version: str | None = None) -> Expr:
     """
     Sum all values.
 
@@ -2990,10 +2995,10 @@ def sum(*columns: str) -> Expr:
         └─────┘
     """
 
-    return Expr(lambda plx: plx.sum(*columns))
+    return Expr(lambda plx: plx.sum(*columns), api_version=api_version or "0.20")
 
 
-def mean(*columns: str) -> Expr:
+def mean(*columns: str, api_version: str | None = None) -> Expr:
     """
     Get the mean value.
 
@@ -3033,10 +3038,10 @@ def mean(*columns: str) -> Expr:
         └─────┘
     """
 
-    return Expr(lambda plx: plx.mean(*columns))
+    return Expr(lambda plx: plx.mean(*columns), api_version=api_version or "0.20")
 
 
-def min(*columns: str) -> Expr:
+def min(*columns: str, api_version: str | None = None) -> Expr:
     """
     Return the minimum value.
 
@@ -3074,10 +3079,10 @@ def min(*columns: str) -> Expr:
         │ 5   │
         └─────┘
     """
-    return Expr(lambda plx: plx.min(*columns))
+    return Expr(lambda plx: plx.min(*columns), api_version=api_version or "0.20")
 
 
-def max(*columns: str) -> Expr:
+def max(*columns: str, api_version: str | None = None) -> Expr:
     """
     Return the maximum value.
 
@@ -3115,10 +3120,12 @@ def max(*columns: str) -> Expr:
         │ 2   │
         └─────┘
     """
-    return Expr(lambda plx: plx.max(*columns))
+    return Expr(lambda plx: plx.max(*columns), api_version=api_version or "0.20")
 
 
-def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def sum_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], api_version: str | None = None
+) -> Expr:
     """
     Sum all values horizontally across columns
 
@@ -3159,11 +3166,12 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
     """
     return Expr(
-        lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)])
+        lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)]),
+        api_version=api_version or "0.20",
     )
 
 
-def lit(value: Any, dtype: DType | None = None) -> Expr:
+def lit(value: Any, dtype: DType | None = None, api_version: str | None = None) -> Expr:
     """
     Return an expression representing a literal value.
 
@@ -3213,8 +3221,11 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         raise NotImplementedError(msg)
 
     if dtype is None:
-        return Expr(lambda plx: plx.lit(value, dtype))
-    return Expr(lambda plx: plx.lit(value, translate_dtype(plx, dtype)))
+        return Expr(lambda plx: plx.lit(value, dtype), api_version=api_version or "0.20")
+    return Expr(
+        lambda plx: plx.lit(value, translate_dtype(plx, dtype)),
+        api_version=api_version or "0.20",
+    )
 
 
 __all__ = [

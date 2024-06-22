@@ -10,7 +10,7 @@ from narwhals.utils import flatten
 class Selector(Expr): ...
 
 
-def by_dtype(*dtypes: Any) -> Expr:
+def by_dtype(*dtypes: Any, api_version: str | None = None) -> Expr:
     """
     Select columns based on their dtype.
 
@@ -55,11 +55,12 @@ def by_dtype(*dtypes: Any) -> Expr:
     return Selector(
         lambda plx: plx.selectors.by_dtype(
             [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
-        )
+        ),
+        api_version=api_version or "0.20",
     )
 
 
-def numeric() -> Expr:
+def numeric(api_version: str | None = None) -> Expr:
     """
     Select numeric columns.
 
@@ -98,10 +99,12 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector(lambda plx: plx.selectors.numeric())
+    return Selector(
+        lambda plx: plx.selectors.numeric(), api_version=api_version or "0.20"
+    )
 
 
-def boolean() -> Expr:
+def boolean(api_version: str | None = None) -> Expr:
     """
     Select boolean columns.
 
@@ -140,10 +143,12 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-    return Selector(lambda plx: plx.selectors.boolean())
+    return Selector(
+        lambda plx: plx.selectors.boolean(), api_version=api_version or "0.20"
+    )
 
 
-def string() -> Expr:
+def string(api_version: str | None = None) -> Expr:
     """
     Select string columns.
 
@@ -182,10 +187,10 @@ def string() -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.string())
+    return Selector(lambda plx: plx.selectors.string(), api_version=api_version or "0.20")
 
 
-def categorical() -> Expr:
+def categorical(api_version: str | None = None) -> Expr:
     """
     Select categorical columns.
 
@@ -224,10 +229,12 @@ def categorical() -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.categorical())
+    return Selector(
+        lambda plx: plx.selectors.categorical(), api_version=api_version or "0.20"
+    )
 
 
-def all() -> Expr:
+def all(api_version: str | None = None) -> Expr:
     """
     Select all columns.
 
@@ -266,4 +273,4 @@ def all() -> Expr:
         │ 2   ┆ y   ┆ true  │
         └─────┴─────┴───────┘
     """
-    return Selector(lambda plx: plx.selectors.all())
+    return Selector(lambda plx: plx.selectors.all(), api_version=api_version or "0.20")

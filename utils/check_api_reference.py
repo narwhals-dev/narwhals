@@ -103,7 +103,9 @@ if extra := set(documented).difference(top_level_functions):
     ret = 1
 
 top_level_functions = [
-    i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
+    i
+    for i in nw.Expr(lambda: 0, api_version="0.20").__dir__()
+    if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/expressions.md") as fd:
     content = fd.read()
@@ -132,7 +134,11 @@ if extra := set(documented).difference(top_level_functions):
 # str
 
 # Check Expr vs Series
-expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
+expr = [
+    i
+    for i in nw.Expr(lambda: 0, api_version="0.20").__dir__()
+    if not i[0].isupper() and i[0] != "_"
+]
 series = [
     i
     for i in nw.Series(pl.Series(), api_version="0.20").__dir__()
