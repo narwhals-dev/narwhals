@@ -24,7 +24,7 @@ def test_validate_laziness() -> None:
         NotImplementedError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
-        nw.concat([nw.from_native(df, eager_only=True), nw.LazyFrame(df)])
+        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])
 
 
 def test_memmap() -> None:

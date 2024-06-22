@@ -20,7 +20,7 @@ def test_group_by_complex() -> None:
     expected = {"a": [1, 2, 3], "b": [-3.0, -3.0, -4.0]}
     compare_dicts(result, expected)
 
-    df = nw.LazyFrame(df_lazy)
+    df = nw.from_native(df_lazy).lazy()
     result = nw.to_native(
         df.group_by("a").agg((nw.col("b") - nw.col("z").mean()).mean()).sort("a")
     )

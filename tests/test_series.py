@@ -50,7 +50,7 @@ def test_len(df_raw: Any) -> None:
     assert result == 3
     result = nw.Series(df_raw["a"]).len()
     assert result == 3
-    result = len(nw.LazyFrame(df_raw).collect()["a"])
+    result = len(nw.from_native(df_raw).lazy().collect()["a"])
     assert result == 3
 
 
@@ -103,7 +103,7 @@ def test_gt(df_raw: Any) -> None:
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_dtype(df_raw: Any) -> None:
-    result = nw.LazyFrame(df_raw).collect()["a"].dtype
+    result = nw.from_native(df_raw).lazy().collect()["a"].dtype
     assert result == nw.Int64
     assert result.is_numeric()
 
@@ -112,7 +112,7 @@ def test_dtype(df_raw: Any) -> None:
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_reductions(df_raw: Any) -> None:
-    s = nw.LazyFrame(df_raw).collect()["a"]
+    s = nw.from_native(df_raw).lazy().collect()["a"]
     assert s.mean() == 2.0
     assert s.std() == 1.0
     assert s.min() == 1
@@ -133,16 +133,16 @@ def test_reductions(df_raw: Any) -> None:
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
 def test_boolean_reductions(df_raw: Any) -> None:
-    df = nw.LazyFrame(df_raw).select(nw.col("a") > 1)
+    df = nw.from_native(df_raw).lazy().select(nw.col("a") > 1)
     assert not df.collect()["a"].all()
     assert df.collect()["a"].any()
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
 def test_convert(df_raw: Any) -> None:
-    result = nw.LazyFrame(df_raw).collect()["a"].to_numpy()
+    result = nw.from_native(df_raw).lazy().collect()["a"].to_numpy()
     assert_array_equal(result, np.array([1, 3, 2]))
-    result = nw.LazyFrame(df_raw).collect()["a"].to_pandas()
+    result = nw.from_native(df_raw).lazy().collect()["a"].to_pandas()
     assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
 
 
