@@ -18,6 +18,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.expression import Expr
+from narwhals.functions import show_versions
 from narwhals.expression import all
 from narwhals.expression import col
 from narwhals.expression import len
@@ -25,7 +26,7 @@ from narwhals.expression import lit
 from narwhals.expression import max
 from narwhals.expression import mean
 from narwhals.expression import min
-from narwhals.expression import sum
+from narwhals.expression import sum, sum_horizontal
 from narwhals.functions import concat
 from narwhals.series import Series
 from narwhals.utils import maybe_align_index
@@ -280,6 +281,7 @@ def narwhalify(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
+    api_version: str | None = None,
 ) -> Callable[..., Any]:
     """
     Decorate function so it becomes dataframe-agnostic.
@@ -468,10 +470,10 @@ class StableAPI:
     def __init__(self, api_version: str) -> None:
         self.api_version = api_version
 
-    def all(self, *columns: str | Iterable[str], api_version: str | None = None) -> Expr:
+    def all(self, *columns: str | Iterable[str]) -> Expr:
         return all(*columns, api_version=self.api_version)
 
-    def col(self, *names: str | Iterable[str], api_version: str | None = None) -> Expr:
+    def col(self, *names: str | Iterable[str]) -> Expr:
         return col(*names, api_version=self.api_version)
 
     concat = concat
@@ -497,7 +499,7 @@ class StableAPI:
     def get_native_namespace(self, obj: Any) -> Any:
         return get_native_namespace(obj)
 
-    def len(self, *, api_version: str | None = None) -> Expr:
+    def len(self) -> Expr:
         return len(api_version=self.api_version)
 
     def maybe_align_index(self, lhs: T, rhs: Series | LazyFrame | DataFrame) -> T:
@@ -510,26 +512,53 @@ class StableAPI:
         return maybe_convert_dtypes(df, *args, **kwargs)
 
     def lit(
-        self, value: Any, dtype: DType | None = None, api_version: str | None = None
+        self, value: Any, dtype: DType | None = None
     ) -> Expr:
-        return lit(value, dtype, api_version=api_version)
+        return lit(value, dtype, api_version=self.api_version)
 
-    def max(self, *columns: str, api_version: str | None = None) -> Expr:
-        return max(*columns, api_version=api_version)
+    def max(self, *columns: str) -> Expr:
+        return max(*columns, api_version=self.api_version)
 
-    def mean(self, *columns: str, api_version: str | None = None) -> Expr:
-        return mean(*columns, api_version=api_version)
+    def mean(self, *columns: str) -> Expr:
+        return mean(*columns, api_version=self.api_version)
 
-    def min(self, *columns: str, api_version: str | None = None) -> Expr:
-        return min(*columns, api_version=api_version)
+    def min(self, *columns: str) -> Expr:
+        return min(*columns, api_version=self.api_version)
+
+    def narwhalify(
+        self,
+        func: Callable[..., Any] | None = None,
+        *,
+        strict: bool = True,
+        eager_only: bool | None = None,
+        series_only: bool | None = None,
+        allow_series: bool | None = None,
+    ) -> Callable[..., Any]:
+        narwhalify(func, strict=strict, eager_only=eager_only, series_only=series_only, allow_series=allow_series, api_version=self.api_version)
+
+    def narwhalify_method(
+        self,
+        func: Callable[..., Any] | None = None,
+        *,
+        strict: bool = True,
+        eager_only: bool | None = None,
+        series_only: bool | None = None,
+        allow_series: bool | None = None,
+    ) -> Callable[..., Any]:
+        narwhalify_method(func, strict=strict, eager_only=eager_only, series_only=series_only, allow_series=allow_series, api_version=self.api_version)
+
+    def sum(self, *columns: str | Iterable[str]) -> Expr:
+        return sum(*columns, api_version=self.api_version)
+
+    def sum_horizontal(self, *columns: str | Iterable[str]) -> Expr:
+        return sum_horizontal(*columns, api_version=self.api_version)
+    
+    show_versions = show_versions
 
     def to_native(
         self, narwhals_object: LazyFrame | DataFrame | Series, *, strict: bool = True
     ) -> Any:
         return to_native(narwhals_object, strict=strict)
-
-    def sum(self, *columns: str | Iterable[str], api_version: str | None = None) -> Expr:
-        return sum(*columns, api_version=self.api_version)
 
     Boolean = dtypes.Boolean
     Int64 = dtypes.Int64
