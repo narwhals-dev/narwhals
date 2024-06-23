@@ -83,6 +83,7 @@ markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 
 [tool.coverage.run]
 plugins = ["covdefaults"]
+omit = ["typing.py"]
 
 [tool.coverage.report]
 exclude_also = [

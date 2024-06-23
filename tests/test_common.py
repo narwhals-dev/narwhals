@@ -15,9 +15,10 @@ from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
 from sklearn.utils._testing import ignore_warnings
 
+from narwhals.dataframe import DataFrame
+from narwhals.dataframe import LazyFrame
 from narwhals.functions import _get_deps_info
 from narwhals.functions import _get_sys_info
-from narwhals.functions import show_versions
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 from tests.utils import nw
@@ -393,12 +394,12 @@ def test_accepted_dataframes() -> None:
         TypeError,
         match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
     ):
-        nw.from_native(array, eager_only=True)
+        DataFrame(array, api_version="0.20")
     with pytest.raises(
         TypeError,
-        match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
+        match="Expected Polars lazyframe or object that implements `__narwhals_lazyframe__`, got: <class 'numpy.ndarray'>",
     ):
-        nw.LazyFrame(array, api_version="0.20")
+        LazyFrame(array, api_version="0.20")
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
@@ -876,7 +877,7 @@ def test_get_deps_info() -> None:
 
 def test_show_versions(capsys: Any) -> None:
     with ignore_warnings():
-        show_versions()
+        nw.show_versions()
         out, err = capsys.readouterr()
 
     assert "python" in out
