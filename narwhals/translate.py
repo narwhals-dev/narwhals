@@ -33,7 +33,7 @@ from narwhals.series import Series
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
-from narwhals.versions import DEFAULT_API_VERSION
+from narwhals.versions import validate_api_version
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -41,6 +41,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
 
 T = TypeVar("T")
+
+DEFAULT_API_VERSION: API_VERSION = "0.20"
 
 if TYPE_CHECKING:
     import narwhals as nw
@@ -477,6 +479,7 @@ class StableAPI:
     Expr = Expr
 
     def __init__(self, api_version: API_VERSION) -> None:
+        validate_api_version(api_version)
         self.api_version = api_version
 
     def all(self) -> nw.Expr:
