@@ -54,6 +54,7 @@ lint.ignore = [
   'PD',
   'PLR0911',
   'PLR0912',
+  'PLR0913',  # too many arguments in function
   'PLR5501',
   'PLR2004',
   'PT011',

@@ -35,11 +35,7 @@ from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.expression import Expr
-    from narwhals.series import Series
 
 T = TypeVar("T")
 
@@ -153,7 +149,7 @@ def from_native(
 ) -> DataFrame | LazyFrame | Series: ...
 
 
-def from_native(  # noqa: PLR0913
+def from_native(
     native_dataframe: Any,
     *,
     strict: bool = True,
@@ -480,9 +476,15 @@ class StableAPI:
     def col(self, *names: str | Iterable[str]) -> Expr:
         return col(*names, api_version=self.api_version)
 
-    concat = concat
+    def concat(
+        self,
+        items: Iterable[DataFrame | LazyFrame],
+        *,
+        how: Literal["horizontal", "vertical"] = "vertical",
+    ) -> DataFrame | LazyFrame:
+        return concat(items, how=how)
 
-    def from_native(  # noqa: PLR0913
+    def from_native(
         self,
         native_dataframe: Any,
         *,
@@ -569,7 +571,8 @@ class StableAPI:
     def sum_horizontal(self, *columns: str | Iterable[str]) -> Expr:
         return sum_horizontal(*columns, api_version=self.api_version)
 
-    show_versions = show_versions
+    def show_versions(self) -> None:
+        return show_versions()
 
     def to_native(
         self, narwhals_object: LazyFrame | DataFrame | Series, *, strict: bool = True
@@ -589,6 +592,7 @@ class StableAPI:
     Float32 = dtypes.Float32
     String = dtypes.String
     Categorical = dtypes.Categorical
+    Datetime = dtypes.Datetime
 
 
 __all__ = [
