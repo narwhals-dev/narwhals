@@ -12,6 +12,7 @@ We recommend only ever using this within a `TYPE_CHECKING` block, e.g.:
 from __future__ import annotations
 
 from typing import TYPE_CHECKING  # pragma: no cover
+from typing import Literal
 from typing import Union  # pragma: no cover
 
 if TYPE_CHECKING:
@@ -21,20 +22,19 @@ if TYPE_CHECKING:
         from typing import TypeAlias
     else:
         from typing_extensions import TypeAlias
-
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.expression import Expr
     from narwhals.series import Series
-    from narwhals.versions import API_VERSION
-
-    IntoExpr: TypeAlias = Union[Expr, str, int, float, Series]
 else:
     DataFrame = object
     LazyFrame = object
     Expr = object
     Series = object
-    API_VERSION = object
+
+API_VERSION = Literal["0.20"]
+
+IntoExpr: TypeAlias = Union[Expr, str, int, float, Series]
 
 __all__ = [
     "IntoExpr",

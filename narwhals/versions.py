@@ -1,7 +1,9 @@
-from typing import Literal
+from __future__ import annotations
+
 from typing import get_args
 
-API_VERSION = Literal["0.20"]
+from narwhals.typing import API_VERSION
+
 DEFAULT_API_VERSION: API_VERSION = "0.20"
 
 

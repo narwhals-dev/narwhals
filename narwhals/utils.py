@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
 from typing import cast
+from typing import get_args
 
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -14,6 +15,7 @@ from narwhals.dependencies import get_polars
 if TYPE_CHECKING:
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
+from narwhals.typing import API_VERSION
 
 T = TypeVar("T")
 
@@ -253,3 +255,9 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
             )
         )
     return df
+
+
+def validate_api_version(version: API_VERSION) -> None:
+    if version not in (args := get_args(API_VERSION)):
+        msg = f"Expected one of {args}, got {version}"
+        raise ValueError(msg)
