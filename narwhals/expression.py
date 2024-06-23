@@ -2842,6 +2842,9 @@ def col(
 
     Arguments:
         names: Name(s) of the columns to use in the aggregation function.
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import pandas as pd
@@ -2882,6 +2885,11 @@ def all(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Instantiate an expression representing all columns.
 
+    Arguments:
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
+
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
@@ -2920,6 +2928,11 @@ def all(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
 def len(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Return the number of rows.
+
+    Arguments:
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import polars as pl
@@ -2973,6 +2986,9 @@ def sum(
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import pandas as pd
@@ -3017,6 +3033,9 @@ def mean(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import pandas as pd
@@ -3062,6 +3081,9 @@ def min(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import polars as pl
@@ -3105,6 +3127,9 @@ def max(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import polars as pl
@@ -3147,6 +3172,9 @@ def sum_horizontal(
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import pandas as pd
@@ -3196,6 +3224,9 @@ def lit(
     Arguments:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will be inferred.
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import pandas as pd

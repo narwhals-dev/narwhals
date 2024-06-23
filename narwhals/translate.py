@@ -185,6 +185,9 @@ def from_native(
         eager_only: Whether to only allow eager objects.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Returns:
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
