@@ -477,6 +477,9 @@ class StableAPI:
     """
     Instantiate a perfectly-backwards-compatible Narwhals namespace.
 
+    This concept is inspired by
+    [Rust editions](https://doc.rust-lang.org/edition-guide/editions/).
+
     If you instantiate a `StableAPI` object, then Narhwals promises that your code
     will never unintentionally break, even as newer (possibly API-breaking) versions
     of pandas/Polars/etc come out. You may sometimes need to bump your minimum
@@ -484,7 +487,10 @@ class StableAPI:
     out-of-date.
 
     Arguments:
-        api_version: Polars API version to follow.
+        api_version: Polars API version to follow. Allowed values are:
+
+        - 0.20
+        - 1.0
 
     Examples:
         Suppose you maintain a library called `skbeer`. Here's an example
