@@ -6,7 +6,6 @@ import pandas as pd
 import polars as pl
 import pytest
 
-import narwhals as nw
 from narwhals.selectors import all
 from narwhals.selectors import boolean
 from narwhals.selectors import by_dtype
@@ -14,6 +13,7 @@ from narwhals.selectors import categorical
 from narwhals.selectors import numeric
 from narwhals.selectors import string
 from tests.utils import compare_dicts
+from tests.utils import nw
 
 data = {
     "a": [1, 1, 2],

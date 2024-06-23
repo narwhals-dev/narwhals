@@ -14,13 +14,13 @@ from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
 from sklearn.utils._testing import ignore_warnings
 
-import narwhals as nw
 from narwhals import dtypes
 from narwhals.functions import _get_deps_info
 from narwhals.functions import _get_sys_info
 from narwhals.functions import show_versions
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
+from tests.utils import nw
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 if parse_version(pd.__version__) >= parse_version("1.5.0"):

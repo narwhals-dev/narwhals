@@ -1,7 +1,7 @@
 import pandas as pd
 import polars as pl
 
-import narwhals as nw
+from tests.utils import nw
 
 
 def test_cast_253() -> None:

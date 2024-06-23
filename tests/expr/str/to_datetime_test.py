@@ -5,7 +5,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-import narwhals as nw
+from tests.utils import nw
 
 df_pandas = pd.DataFrame({"a": ["2020-01-01T12:34:56"]})
 df_polars = pl.DataFrame({"a": ["2020-01-01T12:34:56"]})

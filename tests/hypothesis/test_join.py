@@ -8,8 +8,8 @@ from hypothesis import given
 from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
 
-import narwhals as nw
 from narwhals.utils import parse_version
+from tests.utils import nw
 
 pl_version = parse_version(pl.__version__)
 

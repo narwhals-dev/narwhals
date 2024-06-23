@@ -4,7 +4,7 @@ import pytest
 from sklearn.utils import check_X_y
 from sklearn.utils._testing import create_memmap_backed_data
 
-import narwhals as nw
+from tests.utils import nw
 
 
 def test_native_vs_non_native() -> None:

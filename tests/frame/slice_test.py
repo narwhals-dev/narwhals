@@ -4,8 +4,8 @@ import pandas as pd
 import polars as pl
 import pytest
 
-import narwhals as nw
 from tests.utils import compare_dicts
+from tests.utils import nw
 
 data = {
     "a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],

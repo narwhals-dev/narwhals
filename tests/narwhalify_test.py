@@ -3,7 +3,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals as nw
+from tests.utils import nw
 
 
 def test_narwhalify() -> None:

@@ -5,6 +5,10 @@ from typing import Any
 from typing import Iterator
 from typing import Sequence
 
+from narwhals import StableAPI
+
+nw = StableAPI("0.20")
+
 
 def zip_longest(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     if len(left) != len(right):

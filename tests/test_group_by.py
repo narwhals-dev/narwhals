@@ -4,8 +4,8 @@ import pandas as pd
 import polars as pl
 import pytest
 
-import narwhals as nw
 from tests.utils import compare_dicts
+from tests.utils import nw
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})

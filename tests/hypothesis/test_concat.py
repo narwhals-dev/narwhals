@@ -6,8 +6,8 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-import narwhals as nw
 from tests.utils import compare_dicts
+from tests.utils import nw
 
 
 @given(
