@@ -12,6 +12,7 @@ from narwhals.dtypes import DType
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
+from narwhals.versions import DEFAULT_API_VERSION
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -2832,7 +2833,7 @@ class ExprDateTimeNamespace:
         )
 
 
-def col(*names: str | Iterable[str], api_version: str | None = None) -> Expr:
+def col(*names: str | Iterable[str], api_version: str = DEFAULT_API_VERSION) -> Expr:
     """
     Creates an expression that references one or more columns by their name(s).
 
@@ -2872,7 +2873,7 @@ def col(*names: str | Iterable[str], api_version: str | None = None) -> Expr:
     return Expr(lambda plx: plx.col(*names), api_version=api_version or "0.20")
 
 
-def all(api_version: str | None = None) -> Expr:
+def all(api_version: str = DEFAULT_API_VERSION) -> Expr:
     """
     Instantiate an expression representing all columns.
 
@@ -2911,7 +2912,7 @@ def all(api_version: str | None = None) -> Expr:
     return Expr(lambda plx: plx.all(), api_version=api_version or "0.20")
 
 
-def len(api_version: str | None = None) -> Expr:
+def len(api_version: str = DEFAULT_API_VERSION) -> Expr:
     """
     Return the number of rows.
 
@@ -2956,7 +2957,7 @@ def len(api_version: str | None = None) -> Expr:
     return Expr(func, api_version=api_version or "0.20")
 
 
-def sum(*columns: str | Iterable[str], api_version: str | None = None) -> Expr:
+def sum(*columns: str | Iterable[str], api_version: str = DEFAULT_API_VERSION) -> Expr:
     """
     Sum all values.
 
@@ -2998,7 +2999,7 @@ def sum(*columns: str | Iterable[str], api_version: str | None = None) -> Expr:
     return Expr(lambda plx: plx.sum(*columns), api_version=api_version or "0.20")
 
 
-def mean(*columns: str, api_version: str | None = None) -> Expr:
+def mean(*columns: str, api_version: str = DEFAULT_API_VERSION) -> Expr:
     """
     Get the mean value.
 
@@ -3041,7 +3042,7 @@ def mean(*columns: str, api_version: str | None = None) -> Expr:
     return Expr(lambda plx: plx.mean(*columns), api_version=api_version or "0.20")
 
 
-def min(*columns: str, api_version: str | None = None) -> Expr:
+def min(*columns: str, api_version: str = DEFAULT_API_VERSION) -> Expr:
     """
     Return the minimum value.
 
@@ -3082,7 +3083,7 @@ def min(*columns: str, api_version: str | None = None) -> Expr:
     return Expr(lambda plx: plx.min(*columns), api_version=api_version or "0.20")
 
 
-def max(*columns: str, api_version: str | None = None) -> Expr:
+def max(*columns: str, api_version: str = DEFAULT_API_VERSION) -> Expr:
     """
     Return the maximum value.
 
@@ -3124,7 +3125,7 @@ def max(*columns: str, api_version: str | None = None) -> Expr:
 
 
 def sum_horizontal(
-    *exprs: IntoExpr | Iterable[IntoExpr], api_version: str | None = None
+    *exprs: IntoExpr | Iterable[IntoExpr], api_version: str = DEFAULT_API_VERSION
 ) -> Expr:
     """
     Sum all values horizontally across columns
@@ -3171,7 +3172,9 @@ def sum_horizontal(
     )
 
 
-def lit(value: Any, dtype: DType | None = None, api_version: str | None = None) -> Expr:
+def lit(
+    value: Any, dtype: DType | None = None, api_version: str = DEFAULT_API_VERSION
+) -> Expr:
     """
     Return an expression representing a literal value.
 

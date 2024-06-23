@@ -33,6 +33,7 @@ from narwhals.series import Series
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
+from narwhals.versions import DEFAULT_API_VERSION
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -89,7 +90,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-    api_version: str | None = ...,
+    api_version: str = ...,
 ) -> DataFrame | Series: ...
 
 
@@ -101,7 +102,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-    api_version: str | None = ...,
+    api_version: str = ...,
 ) -> DataFrame: ...
 
 
@@ -113,7 +114,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-    api_version: str | None = ...,
+    api_version: str = ...,
 ) -> DataFrame | LazyFrame | Series: ...
 
 
@@ -125,7 +126,7 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-    api_version: str | None = ...,
+    api_version: str = ...,
 ) -> Series: ...
 
 
@@ -137,7 +138,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-    api_version: str | None = ...,
+    api_version: str = ...,
 ) -> DataFrame | LazyFrame: ...
 
 
@@ -149,7 +150,7 @@ def from_native(
     eager_only: bool | None = ...,
     series_only: bool | None = ...,
     allow_series: bool | None = ...,
-    api_version: str | None = ...,
+    api_version: str = ...,
 ) -> DataFrame | LazyFrame | Series: ...
 
 
@@ -160,7 +161,7 @@ def from_native(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-    api_version: str | None = None,
+    api_version: str = DEFAULT_API_VERSION,
 ) -> DataFrame | LazyFrame | Series:
     """
     Convert dataframe to Narwhals DataFrame, LazyFrame, or Series.
@@ -282,7 +283,7 @@ def narwhalify(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-    api_version: str | None = None,
+    api_version: str = DEFAULT_API_VERSION,
 ) -> Callable[..., Any]:
     """
     Decorate function so it becomes dataframe-agnostic.
@@ -373,7 +374,7 @@ def narwhalify_method(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-    api_version: str | None = None,
+    api_version: str = DEFAULT_API_VERSION,
 ) -> Callable[..., Any]:
     """
     Decorate method so it becomes dataframe-agnostic.
