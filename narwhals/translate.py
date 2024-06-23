@@ -7,8 +7,10 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
+from typing import TypeVar
 from typing import overload
 
+from narwhals import dtypes
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import get_cudf
@@ -16,7 +18,10 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.expression import Expr
+from narwhals.expression import all
 from narwhals.expression import col
+from narwhals.expression import len
+from narwhals.expression import sum
 from narwhals.series import Series
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_set_index
@@ -26,6 +31,8 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.expression import Expr
     from narwhals.series import Series
+
+T = TypeVar("T")
 
 
 def to_native(
@@ -480,7 +487,16 @@ class StableAPI:
     def col(self, *names: str | Iterable[str], api_version: str | None = None) -> Expr:
         return col(*names, api_version=self.api_version)
 
-    def maybe_align_index(self, lhs: T, rhs: Series | BaseFrame):
+    def sum(self, *columns: str | Iterable[str], api_version: str | None = None) -> Expr:
+        return sum(*columns, api_version=self.api_version)
+
+    def all(self, *columns: str | Iterable[str], api_version: str | None = None) -> Expr:
+        return all(*columns, api_version=self.api_version)
+
+    def len(self, *, api_version: str | None = None) -> Expr:
+        return len(api_version=self.api_version)
+
+    def maybe_align_index(self, lhs: T, rhs: Series | LazyFrame | DataFrame) -> T:
         return maybe_align_index(lhs, rhs)
 
     def get_native_namespace(self, obj: Any) -> Any:
@@ -488,6 +504,20 @@ class StableAPI:
 
     def maybe_set_index(self, df: T, column_names: str | list[str]) -> T:
         return maybe_set_index(df, column_names)
+
+    Boolean = dtypes.Boolean
+    Int64 = dtypes.Int64
+    Int32 = dtypes.Int32
+    Int16 = dtypes.Int16
+    Int8 = dtypes.Int8
+    UInt64 = dtypes.UInt64
+    UInt32 = dtypes.UInt32
+    UInt16 = dtypes.UInt16
+    UInt8 = dtypes.UInt8
+    Float64 = dtypes.Float64
+    Float32 = dtypes.Float32
+    String = dtypes.String
+    Categorical = dtypes.Categorical
 
 
 __all__ = [

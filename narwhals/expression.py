@@ -2956,7 +2956,7 @@ def len(api_version: str | None = None) -> Expr:
     return Expr(func, api_version=api_version or "0.20")
 
 
-def sum(*columns: str, api_version: str | None = None) -> Expr:
+def sum(*columns: str | Iterable[str], api_version: str | None = None) -> Expr:
     """
     Sum all values.
 
