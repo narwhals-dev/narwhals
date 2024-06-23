@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.expression import Expr
     from narwhals.series import Series
+    from narwhals.versions import API_VERSION
 
     IntoExpr: TypeAlias = Union[Expr, str, int, float, Series]
 else:
@@ -33,6 +34,7 @@ else:
     LazyFrame = object
     Expr = object
     Series = object
+    API_VERSION = object
 
 __all__ = [
     "IntoExpr",
@@ -40,4 +42,5 @@ __all__ = [
     "LazyFrame",
     "Expr",
     "Series",
+    "API_VERSION",
 ]

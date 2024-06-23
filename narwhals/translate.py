@@ -37,6 +37,7 @@ from narwhals.versions import DEFAULT_API_VERSION
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.typing import API_VERSION
     from narwhals.typing import IntoExpr
 
 T = TypeVar("T")
@@ -90,7 +91,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-    api_version: str = ...,
+    api_version: API_VERSION = ...,
 ) -> DataFrame | Series: ...
 
 
@@ -102,7 +103,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-    api_version: str = ...,
+    api_version: API_VERSION = ...,
 ) -> DataFrame: ...
 
 
@@ -114,7 +115,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-    api_version: str = ...,
+    api_version: API_VERSION = ...,
 ) -> DataFrame | LazyFrame | Series: ...
 
 
@@ -126,7 +127,7 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-    api_version: str = ...,
+    api_version: API_VERSION = ...,
 ) -> Series: ...
 
 
@@ -138,7 +139,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-    api_version: str = ...,
+    api_version: API_VERSION = ...,
 ) -> DataFrame | LazyFrame: ...
 
 
@@ -150,7 +151,7 @@ def from_native(
     eager_only: bool | None = ...,
     series_only: bool | None = ...,
     allow_series: bool | None = ...,
-    api_version: str = ...,
+    api_version: API_VERSION = ...,
 ) -> DataFrame | LazyFrame | Series: ...
 
 
@@ -161,7 +162,7 @@ def from_native(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-    api_version: str = DEFAULT_API_VERSION,
+    api_version: API_VERSION = DEFAULT_API_VERSION,
 ) -> DataFrame | LazyFrame | Series:
     """
     Convert dataframe to Narwhals DataFrame, LazyFrame, or Series.
@@ -283,7 +284,7 @@ def narwhalify(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-    api_version: str = DEFAULT_API_VERSION,
+    api_version: API_VERSION = DEFAULT_API_VERSION,
 ) -> Callable[..., Any]:
     """
     Decorate function so it becomes dataframe-agnostic.
@@ -374,7 +375,7 @@ def narwhalify_method(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-    api_version: str = DEFAULT_API_VERSION,
+    api_version: API_VERSION = DEFAULT_API_VERSION,
 ) -> Callable[..., Any]:
     """
     Decorate method so it becomes dataframe-agnostic.
@@ -465,14 +466,14 @@ def narwhalify_method(
 
 
 class StableAPI:
-    api_version: str
+    api_version: API_VERSION
 
     DataFrame = DataFrame
     LazyFrame = LazyFrame
     Series = Series
     Expr = Expr
 
-    def __init__(self, api_version: str) -> None:
+    def __init__(self, api_version: API_VERSION) -> None:
         self.api_version = api_version
 
     def all(self) -> nw.Expr:

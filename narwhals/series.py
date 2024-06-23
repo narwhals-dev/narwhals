@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dataframe import DataFrame
+    from narwhals.typing import API_VERSION
 
 
 class Series:
@@ -29,7 +30,9 @@ class Series:
     `series_only=True`.
     """
 
-    def __init__(self, series: Any, *, is_polars: bool = False, api_version: str) -> None:
+    def __init__(
+        self, series: Any, *, is_polars: bool = False, api_version: API_VERSION
+    ) -> None:
         from narwhals._pandas_like.series import PandasSeries
 
         self._is_polars = is_polars
@@ -1808,7 +1811,7 @@ class Series:
 
 
 class SeriesCatNamespace:
-    def __init__(self, series: Series, *, api_version: str) -> None:
+    def __init__(self, series: Series, *, api_version: API_VERSION) -> None:
         self._series = series
         self._api_version = api_version
 
@@ -1851,7 +1854,7 @@ class SeriesCatNamespace:
 
 
 class SeriesStringNamespace:
-    def __init__(self, series: Series, *, api_version: str) -> None:
+    def __init__(self, series: Series, *, api_version: API_VERSION) -> None:
         self._api_version = api_version
         self._series = series
 
@@ -2146,7 +2149,7 @@ class SeriesStringNamespace:
 
 
 class SeriesDateTimeNamespace:
-    def __init__(self, series: Series, *, api_version: str) -> None:
+    def __init__(self, series: Series, *, api_version: API_VERSION) -> None:
         self._api_version = api_version
         self._series = series
 

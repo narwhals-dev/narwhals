@@ -29,13 +29,14 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
+    from narwhals.typing import API_VERSION
     from narwhals.typing import IntoExpr
 
 
 class BaseFrame:
     _dataframe: Any
     _is_polars: bool
-    _api_version: str
+    _api_version: API_VERSION
 
     def __len__(self) -> Any:
         return self._dataframe.__len__()
@@ -204,7 +205,7 @@ class DataFrame(BaseFrame):
         df: Any,
         *,
         is_polars: bool = False,
-        api_version: str,
+        api_version: API_VERSION,
     ) -> None:
         self._is_polars = is_polars
         self._api_version = api_version
@@ -1667,7 +1668,7 @@ class LazyFrame(BaseFrame):
         df: Any,
         *,
         is_polars: bool = False,
-        api_version: str,
+        api_version: API_VERSION,
     ) -> None:
         self._is_polars = is_polars
         self._api_version = api_version

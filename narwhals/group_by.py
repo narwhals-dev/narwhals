@@ -11,12 +11,13 @@ from narwhals.utils import tupleify
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.typing import API_VERSION
     from narwhals.typing import IntoExpr
 
 
 class GroupBy:
     def __init__(
-        self, df: DataFrame, *keys: str | Iterable[str], api_version: str
+        self, df: DataFrame, *keys: str | Iterable[str], api_version: API_VERSION
     ) -> None:
         self._df = df
         self._keys = flatten(keys)
@@ -122,7 +123,7 @@ class GroupBy:
 
 class LazyGroupBy:
     def __init__(
-        self, df: LazyFrame, *keys: str | Iterable[str], api_version: str
+        self, df: LazyFrame, *keys: str | Iterable[str], api_version: API_VERSION
     ) -> None:
         self._df = df
         self._keys = keys

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dtypes import translate_dtype
@@ -7,11 +8,14 @@ from narwhals.expression import Expr
 from narwhals.utils import flatten
 from narwhals.versions import DEFAULT_API_VERSION
 
+if TYPE_CHECKING:
+    from narwhals.typing import API_VERSION
+
 
 class Selector(Expr): ...
 
 
-def by_dtype(*dtypes: Any, api_version: str = DEFAULT_API_VERSION) -> Expr:
+def by_dtype(*dtypes: Any, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select columns based on their dtype.
 
@@ -61,7 +65,7 @@ def by_dtype(*dtypes: Any, api_version: str = DEFAULT_API_VERSION) -> Expr:
     )
 
 
-def numeric(api_version: str = DEFAULT_API_VERSION) -> Expr:
+def numeric(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select numeric columns.
 
@@ -105,7 +109,7 @@ def numeric(api_version: str = DEFAULT_API_VERSION) -> Expr:
     )
 
 
-def boolean(api_version: str = DEFAULT_API_VERSION) -> Expr:
+def boolean(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select boolean columns.
 
@@ -149,7 +153,7 @@ def boolean(api_version: str = DEFAULT_API_VERSION) -> Expr:
     )
 
 
-def string(api_version: str = DEFAULT_API_VERSION) -> Expr:
+def string(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select string columns.
 
@@ -191,7 +195,7 @@ def string(api_version: str = DEFAULT_API_VERSION) -> Expr:
     return Selector(lambda plx: plx.selectors.string(), api_version=api_version or "0.20")
 
 
-def categorical(api_version: str = DEFAULT_API_VERSION) -> Expr:
+def categorical(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select categorical columns.
 
@@ -235,7 +239,7 @@ def categorical(api_version: str = DEFAULT_API_VERSION) -> Expr:
     )
 
 
-def all(api_version: str = DEFAULT_API_VERSION) -> Expr:
+def all(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select all columns.
 
