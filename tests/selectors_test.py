@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pandas as pd
@@ -21,6 +22,9 @@ data = {
     "c": [4.0, 5.0, 6.0],
     "d": [True, False, True],
 }
+
+if TYPE_CHECKING:
+    from narwhals.typing import Expr
 
 
 @pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
@@ -81,9 +85,7 @@ def test_categorical() -> None:
         (all(), ["a", "b", "c", "d"]),
     ],
 )
-def test_set_ops(
-    constructor: Any, selector: nw.selectors.Selector, expected: list[str]
-) -> None:
+def test_set_ops(constructor: Any, selector: Expr, expected: list[str]) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(selector).columns
     assert sorted(result) == expected

@@ -371,10 +371,12 @@ def test_lazy_instantiation(df_raw: Any) -> None:
 
 @pytest.mark.parametrize("df_raw", [df_lazy])
 def test_lazy_instantiation_error(df_raw: Any) -> None:
+    from narwhals import DataFrame
+
     with pytest.raises(
         TypeError, match="Can't instantiate DataFrame from Polars LazyFrame."
     ):
-        _ = nw.DataFrame(df_raw, api_version="0.20").shape
+        _ = DataFrame(df_raw, api_version="0.20").shape
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])

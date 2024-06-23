@@ -36,8 +36,12 @@ from narwhals.utils import maybe_set_index
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoExpr
 
 T = TypeVar("T")
+
+if TYPE_CHECKING:
+    import narwhals as nw
 
 
 def to_native(
@@ -470,19 +474,85 @@ class StableAPI:
     def __init__(self, api_version: str) -> None:
         self.api_version = api_version
 
-    def all(self, *columns: str | Iterable[str]) -> Expr:
-        return all(*columns, api_version=self.api_version)
+    def all(self) -> nw.Expr:
+        return all(api_version=self.api_version)
 
-    def col(self, *names: str | Iterable[str]) -> Expr:
+    def col(self, *names: str | Iterable[str]) -> nw.Expr:
         return col(*names, api_version=self.api_version)
 
     def concat(
         self,
-        items: Iterable[DataFrame | LazyFrame],
+        items: Iterable[nw.DataFrame | nw.LazyFrame],
         *,
         how: Literal["horizontal", "vertical"] = "vertical",
-    ) -> DataFrame | LazyFrame:
+    ) -> nw.DataFrame | nw.LazyFrame:
         return concat(items, how=how)
+
+    @overload
+    def from_native(
+        self,
+        native_dataframe: Any,
+        *,
+        strict: bool = ...,
+        eager_only: Literal[True],
+        series_only: None = ...,
+        allow_series: Literal[True],
+    ) -> nw.DataFrame | nw.Series: ...
+
+    @overload
+    def from_native(
+        self,
+        native_dataframe: Any,
+        *,
+        strict: bool = ...,
+        eager_only: Literal[True],
+        series_only: None = ...,
+        allow_series: None = ...,
+    ) -> nw.DataFrame: ...
+
+    @overload
+    def from_native(
+        self,
+        native_dataframe: Any,
+        *,
+        strict: bool = ...,
+        eager_only: None = ...,
+        series_only: None = ...,
+        allow_series: Literal[True],
+    ) -> nw.DataFrame | nw.LazyFrame | nw.Series: ...
+
+    @overload
+    def from_native(
+        self,
+        native_dataframe: Any,
+        *,
+        strict: bool = ...,
+        eager_only: None = ...,
+        series_only: Literal[True],
+        allow_series: None = ...,
+    ) -> nw.Series: ...
+
+    @overload
+    def from_native(
+        self,
+        native_dataframe: Any,
+        *,
+        strict: bool = ...,
+        eager_only: None = ...,
+        series_only: None = ...,
+        allow_series: None = ...,
+    ) -> nw.DataFrame | nw.LazyFrame: ...
+
+    @overload
+    def from_native(
+        self,
+        native_dataframe: Any,
+        *,
+        strict: bool = ...,
+        eager_only: bool | None = ...,
+        series_only: bool | None = ...,
+        allow_series: bool | None = ...,
+    ) -> nw.DataFrame | nw.LazyFrame | nw.Series: ...
 
     def from_native(
         self,
@@ -492,7 +562,7 @@ class StableAPI:
         eager_only: bool | None = None,
         series_only: bool | None = None,
         allow_series: bool | None = None,
-    ) -> DataFrame | LazyFrame | Series:
+    ) -> nw.DataFrame | nw.LazyFrame | nw.Series:
         return from_native(
             native_dataframe,
             strict=strict,
@@ -505,10 +575,12 @@ class StableAPI:
     def get_native_namespace(self, obj: Any) -> Any:
         return get_native_namespace(obj)
 
-    def len(self) -> Expr:
+    def len(self) -> nw.Expr:
         return len(api_version=self.api_version)
 
-    def maybe_align_index(self, lhs: T, rhs: Series | LazyFrame | DataFrame) -> T:
+    def maybe_align_index(
+        self, lhs: T, rhs: nw.Series | nw.LazyFrame | nw.DataFrame
+    ) -> T:
         return maybe_align_index(lhs, rhs)
 
     def maybe_set_index(self, df: T, column_names: str | list[str]) -> T:
@@ -517,16 +589,16 @@ class StableAPI:
     def maybe_convert_dtypes(self, df: T, *args: bool, **kwargs: bool | str) -> T:
         return maybe_convert_dtypes(df, *args, **kwargs)
 
-    def lit(self, value: Any, dtype: DType | None = None) -> Expr:
+    def lit(self, value: Any, dtype: DType | None = None) -> nw.Expr:
         return lit(value, dtype, api_version=self.api_version)
 
-    def max(self, *columns: str) -> Expr:
+    def max(self, *columns: str) -> nw.Expr:
         return max(*columns, api_version=self.api_version)
 
-    def mean(self, *columns: str) -> Expr:
+    def mean(self, *columns: str) -> nw.Expr:
         return mean(*columns, api_version=self.api_version)
 
-    def min(self, *columns: str) -> Expr:
+    def min(self, *columns: str) -> nw.Expr:
         return min(*columns, api_version=self.api_version)
 
     def narwhalify(
@@ -565,17 +637,20 @@ class StableAPI:
             api_version=self.api_version,
         )
 
-    def sum(self, *columns: str | Iterable[str]) -> Expr:
+    def sum(self, *columns: str | Iterable[str]) -> nw.Expr:
         return sum(*columns, api_version=self.api_version)
 
-    def sum_horizontal(self, *columns: str | Iterable[str]) -> Expr:
-        return sum_horizontal(*columns, api_version=self.api_version)
+    def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> nw.Expr:
+        return sum_horizontal(*exprs, api_version=self.api_version)
 
     def show_versions(self) -> None:
         return show_versions()
 
     def to_native(
-        self, narwhals_object: LazyFrame | DataFrame | Series, *, strict: bool = True
+        self,
+        narwhals_object: nw.LazyFrame | nw.DataFrame | nw.Series,
+        *,
+        strict: bool = True,
     ) -> Any:
         return to_native(narwhals_object, strict=strict)
 
