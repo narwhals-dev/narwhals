@@ -2873,7 +2873,9 @@ def col(
         │ 8   │
         └─────┘
     """
-    return Expr(lambda plx: plx.col(*names), api_version=api_version or "0.20")
+    return Expr(
+        lambda plx: plx.col(*names), api_version=api_version or DEFAULT_API_VERSION
+    )
 
 
 def all(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
@@ -2912,7 +2914,7 @@ def all(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         │ 6   ┆ 12  │
         └─────┴─────┘
     """
-    return Expr(lambda plx: plx.all(), api_version=api_version or "0.20")
+    return Expr(lambda plx: plx.all(), api_version=api_version or DEFAULT_API_VERSION)
 
 
 def len(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
@@ -2957,7 +2959,7 @@ def len(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
             return plx.count().alias("len")
         return plx.len()
 
-    return Expr(func, api_version=api_version or "0.20")
+    return Expr(func, api_version=api_version or DEFAULT_API_VERSION)
 
 
 def sum(
@@ -3001,7 +3003,9 @@ def sum(
         └─────┘
     """
 
-    return Expr(lambda plx: plx.sum(*columns), api_version=api_version or "0.20")
+    return Expr(
+        lambda plx: plx.sum(*columns), api_version=api_version or DEFAULT_API_VERSION
+    )
 
 
 def mean(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
@@ -3044,7 +3048,9 @@ def mean(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         └─────┘
     """
 
-    return Expr(lambda plx: plx.mean(*columns), api_version=api_version or "0.20")
+    return Expr(
+        lambda plx: plx.mean(*columns), api_version=api_version or DEFAULT_API_VERSION
+    )
 
 
 def min(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
@@ -3085,7 +3091,9 @@ def min(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         │ 5   │
         └─────┘
     """
-    return Expr(lambda plx: plx.min(*columns), api_version=api_version or "0.20")
+    return Expr(
+        lambda plx: plx.min(*columns), api_version=api_version or DEFAULT_API_VERSION
+    )
 
 
 def max(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
@@ -3126,7 +3134,9 @@ def max(*columns: str, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         │ 2   │
         └─────┘
     """
-    return Expr(lambda plx: plx.max(*columns), api_version=api_version or "0.20")
+    return Expr(
+        lambda plx: plx.max(*columns), api_version=api_version or DEFAULT_API_VERSION
+    )
 
 
 def sum_horizontal(
@@ -3173,7 +3183,7 @@ def sum_horizontal(
     """
     return Expr(
         lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)]),
-        api_version=api_version or "0.20",
+        api_version=api_version or DEFAULT_API_VERSION,
     )
 
 
@@ -3229,10 +3239,13 @@ def lit(
         raise NotImplementedError(msg)
 
     if dtype is None:
-        return Expr(lambda plx: plx.lit(value, dtype), api_version=api_version or "0.20")
+        return Expr(
+            lambda plx: plx.lit(value, dtype),
+            api_version=api_version or DEFAULT_API_VERSION,
+        )
     return Expr(
         lambda plx: plx.lit(value, translate_dtype(plx, dtype)),
-        api_version=api_version or "0.20",
+        api_version=api_version or DEFAULT_API_VERSION,
     )
 
 

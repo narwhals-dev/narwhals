@@ -198,13 +198,13 @@ def from_native(
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with polars.DataFrame")
-        return DataFrame(native_dataframe, api_version=api_version or "0.20")
+        return DataFrame(native_dataframe, api_version=api_version or DEFAULT_API_VERSION)
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with polars.LazyFrame")
         if eager_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `eager_only` with polars.LazyFrame")
-        return LazyFrame(native_dataframe, api_version=api_version or "0.20")
+        return LazyFrame(native_dataframe, api_version=api_version or DEFAULT_API_VERSION)
     elif (
         (pd := get_pandas()) is not None
         and isinstance(native_dataframe, pd.DataFrame)
@@ -215,12 +215,13 @@ def from_native(
     ):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
-        return DataFrame(native_dataframe, api_version=api_version or "0.20")
+        return DataFrame(native_dataframe, api_version=api_version or DEFAULT_API_VERSION)
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
         return DataFrame(
-            native_dataframe.__narwhals_dataframe__(), api_version=api_version or "0.20"
+            native_dataframe.__narwhals_dataframe__(),
+            api_version=api_version or DEFAULT_API_VERSION,
         )
     elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
@@ -228,7 +229,8 @@ def from_native(
         if eager_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `eager_only` with lazyframe")
         return LazyFrame(
-            native_dataframe.__narwhals_lazyframe__(), api_version=api_version or "0.20"
+            native_dataframe.__narwhals_lazyframe__(),
+            api_version=api_version or DEFAULT_API_VERSION,
         )
     elif (
         (pl := get_polars()) is not None
@@ -246,12 +248,13 @@ def from_native(
     ):
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
-        return Series(native_dataframe, api_version=api_version or "0.20")
+        return Series(native_dataframe, api_version=api_version or DEFAULT_API_VERSION)
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
-            native_dataframe.__narwhals_series__(), api_version=api_version or "0.20"
+            native_dataframe.__narwhals_series__(),
+            api_version=api_version or DEFAULT_API_VERSION,
         )
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"

@@ -61,7 +61,7 @@ def by_dtype(*dtypes: Any, api_version: API_VERSION = DEFAULT_API_VERSION) -> Ex
         lambda plx: plx.selectors.by_dtype(
             [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
         ),
-        api_version=api_version or "0.20",
+        api_version=api_version or DEFAULT_API_VERSION,
     )
 
 
@@ -105,7 +105,8 @@ def numeric(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         └─────┴─────┘
     """
     return Selector(
-        lambda plx: plx.selectors.numeric(), api_version=api_version or "0.20"
+        lambda plx: plx.selectors.numeric(),
+        api_version=api_version or DEFAULT_API_VERSION,
     )
 
 
@@ -149,7 +150,8 @@ def boolean(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         └───────┘
     """
     return Selector(
-        lambda plx: plx.selectors.boolean(), api_version=api_version or "0.20"
+        lambda plx: plx.selectors.boolean(),
+        api_version=api_version or DEFAULT_API_VERSION,
     )
 
 
@@ -192,7 +194,9 @@ def string(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.string(), api_version=api_version or "0.20")
+    return Selector(
+        lambda plx: plx.selectors.string(), api_version=api_version or DEFAULT_API_VERSION
+    )
 
 
 def categorical(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
@@ -235,7 +239,8 @@ def categorical(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         └─────┘
     """
     return Selector(
-        lambda plx: plx.selectors.categorical(), api_version=api_version or "0.20"
+        lambda plx: plx.selectors.categorical(),
+        api_version=api_version or DEFAULT_API_VERSION,
     )
 
 
@@ -278,4 +283,6 @@ def all(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
         │ 2   ┆ y   ┆ true  │
         └─────┴─────┴───────┘
     """
-    return Selector(lambda plx: plx.selectors.all(), api_version=api_version or "0.20")
+    return Selector(
+        lambda plx: plx.selectors.all(), api_version=api_version or DEFAULT_API_VERSION
+    )
