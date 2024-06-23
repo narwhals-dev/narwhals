@@ -471,6 +471,49 @@ def narwhalify_method(
 
 
 class StableAPI:
+    """
+    Instantiate a perfectly-backwards-compatible Narwhals namespace.
+
+    If you instantiate a `StableAPI` object, then Narhwals promises that your code
+    will never unintentionally break, even as newer (possibly API-breaking) versions
+    of pandas/Polars/etc come out. You may sometimes need to bump your minimum
+    Narwhals version, but you should never need to worry about your code going
+    out-of-date.
+
+    Arguments:
+        api_version: Polars API version to follow.
+
+    Examples:
+        Suppose you maintain a library called `skbeer`. Here's an example
+        of how you could use Narwhals in a perfectly-backwards compatible way.
+
+        First, in some project file (say, `skbeer/_narwhals.py`), instantiate:
+
+        >>> from narwhals import StableAPI
+        >>> nw = StableAPI("0.20")
+
+        Then, in other modules, if you'd like to use Narwhals, import it as follows
+        (note: replace `skbeer` with the name of your module):
+
+        >>> from skbeer._narwhals import nw  # doctest: +SKIP
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.with_columns(nw.col("a").shift(1))
+
+        Suppose hypothetically for the sake of argument that in version 1.0, Polars
+        was to change the direction in which `shift` operates. This hasn't happened,
+        but presumably, at some point, Narwhals will be hit by a backwards-incompatible
+        API change in Polars.
+
+        At that point, given that you instantiated `StableAPI` with `api_version='0.20'`,
+        then your code will carry on operating as it always did, even with newer versions
+        of Polars! All you'd need to do is to bump the minimum version of Narwhals to one
+        where we handle the different Polars' API behaviours.
+
+        We follow development of pandas and Polars _very_ closely, and so we expect to be
+        able to make compatible Narwhals releases well in advance of pandas/Polars ones.
+    """
+
     api_version: API_VERSION
 
     DataFrame = DataFrame

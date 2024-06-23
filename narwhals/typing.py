@@ -32,7 +32,7 @@ else:
     Expr = object
     Series = object
 
-API_VERSION = Literal["0.20"]
+API_VERSION = Literal["0.20", "1.0"]
 
 IntoExpr: TypeAlias = Union[Expr, str, int, float, Series]
 
