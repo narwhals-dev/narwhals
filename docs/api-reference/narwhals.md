@@ -6,6 +6,7 @@ Here are the top-level functions available in Narwhals.
     handler: python
     options:
       members:
+        - StableAPI
         - all
         - col
         - concat

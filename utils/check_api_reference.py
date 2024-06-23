@@ -14,10 +14,7 @@ files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions = [
     i
     for i in nw.__dir__()
-    if not i[0].isupper()
-    and i[0] != "_"
-    and i not in files
-    and i not in {"annotations", "DataFrame", "LazyFrame", "Series"}
+    if not i[0].isupper() and i[0] != "_" and i not in files and i not in {"annotations"}
 ]
 with open("docs/api-reference/narwhals.md") as fd:
     content = fd.read()
@@ -30,7 +27,7 @@ if missing := set(top_level_functions).difference(documented):
     print("top-level functions: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(top_level_functions).difference({"StableAPI"}):
     print("top-level functions: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
