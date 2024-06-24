@@ -344,7 +344,7 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
     raise TypeError(msg)  # pragma: no cover
 
 
-def series_from_iterable(
+def native_series_from_iterable(
     data: Iterable[Any], name: str, index: Any, implementation: str
 ) -> Any:
     """Return native series."""
