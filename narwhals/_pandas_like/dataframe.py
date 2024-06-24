@@ -293,7 +293,7 @@ class PandasDataFrame:
         try:
             start_index = df_columns.get_loc(start_col)
             end_index = df_columns.get_loc(end_col)
-            sliced_df = merged_df.iloc[:, start_index:end_index + 1]
+            sliced_df = merged_df.iloc[:, start_index : end_index + 1]
         except KeyError:
             sliced_df = merged_df
         return self._from_dataframe(sliced_df)
