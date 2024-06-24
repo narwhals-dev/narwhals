@@ -293,8 +293,10 @@ class PandasDataFrame:
         if start_col in merged_df.columns and end_col in df_columns:
             sliced_df = merged_df.loc[:, "a":"a_right"]
         else:
-            raise ValueError(f"Columns {start_col} or {end_col} not found in the merged DataFrame")
-        
+            raise ValueError(
+                f"Columns {start_col} or {end_col} not found in the merged DataFrame"
+            )
+
         return self._from_dataframe(sliced_df)
 
         # return self._from_dataframe(
