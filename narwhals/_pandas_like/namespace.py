@@ -12,7 +12,6 @@ from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import parse_into_exprs
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten
@@ -66,13 +65,10 @@ class PandasNamespace:
     def _create_series_from_scalar(
         self, value: Any, series: PandasSeries
     ) -> PandasSeries:
-        return PandasSeries(
-            native_series_from_iterable(
-                [value],
-                name=series._series.name,
-                index=series._series.index[0:1],
-                implementation=self._implementation,
-            ),
+        return PandasSeries.from_iterable(
+            [value],
+            name=series._series.name,
+            index=series._series.index[0:1],
             implementation=self._implementation,
         )
 
@@ -110,13 +106,10 @@ class PandasNamespace:
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasExpr:
         def _lit_pandas_series(df: PandasDataFrame) -> PandasSeries:
-            pandas_series = PandasSeries(
-                native_series_from_iterable(
-                    data=[value],
-                    name="lit",
-                    index=df._dataframe.index[0:1],
-                    implementation=self._implementation,
-                ),
+            pandas_series = PandasSeries.from_iterable(
+                data=[value],
+                name="lit",
+                index=df._dataframe.index[0:1],
                 implementation=self._implementation,
             )
             if dtype:
@@ -156,15 +149,12 @@ class PandasNamespace:
     def len(self) -> PandasExpr:
         return PandasExpr(
             lambda df: [
-                PandasSeries(
-                    native_series_from_iterable(
-                        [len(df._dataframe)],
-                        name="len",
-                        index=[0],
-                        implementation=self._implementation,
-                    ),
+                PandasSeries.from_iterable(
+                    [len(df._dataframe)],
+                    name="len",
+                    index=[0],
                     implementation=self._implementation,
-                ),
+                )
             ],
             depth=0,
             function_name="len",

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
@@ -111,6 +113,17 @@ class PandasSeries:
         return self.__class__(
             series,
             implementation=self._implementation,
+        )
+
+    @classmethod
+    def from_iterable(
+        cls: type[Self], data: Iterable[Any], name: str, index: Any, implementation: str
+    ) -> Self:
+        return cls(
+            native_series_from_iterable(
+                data, name=name, index=index, implementation=implementation
+            ),
+            implementation=implementation,
         )
 
     def __len__(self) -> int:
