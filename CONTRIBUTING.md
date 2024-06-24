@@ -61,7 +61,7 @@ Please adhere to the following guidelines:
 ## How it works
 
 If Narwhals looks like underwater unicorn magic to you, then please read
-[how it works](https://narwhals-dev.github.io/narwhals/roadmap/).
+[how it works](https://narwhals-dev.github.io/narwhals/how-it-works/).
 
 ## Happy contributing!
 
