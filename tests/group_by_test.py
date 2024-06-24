@@ -35,3 +35,12 @@ def test_group_by_iter(constructor: Any) -> None:
     for key, _df in df.group_by(["a", "b"]):
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+def test_group_by_len(constructor: Any) -> None:
+    result = (
+        nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
+    )
+    expected = {"a": [1, 3], "b": [2, 1]}
+    compare_dicts(result, expected)

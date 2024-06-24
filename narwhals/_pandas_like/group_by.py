@@ -10,8 +10,8 @@ from typing import Iterable
 from typing import Iterator
 
 from narwhals._pandas_like.utils import is_simple_aggregation
+from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import parse_into_exprs
-from narwhals._pandas_like.utils import series_from_iterable
 from narwhals.dependencies import get_pandas
 from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
@@ -118,9 +118,12 @@ def agg_pandas(  # noqa: PLR0913
             assert expr._depth == 1
             assert expr._root_names is not None
             assert expr._output_names is not None
+            function_name = remove_prefix(expr._function_name, "col->")
+            function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
+                function_name, function_name
+            )
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                name = remove_prefix(expr._function_name, "col->")
-                simple_aggregations[output_name] = (root_name, name)
+                simple_aggregations[output_name] = (root_name, function_name)
 
         aggs = collections.defaultdict(list)
         name_mapping = {}
@@ -153,7 +156,7 @@ def agg_pandas(  # noqa: PLR0913
             for result_keys in results_keys:
                 out_group.append(result_keys._series.item())
                 out_names.append(result_keys.name)
-        return series_from_iterable(
+        return native_series_from_iterable(
             out_group, index=out_names, name="", implementation=implementation
         )
 

@@ -49,10 +49,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select((nw.col("b") + 10).alias("c"))
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select((nw.col("b") + 10).alias("c"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -93,13 +92,11 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select(
             ...         nw.col("foo").cast(nw.Float32), nw.col("bar").cast(nw.UInt8)
             ...     )
-            ...     native_df = nw.to_native(df)
-            ...     return native_df
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1620,6 +1617,57 @@ class Expr:
     @property
     def dt(self) -> ExprDateTimeNamespace:
         return ExprDateTimeNamespace(self)
+
+    @property
+    def cat(self) -> ExprCatNamespace:
+        return ExprCatNamespace(self)
+
+
+class ExprCatNamespace:
+    def __init__(self, expr: Expr) -> None:
+        self._expr = expr
+
+    def get_categories(self) -> Expr:
+        """
+        Get unique categories from column.
+
+        Examples:
+            Let's create some dataframes:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "mango", "mango"]}
+            >>> df_pd = pd.DataFrame(data, dtype="category")
+            >>> df_pl = pl.DataFrame(data, schema={"fruits": pl.Categorical})
+
+            We define a dataframe-agnostic function to get unique categories
+            from column 'fruits':
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("fruits").cat.get_categories())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+              fruits
+            0  apple
+            1  mango
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌────────┐
+            │ fruits │
+            │ ---    │
+            │ str    │
+            ╞════════╡
+            │ apple  │
+            │ mango  │
+            └────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).cat.get_categories()
+        )
 
 
 class ExprStringNamespace:
