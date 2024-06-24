@@ -49,10 +49,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select((nw.col("b") + 10).alias("c"))
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select((nw.col("b") + 10).alias("c"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -93,13 +92,11 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select(
             ...         nw.col("foo").cast(nw.Float32), nw.col("bar").cast(nw.UInt8)
             ...     )
-            ...     native_df = nw.to_native(df)
-            ...     return native_df
 
             We can then pass either pandas or Polars to `func`:
 
