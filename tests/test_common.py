@@ -337,15 +337,16 @@ def test_join(df_raw: Any) -> None:
     }
     compare_dicts(result_native, expected)
 
-@pytest.mark.parametrize('constructor', [pl.DataFrame, pd.DataFrame])
+
+@pytest.mark.parametrize("constructor", [pl.DataFrame, pd.DataFrame])
 @pytest.mark.filterwarnings("ignore:the default coalesce behavior")
 def test_left_join(constructor: Any) -> None:
-    data_left = {'a': [1,2,3], 'b': [4,5,6]}
-    data_right = {'a': [1,2,3], 'c': [4,5,6]}
+    data_left = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    data_right = {"a": [1, 2, 3], "c": [4, 5, 6]}
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
-    result = df_left.join(df_right, left_on='b', right_on='c', how='left')
-    expected = {'a': [1,2,3], 'b': [4,5,6], 'a_right': [1,2,3]}
+    result = df_left.join(df_right, left_on="b", right_on="c", how="left")
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "a_right": [1, 2, 3]}
     compare_dicts(result, expected)
 
 
