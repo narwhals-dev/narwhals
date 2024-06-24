@@ -290,22 +290,13 @@ class PandasDataFrame:
 
         df_columns = merged_df.columns
 
-        if start_col in merged_df.columns and end_col in df_columns:
-            sliced_df = merged_df.loc[:, "a":"a_right"]
-        else:
-            raise ValueError(f"Columns {start_col} or {end_col} not found in the merged DataFrame")
-        
+        try:
+            start_index = df_columns.get_loc(start_col)
+            end_index = df_columns.get_loc(end_col)
+            sliced_df = merged_df.iloc[:, start_index:end_index + 1]
+        except KeyError:
+            sliced_df = merged_df
         return self._from_dataframe(sliced_df)
-
-        # return self._from_dataframe(
-        #     self._dataframe.merge(
-        #         other._dataframe,
-        #         left_on=left_on,
-        #         right_on=right_on,
-        #         how=how,
-        #         suffixes=("", "_right"),
-        #     ),
-        # )
 
     # --- partial reduction ---
 
