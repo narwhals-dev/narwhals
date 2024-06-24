@@ -337,47 +337,16 @@ def test_join(df_raw: Any) -> None:
     }
     compare_dicts(result_native, expected)
 
-
-# Sample data
-df_pandas_left = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-df_pandas_right = pd.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
-
-df_polars_left = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-df_polars_right = pl.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
-
-
-@pytest.mark.parametrize(
-    "df_left, df_right", [(df_pandas_left, df_pandas_right), (df_polars_left, df_polars_right)]
-)
-def test_coalesce_overlapping_names(df_left, df_right):
-    if isinstance(df_left, pd.DataFrame):
-        # Convert Pandas to Polars for uniformity in processing
-        df_left = pl.DataFrame(df_left)
-        df_right = pl.DataFrame(df_right)
-
-    result = df_left.join(df_right, left_on="b", right_on="c", how="left")
-
-    if isinstance(df_left, pd.DataFrame):
-        result_native = result.to_pandas()
-    else:
-        result_native = result
-
-    if isinstance(result_native, pd.DataFrame):
-        result_native = result_native.rename(columns={"a_x": "a", "a_y": "a_right"})
-        result_dict = result_native.to_dict(orient="list")
-    else:
-        result_native = result_native.rename({"a": "a", "a_right": "a_right"}).to_pandas()
-        result_dict = result_native.to_dict(orient="list")
-
-    # Expected result dictionary
-    expected = {
-        "a": [1, 2, 3],
-        "b": [4, 5, 6],
-        "a_right": [1, 2, 3]
-    }
-
-    # Perform the comparison
-    compare_dicts(result_dict, expected)
+@pytest.mark.parametrize('constructor', [pl.DataFrame, pd.DataFrame])
+@pytest.mark.filterwarnings("ignore:the default coalesce behavior")
+def test_left_join(constructor: Any) -> None:
+    data_left = {'a': [1,2,3], 'b': [4,5,6]}
+    data_right = {'a': [1,2,3], 'c': [4,5,6]}
+    df_left = nw.from_native(constructor(data_left))
+    df_right = nw.from_native(constructor(data_right))
+    result = df_left.join(df_right, left_on='b', right_on='c', how='left')
+    expected = {'a': [1,2,3], 'b': [4,5,6], 'a_right': [1,2,3]}
+    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize(

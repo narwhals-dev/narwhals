@@ -276,15 +276,36 @@ class PandasDataFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
 
-        return self._from_dataframe(
-            self._dataframe.merge(
-                other._dataframe,
-                left_on=left_on,
-                right_on=right_on,
-                how=how,
-                suffixes=("", "_right"),
-            ),
+        # performing the merge
+        merged_df = self._dataframe.merge(
+            other._dataframe,
+            left_on=left_on,
+            right_on=right_on,
+            how=how,
+            suffixes=("", "_right"),
         )
+
+        start_col = "a"
+        end_col = "a_right"
+
+        df_columns = merged_df.columns
+
+        if start_col in merged_df.columns and end_col in df_columns:
+            sliced_df = merged_df.loc[:, "a":"a_right"]
+        else:
+            raise ValueError(f"Columns {start_col} or {end_col} not found in the merged DataFrame")
+        
+        return self._from_dataframe(sliced_df)
+
+        # return self._from_dataframe(
+        #     self._dataframe.merge(
+        #         other._dataframe,
+        #         left_on=left_on,
+        #         right_on=right_on,
+        #         how=how,
+        #         suffixes=("", "_right"),
+        #     ),
+        # )
 
     # --- partial reduction ---
 
