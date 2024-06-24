@@ -12,8 +12,8 @@ from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.utils import horizontal_concat
+from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import parse_into_exprs
-from narwhals._pandas_like.utils import series_from_iterable
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten
 
@@ -67,7 +67,7 @@ class PandasNamespace:
         self, value: Any, series: PandasSeries
     ) -> PandasSeries:
         return PandasSeries(
-            series_from_iterable(
+            native_series_from_iterable(
                 [value],
                 name=series._series.name,
                 index=series._series.index[0:1],
@@ -111,7 +111,7 @@ class PandasNamespace:
     def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasExpr:
         def _lit_pandas_series(df: PandasDataFrame) -> PandasSeries:
             pandas_series = PandasSeries(
-                series_from_iterable(
+                native_series_from_iterable(
                     data=[value],
                     name="lit",
                     index=df._dataframe.index[0:1],
@@ -157,7 +157,7 @@ class PandasNamespace:
         return PandasExpr(
             lambda df: [
                 PandasSeries(
-                    series_from_iterable(
+                    native_series_from_iterable(
                         [len(df._dataframe)],
                         name="len",
                         index=[0],
