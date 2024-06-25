@@ -14,3 +14,5 @@ def test_completeness() -> None:
     right = [i for i in narwhals.StableAPI("0.20").__dir__() if not i.startswith("_")]
     missing = [i for i in left if i not in right]
     assert missing == ["StableAPI"]
+    extra = [i for i in right if i not in left]
+    assert extra == ["api_version"]
