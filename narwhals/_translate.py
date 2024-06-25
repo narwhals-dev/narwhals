@@ -546,9 +546,82 @@ class StableAPI:
         self.api_version = api_version
 
     def all(self) -> nw.Expr:
+        """
+        Instantiate an expression representing all columns.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all() * 2)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a   b
+            0  2   8
+            1  4  10
+            2  6  12
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 2   ┆ 8   │
+            │ 4   ┆ 10  │
+            │ 6   ┆ 12  │
+            └─────┴─────┘
+        """
         return all(api_version=self.api_version)
 
     def col(self, *names: str | Iterable[str]) -> nw.Expr:
+        """
+        Creates an expression that references one or more columns by their name(s).
+
+        Arguments:
+            names: Name(s) of the columns to use in the aggregation function.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a") * nw.col("b"))
+
+            We can then pass either pandas or polars to `func`:
+
+            >>> func(df_pd)
+               a
+            0  3
+            1  8
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 3   │
+            │ 8   │
+            └─────┘
+        """
         return col(*names, api_version=self.api_version)
 
     def concat(
@@ -634,6 +707,29 @@ class StableAPI:
         series_only: bool | None = None,
         allow_series: bool | None = None,
     ) -> nw.DataFrame | nw.LazyFrame | nw.Series:
+        """
+        Convert dataframe to Narwhals DataFrame, LazyFrame, or Series.
+
+        Arguments:
+            native_dataframe: Raw dataframe from user.
+                Depending on the other arguments, input object can be:
+
+                - pandas.DataFrame
+                - polars.DataFrame
+                - polars.LazyFrame
+                - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
+                - pandas.Series
+                - polars.Series
+                - anything with a `__narwhals_series__` method
+            strict: Whether to raise if object can't be converted (default) or
+                to just leave it as-is.
+            eager_only: Whether to only allow eager objects.
+            series_only: Whether to only allow series.
+            allow_series: Whether to allow series (default is only dataframe / lazyframe).
+
+        Returns:
+            narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
+        """
         return from_native(
             native_dataframe,
             strict=strict,
@@ -644,14 +740,86 @@ class StableAPI:
         )
 
     def get_native_namespace(self, obj: Any) -> Any:
+        """
+        Get native namespace from object.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
+            >>> nw.get_native_namespace(df)
+            <module 'pandas'...>
+            >>> df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+            >>> nw.get_native_namespace(df)
+            <module 'polars'...>
+        """
         return get_native_namespace(obj)
 
     def len(self) -> nw.Expr:
+        """
+        Return the number of rows.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.len())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               len
+            0    2
+            >>> func(df_pl)
+            shape: (1, 1)
+            ┌─────┐
+            │ len │
+            │ --- │
+            │ u32 │
+            ╞═════╡
+            │ 2   │
+            └─────┘
+        """
         return len(api_version=self.api_version)
 
     def maybe_align_index(
         self, lhs: T, rhs: nw.Series | nw.LazyFrame | nw.DataFrame
     ) -> T:
+        """
+        Align `lhs` to the Index of `rhs, if they're both pandas-like.
+
+        Notes:
+            This is only really intended for backwards-compatibility purposes,
+            for example if your library already aligns indices for users.
+            If you're designing a new library, we highly encourage you to not
+            rely on the Index.
+            For non-pandas-like inputs, this only checks that `lhs` and `rhs`
+            are the same length.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pd = pd.DataFrame({"a": [1, 2]}, index=[3, 4])
+            >>> s_pd = pd.Series([6, 7], index=[4, 3])
+            >>> df = nw.from_native(df_pd)
+            >>> s = nw.from_native(s_pd, series_only=True)
+            >>> nw.to_native(nw.maybe_align_index(df, s))
+               a
+            4  2
+            3  1
+        """
         return maybe_align_index(lhs, rhs)
 
     def maybe_set_index(self, df: T, column_names: str | list[str]) -> T:
