@@ -25,6 +25,7 @@ Seamlessly support all, without depending on any!
   either getting in the way
 - ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
 - ✅ **Negligible overhead**, see [overhead](https://narwhals-dev.github.io/narwhals/overhead/)
+- ✅ Write your code once and forget about it, read our [**Perfectly backwards compatibility policy**](https://narwhals-dev.github.io/narwhals/backcompat/)
 
 ## Used by
 
