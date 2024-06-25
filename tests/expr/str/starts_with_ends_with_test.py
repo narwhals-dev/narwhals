@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import warnings
 from typing import Any
 
 import pandas as pd
@@ -10,21 +8,11 @@ import pytest
 
 import narwhals as nw
 from tests.utils import compare_dicts
+from tests.utils import maybe_get_modin_df
 
 df_pandas = pd.DataFrame({"a": ["fdas", "edfas"]})
 df_polars = pl.LazyFrame({"a": ["fdas", "edfas"]})
-
-if os.environ.get("CI", None):  # pragma: no cover
-    try:
-        import modin.pandas as mpd
-    except ImportError:
-        df_mpd = df_pandas.copy()
-    else:
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning)
-            df_mpd = mpd.DataFrame({"a": ["fdas", "edfas"]})
-else:  # pragma: no cover
-    df_mpd = df_pandas.copy()
+df_mpd = maybe_get_modin_df(df_pandas)
 
 
 @pytest.mark.parametrize(
