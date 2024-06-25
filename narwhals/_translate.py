@@ -340,6 +340,9 @@ def narwhalify(
         eager_only: Whether to only allow eager objects.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     See Also:
         narwhalify_method: If you want to narwhalify a class method, use that instead.
@@ -433,6 +436,9 @@ def narwhalify_method(
         eager_only: Whether to only allow eager objects.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -920,12 +926,127 @@ class StableAPI:
         return lit(value, dtype, api_version=self.api_version)
 
     def max(self, *columns: str) -> nw.Expr:
+        """
+        Return the maximum value.
+
+        Note:
+        Syntactic sugar for ``nw.col(columns).max()``.
+
+        Arguments:
+            columns: Name(s) of the columns to use in the aggregation function.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.max("a"))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            a
+            0  2
+            >>> func(df_pl)
+            shape: (1, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 2   │
+            └─────┘
+        """
         return max(*columns, api_version=self.api_version)
 
     def mean(self, *columns: str) -> nw.Expr:
+        """
+        Get the mean value.
+
+        Note:
+            Syntactic sugar for ``nw.col(columns).mean()``
+
+        Arguments:
+            columns: Name(s) of the columns to use in the aggregation function
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
+            >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
+
+            We define a dataframe agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     df = df.select(nw.mean("a"))
+            ...     return nw.to_native(df)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                a
+            0  4.0
+            >>> func(df_pl)
+            shape: (1, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 4.0 │
+            └─────┘
+        """
         return mean(*columns, api_version=self.api_version)
 
     def min(self, *columns: str) -> nw.Expr:
+        """
+        Return the minimum value.
+
+        Note:
+        Syntactic sugar for ``nw.col(columns).min()``.
+
+        Arguments:
+            columns: Name(s) of the columns to use in the aggregation function.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.min("b"))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            b
+            0  5
+            >>> func(df_pl)
+            shape: (1, 1)
+            ┌─────┐
+            │ b   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 5   │
+            └─────┘
+        """
         return min(*columns, api_version=self.api_version)
 
     def narwhalify(
@@ -937,6 +1058,55 @@ class StableAPI:
         series_only: bool | None = None,
         allow_series: bool | None = None,
     ) -> Callable[..., Any]:
+        """
+        Decorate function so it becomes dataframe-agnostic.
+
+        Instead of writing
+
+        ```python
+        from narwhals import StableAPI
+
+        nw = StableAPI("0.20")
+
+
+        def func(df_any):
+            df = nw.from_native(df_any, strict=False)
+            df = df.group_by("a").agg(nw.col("b").sum())
+            return nw.to_native(df)
+        ```
+
+        you can just write
+
+        ```python
+        from narwhals import StableAPI
+
+        nw = StableAPI("0.20")
+
+
+        @nw.narwhalify
+        def func(df):
+            return df.group_by("a").agg(nw.col("b").sum())
+        ```
+
+        You can also pass in extra arguments, e.g.
+
+        ```python
+        @nw.narhwalify(eager_only=True)
+        ```
+
+        that will get passed down to `nw.from_native`.
+
+        Arguments:
+            func: Function to wrap in a `from_native`-`to_native` block.
+            strict: Whether to raise if object can't be converted (default) or
+                to just leave it as-is.
+            eager_only: Whether to only allow eager objects.
+            series_only: Whether to only allow series.
+            allow_series: Whether to allow series (default is only dataframe / lazyframe).
+
+        See Also:
+            narwhalify_method: If you want to narwhalify a class method, use that instead.
+        """
         return narwhalify(
             func,
             strict=strict,
@@ -955,6 +1125,54 @@ class StableAPI:
         series_only: bool | None = None,
         allow_series: bool | None = None,
     ) -> Callable[..., Any]:
+        """
+        Decorate method so it becomes dataframe-agnostic.
+
+        Instead of writing
+
+        ```python
+        from narwhals import StableAPI
+
+        nw = StableAPI("0.20")
+
+
+        class Foo:
+            def func(self, df_any):
+                df = nw.from_native(df_any, strict=False)
+                df = df.group_by("a").agg(nw.col("b").sum())
+                return nw.to_native(df)
+        ```
+
+        you can just write
+
+        ```python
+        from narwhals import StableAPI
+
+        nw = StableAPI("0.20")
+
+
+        class Foo:
+            @nw.narwhalify_method
+            def func(self, df):
+                return df.group_by("a").agg(nw.col("b").sum())
+        ```
+
+        You can also pass in extra arguments, e.g.
+
+        ```python
+        @nw.narhwalify_method(eager_only=True)
+        ```
+
+        that will get passed down to `nw.from_native`.
+
+        Arguments:
+            func: Function to wrap in a `from_native`-`to_native` block.
+            strict: Whether to raise if object can't be converted (default) or
+                to just leave it as-is.
+            eager_only: Whether to only allow eager objects.
+            series_only: Whether to only allow series.
+            allow_series: Whether to allow series (default is only dataframe / lazyframe).
+        """
         return narwhalify_method(
             func,
             strict=strict,
