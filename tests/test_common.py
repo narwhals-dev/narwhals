@@ -15,10 +15,10 @@ from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
 from sklearn.utils._testing import ignore_warnings
 
-from narwhals.dataframe import DataFrame
-from narwhals.dataframe import LazyFrame
-from narwhals.functions import _get_deps_info
-from narwhals.functions import _get_sys_info
+from narwhals._dataframe import DataFrame
+from narwhals._dataframe import LazyFrame
+from narwhals._functions import _get_deps_info
+from narwhals._functions import _get_sys_info
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 from tests.utils import nw

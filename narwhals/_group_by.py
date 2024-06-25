@@ -9,8 +9,8 @@ from narwhals.utils import flatten
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals._dataframe import DataFrame
+    from narwhals._dataframe import LazyFrame
     from narwhals.typing import API_VERSION
     from narwhals.typing import IntoExpr
 

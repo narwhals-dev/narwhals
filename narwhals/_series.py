@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
-    from narwhals.dataframe import DataFrame
+    from narwhals._dataframe import DataFrame
     from narwhals.typing import API_VERSION
 
 
@@ -109,7 +109,7 @@ class Series:
         return self._series.shape  # type: ignore[no-any-return]
 
     def _extract_native(self, arg: Any) -> Any:
-        from narwhals.series import Series
+        from narwhals._series import Series
 
         if isinstance(arg, Series):
             return arg._series
@@ -304,7 +304,7 @@ class Series:
             │ 3   │
             └─────┘
         """
-        from narwhals.dataframe import DataFrame
+        from narwhals._dataframe import DataFrame
 
         return DataFrame(self._series.to_frame(), api_version=self._api_version)
 
@@ -1538,7 +1538,7 @@ class Series:
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        from narwhals.dataframe import DataFrame
+        from narwhals._dataframe import DataFrame
 
         return DataFrame(
             self._series.value_counts(sort=sort, parallel=parallel),

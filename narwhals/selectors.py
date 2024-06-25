@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._expression import Expr
 from narwhals.dtypes import translate_dtype
-from narwhals.expression import Expr
 from narwhals.utils import flatten
 from narwhals.versions import DEFAULT_API_VERSION
 

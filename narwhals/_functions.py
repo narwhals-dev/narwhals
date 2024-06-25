@@ -10,8 +10,8 @@ from narwhals.utils import validate_laziness
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals._dataframe import DataFrame
+    from narwhals._dataframe import LazyFrame
 
 
 def concat(

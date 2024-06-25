@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 @pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_selecctors(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = nw.to_native(df.select(by_dtype([nw.Int64, nw.Float64]) + 1))
+    result = nw.to_native(df.select(nw.selectors.by_dtype([nw.Int64, nw.Float64]) + 1))
     expected = {"a": [2, 2, 3], "c": [5.0, 6.0, 7.0]}
     compare_dicts(result, expected)
 

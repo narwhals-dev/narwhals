@@ -12,8 +12,8 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import BaseFrame
-    from narwhals.series import Series
+    from narwhals._dataframe import BaseFrame
+    from narwhals._series import Series
 
 T = TypeVar("T")
 
@@ -45,7 +45,7 @@ def tupleify(arg: Any) -> Any:
 
 
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
-    from narwhals.series import Series
+    from narwhals._series import Series
 
     if (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame)):
         msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
@@ -91,8 +91,8 @@ def validate_same_library(items: Iterable[Any]) -> None:
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals._dataframe import DataFrame
+    from narwhals._dataframe import LazyFrame
 
     if all(isinstance(item, DataFrame) for item in items) or (
         all(isinstance(item, LazyFrame) for item in items)

@@ -25,10 +25,10 @@ if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
+    from narwhals._group_by import GroupBy
+    from narwhals._group_by import LazyGroupBy
+    from narwhals._series import Series
     from narwhals.dtypes import DType
-    from narwhals.group_by import GroupBy
-    from narwhals.group_by import LazyGroupBy
-    from narwhals.series import Series
     from narwhals.typing import API_VERSION
     from narwhals.typing import IntoExpr
 
@@ -68,8 +68,8 @@ class BaseFrame:
         return args, kwargs
 
     def _extract_native(self, arg: Any) -> Any:
-        from narwhals.expression import Expr
-        from narwhals.series import Series
+        from narwhals._expression import Expr
+        from narwhals._series import Series
 
         if isinstance(arg, BaseFrame):
             return arg._dataframe
@@ -386,7 +386,7 @@ class DataFrame(BaseFrame):
 
     def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
         if isinstance(item, str):
-            from narwhals.series import Series
+            from narwhals._series import Series
 
             return Series(self._dataframe[item], api_version=self._api_version)
 
@@ -433,7 +433,7 @@ class DataFrame(BaseFrame):
             >>> func(df_pl)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
-        from narwhals.series import Series
+        from narwhals._series import Series
 
         if as_series:
             return {
@@ -1272,7 +1272,7 @@ class DataFrame(BaseFrame):
             │ a   ┆ 1   ┆ 5   │
             └─────┴─────┴─────┘
         """
-        from narwhals.group_by import GroupBy
+        from narwhals._group_by import GroupBy
 
         return GroupBy(self, *keys, api_version=self._api_version)
 
@@ -1480,7 +1480,7 @@ class DataFrame(BaseFrame):
                 true
             ]
         """
-        from narwhals.series import Series
+        from narwhals._series import Series
 
         return Series(self._dataframe.is_duplicated(), api_version=self._api_version)
 
@@ -1562,7 +1562,7 @@ class DataFrame(BaseFrame):
                 false
             ]
         """
-        from narwhals.series import Series
+        from narwhals._series import Series
 
         return Series(self._dataframe.is_unique(), api_version=self._api_version)
 
@@ -2640,7 +2640,7 @@ class LazyFrame(BaseFrame):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        from narwhals.group_by import LazyGroupBy
+        from narwhals._group_by import LazyGroupBy
 
         return LazyGroupBy(self, *keys, api_version=self._api_version)
 

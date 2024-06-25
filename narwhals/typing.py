@@ -22,10 +22,10 @@ if TYPE_CHECKING:
         from typing import TypeAlias
     else:
         from typing_extensions import TypeAlias
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
-    from narwhals.expression import Expr
-    from narwhals.series import Series
+    from narwhals._dataframe import DataFrame
+    from narwhals._dataframe import LazyFrame
+    from narwhals._expression import Expr
+    from narwhals._series import Series
 else:
     DataFrame = object
     LazyFrame = object

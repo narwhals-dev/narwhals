@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def extract_native(expr: Expr, other: Any) -> Any:
-    from narwhals.series import Series
+    from narwhals._series import Series
 
     if isinstance(other, Expr):
         return other._call(expr)
