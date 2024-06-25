@@ -823,12 +823,100 @@ class StableAPI:
         return maybe_align_index(lhs, rhs)
 
     def maybe_set_index(self, df: T, column_names: str | list[str]) -> T:
+        """
+        Set columns `columns` to be the index of `df`, if `df` is pandas-like.
+
+        Notes:
+            This is only really intended for backwards-compatibility purposes,
+            for example if your library already aligns indices for users.
+            If you're designing a new library, we highly encourage you to not
+            rely on the Index.
+            For non-pandas-like inputs, this is a no-op.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+            >>> df = nw.from_native(df_pd)
+            >>> nw.to_native(nw.maybe_set_index(df, "b"))  # doctest: +NORMALIZE_WHITESPACE
+            a
+            b
+            4  1
+            5  2
+        """
         return maybe_set_index(df, column_names)
 
     def maybe_convert_dtypes(self, df: T, *args: bool, **kwargs: bool | str) -> T:
+        """
+        Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+
+        Notes:
+            For non-pandas-like inputs, this is a no-op.
+            Also, `args` and `kwargs` just get passed down to the underlying library as-is.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import numpy as np
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pd = pd.DataFrame(
+            ...     {
+            ...         "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
+            ...         "b": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
+            ...     }
+            ... )
+            >>> df = nw.from_native(df_pd)
+            >>> nw.to_native(
+            ...     nw.maybe_convert_dtypes(df)
+            ... ).dtypes  # doctest: +NORMALIZE_WHITESPACE
+            a             Int32
+            b           boolean
+            dtype: object
+        """
         return maybe_convert_dtypes(df, *args, **kwargs)
 
     def lit(self, value: Any, dtype: DType | None = None) -> nw.Expr:
+        """
+        Return an expression representing a literal value.
+
+        Arguments:
+            value: The value to use as literal.
+            dtype: The data type of the literal value. If not provided, the data type will be inferred.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pl = pl.DataFrame({"a": [1, 2]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2]})
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(nw.lit(3).alias("b"))
+
+            We can then pass either pandas or polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  3
+            1  2  3
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i32 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            │ 2   ┆ 3   │
+            └─────┴─────┘
+        """
         return lit(value, dtype, api_version=self.api_version)
 
     def max(self, *columns: str) -> nw.Expr:
