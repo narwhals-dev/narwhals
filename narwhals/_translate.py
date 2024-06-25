@@ -952,7 +952,7 @@ class StableAPI:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-            a
+               a
             0  2
             >>> func(df_pl)
             shape: (1, 1)
@@ -994,7 +994,7 @@ class StableAPI:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                a
+                 a
             0  4.0
             >>> func(df_pl)
             shape: (1, 1)
@@ -1035,7 +1035,7 @@ class StableAPI:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-            b
+               b
             0  5
             >>> func(df_pl)
             shape: (1, 1)
@@ -1183,12 +1183,98 @@ class StableAPI:
         )
 
     def sum(self, *columns: str | Iterable[str]) -> nw.Expr:
+        """
+        Sum all values.
+
+        Note:
+            Syntactic sugar for ``nw.col(columns).sum()``
+
+        Arguments:
+            columns: Name(s) of the columns to use in the aggregation function
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pl = pl.DataFrame({"a": [1, 2]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2]})
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.sum("a"))
+
+            We can then pass either pandas or polars to `func`:
+
+            >>> func(df_pd)
+               a
+            0  3
+            >>> func(df_pl)
+            shape: (1, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 3   │
+            └─────┘
+        """
         return sum(*columns, api_version=self.api_version)
 
     def sum_horizontal(self, *exprs: IntoExpr | Iterable[IntoExpr]) -> nw.Expr:
+        """
+        Sum all values horizontally across columns
+
+        Arguments:
+            exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from narwhals import StableAPI
+            >>> nw = StableAPI("0.20")
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.sum_horizontal("a", "b"))
+
+            We can then pass either pandas or polars to `func`:
+
+            >>> func(df_pd)
+                a
+            0   6
+            1  12
+            2  18
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 6   │
+            │ 12  │
+            │ 18  │
+            └─────┘
+
+        """
         return sum_horizontal(*exprs, api_version=self.api_version)
 
     def show_versions(self) -> None:
+        """
+        Print useful debugging information
+
+        Examples:
+
+            >>> from narwhals import show_versions
+            >>> show_versions()  # doctest:+SKIP
+        """
         return show_versions()
 
     def to_native(
@@ -1197,6 +1283,16 @@ class StableAPI:
         *,
         strict: bool = True,
     ) -> Any:
+        """
+        Convert Narwhals object to native one.
+
+        Arguments:
+            narwhals_object: Narwhals object.
+            strict: whether to raise on non-Narwhals input.
+
+        Returns:
+            Object of class that user started with.
+        """
         return to_native(narwhals_object, strict=strict)
 
     Boolean = dtypes.Boolean
@@ -1223,4 +1319,5 @@ __all__ = [
     "get_native_namespace",
     "to_native",
     "narwhalify",
+    "StableAPI",
 ]
