@@ -326,7 +326,16 @@ def narwhalify(
                 for name, value in kwargs.items()
             }
 
-            # (todo) validate same backend?!
+            backends = {
+                b()
+                for v in [*args, *kwargs.values()]
+                if (b := getattr(v, "__native_namespace__", None))
+            }
+
+            if len(backends) >= 2:
+                msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+                raise ValueError(msg)
+
             result = func(*args, **kwargs)
 
             return to_native(result, strict=strict)

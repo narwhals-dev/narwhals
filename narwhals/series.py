@@ -66,6 +66,11 @@ class Series:
             return self._series[idx]
         return self._from_series(self._series[idx])
 
+    def __native_namespace__(self) -> Any:
+        if self._is_polars:
+            return get_polars()
+        return self._series.__native_namespace__()
+
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
             return get_polars()
