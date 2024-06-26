@@ -332,7 +332,7 @@ def narwhalify(
                 if (b := getattr(v, "__native_namespace__", None))
             }
 
-            if len(backends) >= 2:
+            if len(backends) > 1:
                 msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
                 raise ValueError(msg)
 
