@@ -10,8 +10,8 @@ from narwhals.utils import validate_laziness
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals._dataframe import DataFrame
+    from narwhals._dataframe import LazyFrame
 
 
 def concat(
@@ -33,6 +33,7 @@ def concat(
     return first_item.__class__(
         plx.concat([df._dataframe for df in items], how=how),
         is_polars=first_item._is_polars,
+        api_version=first_item._api_version,
     )
 
 

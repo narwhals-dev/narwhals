@@ -14,10 +14,7 @@ files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions = [
     i
     for i in nw.__dir__()
-    if not i[0].isupper()
-    and i[0] != "_"
-    and i not in files
-    and i not in {"annotations", "DataFrame", "LazyFrame", "Series"}
+    if not i[0].isupper() and i[0] != "_" and i not in files and i not in {"annotations"}
 ]
 with open("docs/api-reference/narwhals.md") as fd:
     content = fd.read()
@@ -30,14 +27,14 @@ if missing := set(top_level_functions).difference(documented):
     print("top-level functions: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(top_level_functions).difference({"StableAPI"}):
     print("top-level functions: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
 
 top_level_functions = [
     i
-    for i in nw.DataFrame(pl.DataFrame()).__dir__()
+    for i in nw.DataFrame(pl.DataFrame(), api_version="0.20").__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/dataframe.md") as fd:
@@ -58,7 +55,7 @@ if extra := set(documented).difference(top_level_functions):
 
 top_level_functions = [
     i
-    for i in nw.LazyFrame(pl.LazyFrame()).__dir__()
+    for i in nw.LazyFrame(pl.LazyFrame(), api_version="0.20").__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/lazyframe.md") as fd:
@@ -78,7 +75,9 @@ if extra := set(documented).difference(top_level_functions):
     ret = 1
 
 top_level_functions = [
-    i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
+    i
+    for i in nw.Series(pl.Series(), api_version="0.20").__dir__()
+    if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/series.md") as fd:
     content = fd.read()
@@ -101,7 +100,9 @@ if extra := set(documented).difference(top_level_functions):
     ret = 1
 
 top_level_functions = [
-    i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
+    i
+    for i in nw.Expr(lambda: 0, api_version="0.20").__dir__()
+    if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/expressions.md") as fd:
     content = fd.read()
@@ -130,9 +131,15 @@ if extra := set(documented).difference(top_level_functions):
 # str
 
 # Check Expr vs Series
-expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
+expr = [
+    i
+    for i in nw.Expr(lambda: 0, api_version="0.20").__dir__()
+    if not i[0].isupper() and i[0] != "_"
+]
 series = [
-    i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
+    i
+    for i in nw.Series(pl.Series(), api_version="0.20").__dir__()
+    if not i[0].isupper() and i[0] != "_"
 ]
 
 if missing := set(expr).difference(series).difference({"over"}):

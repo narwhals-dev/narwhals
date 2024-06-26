@@ -1,6 +1,6 @@
 # `narwhals.Series.dt`
 
-::: narwhals.series.SeriesDateTimeNamespace
+::: narwhals._series.SeriesDateTimeNamespace
     handler: python
     options:
       members:

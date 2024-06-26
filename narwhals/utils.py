@@ -12,8 +12,8 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import BaseFrame
-    from narwhals.series import Series
+    from narwhals._dataframe import BaseFrame
+    from narwhals._series import Series
 
 T = TypeVar("T")
 
@@ -45,7 +45,7 @@ def tupleify(arg: Any) -> Any:
 
 
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
-    from narwhals.series import Series
+    from narwhals._series import Series
 
     if (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame)):
         msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
@@ -91,8 +91,8 @@ def validate_same_library(items: Iterable[Any]) -> None:
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals._dataframe import DataFrame
+    from narwhals._dataframe import LazyFrame
 
     if all(isinstance(item, DataFrame) for item in items) or (
         all(isinstance(item, LazyFrame) for item in items)
@@ -130,8 +130,6 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     """
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.series import PandasSeries
-    from narwhals.dataframe import DataFrame
-    from narwhals.series import Series
 
     def _validate_index(index: Any) -> None:
         if not index.is_unique:
@@ -144,17 +142,17 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     ):
         _validate_index(lhs_any._dataframe._dataframe.index)
         _validate_index(rhs_any._dataframe._dataframe.index)
-        return DataFrame(  # type: ignore[return-value]
+        return lhs._from_dataframe(  # type: ignore[no-any-return, attr-defined]
             lhs_any._dataframe._from_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._dataframe._dataframe.index]
-            )
+            ),
         )
     if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
         getattr(rhs_any, "_series", None), PandasSeries
     ):
         _validate_index(lhs_any._dataframe._dataframe.index)
         _validate_index(rhs_any._series._series.index)
-        return DataFrame(  # type: ignore[return-value]
+        return lhs._from_dataframe(  # type: ignore[no-any-return, attr-defined]
             lhs_any._dataframe._from_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._series._series.index]
             )
@@ -164,7 +162,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     ):
         _validate_index(lhs_any._series._series.index)
         _validate_index(rhs_any._dataframe._dataframe.index)
-        return Series(  # type: ignore[return-value]
+        return lhs._from_series(  # type: ignore[no-any-return, attr-defined]
             lhs_any._series._from_series(
                 lhs_any._series._series.loc[rhs_any._dataframe._dataframe.index]
             )
@@ -174,7 +172,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
     ):
         _validate_index(lhs_any._series._series.index)
         _validate_index(rhs_any._series._series.index)
-        return Series(  # type: ignore[return-value]
+        return lhs._from_series(  # type: ignore[no-any-return, attr-defined]
             lhs_any._series._from_series(
                 lhs_any._series._series.loc[rhs_any._series._series.index]
             )
@@ -209,11 +207,10 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         5  2
     """
     from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals.dataframe import DataFrame
 
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
-        return DataFrame(  # type: ignore[return-value]
+        return df._from_dataframe(  # type: ignore[no-any-return, attr-defined]
             df_any._dataframe._from_dataframe(
                 df_any._dataframe._dataframe.set_index(column_names)
             )
@@ -247,11 +244,10 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         dtype: object
     """
     from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals.dataframe import DataFrame
 
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
-        return DataFrame(  # type: ignore[return-value]
+        return df._from_dataframe(  # type: ignore[no-any-return, attr-defined]
             df_any._dataframe._from_dataframe(
                 df_any._dataframe._dataframe.convert_dtypes(*args, **kwargs)
             )

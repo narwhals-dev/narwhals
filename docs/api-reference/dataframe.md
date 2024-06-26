@@ -1,6 +1,6 @@
 # `narwhals.DataFrame`
 
-::: narwhals.dataframe.DataFrame
+::: narwhals.DataFrame
     handler: python
     options:
       members:

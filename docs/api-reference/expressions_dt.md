@@ -1,6 +1,6 @@
 # `narwhals.Expr.dt`
 
-::: narwhals.expression.ExprDateTimeNamespace
+::: narwhals._expression.ExprDateTimeNamespace
     handler: python
     options:
       members:

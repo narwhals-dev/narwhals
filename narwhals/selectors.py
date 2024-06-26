@@ -1,21 +1,29 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._expression import Expr
 from narwhals.dtypes import translate_dtype
-from narwhals.expression import Expr
 from narwhals.utils import flatten
+from narwhals.versions import DEFAULT_API_VERSION
+
+if TYPE_CHECKING:
+    from narwhals.typing import API_VERSION
 
 
 class Selector(Expr): ...
 
 
-def by_dtype(*dtypes: Any) -> Expr:
+def by_dtype(*dtypes: Any, api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select columns based on their dtype.
 
     Arguments:
         dtypes: one or data types to select
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import narwhals as nw
@@ -55,13 +63,19 @@ def by_dtype(*dtypes: Any) -> Expr:
     return Selector(
         lambda plx: plx.selectors.by_dtype(
             [translate_dtype(plx, dtype) for dtype in flatten(dtypes)]
-        )
+        ),
+        api_version=api_version or DEFAULT_API_VERSION,
     )
 
 
-def numeric() -> Expr:
+def numeric(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select numeric columns.
+
+    Arguments:
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import narwhals as nw
@@ -98,12 +112,20 @@ def numeric() -> Expr:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector(lambda plx: plx.selectors.numeric())
+    return Selector(
+        lambda plx: plx.selectors.numeric(),
+        api_version=api_version or DEFAULT_API_VERSION,
+    )
 
 
-def boolean() -> Expr:
+def boolean(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select boolean columns.
+
+    Arguments:
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import narwhals as nw
@@ -140,12 +162,20 @@ def boolean() -> Expr:
         │ true  │
         └───────┘
     """
-    return Selector(lambda plx: plx.selectors.boolean())
+    return Selector(
+        lambda plx: plx.selectors.boolean(),
+        api_version=api_version or DEFAULT_API_VERSION,
+    )
 
 
-def string() -> Expr:
+def string(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select string columns.
+
+    Arguments:
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import narwhals as nw
@@ -182,12 +212,19 @@ def string() -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.string())
+    return Selector(
+        lambda plx: plx.selectors.string(), api_version=api_version or DEFAULT_API_VERSION
+    )
 
 
-def categorical() -> Expr:
+def categorical(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select categorical columns.
+
+    Arguments
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import narwhals as nw
@@ -224,12 +261,20 @@ def categorical() -> Expr:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.categorical())
+    return Selector(
+        lambda plx: plx.selectors.categorical(),
+        api_version=api_version or DEFAULT_API_VERSION,
+    )
 
 
-def all() -> Expr:
+def all(api_version: API_VERSION = DEFAULT_API_VERSION) -> Expr:
     """
     Select all columns.
+
+    Arguments:
+        api_version: Narwhals API version to use, if you want to ensure perfect
+            backwards-compatibility. The easiest way to use this is to set it once
+            in `narwhals.StableAPI` and then just import that.
 
     Examples:
         >>> import narwhals as nw
@@ -266,4 +311,6 @@ def all() -> Expr:
         │ 2   ┆ y   ┆ true  │
         └─────┴─────┴───────┘
     """
-    return Selector(lambda plx: plx.selectors.all())
+    return Selector(
+        lambda plx: plx.selectors.all(), api_version=api_version or DEFAULT_API_VERSION
+    )

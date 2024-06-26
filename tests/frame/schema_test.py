@@ -1,7 +1,7 @@
 from datetime import datetime
 from datetime import timezone
 
-import narwhals as nw
+from tests.utils import nw
 
 data = {
     "a": [datetime(2020, 1, 1)],

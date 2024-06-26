@@ -8,8 +8,12 @@ from typing import Any
 from typing import Iterator
 from typing import Sequence
 
+from narwhals import StableAPI
+
 if TYPE_CHECKING:
     import pandas as pd
+
+nw = StableAPI("0.20")
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:

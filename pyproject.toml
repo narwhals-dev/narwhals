@@ -54,6 +54,7 @@ lint.ignore = [
   'PD',
   'PLR0911',
   'PLR0912',
+  'PLR0913',  # too many arguments in function
   'PLR5501',
   'PLR2004',
   'PT011',
@@ -82,6 +83,7 @@ markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 
 [tool.coverage.run]
 plugins = ["covdefaults"]
+omit = ["typing.py"]
 
 [tool.coverage.report]
 exclude_also = [

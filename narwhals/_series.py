@@ -4,30 +4,39 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_polars
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
-from narwhals.translate import get_cudf
-from narwhals.translate import get_modin
-from narwhals.translate import get_pandas
-from narwhals.translate import get_polars
 
 if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
-    from narwhals.dataframe import DataFrame
+    from narwhals._dataframe import DataFrame
+    from narwhals.typing import API_VERSION
 
 
 class Series:
+    """
+    Narwhals Series, backed by a native series.
+
+    The native dataframe might be pandas.Series, polars.Series, ...
+
+    This class is not meant to be instantiated directly - instead, use
+    `narwhals.from_native`, making sure to pass `allow_series=True` or
+    `series_only=True`.
+    """
+
     def __init__(
-        self,
-        series: Any,
-        *,
-        is_polars: bool = False,
+        self, series: Any, *, is_polars: bool = False, api_version: API_VERSION
     ) -> None:
         from narwhals._pandas_like.series import PandasSeries
 
         self._is_polars = is_polars
+        self._api_version = api_version
         if hasattr(series, "__narwhals_series__"):
             self._series = series.__narwhals_series__()
             return
@@ -100,14 +109,16 @@ class Series:
         return self._series.shape  # type: ignore[no-any-return]
 
     def _extract_native(self, arg: Any) -> Any:
-        from narwhals.series import Series
+        from narwhals._series import Series
 
         if isinstance(arg, Series):
             return arg._series
         return arg
 
     def _from_series(self, series: Any) -> Self:
-        return self.__class__(series, is_polars=self._is_polars)
+        return self.__class__(
+            series, is_polars=self._is_polars, api_version=self._api_version
+        )
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals Series                                 "
@@ -293,9 +304,9 @@ class Series:
             │ 3   │
             └─────┘
         """
-        from narwhals.dataframe import DataFrame
+        from narwhals._dataframe import DataFrame
 
-        return DataFrame(self._series.to_frame())
+        return DataFrame(self._series.to_frame(), api_version=self._api_version)
 
     def mean(self) -> Any:
         """
@@ -1269,7 +1280,7 @@ class Series:
                 true
             ]
         """
-        return Series(self._series.is_duplicated())
+        return self._from_series(self._series.is_duplicated())
 
     def is_empty(self: Self) -> bool:
         r"""
@@ -1337,7 +1348,7 @@ class Series:
                 false
             ]
         """
-        return Series(self._series.is_unique())
+        return self._from_series(self._series.is_unique())
 
     def null_count(self: Self) -> int:
         r"""
@@ -1408,7 +1419,7 @@ class Series:
                 false
             ]
         """
-        return Series(self._series.is_first_distinct())
+        return self._from_series(self._series.is_first_distinct())
 
     def is_last_distinct(self: Self) -> Series:
         r"""
@@ -1448,7 +1459,7 @@ class Series:
                 true
             ]
         """
-        return Series(self._series.is_last_distinct())
+        return self._from_series(self._series.is_last_distinct())
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
         r"""
@@ -1527,9 +1538,12 @@ class Series:
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        from narwhals.dataframe import DataFrame
+        from narwhals._dataframe import DataFrame
 
-        return DataFrame(self._series.value_counts(sort=sort, parallel=parallel))
+        return DataFrame(
+            self._series.value_counts(sort=sort, parallel=parallel),
+            api_version=self._api_version,
+        )
 
     def quantile(
         self,
@@ -1785,20 +1799,21 @@ class Series:
 
     @property
     def str(self) -> SeriesStringNamespace:
-        return SeriesStringNamespace(self)
+        return SeriesStringNamespace(self, api_version=self._api_version)
 
     @property
     def dt(self) -> SeriesDateTimeNamespace:
-        return SeriesDateTimeNamespace(self)
+        return SeriesDateTimeNamespace(self, api_version=self._api_version)
 
     @property
     def cat(self) -> SeriesCatNamespace:
-        return SeriesCatNamespace(self)
+        return SeriesCatNamespace(self, api_version=self._api_version)
 
 
 class SeriesCatNamespace:
-    def __init__(self, series: Series) -> None:
+    def __init__(self, series: Series, *, api_version: API_VERSION) -> None:
         self._series = series
+        self._api_version = api_version
 
     def get_categories(self) -> Series:
         """
@@ -1835,11 +1850,12 @@ class SeriesCatNamespace:
                "mango"
             ]
         """
-        return self._series.__class__(self._series._series.cat.get_categories())
+        return self._series._from_series(self._series._series.cat.get_categories())
 
 
 class SeriesStringNamespace:
-    def __init__(self, series: Series) -> None:
+    def __init__(self, series: Series, *, api_version: API_VERSION) -> None:
+        self._api_version = api_version
         self._series = series
 
     def starts_with(self, prefix: str) -> Series:
@@ -1880,7 +1896,7 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series.__class__(self._series._series.str.starts_with(prefix))
+        return self._series._from_series(self._series._series.str.starts_with(prefix))
 
     def ends_with(self, suffix: str) -> Series:
         r"""
@@ -1920,7 +1936,7 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series.__class__(self._series._series.str.ends_with(suffix))
+        return self._series._from_series(self._series._series.str.ends_with(suffix))
 
     def contains(self, pattern: str, *, literal: bool = False) -> Series:
         r"""
@@ -1966,8 +1982,8 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series.__class__(
-            self._series._series.str.contains(pattern, literal=literal)
+        return self._series._from_series(
+            self._series._series.str.contains(pattern, literal=literal),
         )
 
     def slice(self, offset: int, length: int | None = None) -> Series:
@@ -2035,8 +2051,8 @@ class SeriesStringNamespace:
                 "uit"
             ]
         """
-        return self._series.__class__(
-            self._series._series.str.slice(offset=offset, length=length)
+        return self._series._from_series(
+            self._series._series.str.slice(offset=offset, length=length),
         )
 
     def head(self, n: int = 5) -> Series:
@@ -2083,7 +2099,7 @@ class SeriesStringNamespace:
                "zukky"
             ]
         """
-        return self._series.__class__(self._series._series.str.slice(0, n))
+        return self._series._from_series(self._series._series.str.slice(0, n))
 
     def tail(self, n: int = 5) -> Series:
         r"""
@@ -2129,11 +2145,12 @@ class SeriesStringNamespace:
                "kkyun"
             ]
         """
-        return self._series.__class__(self._series._series.str.slice(-n))
+        return self._series._from_series(self._series._series.str.slice(-n))
 
 
 class SeriesDateTimeNamespace:
-    def __init__(self, series: Series) -> None:
+    def __init__(self, series: Series, *, api_version: API_VERSION) -> None:
+        self._api_version = api_version
         self._series = series
 
     def year(self) -> Series:
@@ -2170,7 +2187,7 @@ class SeriesDateTimeNamespace:
                2023
             ]
         """
-        return self._series.__class__(self._series._series.dt.year())
+        return self._series._from_series(self._series._series.dt.year())
 
     def month(self) -> Series:
         """
@@ -2206,7 +2223,7 @@ class SeriesDateTimeNamespace:
                8
             ]
         """
-        return self._series.__class__(self._series._series.dt.month())
+        return self._series._from_series(self._series._series.dt.month())
 
     def day(self) -> Series:
         """
@@ -2242,7 +2259,7 @@ class SeriesDateTimeNamespace:
                5
             ]
         """
-        return self._series.__class__(self._series._series.dt.day())
+        return self._series._from_series(self._series._series.dt.day())
 
     def hour(self) -> Series:
         """
@@ -2278,7 +2295,7 @@ class SeriesDateTimeNamespace:
                9
             ]
         """
-        return self._series.__class__(self._series._series.dt.hour())
+        return self._series._from_series(self._series._series.dt.hour())
 
     def minute(self) -> Series:
         """
@@ -2314,7 +2331,7 @@ class SeriesDateTimeNamespace:
                12
             ]
         """
-        return self._series.__class__(self._series._series.dt.minute())
+        return self._series._from_series(self._series._series.dt.minute())
 
     def second(self) -> Series:
         """
@@ -2350,7 +2367,7 @@ class SeriesDateTimeNamespace:
                 4
             ]
         """
-        return self._series.__class__(self._series._series.dt.second())
+        return self._series._from_series(self._series._series.dt.second())
 
     def millisecond(self) -> Series:
         """
@@ -2399,7 +2416,7 @@ class SeriesDateTimeNamespace:
                 200
             ]
         """
-        return self._series.__class__(self._series._series.dt.millisecond())
+        return self._series._from_series(self._series._series.dt.millisecond())
 
     def microsecond(self) -> Series:
         """
@@ -2448,7 +2465,7 @@ class SeriesDateTimeNamespace:
                200000
             ]
         """
-        return self._series.__class__(self._series._series.dt.microsecond())
+        return self._series._from_series(self._series._series.dt.microsecond())
 
     def nanosecond(self) -> Series:
         """
@@ -2487,7 +2504,7 @@ class SeriesDateTimeNamespace:
                60000000
             ]
         """
-        return self._series.__class__(self._series._series.dt.nanosecond())
+        return self._series._from_series(self._series._series.dt.nanosecond())
 
     def ordinal_day(self) -> Series:
         """
@@ -2523,7 +2540,7 @@ class SeriesDateTimeNamespace:
                216
             ]
         """
-        return self._series.__class__(self._series._series.dt.ordinal_day())
+        return self._series._from_series(self._series._series.dt.ordinal_day())
 
     def total_minutes(self) -> Series:
         """
@@ -2564,7 +2581,7 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series.__class__(self._series._series.dt.total_minutes())
+        return self._series._from_series(self._series._series.dt.total_minutes())
 
     def total_seconds(self) -> Series:
         """
@@ -2605,7 +2622,7 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series.__class__(self._series._series.dt.total_seconds())
+        return self._series._from_series(self._series._series.dt.total_seconds())
 
     def total_milliseconds(self) -> Series:
         """
@@ -2649,7 +2666,7 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series.__class__(self._series._series.dt.total_milliseconds())
+        return self._series._from_series(self._series._series.dt.total_milliseconds())
 
     def total_microseconds(self) -> Series:
         """
@@ -2693,7 +2710,7 @@ class SeriesDateTimeNamespace:
                     1200
             ]
         """
-        return self._series.__class__(self._series._series.dt.total_microseconds())
+        return self._series._from_series(self._series._series.dt.total_microseconds())
 
     def total_nanoseconds(self) -> Series:
         """
@@ -2734,7 +2751,7 @@ class SeriesDateTimeNamespace:
                     1
             ]
         """
-        return self._series.__class__(self._series._series.dt.total_nanoseconds())
+        return self._series._from_series(self._series._series.dt.total_nanoseconds())
 
     def to_string(self, format: str) -> Series:  # noqa: A002
         """
@@ -2776,4 +2793,4 @@ class SeriesDateTimeNamespace:
                "2020/05/01"
             ]
         """
-        return self._series.__class__(self._series._series.dt.to_string(format))
+        return self._series._from_series(self._series._series.dt.to_string(format))

@@ -1,6 +1,6 @@
 # `narwhals.Series.cat`
 
-::: narwhals.series.SeriesStringNamespace
+::: narwhals._series.SeriesStringNamespace
     handler: python
     options:
       members:

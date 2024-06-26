@@ -1,6 +1,6 @@
 # `narwhals.Expr.str`
 
-::: narwhals.expression.ExprStringNamespace
+::: narwhals._expression.ExprStringNamespace
     handler: python
     options:
       members:

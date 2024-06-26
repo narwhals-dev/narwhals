@@ -4,7 +4,7 @@ import pytest
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_series_equal
 
-import narwhals as nw
+from tests.utils import nw
 
 
 def test_maybe_align_index_pandas() -> None:

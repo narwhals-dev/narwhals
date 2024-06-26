@@ -4,7 +4,7 @@
 
 Extremely lightweight compatibility layer between Polars, pandas, and more.
 
-Seamlessly support both, without depending on either!
+Support newer dataframe libraries, at no cost to your existing pandas users!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
 - ✅ **Zero dependencies**, **zero 3rd-party imports**: Narwhals only uses what
@@ -14,6 +14,7 @@ Seamlessly support both, without depending on either!
   either getting in the way
 - ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
 - ✅ **Negligible overhead**, see [overhead](https://narwhals-dev.github.io/narwhals/overhead/)
+- ✅ Write your code once and forget about it, read our [**Perfectly backwards compatibility policy**](https://narwhals-dev.github.io/narwhals/backcompat/)
 
 ## Who's this for?
 

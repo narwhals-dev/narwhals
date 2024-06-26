@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class PandasExpr:
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         call: Callable[[PandasDataFrame], list[PandasSeries]],
         *,

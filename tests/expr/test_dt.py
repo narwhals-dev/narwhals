@@ -11,9 +11,9 @@ import polars as pl
 import pytest
 from hypothesis import given
 
-import narwhals as nw
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
+from tests.utils import nw
 
 data = {
     "a": [

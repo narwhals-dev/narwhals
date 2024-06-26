@@ -70,7 +70,7 @@ df = nw.from_native(df_pl)
 df.select(nw.col('a')+1)
 ```
 
-`nw.col('a')` produces a `narwhals.expression.Expr` object, which has a private `_call` method.
+`nw.col('a')` produces a `narwhals.Expr` object, which has a private `_call` method.
 Inside `DataFrame.select`, we call `nw.col('a')._call(pl)`, which produces `pl.col('a')`.
 
 We then let Polars do its thing. Which is nice, but also not particularly interesting.

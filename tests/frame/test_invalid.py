@@ -4,7 +4,7 @@ import pytest
 from sklearn.utils import check_X_y
 from sklearn.utils._testing import create_memmap_backed_data
 
-import narwhals as nw
+from tests.utils import nw
 
 
 def test_native_vs_non_native() -> None:
@@ -24,7 +24,7 @@ def test_validate_laziness() -> None:
         NotImplementedError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
-        nw.concat([nw.DataFrame(df), nw.LazyFrame(df)])
+        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])
 
 
 def test_memmap() -> None:

@@ -10,11 +10,11 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dtypes import to_narwhals_dtype
-from narwhals.translate import get_cudf
-from narwhals.translate import get_modin
-from narwhals.translate import get_pandas
 from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
@@ -25,16 +25,18 @@ if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
+    from narwhals._group_by import GroupBy
+    from narwhals._group_by import LazyGroupBy
+    from narwhals._series import Series
     from narwhals.dtypes import DType
-    from narwhals.group_by import GroupBy
-    from narwhals.group_by import LazyGroupBy
-    from narwhals.series import Series
+    from narwhals.typing import API_VERSION
     from narwhals.typing import IntoExpr
 
 
 class BaseFrame:
     _dataframe: Any
     _is_polars: bool
+    _api_version: API_VERSION
 
     def __len__(self) -> Any:
         return self._dataframe.__len__()
@@ -54,6 +56,7 @@ class BaseFrame:
         return self.__class__(  # type: ignore[call-arg]
             df,
             is_polars=self._is_polars,
+            api_version=self._api_version,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -65,8 +68,8 @@ class BaseFrame:
         return args, kwargs
 
     def _extract_native(self, arg: Any) -> Any:
-        from narwhals.expression import Expr
-        from narwhals.series import Series
+        from narwhals._expression import Expr
+        from narwhals._series import Series
 
         if isinstance(arg, BaseFrame):
             return arg._dataframe
@@ -115,9 +118,7 @@ class BaseFrame:
         return self._dataframe.columns  # type: ignore[no-any-return]
 
     def lazy(self) -> LazyFrame:
-        return LazyFrame(
-            self._dataframe.lazy(),
-        )
+        return LazyFrame(self._dataframe.lazy(), api_version=self._api_version)
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
@@ -204,8 +205,10 @@ class DataFrame(BaseFrame):
         df: Any,
         *,
         is_polars: bool = False,
+        api_version: API_VERSION,
     ) -> None:
         self._is_polars = is_polars
+        self._api_version = api_version
         if hasattr(df, "__narwhals_dataframe__"):
             self._dataframe: Any = df.__narwhals_dataframe__()
         elif is_polars or (
@@ -383,12 +386,12 @@ class DataFrame(BaseFrame):
 
     def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
         if isinstance(item, str):
-            from narwhals.series import Series
+            from narwhals._series import Series
 
-            return Series(self._dataframe[item])
+            return Series(self._dataframe[item], api_version=self._api_version)
 
         elif isinstance(item, (range, slice)):
-            return DataFrame(self._dataframe[item])
+            return self._from_dataframe(self._dataframe[item])
 
         else:
             msg = f"Expected str, range or slice, got: {type(item)}"
@@ -430,11 +433,11 @@ class DataFrame(BaseFrame):
             >>> func(df_pl)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
-        from narwhals.series import Series
+        from narwhals._series import Series
 
         if as_series:
             return {
-                key: Series(value)
+                key: Series(value, api_version=self._api_version)
                 for key, value in self._dataframe.to_dict(as_series=as_series).items()
             }
         # TODO: overload return type
@@ -1215,6 +1218,7 @@ class DataFrame(BaseFrame):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
+
             >>> df = {
             ...     "a": ["a", "b", "a", "b", "c"],
             ...     "b": [1, 2, 1, 3, 3],
@@ -1273,9 +1277,9 @@ class DataFrame(BaseFrame):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        from narwhals.group_by import GroupBy
+        from narwhals._group_by import GroupBy
 
-        return GroupBy(self, *keys)
+        return GroupBy(self, *keys, api_version=self._api_version)
 
     def sort(
         self,
@@ -1308,7 +1312,7 @@ class DataFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl, eager_only=True)
             >>> dframe = df.sort("a")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1412,8 +1416,8 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "d"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> other_df = nw.DataFrame(other_df_pl)
+            >>> df = nw.from_native(df_pl, eager_only=True)
+            >>> other_df = nw.from_native(other_df_pl, eager_only=True)
             >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1481,9 +1485,9 @@ class DataFrame(BaseFrame):
                 true
             ]
         """
-        from narwhals.series import Series
+        from narwhals._series import Series
 
-        return Series(self._dataframe.is_duplicated())
+        return Series(self._dataframe.is_duplicated(), api_version=self._api_version)
 
     def is_empty(self: Self) -> bool:
         r"""
@@ -1563,9 +1567,9 @@ class DataFrame(BaseFrame):
                 false
             ]
         """
-        from narwhals.series import Series
+        from narwhals._series import Series
 
-        return Series(self._dataframe.is_unique())
+        return Series(self._dataframe.is_unique(), api_version=self._api_version)
 
     def null_count(self: Self) -> DataFrame:
         r"""
@@ -1619,7 +1623,7 @@ class DataFrame(BaseFrame):
             └─────┴─────┴─────┘
         """
 
-        return DataFrame(self._dataframe.null_count())
+        return self._from_dataframe(self._dataframe.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""
@@ -1669,28 +1673,19 @@ class LazyFrame(BaseFrame):
         df: Any,
         *,
         is_polars: bool = False,
+        api_version: API_VERSION,
     ) -> None:
         self._is_polars = is_polars
+        self._api_version = api_version
         if hasattr(df, "__narwhals_lazyframe__"):
             self._dataframe: Any = df.__narwhals_lazyframe__()
         elif is_polars or (
-            (pl := get_polars()) is not None
-            and isinstance(df, (pl.DataFrame, pl.LazyFrame))
+            (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
         ):
-            self._dataframe = df.lazy()
+            self._dataframe = df
             self._is_polars = True
-        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
-        elif (mpd := get_modin()) is not None and isinstance(
-            df, mpd.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="modin")
-        elif (cudf := get_cudf()) is not None and isinstance(
-            df, cudf.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="cudf")
         else:
-            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
+            msg = f"Expected Polars lazyframe or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -1727,7 +1722,7 @@ class LazyFrame(BaseFrame):
             ...         "c": [6, 5, 4, 3, 2, 1],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf
             ┌───────────────────────────────────────────────┐
             | Narwhals LazyFrame                            |
@@ -1751,9 +1746,7 @@ class LazyFrame(BaseFrame):
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        return DataFrame(
-            self._dataframe.collect(),
-        )
+        return DataFrame(self._dataframe.collect(), api_version=self._api_version)
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
@@ -1893,7 +1886,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
@@ -1915,7 +1908,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... ).select("foo", "bar")
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf.columns
             ['foo', 'bar']
         """
@@ -2191,7 +2184,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.rename({"foo": "apple"}).collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2346,7 +2339,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.drop("ham").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2408,7 +2401,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["b", "b", "b", "b"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.unique(None).collect().sort("foo")
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2688,9 +2681,9 @@ class LazyFrame(BaseFrame):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        from narwhals.group_by import LazyGroupBy
+        from narwhals._group_by import LazyGroupBy
 
-        return LazyGroupBy(self, *keys)
+        return LazyGroupBy(self, *keys, api_version=self._api_version)
 
     def sort(
         self,
@@ -2724,7 +2717,7 @@ class LazyFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.sort("a").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2828,8 +2821,8 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "d"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> other_lf = nw.LazyFrame(other_lf_pl)
+            >>> lf = nw.from_native(lf_pl)
+            >>> other_lf = nw.from_native(other_lf_pl)
             >>> lframe = lf.join(other_lf, left_on="ham", right_on="ham").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐

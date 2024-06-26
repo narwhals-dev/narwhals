@@ -79,7 +79,7 @@ class PandasGroupBy:
         return self._grouped.__iter__()  # type: ignore[no-any-return]
 
 
-def agg_pandas(  # noqa: PLR0913
+def agg_pandas(
     grouped: Any,
     exprs: list[PandasExpr],
     keys: list[str],
