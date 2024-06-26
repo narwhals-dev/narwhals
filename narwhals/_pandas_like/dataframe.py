@@ -4,6 +4,7 @@ import collections
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import overload
 
@@ -114,6 +115,22 @@ class PandasDataFrame:
     @property
     def columns(self) -> list[str]:
         return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
+
+    def iter_rows(
+        self,
+        *,
+        named: bool = False,
+        buffer_size: int = 512,
+    ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
+        """
+        NOTE:
+            The param ``buffer_size`` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
+        if not named:
+            yield from self._dataframe.itertuples(index=False, name=None)
+        else:
+            yield from (row._asdict() for row in self._dataframe.itertuples(index=False))
 
     @property
     def schema(self) -> dict[str, DType]:

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -628,6 +629,62 @@ class DataFrame(BaseFrame):
         """
         return super().columns
 
+    @overload
+    def iter_rows(
+        self, *, named: Literal[False], buffer_size: int = ...
+    ) -> Iterator[tuple[Any, ...]]: ...
+
+    @overload
+    def iter_rows(
+        self, *, named: Literal[True], buffer_size: int = ...
+    ) -> Iterator[dict[str, Any]]: ...
+
+    @overload
+    def iter_rows(
+        self, *, named: bool, buffer_size: int = ...
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]: ...
+
+    def iter_rows(
+        self, *, named: bool = False, buffer_size: int = 512
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
+        """
+        Returns an iterator over the DataFrame of rows of python-native values.
+
+        Arguments:
+            named: By default, each row is returned as a tuple of values given
+                in the same order as the frame columns. Setting named=True will
+                return rows of dictionaries instead.
+            buffer_size: Determines the number of rows that are buffered
+                internally while iterating over the data.
+                See https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any, *, named):
+            ...     df = nw.from_native(df_any)
+            ...     return df.iter_rows(named=named)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> [row for row in func(df_pd, named=False)]
+            [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
+            >>> [row for row in func(df_pd, named=True)]
+            [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
+            >>> [row for row in func(df_pl, named=False)]
+            [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
+            >>> [row for row in func(df_pl, named=True)]
+            [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
+        """
+        return self._dataframe.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[no-any-return]
+
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -1155,31 +1212,32 @@ class DataFrame(BaseFrame):
             GroupBy: Object which can be used to perform aggregations.
 
         Examples:
-            Group by one column and call `agg` to compute the grouped sum of another
-             column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "a": ["a", "b", "a", "b", "c"],
-            ...         "b": [1, 2, 1, 3, 3],
-            ...         "c": [5, 4, 3, 2, 1],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> dframe = df.group_by("a").agg(nw.col("b").sum()).sort("a")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {
+            ...     "a": ["a", "b", "a", "b", "c"],
+            ...     "b": [1, 2, 1, 3, 3],
+            ...     "c": [5, 4, 3, 2, 1],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            Let's define a dataframe-agnostic function in which we group by one column
+            and call `agg` to compute the grouped sum of another column.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.group_by("a").agg(nw.col("b").sum()).sort("a")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  a  2
+            1  b  5
+            2  c  3
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
@@ -1193,23 +1251,26 @@ class DataFrame(BaseFrame):
 
             Group by multiple columns by passing a list of column names.
 
-            >>> dframe = df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)  # doctest: +SKIP
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
+            >>> func(df_pd)
+               a  b  c
+            0  a  1  5
+            1  b  2  4
+            2  b  3  2
+            3  c  3  1
+            >>> func(df_pl)
             shape: (4, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
             │ --- ┆ --- ┆ --- │
             │ str ┆ i64 ┆ i64 │
             ╞═════╪═════╪═════╡
+            │ a   ┆ 1   ┆ 5   │
             │ b   ┆ 2   ┆ 4   │
             │ b   ┆ 3   ┆ 2   │
             │ c   ┆ 3   ┆ 1   │
-            │ a   ┆ 1   ┆ 5   │
             └─────┴─────┴─────┘
         """
         from narwhals.group_by import GroupBy
@@ -1584,11 +1645,11 @@ class DataFrame(BaseFrame):
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd, 1, 1), func(df_pl, 1, 1)
-            (5, 5)
+            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")  # doctest:+SKIP
+            (5, 6)
 
-            >>> func(df_pd, 2, "b"), func(df_pl, 2, "b")
-            (6, 6)
+            >>> func(df_pl, 1, 1), func(df_pl, 2, "b")
+            (5, 6)
         """
         return self._dataframe.item(row=row, column=column)
 
@@ -2542,23 +2603,44 @@ class LazyFrame(BaseFrame):
             Group by one column and call `agg` to compute the grouped sum of
             another column.
 
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": ["a", "b", "a", "b", "c"],
-            ...         "b": [1, 2, 1, 3, 3],
-            ...         "c": [5, 4, 3, 2, 1],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.group_by("a").agg(nw.col("b").sum()).collect().sort("a")
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> df = {
+            ...     "a": ["a", "b", "a", "b", "c"],
+            ...     "b": [1, 2, 1, 3, 3],
+            ...     "c": [5, 4, 3, 2, 1],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+            >>> lf_pl = pl.LazyFrame(df)
+
+            Let's define a dataframe-agnostic function in which we group by one column
+            and call `agg` to compute the grouped sum of another column.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.group_by("a").agg(nw.col("b").sum()).sort("a")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  a  2
+            1  b  5
+            2  c  3
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ str ┆ i64 │
+            ╞═════╪═════╡
+            │ a   ┆ 2   │
+            │ b   ┆ 5   │
+            │ c   ┆ 3   │
+            └─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
@@ -2572,13 +2654,28 @@ class LazyFrame(BaseFrame):
 
             Group by multiple columns by passing a list of column names.
 
-            >>> lframe = lf.group_by(["a", "b"]).agg(nw.max("c")).collect().sort(["a", "b"])
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.group_by(["a", "b"]).agg(nw.max("c")).sort(["a", "b"])
+            >>> func(df_pd)
+               a  b  c
+            0  a  1  5
+            1  b  2  4
+            2  b  3  2
+            3  c  3  1
+            >>> func(df_pl)
+            shape: (4, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 1   ┆ 5   │
+            │ b   ┆ 2   ┆ 4   │
+            │ b   ┆ 3   ┆ 2   │
+            │ c   ┆ 3   ┆ 1   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (4, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
