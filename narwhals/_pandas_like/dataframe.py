@@ -290,7 +290,6 @@ class PandasDataFrame:
 
         df_columns = merged_df.columns
 
-
         try:
             start_index = df_columns.get_loc(start_col)
             end_index = df_columns.get_loc(end_col)
