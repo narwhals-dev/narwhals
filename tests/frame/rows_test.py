@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import warnings
 from typing import Any
 
 import pandas as pd
@@ -10,6 +8,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.utils import parse_version
+from tests.utils import maybe_get_modin_df
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 if parse_version(pd.__version__) >= parse_version("1.5.0"):
@@ -35,20 +34,7 @@ else:  # pragma: no cover
     df_pandas_pyarrow = df_pandas
     df_pandas_nullable = df_pandas
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-
-if os.environ.get("CI", None):  # pragma: no cover
-    try:
-        import modin.pandas as mpd
-    except ImportError:
-        df_mpd = df_pandas.copy()
-    else:
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning)
-            df_mpd = mpd.DataFrame(
-                pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-            )
-else:  # pragma: no cover
-    df_mpd = df_pandas.copy()
+df_mpd = maybe_get_modin_df(df_pandas)
 
 df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
