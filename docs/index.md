@@ -4,7 +4,7 @@
 
 Extremely lightweight compatibility layer between Polars, pandas, and more.
 
-Seamlessly support both, without depending on either!
+Support newer dataframe libraries, at no cost to your existing pandas users!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
 - ✅ **Zero dependencies**, **zero 3rd-party imports**: Narwhals only uses what

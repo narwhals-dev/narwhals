@@ -500,8 +500,8 @@ class StableAPI:
     Arguments:
         api_version: Polars API version to follow. Allowed values are:
 
-        - 0.20
-        - 1.0
+            - 0.20
+            - 1.0
 
     Examples:
         Suppose you maintain a library called `skbeer`. Here's an example

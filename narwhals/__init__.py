@@ -13,6 +13,7 @@ from narwhals._expression import sum
 from narwhals._expression import sum_horizontal
 from narwhals._functions import concat
 from narwhals._functions import show_versions
+from narwhals._group_by import GroupBy
 from narwhals._series import Series
 from narwhals._translate import StableAPI
 from narwhals._translate import from_native
@@ -80,4 +81,5 @@ __all__ = [
     "narwhalify_method",
     "show_versions",
     "StableAPI",
+    "GroupBy",
 ]

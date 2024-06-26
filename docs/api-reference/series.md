@@ -1,6 +1,6 @@
 # `narwhals.Series`
 
-::: narwhals.series.Series
+::: narwhals._series.Series
     handler: python
     options:
       members:

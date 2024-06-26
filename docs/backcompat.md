@@ -1,4 +1,4 @@
-# Perfect backwards compatibility
+# Perfect backwards compatibility policy
 
 Ever upgraded a package, only to find that it breaks all your tests because of an intentional
 API change? Did you end up having to litter your code with statements such as
