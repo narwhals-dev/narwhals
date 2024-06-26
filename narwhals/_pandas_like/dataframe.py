@@ -285,10 +285,11 @@ class PandasDataFrame:
             suffixes=("", "_right"),
         )
 
-        start_col = "a"
-        end_col = "a_right"
+        start_col = merged_df.columns[0]
+        end_col = [col for col in merged_df.columns if col.endswith("_right")][0]
 
         df_columns = merged_df.columns
+
 
         try:
             start_index = df_columns.get_loc(start_col)
