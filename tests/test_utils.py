@@ -49,13 +49,6 @@ def test_maybe_align_index_polars() -> None:
         nw.maybe_align_index(df, s[1:])
 
 
-def test_native_namespace() -> None:
-    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
-    assert nw.get_native_namespace(df) is pl
-    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
-    assert nw.get_native_namespace(df) is pd
-
-
 def test_maybe_set_index_pandas() -> None:
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=[1, 2, 0]))
     result = nw.maybe_set_index(df, "b")

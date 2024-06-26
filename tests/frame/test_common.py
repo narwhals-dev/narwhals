@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import os
 import re
-import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -25,6 +23,7 @@ from tests.utils import nw
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+from tests.utils import maybe_get_modin_df
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 if parse_version(pd.__version__) >= parse_version("1.5.0"):
@@ -55,20 +54,7 @@ df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
 df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
-
-if os.environ.get("CI", None):  # pragma: no cover
-    try:
-        import modin.pandas as mpd
-    except ImportError:
-        df_mpd = df_pandas.copy()
-    else:
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning)
-            df_mpd = mpd.DataFrame(
-                pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-            )
-else:  # pragma: no cover
-    df_mpd = df_pandas.copy()
+df_mpd = maybe_get_modin_df(df_pandas)
 
 
 @pytest.mark.parametrize(
