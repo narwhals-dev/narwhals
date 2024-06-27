@@ -409,6 +409,8 @@ def translate_dtype(dtype: Any) -> DType:
         # pyarrow-backed datetime
         # todo: different time units and time zones
         return dtypes.Datetime()
+    if str(dtype) == "date32[day][pyarrow]":
+        return dtypes.Date()
     if dtype == "object":
         return dtypes.String()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
@@ -532,6 +534,11 @@ def reverse_translate_dtype(  # noqa: PLR0915
         if dtype_backend == "pyarrow-nullable":
             return "timestamp[ns][pyarrow]"
         return "datetime64[ns]"
+    if isinstance_or_issubclass(dtype, dtypes.Date):
+        if dtype_backend == "pyarrow-nullable":
+            return "date32[pyarrow]"
+        msg = "Date dtype only supported for pyarrow-backed data types in pandas"
+        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

@@ -110,6 +110,8 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
         return plx.Categorical
     if dtype == Datetime:
         return plx.Datetime
+    if dtype == Date:
+        return plx.Date
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -147,5 +149,7 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Categorical()
     if dtype == pl.Datetime:
         return Datetime()
+    if dtype == pl.Date:
+        return Date()
     msg = f"Unexpected dtype, got: {type(dtype)}"  # pragma: no cover
     raise AssertionError(msg)
