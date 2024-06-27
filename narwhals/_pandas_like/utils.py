@@ -373,9 +373,10 @@ def set_axis(obj: T, index: Any, implementation: str) -> T:
         return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
 
 
-def translate_dtype(dtype: Any) -> DType:
+def translate_dtype(column: Any) -> DType:
     from narwhals import dtypes
 
+    dtype = column.dtype
     if dtype in ("int64", "Int64", "Int64[pyarrow]"):
         return dtypes.Int64()
     if dtype in ("int32", "Int32", "Int32[pyarrow]"):
@@ -412,7 +413,15 @@ def translate_dtype(dtype: Any) -> DType:
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
     if dtype == "object":
-        return dtypes.String()
+        if (idx := column.first_valid_index()) is not None and isinstance(
+            column.loc[idx], str
+        ):
+            # Infer based on first non-missing value.
+            # For pandas pre 3.0, this isn't perfect.
+            # After pandas 3.0, pandas has a dedicated string dtype
+            # which is inferred by default.
+            return dtypes.String()
+        return dtypes.Object()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
