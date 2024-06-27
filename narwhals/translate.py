@@ -6,7 +6,6 @@ from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import overload
-from warnings import warn
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
@@ -296,9 +295,6 @@ def narwhalify(
         eager_only: Whether to only allow eager objects.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
-
-    See Also:
-        narwhalify_method: If you want to narwhalify a class method, use that instead.
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -347,30 +343,6 @@ def narwhalify(
     else:
         # If func is not None, it means the decorator is used without arguments
         return decorator(func)
-
-
-def narwhalify_method(  # pragma: no cover
-    func: Callable[..., Any] | None = None,
-    *,
-    strict: bool = False,
-    eager_only: bool | None = None,
-    series_only: bool | None = None,
-    allow_series: bool | None = None,
-) -> Callable[..., Any]:
-    warn(
-        "Please use `narwhalify` instead of `narwhalify_method`, `narwhalify_method` "
-        "will be deprecated in future versions",
-        DeprecationWarning,
-        stacklevel=1,
-    )
-
-    return narwhalify(
-        func,
-        strict=strict,
-        eager_only=eager_only,
-        series_only=series_only,
-        allow_series=allow_series,
-    )
 
 
 __all__ = [

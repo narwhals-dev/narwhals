@@ -17,18 +17,13 @@ stored them in attributes `self.means` and `self.std_devs`.
 ## Transform method
 
 We're going to take in a dataframe, and return a dataframe of the same type.
-Therefore, we use `@nw.narwhalify_method` (the counterpart to `@nw.narwhalify` which is
-meant to be used for methods):
-
-!!! info
-    As of version 0.y.z, `@nw.narwhalify_method` has been deprecated, and `nw.narwhalify`
-    can be used on methods as well.
+Therefore, we use `@nw.narwhalify`:
 
 ```python
 import narwhals as nw
 
 class StandardScaler:
-    @nw.narwhalify_method  # since v0.y.z, this is deprecated in favor of @nw.narwhalify
+    @nw.narwhalify
     def transform(self, df):
         return df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
@@ -51,7 +46,7 @@ doesn't either.
 
 Note how here, we're not returning a dataframe to the user - we just take a dataframe in, and
 store some internal state. Therefore, we use `nw.from_native` explicitly, as opposed to using the
-utility `@nw.narwhalify_method` decorator.
+utility `@nw.narwhalify` decorator.
 
 ```python
 import narwhals as nw
@@ -75,7 +70,7 @@ class StandardScaler:
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 
-    @nw.narwhalify_method
+    @nw.narwhalify
     def transform(self, df):
         return df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
