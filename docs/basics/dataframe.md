@@ -152,8 +152,8 @@ Let's try it out:
 
 ## Example 4: multiple inputs
 
-As of narwhals v0.y.z, `nw.narwhalify` can be used to decorate functions that take
-multiple inputs as well and output a non dataframe/series-like object as well.
+`nw.narwhalify` can be used to decorate functions that take multiple inputs as well and
+return a non dataframe/series-like object.
 
 For example, let's compute how many rows are left in a dataframe after filtering it based
 on a series.

@@ -44,16 +44,15 @@ To be able to get `Series` out of our `DataFrame`, we'll pass `eager_only=True` 
 This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
 doesn't either.
 
-Note how here, we're not returning a dataframe to the user - we just take a dataframe in, and
-store some internal state. Therefore, we use `nw.from_native` explicitly, as opposed to using the
-utility `@nw.narwhalify` decorator.
+We can specify that in the `@nw.narwhalify` decorator by setting `eager_only=True`, and
+the argument will be propagated to `nw.from_native`.
 
 ```python
 import narwhals as nw
 
 class StandardScaler:
+    @nw.narwhalify(eager_only=True)
     def fit(self, df_any):
-        df = nw.from_native(df_any, eager_only=True)
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 ```
@@ -65,6 +64,7 @@ Here is our dataframe-agnostic standard scaler:
 import narwhals as nw
 
 class StandardScaler:
+    @nw.narwhalify(eager_only=True)
     def fit(self, df_any):
         df = nw.from_native(df_any, eager_only=True)
         self._means = {col: df[col].mean() for col in df.columns}
