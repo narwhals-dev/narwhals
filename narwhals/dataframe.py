@@ -10,11 +10,11 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dtypes import to_narwhals_dtype
-from narwhals.translate import get_cudf
-from narwhals.translate import get_modin
-from narwhals.translate import get_pandas
 from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
