@@ -35,6 +35,7 @@ class PandasNamespace:
     Categorical = dtypes.Categorical
     String = dtypes.String
     Datetime = dtypes.Datetime
+    Date = dtypes.Date
 
     @property
     def selectors(self) -> PandasSelectorNamespace:

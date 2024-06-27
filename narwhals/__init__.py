@@ -3,6 +3,7 @@ from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
+from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
@@ -75,6 +76,7 @@ __all__ = [
     "Categorical",
     "String",
     "Datetime",
+    "Date",
     "narwhalify",
     "narwhalify_method",
     "show_versions",
