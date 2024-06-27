@@ -1,6 +1,6 @@
 from typing import Any
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 data = {
     "a": [1.0, 2.0, None, 4.0],

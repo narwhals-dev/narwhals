@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 data = {"a": [1, 2, 3]}
