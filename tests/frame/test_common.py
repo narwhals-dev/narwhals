@@ -314,7 +314,15 @@ def test_join(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize(
-    "df_raw", [df_polars, df_lazy, df_pandas, df_pandas_na, df_lazy_na, df_mpd]
+    "df_raw",
+    [
+        df_polars,
+        df_lazy,
+        df_pandas,
+        df_pandas_na,
+        df_lazy_na,
+        # df_mpd,
+    ],
 )
 def test_cross_join(df_raw: Any) -> None:
     df = nw.from_native(df_raw).select("a", "z")

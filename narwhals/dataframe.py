@@ -2823,30 +2823,39 @@ class LazyFrame(BaseFrame):
             A new joined LazyFrame
 
         Examples:
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> other_lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "apple": ["x", "y", "z"],
-            ...         "ham": ["a", "b", "d"],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> other_lf = nw.LazyFrame(other_lf_pl)
-            >>> lframe = lf.join(other_lf, left_on="ham", right_on="ham").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> data_other = {
+            ...     "apple": ["x", "y", "z"],
+            ...     "ham": ["a", "b", "d"],
+            ... }
+
+            >>> df_pd = pd.DataFrame(data)
+            >>> other_pd = pd.DataFrame(data_other)
+
+            >>> df_pl = pl.LazyFrame(data)
+            >>> other_pl = pl.LazyFrame(data_other)
+
+            Let's define a dataframe-agnostic function in which we join over "ham" column:
+
+            >>> @nw.narwhalify
+            ... def join_on_ham(df, other):
+            ...     return df.join(other, left_on="ham", right_on="ham")
+
+            We can now pass either pandas or Polars to the function:
+
+            >>> join_on_ham(df_pd, other_pd)
+               foo  bar ham apple
+            0    1  6.0   a     x
+            1    2  7.0   b     y
+
+            >>> join_on_ham(df_pl, other_pl).collect()
             shape: (2, 4)
             ┌─────┬─────┬─────┬───────┐
             │ foo ┆ bar ┆ ham ┆ apple │
