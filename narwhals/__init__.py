@@ -11,6 +11,7 @@ from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
+from narwhals.dtypes import Object
 from narwhals.dtypes import String
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
@@ -72,6 +73,7 @@ __all__ = [
     "Float64",
     "Float32",
     "Boolean",
+    "Object",
     "Categorical",
     "String",
     "Datetime",

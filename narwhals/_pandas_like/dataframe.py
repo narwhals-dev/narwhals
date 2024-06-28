@@ -135,7 +135,8 @@ class PandasDataFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: translate_dtype(dtype) for col, dtype in self._dataframe.dtypes.items()
+            col: translate_dtype(self._dataframe.loc[:, col])
+            for col in self._dataframe.columns
         }
 
     # --- reshape ---

@@ -151,7 +151,7 @@ class PandasSeries:
 
     @property
     def dtype(self) -> DType:
-        return translate_dtype(self._series.dtype)
+        return translate_dtype(self._series)
 
     def cast(
         self,
