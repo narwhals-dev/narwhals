@@ -70,7 +70,6 @@ class BaseFrame:
         from narwhals.expression import Expr
         from narwhals.series import Series
 
-        breakpoint()
         if isinstance(arg, BaseFrame):
             return arg._dataframe
         if isinstance(arg, Series):

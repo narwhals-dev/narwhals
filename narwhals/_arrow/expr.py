@@ -45,7 +45,6 @@ class ArrowExpr(PandasExpr):
         cls: type[Self], *column_names: str, implementation: str
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            breakpoint()
             return [
                 ArrowSeries(
                     df._dataframe[column_name],

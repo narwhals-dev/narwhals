@@ -42,9 +42,9 @@ class ArrowSeries(PandasSeries):
         other = validate_column_comparand(self._series.index, other)
         return self._from_series(pc.add(ser, other))
 
-    def _rename(self, series: Any, name: str) -> Any:
+    def alias(self, name: str) -> Self:
         return self.__class__(
-            series,
+            self._series,
             implementation=self._implementation,
             name=name,
         )

@@ -56,19 +56,19 @@ class ArrowDataFrame(PandasDataFrame):
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         new_names = {s.name: s for s in new_series}
+        result_names = []
         to_concat = []
         # Make sure to preserve column order
         for s in self.columns:
             if s in new_names:
-                to_concat.append(validate_dataframe_comparand(index, new_names.pop(s)))
+                to_concat.append(new_names.pop(s)._series)
+                # to_concat.append(validate_dataframe_comparand(index, new_names.pop(s)))
             else:
                 to_concat.append(self._dataframe[s])
-        to_concat.extend(
-            validate_dataframe_comparand(index, new_names[s]) for s in new_names
-        )
-
-        df = horizontal_concat(
-            to_concat,
-            implementation=self._implementation,
-        )
+            result_names.append(s)
+        for s in new_names:
+            to_concat.append(new_names[s]._series)
+            result_names.append(s)
+        pa = get_pyarrow()
+        df = pa.Table.from_arrays(to_concat, names=result_names)
         return self._from_dataframe(df)
