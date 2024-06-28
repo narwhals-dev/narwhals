@@ -32,9 +32,11 @@ class PandasNamespace:
     Float64 = dtypes.Float64
     Float32 = dtypes.Float32
     Boolean = dtypes.Boolean
+    Object = dtypes.Object
     Categorical = dtypes.Categorical
     String = dtypes.String
     Datetime = dtypes.Datetime
+    Date = dtypes.Date
 
     @property
     def selectors(self) -> PandasSelectorNamespace:

@@ -15,9 +15,9 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
-from narwhals.translate import get_cudf
-from narwhals.translate import get_modin
-from narwhals.translate import get_pandas
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_pandas
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -135,7 +135,8 @@ class PandasDataFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: translate_dtype(dtype) for col, dtype in self._dataframe.dtypes.items()
+            col: translate_dtype(self._dataframe.loc[:, col])
+            for col in self._dataframe.columns
         }
 
     # --- reshape ---

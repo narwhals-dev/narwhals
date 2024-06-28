@@ -113,9 +113,8 @@ Let's try it out:
 
 ## Example 3: horizontal sum
 
-Expressions can be free-standing functions which accept other
-expressions as inputs. For example, we can compute a horizontal
-sum using `nw.sum_horizontal`.
+Expressions can be free-standing functions which accept other expressions as inputs.
+For example, we can compute a horizontal sum using `nw.sum_horizontal`.
 
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex3"
@@ -149,4 +148,43 @@ Let's try it out:
 
     df = pl.LazyFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
     print(func(df).collect())
+    ```
+
+## Example 4: multiple inputs
+
+`nw.narwhalify` can be used to decorate functions that take multiple inputs as well and
+return a non dataframe/series-like object.
+
+For example, let's compute how many rows are left in a dataframe after filtering it based
+on a series.
+
+Make a Python file with the following content:
+```python exec="1" source="above" session="df_ex4"
+import narwhals as nw
+
+@nw.narwhalify(eager_only=True)
+def func(df: nw.DataFrame, s: nw.Series, col_name: str):
+    return df.filter(nw.col(col_name).is_in(s)).shape[0]
+```
+
+We require `eager_only=True` here because lazyframe doesn't support `.shape`.
+
+Let's try it out:
+
+=== "pandas"
+    ```python exec="true" source="material-block" result="python" session="df_ex4"
+    import pandas as pd
+
+    df = pd.DataFrame({'a': [1, 1, 2, 2, 3], 'b': [4, 5, 6, 7, 8]})
+    s = pd.Series([1, 3])
+    print(func(df, s.to_numpy(), 'a'))
+    ```
+
+=== "Polars (eager)"
+    ```python exec="true" source="material-block" result="python" session="df_ex4"
+    import polars as pl
+
+    df = pl.DataFrame({'a': [1, 1, 2, 2, 3], 'b': [4, 5, 6, 7, 8]})
+    s = pl.Series([1, 3])
+    print(func(df, s.to_numpy(), 'a'))
     ```

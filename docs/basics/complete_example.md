@@ -17,14 +17,13 @@ stored them in attributes `self.means` and `self.std_devs`.
 ## Transform method
 
 We're going to take in a dataframe, and return a dataframe of the same type.
-Therefore, we use `@nw.narwhalify_method` (the counterpart to `@nw.narwhalify` which is
-meant to be used for methods):
+Therefore, we use `@nw.narwhalify`:
 
 ```python
 import narwhals as nw
 
 class StandardScaler:
-    @nw.narwhalify_method
+    @nw.narwhalify
     def transform(self, df):
         return df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
@@ -45,16 +44,15 @@ To be able to get `Series` out of our `DataFrame`, we'll pass `eager_only=True` 
 This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
 doesn't either.
 
-Note how here, we're not returning a dataframe to the user - we just take a dataframe in, and
-store some internal state. Therefore, we use `nw.from_native` explicitly, as opposed to using the
-utility `@nw.narwhalify_method` decorator.
+We can specify that in the `@nw.narwhalify` decorator by setting `eager_only=True`, and
+the argument will be propagated to `nw.from_native`.
 
 ```python
 import narwhals as nw
 
 class StandardScaler:
+    @nw.narwhalify(eager_only=True)
     def fit(self, df_any):
-        df = nw.from_native(df_any, eager_only=True)
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 ```
@@ -66,12 +64,13 @@ Here is our dataframe-agnostic standard scaler:
 import narwhals as nw
 
 class StandardScaler:
+    @nw.narwhalify(eager_only=True)
     def fit(self, df_any):
         df = nw.from_native(df_any, eager_only=True)
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 
-    @nw.narwhalify_method
+    @nw.narwhalify
     def transform(self, df):
         return df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
