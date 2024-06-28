@@ -284,20 +284,25 @@ class PandasDataFrame:
                 and (pd := get_pandas()) is not None
                 and parse_version(pd.__version__) < parse_version("1.2.0")
             ):
+                import secrets
+
+                n_bytes = max(len(c.encode("utf-8")) for c in self.columns) + 1
+                key_token = secrets.token_hex(n_bytes)
+
                 return self._from_dataframe(
-                    self._dataframe.assign(__cross_join_key__=0).merge(
-                        other._dataframe.assign(__cross_join_key__=0),
+                    self._dataframe.assign(**{key_token: 0}).merge(
+                        other._dataframe.assign(**{key_token: 0}),
                         how="inner",
-                        left_on="__cross_join_key__",
-                        right_on="__cross_join_key__",
+                        left_on=key_token,
+                        right_on=key_token,
                         suffixes=("", "_right"),
                     ),
-                ).drop("__cross_join_key__")
+                ).drop(key_token)
             else:
                 return self._from_dataframe(
                     self._dataframe.merge(
                         other._dataframe,
-                        how=how,
+                        how="cross",
                         suffixes=("", "_right"),
                     ),
                 )
