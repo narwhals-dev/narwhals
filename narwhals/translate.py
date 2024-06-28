@@ -11,6 +11,7 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_pyarrow
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -180,6 +181,10 @@ def from_native(
     ):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
+        return DataFrame(native_dataframe)
+    elif (pa := get_pyarrow()) is not None and isinstance(native_dataframe, pa.Table):
+        if series_only:  # pragma: no cover (todo)
+            raise TypeError("Cannot only use `series_only` with arrow table")
         return DataFrame(native_dataframe)
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)

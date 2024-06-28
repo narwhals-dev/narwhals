@@ -9,11 +9,13 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
@@ -227,6 +229,10 @@ class DataFrame(BaseFrame):
             df, cudf.DataFrame
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
+        elif (pa := get_pyarrow()) is not None and isinstance(
+            df, pa.Table
+        ):  # pragma: no cover
+            self._dataframe = ArrowDataFrame(df)
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
