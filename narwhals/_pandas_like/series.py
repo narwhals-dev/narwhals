@@ -180,6 +180,9 @@ class PandasSeries:
             self._series.to_frame(), implementation=self._implementation
         )
 
+    def to_list(self) -> Any:
+        return self._series.to_list()
+
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> PandasSeries:
