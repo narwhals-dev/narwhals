@@ -215,7 +215,7 @@ def reuse_series_implementation(
             else:
                 out.append(_out)
         if expr._output_names is not None:  # safety check
-            assert [s._series.name for s in out] == expr._output_names
+            assert [s.name for s in out] == expr._output_names
         return out
 
     # Try tracking root and output names by combining them from all

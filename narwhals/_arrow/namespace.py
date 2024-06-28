@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+from typing import Iterable
+
 from narwhals import dtypes
+from narwhals._arrow.expr import ArrowExpr
+from narwhals.utils import flatten
 
 
 class ArrowNamespace:
@@ -21,3 +27,9 @@ class ArrowNamespace:
 
     # --- not in spec ---
     def __init__(self) -> None: ...
+
+    # --- selection ---
+    def col(self, *column_names: str | Iterable[str]) -> PandasExpr:
+        return ArrowExpr.from_column_names(
+            *flatten(column_names), implementation="pyarrow"
+        )

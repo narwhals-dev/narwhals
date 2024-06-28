@@ -41,3 +41,31 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
     raise AssertionError
+
+
+def validate_column_comparand(left: Any, other: Any) -> Any:
+    """Validate RHS of binary operation.
+
+    If the comparison isn't supported, return `NotImplemented` so that the
+    "right-hand-side" operation (e.g. `__radd__`) can be tried.
+
+    If RHS is length 1, return the scalar value, so that the underlying
+    library can broadcast it.
+    """
+    from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.series import ArrowSeries
+
+    if isinstance(other, list):
+        if len(other) > 1:
+            # e.g. `plx.all() + plx.all()`
+            msg = "Multi-output expressions are not supported in this context"
+            raise ValueError(msg)
+        other = other[0]
+    if isinstance(other, ArrowDataFrame):
+        return NotImplemented
+    if isinstance(other, ArrowSeries):
+        if other.len() == 1:
+            # broadcast
+            return other.item()
+        return other._series
+    return other
