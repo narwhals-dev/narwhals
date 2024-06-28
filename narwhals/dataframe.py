@@ -172,12 +172,15 @@ class BaseFrame:
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
+        how: Literal["inner", "cross"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
-        if how != "inner":
-            raise NotImplementedError("Only inner joins are supported for now")
+        _supported_joins = {"inner", "cross"}
+        if how not in _supported_joins:
+            msg = f"Only the following join stragies are supported: {_supported_joins}"
+            raise NotImplementedError(msg)
+
         validate_same_library([self, other])
         return self._from_dataframe(
             self._dataframe.join(
@@ -1373,7 +1376,7 @@ class DataFrame(BaseFrame):
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
+        how: Literal["inner", "cross"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
@@ -1383,11 +1386,10 @@ class DataFrame(BaseFrame):
         Arguments:
             other: DataFrame to join with.
 
-            how: {'inner'}
-                  Join strategy.
+            how: Join strategy.
 
-                  * *inner*: Returns rows that have matching values in both
-                              tables
+                  * *inner*: Returns rows that have matching values in both tables
+                  * *cross*: Returns the Cartesian product of rows from both tables
 
             left_on: Name(s) of the left join column(s).
 
@@ -1397,30 +1399,39 @@ class DataFrame(BaseFrame):
             A new joined DataFrame
 
         Examples:
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> other_df_pl = pl.DataFrame(
-            ...     {
-            ...         "apple": ["x", "y", "z"],
-            ...         "ham": ["a", "b", "d"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> other_df = nw.DataFrame(other_df_pl)
-            >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> data_other = {
+            ...     "apple": ["x", "y", "z"],
+            ...     "ham": ["a", "b", "d"],
+            ... }
+
+            >>> df_pd = pd.DataFrame(data)
+            >>> other_pd = pd.DataFrame(data_other)
+
+            >>> df_pl = pl.DataFrame(data)
+            >>> other_pl = pl.DataFrame(data_other)
+
+            Let's define a dataframe-agnostic function in which we join over "ham" column:
+
+            >>> @nw.narwhalify
+            ... def join_on_ham(df, other):
+            ...     return df.join(other, left_on="ham", right_on="ham")
+
+            We can now pass either pandas or Polars to the function:
+
+            >>> join_on_ham(df_pd, other_pd)
+               foo  bar ham apple
+            0    1  6.0   a     x
+            1    2  7.0   b     y
+
+            >>> join_on_ham(df_pl, other_pl)
             shape: (2, 4)
             ┌─────┬─────┬─────┬───────┐
             │ foo ┆ bar ┆ ham ┆ apple │
@@ -2789,7 +2800,7 @@ class LazyFrame(BaseFrame):
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
+        how: Literal["inner", "cross"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
@@ -2799,11 +2810,10 @@ class LazyFrame(BaseFrame):
         Arguments:
             other: Lazy DataFrame to join with.
 
-            how: {'inner'}
-                  Join strategy.
+            how: Join strategy.
 
-                  * *inner*: Returns rows that have matching values in both
-                              tables
+                  * *inner*: Returns rows that have matching values in both tables
+                  * *cross*: Returns the Cartesian product of rows from both tables
 
             left_on: Join column of the left DataFrame.
 

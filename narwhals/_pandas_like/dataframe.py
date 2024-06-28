@@ -268,7 +268,7 @@ class PandasDataFrame:
         self,
         other: Self,
         *,
-        how: Literal["left", "inner", "outer"] = "inner",
+        how: Literal["left", "inner", "outer", "cross"] = "inner",
         left_on: str | list[str],
         right_on: str | list[str],
     ) -> Self:
@@ -276,6 +276,15 @@ class PandasDataFrame:
             left_on = [left_on]
         if isinstance(right_on, str):
             right_on = [right_on]
+
+        if how == "cross":
+            return self._from_dataframe(
+                self._dataframe.merge(
+                    other._dataframe,
+                    how=how,
+                    suffixes=("", "_right"),
+                ),
+            )
 
         return self._from_dataframe(
             self._dataframe.merge(
