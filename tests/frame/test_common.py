@@ -335,6 +335,17 @@ def test_left_join(constructor: Any) -> None:
     expected = {"a": [1, 2, 3], "b": [4, 5, 6], "a_right": [1, 2, 3]}
     compare_dicts(result, expected)
 
+@pytest.mark.parametrize("constructor", [pl.DataFrame, pd.DataFrame])
+@pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
+def test_left_join_multiple_column(constructor: Any) -> None:
+    data_left = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    data_right = {"a": [1, 2, 3], "c": [4, 5, 6]}
+    df_left = nw.from_native(constructor(data_left))
+    df_right = nw.from_native(constructor(data_right))
+    result = df_left.join(df_right, left_on=["a", "b"], right_on=["a", "c"], how="left")
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    compare_dicts(result, expected)
+
 
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
