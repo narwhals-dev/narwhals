@@ -75,15 +75,13 @@ class PandasSeries:
         *,
         implementation: str,
     ) -> None:
-        """Parameters
-        ----------
-        df
-            DataFrame this column originates from.
-        """
-
         self._name = series.name
         self._series = series
         self._implementation = implementation
+
+        # In pandas, copy-on-write becomes the default in version 3.
+        # So, before that, we need to explicitly avoid unnecessary
+        # copies by using `copy=False` sometimes.
         self._use_copy_false = False
         if self._implementation == "pandas":
             pd = get_pandas()
