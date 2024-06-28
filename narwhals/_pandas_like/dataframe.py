@@ -19,6 +19,7 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.utils import flatten
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -278,13 +279,28 @@ class PandasDataFrame:
             right_on = [right_on]
 
         if how == "cross":
-            return self._from_dataframe(
-                self._dataframe.merge(
-                    other._dataframe,
-                    how=how,
-                    suffixes=("", "_right"),
-                ),
-            )
+            if self._implementation in {"modin", "cudf"} or (
+                self._implementation == "pandas"
+                and (pd := get_pandas()) is not None
+                and parse_version(pd.__version__) < parse_version("1.2.0")
+            ):
+                return self._from_dataframe(
+                    self._dataframe.assign(__cross_join_key__=0).merge(
+                        other._dataframe.assign(__cross_join_key__=0),
+                        how="inner",
+                        left_on="__cross_join_key__",
+                        right_on="__cross_join_key__",
+                        suffixes=("", "_right"),
+                    ),
+                ).drop("__cross_join_key__")
+            else:
+                return self._from_dataframe(
+                    self._dataframe.merge(
+                        other._dataframe,
+                        how=how,
+                        suffixes=("", "_right"),
+                    ),
+                )
 
         return self._from_dataframe(
             self._dataframe.merge(

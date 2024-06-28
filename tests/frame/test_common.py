@@ -321,7 +321,7 @@ def test_join(df_raw: Any) -> None:
         df_pandas,
         df_pandas_na,
         df_lazy_na,
-        # df_mpd,
+        df_mpd,
     ],
 )
 def test_cross_join(df_raw: Any) -> None:
