@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from typing import Any
 from typing import Literal
 
@@ -310,6 +311,30 @@ def test_join(df_raw: Any) -> None:
         "z_right": [7.0, 8, 9],
     }
     compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw", [df_polars, df_lazy, df_pandas, df_pandas_na, df_lazy_na, df_mpd]
+)
+def test_cross_join(df_raw: Any) -> None:
+    df = nw.from_native(df_raw).select("a", "z")
+    result = df.join(df, how="cross", left_on=["a"], right_on="a")  # type: ignore[arg-type]
+
+    df_ = df.collect() if isinstance(df, nw.LazyFrame) else df
+
+    # List of dicts: [{"a": 1, "z": 7., ...}, {"a": 1, "z": 8., ...}, ...]
+    rows = [
+        {**left_row, **{k + "_right": v for k, v in right_row.items()}}
+        for left_row in df_.iter_rows(named=True)
+        for right_row in df_.iter_rows(named=True)
+    ]
+    # Pivot to single dict of values: {"a": [1, 1, ...], "z": [7., 8., ...], ...}
+    expected = defaultdict(list)
+    for item in rows:
+        for key, value in item.items():
+            expected[key].append(value)
+
+    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize(
