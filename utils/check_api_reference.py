@@ -145,6 +145,7 @@ if (
     .difference(
         {
             "to_pandas",
+            "to_list",
             "to_numpy",
             "dtype",
             "name",

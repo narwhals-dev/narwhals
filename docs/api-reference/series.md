@@ -42,6 +42,7 @@
         - sum
         - tail
         - to_frame
+        - to_list
         - to_numpy
         - to_pandas
         - unique

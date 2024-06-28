@@ -301,6 +301,33 @@ class Series:
 
         return DataFrame(self._series.to_frame())
 
+    def to_list(self) -> list[Any]:
+        """
+        Convert to list.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name="a")
+            >>> s_pl = pl.Series("a", s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s_any):
+            ...     return s_any.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            [1, 2, 3]
+            >>> func(s_pl)
+            [1, 2, 3]
+        """
+        return self._series.to_list()  # type: ignore[no-any-return]
+
     def mean(self) -> Any:
         """
         Reduce this Series to the mean value.
