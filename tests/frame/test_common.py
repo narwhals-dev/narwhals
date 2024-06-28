@@ -347,6 +347,7 @@ def test_left_join_multiple_column(constructor: Any) -> None:
     expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
     compare_dicts(result, expected)
 
+
 @pytest.mark.parametrize("constructor", [pl.DataFrame, pd.DataFrame])
 @pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
 def test_left_join_overlapping_column(constructor: Any) -> None:
