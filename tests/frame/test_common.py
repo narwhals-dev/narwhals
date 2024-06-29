@@ -758,6 +758,7 @@ def test_null_count(df_raw: Any) -> None:
         ("nearest", {"a": [2.0], "b": [4.0], "z": [8.0]}),
     ],
 )
+@pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile(
     df_raw: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],

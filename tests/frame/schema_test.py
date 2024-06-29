@@ -8,6 +8,7 @@ import polars as pl
 import pytest
 
 import narwhals as nw
+from narwhals.utils import parse_version
 
 data = {
     "a": [datetime(2020, 1, 1)],
@@ -42,6 +43,9 @@ def test_actual_object(constructor: Any) -> None:
     assert result == {"a": nw.Object}
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old"
+)
 def test_dtypes() -> None:
     df = pl.DataFrame(
         {

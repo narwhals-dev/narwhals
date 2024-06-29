@@ -419,6 +419,7 @@ def test_is_sorted_invalid(df_raw: Any) -> None:
         ("nearest", 8.0),
     ],
 )
+@pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile(
     df_raw: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],

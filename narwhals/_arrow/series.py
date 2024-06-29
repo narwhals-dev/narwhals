@@ -5,7 +5,7 @@ from typing import Any
 
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.series import PandasSeriesDateTimeNamespace
-from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyarrow_compute
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -62,7 +62,7 @@ class ArrowSeriesDateTimeNamespace(PandasSeriesDateTimeNamespace):
         self._series: ArrowSeries = series
 
     def to_string(self, format: str) -> ArrowSeries:  # noqa: A002
-        pc = get_pyarrow().compute
+        pc = get_pyarrow_compute()
         # PyArrow differs from other libraries in that %S also prints out
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
