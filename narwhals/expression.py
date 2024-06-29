@@ -615,9 +615,7 @@ class Expr:
             the diff and fill missing values with `0` in a Int64 column, you could
             do:
 
-            ```python
-            nw.col("a").diff().fill_null(0).cast(nw.Int64)
-            ```
+                nw.col("a").diff().fill_null(0).cast(nw.Int64)
 
         Examples:
             >>> import polars as pl
@@ -668,9 +666,7 @@ class Expr:
             and fill missing values with `0` in a Int64 column, you could
             do:
 
-            ```python
-            nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
-            ```
+                nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
 
         Examples:
             >>> import polars as pl
