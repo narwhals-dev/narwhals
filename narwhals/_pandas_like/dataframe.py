@@ -190,31 +190,34 @@ class PandasDataFrame:
         **named_exprs: IntoPandasExpr,
     ) -> Self:
         index = self._dataframe.index
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
         # If the inputs are all Expressions which return full columns
         # (as opposed to scalars), we can use a fast path (concat, instead of assign).
         # We can't use the fastpath if any input is not an expression (e.g.
         # if it's a Series) because then we might be changing its flags.
         # See `test_memmap` for an example of where this is necessary.
         fast_path = (
-            all(s.len() > 1 for s in new_series)
+            all(s.len() > 1 for s in new_columns)
             and all(isinstance(x, PandasExpr) for x in exprs)
             and all(isinstance(x, PandasExpr) for (_, x) in named_exprs.items())
         )
 
         if fast_path:
-            new_names = {s.name: s for s in new_series}
+            new_column_name_to_new_column_map = {s.name: s for s in new_columns}
             to_concat = []
             # Make sure to preserve column order
-            for s in self._dataframe.columns:
-                if s in new_names:
+            for name in self._dataframe.columns:
+                if name in new_column_name_to_new_column_map:
                     to_concat.append(
-                        validate_dataframe_comparand(index, new_names.pop(s))
+                        validate_dataframe_comparand(
+                            index, new_column_name_to_new_column_map.pop(name)
+                        )
                     )
                 else:
-                    to_concat.append(self._dataframe.loc[:, s])
+                    to_concat.append(self._dataframe.loc[:, name])
             to_concat.extend(
-                validate_dataframe_comparand(index, new_names[s]) for s in new_names
+                validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+                for s in new_column_name_to_new_column_map
             )
 
             df = horizontal_concat(
@@ -223,7 +226,7 @@ class PandasDataFrame:
             )
         else:
             df = self._dataframe.assign(
-                **{s.name: validate_dataframe_comparand(index, s) for s in new_series}
+                **{s.name: validate_dataframe_comparand(index, s) for s in new_columns}
             )
         return self._from_dataframe(df)
 
