@@ -7,6 +7,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
@@ -99,6 +100,15 @@ def test_filter_series(df_raw: Any) -> None:
     result_native = nw.to_native(result)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
     compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize(
+    "constructor",
+    [pd.DataFrame, pl.DataFrame, pa.table],
+)
+def test_empty_select(constructor: Any) -> None:
+    result = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True).select()
+    assert result.shape == (0, 0)
 
 
 @pytest.mark.parametrize(
