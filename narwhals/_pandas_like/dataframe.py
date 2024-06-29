@@ -89,9 +89,9 @@ class PandasDataFrame:
     def __getitem__(self, item: str) -> PandasSeries: ...
 
     @overload
-    def __getitem__(self, item: range | slice) -> PandasDataFrame: ...
+    def __getitem__(self, item: slice) -> PandasDataFrame: ...
 
-    def __getitem__(self, item: str | range | slice) -> PandasSeries | PandasDataFrame:
+    def __getitem__(self, item: str | slice) -> PandasSeries | PandasDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasSeries
 
@@ -100,7 +100,7 @@ class PandasDataFrame:
                 implementation=self._implementation,
             )
 
-        elif isinstance(item, (range, slice)):
+        elif isinstance(item, slice):
             from narwhals._pandas_like.dataframe import PandasDataFrame
 
             return PandasDataFrame(
@@ -108,7 +108,7 @@ class PandasDataFrame:
             )
 
         else:  # pragma: no cover
-            msg = f"Expected str, range or slice, got: {type(item)}"
+            msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
     # --- properties ---

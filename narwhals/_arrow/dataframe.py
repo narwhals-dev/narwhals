@@ -44,9 +44,9 @@ class ArrowDataFrame(PandasDataFrame):
     def __getitem__(self, item: str) -> ArrowSeries: ...
 
     @overload
-    def __getitem__(self, item: range | slice) -> ArrowDataFrame: ...
+    def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
-    def __getitem__(self, item: str | range | slice) -> ArrowSeries | ArrowDataFrame:
+    def __getitem__(self, item: str | slice) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
@@ -61,7 +61,7 @@ class ArrowDataFrame(PandasDataFrame):
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             if item.step is not None and item.step != 1:
-                msg = "Slicing with step is not supported for PyArrow backend yet"
+                msg = "Slicing with step is not supported on PyArrow tables"
                 raise NotImplementedError(msg)
             start = item.start or 0
             stop = item.stop or len(self._dataframe)

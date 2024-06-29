@@ -385,19 +385,19 @@ class DataFrame(BaseFrame):
     def __getitem__(self, item: str) -> Series: ...
 
     @overload
-    def __getitem__(self, item: range | slice) -> DataFrame: ...
+    def __getitem__(self, item: slice) -> DataFrame: ...
 
-    def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
+    def __getitem__(self, item: str | slice) -> Series | DataFrame:
         if isinstance(item, str):
             from narwhals.series import Series
 
             return Series(self._dataframe[item])
 
-        elif isinstance(item, (range, slice)):
+        elif isinstance(item, slice):
             return DataFrame(self._dataframe[item])
 
         else:
-            msg = f"Expected str, range or slice, got: {type(item)}"
+            msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
@@ -1774,7 +1774,7 @@ class LazyFrame(BaseFrame):
             + "┘"
         )
 
-    def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
+    def __getitem__(self, item: str | slice) -> Series | DataFrame:
         raise TypeError("Slicing is not supported on LazyFrame")
 
     def collect(self) -> DataFrame:

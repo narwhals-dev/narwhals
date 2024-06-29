@@ -36,6 +36,13 @@ def test_slice_rows_with_step(constructor: Any) -> None:
     compare_dicts(result, {"a": [2.0, 4.0, 6.0], "b": [12, 14, 16]})
 
 
+def test_slice_rows_with_step_pyarrow() -> None:
+    with pytest.raises(
+        NotImplementedError, match="Slicing with step is not supported on PyArrow tables"
+    ):
+        nw.from_native(pa.table(data))[1::2]
+
+
 @pytest.mark.parametrize("constructor", [pl.LazyFrame])
 def test_slice_lazy_fails(constructor: Any) -> None:
     with pytest.raises(TypeError, match="Slicing is not supported on LazyFrame"):
@@ -44,7 +51,5 @@ def test_slice_lazy_fails(constructor: Any) -> None:
 
 @pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 def test_slice_int_fails(constructor: Any) -> None:
-    with pytest.raises(
-        TypeError, match="Expected str, range or slice, got: <class 'int'>"
-    ):
+    with pytest.raises(TypeError, match="Expected str or slice, got: <class 'int'>"):
         _ = nw.from_native(constructor(data))[1]  # type: ignore[call-overload,index]
