@@ -397,7 +397,7 @@ def translate_dtype(column: Any) -> DType:
         return dtypes.Float64()
     if dtype in ("float32", "Float32", "Float32[pyarrow]"):
         return dtypes.Float32()
-    if dtype in ("string", "string[python]", "string[pyarrow]"):
+    if dtype in ("string", "string[python]", "string[pyarrow]", "large_string[pyarrow]"):
         return dtypes.String()
     if dtype in ("bool", "boolean", "boolean[pyarrow]"):
         return dtypes.Boolean()

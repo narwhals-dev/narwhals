@@ -1,3 +1,4 @@
+from datetime import date
 from datetime import datetime
 from datetime import timezone
 from typing import Any
@@ -57,6 +58,8 @@ def test_dtypes() -> None:
             "k": ["1"],
             "l": [1],
             "m": [True],
+            "n": [date(2020, 1, 1)],
+            "o": [datetime(2020, 1, 1)],
         },
         schema={
             "a": pl.Int64,
@@ -72,6 +75,8 @@ def test_dtypes() -> None:
             "k": pl.String,
             "l": pl.Datetime,
             "m": pl.Boolean,
+            "n": pl.Date,
+            "o": pl.Datetime,
         },
     )
     result = nw.DataFrame(df).schema
@@ -89,9 +94,11 @@ def test_dtypes() -> None:
         "k": nw.String,
         "l": nw.Datetime,
         "m": nw.Boolean,
+        "n": nw.Date,
+        "o": nw.Datetime,
     }
     assert result == expected
-    result_pd = nw.DataFrame(df.to_pandas()).schema
+    result_pd = nw.DataFrame(df.to_pandas(use_pyarrow_extension_array=True)).schema
     assert result_pd == expected
     result_pa = nw.DataFrame(df.to_arrow()).schema
     assert result_pa == expected
