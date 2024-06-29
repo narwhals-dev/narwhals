@@ -4,10 +4,12 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 
+from narwhals._arrow.series import ArrowSeries
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
 
@@ -49,6 +51,11 @@ class Series:
             series, pd.Series
         ):  # pragma: no cover
             self._series = PandasSeries(series, implementation="cudf")
+            return
+        if (pa := get_pyarrow()) is not None and isinstance(
+            series, pa.ChunkedArray
+        ):  # pragma: no cover
+            self._series = ArrowSeries(series, name="")
             return
         msg = (  # pragma: no cover
             f"Expected pandas, Polars, modin, or cuDF Series, got: {type(series)}. "

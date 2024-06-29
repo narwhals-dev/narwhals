@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Callable
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._pandas_like.expr import PandasExpr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -12,7 +11,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
 
 
-class ArrowExpr(PandasExpr):
+class ArrowExpr:
     def __init__(  # noqa: PLR0913
         self,
         call: Callable[[ArrowDataFrame], list[ArrowSeries]],
@@ -23,7 +22,7 @@ class ArrowExpr(PandasExpr):
         output_names: list[str] | None,
         implementation: str,  # just for compatibility with PandasExpr
     ) -> None:
-        self._call = call  # type: ignore[assignment]
+        self._call = call
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
@@ -48,7 +47,6 @@ class ArrowExpr(PandasExpr):
             return [
                 ArrowSeries(
                     df._dataframe[column_name],
-                    implementation=df._implementation,
                     name=column_name,
                 )
                 for column_name in column_names

@@ -232,7 +232,7 @@ class DataFrame(BaseFrame):
         elif (pa := get_pyarrow()) is not None and isinstance(
             df, pa.Table
         ):  # pragma: no cover
-            self._dataframe = ArrowDataFrame(df, implementation="pyarrow")
+            self._dataframe = ArrowDataFrame(df)
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)

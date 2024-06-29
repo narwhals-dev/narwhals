@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import TypeVar
+from typing import overload
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
@@ -17,6 +18,9 @@ from narwhals.utils import parse_version
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.series import ArrowSeries
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.series import PandasSeries
@@ -24,6 +28,7 @@ if TYPE_CHECKING:
 
     ExprT = TypeVar("ExprT", bound=PandasExpr)
 
+    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals._pandas_like.typing import IntoPandasExpr
 
 
@@ -100,7 +105,19 @@ def parse_into_exprs(
     return out
 
 
-def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
+@overload
+def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr: ...
+@overload
+def parse_into_expr(implementation: str, into_expr: IntoArrowExpr) -> ArrowExpr: ...
+@overload
+def parse_into_expr(
+    implementation: str, into_expr: IntoArrowExpr | IntoPandasExpr
+) -> ArrowExpr | PandasExpr: ...
+
+
+def parse_into_expr(
+    implementation: str, into_expr: IntoPandasExpr | IntoArrowExpr
+) -> PandasExpr | ArrowExpr:
     """Parse `into_expr` as an expression.
 
     For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
@@ -151,8 +168,8 @@ def create_native_series(
 
 
 def evaluate_into_expr(
-    df: PandasDataFrame, into_expr: IntoPandasExpr
-) -> list[PandasSeries]:
+    df: PandasDataFrame | ArrowDataFrame, into_expr: IntoPandasExpr | IntoArrowExpr
+) -> list[PandasSeries] | list[ArrowSeries]:
     """
     Return list of raw columns.
     """
@@ -161,12 +178,12 @@ def evaluate_into_expr(
 
 
 def evaluate_into_exprs(
-    df: PandasDataFrame,
-    *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
-    **named_exprs: IntoPandasExpr,
-) -> list[PandasSeries]:
+    df: PandasDataFrame | ArrowDataFrame,
+    *exprs: IntoPandasExpr | IntoArrowExpr,
+    **named_exprs: IntoPandasExpr | IntoArrowExpr,
+) -> list[PandasSeries] | list[ArrowSeries]:
     """Evaluate each expr into Series."""
-    series: list[PandasSeries] = [
+    series: list[PandasSeries] | list[ArrowSeries] = [
         item
         for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten(exprs)]
         for item in sublist

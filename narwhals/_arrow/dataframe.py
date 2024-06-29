@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import translate_dtype
-from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals._pandas_like.utils import evaluate_into_exprs
 from narwhals.dependencies import get_pyarrow
 
@@ -19,18 +17,11 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-class ArrowDataFrame(PandasDataFrame):
+class ArrowDataFrame:
     # --- not in the spec ---
-    def __init__(
-        self,
-        dataframe: Any,
-        *,
-        implementation: str,
-    ) -> None:
-        super().__init__(dataframe, implementation=implementation)
-
-    def _validate_columns(self, columns: Sequence[str]) -> None:
-        return None
+    def __init__(self, dataframe: Any) -> None:
+        self._dataframe = dataframe
+        self._implementation = "arrow"  # for compatibility with PandasDataFrame
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -39,6 +30,16 @@ class ArrowDataFrame(PandasDataFrame):
 
     def __native_namespace__(self) -> Any:
         return get_pyarrow()
+
+    def __narwhals_dataframe__(self) -> Self:
+        return self
+
+    def _from_dataframe(self, df: Any) -> Self:
+        return self.__class__(df)
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self._dataframe.shape  # type: ignore[no-any-return]
 
     @overload
     def __getitem__(self, item: str) -> ArrowSeries: ...
@@ -51,11 +52,7 @@ class ArrowDataFrame(PandasDataFrame):
             from narwhals._arrow.series import ArrowSeries
 
             name = self._dataframe.schema.names.index(item)
-            return ArrowSeries(
-                self._dataframe[name],
-                implementation=self._implementation,
-                name=name,
-            )
+            return ArrowSeries(self._dataframe[name], name=name)
 
         elif isinstance(item, slice):
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -67,7 +64,6 @@ class ArrowDataFrame(PandasDataFrame):
             stop = item.stop or len(self._dataframe)
             return ArrowDataFrame(
                 self._dataframe.slice(item.start, stop - start),
-                implementation=self._implementation,
             )
 
         else:  # pragma: no cover
@@ -88,8 +84,8 @@ class ArrowDataFrame(PandasDataFrame):
 
     def select(
         self,
-        *exprs: IntoArrowExpr,  # type: ignore[override]
-        **named_exprs: IntoArrowExpr,  # type: ignore[override]
+        *exprs: IntoArrowExpr,
+        **named_exprs: IntoArrowExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:

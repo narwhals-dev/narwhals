@@ -3,34 +3,38 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals._pandas_like.series import PandasSeries
-from narwhals._pandas_like.series import PandasSeriesDateTimeNamespace
 from narwhals.dependencies import get_pyarrow_compute
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
 
-class ArrowSeries(PandasSeries):
+class ArrowSeries:
     def __init__(
         self,
         series: Any,
         *,
         name: str,
-        implementation: str,
     ) -> None:
         self._name = name
         self._series = series
-        self._implementation = implementation
-        self._use_copy_false = False
-        self._implementation = implementation
+        self._implementation = "arrow"  # for compatibility with PandasSeries
 
     def _from_series(self, series: Any) -> Self:
         return self.__class__(
             series,
-            implementation=self._implementation,
             name=self._name,
         )
+
+    def __len__(self) -> int:
+        return len(self._series)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def __narwhals_series__(self) -> Self:
+        return self
 
     def __getitem__(self, idx: int) -> Any:
         return self._series[idx]
@@ -44,7 +48,6 @@ class ArrowSeries(PandasSeries):
     def alias(self, name: str) -> Self:
         return self.__class__(
             self._series,
-            implementation=self._implementation,
             name=name,
         )
 
@@ -57,9 +60,9 @@ class ArrowSeries(PandasSeries):
         return ArrowSeriesDateTimeNamespace(self)
 
 
-class ArrowSeriesDateTimeNamespace(PandasSeriesDateTimeNamespace):
+class ArrowSeriesDateTimeNamespace:
     def __init__(self, series: ArrowSeries) -> None:
-        self._series: ArrowSeries = series
+        self._series = series
 
     def to_string(self, format: str) -> ArrowSeries:  # noqa: A002
         pc = get_pyarrow_compute()
