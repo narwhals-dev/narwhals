@@ -40,6 +40,7 @@ df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
 df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 
 
+@pytest.mark.parametrize("method_name", ["iter_rows", "rows"])
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_mpd, df_polars]
 )
@@ -59,6 +60,7 @@ df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
 )
 @pytest.mark.filterwarnings("ignore::FutureWarning")
 def test_rows(
+    method_name: str,
     df_raw: Any,
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
@@ -67,7 +69,7 @@ def test_rows(
     df = nw.DataFrame(df_raw)
 
     # WHEN
-    result = list(df.iter_rows(named=named))
+    result = list(getattr(df, method_name)(named=named))
 
     # THEN
     assert result == expected
