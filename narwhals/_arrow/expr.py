@@ -71,7 +71,7 @@ class ArrowExprDateTimeNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
         self._expr = expr
 
-    def to_string(self, format: str) -> ArrowExpr:
-        return reuse_series_namespace_implementation(
+    def to_string(self, format: str) -> ArrowExpr:  # noqa: A002
+        return reuse_series_namespace_implementation(  # type: ignore[type-var, return-value]
             self._expr, "dt", "to_string", format
         )

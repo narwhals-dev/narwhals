@@ -87,7 +87,7 @@ class ArrowDataFrame:
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)  # type: ignore[arg-type]
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_dataframe(self._dataframe.__class__.from_arrays([]))

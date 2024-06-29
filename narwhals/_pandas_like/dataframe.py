@@ -205,7 +205,7 @@ class PandasDataFrame:
         # if it's a Series) because then we might be changing its flags.
         # See `test_memmap` for an example of where this is necessary.
         fast_path = (
-            all(s.len() > 1 for s in new_columns)
+            all(len(s) > 1 for s in new_columns)
             and all(isinstance(x, PandasExpr) for x in exprs)
             and all(isinstance(x, PandasExpr) for (_, x) in named_exprs.items())
         )

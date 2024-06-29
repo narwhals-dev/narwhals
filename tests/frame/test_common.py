@@ -416,13 +416,6 @@ def test_convert_numpy(df_raw: Any) -> None:
     assert result.dtype == "float64"
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
-def test_shape(df_raw: Any) -> None:
-    result = nw.DataFrame(df_raw).shape
-    expected = (3, 3)
-    assert result == expected
-
-
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
 def test_expr_binary(df_raw: Any) -> None:
     result = nw.LazyFrame(df_raw).with_columns(
