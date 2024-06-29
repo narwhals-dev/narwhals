@@ -208,6 +208,8 @@ def from_native(
             and isinstance(native_dataframe, mpd.Series)
             or (cudf := get_cudf()) is not None
             and isinstance(native_dataframe, cudf.Series)
+            or (pa := get_pyarrow()) is not None
+            and isinstance(native_dataframe, pa.ChunkedArray)
         )
     ):
         if not allow_series:  # pragma: no cover (todo)
