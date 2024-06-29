@@ -388,7 +388,7 @@ class DataFrame(BaseFrame):
             return Series(self._dataframe[item])
 
         elif isinstance(item, (range, slice)):
-            return DataFrame(self._dataframe[item])
+            return self._from_dataframe(self._dataframe[item])
 
         else:
             msg = f"Expected str, range or slice, got: {type(item)}"
@@ -1680,7 +1680,7 @@ class DataFrame(BaseFrame):
             └─────┴─────┴─────┘
         """
 
-        return DataFrame(self._dataframe.null_count())
+        return self._from_dataframe(self._dataframe.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""
