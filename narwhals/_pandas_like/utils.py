@@ -115,27 +115,26 @@ def parse_into_expr(
     - if it's a string, then convert it to an expression
     - else, raise
     """
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.series import PandasSeries
 
-    if implementation == 'arrow':
-        plx = ArrowNamespace()
+    if implementation == "arrow":
+        plx: ArrowNamespace | PandasNamespace = ArrowNamespace()
     else:
         plx = PandasNamespace(implementation=implementation)
-    breakpoint()
     if isinstance(into_expr, (PandasExpr, ArrowExpr)):
-        return into_expr
+        return into_expr  # type: ignore[return-value]
     if isinstance(into_expr, (PandasSeries, ArrowSeries)):
-        return plx._create_expr_from_series(into_expr)
+        return plx._create_expr_from_series(into_expr)  # type: ignore[arg-type, return-value]
     if isinstance(into_expr, str):
-        return plx.col(into_expr)
+        return plx.col(into_expr)  # type: ignore[return-value]
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
         series = create_native_series(into_expr, implementation=implementation)
-        return plx._create_expr_from_series(series)
+        return plx._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 

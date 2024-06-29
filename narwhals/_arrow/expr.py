@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 from typing import Callable
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._pandas_like.utils import reuse_series_namespace_implementation, reuse_series_implementation
+from narwhals._pandas_like.utils import reuse_series_implementation
+from narwhals._pandas_like.utils import reuse_series_namespace_implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -29,7 +30,7 @@ class ArrowExpr:
         self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
-        self._implementation = 'arrow'
+        self._implementation = "arrow"
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -41,9 +42,7 @@ class ArrowExpr:
         )
 
     @classmethod
-    def from_column_names(
-        cls: type[Self], *column_names: str, implementation: str
-    ) -> Self:
+    def from_column_names(cls: type[Self], *column_names: str) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 ArrowSeries(
@@ -59,7 +58,6 @@ class ArrowExpr:
             function_name="col",
             root_names=list(column_names),
             output_names=list(column_names),
-            implementation=implementation,
         )
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
@@ -68,7 +66,7 @@ class ArrowExpr:
         return ArrowNamespace()
 
     def cum_sum(self) -> Self:
-        return reuse_series_implementation(self, "cum_sum")
+        return reuse_series_implementation(self, "cum_sum")  # type: ignore[type-var]
 
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:

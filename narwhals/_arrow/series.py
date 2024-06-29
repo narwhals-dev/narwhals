@@ -50,10 +50,10 @@ class ArrowSeries:
             self._series,
             name=name,
         )
-    
+
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()
-        return pc.cumulative_sum(self._series)
+        return self._from_series(pc.cumulative_sum(self._series))
 
     @property
     def shape(self) -> tuple[int]:

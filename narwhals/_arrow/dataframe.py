@@ -33,6 +33,7 @@ class ArrowDataFrame:
 
     def __narwhals_dataframe__(self) -> Self:
         return self
+
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
@@ -83,7 +84,7 @@ class ArrowDataFrame:
     @property
     def columns(self) -> list[str]:
         return self._dataframe.schema.names  # type: ignore[no-any-return]
-    
+
     def lazy(self) -> Self:
         return self
 
@@ -96,7 +97,6 @@ class ArrowDataFrame:
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_dataframe(self._dataframe.__class__.from_arrays([]))
-        breakpoint()
         names = [s.name for s in new_series]
         pa = get_pyarrow()
         df = pa.Table.from_arrays([s._series for s in new_series], names=names)

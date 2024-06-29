@@ -134,7 +134,6 @@ class BaseFrame:
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> Self:
-        breakpoint()
         exprs, named_exprs = self._flatten_and_extract(*exprs, **named_exprs)
         return self._from_dataframe(
             self._dataframe.select(*exprs, **named_exprs),
