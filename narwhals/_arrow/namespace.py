@@ -4,11 +4,10 @@ from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
-from narwhals._pandas_like.namespace import PandasNamespace
 from narwhals.utils import flatten
 
 
-class ArrowNamespace(PandasNamespace):
+class ArrowNamespace:
     Int64 = dtypes.Int64
     Int32 = dtypes.Int32
     Int16 = dtypes.Int16
