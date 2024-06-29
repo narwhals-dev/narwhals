@@ -8,6 +8,7 @@ import hypothesis.strategies as st
 import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from hypothesis import given
 
@@ -168,7 +169,7 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     assert result_pdns == result_pl
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 @pytest.mark.parametrize(
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )

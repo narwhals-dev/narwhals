@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import overload
 
 from narwhals._arrow.utils import translate_dtype
 from narwhals._pandas_like.dataframe import PandasDataFrame
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
 
@@ -37,6 +39,34 @@ class ArrowDataFrame(PandasDataFrame):
 
     def __native_namespace__(self) -> Any:
         return get_pyarrow()
+
+    @overload
+    def __getitem__(self, item: str) -> ArrowSeries: ...
+
+    @overload
+    def __getitem__(self, item: range | slice) -> ArrowDataFrame: ...
+
+    def __getitem__(self, item: str | range | slice) -> ArrowSeries | ArrowDataFrame:
+        if isinstance(item, str):
+            from narwhals._arrow.series import ArrowSeries
+
+            name = self._dataframe.schema.names.index(item)
+            return ArrowSeries(
+                self._dataframe[name],
+                implementation=self._implementation,
+                name=name,
+            )
+
+        elif isinstance(item, (range, slice)):
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame(
+                self._dataframe.iloc[item], implementation=self._implementation
+            )
+
+        else:  # pragma: no cover
+            msg = f"Expected str, range or slice, got: {type(item)}"
+            raise TypeError(msg)
 
     @property
     def schema(self) -> dict[str, DType]:
