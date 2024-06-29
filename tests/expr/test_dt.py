@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
@@ -174,10 +173,6 @@ def test_total_minutes(timedeltas: timedelta) -> None:
 @pytest.mark.parametrize(
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
-@pytest.mark.skipif(
-    "win" in sys.platform,
-    reason="pyarrow breaking on windows",
-)
 def test_dt_to_string(constructor: Any, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data), eager_only=True)
     input_series = input_frame["a"]
@@ -207,10 +202,6 @@ def test_dt_to_string(constructor: Any, fmt: str) -> None:
         (datetime(2020, 1, 9, 12, 34, 56, 123), "2020-01-09T12:34:56.000123"),
         (datetime(2020, 1, 9, 12, 34, 56, 123456), "2020-01-09T12:34:56.123456"),
     ],
-)
-@pytest.mark.skipif(
-    "win" in sys.platform,
-    reason="pyarrow breaking on windows",
 )
 def test_dt_to_string_iso_local_datetime(
     constructor: Any, data: datetime, expected: str
@@ -258,10 +249,6 @@ def test_dt_to_string_iso_local_datetime(
     [
         (datetime(2020, 1, 9), "2020-01-09"),
     ],
-)
-@pytest.mark.skipif(
-    "win" in sys.platform,
-    reason="pyarrow breaking on windows",
 )
 def test_dt_to_string_iso_local_date(
     constructor: Any, data: datetime, expected: str
