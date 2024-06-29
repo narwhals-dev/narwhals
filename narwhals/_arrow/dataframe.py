@@ -34,9 +34,6 @@ class ArrowDataFrame:
     def __narwhals_dataframe__(self) -> Self:
         return self
 
-    def __narwhals_lazyframe__(self) -> Self:
-        return self
-
     def _from_dataframe(self, df: Any) -> Self:
         return self.__class__(df)
 
@@ -54,8 +51,7 @@ class ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
-            name = self._dataframe.schema.names.index(item)
-            return ArrowSeries(self._dataframe[name], name=name)
+            return ArrowSeries(self._dataframe[item], name=item)
 
         elif isinstance(item, slice):
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -84,9 +80,6 @@ class ArrowDataFrame:
     @property
     def columns(self) -> list[str]:
         return self._dataframe.schema.names  # type: ignore[no-any-return]
-
-    def lazy(self) -> Self:
-        return self
 
     def select(
         self,
