@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Callable
 
 from narwhals._arrow.series import ArrowSeries
+from narwhals._pandas_like.utils import reuse_series_namespace_implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -59,4 +60,18 @@ class ArrowExpr:
             root_names=list(column_names),
             output_names=list(column_names),
             implementation=implementation,
+        )
+
+    @property
+    def dt(self) -> ArrowExprDateTimeNamespace:
+        return ArrowExprDateTimeNamespace(self)
+
+
+class ArrowExprDateTimeNamespace:
+    def __init__(self, expr: ArrowExpr) -> None:
+        self._expr = expr
+
+    def to_string(self, format: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "to_string", format
         )
