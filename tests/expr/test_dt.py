@@ -261,7 +261,7 @@ def test_dt_to_string_iso_local_date(
 
     result = (
         nw.from_native(df, eager_only=True)
-        .select(nw.col("a").dt.to_string("%Y-%m-%d"))["a"]
+        .select(b=nw.col("a").dt.to_string("%Y-%m-%d"))["b"]
         .to_list()[0]
     )
     assert result == expected

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals._arrow.utils import validate_column_comparand
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.series import PandasSeriesDateTimeNamespace
 from narwhals.dependencies import get_pyarrow
@@ -32,12 +31,6 @@ class ArrowSeries(PandasSeries):
             implementation=self._implementation,
             name=self._name,
         )
-
-    def __add__(self, other: Any) -> ArrowSeries:
-        ser = self._series
-        pc = get_pyarrow().compute
-        other = validate_column_comparand(self._series.index, other)
-        return self._from_series(pc.add(ser, other))
 
     def to_list(self) -> Any:
         return self._series.to_pylist()
