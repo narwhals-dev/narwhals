@@ -103,3 +103,17 @@ class ArrowDataFrame(PandasDataFrame):
         pa = get_pyarrow()
         df = pa.Table.from_arrays(to_concat, names=result_names)
         return self._from_dataframe(df)
+
+    def select(
+        self,
+        *exprs: IntoArrowExpr,  # type: ignore[override]
+        **named_exprs: IntoArrowExpr,  # type: ignore[override]
+    ) -> Self:
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        if not new_series:
+            # return empty dataframe, like Polars does
+            return self._from_dataframe(self._dataframe.__class__())
+        names = [s.name for s in new_series]
+        pa = get_pyarrow()
+        df = pa.Table.from_arrays([s._series for s in new_series], names=names)
+        return self._from_dataframe(df)

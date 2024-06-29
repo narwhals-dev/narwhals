@@ -150,7 +150,7 @@ class PandasDataFrame:
     # --- reshape ---
     def select(
         self,
-        *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+        *exprs: IntoPandasExpr,
         **named_exprs: IntoPandasExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)

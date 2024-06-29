@@ -39,6 +39,9 @@ class ArrowSeries(PandasSeries):
         other = validate_column_comparand(self._series.index, other)
         return self._from_series(pc.add(ser, other))
 
+    def to_list(self) -> Any:
+        return self._series.to_pylist()
+
     def alias(self, name: str) -> Self:
         return self.__class__(
             self._series,
@@ -57,4 +60,8 @@ class ArrowSeriesDateTimeNamespace(PandasSeriesDateTimeNamespace):
 
     def to_string(self, format: str) -> ArrowSeries:  # noqa: A002
         pc = get_pyarrow().compute
+        # PyArrow differs from other libraries in that %S also prints out
+        # the fractional part of the second...:'(
+        # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
+        format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
         return self._series._from_series(pc.strftime(self._series._series, format))

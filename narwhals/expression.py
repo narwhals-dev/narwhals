@@ -2776,6 +2776,37 @@ class ExprDateTimeNamespace:
         """
         Convert a Date/Time/Datetime column into a String column with the given format.
 
+        Notes:
+            Unfortunately, different libraries interpret format directives a bit
+            differently.
+
+            - Chrono, the library used by Polars, uses `"%.f"` for fractional seconds,
+              whereas pandas and Python stdlib use `".%f"`.
+            - PyArrow interprets `"%S"` as "seconds, including fractional seconds"
+              whereas most other tools interpret it as "just seconds, as 2 digits".
+
+            Therefore, we make the following adjustments:
+
+            - for pandas-like libraries, we replace `".%f"` with `"%.f"`.
+            - for PyArrow, we replace `"%S.%f"` with `"%S"`.
+
+            Workarounds like these don't make us happy, and we try to avoid them as
+            much as possible, but here we feel like it's the best compromise.
+
+            If you just want to format a date/datetime Series as a local datetime
+            string, and have it work as consistently as possible across libraries,
+            we suggest using:
+
+            - `"%Y-%m-%dT%H:%M:%S%.f"` for datetimes
+            - `"%Y-%m-%d"` for dates
+
+            though note that, even then, different tools may return a different number
+            of trailing zeros. Nonetheless, this is probably consistent enough for
+            most applications.
+
+            If you have an application where this is not enough, please open an issue
+            and let us know.
+
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd
