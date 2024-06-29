@@ -118,12 +118,18 @@ def parse_into_expr(
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
+    from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._arrow.series import ArrowSeries
 
-    plx = PandasNamespace(implementation=implementation)
-
-    if isinstance(into_expr, PandasExpr):
+    if implementation == 'arrow':
+        plx = ArrowNamespace()
+    else:
+        plx = PandasNamespace(implementation=implementation)
+    breakpoint()
+    if isinstance(into_expr, (PandasExpr, ArrowExpr)):
         return into_expr
-    if isinstance(into_expr, PandasSeries):
+    if isinstance(into_expr, (PandasSeries, ArrowSeries)):
         return plx._create_expr_from_series(into_expr)
     if isinstance(into_expr, str):
         return plx.col(into_expr)
@@ -198,10 +204,7 @@ def reuse_series_implementation(
             the expression version should return a 1-row Series.
         args, kwargs: arguments and keyword arguments to pass to function.
     """
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.namespace import PandasNamespace
-
-    plx = PandasNamespace(implementation=expr._implementation)
+    plx = expr.__narwhals_namespace__()
 
     def func(df: PandasDataFrame) -> list[PandasSeries]:
         out: list[PandasSeries] = []
@@ -228,7 +231,7 @@ def reuse_series_implementation(
     root_names = copy(expr._root_names)
     output_names = expr._output_names
     for arg in list(args) + list(kwargs.values()):
-        if root_names is not None and isinstance(arg, PandasExpr):
+        if root_names is not None and isinstance(arg, expr.__class__):
             if arg._root_names is not None:
                 root_names.extend(arg._root_names)
             else:

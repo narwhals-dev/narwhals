@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.namespace import ArrowNamespace
 
 
 class ArrowExpr:
@@ -60,6 +61,11 @@ class ArrowExpr:
             output_names=list(column_names),
             implementation=implementation,
         )
+
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace()
 
     def cum_sum(self) -> Self:
         return reuse_series_implementation(self, "cum_sum")
