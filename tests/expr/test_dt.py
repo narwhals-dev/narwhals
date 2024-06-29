@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
@@ -174,8 +175,8 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(
-    parse_version(pa.__version__) < parse_version("12.0.0"),
-    reason="pyarrow 12+ required",
+    "win" in sys.platform,
+    reason="pyarrow breaking on windows",
 )
 def test_dt_to_string(constructor: Any, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data), eager_only=True)
