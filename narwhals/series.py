@@ -691,9 +691,7 @@ class Series:
             the diff and fill missing values with `0` in a Int64 column, you could
             do:
 
-            ```python
-           s_any.diff().fill_null(0).cast(nw.Int64)
-            ```
+                s_any.diff().fill_null(0).cast(nw.Int64)
 
         Examples:
             >>> import pandas as pd
@@ -742,9 +740,7 @@ class Series:
             and fill missing values with `0` in a Int64 column, you could
             do:
 
-            ```python
-           s_any.shift(1).fill_null(0).cast(nw.Int64)
-            ```
+                s_any.shift(1).fill_null(0).cast(nw.Int64)
 
         Examples:
             >>> import pandas as pd
