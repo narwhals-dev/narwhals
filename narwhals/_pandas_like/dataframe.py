@@ -116,6 +116,14 @@ class PandasDataFrame:
     def columns(self) -> list[str]:
         return self._dataframe.columns.tolist()  # type: ignore[no-any-return]
 
+    def rows(
+        self, *, named: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        if not named:
+            return list(self._dataframe.itertuples(index=False, name=None))
+
+        return self._dataframe.to_dict("records")  # type: ignore[no-any-return]
+
     def iter_rows(
         self,
         *,
