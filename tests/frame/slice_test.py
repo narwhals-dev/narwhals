@@ -2,6 +2,7 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -13,14 +14,14 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 def test_slice_column(constructor: Any) -> None:
     result = nw.from_native(constructor(data))["a"]
     assert isinstance(result, nw.Series)
     assert result.to_numpy().tolist() == [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 def test_slice_rows(constructor: Any) -> None:
     result = nw.from_native(constructor(data))[1:]
     compare_dicts(result, {"a": [2.0, 3.0, 4.0, 5.0, 6.0], "b": [12, 13, 14, 15, 16]})
@@ -41,7 +42,7 @@ def test_slice_lazy_fails(constructor: Any) -> None:
         _ = nw.from_native(constructor(data))[1:]
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 def test_slice_int_fails(constructor: Any) -> None:
     with pytest.raises(
         TypeError, match="Expected str, range or slice, got: <class 'int'>"

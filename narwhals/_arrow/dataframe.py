@@ -57,15 +57,21 @@ class ArrowDataFrame(PandasDataFrame):
                 name=name,
             )
 
-        elif isinstance(item, (range, slice)):
+        elif isinstance(item, slice):
             from narwhals._arrow.dataframe import ArrowDataFrame
 
+            if item.step is not None and item.step != 1:
+                msg = "Slicing with step is not supported for PyArrow backend yet"
+                raise NotImplementedError(msg)
+            start = item.start or 0
+            stop = item.stop or len(self._dataframe)
             return ArrowDataFrame(
-                self._dataframe.iloc[item], implementation=self._implementation
+                self._dataframe.slice(item.start, stop - start),
+                implementation=self._implementation,
             )
 
         else:  # pragma: no cover
-            msg = f"Expected str, range or slice, got: {type(item)}"
+            msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
     @property

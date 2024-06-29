@@ -32,8 +32,14 @@ class ArrowSeries(PandasSeries):
             name=self._name,
         )
 
+    def __getitem__(self, idx: int) -> Any:
+        return self._series[idx]
+
     def to_list(self) -> Any:
         return self._series.to_pylist()
+
+    def to_numpy(self) -> Any:
+        return self._series.to_numpy()
 
     def alias(self, name: str) -> Self:
         return self.__class__(
@@ -41,6 +47,10 @@ class ArrowSeries(PandasSeries):
             implementation=self._implementation,
             name=name,
         )
+
+    @property
+    def shape(self) -> tuple[int]:
+        return (len(self._series),)
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
