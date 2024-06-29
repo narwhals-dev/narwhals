@@ -86,30 +86,6 @@ class ArrowDataFrame(PandasDataFrame):
     def columns(self) -> list[str]:
         return self._dataframe.schema.names  # type: ignore[no-any-return]
 
-    def with_columns(
-        self,
-        *exprs: IntoArrowExpr,  # type: ignore[override]
-        **named_exprs: IntoArrowExpr,  # type: ignore[override]
-    ) -> Self:
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
-        new_names = {s.name: s for s in new_series}
-        result_names = []
-        to_concat = []
-        # Make sure to preserve column order
-        for s in self.columns:
-            if s in new_names:
-                to_concat.append(new_names.pop(s)._series)
-                # to_concat.append(validate_dataframe_comparand(index, new_names.pop(s)))
-            else:
-                to_concat.append(self._dataframe[s])
-            result_names.append(s)
-        for s in new_names:
-            to_concat.append(new_names[s]._series)
-            result_names.append(s)
-        pa = get_pyarrow()
-        df = pa.Table.from_arrays(to_concat, names=result_names)
-        return self._from_dataframe(df)
-
     def select(
         self,
         *exprs: IntoArrowExpr,  # type: ignore[override]

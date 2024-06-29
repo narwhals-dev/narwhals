@@ -556,7 +556,7 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
     idx = series[0]._series.index
     reindexed = [series[0]._series]
     for s in series[1:]:
-        if s._series.index is not idx and not (s._series.index == idx).all():
+        if s._series.index is not idx:
             reindexed.append(s._series.set_axis(idx.rename(s._series.index.name), axis=0))
         else:
             reindexed.append(s._series)
