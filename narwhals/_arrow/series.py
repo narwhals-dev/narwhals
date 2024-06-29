@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals._pandas_like.series import PandasSeries
+from narwhals._pandas_like.series import PandasSeriesDateTimeNamespace
 from narwhals.dependencies import get_pyarrow
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 class ArrowSeries(PandasSeries):
@@ -19,15 +24,7 @@ class ArrowSeries(PandasSeries):
         self._series = series
         self._implementation = implementation
         self._use_copy_false = False
-        if self._implementation == "pandas":
-            pd = get_pandas()
-
-            if parse_version(pd.__version__) < parse_version("3.0.0"):
-                self._use_copy_false = True
-            else:  # pragma: no cover
-                pass
-        else:  # pragma: no cover
-            pass
+        self._implementation = implementation
 
     def _from_series(self, series: Any) -> Self:
         return self.__class__(
@@ -36,7 +33,7 @@ class ArrowSeries(PandasSeries):
             name=self._name,
         )
 
-    def __add__(self, other: Any) -> PandasSeries:
+    def __add__(self, other: Any) -> ArrowSeries:
         ser = self._series
         pc = get_pyarrow().compute
         other = validate_column_comparand(self._series.index, other)
@@ -48,3 +45,16 @@ class ArrowSeries(PandasSeries):
             implementation=self._implementation,
             name=name,
         )
+
+    @property
+    def dt(self) -> ArrowSeriesDateTimeNamespace:
+        return ArrowSeriesDateTimeNamespace(self)
+
+
+class ArrowSeriesDateTimeNamespace(PandasSeriesDateTimeNamespace):
+    def __init__(self, series: ArrowSeries) -> None:
+        self._series: ArrowSeries = series
+
+    def to_string(self, format: str) -> ArrowSeries:  # noqa: A002
+        pc = get_pyarrow().compute
+        return self._series._from_series(pc.strftime(self._series._series, format))

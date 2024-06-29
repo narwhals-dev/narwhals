@@ -4,10 +4,11 @@ from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
+from narwhals._pandas_like.namespace import PandasNamespace
 from narwhals.utils import flatten
 
 
-class ArrowNamespace:
+class ArrowNamespace(PandasNamespace):
     Int64 = dtypes.Int64
     Int32 = dtypes.Int32
     Int16 = dtypes.Int16
@@ -29,7 +30,7 @@ class ArrowNamespace:
     def __init__(self) -> None: ...
 
     # --- selection ---
-    def col(self, *column_names: str | Iterable[str]) -> PandasExpr:
+    def col(self, *column_names: str | Iterable[str]) -> ArrowExpr:
         return ArrowExpr.from_column_names(
             *flatten(column_names), implementation="pyarrow"
         )

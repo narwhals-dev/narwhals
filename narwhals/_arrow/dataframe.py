@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
 
 
@@ -47,12 +48,12 @@ class ArrowDataFrame(PandasDataFrame):
 
     @property
     def columns(self) -> list[str]:
-        return self._dataframe.schema.names
+        return self._dataframe.schema.names  # type: ignore[no-any-return]
 
     def with_columns(
         self,
-        *exprs: IntoPandasExpr,
-        **named_exprs: IntoPandasExpr,
+        *exprs: IntoArrowExpr,  # type: ignore[override]
+        **named_exprs: IntoArrowExpr,  # type: ignore[override]
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         new_names = {s.name: s for s in new_series}

@@ -9,21 +9,21 @@ from narwhals._pandas_like.expr import PandasExpr
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._arrow.dataframe import ArrowDataFrame
 
 
 class ArrowExpr(PandasExpr):
     def __init__(  # noqa: PLR0913
         self,
-        call: Callable[[PandasDataFrame], list[PandasSeries]],
+        call: Callable[[ArrowDataFrame], list[ArrowSeries]],
         *,
         depth: int,
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-        implementation: str,
+        implementation: str,  # just for compatibility with PandasExpr
     ) -> None:
-        self._call = call
+        self._call = call  # type: ignore[assignment]
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
