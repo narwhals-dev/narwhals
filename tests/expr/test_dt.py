@@ -174,8 +174,8 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(
-    parse_version(pa.__version__) < parse_version("5.0.0"),
-    reason="pyarrow 5.0.0 required",
+    parse_version(pa.__version__) < parse_version("12.0.0"),
+    reason="pyarrow 12+ required",
 )
 def test_dt_to_string(constructor: Any, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data), eager_only=True)
