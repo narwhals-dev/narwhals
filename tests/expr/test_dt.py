@@ -259,6 +259,10 @@ def test_dt_to_string_iso_local_datetime(
         (datetime(2020, 1, 9), "2020-01-09"),
     ],
 )
+@pytest.mark.skipif(
+    "win" in sys.platform,
+    reason="pyarrow breaking on windows",
+)
 def test_dt_to_string_iso_local_date(
     constructor: Any, data: datetime, expected: str
 ) -> None:
