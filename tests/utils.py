@@ -30,7 +30,7 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
         for lhs, rhs in zip_strict(result[key], expected[key]):
             if hasattr(lhs, "as_py"):
                 lhs = lhs.as_py()  # noqa: PLW2901
-            if hasattr(rhs, "as_py"):
+            if hasattr(rhs, "as_py"):  # pragma: no cover
                 rhs = rhs.as_py()  # noqa: PLW2901
             if isinstance(lhs, float) and not math.isnan(lhs):
                 assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
