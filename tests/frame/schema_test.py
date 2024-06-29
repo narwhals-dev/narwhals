@@ -60,6 +60,7 @@ def test_dtypes() -> None:
             "m": [True],
             "n": [date(2020, 1, 1)],
             "o": [datetime(2020, 1, 1)],
+            "p": ["a"],
         },
         schema={
             "a": pl.Int64,
@@ -77,6 +78,7 @@ def test_dtypes() -> None:
             "m": pl.Boolean,
             "n": pl.Date,
             "o": pl.Datetime,
+            "p": pl.Categorical,
         },
     )
     result = nw.DataFrame(df).schema
@@ -96,6 +98,7 @@ def test_dtypes() -> None:
         "m": nw.Boolean,
         "n": nw.Date,
         "o": nw.Datetime,
+        "p": nw.Categorical,
     }
     assert result == expected
     result_pd = nw.DataFrame(df.to_pandas(use_pyarrow_extension_array=True)).schema

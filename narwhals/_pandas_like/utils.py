@@ -401,7 +401,7 @@ def translate_dtype(column: Any) -> DType:
         return dtypes.String()
     if dtype in ("bool", "boolean", "boolean[pyarrow]"):
         return dtypes.Boolean()
-    if dtype in ("category",):
+    if dtype in ("category",) or str(dtype).startswith("dictionary<"):
         return dtypes.Categorical()
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
