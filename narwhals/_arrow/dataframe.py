@@ -33,6 +33,8 @@ class ArrowDataFrame:
 
     def __narwhals_dataframe__(self) -> Self:
         return self
+    def __narwhals_lazyframe__(self) -> Self:
+        return self
 
     def _from_dataframe(self, df: Any) -> Self:
         return self.__class__(df)
@@ -81,6 +83,9 @@ class ArrowDataFrame:
     @property
     def columns(self) -> list[str]:
         return self._dataframe.schema.names  # type: ignore[no-any-return]
+    
+    def lazy(self) -> Self:
+        return self
 
     def select(
         self,

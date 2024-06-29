@@ -4,6 +4,7 @@ from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
+from narwhals._arrow.series import ArrowSeries
 from narwhals.utils import flatten
 
 
@@ -31,5 +32,19 @@ class ArrowNamespace:
     # --- selection ---
     def col(self, *column_names: str | Iterable[str]) -> ArrowExpr:
         return ArrowExpr.from_column_names(
-            *flatten(column_names), implementation="pyarrow"
+            *flatten(column_names)
+        )
+
+    def all(self) -> ArrowExpr:
+        return ArrowExpr(
+            lambda df: [
+                ArrowSeries(
+                    df._dataframe[column_name], name=column_name
+                )
+                for column_name in df.columns
+            ],
+            depth=0,
+            function_name="all",
+            root_names=None,
+            output_names=None,
         )

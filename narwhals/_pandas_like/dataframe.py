@@ -312,10 +312,7 @@ class PandasDataFrame:
 
     # --- lazy-only ---
     def lazy(self) -> Self:
-        return self.__class__(
-            self._dataframe,
-            implementation=self._implementation,
-        )
+        return self
 
     @property
     def shape(self) -> tuple[int, int]:
