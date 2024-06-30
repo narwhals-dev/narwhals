@@ -53,7 +53,9 @@ class ArrowNamespace:
             output_names=output_names,
         )
 
-    def _create_expr_from_series(self, series: ArrowSeries) -> ArrowExpr:
+    def _create_expr_from_series(
+        self, series: ArrowSeries
+    ) -> ArrowExpr:  # pragma: no cover
         from narwhals._arrow.expr import ArrowExpr
 
         return ArrowExpr(

@@ -338,8 +338,8 @@ class PandasDataFrame:
             return self._dataframe
         if self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._dataframe._to_pandas()
-        if self._implementation is Implementation.CUDF:
-            return self._dataframe.to_pandas()  # pragma: no cover
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
+            return self._dataframe.to_pandas()
 
         return assert_never(self._implementation)
 

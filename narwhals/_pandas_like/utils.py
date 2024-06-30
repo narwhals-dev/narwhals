@@ -126,7 +126,7 @@ def parse_into_expr(
     from narwhals._pandas_like.series import PandasSeries
 
     if implementation is Implementation.PYARROW:  # type: ignore[comparison-overlap]
-        plx: ArrowNamespace | PandasNamespace = ArrowNamespace()
+        plx: ArrowNamespace | PandasNamespace = ArrowNamespace()  # pragma: no cover
     else:
         plx = PandasNamespace(implementation=implementation)
     if isinstance(into_expr, (PandasExpr, ArrowExpr)):
@@ -361,7 +361,7 @@ def set_axis(obj: T, index: Any, implementation: PANDAS_IMPLEMENTATIONS) -> T:
     if implementation is Implementation.PANDAS and backend_verison >= minimum_version:
         return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
 
-    return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
+    return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined] # pragma: no cover
 
 
 def translate_dtype(column: Any) -> DType:
@@ -421,7 +421,7 @@ def translate_dtype(column: Any) -> DType:
 
 
 def get_dtype_backend(dtype: Any, implementation: PANDAS_IMPLEMENTATIONS) -> str:
-    if implementation is not Implementation.PANDAS:
+    if implementation is not Implementation.PANDAS:  # pragma: no cover
         return "numpy"
 
     pd = get_backend(implementation)

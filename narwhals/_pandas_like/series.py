@@ -83,7 +83,7 @@ class PandasSeries:
         # So, before that, we need to explicitly avoid unnecessary
         # copies by using `copy=False` sometimes.
         self._use_copy_false = False
-        if self._implementation is Implementation.PANDAS:
+        if self._implementation is Implementation.PANDAS:  # pragma: no cover
             series_backend = get_backend(self._implementation)
 
             if parse_version(series_backend.__version__) < parse_version("3.0.0"):

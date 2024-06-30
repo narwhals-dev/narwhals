@@ -161,12 +161,12 @@ def agg_pandas(  # noqa: PLR0913
         )
 
     extra_args: dict[str, Any] = {}
-    if implementation is Implementation.PANDAS:
+    if implementation is Implementation.PANDAS:  # pragma: no cover
         backend = get_backend(implementation)
         backend_version = parse_version(backend.__version__)
         minimum_version = parse_version("2.2.0")
 
-        if backend_version >= minimum_version:  # pragma: no cover
+        if backend_version >= minimum_version:
             extra_args["include_groups"] = False
 
     result_complex = grouped.apply(func, **extra_args)

@@ -74,7 +74,7 @@ def get_backend(implementation: Implementation) -> Any:
     # More info in
     # https://adamj.eu/tech/2022/10/14/python-type-hints-exhuastiveness-checking
 
-    if implementation is Implementation.POLARS:
+    if implementation is Implementation.POLARS:  # pragma: no cover
         return get_polars()
     if implementation is Implementation.PANDAS:
         return get_pandas()
@@ -82,9 +82,9 @@ def get_backend(implementation: Implementation) -> Any:
         return get_modin()
     if implementation is Implementation.CUDF:
         return get_cudf()
-    if implementation is Implementation.PYARROW:
+    if implementation is Implementation.PYARROW:  # pragma: no cover
         return get_pyarrow()
-    if implementation is Implementation.NUMPY:
+    if implementation is Implementation.NUMPY:  # pragma: no cover
         return get_numpy()
 
     return assert_never(implementation)
