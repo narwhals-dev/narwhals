@@ -398,9 +398,21 @@ def translate_dtype(column: Any) -> DType:
         return dtypes.UInt16()
     if str(dtype) in ("uint8", "UInt8", "UInt8[pyarrow]", "uint8[pyarrow]"):
         return dtypes.UInt8()
-    if str(dtype) in ("float64", "Float64", "Float64[pyarrow]", "float64[pyarrow]"):
+    if str(dtype) in (
+        "float64",
+        "Float64",
+        "Float64[pyarrow]",
+        "float64[pyarrow]",
+        "double[pyarrow]",
+    ):
         return dtypes.Float64()
-    if str(dtype) in ("float32", "Float32", "Float32[pyarrow]", "float32[pyarrow]"):
+    if str(dtype) in (
+        "float32",
+        "Float32",
+        "Float32[pyarrow]",
+        "float32[pyarrow]",
+        "float[pyarrow]",
+    ):
         return dtypes.Float32()
     if str(dtype) in (
         "string",
@@ -409,7 +421,7 @@ def translate_dtype(column: Any) -> DType:
         "large_string[pyarrow]",
     ):
         return dtypes.String()
-    if str(dtype) in ("bool", "boolean", "boolean[pyarrow]"):
+    if str(dtype) in ("bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"):
         return dtypes.Boolean()
     if str(dtype) in ("category",) or str(dtype).startswith("dictionary<"):
         return dtypes.Categorical()

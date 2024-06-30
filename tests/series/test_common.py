@@ -463,7 +463,7 @@ def test_cast_string() -> None:
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
     result = nw.to_native(s)
-    assert result.dtype in ("string", object)
+    assert str(result.dtype) in ("string", "object", "dtype('O')")
 
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
