@@ -18,13 +18,17 @@ if TYPE_CHECKING:
     from narwhals.series import Series
 
     # All dataframes supported by Narwhals have a
-    # `columns` property.
+    # `columns` property. Their similarities don't extend
+    # _that_ much further unfortunately...
     class NativeDataFrame(Protocol):
         @property
         def columns(self) -> Any: ...
+        def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
+# Anything which can be converted to an expression.
 IntoExpr: TypeAlias = Union["Expr", str, int, float, "Series"]
+# Anything which can be converted to a Narwhals DataFrame.
 IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrame"]
 
 __all__ = ["IntoExpr", "IntoDataFrame"]
