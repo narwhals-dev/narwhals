@@ -45,3 +45,22 @@ def get_pyarrow_compute() -> Any:  # pragma: no cover
 def get_numpy() -> Any:
     """Get numpy module (if already imported - else return None)."""
     return sys.modules.get("numpy", None)
+
+
+def is_pandas_dataframe(df: Any) -> bool:
+    """Check whether `df` is a pandas DataFrame without importing pandas."""
+    if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
+        return True
+    return False
+
+
+__all__ = [
+    "get_polars",
+    "get_pandas",
+    "get_modin",
+    "get_cudf",
+    "get_pyarrow",
+    "get_pyarrow_compute",
+    "get_numpy",
+    "is_pandas_dataframe",
+]
