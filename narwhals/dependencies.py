@@ -10,7 +10,7 @@ from typing import Any
 from typing_extensions import assert_never
 
 
-class Backend(Enum):
+class Implementation(Enum):
     POLARS = auto()
     PANDAS = auto()
     MODIN = auto()
@@ -60,22 +60,22 @@ def get_numpy() -> Any:
     return sys.modules.get("numpy", None)
 
 
-def get_implementation(backend: Backend) -> Any:
+def get_backend(implementation: Implementation) -> Any:
     # This is equivalent to an exhaustive match without using Python 3.10 match
     # More info in
     # https://adamj.eu/tech/2022/10/14/python-type-hints-exhuastiveness-checking
 
-    if backend is Backend.POLARS:
+    if implementation is Implementation.POLARS:
         return get_polars()
-    if backend is Backend.PANDAS:
+    if implementation is Implementation.PANDAS:
         return get_pandas()
-    if backend is Backend.MODIN:
+    if implementation is Implementation.MODIN:
         return get_modin()
-    if backend is Backend.CUDF:
+    if implementation is Implementation.CUDF:
         return get_cudf()
-    if backend is Backend.PYARROW:
+    if implementation is Implementation.PYARROW:
         return get_pyarrow()
-    if backend is Backend.NUMPY:
+    if implementation is Implementation.NUMPY:
         return get_numpy()
 
-    return assert_never(backend)
+    return assert_never(implementation)

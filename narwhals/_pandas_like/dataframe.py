@@ -17,8 +17,8 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
-from narwhals.dependencies import Backend
-from narwhals.dependencies import get_implementation
+from narwhals.dependencies import Implementation
+from narwhals.dependencies import get_backend
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -58,7 +58,7 @@ class PandasDataFrame:
         return PandasNamespace(self._implementation)
 
     def __native_namespace__(self) -> Any:
-        return get_implementation(self._implementation)
+        return get_backend(self._implementation)
 
     def __len__(self) -> int:
         return len(self._dataframe)
@@ -334,11 +334,11 @@ class PandasDataFrame:
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
-        if self._implementation is Backend.PANDAS:
+        if self._implementation is Implementation.PANDAS:
             return self._dataframe
-        if self._implementation is Backend.MODIN:  # pragma: no cover
+        if self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._dataframe._to_pandas()
-        if self._implementation is Backend.CUDF:
+        if self._implementation is Implementation.CUDF:
             return self._dataframe.to_pandas()  # pragma: no cover
 
         return assert_never(self._implementation)

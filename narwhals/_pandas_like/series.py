@@ -11,8 +11,8 @@ from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
-from narwhals.dependencies import Backend
-from narwhals.dependencies import get_implementation
+from narwhals.dependencies import Implementation
+from narwhals.dependencies import get_backend
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -83,8 +83,8 @@ class PandasSeries:
         # So, before that, we need to explicitly avoid unnecessary
         # copies by using `copy=False` sometimes.
         self._use_copy_false = False
-        if self._implementation is Backend.PANDAS:
-            series_backend = get_implementation(self._implementation)
+        if self._implementation is Implementation.PANDAS:
+            series_backend = get_backend(self._implementation)
 
             if parse_version(series_backend.__version__) < parse_version("3.0.0"):
                 self._use_copy_false = True
@@ -95,7 +95,7 @@ class PandasSeries:
         return PandasNamespace(self._implementation)
 
     def __native_namespace__(self) -> Any:
-        return get_implementation(self._implementation)
+        return get_backend(self._implementation)
 
     def __narwhals_series__(self) -> Self:
         return self
@@ -440,11 +440,11 @@ class PandasSeries:
         return self._series.to_numpy()
 
     def to_pandas(self) -> Any:
-        if self._implementation is Backend.PANDAS:
+        if self._implementation is Implementation.PANDAS:
             return self._series
-        if self._implementation is Backend.MODIN:  # pragma: no cover
+        if self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._series._to_pandas()
-        if self._implementation is Backend.CUDF:  # pragma: no cover
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
             return self._series.to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)

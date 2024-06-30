@@ -9,8 +9,8 @@ from typing import TypeVar
 from typing_extensions import assert_never
 
 from narwhals._pandas_like.implementations import get_series_implementation
-from narwhals.dependencies import Backend
-from narwhals.dependencies import get_implementation
+from narwhals.dependencies import Implementation
+from narwhals.dependencies import get_backend
 from narwhals.dependencies import get_numpy
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
@@ -125,7 +125,7 @@ def parse_into_expr(
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
 
-    if implementation is Backend.PYARROW:  # type: ignore[comparison-overlap]
+    if implementation is Implementation.PYARROW:  # type: ignore[comparison-overlap]
         plx: ArrowNamespace | PandasNamespace = ArrowNamespace()
     else:
         plx = PandasNamespace(implementation=implementation)
@@ -296,16 +296,16 @@ def horizontal_concat(dfs: list[Any], implementation: PANDAS_IMPLEMENTATIONS) ->
 
     Should be in namespace.
     """
-    backend = get_implementation(implementation)
+    backend = get_backend(implementation)
 
-    if implementation is Backend.PANDAS:
+    if implementation is Implementation.PANDAS:
         pandas_version = parse_version(backend.__version__)
 
         if pandas_version < parse_version("3.0.0"):
             return backend.concat(dfs, axis=1, copy=False)
         return backend.concat(dfs, axis=1)  # pragma: no cover
 
-    if implementation is Backend.CUDF or implementation is Backend.MODIN:  # pragma: no cover
+    if implementation is Implementation.CUDF or implementation is Implementation.MODIN:  # pragma: no cover
         return backend.concat(dfs, axis=1)
 
     return assert_never(implementation)
@@ -321,14 +321,14 @@ def vertical_concat(dfs: list[Any], implementation: PANDAS_IMPLEMENTATIONS) -> A
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
 
-    backend = get_implementation(implementation)
+    backend = get_backend(implementation)
     cols = set(dfs[0].columns)
     for df in dfs:
         cols_current = set(df.columns)
         if cols_current != cols:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
-    if implementation is Backend.PANDAS:
+    if implementation is Implementation.PANDAS:
         pandas_version = parse_version(backend.__version__)
 
         if pandas_version < parse_version("3.0.0"):
@@ -336,7 +336,7 @@ def vertical_concat(dfs: list[Any], implementation: PANDAS_IMPLEMENTATIONS) -> A
         return backend.concat(dfs, axis=0)  # pragma: no cover
 
     if (
-        implementation is Backend.CUDF or implementation is Backend.MODIN
+        implementation is Implementation.CUDF or implementation is Implementation.MODIN
     ):  # pragma: no cover
         return backend.concat(dfs, axis=0)
 
@@ -353,9 +353,9 @@ def native_series_from_iterable(
 
 
 def set_axis(obj: T, index: Any, implementation: PANDAS_IMPLEMENTATIONS) -> T:
-    backend = get_implementation(implementation)
+    backend = get_backend(implementation)
     backend_verison = parse_version(backend.__version__)
-    if implementation is Backend.PANDAS and backend_verison >= parse_version("1.5.0"):
+    if implementation is Implementation.PANDAS and backend_verison >= parse_version("1.5.0"):
         return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
 
     return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
@@ -415,10 +415,10 @@ def translate_dtype(column: Any) -> DType:
 
 
 def get_dtype_backend(dtype: Any, implementation: PANDAS_IMPLEMENTATIONS) -> str:
-    if implementation is not Backend.PANDAS:
+    if implementation is not Implementation.PANDAS:
         return "numpy"
 
-    pd = get_implementation(implementation)
+    pd = get_backend(implementation)
     if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
         return "pyarrow-nullable"
 
@@ -554,4 +554,4 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
 
 
 def to_datetime(implementation: PANDAS_IMPLEMENTATIONS) -> Any:
-    return get_implementation(implementation).to_datetime
+    return get_backend(implementation).to_datetime

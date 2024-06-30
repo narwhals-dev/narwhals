@@ -4,18 +4,18 @@ from typing import Literal
 
 from typing_extensions import assert_never
 
-from narwhals.dependencies import Backend
-from narwhals.dependencies import get_implementation
+from narwhals.dependencies import Implementation
+from narwhals.dependencies import get_backend
 
-PANDAS_IMPLEMENTATIONS = Literal[Backend.PANDAS, Backend.MODIN, Backend.CUDF]
+PANDAS_IMPLEMENTATIONS = Literal[Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF]
 
 
-def get_series_implementation(backend: PANDAS_IMPLEMENTATIONS) -> Any:
-    implementation = get_implementation(backend)
+def get_series_implementation(implementation: PANDAS_IMPLEMENTATIONS) -> Any:
+    implementation = get_backend(implementation)
 
-    if backend is Backend.PANDAS:
+    if implementation is Implementation.PANDAS:
         return partial(implementation.Series, copy=False)
-    if backend is Backend.MODIN or backend is Backend.CUDF:
+    if implementation is Implementation.MODIN or implementation is Implementation.CUDF:
         return implementation.Series
 
-    return assert_never(backend)
+    return assert_never(implementation)

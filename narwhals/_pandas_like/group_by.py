@@ -12,8 +12,8 @@ from typing import Iterator
 from narwhals._pandas_like.utils import is_simple_aggregation
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import parse_into_exprs
-from narwhals.dependencies import Backend
-from narwhals.dependencies import get_implementation
+from narwhals.dependencies import Implementation
+from narwhals.dependencies import get_backend
 from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
@@ -160,8 +160,8 @@ def agg_pandas(  # noqa: PLR0913
             out_group, index=out_names, name="", implementation=implementation
         )
 
-    if implementation is Backend.PANDAS:
-        backend = get_implementation(implementation)
+    if implementation is Implementation.PANDAS:
+        backend = get_backend(implementation)
 
         if parse_version(backend.__version__) < parse_version("2.2.0"):  # pragma: no cover
             result_complex = grouped.apply(func)
