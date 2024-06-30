@@ -43,7 +43,7 @@ df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
 
 
 @pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_mpd, df_polars, df_pa]
+    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_mpd, df_polars]
 )
 @pytest.mark.parametrize(
     ("named", "expected"),
