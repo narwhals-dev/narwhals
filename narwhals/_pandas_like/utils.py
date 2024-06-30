@@ -382,25 +382,25 @@ def translate_dtype(column: Any) -> DType:
     from narwhals import dtypes
 
     dtype = column.dtype
-    if str(dtype) in ("int64", "Int64", "Int64[pyarrow]"):
+    if str(dtype) in ("int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"):
         return dtypes.Int64()
-    if str(dtype) in ("int32", "Int32", "Int32[pyarrow]"):
+    if str(dtype) in ("int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"):
         return dtypes.Int32()
-    if str(dtype) in ("int16", "Int16", "Int16[pyarrow]"):
+    if str(dtype) in ("int16", "Int16", "Int16[pyarrow]", "int16[pyarrow]"):
         return dtypes.Int16()
-    if str(dtype) in ("int8", "Int8", "Int8[pyarrow]"):
+    if str(dtype) in ("int8", "Int8", "Int8[pyarrow]", "int8[pyarrow]"):
         return dtypes.Int8()
-    if str(dtype) in ("uint64", "UInt64", "UInt64[pyarrow]"):
+    if str(dtype) in ("uint64", "UInt64", "UInt64[pyarrow]", "uint64[pyarrow]"):
         return dtypes.UInt64()
-    if str(dtype) in ("uint32", "UInt32", "UInt32[pyarrow]"):
+    if str(dtype) in ("uint32", "UInt32", "UInt32[pyarrow]", "uint32[pyarrow]"):
         return dtypes.UInt32()
-    if str(dtype) in ("uint16", "UInt16", "UInt16[pyarrow]"):
+    if str(dtype) in ("uint16", "UInt16", "UInt16[pyarrow]", "uint16[pyarrow]"):
         return dtypes.UInt16()
-    if str(dtype) in ("uint8", "UInt8", "UInt8[pyarrow]"):
+    if str(dtype) in ("uint8", "UInt8", "UInt8[pyarrow]", "uint8[pyarrow]"):
         return dtypes.UInt8()
-    if str(dtype) in ("float64", "Float64", "Float64[pyarrow]"):
+    if str(dtype) in ("float64", "Float64", "Float64[pyarrow]", "float64[pyarrow]"):
         return dtypes.Float64()
-    if str(dtype) in ("float32", "Float32", "Float32[pyarrow]"):
+    if str(dtype) in ("float32", "Float32", "Float32[pyarrow]", "float32[pyarrow]"):
         return dtypes.Float32()
     if str(dtype) in (
         "string",
