@@ -103,3 +103,18 @@ module = [
     "modin.*",
 ]
 ignore_missing_imports = true
+
+
+[tool.pylint.main]
+fail-on = ["I"]
+fail-under = 10
+ignore = ["third_party"]
+ignore-patterns = []
+jobs = 8
+
+
+[tool.pylint."messages control"]
+disable = [
+    "missing-function-docstring",
+    "missing-module-docstring",
+]
