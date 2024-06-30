@@ -173,13 +173,17 @@ class BaseFrame:
         other: Self,
         *,
         how: Literal["inner", "cross"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
     ) -> Self:
         _supported_joins = {"inner", "cross"}
         if how not in _supported_joins:
             msg = f"Only the following join stragies are supported: {_supported_joins}"
             raise NotImplementedError(msg)
+
+        if how == "cross" and (left_on or right_on):
+            msg = "Can not pass left_on, right_on for cross join"
+            raise ValueError(msg)
 
         validate_same_library([self, other])
         return self._from_dataframe(
@@ -1377,8 +1381,8 @@ class DataFrame(BaseFrame):
         other: Self,
         *,
         how: Literal["inner", "cross"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
     ) -> Self:
         r"""
         Join in SQL-like fashion.
@@ -2801,8 +2805,8 @@ class LazyFrame(BaseFrame):
         other: Self,
         *,
         how: Literal["inner", "cross"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
     ) -> Self:
         r"""
         Add a join operation to the Logical Plan.

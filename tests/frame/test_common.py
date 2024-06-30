@@ -326,7 +326,7 @@ def test_join(df_raw: Any) -> None:
 )
 def test_cross_join(df_raw: Any) -> None:
     df = nw.from_native(df_raw).select("a", "z")
-    result = df.join(df, how="cross", left_on=["a"], right_on="a")  # type: ignore[arg-type]
+    result = df.join(df, how="cross")  # type: ignore[arg-type]
 
     df_ = df.collect() if isinstance(df, nw.LazyFrame) else df
 
@@ -343,6 +343,9 @@ def test_cross_join(df_raw: Any) -> None:
             expected[key].append(value)
 
     compare_dicts(result, expected)
+
+    with pytest.raises(ValueError, match="Can not pass left_on, right_on for cross join"):
+        df.join(df, how="cross", left_on="a")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

@@ -270,8 +270,8 @@ class PandasDataFrame:
         other: Self,
         *,
         how: Literal["left", "inner", "outer", "cross"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
     ) -> Self:
         if isinstance(left_on, str):
             left_on = [left_on]
