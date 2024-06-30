@@ -3,10 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._arrow.utils import translate_dtype
 from narwhals.dependencies import get_pyarrow_compute
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
+    from narwhals.dtypes import DType
 
 
 class ArrowSeries:
@@ -50,6 +53,10 @@ class ArrowSeries:
             self._series,
             name=name,
         )
+
+    @property
+    def dtype(self) -> DType:
+        return translate_dtype(self._series.type)
 
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()

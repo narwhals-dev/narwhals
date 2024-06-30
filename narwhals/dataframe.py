@@ -393,8 +393,8 @@ class DataFrame(BaseFrame):
 
             return Series(self._dataframe[item])
 
-        elif isinstance(item, slice):
-            return DataFrame(self._dataframe[item])
+        elif isinstance(item, (range, slice)):
+            return self._from_dataframe(self._dataframe[item])
 
         else:
             msg = f"Expected str or slice, got: {type(item)}"
@@ -640,27 +640,27 @@ class DataFrame(BaseFrame):
         self,
         *,
         named: Literal[False],
-    ) -> tuple[Any, ...]: ...
+    ) -> list[tuple[Any, ...]]: ...
 
     @overload
     def rows(
         self,
         *,
         named: Literal[True],
-    ) -> dict[str, Any]: ...
+    ) -> list[dict[str, Any]]: ...
 
     @overload
     def rows(
         self,
         *,
         named: bool,
-    ) -> tuple[Any, ...] | dict[str, Any]: ...
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(
         self,
         *,
         named: bool = False,
-    ) -> tuple[Any, ...] | dict[str, Any]:
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Returns all data in the DataFrame as a list of rows of python-native values.
 
@@ -1375,7 +1375,7 @@ class DataFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl, eager_only=True)
             >>> dframe = df.sort("a")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1479,8 +1479,8 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "d"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> other_df = nw.DataFrame(other_df_pl)
+            >>> df = nw.from_native(df_pl, eager_only=True)
+            >>> other_df = nw.from_native(other_df_pl, eager_only=True)
             >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1686,7 +1686,7 @@ class DataFrame(BaseFrame):
             └─────┴─────┴─────┘
         """
 
-        return DataFrame(self._dataframe.null_count())
+        return self._from_dataframe(self._dataframe.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""
@@ -1741,23 +1741,12 @@ class LazyFrame(BaseFrame):
         if hasattr(df, "__narwhals_lazyframe__"):
             self._dataframe: Any = df.__narwhals_lazyframe__()
         elif is_polars or (
-            (pl := get_polars()) is not None
-            and isinstance(df, (pl.DataFrame, pl.LazyFrame))
+            (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
         ):
-            self._dataframe = df.lazy()
+            self._dataframe = df
             self._is_polars = True
-        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
-        elif (mpd := get_modin()) is not None and isinstance(
-            df, mpd.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="modin")
-        elif (cudf := get_cudf()) is not None and isinstance(
-            df, cudf.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="cudf")
         else:
-            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
+            msg = f"Expected Polars lazyframe or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -1794,7 +1783,7 @@ class LazyFrame(BaseFrame):
             ...         "c": [6, 5, 4, 3, 2, 1],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf
             ┌───────────────────────────────────────────────┐
             | Narwhals LazyFrame                            |
@@ -1960,7 +1949,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
@@ -1982,7 +1971,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... ).select("foo", "bar")
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf.columns
             ['foo', 'bar']
         """
@@ -2258,7 +2247,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.rename({"foo": "apple"}).collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2413,7 +2402,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.drop("ham").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2475,7 +2464,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["b", "b", "b", "b"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.unique(None).collect().sort("foo")
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2791,7 +2780,7 @@ class LazyFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.sort("a").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2895,8 +2884,8 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "d"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> other_lf = nw.LazyFrame(other_lf_pl)
+            >>> lf = nw.from_native(lf_pl)
+            >>> other_lf = nw.from_native(other_lf_pl)
             >>> lframe = lf.join(other_lf, left_on="ham", right_on="ham").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
