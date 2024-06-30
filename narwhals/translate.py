@@ -60,9 +60,64 @@ def from_native(
     native_dataframe: IntoDataFrame,
     *,
     strict: Literal[False],
-    eager_only: bool | None = ...,
-    series_only: bool | None = ...,
-    allow_series: bool | None = ...,
+    eager_only: Literal[True],
+    series_only: None = ...,
+    allow_series: Literal[True],
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrame,
+    *,
+    strict: Literal[False],
+    eager_only: Literal[True],
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrame,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    series_only: None = ...,
+    allow_series: Literal[True],
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrame,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    series_only: Literal[True],
+    allow_series: None = ...,
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrame,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrame,
+    *,
+    strict: Literal[False],
+    eager_only: bool | None,
+    series_only: bool | None,
+    allow_series: bool | None,
 ) -> Any: ...
 
 
