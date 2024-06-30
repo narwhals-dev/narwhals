@@ -48,7 +48,8 @@ class ArrowDataFrame:
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
-            return list(self._dataframe.itertuples(index=False, name=None))
+            msg = "Unnamed rows are not yet supported on PyArrow tables"
+            raise NotImplementedError(msg)
         return self._dataframe.to_pylist()  # type: ignore[no-any-return]
 
     @overload
