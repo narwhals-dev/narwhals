@@ -44,27 +44,29 @@ def test_concat(  # pragma: no cover
 
     if how == "horizontal":
         df_pl = (
-            nw.LazyFrame(df_polars)
+            nw.from_native(df_polars)
+            .lazy()
             .collect()
             .rename({"a": "d", "b": "e"})
             .lazy()
             .drop("c")
         )
         df_pd = (
-            nw.LazyFrame(df_pandas)
+            nw.from_native(df_pandas)
+            .lazy()
             .collect()
             .rename({"a": "d", "b": "e"})
             .lazy()
             .drop("c")
         )
     else:
-        df_pl = nw.LazyFrame(df_polars)
-        df_pd = nw.LazyFrame(df_pandas)
+        df_pl = nw.from_native(df_polars).lazy()
+        df_pd = nw.from_native(df_pandas).lazy()
 
-    other_pl = nw.LazyFrame(df_polars2)
+    other_pl = nw.from_native(df_polars2).lazy()
     dframe_pl = nw.concat([df_pl, other_pl], how=how)
 
-    other_pd = nw.LazyFrame(df_pandas2)
+    other_pd = nw.from_native(df_pandas2).lazy()
     dframe_pd = nw.concat([df_pd, other_pd], how=how)
 
     dframe_pd1 = nw.to_native(dframe_pl)
