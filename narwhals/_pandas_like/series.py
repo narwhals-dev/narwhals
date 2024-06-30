@@ -13,7 +13,6 @@ from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import Backend
 from narwhals.dependencies import get_implementation
-from narwhals.dependencies import get_pandas
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -85,14 +84,10 @@ class PandasSeries:
         # copies by using `copy=False` sometimes.
         self._use_copy_false = False
         if self._implementation is Backend.PANDAS:
-            pd = get_pandas()
+            series_backend = get_implementation(self._implementation)
 
-            if parse_version(pd.__version__) < parse_version("3.0.0"):
+            if parse_version(series_backend.__version__) < parse_version("3.0.0"):
                 self._use_copy_false = True
-            else:  # pragma: no cover
-                pass
-        else:  # pragma: no cover
-            pass
 
     def __narwhals_namespace__(self) -> PandasNamespace:
         from narwhals._pandas_like.namespace import PandasNamespace

@@ -12,7 +12,8 @@ from typing import Iterator
 from narwhals._pandas_like.utils import is_simple_aggregation
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import parse_into_exprs
-from narwhals.dependencies import Backend, get_pandas
+from narwhals.dependencies import Backend
+from narwhals.dependencies import get_implementation
 from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
@@ -94,8 +95,6 @@ def agg_pandas(  # noqa: PLR0913
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
     """
-    pd = get_pandas()
-
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
@@ -162,9 +161,9 @@ def agg_pandas(  # noqa: PLR0913
         )
 
     if implementation is Backend.PANDAS:
-        pd = get_pandas()
+        backend = get_implementation(implementation)
 
-        if parse_version(pd.__version__) < parse_version("2.2.0"):  # pragma: no cover
+        if parse_version(backend.__version__) < parse_version("2.2.0"):  # pragma: no cover
             result_complex = grouped.apply(func)
         else:
             result_complex = grouped.apply(func, include_groups=False)

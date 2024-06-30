@@ -10,11 +10,8 @@ from typing_extensions import assert_never
 
 from narwhals._pandas_like.implementations import get_series_implementation
 from narwhals.dependencies import Backend
-from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_implementation
-from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
-from narwhals.dependencies import get_pandas
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -299,20 +296,17 @@ def horizontal_concat(dfs: list[Any], implementation: PANDAS_IMPLEMENTATIONS) ->
 
     Should be in namespace.
     """
+    backend = get_implementation(implementation)
+
     if implementation is Backend.PANDAS:
-        pd = get_pandas()
+        pandas_version = parse_version(backend.__version__)
 
-        if parse_version(pd.__version__) < parse_version("3.0.0"):
-            return pd.concat(dfs, axis=1, copy=False)
-        return pd.concat(dfs, axis=1)  # pragma: no cover
-    if implementation is Backend.CUDF:  # pragma: no cover
-        cudf = get_cudf()
+        if pandas_version < parse_version("3.0.0"):
+            return backend.concat(dfs, axis=1, copy=False)
+        return backend.concat(dfs, axis=1)  # pragma: no cover
 
-        return cudf.concat(dfs, axis=1)
-    if implementation is Backend.MODIN:  # pragma: no cover
-        mpd = get_modin()
-
-        return mpd.concat(dfs, axis=1)
+    if implementation is Backend.CUDF or implementation is Backend.MODIN:  # pragma: no cover
+        return backend.concat(dfs, axis=1)
 
     return assert_never(implementation)
 
@@ -326,6 +320,8 @@ def vertical_concat(dfs: list[Any], implementation: PANDAS_IMPLEMENTATIONS) -> A
     if not dfs:
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
+
+    backend = get_implementation(implementation)
     cols = set(dfs[0].columns)
     for df in dfs:
         cols_current = set(df.columns)
@@ -333,19 +329,16 @@ def vertical_concat(dfs: list[Any], implementation: PANDAS_IMPLEMENTATIONS) -> A
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
     if implementation is Backend.PANDAS:
-        pd = get_pandas()
+        pandas_version = parse_version(backend.__version__)
 
-        if parse_version(pd.__version__) < parse_version("3.0.0"):
-            return pd.concat(dfs, axis=0, copy=False)
-        return pd.concat(dfs, axis=0)  # pragma: no cover
-    if implementation is Backend.CUDF:  # pragma: no cover
-        cudf = get_cudf()
+        if pandas_version < parse_version("3.0.0"):
+            return backend.concat(dfs, axis=0, copy=False)
+        return backend.concat(dfs, axis=0)  # pragma: no cover
 
-        return cudf.concat(dfs, axis=0)
-    if implementation is Backend.MODIN:  # pragma: no cover
-        mpd = get_modin()
-
-        return mpd.concat(dfs, axis=0)
+    if (
+        implementation is Backend.CUDF or implementation is Backend.MODIN
+    ):  # pragma: no cover
+        return backend.concat(dfs, axis=0)
 
     return assert_never(implementation)
 
@@ -360,9 +353,9 @@ def native_series_from_iterable(
 
 
 def set_axis(obj: T, index: Any, implementation: PANDAS_IMPLEMENTATIONS) -> T:
-    if implementation is Backend.PANDAS and parse_version(
-        get_pandas().__version__
-    ) >= parse_version("1.5.0"):
+    backend = get_implementation(implementation)
+    backend_verison = parse_version(backend.__version__)
+    if implementation is Backend.PANDAS and backend_verison >= parse_version("1.5.0"):
         return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
 
     return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
