@@ -1369,7 +1369,7 @@ class DataFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl, eager_only=True)
             >>> dframe = df.sort("a")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1473,8 +1473,8 @@ class DataFrame(BaseFrame):
             ...         "ham": ["a", "b", "d"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> other_df = nw.DataFrame(other_df_pl)
+            >>> df = nw.from_native(df_pl, eager_only=True)
+            >>> other_df = nw.from_native(df_pl, eager_only=True)
             >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1777,7 +1777,7 @@ class LazyFrame(BaseFrame):
             ...         "c": [6, 5, 4, 3, 2, 1],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf
             ┌───────────────────────────────────────────────┐
             | Narwhals LazyFrame                            |
@@ -1943,7 +1943,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
@@ -1965,7 +1965,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... ).select("foo", "bar")
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf.columns
             ['foo', 'bar']
         """
@@ -2241,7 +2241,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.rename({"foo": "apple"}).collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2396,7 +2396,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.drop("ham").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2458,7 +2458,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["b", "b", "b", "b"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.unique(None).collect().sort("foo")
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2774,7 +2774,7 @@ class LazyFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.sort("a").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2878,8 +2878,8 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "d"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> other_lf = nw.LazyFrame(other_lf_pl)
+            >>> lf = nw.from_native(lf_pl)
+            >>> other_lf = nw.from_native(other_lf_pl)
             >>> lframe = lf.join(other_lf, left_on="ham", right_on="ham").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
