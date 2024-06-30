@@ -284,10 +284,18 @@ class PandasDataFrame:
                 and (pd := get_pandas()) is not None
                 and parse_version(pd.__version__) < parse_version("1.2.0")
             ):
-                import secrets
 
-                n_bytes = max(len(c.encode("utf-8")) for c in self.columns) + 1
-                key_token = secrets.token_hex(n_bytes)
+                def generate_unique_token(
+                    n_bytes: int, columns: list[str]
+                ) -> str:  # pragma: no cover
+                    import secrets
+
+                    while True:
+                        token = secrets.token_hex(n_bytes)
+                        if token not in columns:
+                            return token
+
+                key_token = generate_unique_token(8, self.columns)
 
                 return self._from_dataframe(
                     self._dataframe.assign(**{key_token: 0}).merge(
