@@ -1,5 +1,6 @@
 from datetime import date
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 from typing import Any
 
@@ -65,6 +66,7 @@ def test_dtypes() -> None:
             "n": [date(2020, 1, 1)],
             "o": [datetime(2020, 1, 1)],
             "p": ["a"],
+            "q": [timedelta(1)],
         },
         schema={
             "a": pl.Int64,
@@ -83,6 +85,7 @@ def test_dtypes() -> None:
             "n": pl.Date,
             "o": pl.Datetime,
             "p": pl.Categorical,
+            "q": pl.Duration,
         },
     )
     df = nw.DataFrame(df_pl)
@@ -104,6 +107,7 @@ def test_dtypes() -> None:
         "n": nw.Date,
         "o": nw.Datetime,
         "p": nw.Categorical,
+        "q": nw.Duration,
     }
     assert result == expected
     assert {name: df[name].dtype for name in df.columns} == expected

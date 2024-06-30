@@ -18,6 +18,7 @@
         - Categorical
         - String
         - Datetime
+        - Duration
         - Object
       show_root_heading: false
       show_source: false

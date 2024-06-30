@@ -411,6 +411,9 @@ def translate_dtype(column: Any) -> DType:
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
+    if str(dtype).startswith("timedelta64") or str(dtype).startswith("duration"):
+        # todo: different time units
+        return dtypes.Duration()
     if str(dtype).startswith("timestamp["):
         # pyarrow-backed datetime
         # todo: different time units and time zones
@@ -548,6 +551,11 @@ def reverse_translate_dtype(  # noqa: PLR0915
         if dtype_backend == "pyarrow-nullable":
             return "timestamp[ns][pyarrow]"
         return "datetime64[ns]"
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        # todo: different time units and time zones
+        if dtype_backend == "pyarrow-nullable":
+            return "duration[ns][pyarrow]"
+        return "timedelta64[ns]"
     if isinstance_or_issubclass(dtype, dtypes.Date):
         if dtype_backend == "pyarrow-nullable":
             return "date32[pyarrow]"
