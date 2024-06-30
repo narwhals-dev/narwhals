@@ -6,8 +6,8 @@ from __future__ import annotations
 import sys
 from enum import Enum
 from enum import auto
-from typing import Any
 from typing import TYPE_CHECKING
+from typing import Any
 
 from typing_extensions import assert_never
 
@@ -26,6 +26,7 @@ class Implementation(Enum):
     CUDF = auto()
     PYARROW = auto()
     NUMPY = auto()
+
 
 def get_polars() -> Any:
     """Get Polars module (if already imported - else return None)."""
@@ -87,6 +88,7 @@ def get_backend(implementation: Implementation) -> Any:
         return get_numpy()
 
     return assert_never(implementation)
+
 
 def is_pandas_dataframe(df: Any) -> TypeGuard[pandas.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
