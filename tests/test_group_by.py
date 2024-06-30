@@ -18,7 +18,7 @@ df_lazy = pl.LazyFrame(data)
 def test_group_by_complex() -> None:
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 
-    df = nw.from_native(df_pandas).lazy()
+    df = nw.from_native(df_pandas)
     with pytest.warns(UserWarning, match="complex group-by"):
         result = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
@@ -33,7 +33,7 @@ def test_group_by_complex() -> None:
 
 
 def test_invalid_group_by() -> None:
-    df = nw.from_native(df_pandas).lazy()
+    df = nw.from_native(df_pandas)
     with pytest.raises(RuntimeError, match="does your"):
         df.group_by("a").agg(nw.col("b"))
     with pytest.raises(

@@ -50,7 +50,7 @@ def test_len(df_raw: Any) -> None:
     assert result == 3
     result = nw.from_native(df_raw["a"], series_only=True).len()
     assert result == 3
-    result = len(nw.from_native(df_raw).lazy().collect()["a"])
+    result = len(nw.from_native(df_raw)["a"])
     assert result == 3
 
 

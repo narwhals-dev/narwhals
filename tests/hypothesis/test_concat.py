@@ -43,22 +43,8 @@ def test_concat(  # pragma: no cover
     df_pandas2 = pd.DataFrame(data)
 
     if how == "horizontal":
-        df_pl = (
-            nw.from_native(df_polars)
-            .lazy()
-            .collect()
-            .rename({"a": "d", "b": "e"})
-            .lazy()
-            .drop("c")
-        )
-        df_pd = (
-            nw.from_native(df_pandas)
-            .lazy()
-            .collect()
-            .rename({"a": "d", "b": "e"})
-            .lazy()
-            .drop("c")
-        )
+        df_pl = nw.from_native(df_polars).rename({"a": "d", "b": "e"}).drop("c").lazy()
+        df_pd = nw.from_native(df_pandas).rename({"a": "d", "b": "e"}).drop("c").lazy()
     else:
         df_pl = nw.from_native(df_polars).lazy()
         df_pd = nw.from_native(df_pandas).lazy()
