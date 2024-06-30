@@ -33,6 +33,15 @@ def get_pyarrow() -> Any:  # pragma: no cover
     return sys.modules.get("pyarrow", None)
 
 
+def get_pyarrow_compute() -> Any:  # pragma: no cover
+    """Get pyarrow.compute module (if pyarrow has already been imported - else return None)."""
+    if "pyarrow" in sys.modules:
+        import pyarrow.compute as pc
+
+        return pc
+    return None
+
+
 def get_numpy() -> Any:
     """Get numpy module (if already imported - else return None)."""
     return sys.modules.get("numpy", None)

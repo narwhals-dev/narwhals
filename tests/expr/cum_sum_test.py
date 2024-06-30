@@ -2,6 +2,7 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -14,10 +15,10 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
-def test_over_single(constructor: Any) -> None:
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
+def test_cum_sum_simple(constructor: Any) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
-    result = df.with_columns(nw.all().cum_sum())
+    result = df.select(nw.all().cum_sum())
     expected = {
         "a": [0, 1, 3, 6, 10],
         "b": [1, 3, 6, 11, 14],

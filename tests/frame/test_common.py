@@ -8,6 +8,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
@@ -102,6 +103,15 @@ def test_filter_series(df_raw: Any) -> None:
     result_native = nw.to_native(result)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
     compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize(
+    "constructor",
+    [pd.DataFrame, pl.DataFrame, pa.table],
+)
+def test_empty_select(constructor: Any) -> None:
+    result = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True).select()
+    assert result.shape == (0, 0)
 
 
 @pytest.mark.parametrize(
@@ -409,13 +419,6 @@ def test_convert_numpy(df_raw: Any) -> None:
     assert result.dtype == "float64"
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
-def test_shape(df_raw: Any) -> None:
-    result = nw.from_native(df_raw, eager_only=True).shape
-    expected = (3, 3)
-    assert result == expected
-
-
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
 def test_expr_binary(df_raw: Any) -> None:
     result = (
@@ -504,17 +507,6 @@ def test_expr_min_max(df_raw: Any) -> None:
     expected_max = {"a": [3], "b": [6], "z": [9]}
     compare_dicts(result_min, expected_min)
     compare_dicts(result_max, expected_max)
-
-
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
-def test_expr_sample(df_raw: Any) -> None:
-    df = nw.from_native(df_raw).lazy()
-    result_shape = nw.to_native(df.select(nw.col("a").sample(n=2)).collect()).shape
-    expected = (2, 1)
-    assert result_shape == expected
-    result_shape = nw.to_native(df.collect()["a"].sample(n=2)).shape
-    expected = (2,)  # type: ignore[assignment]
-    assert result_shape == expected
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])
@@ -764,6 +756,7 @@ def test_null_count(df_raw: Any) -> None:
         ("nearest", {"a": [2.0], "b": [4.0], "z": [8.0]}),
     ],
 )
+@pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile(
     df_raw: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],

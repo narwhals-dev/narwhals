@@ -148,60 +148,6 @@ def test_convert(df_raw: Any) -> None:
     assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
 
 
-def test_dtypes() -> None:
-    df = pl.DataFrame(
-        {
-            "a": [1],
-            "b": [1],
-            "c": [1],
-            "d": [1],
-            "e": [1],
-            "f": [1],
-            "g": [1],
-            "h": [1],
-            "i": [1],
-            "j": [1],
-            "k": ["1"],
-            "l": [1],
-            "m": [True],
-        },
-        schema={
-            "a": pl.Int64,
-            "b": pl.Int32,
-            "c": pl.Int16,
-            "d": pl.Int8,
-            "e": pl.UInt64,
-            "f": pl.UInt32,
-            "g": pl.UInt16,
-            "h": pl.UInt8,
-            "i": pl.Float64,
-            "j": pl.Float32,
-            "k": pl.String,
-            "l": pl.Datetime,
-            "m": pl.Boolean,
-        },
-    )
-    result = nw.from_native(df, eager_only=True).schema
-    expected = {
-        "a": nw.Int64,
-        "b": nw.Int32,
-        "c": nw.Int16,
-        "d": nw.Int8,
-        "e": nw.UInt64,
-        "f": nw.UInt32,
-        "g": nw.UInt16,
-        "h": nw.UInt8,
-        "i": nw.Float64,
-        "j": nw.Float32,
-        "k": nw.String,
-        "l": nw.Datetime,
-        "m": nw.Boolean,
-    }
-    assert result == expected
-    result_pd = nw.from_native(df.to_pandas(), eager_only=True).schema
-    assert result_pd == expected
-
-
 def test_cast() -> None:
     df_raw = pl.DataFrame(
         {
@@ -474,6 +420,7 @@ def test_is_sorted_invalid(df_raw: Any) -> None:
         ("nearest", 8.0),
     ],
 )
+@pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile(
     df_raw: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],

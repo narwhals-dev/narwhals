@@ -4,10 +4,12 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 
+from narwhals._arrow.series import ArrowSeries
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
 
@@ -59,6 +61,11 @@ class Series:
             series, pd.Series
         ):  # pragma: no cover
             self._series = PandasSeries(series, implementation="cudf")
+            return
+        if (pa := get_pyarrow()) is not None and isinstance(
+            series, pa.ChunkedArray
+        ):  # pragma: no cover
+            self._series = ArrowSeries(series, name="")
             return
         msg = (  # pragma: no cover
             f"Expected pandas, Polars, modin, or cuDF Series, got: {type(series)}. "
@@ -2756,6 +2763,37 @@ class SeriesDateTimeNamespace:
     def to_string(self, format: str) -> Series:  # noqa: A002
         """
         Convert a Date/Time/Datetime series into a String series with the given format.
+
+        Notes:
+            Unfortunately, different libraries interpret format directives a bit
+            differently.
+
+            - Chrono, the library used by Polars, uses `"%.f"` for fractional seconds,
+              whereas pandas and Python stdlib use `".%f"`.
+            - PyArrow interprets `"%S"` as "seconds, including fractional seconds"
+              whereas most other tools interpret it as "just seconds, as 2 digits".
+
+            Therefore, we make the following adjustments:
+
+            - for pandas-like libraries, we replace `".%f"` with `"%.f"`.
+            - for PyArrow, we replace `"%S.%f"` with `"%S"`.
+
+            Workarounds like these don't make us happy, and we try to avoid them as
+            much as possible, but here we feel like it's the best compromise.
+
+            If you just want to format a date/datetime Series as a local datetime
+            string, and have it work as consistently as possible across libraries,
+            we suggest using:
+
+            - `"%Y-%m-%dT%H:%M:%S%.f"` for datetimes
+            - `"%Y-%m-%d"` for dates
+
+            though note that, even then, different tools may return a different number
+            of trailing zeros. Nonetheless, this is probably consistent enough for
+            most applications.
+
+            If you have an application where this is not enough, please open an issue
+            and let us know.
 
         Examples:
             >>> from datetime import datetime
