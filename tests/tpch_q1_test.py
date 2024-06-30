@@ -24,7 +24,7 @@ def test_q1(library: str) -> None:
     else:
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
-    df = nw.LazyFrame(df_raw)
+    df = nw.from_native(df_raw).lazy()
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -91,7 +91,7 @@ def test_q1_w_generic_funcs(library: str) -> None:
     else:
         df_raw = pl.read_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -148,7 +148,7 @@ def test_q1_w_pandas_agg_generic_path() -> None:
     df_raw = pd.read_parquet("tests/data/lineitem.parquet")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)
-    df = nw.LazyFrame(df_raw)
+    df = nw.from_native(df_raw).lazy()
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(

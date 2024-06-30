@@ -31,6 +31,7 @@ class ArrowNamespace:
     Categorical = dtypes.Categorical
     String = dtypes.String
     Datetime = dtypes.Datetime
+    Duration = dtypes.Duration
     Date = dtypes.Date
 
     def _create_expr_from_callable(  # noqa: PLR0913

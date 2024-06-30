@@ -37,6 +37,7 @@ class PandasNamespace:
     Categorical = dtypes.Categorical
     String = dtypes.String
     Datetime = dtypes.Datetime
+    Duration = dtypes.Duration
     Date = dtypes.Date
 
     @property

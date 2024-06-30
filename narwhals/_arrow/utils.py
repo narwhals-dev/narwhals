@@ -38,6 +38,8 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Date()
     if pa.types.is_timestamp(dtype):
         return dtypes.Datetime()
+    if pa.types.is_duration(dtype):
+        return dtypes.Duration()
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
     raise AssertionError

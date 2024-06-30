@@ -4,13 +4,14 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from narwhals.utils import parse_version
-from tests.utils import maybe_get_modin_df
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 if parse_version(pd.__version__) >= parse_version("1.5.0"):
     df_pandas_pyarrow = pd.DataFrame(
         {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -34,15 +35,13 @@ else:  # pragma: no cover
     df_pandas_pyarrow = df_pandas
     df_pandas_nullable = df_pandas
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_mpd = maybe_get_modin_df(df_pandas)
 
 df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 
 
-@pytest.mark.parametrize("method_name", ["iter_rows", "rows"])
 @pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_mpd, df_polars]
+    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_polars]
 )
 @pytest.mark.parametrize(
     ("named", "expected"),
@@ -58,20 +57,47 @@ df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
         ),
     ],
 )
-@pytest.mark.filterwarnings("ignore::FutureWarning")
-def test_rows(
-    method_name: str,
+def test_iter_rows(
     df_raw: Any,
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
-    # GIVEN
     df = nw.DataFrame(df_raw)
+    result = list(df.iter_rows(named=named))
+    assert result == expected
 
-    # WHEN
-    result = list(getattr(df, method_name)(named=named))
 
-    # THEN
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_polars, df_pa]
+)
+@pytest.mark.parametrize(
+    ("named", "expected"),
+    [
+        (False, [(1, 4, 7.0), (3, 4, 8.0), (2, 6, 9.0)]),
+        (
+            True,
+            [
+                {"a": 1, "b": 4, "z": 7.0},
+                {"a": 3, "b": 4, "z": 8.0},
+                {"a": 2, "b": 6, "z": 9.0},
+            ],
+        ),
+    ],
+)
+def test_rows(
+    df_raw: Any,
+    named: bool,  # noqa: FBT001
+    expected: list[tuple[Any, ...]] | list[dict[str, Any]],
+) -> None:
+    df = nw.DataFrame(df_raw)
+    if isinstance(df_raw, pa.Table) and not named:
+        with pytest.raises(
+            NotImplementedError,
+            match="Unnamed rows are not yet supported on PyArrow tables",
+        ):
+            df.rows(named=named)
+        return
+    result = df.rows(named=named)
     assert result == expected
 
 

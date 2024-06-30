@@ -2,6 +2,7 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -12,7 +13,7 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 def test_drop_nulls(constructor: Any) -> None:
     result = len(nw.from_native(constructor(data)))
     assert result == 4
