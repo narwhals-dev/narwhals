@@ -164,6 +164,7 @@ def test_cast() -> None:
             "m": [True],
             "n": [True],
             "o": ["a"],
+            "p": [1],
         },
         schema={
             "a": pl.Int64,
@@ -181,6 +182,7 @@ def test_cast() -> None:
             "m": pl.Boolean,
             "n": pl.Boolean,
             "o": pl.Categorical,
+            "p": pl.Int64,
         },
     )
     df = nw.DataFrame(df_raw).select(
@@ -199,6 +201,7 @@ def test_cast() -> None:
         nw.col("m").cast(nw.Int8),
         nw.col("n").cast(nw.Int8),
         nw.col("o").cast(nw.String),
+        nw.col("p").cast(nw.Duration),
     )
     result = df.schema
     expected = {
@@ -217,6 +220,7 @@ def test_cast() -> None:
         "m": nw.Int8,
         "n": nw.Int8,
         "o": nw.String,
+        "p": nw.Duration,
     }
     assert result == expected
     result_pd = nw.DataFrame(df.to_pandas()).schema
@@ -237,6 +241,7 @@ def test_cast() -> None:
         df["m"].cast(nw.Int8),
         df["n"].cast(nw.Boolean),
         df["o"].cast(nw.Categorical),
+        df["p"].cast(nw.Duration),
     ).schema
     expected = {
         "a": nw.Int32,
@@ -254,6 +259,7 @@ def test_cast() -> None:
         "m": nw.Int8,
         "n": nw.Boolean,
         "o": nw.Categorical,
+        "p": nw.Duration,
     }
     df = nw.from_native(df.to_pandas())  # type: ignore[assignment]
     result_pd = df.select(
@@ -272,6 +278,7 @@ def test_cast() -> None:
         df["m"].cast(nw.Int8),
         df["n"].cast(nw.Boolean),
         df["o"].cast(nw.Categorical),
+        df["p"].cast(nw.Duration),
     ).schema
     assert result == expected
     df = nw.from_native(df.to_pandas().convert_dtypes())  # type: ignore[assignment]
@@ -291,6 +298,7 @@ def test_cast() -> None:
         df["m"].cast(nw.Int8),
         df["n"].cast(nw.Boolean),
         df["o"].cast(nw.Categorical),
+        df["p"].cast(nw.Duration),
     ).schema
     assert result == expected
     if parse_version(pd.__version__) < parse_version("2.0.0"):  # pragma: no cover
@@ -312,6 +320,7 @@ def test_cast() -> None:
         df["m"].cast(nw.Int8),
         df["n"].cast(nw.Boolean),
         df["o"].cast(nw.Categorical),
+        df["p"].cast(nw.Duration),
     ).schema
     assert result == expected
 
