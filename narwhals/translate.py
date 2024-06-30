@@ -57,29 +57,29 @@ def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
-    series_only: None = ...,
+    series_only: bool | None = ...,
     allow_series: Literal[True],
 ) -> Any: ...
 
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
-    series_only: None = ...,
-    allow_series: None = ...,
+    series_only: bool | None = ...,
+    allow_series: bool | None = ...,
 ) -> Any: ...
 
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -90,7 +90,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -101,7 +101,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -112,7 +112,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: bool | None,
@@ -184,7 +184,7 @@ def from_native(
     eager_only: bool | None,
     series_only: bool | None,
     allow_series: bool | None,
-) -> DataFrame | LazyFrame | Series: ...
+) -> DataFrame | LazyFrame | Series | Any: ...
 
 
 def from_native(

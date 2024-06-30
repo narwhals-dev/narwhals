@@ -23,7 +23,8 @@ if TYPE_CHECKING:
     class NativeDataFrame(Protocol):
         @property
         def columns(self) -> Any: ...
-        def join(self, *args: Any, **kwargs: Any) -> Any: ...
+
+        # def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 # Anything which can be converted to an expression.
