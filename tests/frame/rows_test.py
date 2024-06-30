@@ -9,7 +9,6 @@ import pytest
 
 import narwhals as nw
 from narwhals.utils import parse_version
-from tests.utils import maybe_get_modin_df
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -36,14 +35,13 @@ else:  # pragma: no cover
     df_pandas_pyarrow = df_pandas
     df_pandas_nullable = df_pandas
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_mpd = maybe_get_modin_df(df_pandas)
 
 df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 
 
 @pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_mpd, df_polars]
+    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_polars]
 )
 @pytest.mark.parametrize(
     ("named", "expected"),
@@ -70,7 +68,7 @@ def test_iter_rows(
 
 
 @pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_mpd, df_polars, df_pa]
+    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_polars, df_pa]
 )
 @pytest.mark.parametrize(
     ("named", "expected"),
