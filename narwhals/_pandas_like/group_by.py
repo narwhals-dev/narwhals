@@ -160,15 +160,16 @@ def agg_pandas(  # noqa: PLR0913
             out_group, index=out_names, name="", implementation=implementation
         )
 
+    extra_args: dict[str, Any] = {}
     if implementation is Implementation.PANDAS:
         backend = get_backend(implementation)
+        backend_version = parse_version(backend.__version__)
+        minimum_version = parse_version("2.2.0")
 
-        if parse_version(backend.__version__) < parse_version("2.2.0"):  # pragma: no cover
-            result_complex = grouped.apply(func)
-        else:
-            result_complex = grouped.apply(func, include_groups=False)
-    else:  # pragma: no cover
-        result_complex = grouped.apply(func)
+        if backend_version >= minimum_version:  # pragma: no cover
+            extra_args["include_groups"] = False
+
+    result_complex = grouped.apply(func, **extra_args)
 
     result = result_complex.reset_index()
     return from_dataframe(result.loc[:, output_names])
