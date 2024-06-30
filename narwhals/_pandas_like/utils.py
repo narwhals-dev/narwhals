@@ -382,31 +382,36 @@ def translate_dtype(column: Any) -> DType:
     from narwhals import dtypes
 
     dtype = column.dtype
-    if dtype in ("int64", "Int64", "Int64[pyarrow]"):
+    if str(dtype) in ("int64", "Int64", "Int64[pyarrow]"):
         return dtypes.Int64()
-    if dtype in ("int32", "Int32", "Int32[pyarrow]"):
+    if str(dtype) in ("int32", "Int32", "Int32[pyarrow]"):
         return dtypes.Int32()
-    if dtype in ("int16", "Int16", "Int16[pyarrow]"):
+    if str(dtype) in ("int16", "Int16", "Int16[pyarrow]"):
         return dtypes.Int16()
-    if dtype in ("int8", "Int8", "Int8[pyarrow]"):
+    if str(dtype) in ("int8", "Int8", "Int8[pyarrow]"):
         return dtypes.Int8()
-    if dtype in ("uint64", "UInt64", "UInt64[pyarrow]"):
+    if str(dtype) in ("uint64", "UInt64", "UInt64[pyarrow]"):
         return dtypes.UInt64()
-    if dtype in ("uint32", "UInt32", "UInt32[pyarrow]"):
+    if str(dtype) in ("uint32", "UInt32", "UInt32[pyarrow]"):
         return dtypes.UInt32()
-    if dtype in ("uint16", "UInt16", "UInt16[pyarrow]"):
+    if str(dtype) in ("uint16", "UInt16", "UInt16[pyarrow]"):
         return dtypes.UInt16()
-    if dtype in ("uint8", "UInt8", "UInt8[pyarrow]"):
+    if str(dtype) in ("uint8", "UInt8", "UInt8[pyarrow]"):
         return dtypes.UInt8()
-    if dtype in ("float64", "Float64", "Float64[pyarrow]"):
+    if str(dtype) in ("float64", "Float64", "Float64[pyarrow]"):
         return dtypes.Float64()
-    if dtype in ("float32", "Float32", "Float32[pyarrow]"):
+    if str(dtype) in ("float32", "Float32", "Float32[pyarrow]"):
         return dtypes.Float32()
-    if dtype in ("string", "string[python]", "string[pyarrow]", "large_string[pyarrow]"):
+    if str(dtype) in (
+        "string",
+        "string[python]",
+        "string[pyarrow]",
+        "large_string[pyarrow]",
+    ):
         return dtypes.String()
-    if dtype in ("bool", "boolean", "boolean[pyarrow]"):
+    if str(dtype) in ("bool", "boolean", "boolean[pyarrow]"):
         return dtypes.Boolean()
-    if dtype in ("category",) or str(dtype).startswith("dictionary<"):
+    if str(dtype) in ("category",) or str(dtype).startswith("dictionary<"):
         return dtypes.Categorical()
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
@@ -420,7 +425,7 @@ def translate_dtype(column: Any) -> DType:
         return dtypes.Datetime()
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
-    if dtype == "object":
+    if str(dtype) == "object":
         if (idx := column.first_valid_index()) is not None and isinstance(
             column.loc[idx], str
         ):
