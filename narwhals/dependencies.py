@@ -48,6 +48,7 @@ def get_numpy() -> Any:
 
 
 def is_pandas_dataframe(df: Any) -> bool:
+    """Check whether `df` is a pandas DataFrame without importing pandas."""
     if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
         return True
     return False
