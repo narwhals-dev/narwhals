@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.namespace import PandasNamespace
 
 
 class PandasExpr:
@@ -42,6 +43,11 @@ class PandasExpr:
             f"root_names={self._root_names}, "
             f"output_names={self._output_names}"
         )
+
+    def __narwhals_namespace__(self) -> PandasNamespace:
+        from narwhals._pandas_like.namespace import PandasNamespace
+
+        return PandasNamespace(self._implementation)
 
     @classmethod
     def from_column_names(
@@ -255,7 +261,7 @@ class PandasExpr:
                 )
                 raise ValueError(msg)
             tmp = df.group_by(keys).agg(self)
-            tmp = df.select(keys).join(tmp, how="left", left_on=keys, right_on=keys)
+            tmp = df.select(*keys).join(tmp, how="left", left_on=keys, right_on=keys)
             return [tmp[name] for name in self._output_names]
 
         return self.__class__(

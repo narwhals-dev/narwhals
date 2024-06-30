@@ -89,9 +89,9 @@ class PandasDataFrame:
     def __getitem__(self, item: str) -> PandasSeries: ...
 
     @overload
-    def __getitem__(self, item: range | slice) -> PandasDataFrame: ...
+    def __getitem__(self, item: slice) -> PandasDataFrame: ...
 
-    def __getitem__(self, item: str | range | slice) -> PandasSeries | PandasDataFrame:
+    def __getitem__(self, item: str | slice) -> PandasSeries | PandasDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasSeries
 
@@ -100,7 +100,7 @@ class PandasDataFrame:
                 implementation=self._implementation,
             )
 
-        elif isinstance(item, (range, slice)):
+        elif isinstance(item, slice):
             from narwhals._pandas_like.dataframe import PandasDataFrame
 
             return PandasDataFrame(
@@ -108,7 +108,7 @@ class PandasDataFrame:
             )
 
         else:  # pragma: no cover
-            msg = f"Expected str, range or slice, got: {type(item)}"
+            msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
     # --- properties ---
@@ -150,7 +150,7 @@ class PandasDataFrame:
     # --- reshape ---
     def select(
         self,
-        *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+        *exprs: IntoPandasExpr,
         **named_exprs: IntoPandasExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
@@ -205,7 +205,7 @@ class PandasDataFrame:
         # if it's a Series) because then we might be changing its flags.
         # See `test_memmap` for an example of where this is necessary.
         fast_path = (
-            all(s.len() > 1 for s in new_columns)
+            all(len(s) > 1 for s in new_columns)
             and all(isinstance(x, PandasExpr) for x in exprs)
             and all(isinstance(x, PandasExpr) for (_, x) in named_exprs.items())
         )
@@ -312,10 +312,7 @@ class PandasDataFrame:
 
     # --- lazy-only ---
     def lazy(self) -> Self:
-        return self.__class__(
-            self._dataframe,
-            implementation=self._implementation,
-        )
+        return self
 
     @property
     def shape(self) -> tuple[int, int]:

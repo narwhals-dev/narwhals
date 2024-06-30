@@ -5,6 +5,7 @@ from sklearn.utils import check_X_y
 from sklearn.utils._testing import create_memmap_backed_data
 
 import narwhals as nw
+from narwhals.utils import parse_version
 
 
 def test_native_vs_non_native() -> None:
@@ -27,6 +28,9 @@ def test_validate_laziness() -> None:
         nw.concat([nw.DataFrame(df), nw.LazyFrame(df)])
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old"
+)
 def test_memmap() -> None:
     # the headache this caused me...
     x_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
