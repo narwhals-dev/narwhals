@@ -122,7 +122,7 @@ class PandasDataFrame:
         if not named:
             return list(self._dataframe.itertuples(index=False, name=None))
 
-        return self._dataframe.to_dict("records")  # type: ignore[no-any-return]
+        return self._dataframe.to_dict(orient="records")  # type: ignore[no-any-return]
 
     def iter_rows(
         self,

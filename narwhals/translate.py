@@ -19,9 +19,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
 
 
-def to_native(
-    narwhals_object: LazyFrame | DataFrame | Series, *, strict: bool = True
-) -> Any:
+def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
     """
     Convert Narwhals object to native one.
 

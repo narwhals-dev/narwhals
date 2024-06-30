@@ -640,27 +640,27 @@ class DataFrame(BaseFrame):
         self,
         *,
         named: Literal[False],
-    ) -> tuple[Any, ...]: ...
+    ) -> list[tuple[Any, ...]]: ...
 
     @overload
     def rows(
         self,
         *,
         named: Literal[True],
-    ) -> dict[str, Any]: ...
+    ) -> list[dict[str, Any]]: ...
 
     @overload
     def rows(
         self,
         *,
         named: bool,
-    ) -> tuple[Any, ...] | dict[str, Any]: ...
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(
         self,
         *,
         named: bool = False,
-    ) -> tuple[Any, ...] | dict[str, Any]:
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """
         Returns all data in the DataFrame as a list of rows of python-native values.
 

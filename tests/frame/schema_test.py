@@ -47,7 +47,7 @@ def test_actual_object(constructor: Any) -> None:
     parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old"
 )
 def test_dtypes() -> None:
-    df = pl.DataFrame(
+    df_pl = pl.DataFrame(
         {
             "a": [1],
             "b": [1],
@@ -85,7 +85,8 @@ def test_dtypes() -> None:
             "p": pl.Categorical,
         },
     )
-    result = nw.DataFrame(df).schema
+    df = nw.DataFrame(df_pl)
+    result = df.schema
     expected = {
         "a": nw.Int64,
         "b": nw.Int32,
@@ -105,7 +106,14 @@ def test_dtypes() -> None:
         "p": nw.Categorical,
     }
     assert result == expected
-    result_pd = nw.DataFrame(df.to_pandas(use_pyarrow_extension_array=True)).schema
+    assert {name: df[name].dtype for name in df.columns} == expected
+    df_pd = df_pl.to_pandas(use_pyarrow_extension_array=True)
+    df = nw.DataFrame(df_pd)
+    result_pd = df.schema
     assert result_pd == expected
-    result_pa = nw.DataFrame(df.to_arrow()).schema
+    assert {name: df[name].dtype for name in df.columns} == expected
+    df_pa = df_pl.to_arrow()
+    df = nw.DataFrame(df_pa)
+    result_pa = df.schema
     assert result_pa == expected
+    assert {name: df[name].dtype for name in df.columns} == expected
