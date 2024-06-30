@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING  # pragma: no cover
-from typing import TypeVar  # pragma: no cover
+from typing import Any
+from typing import Protocol
 from typing import Union  # pragma: no cover
 
 if TYPE_CHECKING:
@@ -10,10 +13,18 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
+    from narwhals.dataframe import DataFrame
     from narwhals.expression import Expr
     from narwhals.series import Series
 
-    IntoExpr: TypeAlias = Union[Expr, str, int, float, Series]
+    # All dataframes supported by Narwhals have a
+    # `columns` property.
+    class NativeDataFrame(Protocol):
+        @property
+        def columns(self) -> Any: ...
 
-    NativeDataFrame = TypeVar("NativeDataFrame")
-    NativeSeries = TypeVar("NativeSeries")
+
+IntoExpr: TypeAlias = Union["Expr", str, int, float, "Series"]
+IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrame"]
+
+__all__ = ["IntoExpr", "IntoDataFrame"]

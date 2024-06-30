@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import IntoDataFrame
 
 
 def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
@@ -56,7 +57,18 @@ def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
+    *,
+    strict: Literal[False],
+    eager_only: bool | None = ...,
+    series_only: bool | None = ...,
+    allow_series: bool | None = ...,
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrame,
     *,
     strict: bool = ...,
     eager_only: Literal[True],
@@ -67,7 +79,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
     *,
     strict: bool = ...,
     eager_only: Literal[True],
@@ -78,7 +90,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
     *,
     strict: bool = ...,
     eager_only: None = ...,
@@ -89,7 +101,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
     *,
     strict: bool = ...,
     eager_only: None = ...,
@@ -100,7 +112,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
     *,
     strict: bool = ...,
     eager_only: None = ...,
@@ -111,7 +123,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
     *,
     strict: bool,
     eager_only: bool | None,
@@ -121,13 +133,13 @@ def from_native(
 
 
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
     *,
     strict: bool = True,
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-) -> DataFrame | LazyFrame | Series:
+) -> DataFrame | LazyFrame | Series | Any:
     """
     Convert dataframe to Narwhals DataFrame, LazyFrame, or Series.
 
@@ -220,7 +232,7 @@ def from_native(
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)
-    return native_dataframe  # type: ignore[no-any-return]  # pragma: no cover (todo)
+    return native_dataframe  # pragma: no cover (todo)
 
 
 def get_native_namespace(obj: Any) -> Any:
