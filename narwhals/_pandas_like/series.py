@@ -77,7 +77,7 @@ class PandasSeries:
     ) -> None:
         self._name = series.name
         self._series = series
-        self._implementation = implementation
+        self._implementation: PANDAS_IMPLEMENTATIONS = implementation
 
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary

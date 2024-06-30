@@ -46,7 +46,7 @@ class PandasNamespace:
 
     # --- not in spec ---
     def __init__(self, implementation: PANDAS_IMPLEMENTATIONS) -> None:
-        self._implementation = implementation
+        self._implementation: PANDAS_IMPLEMENTATIONS = implementation
 
     def _create_expr_from_callable(  # noqa: PLR0913
         self,

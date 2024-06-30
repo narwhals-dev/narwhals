@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 class PandasSelectorNamespace:
     def __init__(self, implementation: PANDAS_IMPLEMENTATIONS) -> None:
-        self._implementation = implementation
+        self._implementation: PANDAS_IMPLEMENTATIONS = implementation
 
     def by_dtype(self, dtypes: list[DType | type[DType]]) -> PandasSelector:
         def func(df: PandasDataFrame) -> list[PandasSeries]:

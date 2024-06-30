@@ -34,7 +34,7 @@ class PandasExpr:
         self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
-        self._implementation = implementation
+        self._implementation: PANDAS_IMPLEMENTATIONS = implementation
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
