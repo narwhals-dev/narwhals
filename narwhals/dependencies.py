@@ -45,3 +45,9 @@ def get_pyarrow_compute() -> Any:  # pragma: no cover
 def get_numpy() -> Any:
     """Get numpy module (if already imported - else return None)."""
     return sys.modules.get("numpy", None)
+
+
+def is_pandas_dataframe(df: Any) -> bool:
+    if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
+        return True
+    return False
