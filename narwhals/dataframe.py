@@ -1474,7 +1474,7 @@ class DataFrame(BaseFrame):
             ...     }
             ... )
             >>> df = nw.from_native(df_pl, eager_only=True)
-            >>> other_df = nw.from_native(df_pl, eager_only=True)
+            >>> other_df = nw.from_native(other_df_pl, eager_only=True)
             >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
             >>> dframe
             ┌───────────────────────────────────────────────┐
