@@ -346,10 +346,6 @@ def narwhalify(
 
 
 __all__ = [
-    "get_pandas",
-    "get_polars",
-    "get_modin",
-    "get_cudf",
     "get_native_namespace",
     "to_native",
     "narwhalify",
