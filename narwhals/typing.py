@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING  # pragma: no cover
-from typing import TypeVar  # pragma: no cover
-from typing import Union  # pragma: no cover
+from typing import TYPE_CHECKING
+from typing import NoReturn
+from typing import TypeVar
+from typing import Union
 
 if TYPE_CHECKING:
     import sys
@@ -17,3 +18,7 @@ if TYPE_CHECKING:
 
     NativeDataFrame = TypeVar("NativeDataFrame")
     NativeSeries = TypeVar("NativeSeries")
+
+
+def assert_never(_: NoReturn) -> NoReturn:
+    raise AssertionError("Expected code to be unreachable")

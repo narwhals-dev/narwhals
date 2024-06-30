@@ -6,12 +6,11 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
-from typing_extensions import assert_never
-
 from narwhals._pandas_like.implementations import get_series_implementation
 from narwhals.dependencies import Implementation
 from narwhals.dependencies import get_backend
 from narwhals.dependencies import get_numpy
+from narwhals.typing import assert_never
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version

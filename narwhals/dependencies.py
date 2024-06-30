@@ -9,7 +9,7 @@ from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
 
-from typing_extensions import assert_never
+from narwhals.typing import assert_never
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 10):

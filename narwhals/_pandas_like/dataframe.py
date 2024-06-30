@@ -8,8 +8,6 @@ from typing import Iterator
 from typing import Literal
 from typing import overload
 
-from typing_extensions import assert_never
-
 from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import evaluate_into_exprs
@@ -19,6 +17,7 @@ from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
 from narwhals.dependencies import Implementation
 from narwhals.dependencies import get_backend
+from narwhals.typing import assert_never
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:

@@ -2,10 +2,9 @@ from functools import partial
 from typing import Any
 from typing import Literal
 
-from typing_extensions import assert_never
-
 from narwhals.dependencies import Implementation
 from narwhals.dependencies import get_backend
+from narwhals.typing import assert_never
 
 PANDAS_IMPLEMENTATIONS = Literal[
     Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF
