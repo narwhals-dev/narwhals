@@ -19,6 +19,16 @@ if TYPE_CHECKING:
 
 
 class Series:
+    """
+    Narwhals Series, backed by a native series.
+
+    The native dataframe might be pandas.Series, polars.Series, ...
+
+    This class is not meant to be instantiated directly - instead, use
+    `narwhals.from_native`, making sure to pass `allow_series=True` or
+    `series_only=True`.
+    """
+
     def __init__(
         self,
         series: Any,
