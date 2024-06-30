@@ -41,6 +41,16 @@ class ArrowDataFrame:
     def shape(self) -> tuple[int, int]:
         return self._dataframe.shape  # type: ignore[no-any-return]
 
+    def __len__(self) -> int:
+        return len(self._dataframe)
+
+    def rows(
+        self, *, named: bool = False
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        if not named:
+            return list(self._dataframe.itertuples(index=False, name=None))
+        return self._dataframe.to_pylist()  # type: ignore[no-any-return]
+
     @overload
     def __getitem__(self, item: str) -> ArrowSeries: ...
 
