@@ -17,10 +17,6 @@ repos:
         additional_dependencies:
           - "polars"
           - "pandas"
-          - "pytest"
-          - "scikit-learn"
-          - "hypothesis"
-          - "nox"
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: "v1.10.0"

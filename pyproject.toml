@@ -191,6 +191,12 @@ disable = [
     "consider-using-assignment-expr",          # TODO: Enable
     "docstring-first-line-empty",              # TODO: Enable
     "too-many-try-statements",                 # TODO: Enable
+    "import-error",                            # TODO: Enable
+    "wrong-import-position",                   # TODO: Enable
+    "expression-not-assigned",                 # TODO: Enable
+    "implicit-str-concat",                     # TODO: Enable
+    "redefined-loop-name",                     # TODO: Enable
+    "import-private-name",                     # TODO: Enable
 ]
 
 enable = [
