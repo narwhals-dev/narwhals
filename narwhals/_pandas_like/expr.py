@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.implementations import PANDAS_IMPLEMENTATIONS
     from narwhals._pandas_like.namespace import PandasNamespace
 
 
@@ -25,7 +26,7 @@ class PandasExpr:
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-        implementation: str,
+        implementation: PANDAS_IMPLEMENTATIONS,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -51,7 +52,7 @@ class PandasExpr:
 
     @classmethod
     def from_column_names(
-        cls: type[Self], *column_names: str, implementation: str
+        cls: type[Self], *column_names: str, implementation: PANDAS_IMPLEMENTATIONS
     ) -> Self:
         def func(df: PandasDataFrame) -> list[PandasSeries]:
             return [

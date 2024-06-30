@@ -8,6 +8,8 @@ from typing import Iterator
 from typing import Literal
 from typing import overload
 
+from typing_extensions import assert_never
+
 from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import evaluate_into_exprs
@@ -15,9 +17,8 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
+from narwhals.dependencies import Backend
+from narwhals.dependencies import get_implementation
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasGroupBy
+    from narwhals._pandas_like.implementations import PANDAS_IMPLEMENTATIONS
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
     from narwhals._pandas_like.typing import IntoPandasExpr
@@ -38,11 +40,11 @@ class PandasDataFrame:
         self,
         dataframe: Any,
         *,
-        implementation: str,
+        implementation: PANDAS_IMPLEMENTATIONS,
     ) -> None:
         self._validate_columns(dataframe.columns)
         self._dataframe = dataframe
-        self._implementation = implementation
+        self._implementation: PANDAS_IMPLEMENTATIONS = implementation
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -56,14 +58,7 @@ class PandasDataFrame:
         return PandasNamespace(self._implementation)
 
     def __native_namespace__(self) -> Any:
-        if self._implementation == "pandas":
-            return get_pandas()
-        if self._implementation == "modin":  # pragma: no cover
-            return get_modin()
-        if self._implementation == "cudf":  # pragma: no cover
-            return get_cudf()
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
-        raise AssertionError(msg)
+        return get_implementation(self._implementation)
 
     def __len__(self) -> int:
         return len(self._dataframe)
@@ -339,11 +334,14 @@ class PandasDataFrame:
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
-        if self._implementation == "pandas":
+        if self._implementation is Backend.PANDAS:
             return self._dataframe
-        if self._implementation == "modin":  # pragma: no cover
+        if self._implementation is Backend.MODIN:  # pragma: no cover
             return self._dataframe._to_pandas()
-        return self._dataframe.to_pandas()  # pragma: no cover
+        if self._implementation is Backend.CUDF:
+            return self._dataframe.to_pandas()  # pragma: no cover
+
+        return assert_never(self._implementation)
 
     def write_parquet(self, file: Any) -> Any:
         self._dataframe.to_parquet(file)

@@ -9,12 +9,13 @@ from narwhals._pandas_like.expr import PandasExpr
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.implementations import PANDAS_IMPLEMENTATIONS
     from narwhals._pandas_like.series import PandasSeries
     from narwhals.dtypes import DType
 
 
 class PandasSelectorNamespace:
-    def __init__(self, implementation: str) -> None:
+    def __init__(self, implementation: PANDAS_IMPLEMENTATIONS) -> None:
         self._implementation = implementation
 
     def by_dtype(self, dtypes: list[DType | type[DType]]) -> PandasSelector:

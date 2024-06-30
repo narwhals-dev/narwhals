@@ -11,6 +11,7 @@ from typing import overload
 
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals.dependencies import Backend
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
@@ -220,15 +221,15 @@ class DataFrame(BaseFrame):
                 "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
             )
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
+            self._dataframe = PandasDataFrame(df, implementation=Backend.PANDAS)
         elif (mpd := get_modin()) is not None and isinstance(
             df, mpd.DataFrame
         ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="modin")
+            self._dataframe = PandasDataFrame(df, implementation=Backend.MODIN)
         elif (cudf := get_cudf()) is not None and isinstance(
             df, cudf.DataFrame
         ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="cudf")
+            self._dataframe = PandasDataFrame(df, implementation=Backend.CUDF)
         elif (pa := get_pyarrow()) is not None and isinstance(
             df, pa.Table
         ):  # pragma: no cover
@@ -1747,15 +1748,15 @@ class LazyFrame(BaseFrame):
             self._dataframe = df.lazy()
             self._is_polars = True
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
+            self._dataframe = PandasDataFrame(df, implementation=Backend.PANDAS)
         elif (mpd := get_modin()) is not None and isinstance(
             df, mpd.DataFrame
         ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="modin")
+            self._dataframe = PandasDataFrame(df, implementation=Backend.MODIN)
         elif (cudf := get_cudf()) is not None and isinstance(
             df, cudf.DataFrame
         ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="cudf")
+            self._dataframe = PandasDataFrame(df, implementation=Backend.CUDF)
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)

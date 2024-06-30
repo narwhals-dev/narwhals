@@ -17,6 +17,7 @@ from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
+    from narwhals._pandas_like.implementations import PANDAS_IMPLEMENTATIONS
     from narwhals._pandas_like.typing import IntoPandasExpr
 
 
@@ -43,7 +44,7 @@ class PandasNamespace:
         return PandasSelectorNamespace(self._implementation)
 
     # --- not in spec ---
-    def __init__(self, implementation: str) -> None:
+    def __init__(self, implementation: PANDAS_IMPLEMENTATIONS) -> None:
         self._implementation = implementation
 
     def _create_expr_from_callable(  # noqa: PLR0913

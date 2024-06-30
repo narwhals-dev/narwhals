@@ -11,14 +11,15 @@ from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
+from narwhals.dependencies import Backend
+from narwhals.dependencies import get_implementation
 from narwhals.dependencies import get_pandas
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._pandas_like.implementations import PANDAS_IMPLEMENTATIONS
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals.dtypes import DType
 
@@ -73,7 +74,7 @@ class PandasSeries:
         self,
         series: Any,
         *,
-        implementation: str,
+        implementation: PANDAS_IMPLEMENTATIONS,
     ) -> None:
         self._name = series.name
         self._series = series
@@ -83,7 +84,7 @@ class PandasSeries:
         # So, before that, we need to explicitly avoid unnecessary
         # copies by using `copy=False` sometimes.
         self._use_copy_false = False
-        if self._implementation == "pandas":
+        if self._implementation is Backend.PANDAS:
             pd = get_pandas()
 
             if parse_version(pd.__version__) < parse_version("3.0.0"):
@@ -99,14 +100,7 @@ class PandasSeries:
         return PandasNamespace(self._implementation)
 
     def __native_namespace__(self) -> Any:
-        if self._implementation == "pandas":
-            return get_pandas()
-        if self._implementation == "modin":  # pragma: no cover
-            return get_modin()
-        if self._implementation == "cudf":  # pragma: no cover
-            return get_cudf()
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
-        raise AssertionError(msg)
+        return get_implementation(self._implementation)
 
     def __narwhals_series__(self) -> Self:
         return self
@@ -127,7 +121,11 @@ class PandasSeries:
 
     @classmethod
     def from_iterable(
-        cls: type[Self], data: Iterable[Any], name: str, index: Any, implementation: str
+        cls: type[Self],
+        data: Iterable[Any],
+        name: str,
+        index: Any,
+        implementation: PANDAS_IMPLEMENTATIONS,
     ) -> Self:
         return cls(
             native_series_from_iterable(
@@ -447,12 +445,12 @@ class PandasSeries:
         return self._series.to_numpy()
 
     def to_pandas(self) -> Any:
-        if self._implementation == "pandas":
+        if self._implementation is Backend.PANDAS:
             return self._series
-        elif self._implementation == "cudf":  # pragma: no cover
-            return self._series.to_pandas()
-        elif self._implementation == "modin":  # pragma: no cover
+        if self._implementation is Backend.MODIN:  # pragma: no cover
             return self._series._to_pandas()
+        if self._implementation is Backend.CUDF:  # pragma: no cover
+            return self._series.to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
