@@ -1,9 +1,18 @@
 # pandas / Polars / etc. : if a user passes a dataframe from one of these
 # libraries, it means they must already have imported the given module.
 # So, we can just check sys.modules.
+from __future__ import annotations
 
 import sys
+from typing import TYPE_CHECKING
 from typing import Any
+
+if TYPE_CHECKING:
+    if sys.version_info >= (3, 10):
+        from typing import TypeGuard
+    else:
+        from typing_extensions import TypeGuard
+    import pandas
 
 
 def get_polars() -> Any:
@@ -47,7 +56,7 @@ def get_numpy() -> Any:
     return sys.modules.get("numpy", None)
 
 
-def is_pandas_dataframe(df: Any) -> bool:
+def is_pandas_dataframe(df: Any) -> TypeGuard[pandas.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
         return True
