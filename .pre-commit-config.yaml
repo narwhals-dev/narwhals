@@ -33,3 +33,4 @@ repos:
       entry: (?<!>>> )import (pandas|polars|modin|cudf)
       language: pygrep
       files: ^narwhals/
+      exclude: ^narwhals/dependencies\.py
