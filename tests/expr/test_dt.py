@@ -174,21 +174,20 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
-def test_dt_to_string(constructor: Any, fmt: str) -> None:
-    input_frame = nw.from_native(constructor(data), eager_only=True)
+def test_dt_to_string(constructor_with_pyarrow: Any, fmt: str) -> None:
+    input_frame = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
     input_series = input_frame["a"]
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
     result = input_series.dt.to_string(fmt).to_list()
-    if constructor is pa.table:
+    if constructor_with_pyarrow is pa.table or "pyarrow" in str(constructor_with_pyarrow):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = [x[: x.find(".")] if "." in x else x for x in result]
     assert result == expected_col
     result = input_frame.select(nw.col("a").dt.to_string(fmt))["a"].to_list()
-    if constructor is pa.table:
+    if constructor_with_pyarrow is pa.table or "pyarrow" in str(constructor_with_pyarrow):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = [x[: x.find(".")] if "." in x else x for x in result]
@@ -205,9 +204,8 @@ def test_dt_to_string(constructor: Any, fmt: str) -> None:
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_dt_to_string_iso_local_datetime(
-    constructor: Any, data: datetime, expected: str
+    constructor_with_pyarrow: Any, data: datetime, expected: str
 ) -> None:
     def _clean_string(result: str) -> str:
         # rstrip '0' to remove trailing zeros, as different libraries handle this differently
@@ -216,7 +214,7 @@ def test_dt_to_string_iso_local_datetime(
             result = result.rstrip("0").rstrip(".")
         return result
 
-    df = constructor({"a": [data]})
+    df = constructor_with_pyarrow({"a": [data]})
     result = (
         nw.from_native(df, eager_only=True)["a"]
         .dt.to_string("%Y-%m-%dT%H:%M:%S.%f")

@@ -688,5 +688,10 @@ class PandasSeriesDateTimeNamespace:
 
     def to_string(self, format: str) -> PandasSeries:  # noqa: A002
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
-        format = format.replace("%.f", ".%f")
+        # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
+        # and doesn't support `%f`
+        if "pyarrow" not in str(self._series._series.dtype):
+            format = format.replace("%S%.f", "%S.%f")
+        else:
+            format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
         return self._series._from_series(self._series._series.dt.strftime(format))

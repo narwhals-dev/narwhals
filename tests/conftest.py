@@ -4,6 +4,7 @@ from typing import Callable
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 from narwhals.dependencies import get_modin
@@ -62,4 +63,11 @@ if os.environ.get("CI") and get_modin() is not None:
 
 @pytest.fixture(params=params)
 def constructor(request: Any) -> Callable[[Any], IntoDataFrame]:
+    return request.param  # type: ignore[no-any-return]
+
+
+# TODO: once pyarrow has complete coverage, we can remove this one,
+# and just put `pa.table` into `constructor`
+@pytest.fixture(params=[*params, pa.table])
+def constructor_with_pyarrow(request: Any) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
