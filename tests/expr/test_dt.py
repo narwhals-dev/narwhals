@@ -93,7 +93,7 @@ def test_duration_attributes(
         parse_version(pd.__version__) == parse_version("2.0.3")
         and "pyarrow" in str(constructor)
         and attribute in ("total_minutes", "total_seconds", "total_milliseconds")
-    ):
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_a = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)().fill_null(0)))
@@ -131,7 +131,7 @@ def test_duration_micro_nano(
             "total_microseconds",
             "total_nanoseconds",
         )
-    ):
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_b = nw.to_native(df.select(getattr(nw.col("b").dt, attribute)().fill_null(0)))
