@@ -79,7 +79,7 @@ class Categorical(DType): ...
 class Date(TemporalType): ...
 
 
-def translate_dtype(plx: Any, dtype: DType) -> Any:
+def translate_dtype(plx: Any, dtype: type[DType]) -> Any:
     if "polars" in str(type(dtype)):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
@@ -88,38 +88,29 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
             "- Used `pl.Int64` instead of `nw.Int64`?"
         )
         raise TypeError(msg)
-    if dtype == Float64:
-        return plx.Float64
-    if dtype == Float32:
-        return plx.Float32
-    if dtype == Int64:
-        return plx.Int64
-    if dtype == Int32:
-        return plx.Int32
-    if dtype == Int16:
-        return plx.Int16
-    if dtype == Int8:
-        return plx.Int8
-    if dtype == UInt64:
-        return plx.UInt64
-    if dtype == UInt32:
-        return plx.UInt32
-    if dtype == UInt16:
-        return plx.UInt16
-    if dtype == UInt8:
-        return plx.UInt8
-    if dtype == String:
-        return plx.String
-    if dtype == Boolean:
-        return plx.Boolean
-    if dtype == Categorical:
-        return plx.Categorical
-    if dtype == Datetime:
-        return plx.Datetime
-    if dtype == Duration:
-        return plx.Duration
-    if dtype == Date:
-        return plx.Date
+
+    dtype_mapping = {
+        Float64: plx.Float64,
+        Float32: plx.Float32,
+        Int64: plx.Int64,
+        Int32: plx.Int32,
+        Int16: plx.Int16,
+        Int8: plx.Int8,
+        UInt64: plx.UInt64,
+        UInt32: plx.UInt32,
+        UInt16: plx.UInt16,
+        UInt8: plx.UInt8,
+        String: plx.String,
+        Boolean: plx.Boolean,
+        Categorical: plx.Categorical,
+        Datetime: plx.Datetime,
+        Duration: plx.Duration,
+        Date: plx.Date,
+    }
+
+    if dtype in dtype_mapping:
+        return dtype_mapping[dtype]
+
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -129,39 +120,29 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return dtype  # type: ignore[no-any-return]
     pl = get_polars()
 
-    if dtype == pl.Float64:
-        return Float64()
-    if dtype == pl.Float32:
-        return Float32()
-    if dtype == pl.Int64:
-        return Int64()
-    if dtype == pl.Int32:
-        return Int32()
-    if dtype == pl.Int16:
-        return Int16()
-    if dtype == pl.Int8:
-        return Int8()
-    if dtype == pl.UInt64:
-        return UInt64()
-    if dtype == pl.UInt32:
-        return UInt32()
-    if dtype == pl.UInt16:
-        return UInt16()
-    if dtype == pl.UInt8:
-        return UInt8()
-    if dtype == pl.String:
-        return String()
-    if dtype == pl.Boolean:
-        return Boolean()
-    if dtype == pl.Object:
-        return Object()
-    if dtype == pl.Categorical:
-        return Categorical()
-    if dtype == pl.Datetime:
-        return Datetime()
-    if dtype == pl.Duration:
-        return Duration()
-    if dtype == pl.Date:
-        return Date()
-    msg = f"Unexpected dtype, got: {type(dtype)}"  # pragma: no cover
+    dtype_mapping = {
+        pl.Float64: Float64,
+        pl.Float32: Float32,
+        pl.Int64: Int64,
+        pl.Int32: Int32,
+        pl.Int16: Int16,
+        pl.Int8: Int8,
+        pl.UInt64: UInt64,
+        pl.UInt32: UInt32,
+        pl.UInt16: UInt16,
+        pl.UInt8: UInt8,
+        pl.String: String,
+        pl.Boolean: Boolean,
+        pl.Object: Object,
+        pl.Categorical: Categorical,
+        pl.Datetime: Datetime,
+        pl.Duration: Duration,
+        pl.Date: Date,
+    }
+
+    dtype_type = type(dtype)
+    if dtype_type in dtype_mapping:
+        return dtype_mapping[dtype_type]()
+
+    msg = f"Unexpected dtype, got: {dtype_type}"  # pragma: no cover
     raise AssertionError(msg)

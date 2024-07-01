@@ -3187,7 +3187,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
-def lit(value: Any, dtype: DType | None = None) -> Expr:
+def lit(value: Any, dtype: type[DType] | None = None) -> Expr:
     """
     Return an expression representing a literal value.
 
