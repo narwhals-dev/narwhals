@@ -85,7 +85,7 @@ markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
-omit = ['typing.py']
+omit = ['narwhals/typing.py']
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
