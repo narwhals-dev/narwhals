@@ -158,8 +158,6 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Boolean()
     if dtype == pl.Object:
         return Object()
-    if dtype == pl.Unknown:  # pragma: no cover
-        return Unknown()
     if dtype == pl.Categorical:
         return Categorical()
     if dtype == pl.Datetime:
@@ -168,5 +166,4 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Duration()
     if dtype == pl.Date:
         return Date()
-    msg = f"Unexpected dtype, got: {type(dtype)}"  # pragma: no cover
-    raise AssertionError(msg)
+    return Unknown()
