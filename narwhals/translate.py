@@ -115,7 +115,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: Literal[True] = ...,
     eager_only: Literal[True],
