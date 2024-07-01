@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
@@ -51,15 +52,26 @@ data_timedelta = {
         ("ordinal_day", [60, 2]),
     ],
 )
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_datetime_attributes(
-    attribute: str, expected: list[int], constructor: Any
+    attribute: str,
+    expected: list[int],
+    constructor: Any,
 ) -> None:
+    if "pyarrow" in str(constructor) and attribute in {
+        "millisecond",
+        "microsecond",
+        "nanosecond",
+    }:
+        ctx: Any = pytest.raises(NotImplementedError, match="pyarrow")
+    else:
+        ctx = contextlib.nullcontext()
     df = nw.from_native(constructor(data), eager_only=True)
-    result = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)()))
-    compare_dicts(result, {"a": expected})
-    result = nw.to_native(df.select(getattr(df["a"].dt, attribute)()))
-    compare_dicts(result, {"a": expected})
+    with ctx:
+        result = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)()))
+        compare_dicts(result, {"a": expected})
+    with ctx:
+        result = nw.to_native(df.select(getattr(df["a"].dt, attribute)()))
+        compare_dicts(result, {"a": expected})
 
 
 @pytest.mark.parametrize(

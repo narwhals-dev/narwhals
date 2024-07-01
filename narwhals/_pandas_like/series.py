@@ -609,14 +609,23 @@ class PandasSeriesDateTimeNamespace:
         )
 
     def millisecond(self) -> PandasSeries:
+        if "pyarrow" in str(self._series._series.dtype):
+            msg = ".dt.millisecond not implemented for pyarrow-backed pandas"
+            raise NotImplementedError(msg)
         return self._series._from_series(
             self._series._series.dt.microsecond // 1000,
         )
 
     def microsecond(self) -> PandasSeries:
+        if "pyarrow" in str(self._series._series.dtype):
+            msg = ".dt.microsecond not implemented for pyarrow-backed pandas"
+            raise NotImplementedError(msg)
         return self._series._from_series(self._series._series.dt.microsecond)
 
     def nanosecond(self) -> PandasSeries:
+        if "pyarrow" in str(self._series._series.dtype):
+            msg = ".dt.nanosecond not implemented for pyarrow-backed pandas"
+            raise NotImplementedError(msg)
         return self._series._from_series(
             (
                 (self._series._series.dt.microsecond * 1_000)
