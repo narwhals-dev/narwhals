@@ -121,3 +121,8 @@ def test_dtypes() -> None:
     result_pa = df.schema
     assert result_pa == expected
     assert {name: df[name].dtype for name in df.columns} == expected
+
+
+def test_unknown_dtype() -> None:
+    df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="M")})
+    assert nw.from_native(df).schema == {"a": nw.Unknown}

@@ -84,3 +84,8 @@ def test_cast_date_datetime_invalid() -> None:
     df = nw.from_native(dfpd)
     with pytest.raises(NotImplementedError, match="pyarrow"):
         df.select(nw.col("a").cast(nw.Date))
+
+
+def test_unknown_to_int() -> None:
+    df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="M")})
+    assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}

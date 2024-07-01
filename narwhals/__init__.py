@@ -18,6 +18,7 @@ from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
+from narwhals.dtypes import Unknown
 from narwhals.expression import Expr
 from narwhals.expression import all
 from narwhals.expression import col
@@ -75,6 +76,7 @@ __all__ = [
     "Float32",
     "Boolean",
     "Object",
+    "Unknown",
     "Categorical",
     "String",
     "Datetime",
