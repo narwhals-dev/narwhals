@@ -106,7 +106,6 @@ def test_duration_attributes(
         ("total_nanoseconds", [2000000, 1300000], [0, 20]),
     ],
 )
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_duration_micro_nano(
     attribute: str,
     expected_b: list[int],
