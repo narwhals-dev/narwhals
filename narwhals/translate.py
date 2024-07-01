@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import get_cudf
@@ -17,6 +18,9 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import IntoDataFrame
+
+T = TypeVar("T")
 
 
 def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
@@ -58,7 +62,62 @@ def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
 def from_native(
     native_dataframe: Any,
     *,
-    strict: bool = ...,
+    strict: Literal[False],
+    eager_only: Literal[True],
+    series_only: None = ...,
+    allow_series: Literal[True],
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrame | T,
+    *,
+    strict: Literal[False],
+    eager_only: Literal[True],
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame | T: ...
+
+
+@overload
+def from_native(
+    native_dataframe: Any,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    series_only: None = ...,
+    allow_series: Literal[True],
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: Any,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    series_only: Literal[True],
+    allow_series: None = ...,
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrame | T,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame | LazyFrame | T: ...
+
+
+@overload
+def from_native(
+    native_dataframe: Any,
+    *,
+    strict: Literal[True] = ...,
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
@@ -67,9 +126,9 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
@@ -80,7 +139,7 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
@@ -91,7 +150,7 @@ def from_native(
 def from_native(
     native_dataframe: Any,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
@@ -100,15 +159,16 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
 ) -> DataFrame | LazyFrame: ...
 
 
+# Nothing was specified
 @overload
 def from_native(
     native_dataframe: Any,
@@ -117,7 +177,7 @@ def from_native(
     eager_only: bool | None,
     series_only: bool | None,
     allow_series: bool | None,
-) -> DataFrame | LazyFrame | Series: ...
+) -> Any: ...
 
 
 def from_native(
@@ -127,7 +187,7 @@ def from_native(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-) -> DataFrame | LazyFrame | Series:
+) -> Any:
     """
     Convert dataframe to Narwhals DataFrame, LazyFrame, or Series.
 
@@ -220,7 +280,7 @@ def from_native(
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)
-    return native_dataframe  # type: ignore[no-any-return]  # pragma: no cover (todo)
+    return native_dataframe  # pragma: no cover (todo)
 
 
 def get_native_namespace(obj: Any) -> Any:
