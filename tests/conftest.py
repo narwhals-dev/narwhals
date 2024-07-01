@@ -44,7 +44,7 @@ def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
-def modin_constructor(obj: Any) -> IntoDataFrame:
+def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
@@ -54,10 +54,10 @@ def polars_constructor(obj: Any) -> IntoDataFrame:
 
 if parse_version(pd.__version__) >= parse_version("1.5.0"):
     params = [pandas_constructor, pandas_nullable_constructor, pandas_pyarrow_constructor]
-else:
+else:  # pragma: no cover
     params = [pandas_constructor]
 params.append(polars_constructor)
-if os.environ.get("CI") and get_modin() is not None:
+if os.environ.get("CI") and get_modin() is not None:  # pragma: no cover
     params.append(modin_constructor)
 
 
