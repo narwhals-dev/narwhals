@@ -356,8 +356,9 @@ def native_series_from_iterable(
 def set_axis(obj: T, index: Any, implementation: PANDAS_IMPLEMENTATIONS) -> T:
     backend = get_backend(implementation)
     backend_verison = parse_version(backend.__version__)
-    minimum_version = parse_version("1.5.0")
-    if implementation is Implementation.PANDAS and backend_verison >= minimum_version:
+    if implementation is Implementation.PANDAS and (
+        backend_verison >= parse_version("1.5.0")
+    ):
         return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
 
     return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined] # pragma: no cover
