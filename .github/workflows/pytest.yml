@@ -14,12 +14,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Cache multiple paths
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/pip
@@ -35,20 +35,49 @@ jobs:
       - name: Run doctests
         run: pytest narwhals --doctest-modules
 
-  pytest-coverage:
+  pytest-windows:
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest]
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Cache multiple paths
-        uses: actions/cache@v3
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}
+      - name: install-reqs
+        run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
+      - name: install-modin
+        run: python -m pip install --upgrade modin[dask]
+      - name: Run pytest
+        run: pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95
+      - name: Run doctests
+        run: pytest narwhals --doctest-modules
+
+  pytest-coverage:
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache multiple paths
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/pip

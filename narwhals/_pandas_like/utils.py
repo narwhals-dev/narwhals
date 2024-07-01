@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     ExprT = TypeVar("ExprT", bound=PandasExpr)
 
+    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals._pandas_like.typing import IntoPandasExpr
 
 
@@ -100,7 +101,9 @@ def parse_into_exprs(
     return out
 
 
-def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExpr:
+def parse_into_expr(
+    implementation: str, into_expr: IntoPandasExpr | IntoArrowExpr
+) -> PandasExpr:
     """Parse `into_expr` as an expression.
 
     For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
@@ -112,21 +115,26 @@ def parse_into_expr(implementation: str, into_expr: IntoPandasExpr) -> PandasExp
     - if it's a string, then convert it to an expression
     - else, raise
     """
+    from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._arrow.series import ArrowSeries
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
 
-    plx = PandasNamespace(implementation=implementation)
-
-    if isinstance(into_expr, PandasExpr):
-        return into_expr
-    if isinstance(into_expr, PandasSeries):
-        return plx._create_expr_from_series(into_expr)
+    if implementation == "arrow":
+        plx: ArrowNamespace | PandasNamespace = ArrowNamespace()
+    else:
+        plx = PandasNamespace(implementation=implementation)
+    if isinstance(into_expr, (PandasExpr, ArrowExpr)):
+        return into_expr  # type: ignore[return-value]
+    if isinstance(into_expr, (PandasSeries, ArrowSeries)):
+        return plx._create_expr_from_series(into_expr)  # type: ignore[arg-type, return-value]
     if isinstance(into_expr, str):
-        return plx.col(into_expr)
+        return plx.col(into_expr)  # type: ignore[return-value]
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
         series = create_native_series(into_expr, implementation=implementation)
-        return plx._create_expr_from_series(series)
+        return plx._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -162,7 +170,7 @@ def evaluate_into_expr(
 
 def evaluate_into_exprs(
     df: PandasDataFrame,
-    *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+    *exprs: IntoPandasExpr,
     **named_exprs: IntoPandasExpr,
 ) -> list[PandasSeries]:
     """Evaluate each expr into Series."""
@@ -195,10 +203,7 @@ def reuse_series_implementation(
             the expression version should return a 1-row Series.
         args, kwargs: arguments and keyword arguments to pass to function.
     """
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.namespace import PandasNamespace
-
-    plx = PandasNamespace(implementation=expr._implementation)
+    plx = expr.__narwhals_namespace__()
 
     def func(df: PandasDataFrame) -> list[PandasSeries]:
         out: list[PandasSeries] = []
@@ -215,7 +220,7 @@ def reuse_series_implementation(
             else:
                 out.append(_out)
         if expr._output_names is not None:  # safety check
-            assert [s._series.name for s in out] == expr._output_names
+            assert [s.name for s in out] == expr._output_names
         return out
 
     # Try tracking root and output names by combining them from all
@@ -225,7 +230,7 @@ def reuse_series_implementation(
     root_names = copy(expr._root_names)
     output_names = expr._output_names
     for arg in list(args) + list(kwargs.values()):
-        if root_names is not None and isinstance(arg, PandasExpr):
+        if root_names is not None and isinstance(arg, expr.__class__):
             if arg._root_names is not None:
                 root_names.extend(arg._root_names)
             else:
@@ -377,42 +382,62 @@ def translate_dtype(column: Any) -> DType:
     from narwhals import dtypes
 
     dtype = column.dtype
-    if dtype in ("int64", "Int64", "Int64[pyarrow]"):
+    if str(dtype) in ("int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"):
         return dtypes.Int64()
-    if dtype in ("int32", "Int32", "Int32[pyarrow]"):
+    if str(dtype) in ("int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"):
         return dtypes.Int32()
-    if dtype in ("int16", "Int16", "Int16[pyarrow]"):
+    if str(dtype) in ("int16", "Int16", "Int16[pyarrow]", "int16[pyarrow]"):
         return dtypes.Int16()
-    if dtype in ("int8", "Int8", "Int8[pyarrow]"):
+    if str(dtype) in ("int8", "Int8", "Int8[pyarrow]", "int8[pyarrow]"):
         return dtypes.Int8()
-    if dtype in ("uint64", "UInt64", "UInt64[pyarrow]"):
+    if str(dtype) in ("uint64", "UInt64", "UInt64[pyarrow]", "uint64[pyarrow]"):
         return dtypes.UInt64()
-    if dtype in ("uint32", "UInt32", "UInt32[pyarrow]"):
+    if str(dtype) in ("uint32", "UInt32", "UInt32[pyarrow]", "uint32[pyarrow]"):
         return dtypes.UInt32()
-    if dtype in ("uint16", "UInt16", "UInt16[pyarrow]"):
+    if str(dtype) in ("uint16", "UInt16", "UInt16[pyarrow]", "uint16[pyarrow]"):
         return dtypes.UInt16()
-    if dtype in ("uint8", "UInt8", "UInt8[pyarrow]"):
+    if str(dtype) in ("uint8", "UInt8", "UInt8[pyarrow]", "uint8[pyarrow]"):
         return dtypes.UInt8()
-    if dtype in ("float64", "Float64", "Float64[pyarrow]"):
+    if str(dtype) in (
+        "float64",
+        "Float64",
+        "Float64[pyarrow]",
+        "float64[pyarrow]",
+        "double[pyarrow]",
+    ):
         return dtypes.Float64()
-    if dtype in ("float32", "Float32", "Float32[pyarrow]"):
+    if str(dtype) in (
+        "float32",
+        "Float32",
+        "Float32[pyarrow]",
+        "float32[pyarrow]",
+        "float[pyarrow]",
+    ):
         return dtypes.Float32()
-    if dtype in ("string", "string[python]", "string[pyarrow]"):
+    if str(dtype) in (
+        "string",
+        "string[python]",
+        "string[pyarrow]",
+        "large_string[pyarrow]",
+    ):
         return dtypes.String()
-    if dtype in ("bool", "boolean", "boolean[pyarrow]"):
+    if str(dtype) in ("bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"):
         return dtypes.Boolean()
-    if dtype in ("category",):
+    if str(dtype) in ("category",) or str(dtype).startswith("dictionary<"):
         return dtypes.Categorical()
     if str(dtype).startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
+    if str(dtype).startswith("timedelta64") or str(dtype).startswith("duration"):
+        # todo: different time units
+        return dtypes.Duration()
     if str(dtype).startswith("timestamp["):
         # pyarrow-backed datetime
         # todo: different time units and time zones
         return dtypes.Datetime()
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
-    if dtype == "object":
+    if str(dtype) == "object":
         if (idx := column.first_valid_index()) is not None and isinstance(
             column.loc[idx], str
         ):
@@ -543,6 +568,11 @@ def reverse_translate_dtype(  # noqa: PLR0915
         if dtype_backend == "pyarrow-nullable":
             return "timestamp[ns][pyarrow]"
         return "datetime64[ns]"
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        # todo: different time units and time zones
+        if dtype_backend == "pyarrow-nullable":
+            return "duration[ns][pyarrow]"
+        return "timedelta64[ns]"
     if isinstance_or_issubclass(dtype, dtypes.Date):
         if dtype_backend == "pyarrow-nullable":
             return "date32[pyarrow]"
@@ -556,7 +586,7 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
     idx = series[0]._series.index
     reindexed = [series[0]._series]
     for s in series[1:]:
-        if s._series.index is not idx and not (s._series.index == idx).all():
+        if s._series.index is not idx:
             reindexed.append(s._series.set_axis(idx.rename(s._series.index.name), axis=0))
         else:
             reindexed.append(s._series)

@@ -5,6 +5,7 @@ from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
+from narwhals.dtypes import Duration
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
@@ -38,7 +39,7 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "0.9.17"
+__version__ = "0.9.21"
 
 __all__ = [
     "selectors",
@@ -77,6 +78,7 @@ __all__ = [
     "Categorical",
     "String",
     "Datetime",
+    "Duration",
     "Date",
     "narwhalify",
     "show_versions",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
@@ -8,6 +9,7 @@ import hypothesis.strategies as st
 import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from hypothesis import given
 
@@ -168,9 +170,13 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     assert result_pdns == result_pl
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 @pytest.mark.parametrize(
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
+)
+@pytest.mark.skipif(
+    "win" in sys.platform,
+    reason="pyarrow breaking on windows",
 )
 def test_dt_to_string(constructor: Any, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data), eager_only=True)
@@ -178,8 +184,97 @@ def test_dt_to_string(constructor: Any, fmt: str) -> None:
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
-    assert nw.to_native(input_series.dt.to_string(fmt)).to_list() == expected_col
-    assert (
-        nw.to_native(input_frame.select(nw.col("a").dt.to_string(fmt))["a"]).to_list()
-        == expected_col
+    result = input_series.dt.to_string(fmt).to_list()
+    if constructor is pa.table:
+        # PyArrow differs from other libraries, in that %S also shows
+        # the fraction of a second.
+        result = [x[: x.find(".")] if "." in x else x for x in result]
+    assert result == expected_col
+    result = input_frame.select(nw.col("a").dt.to_string(fmt))["a"].to_list()
+    if constructor is pa.table:
+        # PyArrow differs from other libraries, in that %S also shows
+        # the fraction of a second.
+        result = [x[: x.find(".")] if "." in x else x for x in result]
+    assert result == expected_col
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        (datetime(2020, 1, 9), "2020-01-09T00:00:00.000000"),
+        (datetime(2020, 1, 9, 12, 34, 56), "2020-01-09T12:34:56.000000"),
+        (datetime(2020, 1, 9, 12, 34, 56, 123), "2020-01-09T12:34:56.000123"),
+        (datetime(2020, 1, 9, 12, 34, 56, 123456), "2020-01-09T12:34:56.123456"),
+    ],
+)
+@pytest.mark.skipif(
+    "win" in sys.platform,
+    reason="pyarrow breaking on windows",
+)
+def test_dt_to_string_iso_local_datetime(
+    constructor: Any, data: datetime, expected: str
+) -> None:
+    def _clean_string(result: str) -> str:
+        # rstrip '0' to remove trailing zeros, as different libraries handle this differently
+        # if there's then a trailing `.`, remove that too.
+        if "." in result:
+            result = result.rstrip("0").rstrip(".")
+        return result
+
+    df = constructor({"a": [data]})
+    result = (
+        nw.from_native(df, eager_only=True)["a"]
+        .dt.to_string("%Y-%m-%dT%H:%M:%S.%f")
+        .to_list()[0]
     )
+    assert _clean_string(result) == _clean_string(expected)
+
+    result = (
+        nw.from_native(df, eager_only=True)
+        .select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f"))["a"]
+        .to_list()[0]
+    )
+    assert _clean_string(result) == _clean_string(expected)
+
+    result = (
+        nw.from_native(df, eager_only=True)["a"]
+        .dt.to_string("%Y-%m-%dT%H:%M:%S%.f")
+        .to_list()[0]
+    )
+    assert _clean_string(result) == _clean_string(expected)
+
+    result = (
+        nw.from_native(df, eager_only=True)
+        .select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f"))["a"]
+        .to_list()[0]
+    )
+    assert _clean_string(result) == _clean_string(expected)
+
+
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        (datetime(2020, 1, 9), "2020-01-09"),
+    ],
+)
+@pytest.mark.skipif(
+    "win" in sys.platform,
+    reason="pyarrow breaking on windows",
+)
+def test_dt_to_string_iso_local_date(
+    constructor: Any, data: datetime, expected: str
+) -> None:
+    df = constructor({"a": [data]})
+    result = (
+        nw.from_native(df, eager_only=True)["a"].dt.to_string("%Y-%m-%d").to_list()[0]
+    )
+    assert result == expected
+
+    result = (
+        nw.from_native(df, eager_only=True)
+        .select(b=nw.col("a").dt.to_string("%Y-%m-%d"))["b"]
+        .to_list()[0]
+    )
+    assert result == expected
