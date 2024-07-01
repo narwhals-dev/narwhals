@@ -83,7 +83,7 @@ def test_datetime_attributes(
     ],
 )
 @pytest.mark.xfail(
-    parse_version(pd.__version__) < parse_version("2.2.0"),
+    parse_version(pd.__version__) < parse_version("2.0.0"),
     reason="pyarrow backend too buggy",
 )
 def test_duration_attributes(
@@ -111,7 +111,7 @@ def test_duration_attributes(
     ],
 )
 @pytest.mark.xfail(
-    parse_version(pd.__version__) < parse_version("2.2.0"),
+    parse_version(pd.__version__) < parse_version("2.0.0"),
     reason="pyarrow backend too buggy",
 )
 def test_duration_micro_nano(
