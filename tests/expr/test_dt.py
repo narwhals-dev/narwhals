@@ -82,16 +82,19 @@ def test_datetime_attributes(
         ("total_milliseconds", [0, 61001], [2, 1]),
     ],
 )
-# @pytest.mark.xfail(
-#     parse_version(pd.__version__) < parse_version("2.0.0"),
-#     reason="pyarrow backend too buggy",
-# )
 def test_duration_attributes(
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],
     constructor: Any,
+    request: Any,
 ) -> None:
+    if (
+        parse_version(pd.__version__) == parse_version("2.0.3")
+        and "pyarrow" in str(constructor)
+        and attribute in ("total_minutes", "total_seconds", "total_milliseconds")
+    ):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_a = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)().fill_null(0)))
     compare_dicts(result_a, {"a": expected_a})
@@ -110,16 +113,26 @@ def test_duration_attributes(
         ("total_nanoseconds", [2000000, 1300000], [0, 20]),
     ],
 )
-# @pytest.mark.xfail(
-#     parse_version(pd.__version__) < parse_version("2.0.0"),
-#     reason="pyarrow backend too buggy",
-# )
 def test_duration_micro_nano(
     attribute: str,
     expected_b: list[int],
     expected_c: list[int],
     constructor: Any,
+    request: Any,
 ) -> None:
+    if (
+        parse_version(pd.__version__) == parse_version("2.0.3")
+        and "pyarrow" in str(constructor)
+        and attribute
+        in (
+            "total_minutes",
+            "total_seconds",
+            "total_milliseconds",
+            "total_microseconds",
+            "total_nanoseconds",
+        )
+    ):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_b = nw.to_native(df.select(getattr(nw.col("b").dt, attribute)().fill_null(0)))
     compare_dicts(result_b, {"b": expected_b})
