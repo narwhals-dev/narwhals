@@ -1,4 +1,5 @@
 import random
+from pathlib import Path
 
 PANDAS_VERSION = [
     "1.0.5",
@@ -56,17 +57,17 @@ pandas_version = random.choice(PANDAS_VERSION)
 polars_version = random.choice(POLARS_VERSION)
 pyarrow_version = random.choice(PYARROW_VERSION)
 
-content = (
+dependencies_content = (
     f"pandas=={pandas_version}\npolars=={polars_version}\npyarrow=={pyarrow_version}\n"
 )
-with open("random-requirements.txt", "w") as fd:
-    fd.write(content)
 
-with open("pyproject.toml") as fd:
-    content = fd.read()
-content = content.replace(
+Path("random-requirements.txt").write_text(dependencies_content, encoding="UTF-8")
+
+pyproject_path = Path("pyproject.toml")
+pyproject_content = pyproject_path.read_text(encoding="UTF-8")
+
+updated_pyproject_content = pyproject_content.replace(
     'filterwarnings = [\n  "error",\n]',
     "filterwarnings = [\n  \"error\",\n  'ignore:distutils Version classes are deprecated:DeprecationWarning',\n]",
 )
-with open("pyproject.toml", "w") as fd:
-    fd.write(content)
+pyproject_path.write_text(updated_pyproject_content, encoding="UTF-8")
