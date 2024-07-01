@@ -282,7 +282,7 @@ class PandasDataFrame:
             if self._implementation in {"modin", "cudf"} or (
                 self._implementation == "pandas"
                 and (pd := get_pandas()) is not None
-                and parse_version(pd.__version__) < parse_version("1.2.0")
+                and parse_version(pd.__version__) < parse_version("1.4.0")
             ):
 
                 def generate_unique_token(
@@ -290,10 +290,19 @@ class PandasDataFrame:
                 ) -> str:  # pragma: no cover
                     import secrets
 
+                    counter = 0
                     while True:
                         token = secrets.token_hex(n_bytes)
                         if token not in columns:
                             return token
+
+                        counter += 1
+                        if counter > 100:  # pragma: no cover
+                            msg = (
+                                "Internal Error: Narwhals was not able to generate a column name to perform cross "
+                                "join operation"
+                            )
+                            raise AssertionError(msg)
 
                 key_token = generate_unique_token(8, self.columns)
 
