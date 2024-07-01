@@ -175,7 +175,7 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(
-    "win" in sys.platform,
+    sys.platform in ["win32", "cygwin"],
     reason="pyarrow breaking on windows",
 )
 def test_dt_to_string(constructor: Any, fmt: str) -> None:
@@ -209,7 +209,7 @@ def test_dt_to_string(constructor: Any, fmt: str) -> None:
     ],
 )
 @pytest.mark.skipif(
-    "win" in sys.platform,
+    sys.platform in ["win32", "cygwin"],
     reason="pyarrow breaking on windows",
 )
 def test_dt_to_string_iso_local_datetime(
@@ -260,7 +260,7 @@ def test_dt_to_string_iso_local_datetime(
     ],
 )
 @pytest.mark.skipif(
-    "win" in sys.platform,
+    sys.platform in ["win32", "cygwin"],
     reason="pyarrow breaking on windows",
 )
 def test_dt_to_string_iso_local_date(
