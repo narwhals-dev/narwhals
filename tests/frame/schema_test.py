@@ -125,3 +125,8 @@ def test_dtypes() -> None:
 def test_unknown_dtype() -> None:
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="M")})
     assert nw.from_native(df).schema == {"a": nw.Unknown}
+
+
+def test_unknown_dtype_polars() -> None:
+    df = pl.DataFrame({"a": [[1, 2, 3]]})
+    assert nw.from_native(df).schema == {"a": nw.Unknown}
