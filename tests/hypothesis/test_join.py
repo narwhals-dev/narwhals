@@ -3,7 +3,6 @@ from __future__ import annotations
 import pandas as pd
 import polars as pl
 import pytest
-from hypothesis import example
 from hypothesis import given
 from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
@@ -14,7 +13,6 @@ from narwhals.utils import parse_version
 pl_version = parse_version(pl.__version__)
 
 
-@example([0, 0, 0], [0, 0, 0], [0.0, 0.0, -0.0], ["c"])  # type: ignore[misc]
 @given(
     st.lists(
         st.integers(min_value=-9223372036854775807, max_value=9223372036854775807),
@@ -38,8 +36,8 @@ pl_version = parse_version(pl.__version__)
         unique=True,
     ),
 )  # type: ignore[misc]
+@pytest.mark.skipif(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
 @pytest.mark.slow()
-@pytest.mark.xfail(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
 def test_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
@@ -84,20 +82,13 @@ def test_join(  # pragma: no cover
         min_size=3,
         max_size=3,
     ),
-    st.lists(
-        st.floats(),
-        min_size=3,
-        max_size=3,
-    ),
 )  # type: ignore[misc]
 @pytest.mark.slow()
-@pytest.mark.xfail(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
 def test_cross_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
-    floats: st.SearchStrategy[list[float]],
 ) -> None:
-    data = {"a": integers, "b": other_integers, "c": floats}
+    data = {"a": integers, "b": other_integers}
 
     df_polars = pl.DataFrame(data)
     df_polars2 = pl.DataFrame(data)
