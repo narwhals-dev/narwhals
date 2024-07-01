@@ -39,8 +39,6 @@ lint.ignore = [
   'A003',
   'ANN101',
   'ANN401',
-  'ARG002',  # todo: enable
-  'ARG003',  # todo: enable
   'C901',
   'COM812',
   'D',

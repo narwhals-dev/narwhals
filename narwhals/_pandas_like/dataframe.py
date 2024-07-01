@@ -128,7 +128,7 @@ class PandasDataFrame:
         self,
         *,
         named: bool = False,
-        buffer_size: int = 512,
+        buffer_size: int = 512,  # noqa: ARG002
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         """
         NOTE:
