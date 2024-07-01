@@ -326,6 +326,36 @@ def test_join(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize(
+    ("df_raw", "expected"),
+    [
+        (
+            df_polars,
+            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
+        ),
+        (
+            df_lazy,
+            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
+        ),
+        (
+            df_pandas,
+            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
+        ),
+        (
+            df_mpd,
+            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
+        ),
+    ],
+)
+def test_cross_join(df_raw: Any, expected: dict[str, list[Any]]) -> None:
+    df = nw.from_native(df_raw).select("a")
+    result = df.join(df, how="cross")  # type: ignore[arg-type]
+    compare_dicts(result, expected)
+
+    with pytest.raises(ValueError, match="Can not pass left_on, right_on for cross join"):
+        df.join(df, how="cross", left_on="a")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
 # todo: https://github.com/narwhals-dev/narwhals/issues/313
