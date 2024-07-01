@@ -82,10 +82,10 @@ def test_datetime_attributes(
         ("total_milliseconds", [0, 61001], [2, 1]),
     ],
 )
-@pytest.mark.xfail(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
-    reason="pyarrow backend too buggy",
-)
+# @pytest.mark.xfail(
+#     parse_version(pd.__version__) < parse_version("2.0.0"),
+#     reason="pyarrow backend too buggy",
+# )
 def test_duration_attributes(
     attribute: str,
     expected_a: list[int],
@@ -110,10 +110,10 @@ def test_duration_attributes(
         ("total_nanoseconds", [2000000, 1300000], [0, 20]),
     ],
 )
-@pytest.mark.xfail(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
-    reason="pyarrow backend too buggy",
-)
+# @pytest.mark.xfail(
+#     parse_version(pd.__version__) < parse_version("2.0.0"),
+#     reason="pyarrow backend too buggy",
+# )
 def test_duration_micro_nano(
     attribute: str,
     expected_b: list[int],
