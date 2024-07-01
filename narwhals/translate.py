@@ -148,7 +148,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -165,9 +165,10 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> Series: ...
+) -> DataFrame | LazyFrame: ...
 
 
+# Nothing was specified
 @overload
 def from_native(
     native_dataframe: Any,
