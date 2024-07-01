@@ -37,10 +37,8 @@ lint.select = [
 lint.ignore = [
   'A001',
   'A003',
-  'ANN101',
+  'ANN101', # deprecated and will be removed in future ruff release: https://docs.astral.sh/ruff/rules/missing-type-self/
   'ANN401',
-  'ARG002',  # todo: enable
-  'ARG003',  # todo: enable
   'C901',
   'COM812',
   'D',
@@ -53,12 +51,10 @@ lint.ignore = [
   'ICN001',
   'ISC001',
   'PD',
-  'PLR0911',
   'PLR0912',
   'PLR5501',
   'PLR2004',
   'PT011',
-  'PTH',
   'RET505',
   'S',
   'SLF001',

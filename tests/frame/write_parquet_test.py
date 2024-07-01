@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -14,6 +14,6 @@ data = {"a": [1, 2, 3]}
 
 @pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_write_parquet(constructor: Any, tmpdir: pytest.TempdirFactory) -> None:
-    path = str(tmpdir / "foo.parquet")  # type: ignore[operator]
+    path = Path(str(tmpdir)) / "foo.parquet"
     nw.from_native(constructor(data), eager_only=True).write_parquet(path)
-    assert os.path.exists(path)
+    assert path.exists()

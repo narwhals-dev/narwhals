@@ -378,75 +378,93 @@ def set_axis(obj: T, index: Any, implementation: str) -> T:
         return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
 
 
-def translate_dtype(column: Any) -> DType:
+def __translate_primitive_dtype(dtype: str) -> DType | None:
     from narwhals import dtypes
 
-    dtype = column.dtype
-    if str(dtype) in ("int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"):
-        return dtypes.Int64()
-    if str(dtype) in ("int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"):
-        return dtypes.Int32()
-    if str(dtype) in ("int16", "Int16", "Int16[pyarrow]", "int16[pyarrow]"):
-        return dtypes.Int16()
-    if str(dtype) in ("int8", "Int8", "Int8[pyarrow]", "int8[pyarrow]"):
-        return dtypes.Int8()
-    if str(dtype) in ("uint64", "UInt64", "UInt64[pyarrow]", "uint64[pyarrow]"):
-        return dtypes.UInt64()
-    if str(dtype) in ("uint32", "UInt32", "UInt32[pyarrow]", "uint32[pyarrow]"):
-        return dtypes.UInt32()
-    if str(dtype) in ("uint16", "UInt16", "UInt16[pyarrow]", "uint16[pyarrow]"):
-        return dtypes.UInt16()
-    if str(dtype) in ("uint8", "UInt8", "UInt8[pyarrow]", "uint8[pyarrow]"):
-        return dtypes.UInt8()
-    if str(dtype) in (
-        "float64",
-        "Float64",
-        "Float64[pyarrow]",
-        "float64[pyarrow]",
-        "double[pyarrow]",
-    ):
-        return dtypes.Float64()
-    if str(dtype) in (
-        "float32",
-        "Float32",
-        "Float32[pyarrow]",
-        "float32[pyarrow]",
-        "float[pyarrow]",
-    ):
-        return dtypes.Float32()
-    if str(dtype) in (
-        "string",
-        "string[python]",
-        "string[pyarrow]",
-        "large_string[pyarrow]",
-    ):
-        return dtypes.String()
-    if str(dtype) in ("bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"):
-        return dtypes.Boolean()
-    if str(dtype) in ("category",) or str(dtype).startswith("dictionary<"):
+    dtype_mappers: dict[str, type[dtypes.DType]] = {
+        "int64": dtypes.Int64,
+        "int32": dtypes.Int32,
+        "int16": dtypes.Int16,
+        "int8": dtypes.Int8,
+        "uint64": dtypes.UInt64,
+        "uint32": dtypes.UInt32,
+        "uint16": dtypes.UInt16,
+        "uint8": dtypes.UInt8,
+        "float64": dtypes.Float64,
+        "double": dtypes.Float64,
+        "float32": dtypes.Float32,
+        "float": dtypes.Float32,
+        "string": dtypes.String,
+        "string[python]": dtypes.String,
+        "large_string": dtypes.String,
+        "bool": dtypes.Boolean,
+        "boolean": dtypes.Boolean,
+        "category": dtypes.Categorical,
+        "date32[day]": dtypes.Date,
+    }
+
+    if dtype not in dtype_mappers:
+        return None
+
+    dtype_factory = next(
+        dtype_factory
+        for pandas_dtype, dtype_factory in dtype_mappers.items()
+        if dtype == pandas_dtype
+    )
+    return dtype_factory()
+
+
+def __translate_datetime_dtype(dtype: str) -> DType | None:
+    from narwhals import dtypes
+
+    if dtype in ("category",) or dtype.startswith("dictionary<"):
         return dtypes.Categorical()
-    if str(dtype).startswith("datetime64"):
+    if dtype.startswith("datetime64"):
         # todo: different time units and time zones
         return dtypes.Datetime()
-    if str(dtype).startswith("timedelta64") or str(dtype).startswith("duration"):
+    if dtype.startswith(("timedelta64", "duration")):
         # todo: different time units
         return dtypes.Duration()
-    if str(dtype).startswith("timestamp["):
+    if dtype.startswith("timestamp["):
         # pyarrow-backed datetime
         # todo: different time units and time zones
         return dtypes.Datetime()
-    if str(dtype) == "date32[day][pyarrow]":
-        return dtypes.Date()
-    if str(dtype) == "object":
-        if (idx := column.first_valid_index()) is not None and isinstance(
-            column.loc[idx], str
-        ):
-            # Infer based on first non-missing value.
-            # For pandas pre 3.0, this isn't perfect.
-            # After pandas 3.0, pandas has a dedicated string dtype
-            # which is inferred by default.
-            return dtypes.String()
-        return dtypes.Object()
+
+    return None
+
+
+def __translate_object_dtype(dtype: str, column: Any) -> DType | None:
+    from narwhals import dtypes
+
+    if str(dtype) != "object":
+        return None
+
+    if (idx := column.first_valid_index()) is not None and isinstance(
+        column.loc[idx], str
+    ):
+        # Infer based on first non-missing value.
+        # For pandas pre 3.0, this isn't perfect.
+        # After pandas 3.0, pandas has a dedicated string dtype
+        # which is inferred by default.
+        return dtypes.String()
+    return dtypes.Object()
+
+
+def translate_dtype(column: Any) -> DType:
+    dtype = str(column.dtype).lower().replace("[pyarrow]", "")
+
+    primitive_dtype = __translate_primitive_dtype(dtype)
+    if primitive_dtype:
+        return primitive_dtype
+
+    datetime_dtype = __translate_datetime_dtype(dtype)
+    if datetime_dtype:
+        return datetime_dtype
+
+    object_dtype = __translate_object_dtype(dtype, column)
+    if object_dtype:
+        return object_dtype
+
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -468,116 +486,104 @@ def get_dtype_backend(dtype: Any, implementation: str) -> str:
         return "numpy"
 
 
-def reverse_translate_dtype(  # noqa: PLR0915
+def reverse_translate_dtype(
     dtype: DType | type[DType], starting_dtype: Any, implementation: str
 ) -> Any:
     from narwhals import dtypes
 
+    dtypes_mapping: dict[type[dtypes.DType], dict[str, str | Any]] = {
+        dtypes.Float64: {
+            "pyarrow-nullable": "Float64[pyarrow]",
+            "pandas-nullable": "Float64",
+            "numpy": "float64",
+        },
+        dtypes.Float32: {
+            "pyarrow-nullable": "Float32[pyarrow]",
+            "pandas-nullable": "Float32",
+            "numpy": "float32",
+        },
+        dtypes.Int64: {
+            "pyarrow-nullable": "Int64[pyarrow]",
+            "pandas-nullable": "Int64",
+            "numpy": "int64",
+        },
+        dtypes.Int32: {
+            "pyarrow-nullable": "Int32[pyarrow]",
+            "pandas-nullable": "Int32",
+            "numpy": "int32",
+        },
+        dtypes.Int16: {
+            "pyarrow-nullable": "Int16[pyarrow]",
+            "pandas-nullable": "Int16",
+            "numpy": "int16",
+        },
+        dtypes.Int8: {
+            "pyarrow-nullable": "Int8[pyarrow]",
+            "pandas-nullable": "Int8",
+            "numpy": "int8",
+        },
+        dtypes.UInt64: {
+            "pyarrow-nullable": "UInt64[pyarrow]",
+            "pandas-nullable": "UInt64",
+            "numpy": "uint64",
+        },
+        dtypes.UInt32: {
+            "pyarrow-nullable": "UInt32[pyarrow]",
+            "pandas-nullable": "UInt32",
+            "numpy": "uint32",
+        },
+        dtypes.UInt16: {
+            "pyarrow-nullable": "UInt16[pyarrow]",
+            "pandas-nullable": "UInt16",
+            "numpy": "uint16",
+        },
+        dtypes.UInt8: {
+            "pyarrow-nullable": "UInt8[pyarrow]",
+            "pandas-nullable": "UInt8",
+            "numpy": "uint8",
+        },
+        dtypes.String: {
+            "pyarrow-nullable": "string[pyarrow]",
+            "pandas-nullable": "string",
+            "numpy": str,
+        },
+        dtypes.Boolean: {
+            "pyarrow-nullable": "boolean[pyarrow]",
+            "pandas-nullable": "boolean",
+            "numpy": "bool",
+        },
+        dtypes.Categorical: {
+            "pyarrow-nullable": "category",
+            "pandas-nullable": "category",
+            "numpy": "category",
+        },
+        dtypes.Datetime: {
+            "pyarrow-nullable": "timestamp[ns][pyarrow]",
+            "pandas-nullable": "datetime64[ns]",
+            "numpy": "datetime64[ns]",
+        },
+        dtypes.Duration: {
+            "pyarrow-nullable": "duration[ns][pyarrow]",
+            "pandas-nullable": "timedelta64[ns]",
+            "numpy": "timedelta64[ns]",
+        },
+        dtypes.Date: {
+            "pyarrow-nullable": "date32[pyarrow]",
+        },
+    }
+
     dtype_backend = get_dtype_backend(starting_dtype, implementation)
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        if dtype_backend == "pyarrow-nullable":
-            return "Float64[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "Float64"
-        else:
-            return "float64"
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        if dtype_backend == "pyarrow-nullable":
-            return "Float32[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "Float32"
-        else:
-            return "float32"
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        if dtype_backend == "pyarrow-nullable":
-            return "Int64[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "Int64"
-        else:
-            return "int64"
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        if dtype_backend == "pyarrow-nullable":
-            return "Int32[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "Int32"
-        else:
-            return "int32"
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        if dtype_backend == "pyarrow-nullable":
-            return "Int16[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "Int16"
-        else:
-            return "int16"
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        if dtype_backend == "pyarrow-nullable":
-            return "Int8[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "Int8"
-        else:
-            return "int8"
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        if dtype_backend == "pyarrow-nullable":
-            return "UInt64[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "UInt64"
-        else:
-            return "uint64"
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        if dtype_backend == "pyarrow-nullable":
-            return "UInt32[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "UInt32"
-        else:
-            return "uint32"
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        if dtype_backend == "pyarrow-nullable":
-            return "UInt16[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "UInt16"
-        else:
-            return "uint16"
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        if dtype_backend == "pyarrow-nullable":
-            return "UInt8[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "UInt8"
-        else:
-            return "uint8"
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        if dtype_backend == "pyarrow-nullable":
-            return "string[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "string"
-        else:
-            return str
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        if dtype_backend == "pyarrow-nullable":
-            return "boolean[pyarrow]"
-        if dtype_backend == "pandas-nullable":
-            return "boolean"
-        else:
-            return "bool"
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        # todo: is there no pyarrow-backed categorical?
-        # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
-        # convert to it?
-        return "category"
-    if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # todo: different time units and time zones
-        if dtype_backend == "pyarrow-nullable":
-            return "timestamp[ns][pyarrow]"
-        return "datetime64[ns]"
-    if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # todo: different time units and time zones
-        if dtype_backend == "pyarrow-nullable":
-            return "duration[ns][pyarrow]"
-        return "timedelta64[ns]"
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        if dtype_backend == "pyarrow-nullable":
-            return "date32[pyarrow]"
-        msg = "Date dtype only supported for pyarrow-backed data types in pandas"
-        raise NotImplementedError(msg)
+
+    for dtype_type, dtype_to_backend_mapping in dtypes_mapping.items():
+        if not isinstance_or_issubclass(dtype, dtype_type):
+            continue
+
+        if dtype_backend not in dtype_to_backend_mapping:
+            msg = f"Type {dtype_type} not supported for backend {dtype_backend}"
+            raise NotImplementedError(msg)
+
+        return dtype_to_backend_mapping[dtype_backend]
+
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

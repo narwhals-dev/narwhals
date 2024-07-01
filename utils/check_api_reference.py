@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import os
 import sys
+from pathlib import Path
 
 import polars as pl
 
@@ -11,7 +14,7 @@ ret = 0
 
 # todo: make dtypes reference page as well
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
-top_level_functions = [
+top_level_functions: list[str] = [
     i
     for i in nw.__dir__()
     if not i[0].isupper()
@@ -19,8 +22,10 @@ top_level_functions = [
     and i not in files
     and i not in {"annotations", "DataFrame", "LazyFrame", "Series"}
 ]
-with open("docs/api-reference/narwhals.md") as fd:
-    content = fd.read()
+
+markdown_file = Path("docs/api-reference/narwhals.md")
+content = markdown_file.read_text(encoding="UTF8")
+
 documented = [
     remove_prefix(i, "        - ")
     for i in content.splitlines()
@@ -40,8 +45,9 @@ top_level_functions = [
     for i in nw.DataFrame(pl.DataFrame()).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
-with open("docs/api-reference/dataframe.md") as fd:
-    content = fd.read()
+
+api_document = Path("docs/api-reference/dataframe.md")
+content = api_document.read_text(encoding="UTF8")
 documented = [
     remove_prefix(i, "        - ")
     for i in content.splitlines()
@@ -61,8 +67,9 @@ top_level_functions = [
     for i in nw.LazyFrame(pl.LazyFrame()).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
-with open("docs/api-reference/lazyframe.md") as fd:
-    content = fd.read()
+
+lazyframe_document = Path("docs/api-reference/lazyframe.md")
+content = lazyframe_document.read_text(encoding="UTF8")
 documented = [
     remove_prefix(i, "        - ")
     for i in content.splitlines()
@@ -80,8 +87,9 @@ if extra := set(documented).difference(top_level_functions):
 top_level_functions = [
     i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
 ]
-with open("docs/api-reference/series.md") as fd:
-    content = fd.read()
+
+series_document = Path("docs/api-reference/series.md")
+content = series_document.read_text(encoding="UTF8")
 documented = [
     remove_prefix(i, "        - ")
     for i in content.splitlines()
@@ -103,8 +111,9 @@ if extra := set(documented).difference(top_level_functions):
 top_level_functions = [
     i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
 ]
-with open("docs/api-reference/expressions.md") as fd:
-    content = fd.read()
+
+expressions_document = Path("docs/api-reference/expressions.md")
+content = expressions_document.read_text(encoding="UTF8")
 documented = [
     remove_prefix(i, "        - ")
     for i in content.splitlines()

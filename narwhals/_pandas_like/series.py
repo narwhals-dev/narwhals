@@ -485,7 +485,7 @@ class PandasSeries:
         else:
             return self._series.is_monotonic_increasing  # type: ignore[no-any-return]
 
-    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:
+    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
         """Parallel is unused, exists for compatibility"""
         from narwhals._pandas_like.dataframe import PandasDataFrame
 
