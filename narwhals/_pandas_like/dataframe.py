@@ -325,11 +325,13 @@ class PandasDataFrame:
 
             return self._from_dataframe(
                 self._dataframe.merge(
-                    other._dataframe.loc[:, left_on],
+                    other._dataframe.loc[:, right_on].rename(
+                        dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                    ),
                     how="outer",
                     indicator=indicator_token,
-                    right_on=right_on,
                     left_on=left_on,
+                    right_on=left_on,
                 )
                 .loc[lambda t: t[indicator_token] == "left_only"]
                 .drop(indicator_token, axis=1)
