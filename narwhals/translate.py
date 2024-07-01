@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import get_cudf
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrame
+
+T = TypeVar("T")
 
 
 def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
@@ -57,75 +60,64 @@ def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame | T,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
-    series_only: bool | None = ...,
+    series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame | Series | T: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame | T,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
-    series_only: bool | None = ...,
-    allow_series: bool | None = ...,
-) -> Any: ...
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame | T: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame | T,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame | LazyFrame | Series | T: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame | T,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Any: ...
+) -> Series | T: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrame | T,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> Any: ...
-
-
-@overload
-def from_native(
-    native_dataframe: Any,
-    *,
-    strict: Literal[False],
-    eager_only: bool | None,
-    series_only: bool | None,
-    allow_series: bool | None,
-) -> Any: ...
+) -> DataFrame | LazyFrame | T: ...
 
 
 @overload
 def from_native(
     native_dataframe: IntoDataFrame,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
@@ -136,7 +128,7 @@ def from_native(
 def from_native(
     native_dataframe: IntoDataFrame,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
@@ -147,7 +139,7 @@ def from_native(
 def from_native(
     native_dataframe: IntoDataFrame,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
@@ -158,7 +150,7 @@ def from_native(
 def from_native(
     native_dataframe: IntoDataFrame,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
@@ -169,32 +161,32 @@ def from_native(
 def from_native(
     native_dataframe: IntoDataFrame,
     *,
-    strict: bool = ...,
+    strict: Literal[True] = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame | LazyFrame: ...
+) -> Series: ...
 
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: bool,
     eager_only: bool | None,
     series_only: bool | None,
     allow_series: bool | None,
-) -> DataFrame | LazyFrame | Series | Any: ...
+) -> Any: ...
 
 
 def from_native(
-    native_dataframe: IntoDataFrame,
+    native_dataframe: Any,
     *,
     strict: bool = True,
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
-) -> DataFrame | LazyFrame | Series | Any:
+) -> Any:
     """
     Convert dataframe to Narwhals DataFrame, LazyFrame, or Series.
 
