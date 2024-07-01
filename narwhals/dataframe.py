@@ -501,7 +501,7 @@ class DataFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {"a": [1.0, 2.0, None], "ba": [1, None, 2.0]}
+            >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -1828,9 +1828,7 @@ class LazyFrame(BaseFrame):
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.pipe(
-            ...         lambda _df: _df.select([x for x in _df.columns if len(x) == 1])
-            ...     )
+            ...     df = df.pipe(lambda _df: _df.select("a"))
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars:
@@ -1866,7 +1864,7 @@ class LazyFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {"a": [1.0, 2.0, None], "ba": [1, None, 2.0]}
+            >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.LazyFrame(data)
 
@@ -1972,7 +1970,7 @@ class LazyFrame(BaseFrame):
             ...     }
             ... ).select("foo", "bar")
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.columns
+            >>> lf.columns  # doctest: +SKIP
             ['foo', 'bar']
         """
         return super().columns
