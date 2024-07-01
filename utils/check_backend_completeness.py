@@ -1,3 +1,10 @@
+"""
+Hopefully temporary script which tracks which methods we're missing
+for the PyArrow table backend.
+
+If you implement a method, please remove it from the `MISSING` list.
+"""
+
 # ruff: noqa
 import sys
 
