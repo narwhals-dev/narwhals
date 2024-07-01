@@ -605,6 +605,6 @@ def to_datetime(implementation: str) -> Any:
 def int_dtype_mapper(dtype: Any) -> str:
     if "pyarrow" in str(dtype):
         return "Int64[pyarrow]"
-    if str(dtype).lower() != str(dtype):
+    if str(dtype).lower() != str(dtype):  # pragma: no cover
         return "Int64"
     return "int64"
