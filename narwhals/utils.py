@@ -266,7 +266,7 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     return df
 
 
-def is_ordered_categorical(series: Series) -> bool:
+def is_ordered_categorical(series: Series) -> bool:  # noqa: PLR0911 - Another level of abstraction is needed
     """
     Return whether indices of categories are semantically meaningful.
 

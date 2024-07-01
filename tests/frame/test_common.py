@@ -100,7 +100,7 @@ def test_std(df_raw: Any) -> None:
     ("dtype", "expected_lit"),
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
-def test_lit(df_raw: Any, dtype: DType | None, expected_lit: list[Any]) -> None:
+def test_lit(df_raw: Any, dtype: type[DType] | None, expected_lit: list[Any]) -> None:
     df = nw.from_native(df_raw)
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
     result_native = nw.to_native(result)

@@ -842,7 +842,8 @@ def len() -> Expr:
     return _stableify(nw.len())
 
 
-def lit(value: Any, dtype: DType | None = None) -> Expr:
+
+def lit(value: Any, dtype: type[DType] | None = None) -> Expr:
     """
     Return an expression representing a literal value.
 

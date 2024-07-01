@@ -208,7 +208,7 @@ def from_native(
 ) -> Any: ...
 
 
-def from_native(  # noqa: PLR0915
+def from_native(  # noqa: PLR0915, PLR0911 - Another level of abstraction is needed
     native_dataframe: Any,
     *,
     strict: bool = True,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Callable
 
 from narwhals import dtypes
 from narwhals.dependencies import get_pyarrow
@@ -8,45 +9,34 @@ from narwhals.utils import isinstance_or_issubclass
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
-    pa = get_pyarrow()
-    if pa.types.is_int64(dtype):
-        return dtypes.Int64()
-    if pa.types.is_int32(dtype):
-        return dtypes.Int32()
-    if pa.types.is_int16(dtype):
-        return dtypes.Int16()
-    if pa.types.is_int8(dtype):
-        return dtypes.Int8()
-    if pa.types.is_uint64(dtype):
-        return dtypes.UInt64()
-    if pa.types.is_uint32(dtype):
-        return dtypes.UInt32()
-    if pa.types.is_uint16(dtype):
-        return dtypes.UInt16()
-    if pa.types.is_uint8(dtype):
-        return dtypes.UInt8()
-    if pa.types.is_boolean(dtype):
-        return dtypes.Boolean()
-    if pa.types.is_float64(dtype):
-        return dtypes.Float64()
-    if pa.types.is_float32(dtype):
-        return dtypes.Float32()
-    # bug in coverage? it shows `31->exit` (where `31` is currently the line number of
-    # the next line), even though both when the if condition is true and false are covered
-    if (  # pragma: no cover
-        pa.types.is_string(dtype)
-        or pa.types.is_large_string(dtype)
-        or getattr(pa.types, "is_string_view", lambda _: False)(dtype)
-    ):
-        return dtypes.String()
-    if pa.types.is_date32(dtype):
-        return dtypes.Date()
-    if pa.types.is_timestamp(dtype):
-        return dtypes.Datetime()
-    if pa.types.is_duration(dtype):
-        return dtypes.Duration()
-    if pa.types.is_dictionary(dtype):
-        return dtypes.Categorical()
+    pyarrow = get_pyarrow()
+    pyarrow_types = pyarrow.types
+
+    dtype_mappers: dict[Callable[[Any], bool], type[dtypes.DType]] = {
+        pyarrow_types.is_int64: dtypes.Int64,
+        pyarrow_types.is_int32: dtypes.Int32,
+        pyarrow_types.is_int16: dtypes.Int16,
+        pyarrow_types.is_int8: dtypes.Int8,
+        pyarrow_types.is_uint64: dtypes.UInt64,
+        pyarrow_types.is_uint32: dtypes.UInt32,
+        pyarrow_types.is_uint16: dtypes.UInt16,
+        pyarrow_types.is_uint8: dtypes.UInt8,
+        pyarrow_types.is_boolean: dtypes.Boolean,
+        pyarrow_types.is_float64: dtypes.Float64,
+        pyarrow_types.is_float32: dtypes.Float32,
+        pyarrow_types.is_string: dtypes.String,
+        pyarrow_types.is_large_string: dtypes.String,
+        getattr(pyarrow_types, "is_string_view", lambda _: False): dtypes.String,
+        pyarrow_types.is_date32: dtypes.Date,
+        pyarrow_types.is_timestamp: dtypes.Datetime,
+        pyarrow_types.is_duration: dtypes.Duration,
+        pyarrow_types.is_dictionary: dtypes.Categorical,
+    }
+
+    for type_check, dtype_factory in dtype_mappers.items():
+        if type_check(dtype):
+            return dtype_factory()
+
     raise AssertionError
 
 
@@ -55,42 +45,33 @@ def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
 
     pa = get_pyarrow()
 
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return pa.float64()
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return pa.float32()
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return pa.int64()
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return pa.int32()
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return pa.int16()
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return pa.int8()
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return pa.uint64()
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return pa.uint32()
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        return pa.uint16()
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return pa.uint8()
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        return pa.string()
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return pa.bool_()
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
+    pyarrow_dtypes_mapping = {
+        dtypes.Float64: pa.float64(),
+        dtypes.Float32: pa.float32(),
+        dtypes.Int64: pa.int64(),
+        dtypes.Int32: pa.int32(),
+        dtypes.Int16: pa.int16(),
+        dtypes.Int8: pa.int8(),
+        dtypes.UInt64: pa.uint64(),
+        dtypes.UInt32: pa.uint32(),
+        dtypes.UInt16: pa.uint16(),
+        dtypes.UInt8: pa.uint8(),
+        dtypes.String: pa.string(),
+        dtypes.Boolean: pa.bool_(),
         # todo: what should the key be? let's keep it consistent
         # with Polars for now
-        return pa.dictionary(pa.uint32(), pa.string())
-    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        dtypes.Categorical: pa.dictionary(pa.uint32(), pa.string()),
         # Use Polars' default
-        return pa.timestamp("us")
-    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        dtypes.Datetime: pa.timestamp("us"),
         # Use Polars' default
-        return pa.duration("us")
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return pa.date32()
+        dtypes.Duration: pa.duration("us"),
+        dtypes.Date: pa.date32(),
+    }
+
+    for narwhals_dtype, pyarrow_dtype in pyarrow_dtypes_mapping.items():
+        if isinstance_or_issubclass(dtype, narwhals_dtype):
+            return pyarrow_dtype
+
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

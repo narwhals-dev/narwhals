@@ -101,7 +101,7 @@ def test_cast_date_datetime_invalid() -> None:
     # pandas: pyarrow datetime to date
     dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]})
     df = nw.from_native(dfpd)
-    with pytest.raises(NotImplementedError, match="pyarrow"):
+    with pytest.raises(NotImplementedError, match="not supported"):
         df.select(nw.col("a").cast(nw.Date))
 
 
