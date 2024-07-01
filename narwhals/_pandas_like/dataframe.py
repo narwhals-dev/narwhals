@@ -11,6 +11,7 @@ from typing import overload
 from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import evaluate_into_exprs
+from narwhals._pandas_like.utils import generate_unique_token
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
@@ -280,7 +281,7 @@ class PandasDataFrame:
         self,
         other: Self,
         *,
-        how: Literal["left", "inner", "outer", "cross"] = "inner",
+        how: Literal["left", "inner", "outer", "cross", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -295,27 +296,9 @@ class PandasDataFrame:
                 and (pd := get_pandas()) is not None
                 and parse_version(pd.__version__) < parse_version("1.4.0")
             ):
-
-                def generate_unique_token(
-                    n_bytes: int, columns: list[str]
-                ) -> str:  # pragma: no cover
-                    import secrets
-
-                    counter = 0
-                    while True:
-                        token = secrets.token_hex(n_bytes)
-                        if token not in columns:
-                            return token
-
-                        counter += 1
-                        if counter > 100:  # pragma: no cover
-                            msg = (
-                                "Internal Error: Narwhals was not able to generate a column name to perform cross "
-                                "join operation"
-                            )
-                            raise AssertionError(msg)
-
-                key_token = generate_unique_token(8, self.columns)
+                key_token = generate_unique_token(
+                    n_bytes=8, columns=[*self.columns, *other.columns]
+                )  # pragma: no cover
 
                 return self._from_dataframe(
                     self._dataframe.assign(**{key_token: 0}).merge(
@@ -334,6 +317,23 @@ class PandasDataFrame:
                         suffixes=("", "_right"),
                     ),
                 )
+
+        if how == "anti":
+            indicator_token = generate_unique_token(
+                n_bytes=8, columns=[*self.columns, *other.columns]
+            )  # pragma: no cover
+
+            return self._from_dataframe(
+                self._dataframe.merge(
+                    other._dataframe.loc[:, left_on],
+                    how="outer",
+                    indicator=indicator_token,
+                    right_on=right_on,
+                    left_on=left_on,
+                )
+                .loc[lambda t: t[indicator_token] == "left_only"]
+                .drop(indicator_token, axis=1)
+            )
 
         return self._from_dataframe(
             self._dataframe.merge(
