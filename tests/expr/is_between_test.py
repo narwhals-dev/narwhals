@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -14,7 +12,6 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize(
     ("closed", "expected"),
     [

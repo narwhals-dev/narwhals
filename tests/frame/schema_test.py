@@ -34,7 +34,6 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_actual_object(constructor: Any) -> None:
     class Foo: ...
 
@@ -121,3 +120,13 @@ def test_dtypes() -> None:
     result_pa = df.schema
     assert result_pa == expected
     assert {name: df[name].dtype for name in df.columns} == expected
+
+
+def test_unknown_dtype() -> None:
+    df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="M")})
+    assert nw.from_native(df).schema == {"a": nw.Unknown}
+
+
+def test_unknown_dtype_polars() -> None:
+    df = pl.DataFrame({"a": [[1, 2, 3]]})
+    assert nw.from_native(df).schema == {"a": nw.Unknown}

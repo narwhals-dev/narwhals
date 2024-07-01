@@ -1,7 +1,6 @@
 from typing import Any
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -14,7 +13,6 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_over_single(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_max=nw.col("c").max().over("a"))
@@ -27,7 +25,6 @@ def test_over_single(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_over_multiple(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
@@ -40,8 +37,7 @@ def test_over_multiple(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame])
-def test_over_invalid(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_over_invalid() -> None:
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Anonymous expressions"):
         df.with_columns(c_min=nw.all().min().over("a", "b"))

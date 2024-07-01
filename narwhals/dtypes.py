@@ -67,6 +67,9 @@ class Boolean(DType): ...
 class Object(DType): ...
 
 
+class Unknown(DType): ...
+
+
 class Datetime(TemporalType): ...
 
 
@@ -163,5 +166,4 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Duration()
     if dtype == pl.Date:
         return Date()
-    msg = f"Unexpected dtype, got: {type(dtype)}"  # pragma: no cover
-    raise AssertionError(msg)
+    return Unknown()

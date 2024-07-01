@@ -1,9 +1,5 @@
 from typing import Any
 
-import pandas as pd
-import polars as pl
-import pytest
-
 import narwhals as nw
 from tests.utils import compare_dicts
 
@@ -15,7 +11,6 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_filter(constructor: Any) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.select(nw.col("a").filter(nw.col("i") < 2, nw.col("c") == 5))

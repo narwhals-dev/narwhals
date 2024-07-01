@@ -42,7 +42,6 @@ def test_invalid_group_by() -> None:
         df.group_by("a").agg(nw.all().mean())
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_group_by_iter(constructor: Any) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
     expected_keys = [(1,), (3,)]
@@ -65,7 +64,6 @@ def test_group_by_iter(constructor: Any) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_group_by_len(constructor: Any) -> None:
     result = (
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")

@@ -2,15 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
 from tests.utils import compare_dicts
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize("decimals", [0, 1, 2])
 def test_round(constructor: Any, decimals: int) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234]}

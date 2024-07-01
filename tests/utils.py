@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import os
+import sys
 import warnings
 from typing import TYPE_CHECKING
 from typing import Any
@@ -53,3 +54,8 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
                 return mpd.DataFrame(df_pandas.to_dict(orient="list"))
     else:  # pragma: no cover
         return df_pandas
+
+
+def is_windows() -> bool:
+    """Check if the current platform is Windows."""
+    return sys.platform in ["win32", "cygwin"]
