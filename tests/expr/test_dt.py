@@ -82,7 +82,6 @@ def test_datetime_attributes(
         ("total_milliseconds", [0, 61001], [2, 1]),
     ],
 )
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_duration_attributes(
     attribute: str,
     expected_a: list[int],

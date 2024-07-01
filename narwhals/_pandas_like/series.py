@@ -6,6 +6,7 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
@@ -648,51 +649,51 @@ class PandasSeriesDateTimeNamespace:
     def total_minutes(self) -> PandasSeries:
         s = self._series._series.dt.total_seconds()
         s_sign = (
-            2 * (s > 0).astype(int) - 1
+            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 60
         if ~s.isna().any():
-            s_abs = s_abs.astype(int)
+            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._series._from_series(s_abs * s_sign)
 
     def total_seconds(self) -> PandasSeries:
         s = self._series._series.dt.total_seconds()
         s_sign = (
-            2 * (s > 0).astype(int) - 1
+            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 1
         if ~s.isna().any():
-            s_abs = s_abs.astype(int)
+            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._series._from_series(s_abs * s_sign)
 
     def total_milliseconds(self) -> PandasSeries:
         s = self._series._series.dt.total_seconds() * 1e3
         s_sign = (
-            2 * (s > 0).astype(int) - 1
+            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 1
         if ~s.isna().any():
-            s_abs = s_abs.astype(int)
+            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._series._from_series(s_abs * s_sign)
 
     def total_microseconds(self) -> PandasSeries:
         s = self._series._series.dt.total_seconds() * 1e6
         s_sign = (
-            2 * (s > 0).astype(int) - 1
+            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 1
         if ~s.isna().any():
-            s_abs = s_abs.astype(int)
+            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._series._from_series(s_abs * s_sign)
 
     def total_nanoseconds(self) -> PandasSeries:
         s = self._series._series.dt.total_seconds() * 1e9
         s_sign = (
-            2 * (s > 0).astype(int) - 1
+            2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 1
         if ~s.isna().any():
-            s_abs = s_abs.astype(int)
+            s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._series._from_series(s_abs * s_sign)
 
     def to_string(self, format: str) -> PandasSeries:  # noqa: A002

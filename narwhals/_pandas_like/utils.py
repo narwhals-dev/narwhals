@@ -600,3 +600,11 @@ def to_datetime(implementation: str) -> Any:
     if implementation == "cudf":
         return get_cudf().to_datetime
     raise AssertionError
+
+
+def int_dtype_mapper(dtype: Any) -> str:
+    if "pyarrow" in str(dtype):
+        return "Int64[pyarrow]"
+    if str(dtype).lower() != str(dtype):
+        return "Int64"
+    return "int64"
