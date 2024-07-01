@@ -1,0 +1,4 @@
+markdown-exec[ansi]
+mkdocs
+mkdocs-material
+mkdocstrings[python]

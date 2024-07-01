@@ -1,0 +1,1357 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../extending/">
+      
+      
+        <link rel="next" href="../roadmap/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.27">
+    
+    
+      
+        <title>How it works - Narwhals</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.6543a935.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#how-it-works" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Narwhals" class="md-header__button md-logo" aria-label="Narwhals" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Narwhals
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              How it works
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/narwhals-dev/narwhals.git" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Narwhals" class="md-nav__button md-logo" aria-label="Narwhals" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    Narwhals
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/narwhals-dev/narwhals.git" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Why
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick_start/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quick start
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Tutorial
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorial
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basics/dataframe/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DataFrame
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basics/column/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Series
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basics/complete_example/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Complete example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Other concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Other concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../other/pandas_index/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    What about the pandas Index?
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overhead/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overhead
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extending/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    List of supported libraries (and how to add yours!)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    How it works
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    How it works
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#theory" class="md-nav__link">
+    <span class="md-ellipsis">
+      Theory
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#polars-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Polars implementation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pandas-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      pandas implementation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#group-by" class="md-nav__link">
+    <span class="md-ellipsis">
+      Group-by
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Roadmap
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../related/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Related projects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../api-reference/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    API Reference
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_12" id="__nav_12_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/dataframe/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.DataFrame
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expressions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.Expr
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expressions_cat/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.cat
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expressions_dt/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.dt
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expressions_str/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.str
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/group_by/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.GroupBy
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/lazyframe/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.LazyFrame
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.Series
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series_cat/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.Series.cat
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series_dt/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.Series.dt
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series_str/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.Series.str
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/dependencies/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.dependencies
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/dtypes/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.dtypes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/narwhals/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/selectors/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    narwhals.selectors
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#theory" class="md-nav__link">
+    <span class="md-ellipsis">
+      Theory
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#polars-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Polars implementation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pandas-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      pandas implementation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#group-by" class="md-nav__link">
+    <span class="md-ellipsis">
+      Group-by
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="how-it-works">How it works</h1>
+<h2 id="theory">Theory</h2>
+<p>You might think that Narwhals runs on underwater unicorn magic. However, this section exists
+to reassure you that there's no such thing. There's only one rule you need to understand in
+order to make sense of Narwhals:</p>
+<blockquote>
+<p><strong>An expression is a function from a DataFrame to a sequence of Series.</strong></p>
+</blockquote>
+<p>For example, <code>nw.col('a')</code> means "given a dataframe <code>df</code>, give me the Series <code>'a'</code> from <code>df</code>".
+Translating this to pandas syntax, we get:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">col_a</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;a&#39;</span><span class="p">]]</span>
+</code></pre></div>
+<p>Let's step up the complexity. How about <code>nw.col('a')+1</code>? We already know what the
+<code>nw.col('a')</code> part looks like, so we just need to add <code>1</code> to each of its outputs:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">col_a</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;a&#39;</span><span class="p">]]</span>
+
+<span class="k">def</span> <span class="nf">col_a_plus_1</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">col_a</span><span class="p">(</span><span class="n">df</span><span class="p">)]</span>
+</code></pre></div>
+<p>Expressions can return multiple Series - for example, <code>nw.col('a', 'b')</code> translates to:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">col_a_b</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;a&#39;</span><span class="p">],</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;b&#39;</span><span class="p">]]</span>
+</code></pre></div>
+<p>Expressions can also take multiple columns as input - for example, <code>nw.sum_horizontal('a', 'b')</code>
+translates to:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">sum_horizontal_a_b</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;a&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;b&#39;</span><span class="p">]]</span>
+</code></pre></div>
+<p>Note that although an expression may have multiple columns as input,
+those columns must all have been derived from the same dataframe. This last sentence was
+quite important, you might want to re-read it to make sure it sunk in.</p>
+<p>By itself, an expression doesn't produce a value. It only produces a value once you give it to a
+DataFrame context. What happens to the value(s) it produces depends on which context you hand
+it to:</p>
+<ul>
+<li><code>DataFrame.select</code>: produce a DataFrame with only the result of the given expression</li>
+<li><code>DataFrame.with_columns</code>: produce a DataFrame like the current one, but also with the result of
+  the given expression</li>
+<li><code>DataFrame.filter</code>: evaluate the given expression, and if it only returns a single Series, then
+  only keep rows where the result is <code>True</code>.</li>
+</ul>
+<p>Now let's turn our attention to the implementation.</p>
+<h2 id="polars-implementation">Polars implementation</h2>
+<p>For Polars, Narwhals just "passes everything through". For example consider the following:
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">import</span> <span class="nn">narwhals</span> <span class="k">as</span> <span class="nn">nw</span>
+
+<span class="n">df_pl</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]})</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">from_native</span><span class="p">(</span><span class="n">df_pl</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div></p>
+<p><code>nw.col('a')</code> produces a <code>narwhals.expression.Expr</code> object, which has a private <code>_call</code> method.
+Inside <code>DataFrame.select</code>, we call <code>nw.col('a')._call(pl)</code>, which produces <code>pl.col('a')</code>.</p>
+<p>We then let Polars do its thing. Which is nice, but also not particularly interesting.
+How about translating expressions to pandas? Well, it's
+interesting to us, and you're still reading, so maybe it'll be interesting to you too.</p>
+<h2 id="pandas-implementation">pandas implementation</h2>
+<p>When we called <code>nw.col('a')._call(pl)</code>, we got a Narwhals-compliant Polars namespace.
+The pandas namespace (<code>pd</code>) isn't Narwhals-compliant, as the pandas API is very different
+from Polars'. So...Narwhals implements a <code>PandasNamespace</code>, which includes the top-level
+Polars functions included in the Narwhals API:</p>
+<p><div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">narwhals</span> <span class="k">as</span> <span class="nn">nw</span>
+<span class="kn">from</span> <span class="nn">narwhals._pandas_like.namespace</span> <span class="kn">import</span> <span class="n">PandasNamespace</span>
+
+<span class="n">pn</span> <span class="o">=</span> <span class="n">PandasNamespace</span><span class="p">(</span><span class="n">implementation</span><span class="o">=</span><span class="s1">&#39;pandas&#39;</span><span class="p">)</span>
+<span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">_call</span><span class="p">(</span><span class="n">pn</span><span class="p">)</span>
+</code></pre></div>
+The result from the last line above is the same as we'd get from <code>pn.col('a')</code>, and it's
+a <code>narwhals._pandas_like.expression.PandasExpr</code> object, which we'll call <code>PandasExpr</code> for
+short.</p>
+<p><code>PandasExpr</code> also has a <code>_call</code> method - but this one expects a <code>PandasDataFrame</code> as input.
+Recall from above that an expression is a function from a dataframe to a sequence of series.
+The <code>_call</code> method gives us that function! Let's see it in action.</p>
+<p>Note: the following examples use <code>PandasDataFrame</code> and <code>PandasSeries</code>. These are backed
+by actual <code>pandas.DataFrame</code>s and <code>pandas.Series</code> respectively and are Narwhals-compliant. We can access the 
+underlying pandas objects via <code>PandasDataFrame._dataframe</code> and <code>PandasSeries._series</code>.</p>
+<p><div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">narwhals</span> <span class="k">as</span> <span class="nn">nw</span>
+<span class="kn">from</span> <span class="nn">narwhals._pandas_like.namespace</span> <span class="kn">import</span> <span class="n">PandasNamespace</span>
+<span class="kn">from</span> <span class="nn">narwhals._pandas_like.dataframe</span> <span class="kn">import</span> <span class="n">PandasDataFrame</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="n">pn</span> <span class="o">=</span> <span class="n">PandasNamespace</span><span class="p">(</span><span class="n">implementation</span><span class="o">=</span><span class="s1">&#39;pandas&#39;</span><span class="p">)</span>
+
+<span class="n">df_pd</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]})</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">PandasDataFrame</span><span class="p">(</span><span class="n">df_pd</span><span class="p">,</span> <span class="n">implementation</span><span class="o">=</span><span class="s1">&#39;pandas&#39;</span><span class="p">)</span>
+<span class="n">expression</span> <span class="o">=</span> <span class="n">pn</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">expression</span><span class="o">.</span><span class="n">_call</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">([</span><span class="n">x</span><span class="o">.</span><span class="n">_series</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">result</span><span class="p">])</span>
+</code></pre></div>
+The first (and only) Series to be output is:
+<div class="highlight"><pre><span></span><code>0    2
+1    3
+2    4
+Name: a, dtype: int64
+</code></pre></div></p>
+<p>So indeed, our expression did what it said on the tin - it took some dataframe, took
+column 'a', and added 1 to it.</p>
+<p>If you search for <code>def reuse_series_implementation</code>, you'll see that that's all
+expressions do in Narwhals - they just keep rigorously applying the definition of
+expression.</p>
+<p>It may look like there should be significant overhead to doing it this way - but really,
+it's just a few Python calls which get unwinded. From timing tests I've done, there's
+no detectable difference - in fact, because the Narwhals API guards against misusing the
+pandas API, it's likely that running pandas via Narwhals will in general be more efficient
+than running pandas directly.</p>
+<p>Further attempts at demistifying Narwhals, refactoring code so it's clearer, and explaining
+this section better are 110% welcome.</p>
+<h2 id="group-by">Group-by</h2>
+<p>Group-by is probably one of Polars' most significant innovations (on the syntax side) with respect
+to pandas. We can write something like
+<div class="highlight"><pre><span></span><code><span class="n">df</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span>
+<span class="n">df</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">((</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+</code></pre></div>
+To do this in pandas, we need to either use <code>GroupBy.apply</code> (sloooow), or do some crazy manual
+optimisations to get it to work.</p>
+<p>In Narwhals, here's what we do:</p>
+<ul>
+<li>if somebody uses a simple group-by aggregation (e.g. <code>df.group_by('a').agg(nw.col('b').mean())</code>),
+  then on the pandas side we translate it to
+  <div class="highlight"><pre><span></span><code><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+<span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]})</span>
+</code></pre></div></li>
+<li>if somebody passes a complex group-by aggregation, then we use <code>apply</code> and raise a <code>UserWarning</code>, warning
+  users of the performance penalty and advising them to refactor their code so that the aggregation they perform
+  ends up being a simple one.</li>
+</ul>
+<p>In order to tell whether an aggregation is simple, Narwhals uses the private <code>_depth</code> attribute of <code>PandasExpr</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">pn</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="n">PandasExpr</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">function_name</span><span class="o">=</span><span class="n">col</span><span class="o">-&gt;</span><span class="n">mean</span><span class="p">,</span> <span class="n">root_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">],</span> <span class="n">output_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">]</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">(</span><span class="n">pn</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="n">PandasExpr</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">function_name</span><span class="o">=</span><span class="n">col</span><span class="o">-&gt;</span><span class="fm">__add__</span><span class="o">-&gt;</span><span class="n">mean</span><span class="p">,</span> <span class="n">root_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">],</span> <span class="n">output_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">]</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">pn</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+<span class="n">PandasExpr</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">function_name</span><span class="o">=</span><span class="n">col</span><span class="o">-&gt;</span><span class="n">mean</span><span class="p">,</span> <span class="n">root_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">],</span> <span class="n">output_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">]</span>
+</code></pre></div>
+<p>For simple aggregations, Narwhals can just look at <code>_depth</code> and <code>function_name</code> and figure out
+which (efficient) elementary operation this corresponds to in pandas.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../extending/" class="md-footer__link md-footer__link--prev" aria-label="Previous: List of supported libraries (and how to add yours!)">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                List of supported libraries (and how to add yours!)
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../roadmap/" class="md-footer__link md-footer__link--next" aria-label="Next: Roadmap">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Roadmap
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate", "navigation.footer", "navigation.indexes"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      
+    
+  </body>
+</html>
