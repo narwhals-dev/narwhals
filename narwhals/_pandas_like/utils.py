@@ -447,8 +447,7 @@ def translate_dtype(column: Any) -> DType:
             # which is inferred by default.
             return dtypes.String()
         return dtypes.Object()
-    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
-    raise AssertionError(msg)
+    return dtypes.Unknown()
 
 
 def get_dtype_backend(dtype: Any, implementation: str) -> str:

@@ -67,6 +67,9 @@ class Boolean(DType): ...
 class Object(DType): ...
 
 
+class Unknown(DType): ...
+
+
 class Datetime(TemporalType): ...
 
 
@@ -155,6 +158,8 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Boolean()
     if dtype == pl.Object:
         return Object()
+    if dtype == pl.Unknown:  # pragma: no cover
+        return Unknown()
     if dtype == pl.Categorical:
         return Categorical()
     if dtype == pl.Datetime:
