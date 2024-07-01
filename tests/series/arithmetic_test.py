@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -23,9 +21,12 @@ data = [1, 2, 3]
         ("__pow__", 2, [1, 4, 9]),
     ],
 )
-@pytest.mark.parametrize("constructor", [pd.Series, pl.Series])
-def test_arithmetic(attr: str, rhs: Any, expected: list[Any], constructor: Any) -> None:
-    s = nw.from_native(constructor(data), series_only=True)
+def test_arithmetic(
+    attr: str, rhs: Any, expected: list[Any], constructor_series: Any, request: Any
+) -> None:
+    if "pyarrow" in str(constructor_series) and attr == "__mod__":
+        request.applymarker(pytest.mark.xfail)
+    s = nw.from_native(constructor_series(data), series_only=True)
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected
 
@@ -41,8 +42,11 @@ def test_arithmetic(attr: str, rhs: Any, expected: list[Any], constructor: Any) 
         ("__rpow__", 2, [2, 4, 8]),
     ],
 )
-@pytest.mark.parametrize("constructor", [pd.Series, pl.Series])
-def test_rarithmetic(attr: str, rhs: Any, expected: list[Any], constructor: Any) -> None:
-    s = nw.from_native(constructor(data), series_only=True)
+def test_rarithmetic(
+    attr: str, rhs: Any, expected: list[Any], constructor_series: Any, request: Any
+) -> None:
+    if "pyarrow" in str(constructor_series) and attr == "__rmod__":
+        request.applymarker(pytest.mark.xfail)
+    s = nw.from_native(constructor_series(data), series_only=True)
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected
