@@ -33,9 +33,11 @@ class PandasNamespace:
     Float32 = dtypes.Float32
     Boolean = dtypes.Boolean
     Object = dtypes.Object
+    Unknown = dtypes.Unknown
     Categorical = dtypes.Categorical
     String = dtypes.String
     Datetime = dtypes.Datetime
+    Duration = dtypes.Duration
     Date = dtypes.Date
 
     @property

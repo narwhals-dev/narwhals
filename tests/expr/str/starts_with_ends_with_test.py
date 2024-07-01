@@ -7,20 +7,24 @@ import polars as pl
 import pytest
 
 import narwhals as nw
+
+# Don't move this into typechecking block, for coverage
+# purposes
+from narwhals.typing import IntoDataFrame  # noqa: TCH001
 from tests.utils import compare_dicts
 from tests.utils import maybe_get_modin_df
 
 df_pandas = pd.DataFrame({"a": ["fdas", "edfas"]})
-df_polars = pl.LazyFrame({"a": ["fdas", "edfas"]})
+df_lazy = pl.LazyFrame({"a": ["fdas", "edfas"]})
 df_mpd = maybe_get_modin_df(df_pandas)
 
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas, df_polars, df_mpd],
+    [df_pandas, df_lazy, df_mpd],
 )
-def test_ends_with(df_raw: Any) -> None:
-    df = nw.LazyFrame(df_raw)
+def test_ends_with(df_raw: IntoDataFrame) -> None:
+    df = nw.from_native(df_raw).lazy()
     result = df.select(nw.col("a").str.ends_with("das"))
     result_native = nw.to_native(result)
     expected = {
@@ -37,10 +41,10 @@ def test_ends_with(df_raw: Any) -> None:
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas, df_polars, df_mpd],
+    [df_pandas, df_lazy, df_mpd],
 )
 def test_starts_with(df_raw: Any) -> None:
-    df = nw.LazyFrame(df_raw)
+    df = nw.from_native(df_raw).lazy()
     result = df.select(nw.col("a").str.starts_with("fda"))
     result_native = nw.to_native(result)
     expected = {

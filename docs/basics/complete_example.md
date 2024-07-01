@@ -65,8 +65,7 @@ import narwhals as nw
 
 class StandardScaler:
     @nw.narwhalify(eager_only=True)
-    def fit(self, df_any):
-        df = nw.from_native(df_any, eager_only=True)
+    def fit(self, df):
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 
