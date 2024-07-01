@@ -93,13 +93,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame | T,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series | T: ...
+) -> Any: ...
 
 
 @overload
