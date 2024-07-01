@@ -1,10 +1,5 @@
 from typing import Any
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
-import pytest
-
 import narwhals as nw
 from tests.utils import compare_dicts
 
@@ -15,7 +10,6 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 def test_cum_sum_simple(constructor: Any) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.select(nw.all().cum_sum())

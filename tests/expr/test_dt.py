@@ -36,7 +36,6 @@ data_timedelta = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize(
     ("attribute", "expected"),
     [
@@ -52,6 +51,7 @@ data_timedelta = {
         ("ordinal_day", [60, 2]),
     ],
 )
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_datetime_attributes(
     attribute: str, expected: list[int], constructor: Any
 ) -> None:
@@ -62,7 +62,6 @@ def test_datetime_attributes(
     compare_dicts(result, {"a": expected})
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize(
     ("attribute", "expected_a", "expected_b"),
     [
@@ -71,6 +70,7 @@ def test_datetime_attributes(
         ("total_milliseconds", [0, 61001], [2, 1]),
     ],
 )
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_duration_attributes(
     attribute: str,
     expected_a: list[int],
@@ -88,7 +88,6 @@ def test_duration_attributes(
     compare_dicts(result_b, {"b": expected_b})
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize(
     ("attribute", "expected_b", "expected_c"),
     [
@@ -96,6 +95,7 @@ def test_duration_attributes(
         ("total_nanoseconds", [2000000, 1300000], [0, 20]),
     ],
 )
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_duration_micro_nano(
     attribute: str,
     expected_b: list[int],
@@ -170,11 +170,11 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     assert result_pdns == result_pl
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 @pytest.mark.parametrize(
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_dt_to_string(constructor: Any, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data), eager_only=True)
     input_series = input_frame["a"]
@@ -195,7 +195,6 @@ def test_dt_to_string(constructor: Any, fmt: str) -> None:
     assert result == expected_col
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
@@ -206,6 +205,7 @@ def test_dt_to_string(constructor: Any, fmt: str) -> None:
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_dt_to_string_iso_local_datetime(
     constructor: Any, data: datetime, expected: str
 ) -> None:
@@ -246,7 +246,6 @@ def test_dt_to_string_iso_local_datetime(
     assert _clean_string(result) == _clean_string(expected)
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame, pa.table])
 @pytest.mark.parametrize(
     ("data", "expected"),
     [

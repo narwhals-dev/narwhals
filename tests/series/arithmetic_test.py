@@ -11,7 +11,6 @@ import narwhals as nw
 data = [1, 2, 3]
 
 
-@pytest.mark.parametrize("constructor", [pd.Series, pl.Series])
 @pytest.mark.parametrize(
     ("attr", "rhs", "expected"),
     [
@@ -24,13 +23,13 @@ data = [1, 2, 3]
         ("__pow__", 2, [1, 4, 9]),
     ],
 )
+@pytest.mark.parametrize("constructor", [pd.Series, pl.Series])
 def test_arithmetic(attr: str, rhs: Any, expected: list[Any], constructor: Any) -> None:
     s = nw.from_native(constructor(data), series_only=True)
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected
 
 
-@pytest.mark.parametrize("constructor", [pd.Series, pl.Series])
 @pytest.mark.parametrize(
     ("attr", "rhs", "expected"),
     [
@@ -42,6 +41,7 @@ def test_arithmetic(attr: str, rhs: Any, expected: list[Any], constructor: Any) 
         ("__rpow__", 2, [2, 4, 8]),
     ],
 )
+@pytest.mark.parametrize("constructor", [pd.Series, pl.Series])
 def test_rarithmetic(attr: str, rhs: Any, expected: list[Any], constructor: Any) -> None:
     s = nw.from_native(constructor(data), series_only=True)
     result = getattr(s, attr)(rhs)

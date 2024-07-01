@@ -1,9 +1,5 @@
 from typing import Any
 
-import pandas as pd
-import polars as pl
-import pytest
-
 import narwhals as nw
 from tests.utils import compare_dicts
 
@@ -13,10 +9,9 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.LazyFrame])
 def test_pipe(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    columns = df.columns
+    columns = df.lazy().collect().columns
     result = df.pipe(lambda _df: _df.select([x for x in columns if len(x) == 2]))
     expected = {"ab": ["foo", "bars"]}
     compare_dicts(result, expected)

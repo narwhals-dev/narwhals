@@ -23,7 +23,6 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_selecctors(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = nw.to_native(df.select(by_dtype([nw.Int64, nw.Float64]) + 1))
@@ -31,7 +30,6 @@ def test_selecctors(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_numeric(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = nw.to_native(df.select(numeric() + 1))
@@ -39,7 +37,6 @@ def test_numeric(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_boolean(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = nw.to_native(df.select(boolean()))
@@ -47,7 +44,6 @@ def test_boolean(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_string(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = nw.to_native(df.select(string()))
@@ -66,7 +62,6 @@ def test_categorical() -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize(
     ("selector", "expected"),
     [
@@ -81,6 +76,7 @@ def test_categorical() -> None:
         (all(), ["a", "b", "c", "d"]),
     ],
 )
+@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_set_ops(
     constructor: Any, selector: nw.selectors.Selector, expected: list[str]
 ) -> None:
