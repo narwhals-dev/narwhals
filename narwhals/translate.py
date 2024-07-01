@@ -60,13 +60,13 @@ def to_native(narwhals_object: Any, *, strict: bool = True) -> Any:
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame | T,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame | Series | T: ...
+) -> Any: ...
 
 
 @overload
