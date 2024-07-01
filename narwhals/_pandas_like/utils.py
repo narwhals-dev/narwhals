@@ -579,8 +579,10 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
             reindexed.append(s._series)
     return reindexed
 
+
 def to_datetime(implementation: PANDAS_IMPLEMENTATIONS) -> Any:
     return get_backend(implementation).to_datetime
+
 
 def int_dtype_mapper(dtype: Any) -> str:
     if "pyarrow" in str(dtype):

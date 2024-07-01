@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals.dataframe import DataFrame
     from narwhals.expression import Expr
     from narwhals.series import Series
 
@@ -26,8 +25,10 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
+
 def assert_never(_: NoReturn) -> NoReturn:
     raise AssertionError("Expected code to be unreachable")
+
 
 # Anything which can be converted to an expression.
 IntoExpr: TypeAlias = Union["Expr", str, int, float, "Series"]
