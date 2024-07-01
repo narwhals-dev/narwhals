@@ -8,8 +8,13 @@ from typing import Sequence
 from typing import TypeVar
 from typing import cast
 
+from narwhals import dtypes
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_pyarrow
+from narwhals.translate import to_native
 
 if TYPE_CHECKING:
     from narwhals.dataframe import BaseFrame
@@ -257,3 +262,21 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
             )
         )
     return df
+
+
+def is_ordered_categorical(series: Series) -> bool:
+    if series.dtype != dtypes.Categorical:
+        return False
+    native_series = to_native(series)
+    if (pl := get_polars()) is not None and isinstance(native_series, pl.Series):
+        return native_series.dtype.ordering == "physical"  # type: ignore[no-any-return]
+    if (pd := get_pandas()) is not None and isinstance(native_series, pd.Series):
+        return native_series.cat.ordered  # type: ignore[no-any-return]
+    if (mpd := get_modin()) is not None and isinstance(native_series, mpd.Series):
+        return native_series.cat.ordered  # type: ignore[no-any-return]
+    if (cudf := get_cudf()) is not None and isinstance(native_series, cudf.Series):
+        return native_series.cat.ordered  # type: ignore[no-any-return]
+    if (pa := get_pyarrow()) is not None and isinstance(native_series, pa.ChunkedArray):
+        return native_series.type.ordered  # type: ignore[no-any-return]
+    # If it doesn't match any of the above, let's just play it safe and return False.
+    return False
