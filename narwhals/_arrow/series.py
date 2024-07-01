@@ -62,10 +62,6 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_series(pc.cumulative_sum(self._series))
 
-    def all(self) -> Any:
-        ser = self._series
-        return ser.all()
-
     @property
     def shape(self) -> tuple[int]:
         return (len(self._series),)

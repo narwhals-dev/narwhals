@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pyarrow as pa
 import re
 from typing import TYPE_CHECKING
 from typing import Any
@@ -51,7 +50,6 @@ else:  # pragma: no cover
     df_pandas_nullable = df_pandas
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
@@ -635,19 +633,6 @@ def test_to_dict() -> None:
     }
     for key in expected:
         pl_assert_series_equal(nw.to_native(result[key]), expected[key])
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow, df_pa]
-)
-def test_any_all(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = nw.to_native(df.select((nw.all() > 1).all()))
-    expected = {"a": [False], "b": [True], "z": [True]}
-    compare_dicts(result, expected)
-    result = nw.to_native(df.select((nw.all() > 1).any()))
-    expected = {"a": [True], "b": [True], "z": [True]}
-    compare_dicts(result, expected)
 
 
 def test_invalid() -> None:
