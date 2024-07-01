@@ -34,7 +34,6 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 def test_actual_object(constructor: Any) -> None:
     class Foo: ...
 

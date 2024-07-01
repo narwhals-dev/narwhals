@@ -2787,7 +2787,7 @@ class ExprDateTimeNamespace:
 
             Therefore, we make the following adjustments:
 
-            - for pandas-like libraries, we replace `".%f"` with `"%.f"`.
+            - for pandas-like libraries, we replace `"%S.%f"` with `"%S%.f"`.
             - for PyArrow, we replace `"%S.%f"` with `"%S"`.
 
             Workarounds like these don't make us happy, and we try to avoid them as

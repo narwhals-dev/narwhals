@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -12,7 +10,6 @@ from tests.utils import compare_dicts
 data = {"a": ["fdas", "edfas"]}
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
 @pytest.mark.parametrize(
     ("offset", "length", "expected"),
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],

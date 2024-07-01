@@ -635,19 +635,6 @@ def test_to_dict() -> None:
         pl_assert_series_equal(nw.to_native(result[key]), expected[key])
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_any_all(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = nw.to_native(df.select((nw.all() > 1).all()))
-    expected = {"a": [False], "b": [True], "z": [True]}
-    compare_dicts(result, expected)
-    result = nw.to_native(df.select((nw.all() > 1).any()))
-    expected = {"a": [True], "b": [True], "z": [True]}
-    compare_dicts(result, expected)
-
-
 def test_invalid() -> None:
     df = nw.from_native(df_pandas)
     with pytest.raises(ValueError, match="Multi-output"):
