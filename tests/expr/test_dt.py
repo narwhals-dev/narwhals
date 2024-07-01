@@ -262,9 +262,9 @@ def test_dt_to_string_iso_local_datetime(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date(
-    constructor: Any, data: datetime, expected: str
+    constructor_with_pyarrow: Any, data: datetime, expected: str
 ) -> None:
-    df = constructor({"a": [data]})
+    df = constructor_with_pyarrow({"a": [data]})
     result = (
         nw.from_native(df, eager_only=True)["a"].dt.to_string("%Y-%m-%d").to_list()[0]
     )
