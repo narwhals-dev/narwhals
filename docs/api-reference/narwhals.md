@@ -11,6 +11,7 @@ Here are the top-level functions available in Narwhals.
         - concat
         - from_native
         - get_native_namespace
+        - is_ordered_categorical
         - len
         - maybe_align_index
         - maybe_set_index
@@ -20,7 +21,6 @@ Here are the top-level functions available in Narwhals.
         - mean
         - min
         - narwhalify
-        - narwhalify_method
         - sum
         - sum_horizontal
         - show_versions

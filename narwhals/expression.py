@@ -49,10 +49,9 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select((nw.col("b") + 10).alias("c"))
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select((nw.col("b") + 10).alias("c"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -93,13 +92,11 @@ class Expr:
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.select(
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select(
             ...         nw.col("foo").cast(nw.Float32), nw.col("bar").cast(nw.UInt8)
             ...     )
-            ...     native_df = nw.to_native(df)
-            ...     return native_df
 
             We can then pass either pandas or Polars to `func`:
 
@@ -618,9 +615,7 @@ class Expr:
             the diff and fill missing values with `0` in a Int64 column, you could
             do:
 
-            ```python
-            nw.col("a").diff().fill_null(0).cast(nw.Int64)
-            ```
+                nw.col("a").diff().fill_null(0).cast(nw.Int64)
 
         Examples:
             >>> import polars as pl
@@ -671,9 +666,7 @@ class Expr:
             and fill missing values with `0` in a Int64 column, you could
             do:
 
-            ```python
-            nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
-            ```
+                nw.col("a").shift(1).fill_null(0).cast(nw.Int64)
 
         Examples:
             >>> import polars as pl
@@ -1620,6 +1613,57 @@ class Expr:
     @property
     def dt(self) -> ExprDateTimeNamespace:
         return ExprDateTimeNamespace(self)
+
+    @property
+    def cat(self) -> ExprCatNamespace:
+        return ExprCatNamespace(self)
+
+
+class ExprCatNamespace:
+    def __init__(self, expr: Expr) -> None:
+        self._expr = expr
+
+    def get_categories(self) -> Expr:
+        """
+        Get unique categories from column.
+
+        Examples:
+            Let's create some dataframes:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "mango", "mango"]}
+            >>> df_pd = pd.DataFrame(data, dtype="category")
+            >>> df_pl = pl.DataFrame(data, schema={"fruits": pl.Categorical})
+
+            We define a dataframe-agnostic function to get unique categories
+            from column 'fruits':
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("fruits").cat.get_categories())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+              fruits
+            0  apple
+            1  mango
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌────────┐
+            │ fruits │
+            │ ---    │
+            │ str    │
+            ╞════════╡
+            │ apple  │
+            │ mango  │
+            └────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).cat.get_categories()
+        )
 
 
 class ExprStringNamespace:
@@ -2731,6 +2775,37 @@ class ExprDateTimeNamespace:
     def to_string(self, format: str) -> Expr:  # noqa: A002
         """
         Convert a Date/Time/Datetime column into a String column with the given format.
+
+        Notes:
+            Unfortunately, different libraries interpret format directives a bit
+            differently.
+
+            - Chrono, the library used by Polars, uses `"%.f"` for fractional seconds,
+              whereas pandas and Python stdlib use `".%f"`.
+            - PyArrow interprets `"%S"` as "seconds, including fractional seconds"
+              whereas most other tools interpret it as "just seconds, as 2 digits".
+
+            Therefore, we make the following adjustments:
+
+            - for pandas-like libraries, we replace `"%S.%f"` with `"%S%.f"`.
+            - for PyArrow, we replace `"%S.%f"` with `"%S"`.
+
+            Workarounds like these don't make us happy, and we try to avoid them as
+            much as possible, but here we feel like it's the best compromise.
+
+            If you just want to format a date/datetime Series as a local datetime
+            string, and have it work as consistently as possible across libraries,
+            we suggest using:
+
+            - `"%Y-%m-%dT%H:%M:%S%.f"` for datetimes
+            - `"%Y-%m-%d"` for dates
+
+            though note that, even then, different tools may return a different number
+            of trailing zeros. Nonetheless, this is probably consistent enough for
+            most applications.
+
+            If you have an application where this is not enough, please open an issue
+            and let us know.
 
         Examples:
             >>> from datetime import datetime

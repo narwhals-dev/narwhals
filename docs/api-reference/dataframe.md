@@ -14,11 +14,13 @@
         - is_empty
         - is_unique
         - item
+        - iter_rows
         - join
         - lazy
         - null_count
         - pipe
         - rename
+        - rows
         - schema
         - select
         - shape

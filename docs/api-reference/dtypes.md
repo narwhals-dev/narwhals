@@ -16,8 +16,12 @@
         - Float32
         - Boolean
         - Categorical
+        - Enum
         - String
         - Datetime
+        - Duration
+        - Object
+        - Unknown
       show_root_heading: false
       show_source: false
       show_bases: false

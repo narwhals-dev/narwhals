@@ -4,16 +4,20 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
-from narwhals.translate import get_cudf
-from narwhals.translate import get_modin
-from narwhals.translate import get_pandas
 from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
@@ -171,12 +175,19 @@ class BaseFrame:
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
+        how: Literal["inner", "cross"] = "inner",
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
     ) -> Self:
-        if how != "inner":
-            raise NotImplementedError("Only inner joins are supported for now")
+        _supported_joins = {"inner", "cross"}
+        if how not in _supported_joins:
+            msg = f"Only the following join stragies are supported: {_supported_joins}"
+            raise NotImplementedError(msg)
+
+        if how == "cross" and (left_on or right_on):
+            msg = "Can not pass left_on, right_on for cross join"
+            raise ValueError(msg)
+
         validate_same_library([self, other])
         return self._from_dataframe(
             self._dataframe.join(
@@ -226,6 +237,10 @@ class DataFrame(BaseFrame):
             df, cudf.DataFrame
         ):  # pragma: no cover
             self._dataframe = PandasDataFrame(df, implementation="cudf")
+        elif (pa := get_pyarrow()) is not None and isinstance(
+            df, pa.Table
+        ):  # pragma: no cover
+            self._dataframe = ArrowDataFrame(df)
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
@@ -375,22 +390,29 @@ class DataFrame(BaseFrame):
         return self._dataframe.shape  # type: ignore[no-any-return]
 
     @overload
+    def __getitem__(self, item: Sequence[int]) -> Series: ...
+
+    @overload
     def __getitem__(self, item: str) -> Series: ...
 
     @overload
-    def __getitem__(self, item: range | slice) -> DataFrame: ...
+    def __getitem__(self, item: slice) -> DataFrame: ...
 
-    def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
+    def __getitem__(self, item: str | slice | Sequence[int]) -> Series | DataFrame:
         if isinstance(item, str):
             from narwhals.series import Series
 
             return Series(self._dataframe[item])
 
-        elif isinstance(item, (range, slice)):
-            return DataFrame(self._dataframe[item])
+        elif isinstance(item, (Sequence, slice)) or (
+            (np := get_numpy()) is not None
+            and isinstance(item, np.ndarray)
+            and item.ndim == 1
+        ):
+            return self._from_dataframe(self._dataframe[item])
 
         else:
-            msg = f"Expected str, range or slice, got: {type(item)}"
+            msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
     def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
@@ -494,7 +516,7 @@ class DataFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {"a": [1.0, 2.0, None], "ba": [1, None, 2.0]}
+            >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
 
@@ -627,6 +649,123 @@ class DataFrame(BaseFrame):
             ['foo', 'bar', 'ham']
         """
         return super().columns
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[False],
+    ) -> list[tuple[Any, ...]]: ...
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[True],
+    ) -> list[dict[str, Any]]: ...
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: bool,
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+
+    def rows(
+        self,
+        *,
+        named: bool = False,
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        """
+        Returns all data in the DataFrame as a list of rows of python-native values.
+
+        Arguments:
+            named: By default, each row is returned as a tuple of values given
+                in the same order as the frame columns. Setting named=True will
+                return rows of dictionaries instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any, *, named):
+            ...     df = nw.from_native(df_any)
+            ...     return df.rows(named=named)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd, named=False)
+            [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
+            >>> func(df_pd, named=True)
+            [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
+            >>> func(df_pl, named=False)
+            [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
+            >>> func(df_pl, named=True)
+            [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
+        """
+        return self._dataframe.rows(named=named)  # type: ignore[no-any-return]
+
+    @overload
+    def iter_rows(
+        self, *, named: Literal[False], buffer_size: int = ...
+    ) -> Iterator[tuple[Any, ...]]: ...
+
+    @overload
+    def iter_rows(
+        self, *, named: Literal[True], buffer_size: int = ...
+    ) -> Iterator[dict[str, Any]]: ...
+
+    @overload
+    def iter_rows(
+        self, *, named: bool, buffer_size: int = ...
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]: ...
+
+    def iter_rows(
+        self, *, named: bool = False, buffer_size: int = 512
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
+        """
+        Returns an iterator over the DataFrame of rows of python-native values.
+
+        Arguments:
+            named: By default, each row is returned as a tuple of values given
+                in the same order as the frame columns. Setting named=True will
+                return rows of dictionaries instead.
+            buffer_size: Determines the number of rows that are buffered
+                internally while iterating over the data.
+                See https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any, *, named):
+            ...     df = nw.from_native(df_any)
+            ...     return df.iter_rows(named=named)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> [row for row in func(df_pd, named=False)]
+            [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
+            >>> [row for row in func(df_pd, named=True)]
+            [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
+            >>> [row for row in func(df_pl, named=False)]
+            [(1, 6.0, 'a'), (2, 7.0, 'b'), (3, 8.0, 'c')]
+            >>> [row for row in func(df_pl, named=True)]
+            [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
+        """
+        return self._dataframe.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[no-any-return]
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
@@ -1049,31 +1188,31 @@ class DataFrame(BaseFrame):
             predicates: Expression(s) that evaluates to a boolean Series.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
+            >>> df = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6, 7, 8],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
 
-            Filter on one condition:
+            Let's define a dataframe-agnostic function in which we filter on
+            one condition.
 
-            >>> dframe = df.filter(nw.col("foo") > 1)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter(nw.col("foo") > 1)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar ham
+            1    2    7   b
+            2    3    8   c
+            >>> func(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1086,13 +1225,13 @@ class DataFrame(BaseFrame):
 
             Filter on multiple conditions, combined with and/or operators:
 
-            >>> dframe = df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            >>> func(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1102,13 +1241,14 @@ class DataFrame(BaseFrame):
             │ 1   ┆ 6   ┆ a   │
             └─────┴─────┴─────┘
 
-            >>> dframe = df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            2    3    8   c
+            >>> func(df_pl)
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1121,16 +1261,17 @@ class DataFrame(BaseFrame):
 
             Provide multiple filters using `*args` syntax:
 
-            >>> dframe = df.filter(
-            ...     nw.col("foo") <= 2,
-            ...     ~nw.col("ham").is_in(["b", "c"]),
-            ... )
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     dframe = df.filter(
+            ...         nw.col("foo") <= 2,
+            ...         ~nw.col("ham").is_in(["b", "c"]),
+            ...     )
+            ...     return dframe
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            >>> func(df_pl)
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -1153,31 +1294,32 @@ class DataFrame(BaseFrame):
             GroupBy: Object which can be used to perform aggregations.
 
         Examples:
-            Group by one column and call `agg` to compute the grouped sum of another
-             column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "a": ["a", "b", "a", "b", "c"],
-            ...         "b": [1, 2, 1, 3, 3],
-            ...         "c": [5, 4, 3, 2, 1],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> dframe = df.group_by("a").agg(nw.col("b").sum()).sort("a")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> df = {
+            ...     "a": ["a", "b", "a", "b", "c"],
+            ...     "b": [1, 2, 1, 3, 3],
+            ...     "c": [5, 4, 3, 2, 1],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            Let's define a dataframe-agnostic function in which we group by one column
+            and call `agg` to compute the grouped sum of another column.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.group_by("a").agg(nw.col("b").sum()).sort("a")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  a  2
+            1  b  5
+            2  c  3
+            >>> func(df_pl)
             shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
@@ -1191,23 +1333,26 @@ class DataFrame(BaseFrame):
 
             Group by multiple columns by passing a list of column names.
 
-            >>> dframe = df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)  # doctest: +SKIP
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
+            >>> func(df_pd)
+               a  b  c
+            0  a  1  5
+            1  b  2  4
+            2  b  3  2
+            3  c  3  1
+            >>> func(df_pl)
             shape: (4, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
             │ --- ┆ --- ┆ --- │
             │ str ┆ i64 ┆ i64 │
             ╞═════╪═════╪═════╡
+            │ a   ┆ 1   ┆ 5   │
             │ b   ┆ 2   ┆ 4   │
             │ b   ┆ 3   ┆ 2   │
             │ c   ┆ 3   ┆ 1   │
-            │ a   ┆ 1   ┆ 5   │
             └─────┴─────┴─────┘
         """
         from narwhals.group_by import GroupBy
@@ -1245,7 +1390,7 @@ class DataFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> df = nw.DataFrame(df_pl)
+            >>> df = nw.from_native(df_pl, eager_only=True)
             >>> dframe = df.sort("a")
             >>> dframe
             ┌───────────────────────────────────────────────┐
@@ -1310,9 +1455,9 @@ class DataFrame(BaseFrame):
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
+        how: Literal["inner", "cross"] = "inner",
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
     ) -> Self:
         r"""
         Join in SQL-like fashion.
@@ -1320,11 +1465,10 @@ class DataFrame(BaseFrame):
         Arguments:
             other: DataFrame to join with.
 
-            how: {'inner'}
-                  Join strategy.
+            how: Join strategy.
 
-                  * *inner*: Returns rows that have matching values in both
-                              tables
+                  * *inner*: Returns rows that have matching values in both tables
+                  * *cross*: Returns the Cartesian product of rows from both tables
 
             left_on: Name(s) of the left join column(s).
 
@@ -1334,30 +1478,39 @@ class DataFrame(BaseFrame):
             A new joined DataFrame
 
         Examples:
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> other_df_pl = pl.DataFrame(
-            ...     {
-            ...         "apple": ["x", "y", "z"],
-            ...         "ham": ["a", "b", "d"],
-            ...     }
-            ... )
-            >>> df = nw.DataFrame(df_pl)
-            >>> other_df = nw.DataFrame(other_df_pl)
-            >>> dframe = df.join(other_df, left_on="ham", right_on="ham")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> data_other = {
+            ...     "apple": ["x", "y", "z"],
+            ...     "ham": ["a", "b", "d"],
+            ... }
+
+            >>> df_pd = pd.DataFrame(data)
+            >>> other_pd = pd.DataFrame(data_other)
+
+            >>> df_pl = pl.DataFrame(data)
+            >>> other_pl = pl.DataFrame(data_other)
+
+            Let's define a dataframe-agnostic function in which we join over "ham" column:
+
+            >>> @nw.narwhalify
+            ... def join_on_ham(df, other):
+            ...     return df.join(other, left_on="ham", right_on="ham")
+
+            We can now pass either pandas or Polars to the function:
+
+            >>> join_on_ham(df_pd, other_pd)
+               foo  bar ham apple
+            0    1  6.0   a     x
+            1    2  7.0   b     y
+
+            >>> join_on_ham(df_pl, other_pl)
             shape: (2, 4)
             ┌─────┬─────┬─────┬───────┐
             │ foo ┆ bar ┆ ham ┆ apple │
@@ -1556,7 +1709,7 @@ class DataFrame(BaseFrame):
             └─────┴─────┴─────┘
         """
 
-        return DataFrame(self._dataframe.null_count())
+        return self._from_dataframe(self._dataframe.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""
@@ -1582,11 +1735,11 @@ class DataFrame(BaseFrame):
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd, 1, 1), func(df_pl, 1, 1)
-            (5, 5)
+            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")  # doctest:+SKIP
+            (5, 6)
 
-            >>> func(df_pd, 2, "b"), func(df_pl, 2, "b")
-            (6, 6)
+            >>> func(df_pl, 1, 1), func(df_pl, 2, "b")
+            (5, 6)
         """
         return self._dataframe.item(row=row, column=column)
 
@@ -1611,23 +1764,12 @@ class LazyFrame(BaseFrame):
         if hasattr(df, "__narwhals_lazyframe__"):
             self._dataframe: Any = df.__narwhals_lazyframe__()
         elif is_polars or (
-            (pl := get_polars()) is not None
-            and isinstance(df, (pl.DataFrame, pl.LazyFrame))
+            (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
         ):
-            self._dataframe = df.lazy()
+            self._dataframe = df
             self._is_polars = True
-        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
-        elif (mpd := get_modin()) is not None and isinstance(
-            df, mpd.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="modin")
-        elif (cudf := get_cudf()) is not None and isinstance(
-            df, cudf.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="cudf")
         else:
-            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
+            msg = f"Expected Polars lazyframe or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -1644,7 +1786,7 @@ class LazyFrame(BaseFrame):
             + "┘"
         )
 
-    def __getitem__(self, item: str | range | slice) -> Series | DataFrame:
+    def __getitem__(self, item: str | slice) -> Series | DataFrame:
         raise TypeError("Slicing is not supported on LazyFrame")
 
     def collect(self) -> DataFrame:
@@ -1664,7 +1806,7 @@ class LazyFrame(BaseFrame):
             ...         "c": [6, 5, 4, 3, 2, 1],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf
             ┌───────────────────────────────────────────────┐
             | Narwhals LazyFrame                            |
@@ -1709,9 +1851,7 @@ class LazyFrame(BaseFrame):
 
             >>> def func(df_any):
             ...     df = nw.from_native(df_any)
-            ...     df = df.pipe(
-            ...         lambda _df: _df.select([x for x in _df.columns if len(x) == 1])
-            ...     )
+            ...     df = df.pipe(lambda _df: _df.select("a"))
             ...     return nw.to_native(df)
 
             We can then pass either pandas or Polars:
@@ -1747,7 +1887,7 @@ class LazyFrame(BaseFrame):
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {"a": [1.0, 2.0, None], "ba": [1, None, 2.0]}
+            >>> data = {"a": [1.0, 2.0, None], "ba": [1.0, None, 2.0]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.LazyFrame(data)
 
@@ -1830,7 +1970,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lf.schema  # doctest: +SKIP
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
@@ -1852,8 +1992,8 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... ).select("foo", "bar")
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lf.columns
+            >>> lf = nw.from_native(lf_pl)
+            >>> lf.columns  # doctest: +SKIP
             ['foo', 'bar']
         """
         return super().columns
@@ -2128,7 +2268,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.rename({"foo": "apple"}).collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2283,7 +2423,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["a", "b", "c"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.drop("ham").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2345,7 +2485,7 @@ class LazyFrame(BaseFrame):
             ...         "ham": ["b", "b", "b", "b"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.unique(None).collect().sort("foo")
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2391,26 +2531,42 @@ class LazyFrame(BaseFrame):
             *predicates: Expression that evaluates to a boolean Series.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
+            >>> df = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6, 7, 8],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+            >>> lf_pl = pl.LazyFrame(df)
 
-            Filter on one condition:
+            Let's define a dataframe-agnostic function in which we filter on
+            one condition.
 
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.filter(nw.col("foo") > 1).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter(nw.col("foo") > 1)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar ham
+            1    2    7   b
+            2    3    8   c
+            >>> func(df_pl)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 2   ┆ 7   ┆ b   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2423,13 +2579,22 @@ class LazyFrame(BaseFrame):
 
             Filter on multiple conditions:
 
-            >>> lframe = lf.filter((nw.col("foo") < 3) & (nw.col("ham") == "a")).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            >>> func(df_pl)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2441,16 +2606,26 @@ class LazyFrame(BaseFrame):
 
             Provide multiple filters using `*args` syntax:
 
-            >>> lframe = lf.filter(
-            ...     nw.col("foo") == 1,
-            ...     nw.col("ham") == "a",
-            ... ).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     dframe = df.filter(
+            ...         nw.col("foo") == 1,
+            ...         nw.col("ham") == "a",
+            ...     )
+            ...     return dframe
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            >>> func(df_pl)
+            shape: (1, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2462,13 +2637,24 @@ class LazyFrame(BaseFrame):
 
             Filter on an OR condition:
 
-            >>> lframe = lf.filter((nw.col("foo") == 1) | (nw.col("ham") == "c")).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
+            >>> func(df_pd)
+               foo  bar ham
+            0    1    6   a
+            2    3    8   c
+            >>> func(df_pl)
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ i64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6   ┆ a   │
+            │ 3   ┆ 8   ┆ c   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (2, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2494,23 +2680,44 @@ class LazyFrame(BaseFrame):
             Group by one column and call `agg` to compute the grouped sum of
             another column.
 
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": ["a", "b", "a", "b", "c"],
-            ...         "b": [1, 2, 1, 3, 3],
-            ...         "c": [5, 4, 3, 2, 1],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> lframe = lf.group_by("a").agg(nw.col("b").sum()).collect().sort("a")
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> df = {
+            ...     "a": ["a", "b", "a", "b", "c"],
+            ...     "b": [1, 2, 1, 3, 3],
+            ...     "c": [5, 4, 3, 2, 1],
+            ... }
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+            >>> lf_pl = pl.LazyFrame(df)
+
+            Let's define a dataframe-agnostic function in which we group by one column
+            and call `agg` to compute the grouped sum of another column.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.group_by("a").agg(nw.col("b").sum()).sort("a")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  a  2
+            1  b  5
+            2  c  3
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ str ┆ i64 │
+            ╞═════╪═════╡
+            │ a   ┆ 2   │
+            │ b   ┆ 5   │
+            │ c   ┆ 3   │
+            └─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (3, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
@@ -2524,13 +2731,28 @@ class LazyFrame(BaseFrame):
 
             Group by multiple columns by passing a list of column names.
 
-            >>> lframe = lf.group_by(["a", "b"]).agg(nw.max("c")).collect().sort(["a", "b"])
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.group_by(["a", "b"]).agg(nw.max("c")).sort(["a", "b"])
+            >>> func(df_pd)
+               a  b  c
+            0  a  1  5
+            1  b  2  4
+            2  b  3  2
+            3  c  3  1
+            >>> func(df_pl)
+            shape: (4, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 1   ┆ 5   │
+            │ b   ┆ 2   ┆ 4   │
+            │ b   ┆ 3   ┆ 2   │
+            │ c   ┆ 3   ┆ 1   │
+            └─────┴─────┴─────┘
+            >>> func(lf_pl).collect()
             shape: (4, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
@@ -2579,7 +2801,7 @@ class LazyFrame(BaseFrame):
             ...         "c": ["a", "c", "b"],
             ...     }
             ... )
-            >>> lf = nw.LazyFrame(lf_pl)
+            >>> lf = nw.from_native(lf_pl)
             >>> lframe = lf.sort("a").collect()
             >>> lframe
             ┌───────────────────────────────────────────────┐
@@ -2644,9 +2866,9 @@ class LazyFrame(BaseFrame):
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
+        how: Literal["inner", "cross"] = "inner",
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
     ) -> Self:
         r"""
         Add a join operation to the Logical Plan.
@@ -2654,11 +2876,10 @@ class LazyFrame(BaseFrame):
         Arguments:
             other: Lazy DataFrame to join with.
 
-            how: {'inner'}
-                  Join strategy.
+            how: Join strategy.
 
-                  * *inner*: Returns rows that have matching values in both
-                              tables
+                  * *inner*: Returns rows that have matching values in both tables
+                  * *cross*: Returns the Cartesian product of rows from both tables
 
             left_on: Join column of the left DataFrame.
 
@@ -2668,30 +2889,39 @@ class LazyFrame(BaseFrame):
             A new joined LazyFrame
 
         Examples:
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> other_lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "apple": ["x", "y", "z"],
-            ...         "ham": ["a", "b", "d"],
-            ...     }
-            ... )
-            >>> lf = nw.LazyFrame(lf_pl)
-            >>> other_lf = nw.LazyFrame(other_lf_pl)
-            >>> lframe = lf.join(other_lf, left_on="ham", right_on="ham").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> data_other = {
+            ...     "apple": ["x", "y", "z"],
+            ...     "ham": ["a", "b", "d"],
+            ... }
+
+            >>> df_pd = pd.DataFrame(data)
+            >>> other_pd = pd.DataFrame(data_other)
+
+            >>> df_pl = pl.LazyFrame(data)
+            >>> other_pl = pl.LazyFrame(data_other)
+
+            Let's define a dataframe-agnostic function in which we join over "ham" column:
+
+            >>> @nw.narwhalify
+            ... def join_on_ham(df, other):
+            ...     return df.join(other, left_on="ham", right_on="ham")
+
+            We can now pass either pandas or Polars to the function:
+
+            >>> join_on_ham(df_pd, other_pd)
+               foo  bar ham apple
+            0    1  6.0   a     x
+            1    2  7.0   b     y
+
+            >>> join_on_ham(df_pl, other_pl).collect()
             shape: (2, 4)
             ┌─────┬─────┬─────┬───────┐
             │ foo ┆ bar ┆ ham ┆ apple │

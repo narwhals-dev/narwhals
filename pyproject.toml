@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "0.9.14"
+version = "0.9.24"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -20,6 +20,7 @@ classifiers = [
 [project.optional-dependencies]
 pandas = ["pandas>=1.1.5"]
 polars = ["polars>=0.20.3"]
+pyarrow = ['pyarrow>=11.0.0']
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"
@@ -84,6 +85,7 @@ markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
+omit = ['narwhals/typing.py']
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
