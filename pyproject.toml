@@ -42,9 +42,9 @@ lint.ignore = [
   'D',
   'DTZ',
   'E501',
-  'FIX',
+  'FIX002',
   'ISC001',  # Keep to avoid conflic with ruff-format
-  'PD',
+  'PD901',  # This is a auxiliary library so dataframe variables have no concrete business meaning
   'PLR0912',
   'PLR2004',
   'RET505', # Keep, this will become easier to fix after #363 is merged

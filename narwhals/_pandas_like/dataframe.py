@@ -371,7 +371,7 @@ class PandasDataFrame:
 
     def null_count(self: Self) -> PandasDataFrame:
         return PandasDataFrame(
-            self._dataframe.isnull().sum(axis=0).to_frame().transpose(),
+            self._dataframe.isna().sum(axis=0).to_frame().transpose(),
             implementation=self._implementation,
         )
 
@@ -384,11 +384,11 @@ class PandasDataFrame:
                     f" frame has shape {self.shape!r}"
                 )
                 raise ValueError(msg)
-            return self._dataframe.iat[0, 0]
+            return self._dataframe.iloc[0, 0]
 
         elif row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
-        return self._dataframe.iat[row, _col]
+        return self._dataframe.iloc[row, _col]

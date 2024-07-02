@@ -115,7 +115,7 @@ def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
         for j, value in enumerate(row):
             value_in_result = result[i][j]
             if value is None:
-                assert pd.isnull(value_in_result)  # because float('nan') != float('nan')
+                assert pd.isna(value_in_result)  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value
 
@@ -138,6 +138,6 @@ def test_rows_with_nulls_named(df_raw: Any) -> None:
         for col, value in row.items():
             value_in_result = result[i][col]
             if value is None:
-                assert pd.isnull(value_in_result)  # because float('nan') != float('nan')
+                assert pd.isna(value_in_result)  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value
