@@ -688,5 +688,5 @@ class PandasSeriesDateTimeNamespace:
 
     def to_string(self, format: str) -> PandasSeries:  # noqa: A002
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
-        format = format.replace("%.f", ".%f")
-        return self._series._from_series(self._series._series.dt.strftime(format))
+        format_ = format.replace("%.f", ".%f")
+        return self._series._from_series(self._series._series.dt.strftime(format_))

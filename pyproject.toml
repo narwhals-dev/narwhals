@@ -35,7 +35,6 @@ lint.select = [
   "ALL",
 ]
 lint.ignore = [
-  'A001',
   'A003',
   'ANN101', # deprecated and will be removed in future ruff release: https://docs.astral.sh/ruff/rules/missing-type-self/
   'ANN401',
