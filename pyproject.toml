@@ -52,7 +52,7 @@ lint.ignore = [
   'C901',
   'COM812',
   'D',
-  'DTZ',
+  'DTZ001',
   'E501',
   'EM101',  # todo: enable
   'ERA001',  # todo: enable
