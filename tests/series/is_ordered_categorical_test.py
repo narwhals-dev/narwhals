@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -21,6 +23,14 @@ def test_is_ordered_categorical() -> None:
         [pa.array(["a", "b"], type=pa.dictionary(pa.int32(), pa.string()))]
     )
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
+
+
+def test_is_definitely_not_ordered_categorical(
+    constructor_series_with_pyarrow: Any,
+) -> None:
+    assert not nw.is_ordered_categorical(
+        nw.from_native(constructor_series_with_pyarrow([1, 2, 3]), series_only=True)
+    )
 
 
 @pytest.mark.xfail(reason="https://github.com/apache/arrow/issues/41017")

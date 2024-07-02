@@ -30,6 +30,7 @@ class ArrowNamespace:
     Object = dtypes.Object
     Unknown = dtypes.Unknown
     Categorical = dtypes.Categorical
+    Enum = dtypes.Enum
     String = dtypes.String
     Datetime = dtypes.Datetime
     Duration = dtypes.Duration

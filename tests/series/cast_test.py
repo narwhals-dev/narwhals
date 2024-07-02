@@ -89,3 +89,19 @@ def test_cast_date_datetime_invalid() -> None:
 def test_unknown_to_int() -> None:
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="M")})
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
+
+
+def test_cast_to_enum() -> None:
+    # we don't yet support metadata in dtypes, so for now disallow this
+    # seems like a very niche use case anyway, and allowing it later wouldn't be
+    # backwards-incompatible
+    df = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
+    with pytest.raises(
+        NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
+    ):
+        nw.from_native(df).select(nw.col("a").cast(nw.Enum))
+    df = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
+    with pytest.raises(
+        NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
+    ):
+        nw.from_native(df).select(nw.col("a").cast(nw.Enum))

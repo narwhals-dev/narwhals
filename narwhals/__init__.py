@@ -6,6 +6,7 @@ from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Duration
+from narwhals.dtypes import Enum
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
@@ -80,6 +81,7 @@ __all__ = [
     "Object",
     "Unknown",
     "Categorical",
+    "Enum",
     "String",
     "Datetime",
     "Duration",
