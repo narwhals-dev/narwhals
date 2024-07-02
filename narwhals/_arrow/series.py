@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 
 from narwhals._arrow.utils import translate_dtype
+from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.dependencies import get_pyarrow_compute
 
 if TYPE_CHECKING:
@@ -27,6 +29,15 @@ class ArrowSeries:
         return self.__class__(
             series,
             name=self._name,
+        )
+
+    @classmethod
+    def from_iterable(cls: type[Self], data: Iterable[Any], name: str) -> Self:
+        return cls(
+            native_series_from_iterable(
+                data, name=name, index=None, implementation="arrow"
+            ),
+            name=name,
         )
 
     def __len__(self) -> int:
@@ -61,6 +72,14 @@ class ArrowSeries:
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_series(pc.cumulative_sum(self._series))
+
+    def any(self) -> bool:
+        pc = get_pyarrow_compute()
+        return pc.any(self._series)  # type: ignore[no-any-return]
+
+    def all(self) -> bool:
+        pc = get_pyarrow_compute()
+        return pc.all(self._series)  # type: ignore[no-any-return]
 
     @property
     def shape(self) -> tuple[int]:
