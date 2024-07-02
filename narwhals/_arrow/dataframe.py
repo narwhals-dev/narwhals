@@ -6,6 +6,7 @@ from typing import overload
 
 from narwhals._arrow.utils import translate_dtype
 from narwhals._pandas_like.utils import evaluate_into_exprs
+from narwhals.dependencies import Implementation
 from narwhals.dependencies import get_pyarrow
 
 if TYPE_CHECKING:
@@ -21,7 +22,9 @@ class ArrowDataFrame:
     # --- not in the spec ---
     def __init__(self, dataframe: Any) -> None:
         self._dataframe = dataframe
-        self._implementation = "arrow"  # for compatibility with PandasDataFrame
+        self._implementation = (
+            Implementation.PYARROW
+        )  # for compatibility with PandasDataFrame
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace

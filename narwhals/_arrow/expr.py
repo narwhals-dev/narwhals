@@ -6,6 +6,7 @@ from typing import Callable
 from narwhals._arrow.series import ArrowSeries
 from narwhals._pandas_like.utils import reuse_series_implementation
 from narwhals._pandas_like.utils import reuse_series_namespace_implementation
+from narwhals.dependencies import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -30,7 +31,7 @@ class ArrowExpr:
         self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
-        self._implementation = "arrow"
+        self._implementation = Implementation.PYARROW
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
