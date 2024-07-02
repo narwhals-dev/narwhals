@@ -28,10 +28,12 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Float64()
     if pa.types.is_float32(dtype):
         return dtypes.Float32()
-    if (
+    # bug in coverage? it shows `31->exit` (where `31` is currently the line number of
+    # the next line), even though both when the if condition is true and false are covered
+    if (  # pragma: no cover
         pa.types.is_string(dtype)
         or pa.types.is_large_string(dtype)
-        or pa.types.is_string_view(dtype)
+        or getattr(pa.types, "is_string_view", lambda _: False)(dtype)
     ):
         return dtypes.String()
     if pa.types.is_date32(dtype):

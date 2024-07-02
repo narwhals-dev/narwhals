@@ -16,6 +16,7 @@
         - Float32
         - Boolean
         - Categorical
+        - Enum
         - String
         - Datetime
         - Duration
