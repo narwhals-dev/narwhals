@@ -14,6 +14,7 @@ Extremely lightweight and extensible compatibility layer between Polars, pandas,
 - [Read the documentation](https://narwhals-dev.github.io/narwhals/)
 - [Chat with us on Discord!](https://discord.gg/V3PqtB4VA4)
 - [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com&ctz=Europe%2FLondon).
+- [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md).
 
 Seamlessly support all, without depending on any!
 
@@ -93,7 +94,3 @@ Indeed, you may suspect that.
 [Coz they are so awesome](https://youtu.be/ykwqXuMPsoc?si=A-i8LdR38teYsos4).
 
 Thanks to [Olha Urdeichuk](https://www.fiverr.com/olhaurdeichuk) for the illustration!
-
-## Contributing
-
-We welcome contributions! Please see the [contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md).
