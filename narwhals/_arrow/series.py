@@ -6,6 +6,7 @@ from typing import Iterable
 
 from narwhals._arrow.utils import translate_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 
 if TYPE_CHECKING:
@@ -89,6 +90,10 @@ class ArrowSeries:
     def dt(self) -> ArrowSeriesDateTimeNamespace:
         return ArrowSeriesDateTimeNamespace(self)
 
+    @property
+    def cat(self) -> ArrowSeriesCatNamespace:
+        return ArrowSeriesCatNamespace(self)
+
 
 class ArrowSeriesDateTimeNamespace:
     def __init__(self, series: ArrowSeries) -> None:
@@ -101,3 +106,15 @@ class ArrowSeriesDateTimeNamespace:
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
         format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
         return self._series._from_series(pc.strftime(self._series._series, format))
+
+
+class ArrowSeriesCatNamespace:
+    def __init__(self, series: ArrowSeries) -> None:
+        self._series = series
+
+    def get_categories(self) -> ArrowSeries:
+        pa = get_pyarrow()
+        ca = self._series._series
+        # todo: this looks potentially expensive - is there no better way?
+        out = pa.chunked_array([pa.concat_arrays(ca.chunks).dictionary])
+        return self._series._from_series(out)
