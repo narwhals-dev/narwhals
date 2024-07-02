@@ -265,6 +265,13 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
 
 
 def is_ordered_categorical(series: Series) -> bool:
+    """
+    Return whether indices of categories are semantically meaningful.
+
+    This is a convenience function to accessing what would otherwise be
+    the `is_ordered` property from the DataFrame Interchange Protocol,
+    see https://data-apis.org/dataframe-protocol/latest/API.html.
+    """
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:
