@@ -166,9 +166,9 @@ class ArrowSeriesDateTimeNamespace:
         # PyArrow differs from other libraries in that %S also prints out
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
-        format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
+        format_ = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
         return self._series._from_native_series(
-            pc.strftime(self._series._native_series, format)
+            pc.strftime(self._series._native_series, format_)
         )
 
 

@@ -43,7 +43,6 @@ lint.select = [
   "ALL",
 ]
 lint.ignore = [
-  'A001',
   'A003',
   'ANN101',
   'ANN401',

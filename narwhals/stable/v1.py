@@ -1,3 +1,5 @@
+# flake8: noqa: A001
+
 from __future__ import annotations
 
 from functools import wraps

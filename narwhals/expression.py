@@ -1,3 +1,5 @@
+# flake8: noqa: A001
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

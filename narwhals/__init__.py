@@ -1,3 +1,5 @@
+# flake8: noqa: A001
+
 from narwhals import selectors
 from narwhals import stable
 from narwhals.dataframe import DataFrame

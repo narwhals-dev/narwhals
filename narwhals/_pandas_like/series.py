@@ -757,9 +757,9 @@ class PandasSeriesDateTimeNamespace:
         # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
         # and doesn't support `%f`
         if "pyarrow" not in str(self._series._native_series.dtype):
-            format = format.replace("%S%.f", "%S.%f")
+            format_ = format.replace("%S%.f", "%S.%f")
         else:
-            format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
+            format_ = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
         return self._series._from_native_series(
-            self._series._native_series.dt.strftime(format)
+            self._series._native_series.dt.strftime(format_)
         )
