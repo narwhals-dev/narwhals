@@ -6,6 +6,7 @@ from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Duration
+from narwhals.dtypes import Enum
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
@@ -36,6 +37,7 @@ from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
 from narwhals.translate import to_native
+from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
@@ -47,6 +49,7 @@ __all__ = [
     "concat",
     "to_native",
     "from_native",
+    "is_ordered_categorical",
     "maybe_align_index",
     "maybe_convert_dtypes",
     "maybe_set_index",
@@ -78,6 +81,7 @@ __all__ = [
     "Object",
     "Unknown",
     "Categorical",
+    "Enum",
     "String",
     "Datetime",
     "Duration",

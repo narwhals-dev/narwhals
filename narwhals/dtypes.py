@@ -21,6 +21,9 @@ class DType:
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         return isinstance_or_issubclass(other, type(self))
 
+    def __hash__(self) -> int:
+        return hash(self.__class__)
+
 
 class NumericType(DType): ...
 
@@ -79,6 +82,9 @@ class Duration(TemporalType): ...
 class Categorical(DType): ...
 
 
+class Enum(DType): ...
+
+
 class Date(TemporalType): ...
 
 
@@ -117,6 +123,9 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
         return plx.Boolean
     if dtype == Categorical:
         return plx.Categorical
+    if dtype == Enum:
+        msg = "Converting to Enum is not (yet) supported"
+        raise NotImplementedError(msg)
     if dtype == Datetime:
         return plx.Datetime
     if dtype == Duration:
@@ -160,6 +169,8 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return Object()
     if dtype == pl.Categorical:
         return Categorical()
+    if dtype == pl.Enum:
+        return Enum()
     if dtype == pl.Datetime:
         return Datetime()
     if dtype == pl.Duration:

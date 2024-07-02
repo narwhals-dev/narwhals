@@ -66,6 +66,7 @@ def test_dtypes() -> None:
             "o": [datetime(2020, 1, 1)],
             "p": ["a"],
             "q": [timedelta(1)],
+            "r": ["a"],
         },
         schema={
             "a": pl.Int64,
@@ -85,6 +86,7 @@ def test_dtypes() -> None:
             "o": pl.Datetime,
             "p": pl.Categorical,
             "q": pl.Duration,
+            "r": pl.Enum(["a", "b"]),
         },
     )
     df = nw.DataFrame(df_pl)
@@ -107,9 +109,13 @@ def test_dtypes() -> None:
         "o": nw.Datetime,
         "p": nw.Categorical,
         "q": nw.Duration,
+        "r": nw.Enum,
     }
     assert result == expected
     assert {name: df[name].dtype for name in df.columns} == expected
+
+    # pandas/pyarrow only have categorical, not enum
+    expected["r"] = nw.Categorical
     df_pd = df_pl.to_pandas(use_pyarrow_extension_array=True)
     df = nw.DataFrame(df_pd)
     result_pd = df.schema
@@ -130,3 +136,7 @@ def test_unknown_dtype() -> None:
 def test_unknown_dtype_polars() -> None:
     df = pl.DataFrame({"a": [[1, 2, 3]]})
     assert nw.from_native(df).schema == {"a": nw.Unknown}
+
+
+def test_hash() -> None:
+    assert nw.Int64() in {nw.Int64, nw.Int32}
