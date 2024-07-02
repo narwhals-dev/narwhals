@@ -82,6 +82,9 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.all(self._series)  # type: ignore[no-any-return]
 
+    def is_empty(self) -> bool:
+        return len(self) == 0
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._series),)
