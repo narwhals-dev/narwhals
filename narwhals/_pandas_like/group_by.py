@@ -167,7 +167,7 @@ def agg_pandas(  # noqa: PLR0913
         if parse_version(backend.__version__) >= parse_version("2.2.0"):
             apply_kwargs["include_groups"] = False
 
-    result_complex = grouped.apply(func, **extra_args)
+    result_complex = grouped.apply(func, **apply_kwargs)
 
     result = result_complex.reset_index()
     return from_dataframe(result.loc[:, output_names])
