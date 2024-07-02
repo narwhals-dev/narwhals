@@ -284,10 +284,15 @@ class PandasDataFrame:
             right_on = [right_on]
 
         if how == "cross":
-            if self._implementation in {"modin", "cudf"} or (
-                self._implementation == "pandas"
-                and (pd := get_pandas()) is not None
-                and parse_version(pd.__version__) < parse_version("1.4.0")
+            backend = get_backend(self._implementation)
+            if (
+                self._implementation is Implementation.MODIN
+                or self._implementation is Implementation.CUDF
+                or (
+                    self._implementation == Implementation.PANDAS
+                    and backend
+                    and parse_version(backend.__version__) < parse_version("1.4.0")
+                )
             ):
 
                 def generate_unique_token(
