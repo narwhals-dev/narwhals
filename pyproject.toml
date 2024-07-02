@@ -46,10 +46,9 @@ lint.ignore = [
   'ISC001',  # Keep to avoid conflic with ruff-format
   'PD',
   'PLR0912',
-  'PLR5501',
   'PLR2004',
-  'RET505',
-  'S',
+  'RET505', # Keep, this will become easier to fix after #363 is merged
+  'S101',
   'SLF001',
   'TD',
 ]
