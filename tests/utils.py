@@ -44,7 +44,7 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
     """Convert a pandas DataFrame to a Modin DataFrame if Modin is available."""
     try:
         import modin.pandas as mpd
-    except ImportError:
+    except ImportError:  # pragma: no cover
         return df_pandas.copy()
     else:
         with warnings.catch_warnings():
