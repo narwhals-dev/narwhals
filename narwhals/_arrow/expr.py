@@ -68,6 +68,12 @@ class ArrowExpr:
     def cum_sum(self) -> Self:
         return reuse_series_implementation(self, "cum_sum")  # type: ignore[type-var]
 
+    def any(self) -> Self:
+        return reuse_series_implementation(self, "any", returns_scalar=True)  # type: ignore[type-var]
+
+    def all(self) -> Self:
+        return reuse_series_implementation(self, "all", returns_scalar=True)  # type: ignore[type-var]
+
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)

@@ -10,6 +10,7 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -365,6 +366,9 @@ def native_series_from_iterable(
         mpd = get_modin()
 
         return mpd.Series(data, name=name, index=index)
+    if implementation == "arrow":
+        pa = get_pyarrow()
+        return pa.chunked_array([data])
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
