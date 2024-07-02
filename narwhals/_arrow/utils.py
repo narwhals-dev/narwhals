@@ -31,7 +31,7 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     if (
         pa.types.is_string(dtype)
         or pa.types.is_large_string(dtype)
-        or pa.types.is_string_view(dtype)
+        or getattr(pa.types, "is_string_view", lambda _: False)(dtype)
     ):
         return dtypes.String()
     if pa.types.is_date32(dtype):

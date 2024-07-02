@@ -21,6 +21,9 @@ class DType:
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         return isinstance_or_issubclass(other, type(self))
 
+    def __hash__(self) -> int:
+        return hash(self.__class__)
+
 
 class NumericType(DType): ...
 

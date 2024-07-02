@@ -136,3 +136,7 @@ def test_unknown_dtype() -> None:
 def test_unknown_dtype_polars() -> None:
     df = pl.DataFrame({"a": [[1, 2, 3]]})
     assert nw.from_native(df).schema == {"a": nw.Unknown}
+
+
+def test_hash() -> None:
+    assert nw.Int64() in {nw.Int64, nw.Int32}
