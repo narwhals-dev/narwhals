@@ -116,5 +116,7 @@ class ArrowSeriesCatNamespace:
         pa = get_pyarrow()
         ca = self._series._series
         # todo: this looks potentially expensive - is there no better way?
-        out = pa.chunked_array([pa.concat_arrays(ca.chunks).dictionary])
+        out = pa.chunked_array(
+            [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
+        )
         return self._series._from_series(out)
