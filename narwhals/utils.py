@@ -87,7 +87,8 @@ def validate_same_library(items: Iterable[Any]) -> None:
         len({item._dataframe._implementation for item in items}) == 1
     ):
         return
-    raise NotImplementedError("Cross-library comparisons aren't supported")
+    error_message = "Cross-library comparisons aren't supported"
+    raise NotImplementedError(error_message)
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
@@ -98,9 +99,8 @@ def validate_laziness(items: Iterable[Any]) -> None:
         all(isinstance(item, LazyFrame) for item in items)
     ):
         return
-    raise NotImplementedError(
-        "The items to concatenate should either all be eager, or all lazy"
-    )
+    error_message = "The items to concatenate should either all be eager, or all lazy"
+    raise NotImplementedError(error_message)
 
 
 def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:

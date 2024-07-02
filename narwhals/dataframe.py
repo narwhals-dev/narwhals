@@ -179,7 +179,8 @@ class BaseFrame:
         right_on: str | list[str],
     ) -> Self:
         if how != "inner":
-            raise NotImplementedError("Only inner joins are supported for now")
+            error_message = "Only inner joins are supported for now"
+            raise NotImplementedError(error_message)
         validate_same_library([self, other])
         return self._from_dataframe(
             self._dataframe.join(

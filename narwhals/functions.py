@@ -20,9 +20,8 @@ def concat(
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> DataFrame | LazyFrame:
     if how not in ("horizontal", "vertical"):
-        raise NotImplementedError(
-            "Only horizontal and vertical concatenations are supported"
-        )
+        error_message = "Only horizontal and vertical concatenations are supported"
+        raise NotImplementedError(error_message)
     if not items:
         error_message = "No items to concatenate"
         raise ValueError(error_message)
