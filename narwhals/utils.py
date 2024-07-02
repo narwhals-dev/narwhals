@@ -271,6 +271,35 @@ def is_ordered_categorical(series: Series) -> bool:
     This is a convenience function to accessing what would otherwise be
     the `is_ordered` property from the DataFrame Interchange Protocol,
     see https://data-apis.org/dataframe-protocol/latest/API.html.
+
+    - For Polars:
+      - Enums are always ordered.
+      - Categoricals are ordered if `dtype.ordering == "physical"`.
+    - For pandas-like APIs:
+      - Categoricals are ordered if `dtype.cat.ordered == True`.
+    - For PyArrow table:
+      - Categoricals are ordered if `dtype.type.ordered == True`.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> data = ["x", "y"]
+        >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
+        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="physical"))
+
+        Let's define a library-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(s):
+        ...     return nw.is_ordered_categorical(s)
+
+        Then, we can pass any supported library to `func`:
+
+        >>> func(s_pd)
+        True
+        >>> func(s_pl)
+        True
     """
     if series.dtype == dtypes.Enum:
         return True
