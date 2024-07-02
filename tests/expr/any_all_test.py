@@ -11,7 +11,7 @@ from tests.utils import compare_dicts
 def test_any_all(constructor_with_pyarrow: Any, request: Any) -> None:
     if "table" in str(constructor_with_pyarrow) and parse_version(
         pa.__version__
-    ) < parse_version("12.0.0"):
+    ) < parse_version("12.0.0"):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor_with_pyarrow(
