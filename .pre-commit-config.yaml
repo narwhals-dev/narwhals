@@ -12,7 +12,10 @@ repos:
   rev: 'v1.10.0'
   hooks:
     - id: mypy
-      additional_dependencies: ['polars==0.20.10', 'pytest==8.0.1']
+      additional_dependencies:
+        - "polars==0.20.10"
+        - "pytest==8.0.1"
+        - "typing-extensions==4.12.2"
       exclude: utils|tpch
 - repo: https://github.com/codespell-project/codespell
   rev: 'v2.3.0'

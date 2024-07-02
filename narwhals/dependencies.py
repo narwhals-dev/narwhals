@@ -4,8 +4,12 @@
 from __future__ import annotations
 
 import sys
+from enum import Enum
+from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
+
+from narwhals.typing import assert_never
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 10):
@@ -13,6 +17,15 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
     import pandas
+
+
+class Implementation(Enum):
+    POLARS = auto()
+    PANDAS = auto()
+    MODIN = auto()
+    CUDF = auto()
+    PYARROW = auto()
+    NUMPY = auto()
 
 
 def get_polars() -> Any:
@@ -56,6 +69,27 @@ def get_numpy() -> Any:
     return sys.modules.get("numpy", None)
 
 
+def get_backend(implementation: Implementation) -> Any:
+    # This is equivalent to an exhaustive match without using Python 3.10 match
+    # More info in
+    # https://adamj.eu/tech/2022/10/14/python-type-hints-exhuastiveness-checking
+
+    if implementation is Implementation.POLARS:  # pragma: no cover
+        return get_polars()
+    if implementation is Implementation.PANDAS:
+        return get_pandas()
+    if implementation is Implementation.MODIN:
+        return get_modin()
+    if implementation is Implementation.CUDF:
+        return get_cudf()
+    if implementation is Implementation.PYARROW:  # pragma: no cover
+        return get_pyarrow()
+    if implementation is Implementation.NUMPY:  # pragma: no cover
+        return get_numpy()
+
+    return assert_never(implementation)
+
+
 def is_pandas_dataframe(df: Any) -> TypeGuard[pandas.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     if (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
@@ -64,6 +98,7 @@ def is_pandas_dataframe(df: Any) -> TypeGuard[pandas.DataFrame]:
 
 
 __all__ = [
+    "get_backend",
     "get_polars",
     "get_pandas",
     "get_modin",

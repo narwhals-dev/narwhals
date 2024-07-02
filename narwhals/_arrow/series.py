@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals._arrow.utils import translate_dtype
+from narwhals.dependencies import Implementation
 from narwhals.dependencies import get_pyarrow_compute
 
 if TYPE_CHECKING:
@@ -21,7 +22,9 @@ class ArrowSeries:
     ) -> None:
         self._name = name
         self._series = series
-        self._implementation = "arrow"  # for compatibility with PandasSeries
+        self._implementation = (
+            Implementation.PYARROW
+        )  # for compatibility with PandasSeries
 
     def _from_series(self, series: Any) -> Self:
         return self.__class__(

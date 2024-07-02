@@ -5,6 +5,7 @@ from typing import Any
 from typing import Literal
 
 from narwhals._arrow.series import ArrowSeries
+from narwhals.dependencies import Implementation
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
@@ -50,17 +51,17 @@ class Series:
             self._is_polars = True
             return
         if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
-            self._series = PandasSeries(series, implementation="pandas")
+            self._series = PandasSeries(series, implementation=Implementation.PANDAS)
             return
         if (pd := get_modin()) is not None and isinstance(
             series, pd.Series
         ):  # pragma: no cover
-            self._series = PandasSeries(series, implementation="modin")
+            self._series = PandasSeries(series, implementation=Implementation.MODIN)
             return
         if (pd := get_cudf()) is not None and isinstance(
             series, pd.Series
         ):  # pragma: no cover
-            self._series = PandasSeries(series, implementation="cudf")
+            self._series = PandasSeries(series, implementation=Implementation.CUDF)
             return
         if (pa := get_pyarrow()) is not None and isinstance(
             series, pa.ChunkedArray

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import NoReturn
 from typing import Protocol
 from typing import Union
 
@@ -32,4 +33,9 @@ IntoExpr: TypeAlias = Union["Expr", str, int, float, "Series"]
 # Anything which can be converted to a Narwhals DataFrame.
 IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrame"]
 
-__all__ = ["IntoExpr", "IntoDataFrame"]
+
+def assert_never(_: NoReturn) -> NoReturn:
+    raise AssertionError("Expected code to be unreachable")
+
+
+__all__ = ["IntoExpr", "IntoDataFrame", "assert_never"]

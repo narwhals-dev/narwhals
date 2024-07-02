@@ -15,9 +15,9 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
+from narwhals.dependencies import Implementation
+from narwhals.dependencies import get_backend
+from narwhals.typing import assert_never
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
 
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasGroupBy
+    from narwhals._pandas_like.implementations import PANDAS_IMPLEMENTATIONS
     from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
     from narwhals._pandas_like.typing import IntoPandasExpr
@@ -39,11 +40,11 @@ class PandasDataFrame:
         self,
         dataframe: Any,
         *,
-        implementation: str,
+        implementation: PANDAS_IMPLEMENTATIONS,
     ) -> None:
         self._validate_columns(dataframe.columns)
         self._dataframe = dataframe
-        self._implementation = implementation
+        self._implementation: PANDAS_IMPLEMENTATIONS = implementation
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -57,14 +58,7 @@ class PandasDataFrame:
         return PandasNamespace(self._implementation)
 
     def __native_namespace__(self) -> Any:
-        if self._implementation == "pandas":
-            return get_pandas()
-        if self._implementation == "modin":  # pragma: no cover
-            return get_modin()
-        if self._implementation == "cudf":  # pragma: no cover
-            return get_cudf()
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
-        raise AssertionError(msg)
+        return get_backend(self._implementation)
 
     def __len__(self) -> int:
         return len(self._dataframe)
@@ -290,10 +284,15 @@ class PandasDataFrame:
             right_on = [right_on]
 
         if how == "cross":
-            if self._implementation in {"modin", "cudf"} or (
-                self._implementation == "pandas"
-                and (pd := get_pandas()) is not None
-                and parse_version(pd.__version__) < parse_version("1.4.0")
+            backend = get_backend(self._implementation)
+            if (
+                self._implementation is Implementation.MODIN
+                or self._implementation is Implementation.CUDF
+                or (
+                    self._implementation == Implementation.PANDAS
+                    and backend
+                    and parse_version(backend.__version__) < parse_version("1.4.0")
+                )
             ):
 
                 def generate_unique_token(
@@ -386,11 +385,14 @@ class PandasDataFrame:
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
-        if self._implementation == "pandas":
+        if self._implementation is Implementation.PANDAS:
             return self._dataframe
-        if self._implementation == "modin":  # pragma: no cover
+        if self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._dataframe._to_pandas()
-        return self._dataframe.to_pandas()  # pragma: no cover
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
+            return self._dataframe.to_pandas()
+
+        return assert_never(self._implementation)
 
     def write_parquet(self, file: Any) -> Any:
         self._dataframe.to_parquet(file)

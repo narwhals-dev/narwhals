@@ -12,13 +12,15 @@ from typing import Iterator
 from narwhals._pandas_like.utils import is_simple_aggregation
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import parse_into_exprs
-from narwhals.dependencies import get_pandas
+from narwhals.dependencies import Implementation
+from narwhals.dependencies import get_backend
 from narwhals.utils import parse_version
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.implementations import PANDAS_IMPLEMENTATIONS
     from narwhals._pandas_like.typing import IntoPandasExpr
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
@@ -46,7 +48,7 @@ class PandasGroupBy:
             *aggs,
             **named_aggs,
         )
-        implementation: str = self._df._implementation
+        implementation = self._df._implementation
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:
@@ -85,7 +87,7 @@ def agg_pandas(  # noqa: PLR0913
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], PandasDataFrame],
-    implementation: Any,
+    implementation: PANDAS_IMPLEMENTATIONS,
 ) -> PandasDataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
@@ -93,8 +95,6 @@ def agg_pandas(  # noqa: PLR0913
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
     """
-    pd = get_pandas()
-
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
@@ -160,15 +160,14 @@ def agg_pandas(  # noqa: PLR0913
             out_group, index=out_names, name="", implementation=implementation
         )
 
-    if implementation == "pandas":
-        pd = get_pandas()
+    apply_kwargs: dict[str, Any] = {}
+    if implementation is Implementation.PANDAS:  # pragma: no cover
+        backend = get_backend(implementation)
 
-        if parse_version(pd.__version__) < parse_version("2.2.0"):  # pragma: no cover
-            result_complex = grouped.apply(func)
-        else:
-            result_complex = grouped.apply(func, include_groups=False)
-    else:  # pragma: no cover
-        result_complex = grouped.apply(func)
+        if parse_version(backend.__version__) >= parse_version("2.2.0"):
+            apply_kwargs["include_groups"] = False
+
+    result_complex = grouped.apply(func, **apply_kwargs)
 
     result = result_complex.reset_index()
     return from_dataframe(result.loc[:, output_names])
