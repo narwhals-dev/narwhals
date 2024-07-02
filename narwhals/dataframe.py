@@ -216,9 +216,8 @@ class DataFrame(BaseFrame):
             self._dataframe = df
             self._is_polars = True
         elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
-            raise TypeError(
-                "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
-            )
+            error_message = "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
+            raise TypeError(error_message)
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
             self._dataframe = PandasDataFrame(df, implementation="pandas")
         elif (mpd := get_modin()) is not None and isinstance(
@@ -1764,7 +1763,8 @@ class LazyFrame(BaseFrame):
         )
 
     def __getitem__(self, item: str | slice) -> Series | DataFrame:
-        raise TypeError("Slicing is not supported on LazyFrame")
+        error_message = "Slicing is not supported on LazyFrame"
+        raise TypeError(error_message)
 
     def collect(self) -> DataFrame:
         r"""

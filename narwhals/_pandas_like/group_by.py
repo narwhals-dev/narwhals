@@ -133,9 +133,10 @@ def agg_pandas(  # noqa: PLR0913
         try:
             result_simple = grouped.agg(aggs)
         except AttributeError as exc:
-            raise RuntimeError(
+            error_message = (
                 "Failed to aggregated - does your aggregation function return a scalar?"
-            ) from exc
+            )
+            raise RuntimeError(error_message) from exc
         result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
         result_simple = result_simple.rename(columns=name_mapping).reset_index()
         return from_dataframe(result_simple.loc[:, output_names])

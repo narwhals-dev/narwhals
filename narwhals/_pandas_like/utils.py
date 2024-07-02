@@ -76,7 +76,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
         if other._series.index is not index and not (other._series.index == index).all():
             return other._series.set_axis(index, axis=0)
         return other._series
-    raise AssertionError("Please report a bug")
+    error_message = "Please report a bug"
+    raise AssertionError(error_message)
 
 
 def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:

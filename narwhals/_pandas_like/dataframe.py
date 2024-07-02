@@ -77,7 +77,8 @@ class PandasDataFrame:
                     raise ValueError(
                         msg,
                     )
-            raise AssertionError("Pls report bug")
+            error_message = "Please report a bug"
+            raise AssertionError(error_message)
 
     def _from_dataframe(self, df: Any) -> Self:
         return self.__class__(

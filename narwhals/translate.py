@@ -161,13 +161,16 @@ def from_native(  # noqa: PLR0911 - This will become easier once #363 is merged
 
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         if series_only:  # pragma: no cover (todo)
-            raise TypeError("Cannot only use `series_only` with polars.DataFrame")
+            error_message = "Cannot only use `series_only` with polars.DataFrame"
+            raise TypeError(error_message)
         return DataFrame(native_dataframe)
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
         if series_only:  # pragma: no cover (todo)
-            raise TypeError("Cannot only use `series_only` with polars.LazyFrame")
+            error_message = "Cannot only use `series_only` with polars.LazyFrame"
+            raise TypeError(error_message)
         if eager_only:  # pragma: no cover (todo)
-            raise TypeError("Cannot only use `eager_only` with polars.LazyFrame")
+            error_message = "Cannot only use `eager_only` with polars.LazyFrame"
+            raise TypeError(error_message)
         return LazyFrame(native_dataframe)
     elif (
         (pd := get_pandas()) is not None
@@ -178,21 +181,26 @@ def from_native(  # noqa: PLR0911 - This will become easier once #363 is merged
         and isinstance(native_dataframe, cudf.DataFrame)
     ):
         if series_only:  # pragma: no cover (todo)
-            raise TypeError("Cannot only use `series_only` with dataframe")
+            error_message = "Cannot only use `series_only` with dataframe"
+            raise TypeError(error_message)
         return DataFrame(native_dataframe)
     elif (pa := get_pyarrow()) is not None and isinstance(native_dataframe, pa.Table):
         if series_only:  # pragma: no cover (todo)
-            raise TypeError("Cannot only use `series_only` with arrow table")
+            error_message = "Cannot only use `series_only` with arrow table"
+            raise TypeError(error_message)
         return DataFrame(native_dataframe)
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
-            raise TypeError("Cannot only use `series_only` with dataframe")
+            error_message = "Cannot only use `series_only` with dataframe"
+            raise TypeError(error_message)
         return DataFrame(native_dataframe.__narwhals_dataframe__())
     elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
-            raise TypeError("Cannot only use `series_only` with lazyframe")
+            error_message = "Cannot only use `series_only` with lazyframe"
+            raise TypeError(error_message)
         if eager_only:  # pragma: no cover (todo)
-            raise TypeError("Cannot only use `eager_only` with lazyframe")
+            error_message = "Cannot only use `eager_only` with lazyframe"
+            raise TypeError(error_message)
         return LazyFrame(native_dataframe.__narwhals_lazyframe__())
     elif (
         (pl := get_polars()) is not None
@@ -211,11 +219,13 @@ def from_native(  # noqa: PLR0911 - This will become easier once #363 is merged
         )
     ):
         if not allow_series:  # pragma: no cover (todo)
-            raise TypeError("Please set `allow_series=True`")
+            error_messagge = "Please set `allow_series=True`"
+            raise TypeError(error_messagge)
         return Series(native_dataframe)
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
-            raise TypeError("Please set `allow_series=True`")
+            error_messagge = "Please set `allow_series=True`"
+            raise TypeError(error_messagge)
         return Series(native_dataframe.__narwhals_series__())
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"

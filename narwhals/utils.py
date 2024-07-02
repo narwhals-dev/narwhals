@@ -135,7 +135,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame) -> T:
 
     def _validate_index(index: Any) -> None:
         if not index.is_unique:
-            raise ValueError("given index doesn't have a unique index")
+            error_message = "given index doesn't have a unique index"
+            raise ValueError(error_message)
 
     lhs_any = cast(Any, lhs)
     rhs_any = cast(Any, rhs)
