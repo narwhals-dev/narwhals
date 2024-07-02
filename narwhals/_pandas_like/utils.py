@@ -421,14 +421,14 @@ def __translate_datetime_dtype(dtype: str) -> DType | None:
     if dtype in ("category",) or dtype.startswith("dictionary<"):
         return dtypes.Categorical()
     if dtype.startswith("datetime64"):
-        # todo: different time units and time zones
+        # TODO: different time units and time zones
         return dtypes.Datetime()
     if dtype.startswith(("timedelta64", "duration")):
-        # todo: different time units
+        # TODO: different time units
         return dtypes.Duration()
     if dtype.startswith("timestamp["):
         # pyarrow-backed datetime
-        # todo: different time units and time zones
+        # TODO: different time units and time zones
         return dtypes.Datetime()
 
     return None

@@ -50,7 +50,8 @@ lint.ignore = [
   'RET505', # Keep, this will become easier to fix after #363 is merged
   'S101',
   'SLF001',
-  'TD',
+  'TD002',
+  'TD003',
 ]
 
 [tool.ruff.lint.isort]

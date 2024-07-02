@@ -12,7 +12,7 @@ from narwhals.utils import remove_suffix
 
 ret = 0
 
-# todo: make dtypes reference page as well
+# TODO: make dtypes reference page as well
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions: list[str] = [
     i

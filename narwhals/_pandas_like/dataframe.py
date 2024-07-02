@@ -321,7 +321,7 @@ class PandasDataFrame:
 
     def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
         if as_series:
-            # todo: should this return narwhals series?
+            # TODO: should this return narwhals series?
             return {col: self._dataframe.loc[:, col] for col in self.columns}
         return self._dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
