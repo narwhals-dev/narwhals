@@ -70,7 +70,8 @@ lint.ignore = [
   'RET505',
   'S',
   'SLF001',
-  'TD',
+  'TD002',
+  'TD003',
   'TRY003',  # todo: enable
   'TRY004'
 ]

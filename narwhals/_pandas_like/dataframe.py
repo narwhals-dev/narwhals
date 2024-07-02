@@ -395,7 +395,7 @@ class PandasDataFrame:
         from narwhals._pandas_like.series import PandasSeries
 
         if as_series:
-            # todo: should this return narwhals series?
+            # TODO: should this return narwhals series?
             return {
                 col: PandasSeries(
                     self._native_dataframe.loc[:, col],
