@@ -369,7 +369,13 @@ def test_left_join_overlapping_column(constructor: Any) -> None:
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
     result = df_left.join(df_right, left_on="b", right_on="c", how="left")
-    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "d": [1, 4, 2], "a_right": [1, 2, 3], "d_right": [1, 4, 2]}
+    expected = {
+        "a": [1, 2, 3],
+        "b": [4, 5, 6],
+        "d": [1, 4, 2],
+        "a_right": [1, 2, 3],
+        "d_right": [1, 4, 2],
+    }
     compare_dicts(result, expected)
 
 
