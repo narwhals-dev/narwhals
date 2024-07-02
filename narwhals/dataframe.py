@@ -174,14 +174,6 @@ class BaseFrame:
         self,
         other: Self,
         *,
-<<<<<<< HEAD
-        how: Literal["inner", "left"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
-    ) -> Self:
-        if how not in ["inner", "left"]:
-            raise NotImplementedError(f"{how} joins is not supported for now")
-=======
         how: Literal["inner", "cross"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -195,7 +187,6 @@ class BaseFrame:
             msg = "Can not pass left_on, right_on for cross join"
             raise ValueError(msg)
 
->>>>>>> upstream/main
         validate_same_library([self, other])
         return self._from_dataframe(
             self._dataframe.join(
