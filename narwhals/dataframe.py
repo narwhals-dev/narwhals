@@ -13,6 +13,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
@@ -389,18 +390,25 @@ class DataFrame(BaseFrame):
         return self._dataframe.shape  # type: ignore[no-any-return]
 
     @overload
+    def __getitem__(self, item: Sequence[int]) -> Series: ...
+
+    @overload
     def __getitem__(self, item: str) -> Series: ...
 
     @overload
     def __getitem__(self, item: slice) -> DataFrame: ...
 
-    def __getitem__(self, item: str | slice) -> Series | DataFrame:
+    def __getitem__(self, item: str | slice | Sequence[int]) -> Series | DataFrame:
         if isinstance(item, str):
             from narwhals.series import Series
 
             return Series(self._dataframe[item])
 
-        elif isinstance(item, (range, slice)):
+        elif isinstance(item, (Sequence, slice)) or (
+            (np := get_numpy()) is not None
+            and isinstance(item, np.ndarray)
+            and item.ndim == 1
+        ):
             return self._from_dataframe(self._dataframe[item])
 
         else:

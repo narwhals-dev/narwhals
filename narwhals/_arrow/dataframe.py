@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import translate_dtype
 from narwhals._pandas_like.utils import evaluate_into_exprs
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 
 if TYPE_CHECKING:
@@ -65,16 +67,21 @@ class ArrowDataFrame:
             return ArrowSeries(self._dataframe[item], name=item)
 
         elif isinstance(item, slice):
-            from narwhals._arrow.dataframe import ArrowDataFrame
-
             if item.step is not None and item.step != 1:
                 msg = "Slicing with step is not supported on PyArrow tables"
                 raise NotImplementedError(msg)
             start = item.start or 0
             stop = item.stop or len(self._dataframe)
-            return ArrowDataFrame(
+            return self._from_dataframe(
                 self._dataframe.slice(item.start, stop - start),
             )
+
+        elif isinstance(item, Sequence) or (
+            (np := get_numpy()) is not None
+            and isinstance(item, np.ndarray)
+            and item.ndim == 1
+        ):
+            return self._from_dataframe(self._dataframe.take(item))
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
