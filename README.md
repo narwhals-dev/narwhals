@@ -93,3 +93,7 @@ Indeed, you may suspect that.
 [Coz they are so awesome](https://youtu.be/ykwqXuMPsoc?si=A-i8LdR38teYsos4).
 
 Thanks to [Olha Urdeichuk](https://www.fiverr.com/olhaurdeichuk) for the illustration!
+
+## Contributing
+
+We welcome contributions! Please see the [contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md).
