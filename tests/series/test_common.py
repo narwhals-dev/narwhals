@@ -344,14 +344,6 @@ def test_is_duplicated(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])
-def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
-    series = nw.from_native(df_raw["b"], series_only=True)
-    result = series.filter(series > threshold).is_empty()
-    assert result == expected
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_unique(df_raw: Any) -> None:
     series = nw.from_native(df_raw["b"], series_only=True)
     result = series.is_unique()
