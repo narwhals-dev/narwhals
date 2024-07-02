@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import os
 import sys
 import warnings
 from typing import TYPE_CHECKING
@@ -43,17 +42,14 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
     """Convert a pandas DataFrame to a Modin DataFrame if Modin is available."""
-    if os.environ.get("CI", None):  # pragma: no cover
-        try:
-            import modin.pandas as mpd
-        except ImportError:
-            return df_pandas.copy()
-        else:
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=UserWarning)
-                return mpd.DataFrame(df_pandas.to_dict(orient="list"))
-    else:  # pragma: no cover
-        return df_pandas
+    try:
+        import modin.pandas as mpd
+    except ImportError:
+        return df_pandas.copy()
+    else:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            return mpd.DataFrame(df_pandas.to_dict(orient="list"))
 
 
 def is_windows() -> bool:
