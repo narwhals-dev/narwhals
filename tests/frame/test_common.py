@@ -310,8 +310,20 @@ def test_join(df_raw: Any) -> None:
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
     compare_dicts(result_native, expected)
 
+    result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
+    result_native = nw.to_native(result)
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8, 9],
+        "b_right": [4, 4, 6],
+        "z_right": [7.0, 8.0, 9.0],
+    }
+    compare_dicts(result_native, expected)
+    result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
+
     with pytest.raises(NotImplementedError):
-        result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
+        result = df.join(df_right, left_on="a", right_on="a", how="right")  # type: ignore[arg-type]
 
     result = df.collect().join(df_right.collect(), left_on="a", right_on="a", how="inner")  # type: ignore[assignment]
     result_native = nw.to_native(result)
@@ -323,6 +335,48 @@ def test_join(df_raw: Any) -> None:
         "z_right": [7.0, 8, 9],
     }
     compare_dicts(result_native, expected)
+
+
+@pytest.mark.parametrize("constructor", [pl.DataFrame, pd.DataFrame])
+@pytest.mark.filterwarnings("ignore:the default coalesce behavior")
+def test_left_join(constructor: Any) -> None:
+    data_left = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    data_right = {"a": [1, 2, 3], "c": [4, 5, 6]}
+    df_left = nw.from_native(constructor(data_left))
+    df_right = nw.from_native(constructor(data_right))
+    result = df_left.join(df_right, left_on="b", right_on="c", how="left")
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "a_right": [1, 2, 3]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("constructor", [pl.DataFrame, pd.DataFrame])
+@pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
+def test_left_join_multiple_column(constructor: Any) -> None:
+    data_left = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    data_right = {"a": [1, 2, 3], "c": [4, 5, 6]}
+    df_left = nw.from_native(constructor(data_left))
+    df_right = nw.from_native(constructor(data_right))
+    result = df_left.join(df_right, left_on=["a", "b"], right_on=["a", "c"], how="left")
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("constructor", [pl.DataFrame, pd.DataFrame])
+@pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
+def test_left_join_overlapping_column(constructor: Any) -> None:
+    data_left = {"a": [1, 2, 3], "b": [4, 5, 6], "d": [1, 4, 2]}
+    data_right = {"a": [1, 2, 3], "c": [4, 5, 6], "d": [1, 4, 2]}
+    df_left = nw.from_native(constructor(data_left))
+    df_right = nw.from_native(constructor(data_right))
+    result = df_left.join(df_right, left_on="b", right_on="c", how="left")
+    expected = {
+        "a": [1, 2, 3],
+        "b": [4, 5, 6],
+        "d": [1, 4, 2],
+        "a_right": [1, 2, 3],
+        "d_right": [1, 4, 2],
+    }
+    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize(
