@@ -323,7 +323,7 @@ class PandasDataFrame:
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )  # pragma: no cover
 
-            other_ = (
+            other = (
                 other._dataframe.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
@@ -332,7 +332,7 @@ class PandasDataFrame:
             )
             return self._from_dataframe(
                 self._dataframe.merge(
-                    other_,
+                    other,
                     how="outer",
                     indicator=indicator_token,
                     left_on=left_on,
