@@ -12,7 +12,7 @@ if TYPE_CHECKING:
         from typing import TypeGuard
     else:
         from typing_extensions import TypeGuard
-    import pandas
+    import pandas as pd
 
 
 def get_polars() -> Any:
@@ -56,7 +56,7 @@ def get_numpy() -> Any:
     return sys.modules.get("numpy", None)
 
 
-def is_pandas_dataframe(df: Any) -> TypeGuard[pandas.DataFrame]:
+def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return bool((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame))
 
