@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Sequence
 from typing import overload
 
 from narwhals._pandas_like.expr import PandasExpr
@@ -17,13 +18,12 @@ from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasGroupBy
@@ -101,12 +101,18 @@ class PandasDataFrame:
                 implementation=self._implementation,
             )
 
-        elif isinstance(item, slice):
+        elif isinstance(item, (slice, Sequence)):
             from narwhals._pandas_like.dataframe import PandasDataFrame
 
             return PandasDataFrame(
                 self._dataframe.iloc[item], implementation=self._implementation
             )
+        elif (
+            (np := get_numpy()) is not None
+            and isinstance(item, np.ndarray)
+            and item.ndim == 1
+        ):
+            return self._from_dataframe(self._dataframe.iloc[item])
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
