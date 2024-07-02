@@ -40,7 +40,7 @@ lint.ignore = [
   'C901',
   'COM812',
   'D',
-  'DTZ',
+  'DTZ001',
   'E501',
   'FIX002',
   'ISC001',  # Keep to avoid conflic with ruff-format
