@@ -42,7 +42,6 @@ lint.ignore = [
   'D',
   'DTZ',
   'E501',
-  'ERA001',  # todo: enable
   'FBT003',  # todo: enable
   'FIX',
   'ISC001',  # Keep to avoid conflic with ruff-format
