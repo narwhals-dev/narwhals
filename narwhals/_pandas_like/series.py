@@ -439,7 +439,7 @@ class PandasSeries:
             ) < parse_version("1.0.0"):
                 kwargs = {}
             else:
-                kwargs = {"na_values": float("nan")}
+                kwargs = {"na_value": float("nan")}
             return self._series.to_numpy(
                 dtype=PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)], **kwargs
             )
