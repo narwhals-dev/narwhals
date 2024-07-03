@@ -154,7 +154,7 @@ def agg_pandas(  # noqa: PLR0913
         for expr in exprs:
             results_keys = expr._call(from_dataframe(df))
             for result_keys in results_keys:
-                out_group.append(result_keys._series.item())
+                out_group.append(result_keys._series.iloc[0])
                 out_names.append(result_keys.name)
         return native_series_from_iterable(
             out_group, index=out_names, name="", implementation=implementation

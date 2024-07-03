@@ -434,9 +434,14 @@ class PandasSeries:
     def to_numpy(self) -> Any:
         has_missing = self._series.isna().any()
         if has_missing and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
+            if self._implementation == "pandas" and parse_version(
+                get_pandas().__version__
+            ) < parse_version("1.0.0"):
+                kwargs = {}
+            else:
+                kwargs = {"na_values": float("nan")}
             return self._series.to_numpy(
-                dtype=PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)],
-                na_value=float("nan"),
+                dtype=PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)], **kwargs
             )
         if (
             not has_missing

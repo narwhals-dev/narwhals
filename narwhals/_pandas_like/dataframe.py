@@ -334,7 +334,7 @@ class PandasDataFrame:
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
-                .drop_duplicates(ignore_index=True)
+                .drop_duplicates()
             )
             return self._from_dataframe(
                 self._dataframe.merge(

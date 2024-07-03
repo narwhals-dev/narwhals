@@ -74,9 +74,9 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasSeries):
         if other.len() == 1:
             # broadcast
-            return other._series.item()
+            return other._series.iloc[0]
         if other._series.index is not index and not (other._series.index == index).all():
-            return other._series.set_axis(index, axis=0)
+            return other._series.set_axis(index, axis=0, inplace=False)
         return other._series
     raise AssertionError("Please report a bug")
 
@@ -378,9 +378,9 @@ def set_axis(obj: T, index: Any, implementation: str) -> T:
     if implementation == "pandas" and parse_version(
         get_pandas().__version__
     ) >= parse_version("1.5.0"):
-        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[no-any-return, attr-defined]
+        return obj.set_axis(index, axis=0, copy=False, inplace=False)  # type: ignore[no-any-return, attr-defined]
     else:  # pragma: no cover
-        return obj.set_axis(index, axis=0)  # type: ignore[no-any-return, attr-defined]
+        return obj.set_axis(index, axis=0, inplace=False)  # type: ignore[no-any-return, attr-defined]
 
 
 def translate_dtype(column: Any) -> DType:
@@ -591,7 +591,11 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
     reindexed = [series[0]._series]
     for s in series[1:]:
         if s._series.index is not idx:
-            reindexed.append(s._series.set_axis(idx.rename(s._series.index.name), axis=0))
+            reindexed.append(
+                s._series.set_axis(
+                    idx.rename(s._series.index.name), axis=0, inplace=False
+                )
+            )
         else:
             reindexed.append(s._series)
     return reindexed
