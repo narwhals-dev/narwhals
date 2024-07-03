@@ -1103,9 +1103,9 @@ class DataFrame(BaseFrame):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
 
@@ -2435,25 +2435,27 @@ class LazyFrame(BaseFrame):
                       dataframe. Accepts column selector input.
 
         Examples:
-            Drop a single column by passing the name of that column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> lf = nw.from_native(lf_pl)
-            >>> lframe = lf.drop("ham").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.drop("ham")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar
+            0    1  6.0
+            1    2  7.0
+            2    3  8.0
+            >>> func(lf_pl).collect()
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -2467,13 +2469,16 @@ class LazyFrame(BaseFrame):
 
             Use positional arguments to drop multiple columns.
 
-            >>> lframe = lf.drop("foo", "ham").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.drop("foo", "ham")
+
+            >>> func(df_pd)
+               bar
+            0  6.0
+            1  7.0
+            2  8.0
+            >>> func(lf_pl).collect()
             shape: (3, 1)
             ┌─────┐
             │ bar │
