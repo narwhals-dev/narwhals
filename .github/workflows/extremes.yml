@@ -26,10 +26,10 @@ jobs:
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-build-${{ matrix.python-version }}
+      - name: install-minimu-versions
+        run: python -m pip install tox virtualenv setuptools pandas==0.25 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0
       - name: install-reqs
-        run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
-      - name: install-modin
-        run: python -m pip install pandas==0.25 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0
+        run: python -m pip install -r requirements-dev.txt
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
       - name: Run doctests
