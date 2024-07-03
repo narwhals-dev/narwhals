@@ -2406,9 +2406,6 @@ class LazyFrame(BaseFrame):
                       dataframe. Accepts column selector input.
 
         Examples:
-            Drop a single column by passing the name of that column.
-
-            Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
@@ -2419,7 +2416,7 @@ class LazyFrame(BaseFrame):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            >>> def func(df):
+            ... def func(df):
             ...     return df.drop("ham")
 
             We can then pass either pandas or Polars to `func`:
