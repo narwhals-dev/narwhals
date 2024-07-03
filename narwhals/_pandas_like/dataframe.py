@@ -249,8 +249,8 @@ class PandasDataFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_dataframe(self._dataframe.rename(columns=mapping))
 
-    def drop(self, columns: str | Iterable[str]) -> Self:
-        return self._from_dataframe(self._dataframe.drop(columns=flatten(columns)))
+    def drop(self, *columns: str | Iterable[str]) -> Self:
+        return self._from_dataframe(self._dataframe.drop(columns=[*flatten(columns)]))
 
     # --- transform ---
     def sort(

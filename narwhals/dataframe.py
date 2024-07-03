@@ -1109,10 +1109,9 @@ class DataFrame(BaseFrame):
 
             We define a library agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.drop("ham")
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.drop("ham")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1132,6 +1131,29 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7.0 │
             │ 3   ┆ 8.0 │
             └─────┴─────┘
+
+            Use positional arguments to drop multiple columns.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.drop("foo", "ham")
+
+            >>> func(df_pd)
+               bar
+            0  6.0
+            1  7.0
+            2  8.0
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ bar │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 6.0 │
+            │ 7.0 │
+            │ 8.0 │
+            └─────┘
         """
         return super().drop(*columns)
 
