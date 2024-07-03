@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from typing import Any
 
 from narwhals import dtypes
 from narwhals.dependencies import get_pyarrow
+from narwhals.utils import isinstance_or_issubclass
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
@@ -45,3 +48,48 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
     raise AssertionError
+
+
+def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
+    from narwhals import dtypes
+
+    pa = get_pyarrow()
+
+    if isinstance_or_issubclass(dtype, dtypes.Float64):
+        return pa.float64()
+    if isinstance_or_issubclass(dtype, dtypes.Float32):
+        return pa.float32()
+    if isinstance_or_issubclass(dtype, dtypes.Int64):
+        return pa.int64()
+    if isinstance_or_issubclass(dtype, dtypes.Int32):
+        return pa.int32()
+    if isinstance_or_issubclass(dtype, dtypes.Int16):
+        return pa.int16()
+    if isinstance_or_issubclass(dtype, dtypes.Int8):
+        return pa.int8()
+    if isinstance_or_issubclass(dtype, dtypes.UInt64):
+        return pa.uint64()
+    if isinstance_or_issubclass(dtype, dtypes.UInt32):
+        return pa.uint32()
+    if isinstance_or_issubclass(dtype, dtypes.UInt16):
+        return pa.uint16()
+    if isinstance_or_issubclass(dtype, dtypes.UInt8):
+        return pa.uint8()
+    if isinstance_or_issubclass(dtype, dtypes.String):
+        return pa.string()
+    if isinstance_or_issubclass(dtype, dtypes.Boolean):
+        return pa.bool_()
+    if isinstance_or_issubclass(dtype, dtypes.Categorical):
+        # todo: what should the key be? let's keep it consistent
+        # with Polars for now
+        return pa.dictionary(pa.uint32(), pa.string())
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        # Use Polars' default
+        return pa.timestamp("us")
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        # Use Polars' default
+        return pa.duration("us")
+    if isinstance_or_issubclass(dtype, dtypes.Date):
+        return pa.date32()
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)
