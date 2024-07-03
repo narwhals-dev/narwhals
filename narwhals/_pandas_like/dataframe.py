@@ -298,7 +298,7 @@ class PandasDataFrame:
             ):
                 key_token = generate_unique_token(
                     n_bytes=8, columns=[*self.columns, *other.columns]
-                )  # pragma: no cover
+                )
 
                 return self._from_dataframe(
                     self._dataframe.assign(**{key_token: 0}).merge(
@@ -321,7 +321,7 @@ class PandasDataFrame:
         if how == "anti":
             indicator_token = generate_unique_token(
                 n_bytes=8, columns=[*self.columns, *other.columns]
-            )  # pragma: no cover
+            )
 
             other = (
                 other._dataframe.loc[:, right_on]
