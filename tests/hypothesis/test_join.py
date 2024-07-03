@@ -86,6 +86,7 @@ def test_join(  # pragma: no cover
     ),
 )  # type: ignore[misc]
 @pytest.mark.slow()
+@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
 def test_cross_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
