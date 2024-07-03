@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from polars.testing import assert_frame_equal
 
@@ -41,6 +42,24 @@ def test_cast_date_datetime_polars() -> None:
     expected = pl.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
     assert_frame_equal(result, expected)
     assert df.schema == {"a": nw.Date}
+
+
+def test_cast_date_datetime_pyarrow() -> None:
+    # polars: date to datetime
+    dfpa = pa.table({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
+    df = nw.from_native(dfpa)
+    df = df.select(nw.col("a").cast(nw.Datetime))
+    result = nw.to_native(df)
+    expected = pa.table({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]})
+    assert result == expected
+
+    # pyarrow: datetime to date
+    dfpa = pa.table({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]})
+    df = nw.from_native(dfpa)
+    df = df.select(nw.col("a").cast(nw.Date))
+    result = nw.to_native(df)
+    expected = pa.table({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
+    assert result == expected
 
 
 @pytest.mark.skipif(

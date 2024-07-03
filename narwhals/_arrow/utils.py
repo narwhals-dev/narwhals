@@ -90,6 +90,6 @@ def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         # Use Polars' default
         return pa.duration("us")
     if isinstance_or_issubclass(dtype, dtypes.Date):
-        return pa.date()
+        return pa.date32()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
