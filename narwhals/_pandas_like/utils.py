@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -612,3 +613,31 @@ def int_dtype_mapper(dtype: Any) -> str:
     if str(dtype).lower() != str(dtype):  # pragma: no cover
         return "Int64"
     return "int64"
+
+
+def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
+    """Generates a unique token of specified n_bytes that is not present in the given list of columns.
+
+    Arguments:
+        n_bytes : The number of bytes to generate for the token.
+        columns : The list of columns to check for uniqueness.
+
+    Returns:
+        A unique token that is not present in the given list of columns.
+
+    Raises:
+        AssertionError: If a unique token cannot be generated after 100 attempts.
+    """
+    counter = 0
+    while True:
+        token = secrets.token_hex(n_bytes)
+        if token not in columns:
+            return token
+
+        counter += 1
+        if counter > 100:
+            msg = (
+                "Internal Error: Narwhals was not able to generate a column name to perform cross "
+                "join operation"
+            )
+            raise AssertionError(msg)

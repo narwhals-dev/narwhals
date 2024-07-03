@@ -175,11 +175,11 @@ class BaseFrame:
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross"] = "inner",
+        how: Literal["inner", "cross", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
-        _supported_joins = {"inner", "cross"}
+        _supported_joins = {"inner", "cross", "anti"}
         if how not in _supported_joins:
             msg = f"Only the following join stragies are supported: {_supported_joins}"
             raise NotImplementedError(msg)
@@ -1455,7 +1455,7 @@ class DataFrame(BaseFrame):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross"] = "inner",
+        how: Literal["inner", "cross", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -1469,6 +1469,7 @@ class DataFrame(BaseFrame):
 
                   * *inner*: Returns rows that have matching values in both tables
                   * *cross*: Returns the Cartesian product of rows from both tables
+                  * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Name(s) of the left join column(s).
 
@@ -2866,7 +2867,7 @@ class LazyFrame(BaseFrame):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross"] = "inner",
+        how: Literal["inner", "cross", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -2880,6 +2881,7 @@ class LazyFrame(BaseFrame):
 
                   * *inner*: Returns rows that have matching values in both tables
                   * *cross*: Returns the Cartesian product of rows from both tables
+                  * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Join column of the left DataFrame.
 

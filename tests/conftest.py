@@ -1,4 +1,3 @@
-import os
 from typing import Any
 from typing import Callable
 
@@ -58,7 +57,7 @@ if parse_version(pd.__version__) >= parse_version("1.5.0"):
 else:  # pragma: no cover
     params = [pandas_constructor]
 params.append(polars_constructor)
-if os.environ.get("CI") and get_modin() is not None:  # pragma: no cover
+if get_modin() is not None:  # pragma: no cover
     params.append(modin_constructor)
 
 
@@ -104,7 +103,7 @@ if parse_version(pd.__version__) >= parse_version("1.5.0"):
 else:  # pragma: no cover
     params_series = [pandas_series_constructor]
 params_series.append(polars_series_constructor)
-if os.environ.get("CI") and get_modin() is not None:  # pragma: no cover
+if get_modin() is not None:  # pragma: no cover
     params_series.append(modin_series_constructor)
 
 

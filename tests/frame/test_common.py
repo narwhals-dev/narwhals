@@ -325,30 +325,12 @@ def test_join(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize(
-    ("df_raw", "expected"),
-    [
-        (
-            df_polars,
-            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
-        ),
-        (
-            df_lazy,
-            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
-        ),
-        (
-            df_pandas,
-            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
-        ),
-        (
-            df_mpd,
-            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
-        ),
-    ],
-)
-def test_cross_join(df_raw: Any, expected: dict[str, list[Any]]) -> None:
+@pytest.mark.parametrize("df_raw", [df_polars, df_lazy, df_pandas, df_mpd])
+def test_cross_join(df_raw: Any) -> None:
     df = nw.from_native(df_raw).select("a")
     result = df.join(df, how="cross")  # type: ignore[arg-type]
+
+    expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
     compare_dicts(result, expected)
 
     with pytest.raises(ValueError, match="Can not pass left_on, right_on for cross join"):
@@ -361,6 +343,32 @@ def test_cross_join_non_pandas() -> None:
     df._dataframe._implementation = "modin"
     result = df.join(df, how="cross")  # type: ignore[arg-type]
     expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [
+        df_polars,
+        df_lazy,
+        df_pandas,
+        # df_mpd, (todo: understand the difference between ipython/jupyter and pytest runs)
+    ],
+)
+@pytest.mark.parametrize(
+    ("join_key", "filter_expr", "expected"),
+    [
+        (["a", "b"], (nw.col("b") < 5), {"a": [2], "b": [6], "z": [9]}),
+        (["b"], (nw.col("b") < 5), {"a": [2], "b": [6], "z": [9]}),
+        (["b"], (nw.col("b") > 5), {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}),
+    ],
+)
+def test_anti_join(
+    df_raw: Any, join_key: list[str], filter_expr: nw.Expr, expected: dict[str, list[Any]]
+) -> None:
+    df = nw.from_native(df_raw)
+    other = df.filter(filter_expr)
+    result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
     compare_dicts(result, expected)
 
 
