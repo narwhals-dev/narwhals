@@ -29,7 +29,7 @@ jobs:
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
       - name: install-modin
-        run: python -m pip install pandas==0.25 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata
+        run: python -m pip install pandas==0.25 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
       - name: Run doctests
