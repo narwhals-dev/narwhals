@@ -18,7 +18,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-pandas = ["pandas>=1.1.5"]
+pandas = ["pandas>=0.25.0"]
 polars = ["polars>=0.20.3"]
 pyarrow = ['pyarrow>=11.0.0']
 
