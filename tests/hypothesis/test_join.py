@@ -11,6 +11,7 @@ import narwhals as nw
 from narwhals.utils import parse_version
 
 pl_version = parse_version(pl.__version__)
+pd_version = parse_version(pd.__version__)
 
 
 @given(
@@ -37,6 +38,7 @@ pl_version = parse_version(pl.__version__)
     ),
 )  # type: ignore[misc]
 @pytest.mark.skipif(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
+@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
 @pytest.mark.slow()
 def test_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
@@ -84,6 +86,7 @@ def test_join(  # pragma: no cover
     ),
 )  # type: ignore[misc]
 @pytest.mark.slow()
+@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
 def test_cross_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],

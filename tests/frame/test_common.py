@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -12,7 +13,6 @@ import pyarrow as pa
 import pytest
 from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
-from sklearn.utils._testing import ignore_warnings
 
 import narwhals as nw
 from narwhals.functions import _get_deps_info
@@ -444,6 +444,10 @@ def test_accepted_dataframes() -> None:
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.0.0"),
+    reason="too old for pandas-pyarrow",
+)
 def test_convert_pandas(df_raw: Any) -> None:
     result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]
     expected = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -851,7 +855,9 @@ def test_with_columns_order_single_row(df_raw: Any) -> None:
 
 
 def test_get_sys_info() -> None:
-    with ignore_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        show_versions()
         sys_info = _get_sys_info()
 
     assert "python" in sys_info
@@ -860,7 +866,9 @@ def test_get_sys_info() -> None:
 
 
 def test_get_deps_info() -> None:
-    with ignore_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        show_versions()
         deps_info = _get_deps_info()
 
     assert "narwhals" in deps_info
@@ -873,7 +881,8 @@ def test_get_deps_info() -> None:
 
 
 def test_show_versions(capsys: Any) -> None:
-    with ignore_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
         show_versions()
         out, err = capsys.readouterr()
 

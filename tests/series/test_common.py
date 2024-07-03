@@ -141,6 +141,9 @@ def test_boolean_reductions(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
+)
 def test_convert(df_raw: Any) -> None:
     result = nw.from_native(df_raw).lazy().collect()["a"].to_numpy()
     assert_array_equal(result, np.array([1, 3, 2]))
@@ -271,6 +274,10 @@ def test_zip_with(df_raw: Any, mask: Any, expected: Any) -> None:
     assert result == expected
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("1.0.0"),
+    reason="too old for convert_dtypes",
+)
 def test_cast_string() -> None:
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
