@@ -436,7 +436,7 @@ class PandasSeries:
         if has_missing and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
             if self._implementation == "pandas" and parse_version(
                 get_pandas().__version__
-            ) < parse_version("1.0.0"):
+            ) < parse_version("1.0.0"):  # pragma: no cover
                 kwargs = {}
             else:
                 kwargs = {"na_value": float("nan")}

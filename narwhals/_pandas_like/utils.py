@@ -75,14 +75,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other._series.iloc[0]
-        if other._series.index is not index and not (other._series.index == index).all():
-            if other._implementation == "pandas" and parse_version(
-                get_pandas().__version__
-            ) < parse_version("1.0.0"):
-                kwargs = {"inplace": False}
-            else:
-                kwargs = {}
-            return other._series.set_axis(index, axis=0, **kwargs)
+        if other._series.index is not index:
+            return set_axis(other._series, index, implementation=other._implementation)
         return other._series
     raise AssertionError("Please report a bug")
 
@@ -383,7 +377,7 @@ def native_series_from_iterable(
 def set_axis(obj: T, index: Any, implementation: str) -> T:
     if implementation == "pandas" and parse_version(
         get_pandas().__version__
-    ) < parse_version("1.0.0"):
+    ) < parse_version("1.0.0"):  # pragma: no cover
         kwargs = {"inplace": False}
     else:
         kwargs = {}
@@ -391,7 +385,9 @@ def set_axis(obj: T, index: Any, implementation: str) -> T:
         get_pandas().__version__
     ) >= parse_version("1.5.0"):
         kwargs["copy"] = False
-    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
+    else:  # pragma: no cover
+        pass
+    return obj.set_axis(index.rename(obj.index.name), axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
 
 
 def translate_dtype(column: Any) -> DType:
@@ -602,15 +598,7 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
     reindexed = [series[0]._series]
     for s in series[1:]:
         if s._series.index is not idx:
-            if s._implementation == "pandas" and parse_version(
-                get_pandas().__version__
-            ) < parse_version("1.0.0"):
-                kwargs = {"inplace": False}
-            else:
-                kwargs = {}
-            reindexed.append(
-                s._series.set_axis(idx.rename(s._series.index.name), axis=0, **kwargs)
-            )
+            reindexed.append(set_axis(s._series, idx, s._implementation))
         else:
             reindexed.append(s._series)
     return reindexed
