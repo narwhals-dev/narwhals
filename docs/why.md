@@ -15,7 +15,7 @@ print(3 in pl.Series([1, 2, 3]))
 Try it out and see ;) Spoiler alert: they don't. pandas checks if `3` is in the index,
 Polars checks if it's in the values.
 
-Try codes below, they even have different column names after a join!
+For another example, try running the code below - note how the outputs have different column names after the join!
 
 ```python
 pd_df_left = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
