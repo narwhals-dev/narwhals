@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
+    from narwhals.dtypes import DType
 
 
 class ArrowExpr:
@@ -66,6 +67,9 @@ class ArrowExpr:
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace()
+
+    def cast(self, dtype: DType) -> Self:
+        return reuse_series_implementation(self, "cast", dtype)  # type: ignore[type-var]
 
     def cum_sum(self) -> Self:
         return reuse_series_implementation(self, "cum_sum")  # type: ignore[type-var]
