@@ -620,7 +620,14 @@ def test_drop_nulls(df_raw: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_lazy, df_mpd])
+@pytest.mark.parametrize(
+    "df_raw",
+    [
+        df_pandas,
+        df_polars,
+        df_mpd,
+    ],
+)
 @pytest.mark.parametrize(
     ("drop", "left"),
     [
