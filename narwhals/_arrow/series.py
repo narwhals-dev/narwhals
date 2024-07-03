@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 
+from narwhals._arrow.namespace import ArrowNamespace
+from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.dependencies import get_pyarrow
@@ -43,6 +45,9 @@ class ArrowSeries:
 
     def __len__(self) -> int:
         return len(self._series)
+
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        return ArrowNamespace()
 
     @property
     def name(self) -> str:
@@ -84,6 +89,12 @@ class ArrowSeries:
 
     def is_empty(self) -> bool:
         return len(self) == 0
+
+    def cast(self, dtype: DType) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._series
+        dtype = reverse_translate_dtype(dtype)
+        return self._from_series(pc.cast(ser, dtype))
 
     @property
     def shape(self) -> tuple[int]:

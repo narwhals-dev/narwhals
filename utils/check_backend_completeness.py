@@ -37,7 +37,6 @@ MISSING = [
     "DataFrame.with_columns",
     "DataFrame.with_row_index",
     "DataFrame.write_parquet",
-    "Series.cast",
     "Series.diff",
     "Series.drop_nulls",
     "Series.fill_null",
