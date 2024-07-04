@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - clone
         - collect
         - columns
         - drop
