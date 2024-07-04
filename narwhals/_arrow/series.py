@@ -35,7 +35,7 @@ class ArrowSeries:
         )
 
     @classmethod
-    def from_iterable(cls: type[Self], data: Iterable[Any], name: str) -> Self:
+    def _from_iterable(cls: type[Self], data: Iterable[Any], name: str) -> Self:
         return cls(
             native_series_from_iterable(
                 data, name=name, index=None, implementation="arrow"
