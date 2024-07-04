@@ -1,4 +1,3 @@
-import os
 from typing import Any
 from typing import Callable
 
@@ -53,12 +52,12 @@ def polars_constructor(obj: Any) -> IntoDataFrame:
     return pl.DataFrame(obj)
 
 
-if parse_version(pd.__version__) >= parse_version("1.5.0"):
+if parse_version(pd.__version__) >= parse_version("2.0.0"):
     params = [pandas_constructor, pandas_nullable_constructor, pandas_pyarrow_constructor]
 else:  # pragma: no cover
     params = [pandas_constructor]
 params.append(polars_constructor)
-if os.environ.get("CI") and get_modin() is not None:  # pragma: no cover
+if get_modin() is not None:  # pragma: no cover
     params.append(modin_constructor)
 
 
@@ -95,7 +94,7 @@ def polars_series_constructor(obj: Any) -> Any:
     return pl.Series(obj)
 
 
-if parse_version(pd.__version__) >= parse_version("1.5.0"):
+if parse_version(pd.__version__) >= parse_version("2.0.0"):
     params_series = [
         pandas_series_constructor,
         pandas_series_nullable_constructor,
@@ -104,7 +103,7 @@ if parse_version(pd.__version__) >= parse_version("1.5.0"):
 else:  # pragma: no cover
     params_series = [pandas_series_constructor]
 params_series.append(polars_series_constructor)
-if os.environ.get("CI") and get_modin() is not None:  # pragma: no cover
+if get_modin() is not None:  # pragma: no cover
     params_series.append(modin_series_constructor)
 
 
@@ -113,8 +112,12 @@ def constructor_series(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]
 
 
+def pyarrow_chunked_array_constructor(obj: Any) -> Any:
+    return pa.chunked_array([obj])
+
+
 # TODO: once pyarrow has complete coverage, we can remove this one,
 # and just put `pa.table` into `constructor`
-@pytest.fixture(params=[*params_series, lambda x: pa.chunked_array([x])])
+@pytest.fixture(params=[*params_series, pyarrow_chunked_array_constructor])
 def constructor_series_with_pyarrow(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]

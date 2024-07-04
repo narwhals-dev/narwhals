@@ -9,6 +9,7 @@ import polars as pl
 import pytest
 
 import narwhals as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
@@ -17,6 +18,9 @@ from tests.utils import compare_dicts
     ["pandas", "polars"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
+)
 def test_q1(library: str) -> None:
     if library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
@@ -84,6 +88,9 @@ def test_q1(library: str) -> None:
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
     "ignore:.*Complex.*:UserWarning",
 )
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
+)
 def test_q1_w_generic_funcs(library: str) -> None:
     if library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
@@ -144,6 +151,9 @@ def test_q1_w_generic_funcs(library: str) -> None:
 
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
+)
 def test_q1_w_pandas_agg_generic_path() -> None:
     df_raw = pd.read_parquet("tests/data/lineitem.parquet")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])

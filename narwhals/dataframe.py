@@ -175,11 +175,11 @@ class BaseFrame:
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross"] = "inner",
+        how: Literal["inner", "cross", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
-        _supported_joins = {"inner", "cross"}
+        _supported_joins = {"inner", "cross", "anti"}
         if how not in _supported_joins:
             msg = f"Only the following join stragies are supported: {_supported_joins}"
             raise NotImplementedError(msg)
@@ -245,8 +245,8 @@ class DataFrame(BaseFrame):
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
 
-    def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
-        return self._dataframe.to_numpy(*args, **kwargs)
+    def __array__(self) -> np.ndarray:
+        return self._dataframe.to_numpy()
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "
@@ -637,8 +637,8 @@ class DataFrame(BaseFrame):
 
             We define a library agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
+            >>> @nw.narwhalify
+            ... def func(df):
             ...     return df.columns
 
             We can then pass either pandas or Polars to `func`:
@@ -1103,16 +1103,15 @@ class DataFrame(BaseFrame):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.drop("ham")
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.drop("ham")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1132,6 +1131,29 @@ class DataFrame(BaseFrame):
             │ 2   ┆ 7.0 │
             │ 3   ┆ 8.0 │
             └─────┴─────┘
+
+            Use positional arguments to drop multiple columns.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.drop("foo", "ham")
+
+            >>> func(df_pd)
+               bar
+            0  6.0
+            1  7.0
+            2  8.0
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ bar │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 6.0 │
+            │ 7.0 │
+            │ 8.0 │
+            └─────┘
         """
         return super().drop(*columns)
 
@@ -1146,20 +1168,19 @@ class DataFrame(BaseFrame):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = {
+            >>> data = {
             ...     "foo": [1, 2, 3, 1],
             ...     "bar": ["a", "a", "a", "a"],
             ...     "ham": ["b", "b", "b", "b"],
             ... }
-            >>> df_pd = pd.DataFrame(df)
-            >>> df_pl = pl.DataFrame(df)
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.unique(["bar", "ham"])
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.unique(["bar", "ham"])
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1379,65 +1400,32 @@ class DataFrame(BaseFrame):
                          sequence of booleans.
 
         Examples:
-            Pass a single column name to sort by that column.
-
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_pl = pl.DataFrame(
-            ...     {
-            ...         "a": [1, 2, None],
-            ...         "b": [6.0, 5.0, 4.0],
-            ...         "c": ["a", "c", "b"],
-            ...     }
-            ... )
-            >>> df = nw.from_native(df_pl, eager_only=True)
-            >>> dframe = df.sort("a")
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (3, 3)
-            ┌──────┬─────┬─────┐
-            │ a    ┆ b   ┆ c   │
-            │ ---  ┆ --- ┆ --- │
-            │ i64  ┆ f64 ┆ str │
-            ╞══════╪═════╪═════╡
-            │ null ┆ 4.0 ┆ b   │
-            │ 1    ┆ 6.0 ┆ a   │
-            │ 2    ┆ 5.0 ┆ c   │
-            └──────┴─────┴─────┘
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": [1, 2, None],
+            ...     "b": [6.0, 5.0, 4.0],
+            ...     "c": ["a", "c", "b"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
 
-            Sort by multiple columns by passing a list of columns.
+            Let's define a dataframe-agnostic function in which we sort by multiple
+            columns in different orders
 
-            >>> dframe = df.sort(["c", "a"], descending=True)
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
-            shape: (3, 3)
-            ┌──────┬─────┬─────┐
-            │ a    ┆ b   ┆ c   │
-            │ ---  ┆ --- ┆ --- │
-            │ i64  ┆ f64 ┆ str │
-            ╞══════╪═════╪═════╡
-            │ 2    ┆ 5.0 ┆ c   │
-            │ null ┆ 4.0 ┆ b   │
-            │ 1    ┆ 6.0 ┆ a   │
-            └──────┴─────┴─────┘
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.sort("c", "a", descending=[False, True])
 
-            Or use positional arguments to sort by multiple columns in the same way.
+            We can then pass either pandas or Polars to `func`:
 
-            >>> dframe = df.sort("c", "a", descending=[False, True])
-            >>> dframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(dframe)
+            >>> func(df_pd)
+                 a    b  c
+            0  1.0  6.0  a
+            2  NaN  4.0  b
+            1  2.0  5.0  c
+            >>> func(df_pl)
             shape: (3, 3)
             ┌──────┬─────┬─────┐
             │ a    ┆ b   ┆ c   │
@@ -1455,7 +1443,7 @@ class DataFrame(BaseFrame):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross"] = "inner",
+        how: Literal["inner", "cross", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -1469,6 +1457,7 @@ class DataFrame(BaseFrame):
 
                   * *inner*: Returns rows that have matching values in both tables
                   * *cross*: Returns the Cartesian product of rows from both tables
+                  * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Name(s) of the left join column(s).
 
@@ -1797,8 +1786,8 @@ class LazyFrame(BaseFrame):
             DataFrame
 
         Examples:
-            >>> import polars as pl
             >>> import narwhals as nw
+            >>> import polars as pl
             >>> lf_pl = pl.LazyFrame(
             ...     {
             ...         "a": ["a", "b", "a", "b", "b", "c"],
@@ -1813,11 +1802,6 @@ class LazyFrame(BaseFrame):
             | Use `narwhals.to_native` to see native output |
             └───────────────────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
-            >>> df
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
             >>> nw.to_native(df).sort("a")
             shape: (3, 3)
             ┌─────┬─────┬─────┐
@@ -1982,19 +1966,25 @@ class LazyFrame(BaseFrame):
         Get column names.
 
         Examples:
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... ).select("foo", "bar")
-            >>> lf = nw.from_native(lf_pl)
-            >>> lf.columns  # doctest: +SKIP
-            ['foo', 'bar']
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> lf_pl = pl.LazyFrame(df)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.columns
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            ['foo', 'bar', 'ham']
+            >>> func(lf_pl)  # doctest: +SKIP
+            ['foo', 'bar', 'ham']
         """
         return super().columns
 
@@ -2259,23 +2249,27 @@ class LazyFrame(BaseFrame):
              pushdowns at this node.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6, 7, 8],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> lf = nw.from_native(lf_pl)
-            >>> lframe = lf.rename({"foo": "apple"}).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> data = {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.rename({"foo": "apple"})
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               apple  bar ham
+            0      1    6   a
+            1      2    7   b
+            2      3    8   c
+            >>> func(lf_pl).collect()
             shape: (3, 3)
             ┌───────┬─────┬─────┐
             │ apple ┆ bar ┆ ham │
@@ -2412,25 +2406,27 @@ class LazyFrame(BaseFrame):
                       dataframe. Accepts column selector input.
 
         Examples:
-            Drop a single column by passing the name of that column.
-
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3],
-            ...         "bar": [6.0, 7.0, 8.0],
-            ...         "ham": ["a", "b", "c"],
-            ...     }
-            ... )
-            >>> lf = nw.from_native(lf_pl)
-            >>> lframe = lf.drop("ham").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.drop("ham")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo  bar
+            0    1  6.0
+            1    2  7.0
+            2    3  8.0
+            >>> func(lf_pl).collect()
             shape: (3, 2)
             ┌─────┬─────┐
             │ foo ┆ bar │
@@ -2444,13 +2440,16 @@ class LazyFrame(BaseFrame):
 
             Use positional arguments to drop multiple columns.
 
-            >>> lframe = lf.drop("foo", "ham").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.drop("foo", "ham")
+
+            >>> func(df_pd)
+               bar
+            0  6.0
+            1  7.0
+            2  8.0
+            >>> func(lf_pl).collect()
             shape: (3, 1)
             ┌─────┐
             │ bar │
@@ -2476,40 +2475,29 @@ class LazyFrame(BaseFrame):
             LazyFrame: LazyFrame with unique rows.
 
         Examples:
+            >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "foo": [1, 2, 3, 1],
-            ...         "bar": ["a", "a", "a", "a"],
-            ...         "ham": ["b", "b", "b", "b"],
-            ...     }
-            ... )
-            >>> lf = nw.from_native(lf_pl)
-            >>> lframe = lf.unique(None).collect().sort("foo")
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ str ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ a   ┆ b   │
-            │ 2   ┆ a   ┆ b   │
-            │ 3   ┆ a   ┆ b   │
-            └─────┴─────┴─────┘
-            >>> lframe = lf.unique(subset=["bar", "ham"]).collect().sort("foo")
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> data = {
+            ...     "foo": [1, 2, 3, 1],
+            ...     "bar": ["a", "a", "a", "a"],
+            ...     "ham": ["b", "b", "b", "b"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.unique(["bar", "ham"])
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               foo bar ham
+            0    1   a   b
+            >>> func(lf_pl).collect()
             shape: (1, 3)
             ┌─────┬─────┬─────┐
             │ foo ┆ bar ┆ ham │
@@ -2790,65 +2778,32 @@ class LazyFrame(BaseFrame):
                          sequence of booleans.
 
         Examples:
-            Pass a single column name to sort by that column.
-
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": [1, 2, None],
-            ...         "b": [6.0, 5.0, 4.0],
-            ...         "c": ["a", "c", "b"],
-            ...     }
-            ... )
-            >>> lf = nw.from_native(lf_pl)
-            >>> lframe = lf.sort("a").collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (3, 3)
-            ┌──────┬─────┬─────┐
-            │ a    ┆ b   ┆ c   │
-            │ ---  ┆ --- ┆ --- │
-            │ i64  ┆ f64 ┆ str │
-            ╞══════╪═════╪═════╡
-            │ null ┆ 4.0 ┆ b   │
-            │ 1    ┆ 6.0 ┆ a   │
-            │ 2    ┆ 5.0 ┆ c   │
-            └──────┴─────┴─────┘
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": [1, 2, None],
+            ...     "b": [6.0, 5.0, 4.0],
+            ...     "c": ["a", "c", "b"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_lf = pl.LazyFrame(data)
 
-            Sort by multiple columns by passing a list of columns.
+            Let's define a dataframe-agnostic function in which we sort by multiple
+            columns in different orders
 
-            >>> lframe = lf.sort(["c", "a"], descending=True).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
-            shape: (3, 3)
-            ┌──────┬─────┬─────┐
-            │ a    ┆ b   ┆ c   │
-            │ ---  ┆ --- ┆ --- │
-            │ i64  ┆ f64 ┆ str │
-            ╞══════╪═════╪═════╡
-            │ 2    ┆ 5.0 ┆ c   │
-            │ null ┆ 4.0 ┆ b   │
-            │ 1    ┆ 6.0 ┆ a   │
-            └──────┴─────┴─────┘
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.sort("c", "a", descending=[False, True])
 
-            Or use positional arguments to sort by multiple columns in the same way.
+            We can then pass either pandas or Polars to `func`:
 
-            >>> lframe = lf.sort("c", "a", descending=[False, True]).collect()
-            >>> lframe
-            ┌───────────────────────────────────────────────┐
-            | Narwhals DataFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
-            >>> nw.to_native(lframe)
+            >>> func(df_pd)
+                 a    b  c
+            0  1.0  6.0  a
+            2  NaN  4.0  b
+            1  2.0  5.0  c
+            >>> func(df_lf).collect()
             shape: (3, 3)
             ┌──────┬─────┬─────┐
             │ a    ┆ b   ┆ c   │
@@ -2866,7 +2821,7 @@ class LazyFrame(BaseFrame):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross"] = "inner",
+        how: Literal["inner", "cross", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -2880,6 +2835,7 @@ class LazyFrame(BaseFrame):
 
                   * *inner*: Returns rows that have matching values in both tables
                   * *cross*: Returns the Cartesian product of rows from both tables
+                  * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Join column of the left DataFrame.
 

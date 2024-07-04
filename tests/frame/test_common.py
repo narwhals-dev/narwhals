@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -12,7 +13,6 @@ import pyarrow as pa
 import pytest
 from pandas.testing import assert_series_equal as pd_assert_series_equal
 from polars.testing import assert_series_equal as pl_assert_series_equal
-from sklearn.utils._testing import ignore_warnings
 
 import narwhals as nw
 from narwhals.functions import _get_deps_info
@@ -55,30 +55,6 @@ df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9
 df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_mpd = maybe_get_modin_df(df_pandas)
-
-
-@pytest.mark.parametrize(
-    "df_raw",
-    [df_pandas, df_polars, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
-)
-def test_sort(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.sort("a", "b")
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 2, 3],
-        "b": [4, 6, 4],
-        "z": [7.0, 9.0, 8.0],
-    }
-    compare_dicts(result_native, expected)
-    result = df.sort("a", "b", descending=[True, False])
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [3, 2, 1],
-        "b": [4, 6, 4],
-        "z": [8.0, 9.0, 7.0],
-    }
-    compare_dicts(result_native, expected)
 
 
 @pytest.mark.parametrize(
@@ -325,30 +301,12 @@ def test_join(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize(
-    ("df_raw", "expected"),
-    [
-        (
-            df_polars,
-            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
-        ),
-        (
-            df_lazy,
-            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
-        ),
-        (
-            df_pandas,
-            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
-        ),
-        (
-            df_mpd,
-            {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]},
-        ),
-    ],
-)
-def test_cross_join(df_raw: Any, expected: dict[str, list[Any]]) -> None:
+@pytest.mark.parametrize("df_raw", [df_polars, df_lazy, df_pandas, df_mpd])
+def test_cross_join(df_raw: Any) -> None:
     df = nw.from_native(df_raw).select("a")
     result = df.join(df, how="cross")  # type: ignore[arg-type]
+
+    expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
     compare_dicts(result, expected)
 
     with pytest.raises(ValueError, match="Can not pass left_on, right_on for cross join"):
@@ -361,6 +319,32 @@ def test_cross_join_non_pandas() -> None:
     df._dataframe._implementation = "modin"
     result = df.join(df, how="cross")  # type: ignore[arg-type]
     expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [
+        df_polars,
+        df_lazy,
+        df_pandas,
+        # df_mpd, (todo: understand the difference between ipython/jupyter and pytest runs)
+    ],
+)
+@pytest.mark.parametrize(
+    ("join_key", "filter_expr", "expected"),
+    [
+        (["a", "b"], (nw.col("b") < 5), {"a": [2], "b": [6], "z": [9]}),
+        (["b"], (nw.col("b") < 5), {"a": [2], "b": [6], "z": [9]}),
+        (["b"], (nw.col("b") > 5), {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}),
+    ],
+)
+def test_anti_join(
+    df_raw: Any, join_key: list[str], filter_expr: nw.Expr, expected: dict[str, list[Any]]
+) -> None:
+    df = nw.from_native(df_raw)
+    other = df.filter(filter_expr)
+    result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
     compare_dicts(result, expected)
 
 
@@ -436,6 +420,10 @@ def test_accepted_dataframes() -> None:
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.0.0"),
+    reason="too old for pandas-pyarrow",
+)
 def test_convert_pandas(df_raw: Any) -> None:
     result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]
     expected = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -606,6 +594,27 @@ def test_drop_nulls(df_raw: Any) -> None:
     result = nw.to_native(df.select(df.collect()["a"].drop_nulls()))
     expected = {"a": [3, 2]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [
+        df_pandas,
+        df_polars,
+        df_mpd,
+    ],
+)
+@pytest.mark.parametrize(
+    ("drop", "left"),
+    [
+        (["a"], ["b", "z"]),
+        (["a", "b"], ["z"]),
+    ],
+)
+def test_drop(df_raw: Any, drop: list[str], left: list[str]) -> None:
+    df = nw.from_native(df_raw)
+    assert df.drop(drop).columns == left
+    assert df.drop(*drop).columns == left
 
 
 @pytest.mark.parametrize(
@@ -843,7 +852,9 @@ def test_with_columns_order_single_row(df_raw: Any) -> None:
 
 
 def test_get_sys_info() -> None:
-    with ignore_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        show_versions()
         sys_info = _get_sys_info()
 
     assert "python" in sys_info
@@ -852,7 +863,9 @@ def test_get_sys_info() -> None:
 
 
 def test_get_deps_info() -> None:
-    with ignore_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        show_versions()
         deps_info = _get_deps_info()
 
     assert "narwhals" in deps_info
@@ -865,7 +878,8 @@ def test_get_deps_info() -> None:
 
 
 def test_show_versions(capsys: Any) -> None:
-    with ignore_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
         show_versions()
         out, err = capsys.readouterr()
 

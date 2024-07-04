@@ -6,7 +6,6 @@ from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
-from narwhals._arrow.series import ArrowSeries
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -14,6 +13,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.series import ArrowSeries
 
 
 class ArrowNamespace:
@@ -68,7 +68,9 @@ class ArrowNamespace:
         )
 
     def _create_series_from_scalar(self, value: Any, series: ArrowSeries) -> ArrowSeries:
-        return ArrowSeries.from_iterable(
+        from narwhals._arrow.series import ArrowSeries
+
+        return ArrowSeries._from_iterable(
             [value],
             name=series.name,
         )

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Callable
 
-from narwhals._arrow.series import ArrowSeries
 from narwhals._pandas_like.utils import reuse_series_implementation
 from narwhals._pandas_like.utils import reuse_series_namespace_implementation
 
@@ -12,6 +11,8 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._arrow.series import ArrowSeries
+    from narwhals.dtypes import DType
 
 
 class ArrowExpr:
@@ -43,6 +44,8 @@ class ArrowExpr:
 
     @classmethod
     def from_column_names(cls: type[Self], *column_names: str) -> Self:
+        from narwhals._arrow.series import ArrowSeries
+
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 ArrowSeries(
@@ -64,6 +67,9 @@ class ArrowExpr:
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace()
+
+    def cast(self, dtype: DType) -> Self:
+        return reuse_series_implementation(self, "cast", dtype)  # type: ignore[type-var]
 
     def cum_sum(self) -> Self:
         return reuse_series_implementation(self, "cum_sum")  # type: ignore[type-var]

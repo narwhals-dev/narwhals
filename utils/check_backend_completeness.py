@@ -37,10 +37,6 @@ MISSING = [
     "DataFrame.with_columns",
     "DataFrame.with_row_index",
     "DataFrame.write_parquet",
-    "Series.all",
-    "Series.any",
-    "Series.cast",
-    "Series.cat",
     "Series.diff",
     "Series.drop_nulls",
     "Series.fill_null",
@@ -49,7 +45,6 @@ MISSING = [
     "Series.head",
     "Series.is_between",
     "Series.is_duplicated",
-    "Series.is_empty",
     "Series.is_first_distinct",
     "Series.is_in",
     "Series.is_last_distinct",
@@ -130,6 +125,18 @@ if __name__ == "__main__":
     missing.extend([x for x in pd_methods if x not in pa_methods and x not in MISSING])
 
     if missing:
-        print(sorted(missing))
+        print(
+            "The following have not been implemented for the Arrow backend: ",
+            sorted(missing),
+        )
         sys.exit(1)
+
+    no_longer_missing = [x for x in MISSING if x in pa_methods and x in pd_methods]
+    if no_longer_missing:
+        print(
+            "Please remove the following from MISSING in utils/check_backend_completeness.py: ",
+            sorted(no_longer_missing),
+        )
+        sys.exit(1)
+
     sys.exit(0)

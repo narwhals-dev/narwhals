@@ -13,8 +13,8 @@ Extremely lightweight and extensible compatibility layer between Polars, pandas,
 
 - [Read the documentation](https://narwhals-dev.github.io/narwhals/)
 - [Chat with us on Discord!](https://discord.gg/V3PqtB4VA4)
-- [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com&ctz=Europe%2FLondon).
-- [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md).
+- [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com&ctz=Europe%2FLondon)
+- [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md)
 
 Seamlessly support all, without depending on any!
 
@@ -27,13 +27,17 @@ Seamlessly support all, without depending on any!
 - ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
 - ✅ **Negligible overhead**, see [overhead](https://narwhals-dev.github.io/narwhals/overhead/)
 
-## Used by
+## Used by / integrates with
 
 Join the party!
 
+- [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+
+Feel free to add your project to the list if it's missing, and/or
+[chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
 
 ## Installation
 

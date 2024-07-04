@@ -127,7 +127,7 @@ class PandasSeries:
         )
 
     @classmethod
-    def from_iterable(
+    def _from_iterable(
         cls: type[Self], data: Iterable[Any], name: str, index: Any, implementation: str
     ) -> Self:
         return cls(
@@ -431,21 +431,39 @@ class PandasSeries:
         ser = self._series
         return self._from_series(self._rename(ser, name))
 
-    def to_numpy(self) -> Any:
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> Any:
+        # pandas used to always return object dtype for nullable dtypes.
+        # So, we intercept __array__ and pass to `to_numpy` ourselves to make
+        # sure an appropriate numpy dtype is returned.
+        return self.to_numpy(dtype=dtype, copy=copy)
+
+    def to_numpy(self, dtype: Any = None, copy: bool | None = None) -> Any:
+        # the default is meant to be None, but pandas doesn't allow it?
+        # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
+        copy = copy or False
+
         has_missing = self._series.isna().any()
         if has_missing and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
+            if self._implementation == "pandas" and parse_version(
+                get_pandas().__version__
+            ) < parse_version("1.0.0"):  # pragma: no cover
+                kwargs = {}
+            else:
+                kwargs = {"na_value": float("nan")}
             return self._series.to_numpy(
-                dtype=PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)],
-                na_value=float("nan"),
+                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(self._series.dtype)],
+                copy=copy,
+                **kwargs,
             )
         if (
             not has_missing
             and str(self._series.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING
         ):
             return self._series.to_numpy(
-                dtype=PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(self._series.dtype)]
+                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(self._series.dtype)],
+                copy=copy,
             )
-        return self._series.to_numpy()
+        return self._series.to_numpy(dtype=dtype, copy=copy)
 
     def to_pandas(self) -> Any:
         if self._implementation == "pandas":
