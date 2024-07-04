@@ -65,6 +65,7 @@ class PandasGroupBy:
             output_names,
             self._from_dataframe,
             implementation,
+            dataframe_is_empty=self._df._dataframe.empty,
         )
 
     def _from_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:
@@ -86,6 +87,8 @@ def agg_pandas(  # noqa: PLR0913
     output_names: list[str],
     from_dataframe: Callable[[Any], PandasDataFrame],
     implementation: Any,
+    *,
+    dataframe_is_empty: bool,
 ) -> PandasDataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
@@ -140,6 +143,20 @@ def agg_pandas(  # noqa: PLR0913
         result_simple = result_simple.rename(columns=name_mapping).reset_index()
         return from_dataframe(result_simple.loc[:, output_names])
 
+    if dataframe_is_empty:
+        # Don't even attempt this, it's way too inconsistent across pandas versions.
+        msg = (
+            "No results for group-by aggregation.\n\n"
+            "Hint: you were probably trying to apply a non-elementary aggregation with a "
+            "pandas-like API.\n"
+            "Please rewrite your query such that group-by aggregations "
+            "are elementary. For example, instead of:\n\n"
+            "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
+            "use:\n\n"
+            "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
+        )
+        raise ValueError(msg)
+
     warnings.warn(
         "Found complex group-by expression, which can't be expressed efficiently with the "
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
@@ -171,4 +188,5 @@ def agg_pandas(  # noqa: PLR0913
         result_complex = grouped.apply(func)
 
     result = result_complex.reset_index()
+
     return from_dataframe(result.loc[:, output_names])
