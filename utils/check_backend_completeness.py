@@ -12,9 +12,6 @@ import narwhals as nw
 from narwhals._arrow.dataframe import ArrowDataFrame
 
 MISSING = [
-    "DataFrame.collect",
-    "DataFrame.drop",
-    "DataFrame.drop_nulls",
     "DataFrame.filter",
     "DataFrame.group_by",
     "DataFrame.head",
@@ -24,15 +21,12 @@ MISSING = [
     "DataFrame.item",
     "DataFrame.iter_rows",
     "DataFrame.join",
-    "DataFrame.lazy",
     "DataFrame.null_count",
     "DataFrame.pipe",
     "DataFrame.rename",
-    "DataFrame.sort",
     "DataFrame.tail",
     "DataFrame.to_dict",
     "DataFrame.to_numpy",
-    "DataFrame.to_pandas",
     "DataFrame.unique",
     "DataFrame.with_columns",
     "DataFrame.with_row_index",

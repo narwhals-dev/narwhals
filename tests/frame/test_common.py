@@ -55,6 +55,8 @@ df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9
 df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_mpd = maybe_get_modin_df(df_pandas)
+df_pa = pa.Table.from_pandas(df_pandas)
+df_pa_na = pa.Table.from_pandas(df_pandas_na)
 
 
 @pytest.mark.parametrize(
@@ -418,7 +420,7 @@ def test_accepted_dataframes() -> None:
         nw.LazyFrame(array)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_pa])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("2.0.0"),
@@ -602,6 +604,7 @@ def test_drop_nulls(df_raw: Any) -> None:
         df_pandas,
         df_polars,
         df_mpd,
+        df_pa,
     ],
 )
 @pytest.mark.parametrize(
@@ -654,7 +657,7 @@ def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()  # type: ignore[union-attr]
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
 def test_lazy(df_raw: Any) -> None:
     df = nw.from_native(df_raw, eager_only=True)
     result = df.lazy()
