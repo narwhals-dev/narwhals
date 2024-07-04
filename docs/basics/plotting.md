@@ -13,6 +13,8 @@ import polars as pl
 import matplotlib.pyplot as plt
 import csv
 ```
+## Line Plot
+
 Import the data for the demonstration
 
 === "Pandas"
@@ -137,6 +139,70 @@ Then pass either a Pandas or a Polars dataframe to `plot_population_line(df_any)
     plot_population_line(pl_df)
     ```
 
-The resulting graph.
+The resulting graph
 
-![](images/output.png)
+![](images/line_plot.png)
+
+## Bar Plot
+
+Import the libraries needed for this demonstration and create a data dictionary.
+
+```python
+import narwhals as nw
+import matplotlib.pyplot as plt
+import pandas as pd
+import polars as pl
+
+data = {'Player': ['David De Gea', 'Paul Pogba', 'Edinson Cavani', 'Anthony Martial', 'Marcus Rashford', 'Cristiano Ronaldo'], 'Annual Salary': [19500000, 15080000, 13000000, 13000000, 10400000, 26800000]}
+```
+
+We will then define a data-agnostic Narwhals function to plot a Bar Chart using either Pandas or Polars dataframes as input. Note that the logic of the Narwhals function is exactly the same regardless of if Pandas or Polars dataframes are used.
+
+```python
+def plot_bar(df_any):
+    df = nw.from_native(df_any)
+    y = df['Annual Salary'].to_numpy()
+    x = df['Player'].to_numpy()
+    
+    # Create the bar plot
+    plt.figure(figsize=(10, 6))
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    plt.bar(x, y, color=colors, width=0.8)
+
+    # Add labels and Title
+    plt.xlabel('Football Player', labelpad=(10))
+    plt.ylabel('Annual Salary in Tens of Millions (USD)', labelpad=(10))
+    plt.title("Player's Annual Salary")
+
+    # Make the xticks diagonal
+    plt.xticks(rotation = 10)
+
+    # Add labels on the bars for clarity
+    for i in range(len(x)):
+            plt.text(i, y[i], y[i], ha = 'center', va = 'bottom')
+```
+
+Pass either a Pandas or a Polars dataframe
+
+=== "Pandas"
+    ```python
+    # Convert the data dictionary to a Pandas dataframe
+    pd_df = pd.DataFrame(data)
+
+    # Call the narwhals function
+    plot_bar(pd_df)
+    ```
+
+=== "Polars"
+    ```python
+    # Convert the data dictionary to a Polars dataframe
+    pl_df = pl.DataFrame(data)
+
+    # Call the narwhals function
+    plot_bar(pl_df)
+    ```
+
+The resulting plot
+
+![](images/bar_plot.png)
+
