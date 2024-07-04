@@ -38,6 +38,9 @@ class ArrowDataFrame:
     def __narwhals_dataframe__(self) -> Self:
         return self
 
+    def __narwhals_lazyframe__(self) -> Self:
+        return self
+
     def _from_dataframe(self, df: Any) -> Self:
         return self.__class__(df)
 
@@ -117,7 +120,7 @@ class ArrowDataFrame:
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_dataframe(
-            self._dataframe.drop_columns(columns=[*flatten(columns)])
+            self._dataframe.drop_columns(columns=list(flatten(columns)))
         )
 
     def drop_nulls(self) -> Self:
@@ -141,3 +144,12 @@ class ArrowDataFrame:
                 for key, is_descending in zip(flat_keys, descending)
             ]
         return self._from_dataframe(df.sort_by(sorting=sorting))
+
+    def to_pandas(self) -> Any:
+        return self._dataframe.to_pandas()
+
+    def lazy(self) -> Self:
+        return self
+
+    def collect(self) -> ArrowDataFrame:
+        return ArrowDataFrame(self._dataframe)
