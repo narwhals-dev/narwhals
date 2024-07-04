@@ -70,7 +70,7 @@ class PandasNamespace:
     def _create_series_from_scalar(
         self, value: Any, series: PandasSeries
     ) -> PandasSeries:
-        return PandasSeries.from_iterable(
+        return PandasSeries._from_iterable(
             [value],
             name=series._series.name,
             index=series._series.index[0:1],
@@ -111,7 +111,7 @@ class PandasNamespace:
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasExpr:
         def _lit_pandas_series(df: PandasDataFrame) -> PandasSeries:
-            pandas_series = PandasSeries.from_iterable(
+            pandas_series = PandasSeries._from_iterable(
                 data=[value],
                 name="lit",
                 index=df._dataframe.index[0:1],
@@ -154,7 +154,7 @@ class PandasNamespace:
     def len(self) -> PandasExpr:
         return PandasExpr(
             lambda df: [
-                PandasSeries.from_iterable(
+                PandasSeries._from_iterable(
                     [len(df._dataframe)],
                     name="len",
                     index=[0],

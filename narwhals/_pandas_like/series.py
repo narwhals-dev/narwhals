@@ -127,7 +127,7 @@ class PandasSeries:
         )
 
     @classmethod
-    def from_iterable(
+    def _from_iterable(
         cls: type[Self], data: Iterable[Any], name: str, index: Any, implementation: str
     ) -> Self:
         return cls(
