@@ -621,6 +621,27 @@ def test_drop_nulls(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize(
+    "df_raw",
+    [
+        df_pandas,
+        df_polars,
+        df_mpd,
+    ],
+)
+@pytest.mark.parametrize(
+    ("drop", "left"),
+    [
+        (["a"], ["b", "z"]),
+        (["a", "b"], ["z"]),
+    ],
+)
+def test_drop(df_raw: Any, drop: list[str], left: list[str]) -> None:
+    df = nw.from_native(df_raw)
+    assert df.drop(drop).columns == left
+    assert df.drop(*drop).columns == left
+
+
+@pytest.mark.parametrize(
     ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
 )
 def test_concat_horizontal(df_raw: Any, df_raw_right: Any) -> None:
