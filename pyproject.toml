@@ -17,6 +17,14 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[tool.hatch.build]
+exclude = [
+  "/.*",
+  "/docs",
+  "/tests",
+  "/tpch",
+]
+
 [project.optional-dependencies]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
