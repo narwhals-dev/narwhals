@@ -1732,6 +1732,42 @@ class DataFrame(BaseFrame):
         """
         return self._dataframe.item(row=row, column=column)
 
+    def clone(self) -> DataFrame:
+        r"""
+        Create a copy of this DataFrame.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> data = {"a": [1, 2], "b": [3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function in which we clone the DataFrame:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.clone()
+
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            │ 2   ┆ 4   │
+            └─────┴─────┘
+
+            >>> func(df_pd)
+               a  b
+            0  1  3
+            1  2  4
+        """
+        return DataFrame(self._dataframe.clone())
+
 
 class LazyFrame(BaseFrame):
     """

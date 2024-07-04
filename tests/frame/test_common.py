@@ -890,3 +890,12 @@ def test_show_versions(capsys: Any) -> None:
     assert "machine" in out
     assert "pandas" in out
     assert "polars" in out
+
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_mpd])
+def test_clone(df_raw: Any) -> None:
+    df = nw.from_native(df_raw, eager_only=True)
+    df_clone = df.clone()
+    assert df is not df_clone
+    assert df._dataframe is not df_clone._dataframe
+    assert df.to_dict() == df_clone.to_dict()

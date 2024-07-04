@@ -151,3 +151,6 @@ class ArrowDataFrame:
 
     def collect(self) -> ArrowDataFrame:
         return ArrowDataFrame(self._dataframe)
+
+    def clone(self) -> Self:
+        raise NotImplementedError("clone is not yet supported on PyArrow tables")

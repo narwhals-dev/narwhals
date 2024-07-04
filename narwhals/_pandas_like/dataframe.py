@@ -452,3 +452,6 @@ class PandasDataFrame:
 
         _col = self.columns.index(column) if isinstance(column, str) else column
         return self._dataframe.iat[row, _col]
+
+    def clone(self: Self) -> Self:
+        return self._from_dataframe(self._dataframe.copy())
