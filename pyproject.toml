@@ -92,6 +92,7 @@ exclude_also = [
   "if sys.version_info() <",
   "if implementation == \"modin\"",
   "if implementation == \"cudf\"",
+  'request.applymarker(pytest.mark.xfail)'
 ]
 
 [tool.mypy]
