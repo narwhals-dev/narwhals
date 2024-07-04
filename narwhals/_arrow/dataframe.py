@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 from typing import overload
 
@@ -9,6 +10,7 @@ from narwhals._arrow.utils import translate_dtype
 from narwhals._pandas_like.utils import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
+from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -34,6 +36,9 @@ class ArrowDataFrame:
         return get_pyarrow()
 
     def __narwhals_dataframe__(self) -> Self:
+        return self
+
+    def __narwhals_lazyframe__(self) -> Self:
         return self
 
     def _from_dataframe(self, df: Any) -> Self:
@@ -112,3 +117,37 @@ class ArrowDataFrame:
         pa = get_pyarrow()
         df = pa.Table.from_arrays([s._series for s in new_series], names=names)
         return self._from_dataframe(df)
+
+    def drop(self, *columns: str | Iterable[str]) -> Self:
+        return self._from_dataframe(self._dataframe.drop(list(flatten(columns))))
+
+    def drop_nulls(self) -> Self:
+        return self._from_dataframe(self._dataframe.drop_null())
+
+    def sort(
+        self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Sequence[bool] = False,
+    ) -> Self:
+        flat_keys = flatten([*flatten([by]), *more_by])
+        df = self._dataframe
+
+        if isinstance(descending, bool):
+            order = "descending" if descending else "ascending"
+            sorting = [(key, order) for key in flat_keys]
+        else:
+            sorting = [
+                (key, "descending" if is_descending else "ascending")
+                for key, is_descending in zip(flat_keys, descending)
+            ]
+        return self._from_dataframe(df.sort_by(sorting=sorting))
+
+    def to_pandas(self) -> Any:
+        return self._dataframe.to_pandas()
+
+    def lazy(self) -> Self:
+        return self
+
+    def collect(self) -> ArrowDataFrame:
+        return ArrowDataFrame(self._dataframe)
