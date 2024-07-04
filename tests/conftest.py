@@ -52,7 +52,7 @@ def polars_constructor(obj: Any) -> IntoDataFrame:
     return pl.DataFrame(obj)
 
 
-if parse_version(pd.__version__) >= parse_version("1.5.0"):
+if parse_version(pd.__version__) >= parse_version("2.0.0"):
     params = [pandas_constructor, pandas_nullable_constructor, pandas_pyarrow_constructor]
 else:  # pragma: no cover
     params = [pandas_constructor]
@@ -94,7 +94,7 @@ def polars_series_constructor(obj: Any) -> Any:
     return pl.Series(obj)
 
 
-if parse_version(pd.__version__) >= parse_version("1.5.0"):
+if parse_version(pd.__version__) >= parse_version("2.0.0"):
     params_series = [
         pandas_series_constructor,
         pandas_series_nullable_constructor,

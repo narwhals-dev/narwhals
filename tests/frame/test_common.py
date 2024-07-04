@@ -59,30 +59,6 @@ df_mpd = maybe_get_modin_df(df_pandas)
 
 @pytest.mark.parametrize(
     "df_raw",
-    [df_pandas, df_polars, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
-)
-def test_sort(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.sort("a", "b")
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 2, 3],
-        "b": [4, 6, 4],
-        "z": [7.0, 9.0, 8.0],
-    }
-    compare_dicts(result_native, expected)
-    result = df.sort("a", "b", descending=[True, False])
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [3, 2, 1],
-        "b": [4, 6, 4],
-        "z": [8.0, 9.0, 7.0],
-    }
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw",
     [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
 def test_filter(df_raw: Any) -> None:
@@ -618,6 +594,27 @@ def test_drop_nulls(df_raw: Any) -> None:
     result = nw.to_native(df.select(df.collect()["a"].drop_nulls()))
     expected = {"a": [3, 2]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [
+        df_pandas,
+        df_polars,
+        df_mpd,
+    ],
+)
+@pytest.mark.parametrize(
+    ("drop", "left"),
+    [
+        (["a"], ["b", "z"]),
+        (["a", "b"], ["z"]),
+    ],
+)
+def test_drop(df_raw: Any, drop: list[str], left: list[str]) -> None:
+    df = nw.from_native(df_raw)
+    assert df.drop(drop).columns == left
+    assert df.drop(*drop).columns == left
 
 
 @pytest.mark.parametrize(

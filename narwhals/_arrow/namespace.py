@@ -70,7 +70,7 @@ class ArrowNamespace:
     def _create_series_from_scalar(self, value: Any, series: ArrowSeries) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
-        return ArrowSeries.from_iterable(
+        return ArrowSeries._from_iterable(
             [value],
             name=series.name,
         )
