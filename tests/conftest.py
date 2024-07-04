@@ -52,6 +52,10 @@ def polars_constructor(obj: Any) -> IntoDataFrame:
     return pl.DataFrame(obj)
 
 
+def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
+    return pl.LazyFrame(obj)
+
+
 if parse_version(pd.__version__) >= parse_version("2.0.0"):
     params = [pandas_constructor, pandas_nullable_constructor, pandas_pyarrow_constructor]
 else:  # pragma: no cover
@@ -63,6 +67,11 @@ if get_modin() is not None:  # pragma: no cover
 
 @pytest.fixture(params=params)
 def constructor(request: Any) -> Callable[[Any], IntoDataFrame]:
+    return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(params=[*params, polars_lazy_constructor])
+def constructor_with_lazy(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]
 
 

@@ -198,6 +198,9 @@ class BaseFrame:
             )
         )
 
+    def clone(self) -> Self:
+        return self._from_dataframe(self._dataframe.clone())
+
 
 class DataFrame(BaseFrame):
     """
@@ -1732,6 +1735,42 @@ class DataFrame(BaseFrame):
         """
         return self._dataframe.item(row=row, column=column)
 
+    def clone(self) -> Self:
+        r"""
+        Create a copy of this DataFrame.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2], "b": [3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function in which we clone the DataFrame:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.clone()
+
+            >>> func(df_pd)
+               a  b
+            0  1  3
+            1  2  4
+
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            │ 2   ┆ 4   │
+            └─────┴─────┘
+        """
+        return super().clone()
+
 
 class LazyFrame(BaseFrame):
     """
@@ -2889,3 +2928,38 @@ class LazyFrame(BaseFrame):
             └─────┴─────┴─────┴───────┘
         """
         return super().join(other, how=how, left_on=left_on, right_on=right_on)
+
+    def clone(self) -> Self:
+        r"""
+        Create a copy of this DataFrame.
+
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pl = pl.LazyFrame(data)
+
+        Let's define a dataframe-agnostic function in which we copy the DataFrame:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.clone()
+
+        >>> func(df_pd)
+           a  b
+        0  1  3
+        1  2  4
+
+        >>> func(df_pl).collect()
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 3   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+        """
+        return super().clone()
