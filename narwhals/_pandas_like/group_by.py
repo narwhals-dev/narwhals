@@ -171,4 +171,18 @@ def agg_pandas(  # noqa: PLR0913
         result_complex = grouped.apply(func)
 
     result = result_complex.reset_index()
+
+    if result.empty and set(output_names).difference(result.columns):
+        msg = (
+            "No results for group-by aggregation.\n\n"
+            "Hint: you were probably trying to apply a non-elementary aggregation with a "
+            "pandas-like API.\n"
+            "Please rewrite your query such that group-by aggregations "
+            "are elementary. For example, instead of:\n\n"
+            "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
+            "use:\n\n"
+            "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
+        )
+        raise ValueError(msg)
+
     return from_dataframe(result.loc[:, output_names])
