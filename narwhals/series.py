@@ -75,8 +75,8 @@ class Series:
         )
         raise TypeError(msg)  # pragma: no cover
 
-    def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
-        return self._series.to_numpy(*args, **kwargs)
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self._series.__array__(dtype=dtype, copy=copy)
 
     def __getitem__(self, idx: int | slice) -> Any:
         if isinstance(idx, int):

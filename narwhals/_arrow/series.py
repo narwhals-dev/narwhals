@@ -62,6 +62,9 @@ class ArrowSeries:
     def to_list(self) -> Any:
         return self._series.to_pylist()
 
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> Any:
+        return self._series.__array__(dtype=dtype, copy=copy)
+
     def to_numpy(self) -> Any:
         return self._series.to_numpy()
 

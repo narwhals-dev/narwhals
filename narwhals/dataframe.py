@@ -245,8 +245,8 @@ class DataFrame(BaseFrame):
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
 
-    def __array__(self, *args: Any, **kwargs: Any) -> np.ndarray:
-        return self._dataframe.to_numpy(*args, **kwargs)
+    def __array__(self) -> np.ndarray:
+        return self._dataframe.to_numpy()
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "
