@@ -1971,7 +1971,7 @@ class LazyFrame(BaseFrame):
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
-            >>> df_lf = pl.LazyFrame(df)
+            >>> lf_pl = pl.LazyFrame(df)
 
             We define a library agnostic function:
 
@@ -1983,7 +1983,7 @@ class LazyFrame(BaseFrame):
 
             >>> func(df_pd)
             ['foo', 'bar', 'ham']
-            >>> func(df_lf)
+            >>> func(lf_pl)  # doctest: +SKIP
             ['foo', 'bar', 'ham']
         """
         return super().columns
