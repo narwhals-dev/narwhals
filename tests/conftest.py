@@ -112,8 +112,12 @@ def constructor_series(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]
 
 
+def pyarrow_chunked_array_constructor(obj: Any) -> Any:
+    return pa.chunked_array([obj])
+
+
 # TODO: once pyarrow has complete coverage, we can remove this one,
 # and just put `pa.table` into `constructor`
-@pytest.fixture(params=[*params_series, lambda x: pa.chunked_array([x])])
+@pytest.fixture(params=[*params_series, pyarrow_chunked_array_constructor])
 def constructor_series_with_pyarrow(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]
