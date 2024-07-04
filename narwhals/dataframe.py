@@ -1110,7 +1110,7 @@ class DataFrame(BaseFrame):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            >>> def func(df):
+            ... def func(df):
             ...     return df.drop("ham")
 
             We can then pass either pandas or Polars to `func`:
