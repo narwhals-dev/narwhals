@@ -119,9 +119,7 @@ class ArrowDataFrame:
         return self._from_dataframe(df)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        return self._from_dataframe(
-            self._dataframe.drop_columns(columns=list(flatten(columns)))
-        )
+        return self._from_dataframe(self._dataframe.drop(list(flatten(columns))))
 
     def drop_nulls(self) -> Self:
         return self._from_dataframe(self._dataframe.drop_null())

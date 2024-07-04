@@ -55,8 +55,8 @@ df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9
 df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_mpd = maybe_get_modin_df(df_pandas)
-df_pa = pa.Table.from_pandas(df_pandas)
-df_pa_na = pa.Table.from_pandas(df_pandas_na)
+df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+df_pa_na = pa.table({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 
 
 @pytest.mark.parametrize(
