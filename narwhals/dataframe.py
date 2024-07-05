@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
+from typing import TypeVar
 from typing import overload
 
 from narwhals._arrow.dataframe import ArrowDataFrame
@@ -33,10 +35,13 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
+    from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
 
+FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
-class BaseFrame:
+
+class BaseFrame(Generic[FrameT]):
     _dataframe: Any
     _is_polars: bool
 
@@ -116,7 +121,7 @@ class BaseFrame:
     def columns(self) -> list[str]:
         return self._dataframe.columns  # type: ignore[no-any-return]
 
-    def lazy(self) -> LazyFrame:
+    def lazy(self) -> LazyFrame[Any]:
         return LazyFrame(
             self._dataframe.lazy(),
         )
@@ -201,7 +206,7 @@ class BaseFrame:
         return self._from_dataframe(self._dataframe.clone())
 
 
-class DataFrame(BaseFrame):
+class DataFrame(BaseFrame[FrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
@@ -264,7 +269,7 @@ class DataFrame(BaseFrame):
             + "┘"
         )
 
-    def lazy(self) -> LazyFrame:
+    def lazy(self) -> LazyFrame[Any]:
         """
         Lazify the DataFrame (if possible).
 
@@ -1812,7 +1817,7 @@ class DataFrame(BaseFrame):
         return super().clone()
 
 
-class LazyFrame(BaseFrame):
+class LazyFrame(BaseFrame[FrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
@@ -1857,7 +1862,7 @@ class LazyFrame(BaseFrame):
     def __getitem__(self, item: str | slice) -> Series | Self:
         raise TypeError("Slicing is not supported on LazyFrame")
 
-    def collect(self) -> DataFrame:
+    def collect(self) -> DataFrame[Any]:
         r"""
         Materialize this LazyFrame into a DataFrame.
 

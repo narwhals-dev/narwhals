@@ -7,19 +7,20 @@ from typing import Iterable
 from typing import Iterator
 from typing import TypeVar
 
+from narwhals.dataframe import DataFrame
+from narwhals.dataframe import LazyFrame
+from narwhals.typing import IntoDataFrameT
 from narwhals.utils import flatten
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
     from narwhals.typing import IntoExpr
 
-DataFrameT = TypeVar("DataFrameT", bound="DataFrame")
-LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame")
+DataFrameT = TypeVar("DataFrameT", bound=DataFrame)
+LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrame)
 
 
-class GroupBy(Generic[DataFrameT]):
+class GroupBy(Generic[DataFrameT[IntoDataFrameT]]):
     def __init__(self, df: DataFrameT, *keys: str | Iterable[str]) -> None:
         self._df = df
         self._keys = flatten(keys)
@@ -113,7 +114,7 @@ class GroupBy(Generic[DataFrameT]):
             self._grouped.agg(*aggs, **named_aggs),
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, DataFrame]]:
+    def __iter__(self) -> Iterator[tuple[Any, DataFrame[IntoDataFrameT]]]:
         yield from (
             (tupleify(key), self._df._from_dataframe(df))
             for (key, df) in self._grouped.__iter__()
