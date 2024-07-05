@@ -268,20 +268,27 @@ class DataFrame(BaseFrame):
     def lazy(self) -> LazyFrame:
         """
         Lazify the DataFrame (if possible).
+
         If a library does not support lazy execution, then this is a no-op.
+
         Examples:
             Construct pandas and Polars DataFrames:
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+
             We define a library agnostic function:
+
             >>> @nw.narwhalify
             ... def func(df_any):
             ...     return df_any.lazy()
+
             Note that then, pandas dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
+
             >>> func(df_pd)
                foo  bar ham
             0    1  6.0   a
@@ -2994,20 +3001,27 @@ class LazyFrame(BaseFrame):
     def lazy(self) -> Self:
         """
         Lazify the DataFrame (if possible).
+
         If a library does not support lazy execution, then this is a no-op.
+
         Examples:
             Construct pandas and Polars objects:
+
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.LazyFrame(df)
+
             We define a library agnostic function:
+
             >>> @nw.narwhalify
             ... def func(df_any):
             ...     return df_any.lazy()
+
             Note that then, pandas dataframe stay eager, and the Polars LazyFrame stays lazy:
+
             >>> func(df_pd)
                foo  bar ham
             0    1  6.0   a
