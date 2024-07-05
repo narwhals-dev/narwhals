@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrame)
 
 
-class GroupBy(Generic[DataFrameT]):
+class GroupBy(Generic["DataFrameT"]):
     def __init__(self, df: DataFrameT, *keys: str | Iterable[str]) -> None:
         self._df = df
         self._keys = flatten(keys)
@@ -120,7 +120,7 @@ class GroupBy(Generic[DataFrameT]):
         )
 
 
-class LazyGroupBy(Generic[LazyFrameT]):
+class LazyGroupBy(Generic["LazyFrameT"]):
     def __init__(self, df: LazyFrameT, *keys: str | Iterable[str]) -> None:
         self._df = df
         self._keys = keys
