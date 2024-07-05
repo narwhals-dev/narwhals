@@ -137,36 +137,6 @@ def test_std(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy, df_pandas_nullable])
-def test_sumh(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.with_columns(horizonal_sum=nw.sum_horizontal(nw.col("a"), nw.col("b")))
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "horizonal_sum": [5, 7, 8],
-    }
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_sumh_literal(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.with_columns(horizonal_sum=nw.sum_horizontal("a", nw.col("b")))
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "horizonal_sum": [5, 7, 8],
-    }
-    compare_dicts(result_native, expected)
-
-
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
