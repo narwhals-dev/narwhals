@@ -198,17 +198,6 @@ def test_double_selected(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-def test_rename(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.rename({"a": "x", "b": "y"})
-    result_native = nw.to_native(result)
-    expected = {"x": [1, 3, 2], "y": [4, 4, 6], "z": [7.0, 8, 9]}
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
 def test_join(df_raw: Any) -> None:
     df = nw.from_native(df_raw).lazy()
     df_right = df
