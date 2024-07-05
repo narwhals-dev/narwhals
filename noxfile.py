@@ -30,6 +30,8 @@ def pytest_coverage(session: Session) -> None:
     run_common(session, coverage_threshold)
 
 
+
+
 @nox.session(python=PYTHON_VERSIONS[0])  # type: ignore[misc]
 def minimum_versions(session: Session) -> None:
     session.install(
