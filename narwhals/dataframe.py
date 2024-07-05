@@ -1348,7 +1348,7 @@ class DataFrame(BaseFrame):
         """
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy:
+    def group_by(self, *keys: str | Iterable[str]) -> GroupBy[Self]:
         r"""
         Start a group by operation.
 
@@ -2735,7 +2735,7 @@ class LazyFrame(BaseFrame):
         """
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy:
+    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy[Self]:
         r"""
         Start a group by operation.
 
