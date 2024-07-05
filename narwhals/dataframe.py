@@ -452,7 +452,15 @@ class DataFrame(BaseFrame):
             msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
-    def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
+    @overload
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    @overload
+    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(
+        self, *, as_series: bool = True
+    ) -> dict[str, Series] | dict[str, list[Any]]:
         """
         Convert DataFrame to a dictionary mapping column name to values.
 
