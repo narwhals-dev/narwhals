@@ -277,7 +277,7 @@ class Series:
             self._series.cast(translate_dtype(self.__narwhals_namespace__(), dtype))
         )
 
-    def to_frame(self) -> DataFrame:
+    def to_frame(self) -> DataFrame[Any]:
         """
         Convert to dataframe.
 
@@ -1563,7 +1563,7 @@ class Series:
 
     def value_counts(
         self: Self, *, sort: bool = False, parallel: bool = False
-    ) -> DataFrame:
+    ) -> DataFrame[Any]:
         r"""
         Count the occurrences of unique values.
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pandas as pd
@@ -9,12 +10,15 @@ import pytest
 
 import narwhals as nw
 
+if TYPE_CHECKING:
+    from narwhals.typing import IntoDataFrameT
+
 data = {"a": [2, 3, 4]}
 
 
 def test_narwhalify() -> None:
     @nw.narwhalify
-    def func(df: nw.DataFrame) -> nw.DataFrame:
+    def func(df: nw.DataFrame[IntoDataFrameT]) -> nw.DataFrame[IntoDataFrameT]:
         return df.with_columns(nw.all() + 1)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
@@ -27,7 +31,9 @@ def test_narwhalify() -> None:
 def test_narwhalify_method() -> None:
     class Foo:
         @nw.narwhalify
-        def func(self, df: nw.DataFrame, a: int = 1) -> nw.DataFrame:
+        def func(
+            self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
+        ) -> nw.DataFrame[IntoDataFrameT]:
             return df.with_columns(nw.all() + a)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
@@ -40,7 +46,9 @@ def test_narwhalify_method() -> None:
 def test_narwhalify_method_called() -> None:
     class Foo:
         @nw.narwhalify
-        def func(self, df: nw.DataFrame, a: int = 1) -> nw.DataFrame:
+        def func(
+            self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
+        ) -> nw.DataFrame[IntoDataFrameT]:
             return df.with_columns(nw.all() + a)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
@@ -55,12 +63,12 @@ def test_narwhalify_method_called() -> None:
 def test_narwhalify_method_invalid() -> None:
     class Foo:
         @nw.narwhalify(strict=True, eager_only=True)
-        def func(self) -> nw.DataFrame:  # pragma: no cover
-            return self  # type: ignore[return-value]
+        def func(self) -> Foo:  # pragma: no cover
+            return self
 
         @nw.narwhalify(strict=True, eager_only=True)
-        def fun2(self, df: Any) -> nw.DataFrame:  # pragma: no cover
-            return df  # type: ignore[no-any-return]
+        def fun2(self, df: Any) -> Any:  # pragma: no cover
+            return df
 
     with pytest.raises(TypeError):
         Foo().func()
@@ -68,8 +76,8 @@ def test_narwhalify_method_invalid() -> None:
 
 def test_narwhalify_invalid() -> None:
     @nw.narwhalify(strict=True)
-    def func() -> nw.DataFrame:  # pragma: no cover
-        return None  # type: ignore[return-value]
+    def func() -> None:  # pragma: no cover
+        return None
 
     with pytest.raises(TypeError):
         func()

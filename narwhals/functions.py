@@ -12,13 +12,14 @@ from narwhals.utils import validate_same_library
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.typing import IntoDataFrameT
 
 
 def concat(
-    items: Iterable[DataFrame | LazyFrame],
+    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoDataFrameT]],
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
-) -> DataFrame | LazyFrame:
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoDataFrameT]:
     if how not in ("horizontal", "vertical"):
         raise NotImplementedError(
             "Only horizontal and vertical concatenations are supported"

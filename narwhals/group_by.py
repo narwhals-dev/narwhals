@@ -6,22 +6,23 @@ from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import TypeVar
+from typing import cast
 
+from narwhals.dataframe import DataFrame
+from narwhals.dataframe import LazyFrame
 from narwhals.utils import flatten
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
     from narwhals.typing import IntoExpr
 
-DataFrameT = TypeVar("DataFrameT", bound="DataFrame")
-LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame")
+DataFrameT = TypeVar("DataFrameT")
+LazyFrameT = TypeVar("LazyFrameT")
 
 
 class GroupBy(Generic[DataFrameT]):
     def __init__(self, df: DataFrameT, *keys: str | Iterable[str]) -> None:
-        self._df = df
+        self._df = cast(DataFrame[Any], df)
         self._keys = flatten(keys)
         self._grouped = self._df._dataframe.group_by(self._keys)
 
@@ -109,12 +110,12 @@ class GroupBy(Generic[DataFrameT]):
             └─────┴─────┴─────┘
         """
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
-        return self._df.__class__(
+        return self._df.__class__(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, DataFrame]]:
-        yield from (
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
+        yield from (  # type: ignore[misc]
             (tupleify(key), self._df._from_dataframe(df))
             for (key, df) in self._grouped.__iter__()
         )
@@ -122,7 +123,7 @@ class GroupBy(Generic[DataFrameT]):
 
 class LazyGroupBy(Generic[LazyFrameT]):
     def __init__(self, df: LazyFrameT, *keys: str | Iterable[str]) -> None:
-        self._df = df
+        self._df = cast(LazyFrame[Any], df)
         self._keys = keys
         self._grouped = self._df._dataframe.group_by(*self._keys)
 
@@ -130,6 +131,6 @@ class LazyGroupBy(Generic[LazyFrameT]):
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
     ) -> LazyFrameT:
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
-        return self._df.__class__(
+        return self._df.__class__(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
         )

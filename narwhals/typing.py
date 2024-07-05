@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Protocol
+from typing import TypeVar
 from typing import Union
 
 if TYPE_CHECKING:
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
 # Anything which can be converted to an expression.
 IntoExpr: TypeAlias = Union["Expr", str, int, float, "Series"]
 # Anything which can be converted to a Narwhals DataFrame.
-IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrame"]
+IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrame[Any]"]
+IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
 
 __all__ = ["IntoExpr", "IntoDataFrame"]
