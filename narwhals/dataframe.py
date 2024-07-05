@@ -265,6 +265,40 @@ class DataFrame(BaseFrame):
             + "┘"
         )
 
+    def lazy(self) -> LazyFrame:
+        """
+        Lazify the DataFrame (if possible).
+
+        If a library does not support lazy execution, then this is a no-op.
+
+        Examples:
+            Construct pandas and Polars DataFrames:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.lazy()
+
+            Note that then, pandas dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
+
+            >>> func(df_pd)
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+            >>> func(df_pl)
+            <LazyFrame ...>
+        """
+        return super().lazy()
+
     def to_pandas(self) -> Any:
         """
         Convert this DataFrame to a pandas DataFrame.
@@ -418,7 +452,15 @@ class DataFrame(BaseFrame):
             msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
-    def to_dict(self, *, as_series: bool = True) -> dict[str, Any]:
+    @overload
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    @overload
+    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(
+        self, *, as_series: bool = True
+    ) -> dict[str, Series] | dict[str, list[Any]]:
         """
         Convert DataFrame to a dictionary mapping column name to values.
 
@@ -461,7 +503,6 @@ class DataFrame(BaseFrame):
                 key: Series(value)
                 for key, value in self._dataframe.to_dict(as_series=as_series).items()
             }
-        # TODO: overload return type
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
@@ -2963,3 +3004,37 @@ class LazyFrame(BaseFrame):
         └─────┴─────┘
         """
         return super().clone()
+
+    def lazy(self) -> Self:
+        """
+        Lazify the DataFrame (if possible).
+
+        If a library does not support lazy execution, then this is a no-op.
+
+        Examples:
+            Construct pandas and Polars objects:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.LazyFrame(df)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.lazy()
+
+            Note that then, pandas dataframe stay eager, and the Polars LazyFrame stays lazy:
+
+            >>> func(df_pd)
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+            >>> func(df_pl)
+            <LazyFrame ...>
+        """
+        return super().lazy()  # type: ignore[return-value]
