@@ -5,6 +5,7 @@ import sys
 from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Literal
+from typing import overload
 
 from narwhals.utils import validate_laziness
 from narwhals.utils import validate_same_library
@@ -14,6 +15,22 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoLazyFrameT
+
+
+@overload
+def concat(
+    items: Iterable[DataFrame[IntoDataFrameT]],
+    *,
+    how: Literal["horizontal", "vertical"],
+) -> DataFrame[IntoDataFrameT]: ...
+
+
+@overload
+def concat(
+    items: Iterable[LazyFrame[IntoLazyFrameT]],
+    *,
+    how: Literal["horizontal", "vertical"],
+) -> LazyFrame[IntoLazyFrameT]: ...
 
 
 def concat(

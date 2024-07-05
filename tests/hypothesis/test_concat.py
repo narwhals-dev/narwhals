@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from typing import Any
+from typing import Literal
+
 import pandas as pd
 import polars as pl
 import pytest
@@ -30,10 +33,10 @@ from tests.utils import compare_dicts
 )  # type: ignore[misc]
 @pytest.mark.slow()
 def test_concat(  # pragma: no cover
-    integers: st.SearchStrategy[list[int]],
-    other_integers: st.SearchStrategy[list[int]],
-    floats: st.SearchStrategy[list[float]],
-    how: st.SearchStrategy[str],
+    integers: list[int],
+    other_integers: list[int],
+    floats: list[float],
+    how: Literal["horizontal", "vertical"],
 ) -> None:
     data = {"a": integers, "b": other_integers, "c": floats}
 
@@ -43,17 +46,27 @@ def test_concat(  # pragma: no cover
     df_pandas2 = pd.DataFrame(data)
 
     if how == "horizontal":
-        df_pl = nw.from_native(df_polars).rename({"a": "d", "b": "e"}).drop("c").lazy()
-        df_pd = nw.from_native(df_pandas).rename({"a": "d", "b": "e"}).drop("c").lazy()
+        df_pl = (
+            nw.from_native(df_polars, eager_only=True)
+            .rename({"a": "d", "b": "e"})
+            .drop("c")
+            .lazy()
+        )
+        df_pd = (
+            nw.from_native(df_pandas, eager_only=True)
+            .rename({"a": "d", "b": "e"})
+            .drop("c")
+            .lazy()
+        )
     else:
-        df_pl = nw.from_native(df_polars).lazy()
-        df_pd = nw.from_native(df_pandas).lazy()
+        df_pl = nw.from_native(df_polars, eager_only=True).lazy()
+        df_pd = nw.from_native(df_pandas, eager_only=True).lazy()
 
-    other_pl = nw.from_native(df_polars2).lazy()
-    dframe_pl = nw.concat([df_pl, other_pl], how=how)
+    other_pl = nw.from_native(df_polars2, eager_only=True).lazy()
+    dframe_pl: nw.LazyFrame[Any] = nw.concat([df_pl, other_pl], how=how)
 
     other_pd = nw.from_native(df_pandas2).lazy()
-    dframe_pd = nw.concat([df_pd, other_pd], how=how)
+    dframe_pd: nw.LazyFrame[Any] = nw.concat([df_pd, other_pd], how=how)
 
     dframe_pd1 = nw.to_native(dframe_pl)
     dframe_pd2 = nw.to_native(dframe_pd)
