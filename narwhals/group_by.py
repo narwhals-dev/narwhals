@@ -109,10 +109,8 @@ class GroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrame]]:
-        import narwhals as nw
-
         yield from (
-            (tupleify(key), nw.from_native(df, eager_only=True))
+            (tupleify(key), self._df._from_dataframe(df))
             for (key, df) in self._grouped.__iter__()
         )
 
