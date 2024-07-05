@@ -564,6 +564,43 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).unique())
 
+    def abs(self) -> Self:
+        """
+        Return absolute value of each element.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {"a": [1, -2], "b": [-3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a", "b").abs())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  3
+            1  2  4
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            │ 2   ┆ 4   │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).abs())
+
     def cum_sum(self) -> Self:
         """
         Return cumulative sum.
