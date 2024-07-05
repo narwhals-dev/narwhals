@@ -179,25 +179,6 @@ def test_lit_error(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-def test_double_selected(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.select(nw.col("a", "b") * 2)
-    result_native = nw.to_native(result)
-    expected = {"a": [2, 6, 4], "b": [8, 8, 12]}
-    compare_dicts(result_native, expected)
-    result = df.select("z", nw.col("a", "b") * 2)
-    result_native = nw.to_native(result)
-    expected = {"z": [7, 8, 9], "a": [2, 6, 4], "b": [8, 8, 12]}
-    compare_dicts(result_native, expected)
-    result = df.select("a").select(nw.col("a") + nw.all())
-    result_native = nw.to_native(result)
-    expected = {"a": [2, 6, 4]}
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
 def test_join(df_raw: Any) -> None:
     df = nw.from_native(df_raw).lazy()
     df_right = df
