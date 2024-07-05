@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
 from typing import Iterable
 from typing import Iterator
+from typing import TypeVar
 
 from narwhals.utils import flatten
 from narwhals.utils import tupleify
@@ -13,16 +15,19 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.typing import IntoExpr
 
+    DataFrameT = TypeVar("DataFrameT", bound=DataFrame)
+    LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrame)
 
-class GroupBy:
-    def __init__(self, df: DataFrame, *keys: str | Iterable[str]) -> None:
+
+class GroupBy(Generic[DataFrameT]):
+    def __init__(self, df: DataFrameT, *keys: str | Iterable[str]) -> None:
         self._df = df
         self._keys = flatten(keys)
         self._grouped = self._df._dataframe.group_by(self._keys)
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> DataFrame:
+    ) -> DataFrameT:
         """
         Compute aggregations for each group of a group by operation.
 
