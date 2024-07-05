@@ -659,7 +659,7 @@ class Series:
                3
             ]
         """
-        return self._from_series(self._series.cum_sum())
+        return self._from_series(self._series.abs())
 
     def cum_sum(self) -> Self:
         """
