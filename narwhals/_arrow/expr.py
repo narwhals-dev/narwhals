@@ -71,6 +71,9 @@ class ArrowExpr:
     def cast(self, dtype: DType) -> Self:
         return reuse_series_implementation(self, "cast", dtype)  # type: ignore[type-var]
 
+    def abs(self) -> Self:
+        return reuse_series_implementation(self, "abs")  # type: ignore[type-var]
+
     def cum_sum(self) -> Self:
         return reuse_series_implementation(self, "cum_sum")  # type: ignore[type-var]
 

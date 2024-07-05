@@ -625,6 +625,42 @@ class Series:
         """
         return self._from_series(self._series.drop_nulls())
 
+    def abs(self) -> Self:
+        """
+        Calculate the absolute value of each element.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [2, -4, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s_any):
+            ...     return s_any.abs()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    2
+            1    4
+            2    3
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               2
+               4
+               3
+            ]
+        """
+        return self._from_series(self._series.abs())
+
     def cum_sum(self) -> Self:
         """
         Calculate the cumulative sum.

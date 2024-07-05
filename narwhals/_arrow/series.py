@@ -78,6 +78,10 @@ class ArrowSeries:
     def dtype(self) -> DType:
         return translate_dtype(self._series.type)
 
+    def abs(self) -> Self:
+        pc = get_pyarrow_compute()
+        return self._from_series(pc.abs(self._series))
+
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_series(pc.cumulative_sum(self._series))
