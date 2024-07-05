@@ -120,15 +120,15 @@ class GroupBy(Generic[DataFrameT]):
         )
 
 
-class LazyGroupBy:
-    def __init__(self, df: LazyFrame, *keys: str | Iterable[str]) -> None:
+class LazyGroupBy(Generic[LazyFrameT]):
+    def __init__(self, df: LazyFrameT, *keys: str | Iterable[str]) -> None:
         self._df = df
         self._keys = keys
         self._grouped = self._df._dataframe.group_by(*self._keys)
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> LazyFrame:
+    ) -> LazyFrameT:
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
         return self._df.__class__(
             self._grouped.agg(*aggs, **named_aggs),
