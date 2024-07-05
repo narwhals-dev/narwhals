@@ -503,7 +503,6 @@ class DataFrame(BaseFrame):
                 key: Series(value)
                 for key, value in self._dataframe.to_dict(as_series=as_series).items()
             }
-        # TODO: overload return type
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
