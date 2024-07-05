@@ -295,7 +295,7 @@ class DataFrame(BaseFrame):
             1    2  7.0   b
             2    3  8.0   c
             >>> func(df_pl)
-            <LazyFrame at ...>
+            <LazyFrame ...>
         """
         return super().lazy()
 
@@ -3028,6 +3028,6 @@ class LazyFrame(BaseFrame):
             1    2  7.0   b
             2    3  8.0   c
             >>> func(df_pl)
-            <LazyFrame at ...>
+            <LazyFrame ...>
         """
         return super().lazy()  # type: ignore[return-value]
