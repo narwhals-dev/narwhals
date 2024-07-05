@@ -399,9 +399,9 @@ class DataFrame(BaseFrame):
     def __getitem__(self, item: str) -> Series: ...
 
     @overload
-    def __getitem__(self, item: slice) -> DataFrame: ...
+    def __getitem__(self, item: slice) -> Self: ...
 
-    def __getitem__(self, item: str | slice | Sequence[int]) -> Series | DataFrame:
+    def __getitem__(self, item: str | slice | Sequence[int]) -> Series | Self:
         if isinstance(item, str):
             from narwhals.series import Series
 
@@ -1649,7 +1649,7 @@ class DataFrame(BaseFrame):
 
         return Series(self._dataframe.is_unique())
 
-    def null_count(self: Self) -> DataFrame:
+    def null_count(self: Self) -> Self:
         r"""
         Create a new DataFrame that shows the null counts per column.
 
@@ -1814,7 +1814,7 @@ class LazyFrame(BaseFrame):
             + "┘"
         )
 
-    def __getitem__(self, item: str | slice) -> Series | DataFrame:
+    def __getitem__(self, item: str | slice) -> Series | Self:
         raise TypeError("Slicing is not supported on LazyFrame")
 
     def collect(self) -> DataFrame:

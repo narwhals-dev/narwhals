@@ -401,6 +401,9 @@ class PandasSeries:
         ser = self._series
         return self._from_series(ser.sample(n=n, frac=fraction, replace=with_replacement))
 
+    def abs(self) -> PandasSeries:
+        return self._from_series(self._series.abs())
+
     def cum_sum(self) -> PandasSeries:
         return self._from_series(self._series.cumsum())
 
