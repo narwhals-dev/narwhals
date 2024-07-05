@@ -89,7 +89,7 @@ def test_dtypes() -> None:
             "r": pl.Enum(["a", "b"]),
         },
     )
-    df = nw.DataFrame(df_pl)
+    df = nw.from_native(df_pl, eager_only=True)
     result = df.schema
     expected = {
         "a": nw.Int64,
@@ -117,12 +117,12 @@ def test_dtypes() -> None:
     # pandas/pyarrow only have categorical, not enum
     expected["r"] = nw.Categorical
     df_pd = df_pl.to_pandas(use_pyarrow_extension_array=True)
-    df = nw.DataFrame(df_pd)
+    df = nw.from_native(df_pd, eager_only=True)
     result_pd = df.schema
     assert result_pd == expected
     assert {name: df[name].dtype for name in df.columns} == expected
     df_pa = df_pl.to_arrow()
-    df = nw.DataFrame(df_pa)
+    df = nw.from_native(df_pa, eager_only=True)
     result_pa = df.schema
     assert result_pa == expected
     assert {name: df[name].dtype for name in df.columns} == expected

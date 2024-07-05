@@ -62,7 +62,7 @@ def test_iter_rows(
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     result = list(df.iter_rows(named=named))
     assert result == expected
 
@@ -89,7 +89,7 @@ def test_rows(
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     if isinstance(df_raw, pa.Table) and not named:
         with pytest.raises(
             NotImplementedError,
@@ -104,7 +104,7 @@ def test_rows(
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_polars_na])
 def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
     # GIVEN
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
 
     # WHEN
     result = list(df.iter_rows(named=False))
@@ -123,7 +123,7 @@ def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_polars_na])
 def test_rows_with_nulls_named(df_raw: Any) -> None:
     # GIVEN
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
 
     # WHEN
     result = list(df.iter_rows(named=True))
