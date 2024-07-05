@@ -40,10 +40,10 @@ def to_native(narwhals_object: Any, *, strict: bool) -> Any: ...
 
 
 def to_native(
-    narwhals_object: DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series,
+    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series,
     *,
     strict: bool = True,
-) -> IntoDataFrameT | Any:
+) -> IntoFrameT | Any:
     """
     Convert Narwhals object to native one.
 

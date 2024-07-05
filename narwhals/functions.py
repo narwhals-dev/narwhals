@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 def concat(
     items: Iterable[DataFrame[IntoDataFrameT]],
     *,
-    how: Literal["horizontal", "vertical"],
+    how: Literal["horizontal", "vertical"] = ...,
 ) -> DataFrame[IntoDataFrameT]: ...
 
 
@@ -29,7 +29,7 @@ def concat(
 def concat(
     items: Iterable[LazyFrame[IntoLazyFrameT]],
     *,
-    how: Literal["horizontal", "vertical"],
+    how: Literal["horizontal", "vertical"] = ...,
 ) -> LazyFrame[IntoLazyFrameT]: ...
 
 

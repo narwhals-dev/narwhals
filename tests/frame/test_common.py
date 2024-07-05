@@ -22,6 +22,7 @@ from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDataFrame
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 if parse_version(pd.__version__) >= parse_version("1.5.0"):
@@ -596,7 +597,7 @@ def test_drop(df_raw: Any, drop: list[str], left: list[str]) -> None:
 def test_concat_horizontal(df_raw: Any, df_raw_right: Any) -> None:
     df_left = nw.from_native(df_raw)
     df_right = nw.from_native(df_raw_right)
-    result = nw.concat([df_left, df_right], how="horizontal")
+    result = nw.concat([df_left, df_right], how="horizontal")  # type: ignore[call-overload]
     result_native = nw.to_native(result)
     expected = {
         "a": [1, 3, 2],
@@ -624,7 +625,7 @@ def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="vertical")
     with pytest.raises(Exception, match="unable to vstack"):
-        nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()  # type: ignore[union-attr]
+        nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
@@ -687,9 +688,9 @@ def test_library(df_raw: Any, df_raw_right: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_duplicated(df_raw: Any) -> None:
+def test_is_duplicated(df_raw: IntoDataFrame) -> None:
     df = nw.from_native(df_raw, eager_only=True)
-    result = nw.concat([df, df.head(1)]).is_duplicated()  # type: ignore [union-attr]
+    result = nw.concat([df, df.head(1)]).is_duplicated()
     expected = np.array([True, False, False, True])
     assert (result.to_numpy() == expected).all()
 
@@ -705,7 +706,7 @@ def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_unique(df_raw: Any) -> None:
     df = nw.from_native(df_raw, eager_only=True)
-    result = nw.concat([df, df.head(1)]).is_unique()  # type: ignore [union-attr]
+    result = nw.concat([df, df.head(1)]).is_unique()
     expected = np.array([False, True, True, False])
     assert (result.to_numpy() == expected).all()
 
