@@ -18,6 +18,7 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
+from narwhals.utils import flatten
 from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
@@ -61,8 +62,6 @@ class BaseFrame:
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
         """Process `args` and `kwargs`, extracting underlying objects as we go."""
-        from narwhals.utils import flatten
-
         args = [self._extract_native(v) for v in flatten(args)]  # type: ignore[assignment]
         kwargs = {k: self._extract_native(v) for k, v in kwargs.items()}
         return args, kwargs

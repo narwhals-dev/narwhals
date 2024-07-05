@@ -10,7 +10,7 @@ data = {
 }
 
 
-def test_over_single(constructor: Any) -> None:
+def test_diff(constructor: Any) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.with_columns(c_diff=nw.col("c").diff()).filter(nw.col("i") > 0)
     expected = {
