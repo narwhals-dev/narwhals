@@ -1172,74 +1172,74 @@ class Series:
         """
         return self._series.to_pandas()
 
-    def __add__(self, other: object) -> Series:
+    def __add__(self, other: object) -> Self:
         return self._from_series(self._series.__add__(self._extract_native(other)))
 
-    def __radd__(self, other: object) -> Series:
+    def __radd__(self, other: object) -> Self:
         return self._from_series(self._series.__radd__(self._extract_native(other)))
 
-    def __sub__(self, other: object) -> Series:
+    def __sub__(self, other: object) -> Self:
         return self._from_series(self._series.__sub__(self._extract_native(other)))
 
-    def __rsub__(self, other: object) -> Series:
+    def __rsub__(self, other: object) -> Self:
         return self._from_series(self._series.__rsub__(self._extract_native(other)))
 
-    def __mul__(self, other: object) -> Series:
+    def __mul__(self, other: object) -> Self:
         return self._from_series(self._series.__mul__(self._extract_native(other)))
 
-    def __rmul__(self, other: object) -> Series:
+    def __rmul__(self, other: object) -> Self:
         return self._from_series(self._series.__rmul__(self._extract_native(other)))
 
-    def __truediv__(self, other: object) -> Series:
+    def __truediv__(self, other: object) -> Self:
         return self._from_series(self._series.__truediv__(self._extract_native(other)))
 
-    def __floordiv__(self, other: object) -> Series:
+    def __floordiv__(self, other: object) -> Self:
         return self._from_series(self._series.__floordiv__(self._extract_native(other)))
 
-    def __rfloordiv__(self, other: object) -> Series:
+    def __rfloordiv__(self, other: object) -> Self:
         return self._from_series(self._series.__rfloordiv__(self._extract_native(other)))
 
-    def __pow__(self, other: object) -> Series:
+    def __pow__(self, other: object) -> Self:
         return self._from_series(self._series.__pow__(self._extract_native(other)))
 
-    def __rpow__(self, other: object) -> Series:
+    def __rpow__(self, other: object) -> Self:
         return self._from_series(self._series.__rpow__(self._extract_native(other)))
 
-    def __mod__(self, other: object) -> Series:
+    def __mod__(self, other: object) -> Self:
         return self._from_series(self._series.__mod__(self._extract_native(other)))
 
-    def __rmod__(self, other: object) -> Series:
+    def __rmod__(self, other: object) -> Self:
         return self._from_series(self._series.__rmod__(self._extract_native(other)))
 
-    def __eq__(self, other: object) -> Series:  # type: ignore[override]
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._from_series(self._series.__eq__(self._extract_native(other)))
 
-    def __ne__(self, other: object) -> Series:  # type: ignore[override]
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self._from_series(self._series.__ne__(self._extract_native(other)))
 
-    def __gt__(self, other: Any) -> Series:
+    def __gt__(self, other: Any) -> Self:
         return self._from_series(self._series.__gt__(self._extract_native(other)))
 
-    def __ge__(self, other: Any) -> Series:  # pragma: no cover (todo)
+    def __ge__(self, other: Any) -> Self:  # pragma: no cover (todo)
         return self._from_series(self._series.__ge__(self._extract_native(other)))
 
-    def __lt__(self, other: Any) -> Series:  # pragma: no cover (todo)
+    def __lt__(self, other: Any) -> Self:  # pragma: no cover (todo)
         return self._from_series(self._series.__lt__(self._extract_native(other)))
 
-    def __le__(self, other: Any) -> Series:  # pragma: no cover (todo)
+    def __le__(self, other: Any) -> Self:  # pragma: no cover (todo)
         return self._from_series(self._series.__le__(self._extract_native(other)))
 
-    def __and__(self, other: Any) -> Series:  # pragma: no cover (todo)
+    def __and__(self, other: Any) -> Self:  # pragma: no cover (todo)
         return self._from_series(self._series.__and__(self._extract_native(other)))
 
-    def __or__(self, other: Any) -> Series:  # pragma: no cover (todo)
+    def __or__(self, other: Any) -> Self:  # pragma: no cover (todo)
         return self._from_series(self._series.__or__(self._extract_native(other)))
 
     # unary
-    def __invert__(self) -> Series:
+    def __invert__(self) -> Self:
         return self._from_series(self._series.__invert__())
 
-    def filter(self, other: Any) -> Series:
+    def filter(self, other: Any) -> Self:
         """
         Filter elements in the Series based on a condition.
 
@@ -1276,7 +1276,7 @@ class Series:
         return self._from_series(self._series.filter(self._extract_native(other)))
 
     # --- descriptive ---
-    def is_duplicated(self: Self) -> Series:
+    def is_duplicated(self: Self) -> Self:
         r"""
         Get a mask of all duplicated rows in the Series.
 
@@ -1311,7 +1311,7 @@ class Series:
                 true
             ]
         """
-        return Series(self._series.is_duplicated())
+        return self.__class__(self._series.is_duplicated())
 
     def is_empty(self: Self) -> bool:
         r"""
@@ -1343,7 +1343,7 @@ class Series:
         """
         return self._series.is_empty()  # type: ignore[no-any-return]
 
-    def is_unique(self: Self) -> Series:
+    def is_unique(self: Self) -> Self:
         r"""
         Get a mask of all unique rows in the Series.
 
@@ -1379,7 +1379,7 @@ class Series:
                 false
             ]
         """
-        return Series(self._series.is_unique())
+        return self.__class__(self._series.is_unique())
 
     def null_count(self: Self) -> int:
         r"""
@@ -1412,7 +1412,7 @@ class Series:
 
         return self._series.null_count()  # type: ignore[no-any-return]
 
-    def is_first_distinct(self: Self) -> Series:
+    def is_first_distinct(self: Self) -> Self:
         r"""
         Return a boolean mask indicating the first occurrence of each distinct value.
 
@@ -1450,9 +1450,9 @@ class Series:
                 false
             ]
         """
-        return Series(self._series.is_first_distinct())
+        return self.__class__(self._series.is_first_distinct())
 
-    def is_last_distinct(self: Self) -> Series:
+    def is_last_distinct(self: Self) -> Self:
         r"""
         Return a boolean mask indicating the last occurrence of each distinct value.
 
@@ -1490,7 +1490,7 @@ class Series:
                 true
             ]
         """
-        return Series(self._series.is_last_distinct())
+        return self.__class__(self._series.is_last_distinct())
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
         r"""

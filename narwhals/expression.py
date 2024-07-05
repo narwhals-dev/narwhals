@@ -14,6 +14,8 @@ from narwhals.utils import flatten
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.typing import IntoExpr
 
 
@@ -33,7 +35,7 @@ class Expr:
         self._call = call
 
     # --- convert ---
-    def alias(self, name: str) -> Expr:
+    def alias(self, name: str) -> Self:
         """
         Rename the expression.
 
@@ -75,7 +77,7 @@ class Expr:
     def cast(
         self,
         dtype: Any,
-    ) -> Expr:
+    ) -> Self:
         """
         Redefine an object's data type.
 
@@ -123,131 +125,131 @@ class Expr:
         )
 
     # --- binary ---
-    def __eq__(self, other: object) -> Expr:  # type: ignore[override]
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._call(plx).__eq__(extract_native(plx, other))
         )
 
-    def __ne__(self, other: object) -> Expr:  # type: ignore[override]
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: self._call(plx).__ne__(extract_native(plx, other))
         )
 
-    def __and__(self, other: Any) -> Expr:
+    def __and__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__and__(extract_native(plx, other))
         )
 
-    def __rand__(self, other: Any) -> Expr:
+    def __rand__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__rand__(extract_native(plx, other))
         )
 
-    def __or__(self, other: Any) -> Expr:
+    def __or__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__or__(extract_native(plx, other))
         )
 
-    def __ror__(self, other: Any) -> Expr:
+    def __ror__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__ror__(extract_native(plx, other))
         )
 
-    def __add__(self, other: Any) -> Expr:
+    def __add__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__add__(extract_native(plx, other))
         )
 
-    def __radd__(self, other: Any) -> Expr:
+    def __radd__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__radd__(extract_native(plx, other))
         )
 
-    def __sub__(self, other: Any) -> Expr:
+    def __sub__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__sub__(extract_native(plx, other))
         )
 
-    def __rsub__(self, other: Any) -> Expr:
+    def __rsub__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__rsub__(extract_native(plx, other))
         )
 
-    def __truediv__(self, other: Any) -> Expr:
+    def __truediv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__truediv__(extract_native(plx, other))
         )
 
-    def __rtruediv__(self, other: Any) -> Expr:
+    def __rtruediv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__rtruediv__(extract_native(plx, other))
         )
 
-    def __mul__(self, other: Any) -> Expr:
+    def __mul__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__mul__(extract_native(plx, other))
         )
 
-    def __rmul__(self, other: Any) -> Expr:
+    def __rmul__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__rmul__(extract_native(plx, other))
         )
 
-    def __le__(self, other: Any) -> Expr:
+    def __le__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__le__(extract_native(plx, other))
         )
 
-    def __lt__(self, other: Any) -> Expr:
+    def __lt__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__lt__(extract_native(plx, other))
         )
 
-    def __gt__(self, other: Any) -> Expr:
+    def __gt__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__gt__(extract_native(plx, other))
         )
 
-    def __ge__(self, other: Any) -> Expr:
+    def __ge__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__ge__(extract_native(plx, other))
         )
 
-    def __pow__(self, other: Any) -> Expr:
+    def __pow__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__pow__(extract_native(plx, other))
         )
 
-    def __rpow__(self, other: Any) -> Expr:
+    def __rpow__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__rpow__(extract_native(plx, other))
         )
 
-    def __floordiv__(self, other: Any) -> Expr:
+    def __floordiv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__floordiv__(extract_native(plx, other))
         )
 
-    def __rfloordiv__(self, other: Any) -> Expr:
+    def __rfloordiv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__rfloordiv__(extract_native(plx, other))
         )
 
-    def __mod__(self, other: Any) -> Expr:
+    def __mod__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__mod__(extract_native(plx, other))
         )
 
-    def __rmod__(self, other: Any) -> Expr:
+    def __rmod__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: self._call(plx).__rmod__(extract_native(plx, other))
         )
 
     # --- unary ---
-    def __invert__(self) -> Expr:
+    def __invert__(self) -> Self:
         return self.__class__(lambda plx: self._call(plx).__invert__())
 
-    def any(self) -> Expr:
+    def any(self) -> Self:
         """
         Return whether any of the values in the column are `True`
 
@@ -281,7 +283,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).any())
 
-    def all(self) -> Expr:
+    def all(self) -> Self:
         """
         Return whether all values in the column are `True`.
 
@@ -315,7 +317,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).all())
 
-    def mean(self) -> Expr:
+    def mean(self) -> Self:
         """
         Get mean value.
 
@@ -349,7 +351,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).mean())
 
-    def std(self, *, ddof: int = 1) -> Expr:
+    def std(self, *, ddof: int = 1) -> Self:
         """
         Get standard deviation.
 
@@ -422,7 +424,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).sum())
 
-    def min(self) -> Expr:
+    def min(self) -> Self:
         """
         Returns the minimum value(s) from a column(s).
 
@@ -456,7 +458,7 @@ class Expr:
 
         return self.__class__(lambda plx: self._call(plx).min())
 
-    def max(self) -> Expr:
+    def max(self) -> Self:
         """
         Returns the maximum value(s) from a column(s).
 
@@ -490,7 +492,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).max())
 
-    def n_unique(self) -> Expr:
+    def n_unique(self) -> Self:
         """
          Returns count of unique values
 
@@ -524,7 +526,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).n_unique())
 
-    def unique(self) -> Expr:
+    def unique(self) -> Self:
         """
         Return unique values
 
@@ -562,7 +564,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).unique())
 
-    def cum_sum(self) -> Expr:
+    def cum_sum(self) -> Self:
         """
         Return cumulative sum.
 
@@ -604,7 +606,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).cum_sum())
 
-    def diff(self) -> Expr:
+    def diff(self) -> Self:
         """
         Returns the difference between each element and the previous one.
 
@@ -655,7 +657,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).diff())
 
-    def shift(self, n: int) -> Expr:
+    def shift(self, n: int) -> Self:
         """
         Shift values by `n` positions.
 
@@ -706,7 +708,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
-    def sort(self, *, descending: bool = False) -> Expr:
+    def sort(self, *, descending: bool = False) -> Self:
         """
         Sort this column. Place null values first.
 
@@ -777,7 +779,7 @@ class Expr:
     # --- transform ---
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
-    ) -> Expr:
+    ) -> Self:
         """
         Check if this expression is between the given lower and upper bounds.
 
@@ -828,7 +830,7 @@ class Expr:
             lambda plx: self._call(plx).is_between(lower_bound, upper_bound, closed)
         )
 
-    def is_in(self, other: Any) -> Expr:
+    def is_in(self, other: Any) -> Self:
         """
         Check if elements of this expression are present in the other iterable.
 
@@ -877,7 +879,7 @@ class Expr:
                 "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
             )
 
-    def filter(self, *predicates: Any) -> Expr:
+    def filter(self, *predicates: Any) -> Self:
         """
         Filters elements based on a condition, returning a new expression.
 
@@ -922,7 +924,7 @@ class Expr:
             )
         )
 
-    def is_null(self) -> Expr:
+    def is_null(self) -> Self:
         """
         Returns a boolean Series indicating which values are null.
 
@@ -975,7 +977,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).is_null())
 
-    def fill_null(self, value: Any) -> Expr:
+    def fill_null(self, value: Any) -> Self:
         """
         Fill null values with given value.
 
@@ -1027,7 +1029,7 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).fill_null(value))
 
     # --- partial reduction ---
-    def drop_nulls(self) -> Expr:
+    def drop_nulls(self) -> Self:
         """
         Remove missing values.
 
@@ -1079,7 +1081,7 @@ class Expr:
         fraction: float | None = None,
         *,
         with_replacement: bool = False,
-    ) -> Expr:
+    ) -> Self:
         """
         Sample randomly from this expression.
 
@@ -1129,7 +1131,7 @@ class Expr:
             )
         )
 
-    def over(self, *keys: str | Iterable[str]) -> Expr:
+    def over(self, *keys: str | Iterable[str]) -> Self:
         """
         Compute expressions over the given groups.
 
@@ -1173,7 +1175,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
 
-    def is_duplicated(self) -> Expr:
+    def is_duplicated(self) -> Self:
         r"""
         Return a boolean mask indicating duplicated values.
 
@@ -1214,7 +1216,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).is_duplicated())
 
-    def is_unique(self) -> Expr:
+    def is_unique(self) -> Self:
         r"""
         Return a boolean mask indicating unique values.
 
@@ -1256,7 +1258,7 @@ class Expr:
 
         return self.__class__(lambda plx: self._call(plx).is_unique())
 
-    def null_count(self) -> Expr:
+    def null_count(self) -> Self:
         r"""
         Count null values.
 
@@ -1295,7 +1297,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).null_count())
 
-    def is_first_distinct(self) -> Expr:
+    def is_first_distinct(self) -> Self:
         r"""
         Return a boolean mask indicating the first occurrence of each distinct value.
 
@@ -1336,7 +1338,7 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).is_first_distinct())
 
-    def is_last_distinct(self) -> Expr:
+    def is_last_distinct(self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
 
         Examples:
@@ -1380,7 +1382,7 @@ class Expr:
         self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
-    ) -> Expr:
+    ) -> Self:
         r"""Get quantile value.
 
         Note:
@@ -1426,7 +1428,7 @@ class Expr:
             lambda plx: self._call(plx).quantile(quantile, interpolation)
         )
 
-    def head(self, n: int = 10) -> Expr:
+    def head(self, n: int = 10) -> Self:
         r"""
         Get the first `n` rows.
 
@@ -1470,7 +1472,7 @@ class Expr:
 
         return self.__class__(lambda plx: self._call(plx).head(n))
 
-    def tail(self, n: int = 10) -> Expr:
+    def tail(self, n: int = 10) -> Self:
         r"""
         Get the last `n` rows.
 
@@ -1514,7 +1516,7 @@ class Expr:
 
         return self.__class__(lambda plx: self._call(plx).tail(n))
 
-    def round(self, decimals: int = 0) -> Expr:
+    def round(self, decimals: int = 0) -> Self:
         r"""
         Round underlying floating point data by `decimals` digits.
 
@@ -1566,7 +1568,7 @@ class Expr:
 
         return self.__class__(lambda plx: self._call(plx).round(decimals))
 
-    def len(self) -> Expr:
+    def len(self) -> Self:
         r"""
         Return the number of elements in the column.
 
