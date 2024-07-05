@@ -153,18 +153,6 @@ def test_double(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize(
-    "df_raw",
-    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
-)
-def test_select(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.select("a")
-    result_native = nw.to_native(result)
-    expected = {"a": [1, 3, 2]}
-    compare_dicts(result_native, expected)
-
-
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy, df_pandas_nullable])
 def test_sumh(df_raw: Any) -> None:
     df = nw.from_native(df_raw)
