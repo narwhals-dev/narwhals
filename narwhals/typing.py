@@ -37,4 +37,4 @@ IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
 IntoFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "LazyFrame[Any]"]
 IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
 
-__all__ = ["IntoExpr", "IntoDataFrame", "IntoFrame"]
+__all__ = ["IntoExpr", "IntoDataFrame", "IntoDataFrameT", "IntoFrame", "IntoFrameT"]
