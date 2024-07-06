@@ -23,6 +23,7 @@ from tests.utils import maybe_get_modin_df
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoFrameT
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 if parse_version(pd.__version__) >= parse_version("1.5.0"):
@@ -594,10 +595,10 @@ def test_drop(df_raw: Any, drop: list[str], left: list[str]) -> None:
 @pytest.mark.parametrize(
     ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
 )
-def test_concat_horizontal(df_raw: Any, df_raw_right: Any) -> None:
+def test_concat_horizontal(df_raw: IntoFrameT, df_raw_right: IntoFrameT) -> None:
     df_left = nw.from_native(df_raw)
     df_right = nw.from_native(df_raw_right)
-    result = nw.concat([df_left, df_right], how="horizontal")  # type: ignore[call-overload]
+    result = nw.concat([df_left, df_right], how="horizontal")
     result_native = nw.to_native(result)
     expected = {
         "a": [1, 3, 2],

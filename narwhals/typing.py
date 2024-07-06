@@ -34,9 +34,7 @@ IntoExpr: TypeAlias = Union["Expr", str, int, float, "Series"]
 # Anything which can be converted to a Narwhals DataFrame.
 IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]"]
 IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
-IntoLazyFrame: TypeAlias = Union["NativeFrame", "LazyFrame[Any]"]
-IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
 IntoFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "LazyFrame[Any]"]
 IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
 
-__all__ = ["IntoExpr", "IntoDataFrame", "IntoLazyFrame", "IntoFrame"]
+__all__ = ["IntoExpr", "IntoDataFrame", "IntoFrame"]
