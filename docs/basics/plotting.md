@@ -41,7 +41,7 @@ Import the data for the demonstration
             country_list.append(row[0])
     ```
 
-We will now write a Data-Agnostic function
+We will now write a Data-Agnostic function. The `filter_data` function processes a data frame by renaming the population column out non-country entities, grouping by year, summing the population for each year, and then sorting the results globally.
 
 ```python
     @nw.narwhalify
@@ -161,8 +161,8 @@ We will then define a data-agnostic Narwhals function to plot a Bar Chart using 
 ```python
 def plot_bar(df_any):
     df = nw.from_native(df_any)
-    y = df['Annual Salary'].to_numpy()
-    x = df['Player'].to_numpy()
+    y = df['Annual Salary']
+    x = df['Player']
     
     # Create the bar plot
     plt.figure(figsize=(10, 6))
@@ -206,3 +206,45 @@ The resulting plot
 
 ![](images/bar_plot.png)
 
+## Pie plot
+Import the libraries needed for this demonstration and create a data dictionary.
+
+```python
+import narwhals as nw
+import matplotlib.pyplot as plt
+import pandas as pd
+import polars as pl
+
+# create dictionary
+data = { 
+	'Object': ['Bulb', 'Lamp', 'Table', 'Pen', 'Notebook'], 
+	'Price': [45, 38, 90, 60, 40] 
+}
+```
+
+Define a dataframe-agnostic Narwhals function
+
+```python
+def plot_pie(df_any):
+    df = nw.from_native(df_any)
+    plt.pie(df["Price"], labels=df["Object"])
+    plt.show() 
+```
+
+Create a Pandas or Polars dataframe and pass it to the narwhals function
+
+=== "Pandas"
+    ```python
+    pd_df = pd.DataFrame(data)
+    plot_pie(pd_df)
+    ```
+
+=== "Polars"
+    ```python
+    pl_df = pl.DataFrame(data)
+    plot_pie(pl_df)
+    ```
+
+The resulting pie plot
+
+![](images\pie_plot.png)
