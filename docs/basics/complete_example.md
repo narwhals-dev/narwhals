@@ -21,10 +21,11 @@ Therefore, we use `@nw.narwhalify`:
 
 ```python
 import narwhals as nw
+from narwhals.typing import FrameT
 
 class StandardScaler:
     @nw.narwhalify
-    def transform(self, df):
+    def transform(self, df: FrameT) -> FrameT:
         return df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
             for col in df.columns
@@ -49,10 +50,11 @@ the argument will be propagated to `nw.from_native`.
 
 ```python
 import narwhals as nw
+from typing import Any
 
 class StandardScaler:
     @nw.narwhalify(eager_only=True)
-    def fit(self, df_any):
+    def fit(self, df_any: nw.DataFrame[Any]) -> None:
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 ```
@@ -61,16 +63,19 @@ class StandardScaler:
 
 Here is our dataframe-agnostic standard scaler:
 ```python exec="1" source="above" session="tute-ex1"
+from typing import Any
+
 import narwhals as nw
+from narwhals.typing import FrameT
 
 class StandardScaler:
     @nw.narwhalify(eager_only=True)
-    def fit(self, df):
+    def fit(self, df: nw.DataFrame[Any]) -> None:
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 
     @nw.narwhalify
-    def transform(self, df):
+    def transform(self, df: FrameT) -> FrameT:
         return df.with_columns(
             (nw.col(col) - self._means[col]) / self._std_devs[col]
             for col in df.columns

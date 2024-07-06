@@ -33,8 +33,24 @@ if TYPE_CHECKING:
 IntoExpr: TypeAlias = Union["Expr", str, int, float, "Series"]
 # Anything which can be converted to a Narwhals DataFrame.
 IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]"]
-IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
+# Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 IntoFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "LazyFrame[Any]"]
-IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
+# DataFrame or LazyFrame
+Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
 
-__all__ = ["IntoExpr", "IntoDataFrame", "IntoDataFrameT", "IntoFrame", "IntoFrameT"]
+# TypeVars for some of the above
+IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
+IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
+FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
+DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
+
+__all__ = [
+    "IntoExpr",
+    "IntoDataFrame",
+    "IntoDataFrameT",
+    "IntoFrame",
+    "IntoFrameT",
+    "Frame",
+    "FrameT",
+    "DataFrameT",
+]

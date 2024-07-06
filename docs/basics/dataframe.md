@@ -23,9 +23,10 @@ Just like in Polars, we can pass expressions to
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex1"
 import narwhals as nw
+from narwhals.typing import FrameT
 
 @nw.narwhalify
-def func(df):
+def func(df: FrameT) -> FrameT:
     return df.select(
         a_sum=nw.col('a').sum(),
         a_mean=nw.col('a').mean(),
@@ -61,9 +62,10 @@ Let's try it out:
 Alternatively, we could have opted for the more explicit version:
 ```python
 import narwhals as nw
+from narwhals.typing import IntoFrameT
 
-def func(df_any):
-    df = nw.from_native(df_any)
+def func(df_native: IntoFrameT) -> IntoFrameT:
+    df = nw.from_native(df_native)
     df = df.select(
         a_sum=nw.col('a').sum(),
         a_mean=nw.col('a').mean(),
@@ -71,8 +73,10 @@ def func(df_any):
     )
     return nw.to_native(df)
 ```
+Despite being more verbose, it has the advantage of preserving the type annotation of the native
+object - see [typing](# todo) for more details.
 
-In general, we think `@nw.narwhalify` is more legible, so we'll use that wherever possible.
+In general, in this tutorial, we'll use the former.
 
 ## Example 2: group-by and mean
 
@@ -80,9 +84,10 @@ Just like in Polars, we can pass expressions to `GroupBy.agg`.
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex2"
 import narwhals as nw
+from narwhals.typing import FrameT
 
 @nw.narwhalify
-def func(df):
+def func(df: FrameT) -> FrameT:
     return df.group_by('a').agg(nw.col('b').mean()).sort('a')
 ```
 Let's try it out:
@@ -119,9 +124,10 @@ For example, we can compute a horizontal sum using `nw.sum_horizontal`.
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex3"
 import narwhals as nw
+from narwhals.typing import FrameT
 
 @nw.narwhalify
-def func(df):
+def func(df: FrameT) -> FrameT:
     return df.with_columns(a_plus_b=nw.sum_horizontal('a', 'b'))
 ```
 Let's try it out:
@@ -163,7 +169,7 @@ Make a Python file with the following content:
 import narwhals as nw
 
 @nw.narwhalify(eager_only=True)
-def func(df: nw.DataFrame, s: nw.Series, col_name: str):
+def func(df: nw.DataFrame, s: nw.Series, col_name: str) -> int:
     return df.filter(nw.col(col_name).is_in(s)).shape[0]
 ```
 
