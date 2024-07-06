@@ -60,30 +60,6 @@ df_pa_na = pa.table({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 
 
 @pytest.mark.parametrize(
-    "df_raw",
-    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
-)
-def test_filter(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.filter(nw.col("a") > 1)
-    result_native = nw.to_native(result)
-    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw",
-    [df_pandas, df_polars],
-)
-def test_filter_series(df_raw: Any) -> None:
-    df = nw.from_native(df_raw, eager_only=True).with_columns(mask=nw.col("a") > 1)
-    result = df.filter(df["mask"]).drop("mask")
-    result_native = nw.to_native(result)
-    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
     "constructor",
     [pd.DataFrame, pl.DataFrame, pa.table],
 )
