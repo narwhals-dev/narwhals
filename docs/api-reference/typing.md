@@ -5,7 +5,7 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
 
 ## `DataFrameT`
 A `TypeVar` bound to `nw.DataFrame`. Use this when you have a function which
-accepts a `nw.DataFrame` and returns a `nw.DataFrame` backed by the same backend, example:
+accepts a `nw.DataFrame` and returns a `nw.DataFrame` backed by the same backend, for example:
 
   ```python
   import narwhals as nw
@@ -13,13 +13,13 @@ accepts a `nw.DataFrame` and returns a `nw.DataFrame` backed by the same backend
 
   @nw.narwhalify
   def func(df: DataFrameT) -> DataFrameT:
-    return df.with_columns(c=df['a']+1)
+      return df.with_columns(c=df['a']+1)
   ```
 
 ## `Frame`
 
 Either a `nw.DataFrame` or `nw.LazyFrame`. Use this if your function can work on
-either and your function doesn't care about its backend, example:
+either and your function doesn't care about its backend, for example:
 
   ```python
   import narwhals as nw
@@ -27,12 +27,12 @@ either and your function doesn't care about its backend, example:
 
   @nw.narwhalify
   def func(df: Frame) -> list[str]:
-    return df.columns
+      return df.columns
   ```
 
 ## `FrameT`
 A `TypeVar` bound to `Frame`. Use this if your function accepts either `nw.DataFrame`
-or `nw.LazyFrame` and returns an object backed by the same backend, example:
+or `nw.LazyFrame` and returns an object backed by the same backend, for example:
 
   ```python
   import narwhals as nw
@@ -40,22 +40,22 @@ or `nw.LazyFrame` and returns an object backed by the same backend, example:
 
   @nw.narwhalify
   def func(df: FrameT) -> FrameT:
-    return df.with_columns(c=nw.col('a')+1)
+      return df.with_columns(c=nw.col('a')+1)
   ```
 
 ## `IntoDataFrame`
 An object which can be converted to `nw.DataFrame` (e.g. `pd.DataFrame`, `pl.DataFrame`).
-Use this if your function accepts a narwhalifiable object but it doesn't care about its backend:
+Use this if your function accepts a narwhalifiable object but doesn't care about its backend:
 
   ```python
   from __future__ import annotations
 
   import narwhals as nw
-  from narwhals.typing import IntoDataFrameT
+  from narwhals.typing import IntoDataFrame
 
   def func(df_native: IntoDataFrame) -> tuple[int, int]:
-    df = nw.from_native(df_native, eager_only=True)
-    return df.shape
+      df = nw.from_native(df_native, eager_only=True)
+      return df.shape
   ```
 
 ## `IntoDataFrameT`
@@ -68,8 +68,8 @@ class:
   from narwhals.typing import IntoDataFrameT
 
   def func(df_native: IntoDataFrameT) -> IntoDataFrameT:
-    df = nw.from_native(df_native, eager_only=True)
-    return nw.to_native(df.with_columns(c=df['a']+1))
+      df = nw.from_native(df_native, eager_only=True)
+      return nw.to_native(df.with_columns(c=df['a']+1))
   ```
 
 ## `IntoExpr`
@@ -89,8 +89,8 @@ import narwhals as nw
 from narwhals.typing import IntoFrame
 
 def func(df_native: IntoFrame) -> list[str]:
-  df = nw.from_native(df_native)
-  return df.columns
+    df = nw.from_native(df_native)
+    return df.columns
 ```
 
 ## `IntoFrameT`
@@ -103,8 +103,8 @@ of the same type:
   from narwhals.typing import IntoFrameT
 
   def func(df_native: IntoFrameT) -> IntoFrameT:
-    df = nw.from_native(df_native)
-    return nw.to_native(df.with_columns(c=nw.col('a')+1))
+      df = nw.from_native(df_native)
+      return nw.to_native(df.with_columns(c=nw.col('a')+1))
   ```
 
 ## `nw.narwhalify`, or `nw.from_native`?

@@ -166,10 +166,12 @@ on a series.
 
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex4"
+from typing import Any
+
 import narwhals as nw
 
 @nw.narwhalify(eager_only=True)
-def func(df: nw.DataFrame, s: nw.Series, col_name: str) -> int:
+def func(df: nw.DataFrame[Any], s: nw.Series, col_name: str) -> int:
     return df.filter(nw.col(col_name).is_in(s)).shape[0]
 ```
 

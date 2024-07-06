@@ -20,10 +20,10 @@ from __future__ import annotations
 import pandas as pd
 import polars as pl
 import narwhals as nw
-from narwhals.typing import Frame
+from narwhals.typing import IntoFrame
 
 
-def my_function(df_native: Frame) -> list[str]:
+def my_function(df_native: IntoFrame) -> list[str]:
     df = nw.from_native(df_native)
     column_names = df.columns
     return column_names

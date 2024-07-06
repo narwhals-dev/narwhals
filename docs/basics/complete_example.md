@@ -14,32 +14,10 @@ The `fit` method is a bit complicated, so let's start with `transform`.
 Suppose we've already calculated the mean and standard deviation of each column, and have
 stored them in attributes `self.means` and `self.std_devs`.
 
-## Transform method
-
-We're going to take in a dataframe, and return a dataframe of the same type.
-Therefore, we use `@nw.narwhalify`:
-
-```python
-import narwhals as nw
-from narwhals.typing import FrameT
-
-class StandardScaler:
-    @nw.narwhalify
-    def transform(self, df: FrameT) -> FrameT:
-        return df.with_columns(
-            (nw.col(col) - self._means[col]) / self._std_devs[col]
-            for col in df.columns
-        )
-```
-
-Note that all the calculations here can stay lazy if the underlying library permits it,
-so we don't pass in any extra keyword-arguments such as `eager_only`, we just use the
-default `eager_only=False`.
-
 ## Fit method
 
-Unlike the `transform` method, `fit` cannot stay lazy, as we need to compute concrete values
-for the means and standard deviations.
+Unlike the `transform` method, which we'll write below, `fit` cannot stay lazy,
+as we need to compute concrete values for the means and standard deviations.
 
 To be able to get `Series` out of our `DataFrame`, we'll pass `eager_only=True` to `nw.from_native`.
 This is because Polars doesn't have a concept of lazy `Series`, and so Narwhals
@@ -58,6 +36,24 @@ class StandardScaler:
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 ```
+
+## Transform method
+
+We're going to take in a dataframe, and return a dataframe of the same type.
+Therefore, we use `@nw.narwhalify`:
+
+```python
+    @nw.narwhalify
+    def transform(self, df: FrameT) -> FrameT:
+        return df.with_columns(
+            (nw.col(col) - self._means[col]) / self._std_devs[col]
+            for col in df.columns
+        )
+```
+
+Note that all the calculations here can stay lazy if the underlying library permits it,
+so we don't pass in any extra keyword-arguments such as `eager_only`, we just use the
+default `eager_only=False`.
 
 ## Putting it all together
 
