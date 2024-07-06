@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrameT
+    from narwhals.typing import IntoFrameT
 
 T = TypeVar("T")
 
@@ -29,8 +30,8 @@ def to_native(
 ) -> IntoDataFrameT: ...
 @overload
 def to_native(
-    narwhals_object: LazyFrame[IntoDataFrameT], *, strict: Literal[True] = ...
-) -> IntoDataFrameT: ...
+    narwhals_object: LazyFrame[IntoFrameT], *, strict: Literal[True] = ...
+) -> IntoFrameT: ...
 @overload
 def to_native(narwhals_object: Series, *, strict: Literal[True] = ...) -> Any: ...
 @overload
@@ -38,10 +39,10 @@ def to_native(narwhals_object: Any, *, strict: bool) -> Any: ...
 
 
 def to_native(
-    narwhals_object: DataFrame[IntoDataFrameT] | LazyFrame[IntoDataFrameT] | Series,
+    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series,
     *,
     strict: bool = True,
-) -> IntoDataFrameT | Any:
+) -> IntoFrameT | Any:
     """
     Convert Narwhals object to native one.
 
@@ -122,13 +123,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT | T,
+    native_dataframe: IntoFrameT | T,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoDataFrameT] | T: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
 
 
 @overload
@@ -177,13 +178,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrameT,
+    native_dataframe: IntoFrameT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoDataFrameT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 
 
 # Nothing was specified
