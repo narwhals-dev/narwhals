@@ -13,22 +13,22 @@ from tests.utils import compare_dicts
 
 
 @given(
-    st.lists(
+    integers=st.lists(
         st.integers(min_value=-9223372036854775807, max_value=9223372036854775807),
         min_size=3,
         max_size=3,
     ),
-    st.lists(
+    other_integers=st.lists(
         st.integers(min_value=-9223372036854775807, max_value=9223372036854775807),
         min_size=3,
         max_size=3,
     ),
-    st.lists(
+    floats=st.lists(
         st.floats(),
         min_size=3,
         max_size=3,
     ),
-    st.sampled_from(["horizontal", "vertical"]),
+    how=st.sampled_from(["horizontal", "vertical"]),
 )  # type: ignore[misc]
 @pytest.mark.slow()
 def test_concat(  # pragma: no cover

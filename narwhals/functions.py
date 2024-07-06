@@ -5,6 +5,7 @@ import sys
 from typing import Iterable
 from typing import Literal
 from typing import TypeVar
+from typing import Union
 
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
@@ -14,7 +15,7 @@ from narwhals.utils import validate_same_library
 # Missing type parameters for generic type "DataFrame"
 # However, trying to provide one results in mypy still complaining...
 # The rest of the annotations seem to work fine with this anyway
-FrameT = TypeVar("FrameT", bound=DataFrame | LazyFrame)  # type: ignore[type-arg]
+FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
 
 
 def concat(
