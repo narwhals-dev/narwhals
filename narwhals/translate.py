@@ -66,7 +66,7 @@ def to_native(
         return (
             narwhals_object._series
             if narwhals_object._is_polars
-            else narwhals_object._series._series
+            else narwhals_object._series._native_series
         )
 
     if strict:  # pragma: no cover (todo)

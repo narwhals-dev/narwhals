@@ -30,7 +30,7 @@ class PandasGroupBy:
     def __init__(self, df: PandasDataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
-        self._grouped = self._df._dataframe.groupby(
+        self._grouped = self._df._native_dataframe.groupby(
             list(self._keys),
             sort=False,
             as_index=True,
@@ -63,12 +63,12 @@ class PandasGroupBy:
             exprs,
             self._keys,
             output_names,
-            self._from_dataframe,
+            self._from_native_dataframe,
             implementation,
-            dataframe_is_empty=self._df._dataframe.empty,
+            dataframe_is_empty=self._df._native_dataframe.empty,
         )
 
-    def _from_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:
+    def _from_native_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:
         from narwhals._pandas_like.dataframe import PandasDataFrame
 
         return PandasDataFrame(
@@ -171,7 +171,7 @@ def agg_pandas(  # noqa: PLR0913
         for expr in exprs:
             results_keys = expr._call(from_dataframe(df))
             for result_keys in results_keys:
-                out_group.append(result_keys._series.iloc[0])
+                out_group.append(result_keys._native_series.iloc[0])
                 out_names.append(result_keys.name)
         return native_series_from_iterable(
             out_group, index=out_names, name="", implementation=implementation

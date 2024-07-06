@@ -150,7 +150,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
         _validate_index(lhs_any._dataframe._dataframe.index)
         _validate_index(rhs_any._dataframe._dataframe.index)
         return DataFrame(  # type: ignore[return-value]
-            lhs_any._dataframe._from_dataframe(
+            lhs_any._dataframe._from_native_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._dataframe._dataframe.index]
             )
         )
@@ -160,7 +160,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
         _validate_index(lhs_any._dataframe._dataframe.index)
         _validate_index(rhs_any._series._series.index)
         return DataFrame(  # type: ignore[return-value]
-            lhs_any._dataframe._from_dataframe(
+            lhs_any._dataframe._from_native_dataframe(
                 lhs_any._dataframe._dataframe.loc[rhs_any._series._series.index]
             )
         )
@@ -170,7 +170,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
         _validate_index(lhs_any._series._series.index)
         _validate_index(rhs_any._dataframe._dataframe.index)
         return Series(  # type: ignore[return-value]
-            lhs_any._series._from_series(
+            lhs_any._series._from_native_series(
                 lhs_any._series._series.loc[rhs_any._dataframe._dataframe.index]
             )
         )
@@ -180,7 +180,7 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
         _validate_index(lhs_any._series._series.index)
         _validate_index(rhs_any._series._series.index)
         return Series(  # type: ignore[return-value]
-            lhs_any._series._from_series(
+            lhs_any._series._from_native_series(
                 lhs_any._series._series.loc[rhs_any._series._series.index]
             )
         )
@@ -219,7 +219,7 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
         return DataFrame(  # type: ignore[return-value]
-            df_any._dataframe._from_dataframe(
+            df_any._dataframe._from_native_dataframe(
                 df_any._dataframe._dataframe.set_index(column_names)
             )
         )
@@ -257,7 +257,7 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
         return DataFrame(  # type: ignore[return-value]
-            df_any._dataframe._from_dataframe(
+            df_any._dataframe._from_native_dataframe(
                 df_any._dataframe._dataframe.convert_dtypes(*args, **kwargs)
             )
         )

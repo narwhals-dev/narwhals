@@ -56,7 +56,7 @@ class PandasExpr:
         def func(df: PandasDataFrame) -> list[PandasSeries]:
             return [
                 PandasSeries(
-                    df._dataframe.loc[:, column_name],
+                    df._native_dataframe.loc[:, column_name],
                     implementation=df._implementation,
                 )
                 for column_name in column_names

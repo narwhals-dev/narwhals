@@ -28,7 +28,7 @@ class ArrowSeries:
         self._series = series
         self._implementation = "arrow"  # for compatibility with PandasSeries
 
-    def _from_series(self, series: Any) -> Self:
+    def _from_native_series(self, series: Any) -> Self:
         return self.__class__(
             series,
             name=self._name,
@@ -80,11 +80,11 @@ class ArrowSeries:
 
     def abs(self) -> Self:
         pc = get_pyarrow_compute()
-        return self._from_series(pc.abs(self._series))
+        return self._from_native_series(pc.abs(self._series))
 
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()
-        return self._from_series(pc.cumulative_sum(self._series))
+        return self._from_native_series(pc.cumulative_sum(self._series))
 
     def any(self) -> bool:
         pc = get_pyarrow_compute()
@@ -101,7 +101,7 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         ser = self._series
         dtype = reverse_translate_dtype(dtype)
-        return self._from_series(pc.cast(ser, dtype))
+        return self._from_native_series(pc.cast(ser, dtype))
 
     @property
     def shape(self) -> tuple[int]:
@@ -126,7 +126,7 @@ class ArrowSeriesDateTimeNamespace:
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
         format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
-        return self._series._from_series(pc.strftime(self._series._series, format))
+        return self._series._from_native_series(pc.strftime(self._series._series, format))
 
 
 class ArrowSeriesCatNamespace:
@@ -140,4 +140,4 @@ class ArrowSeriesCatNamespace:
         out = pa.chunked_array(
             [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
         )
-        return self._series._from_series(out)
+        return self._series._from_native_series(out)
