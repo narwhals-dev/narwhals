@@ -20,12 +20,12 @@ if TYPE_CHECKING:
 class ArrowSeries:
     def __init__(
         self,
-        series: Any,
+        native_series: Any,
         *,
         name: str,
     ) -> None:
         self._name = name
-        self._series = series
+        self._native_series = native_series
         self._implementation = "arrow"  # for compatibility with PandasSeries
 
     def _from_native_series(self, series: Any) -> Self:
@@ -44,7 +44,7 @@ class ArrowSeries:
         )
 
     def __len__(self) -> int:
-        return len(self._series)
+        return len(self._native_series)
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         return ArrowNamespace()
@@ -57,55 +57,55 @@ class ArrowSeries:
         return self
 
     def __getitem__(self, idx: int) -> Any:
-        return self._series[idx]
+        return self._native_series[idx]
 
     def to_list(self) -> Any:
-        return self._series.to_pylist()
+        return self._native_series.to_pylist()
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> Any:
-        return self._series.__array__(dtype=dtype, copy=copy)
+        return self._native_series.__array__(dtype=dtype, copy=copy)
 
     def to_numpy(self) -> Any:
-        return self._series.to_numpy()
+        return self._native_series.to_numpy()
 
     def alias(self, name: str) -> Self:
         return self.__class__(
-            self._series,
+            self._native_series,
             name=name,
         )
 
     @property
     def dtype(self) -> DType:
-        return translate_dtype(self._series.type)
+        return translate_dtype(self._native_series.type)
 
     def abs(self) -> Self:
         pc = get_pyarrow_compute()
-        return self._from_native_series(pc.abs(self._series))
+        return self._from_native_series(pc.abs(self._native_series))
 
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()
-        return self._from_native_series(pc.cumulative_sum(self._series))
+        return self._from_native_series(pc.cumulative_sum(self._native_series))
 
     def any(self) -> bool:
         pc = get_pyarrow_compute()
-        return pc.any(self._series)  # type: ignore[no-any-return]
+        return pc.any(self._native_series)  # type: ignore[no-any-return]
 
     def all(self) -> bool:
         pc = get_pyarrow_compute()
-        return pc.all(self._series)  # type: ignore[no-any-return]
+        return pc.all(self._native_series)  # type: ignore[no-any-return]
 
     def is_empty(self) -> bool:
         return len(self) == 0
 
     def cast(self, dtype: DType) -> Self:
         pc = get_pyarrow_compute()
-        ser = self._series
+        ser = self._native_series
         dtype = reverse_translate_dtype(dtype)
         return self._from_native_series(pc.cast(ser, dtype))
 
     @property
     def shape(self) -> tuple[int]:
-        return (len(self._series),)
+        return (len(self._native_series),)
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
@@ -126,7 +126,9 @@ class ArrowSeriesDateTimeNamespace:
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
         format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
-        return self._series._from_native_series(pc.strftime(self._series._series, format))
+        return self._series._from_native_series(
+            pc.strftime(self._series._native_series, format)
+        )
 
 
 class ArrowSeriesCatNamespace:
@@ -135,7 +137,7 @@ class ArrowSeriesCatNamespace:
 
     def get_categories(self) -> ArrowSeries:
         pa = get_pyarrow()
-        ca = self._series._series
+        ca = self._series._native_series
         # todo: this looks potentially expensive - is there no better way?
         out = pa.chunked_array(
             [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]

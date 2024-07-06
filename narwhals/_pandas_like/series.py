@@ -542,7 +542,7 @@ class PandasSeries:
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasSeries:
         ser = self._native_series
-        res = ser.where(mask._series, other._series)
+        res = ser.where(mask._native_series, other._native_series)
         return self._from_native_series(res)
 
     def head(self: Self, n: int) -> Self:

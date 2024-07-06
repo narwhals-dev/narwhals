@@ -60,7 +60,7 @@ def to_native(
         return (
             narwhals_object._dataframe
             if narwhals_object._is_polars
-            else narwhals_object._dataframe._dataframe
+            else narwhals_object._dataframe._native_dataframe
         )
     if isinstance(narwhals_object, Series):
         return (
