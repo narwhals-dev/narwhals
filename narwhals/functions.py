@@ -33,9 +33,8 @@ def concat(
     validate_laziness(items)
     first_item = items[0]
     plx = first_item.__narwhals_namespace__()
-    return first_item.__class__(  # type: ignore[return-value]
+    return first_item._from_dataframe(  # type: ignore[return-value]
         plx.concat([df._dataframe for df in items], how=how),
-        is_polars=first_item._is_polars,
     )
 
 
