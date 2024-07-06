@@ -147,41 +147,47 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
         getattr(rhs_any, "_dataframe", None), PandasDataFrame
     ):
-        _validate_index(lhs_any._dataframe._dataframe.index)
-        _validate_index(rhs_any._dataframe._dataframe.index)
+        _validate_index(lhs_any._dataframe._native_dataframe.index)
+        _validate_index(rhs_any._dataframe._native_dataframe.index)
         return DataFrame(  # type: ignore[return-value]
-            lhs_any._dataframe._from_dataframe(
-                lhs_any._dataframe._dataframe.loc[rhs_any._dataframe._dataframe.index]
+            lhs_any._dataframe._from_native_dataframe(
+                lhs_any._dataframe._native_dataframe.loc[
+                    rhs_any._dataframe._native_dataframe.index
+                ]
             )
         )
     if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
         getattr(rhs_any, "_series", None), PandasSeries
     ):
-        _validate_index(lhs_any._dataframe._dataframe.index)
-        _validate_index(rhs_any._series._series.index)
+        _validate_index(lhs_any._dataframe._native_dataframe.index)
+        _validate_index(rhs_any._series._native_series.index)
         return DataFrame(  # type: ignore[return-value]
-            lhs_any._dataframe._from_dataframe(
-                lhs_any._dataframe._dataframe.loc[rhs_any._series._series.index]
+            lhs_any._dataframe._from_native_dataframe(
+                lhs_any._dataframe._native_dataframe.loc[
+                    rhs_any._series._native_series.index
+                ]
             )
         )
     if isinstance(getattr(lhs_any, "_series", None), PandasSeries) and isinstance(
         getattr(rhs_any, "_dataframe", None), PandasDataFrame
     ):
-        _validate_index(lhs_any._series._series.index)
-        _validate_index(rhs_any._dataframe._dataframe.index)
+        _validate_index(lhs_any._series._native_series.index)
+        _validate_index(rhs_any._dataframe._native_dataframe.index)
         return Series(  # type: ignore[return-value]
-            lhs_any._series._from_series(
-                lhs_any._series._series.loc[rhs_any._dataframe._dataframe.index]
+            lhs_any._series._from_native_series(
+                lhs_any._series._native_series.loc[
+                    rhs_any._dataframe._native_dataframe.index
+                ]
             )
         )
     if isinstance(getattr(lhs_any, "_series", None), PandasSeries) and isinstance(
         getattr(rhs_any, "_series", None), PandasSeries
     ):
-        _validate_index(lhs_any._series._series.index)
-        _validate_index(rhs_any._series._series.index)
+        _validate_index(lhs_any._series._native_series.index)
+        _validate_index(rhs_any._series._native_series.index)
         return Series(  # type: ignore[return-value]
-            lhs_any._series._from_series(
-                lhs_any._series._series.loc[rhs_any._series._series.index]
+            lhs_any._series._from_native_series(
+                lhs_any._series._native_series.loc[rhs_any._series._native_series.index]
             )
         )
     if len(lhs_any) != len(rhs_any):
@@ -219,8 +225,8 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
         return DataFrame(  # type: ignore[return-value]
-            df_any._dataframe._from_dataframe(
-                df_any._dataframe._dataframe.set_index(column_names)
+            df_any._dataframe._from_native_dataframe(
+                df_any._dataframe._native_dataframe.set_index(column_names)
             )
         )
     return df
@@ -257,8 +263,8 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
         return DataFrame(  # type: ignore[return-value]
-            df_any._dataframe._from_dataframe(
-                df_any._dataframe._dataframe.convert_dtypes(*args, **kwargs)
+            df_any._dataframe._from_native_dataframe(
+                df_any._dataframe._native_dataframe.convert_dtypes(*args, **kwargs)
             )
         )
     return df

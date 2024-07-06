@@ -90,7 +90,7 @@ class ArrowNamespace:
 
         return ArrowExpr(
             lambda df: [
-                ArrowSeries(df._dataframe[column_name], name=column_name)
+                ArrowSeries(df._native_dataframe[column_name], name=column_name)
                 for column_name in df.columns
             ],
             depth=0,

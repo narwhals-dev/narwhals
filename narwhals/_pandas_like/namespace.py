@@ -72,8 +72,8 @@ class PandasNamespace:
     ) -> PandasSeries:
         return PandasSeries._from_iterable(
             [value],
-            name=series._series.name,
-            index=series._series.index[0:1],
+            name=series._native_series.name,
+            index=series._native_series.index[0:1],
             implementation=self._implementation,
         )
 
@@ -97,7 +97,7 @@ class PandasNamespace:
         return PandasExpr(
             lambda df: [
                 PandasSeries(
-                    df._dataframe.loc[:, column_name],
+                    df._native_dataframe.loc[:, column_name],
                     implementation=self._implementation,
                 )
                 for column_name in df.columns
@@ -114,7 +114,7 @@ class PandasNamespace:
             pandas_series = PandasSeries._from_iterable(
                 data=[value],
                 name="lit",
-                index=df._dataframe.index[0:1],
+                index=df._native_dataframe.index[0:1],
                 implementation=self._implementation,
             )
             if dtype:
@@ -155,7 +155,7 @@ class PandasNamespace:
         return PandasExpr(
             lambda df: [
                 PandasSeries._from_iterable(
-                    [len(df._dataframe)],
+                    [len(df._native_dataframe)],
                     name="len",
                     index=[0],
                     implementation=self._implementation,
@@ -188,7 +188,7 @@ class PandasNamespace:
         *,
         how: str = "vertical",
     ) -> PandasDataFrame:
-        dfs: list[Any] = [item._dataframe for item in items]
+        dfs: list[Any] = [item._native_dataframe for item in items]
         if how == "horizontal":
             return PandasDataFrame(
                 horizontal_concat(dfs, implementation=self._implementation),

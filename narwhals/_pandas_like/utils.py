@@ -54,9 +54,11 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other.item()
-        if other._series.index is not index:
-            return set_axis(other._series, index, implementation=other._implementation)
-        return other._series
+        if other._native_series.index is not index:
+            return set_axis(
+                other._native_series, index, implementation=other._implementation
+            )
+        return other._native_series
     return other
 
 
@@ -74,10 +76,12 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasSeries):
         if other.len() == 1:
             # broadcast
-            return other._series.iloc[0]
-        if other._series.index is not index:
-            return set_axis(other._series, index, implementation=other._implementation)
-        return other._series
+            return other._native_series.iloc[0]
+        if other._native_series.index is not index:
+            return set_axis(
+                other._native_series, index, implementation=other._implementation
+            )
+        return other._native_series
     raise AssertionError("Please report a bug")
 
 
@@ -594,13 +598,13 @@ def reverse_translate_dtype(  # noqa: PLR0915
 
 
 def validate_indices(series: list[PandasSeries]) -> list[Any]:
-    idx = series[0]._series.index
-    reindexed = [series[0]._series]
+    idx = series[0]._native_series.index
+    reindexed = [series[0]._native_series]
     for s in series[1:]:
-        if s._series.index is not idx:
-            reindexed.append(set_axis(s._series, idx, s._implementation))
+        if s._native_series.index is not idx:
+            reindexed.append(set_axis(s._native_series, idx, s._implementation))
         else:
-            reindexed.append(s._series)
+            reindexed.append(s._native_series)
     return reindexed
 
 
