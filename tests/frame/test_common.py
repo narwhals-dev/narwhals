@@ -139,47 +139,6 @@ def test_std(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy, df_pandas_nullable])
-def test_sumh(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.with_columns(horizonal_sum=nw.sum_horizontal(nw.col("a"), nw.col("b")))
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "horizonal_sum": [5, 7, 8],
-    }
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_sumh_literal(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.with_columns(horizonal_sum=nw.sum_horizontal("a", nw.col("b")))
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "horizonal_sum": [5, 7, 8],
-    }
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_sum_all(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.select(nw.all().sum())
-    result_native = nw.to_native(result)
-    expected = {"a": [6], "b": [14], "z": [24.0]}
-    compare_dicts(result_native, expected)
-
-
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
@@ -217,36 +176,6 @@ def test_lit_error(df_raw: Any) -> None:
         NotImplementedError, match="Nested datatypes are not supported yet."
     ):
         _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_double_selected(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.select(nw.col("a", "b") * 2)
-    result_native = nw.to_native(result)
-    expected = {"a": [2, 6, 4], "b": [8, 8, 12]}
-    compare_dicts(result_native, expected)
-    result = df.select("z", nw.col("a", "b") * 2)
-    result_native = nw.to_native(result)
-    expected = {"z": [7, 8, 9], "a": [2, 6, 4], "b": [8, 8, 12]}
-    compare_dicts(result_native, expected)
-    result = df.select("a").select(nw.col("a") + nw.all())
-    result_native = nw.to_native(result)
-    expected = {"a": [2, 6, 4]}
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_rename(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.rename({"a": "x", "b": "y"})
-    result_native = nw.to_native(result)
-    expected = {"x": [1, 3, 2], "y": [4, 4, 6], "z": [7.0, 8, 9]}
-    compare_dicts(result_native, expected)
 
 
 @pytest.mark.parametrize(
