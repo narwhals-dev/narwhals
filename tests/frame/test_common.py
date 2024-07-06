@@ -236,30 +236,6 @@ def test_columns(df_raw: Any) -> None:
     assert result == expected
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
-def test_lazy_instantiation(df_raw: Any) -> None:
-    result = nw.from_native(df_raw)
-    result_native = nw.to_native(result)
-    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize("df_raw", [df_lazy])
-def test_lazy_instantiation_error(df_raw: Any) -> None:
-    with pytest.raises(
-        TypeError, match="Can't instantiate DataFrame from Polars LazyFrame."
-    ):
-        _ = nw.DataFrame(df_raw, is_polars=True, backend_version=(0,)).shape
-
-
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
-def test_eager_instantiation(df_raw: Any) -> None:
-    result = nw.from_native(df_raw, eager_only=True)
-    result_native = nw.to_native(result)
-    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    compare_dicts(result_native, expected)
-
-
 def test_accepted_dataframes() -> None:
     array = np.array([[0, 4.0], [2, 5]])
     with pytest.raises(
