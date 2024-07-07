@@ -17,7 +17,8 @@ def test_lazy_instantiation() -> None:
 def test_lazy_instantiation_error() -> None:
     df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
     with pytest.raises(
-        TypeError, match="Can't instantiate DataFrame from Polars LazyFrame."
+        TypeError,
+        match="Expected polars DataFrame or object which implements `__narwhals_dataframe__`",
     ):
         _ = nw.DataFrame(df_lazy, is_polars=True, backend_version=(0,)).shape
 

@@ -11,17 +11,10 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
-from narwhals._arrow.dataframe import ArrowDataFrame
-from narwhals._pandas_like.dataframe import PandasDataFrame
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
-from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.utils import flatten
-from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
@@ -231,34 +224,8 @@ class DataFrame(BaseFrame[FrameT]):
             self._dataframe: Any = df.__narwhals_dataframe__()
         elif is_polars and isinstance(df, get_polars().DataFrame):
             self._dataframe = df
-        elif is_polars and isinstance(df, get_polars().LazyFrame):
-            raise TypeError(
-                "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
-            )
-        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(
-                df, implementation="pandas", backend_version=parse_version(pd.__version__)
-            )
-        elif (mpd := get_modin()) is not None and isinstance(
-            df, mpd.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(
-                df, implementation="modin", backend_version=parse_version(mpd.__version__)
-            )
-        elif (cudf := get_cudf()) is not None and isinstance(
-            df, cudf.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(
-                df, implementation="cudf", backend_version=parse_version(cudf.__version__)
-            )
-        elif (pa := get_pyarrow()) is not None and isinstance(
-            df, pa.Table
-        ):  # pragma: no cover
-            self._dataframe = ArrowDataFrame(
-                df, backend_version=parse_version(pa.__version__)
-            )
         else:
-            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
+            msg = f"Expected polars DataFrame or object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __array__(self) -> np.ndarray:
@@ -1869,7 +1836,7 @@ class LazyFrame(BaseFrame[FrameT]):
             self._dataframe = df
             self._is_polars = True
         else:
-            msg = f"Expected Polars lazyframe or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
+            msg = f"Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
