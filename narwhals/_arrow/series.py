@@ -5,8 +5,10 @@ from typing import Any
 from typing import Iterable
 
 from narwhals._arrow.namespace import ArrowNamespace
+from narwhals._arrow.utils import item
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
+from narwhals._arrow.utils import validate_column_comparand
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
@@ -55,6 +57,29 @@ class ArrowSeries:
     def __len__(self) -> int:
         return len(self._native_series)
 
+    def __add__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.add(self._native_series, other))
+
+    def __sub__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.subtract(self._native_series, other))
+
+    def __mul__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.multiply(self._native_series, other))
+
+    def mean(self) -> int:
+        pc = get_pyarrow_compute()
+        return item(self._backend_version, pc.mean(self._native_series))  # type: ignore[no-any-return]
+
+    def std(self, ddof: int = 1) -> int:
+        pc = get_pyarrow_compute()
+        return item(self._backend_version, pc.stddev(self._native_series, ddof=ddof))  # type: ignore[no-any-return]
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         return ArrowNamespace(backend_version=self._backend_version)
 
@@ -95,6 +120,20 @@ class ArrowSeries:
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.cumulative_sum(self._native_series))
+
+    def diff(self) -> Self:
+        pc = get_pyarrow_compute()
+        pa = get_pyarrow()
+        # todo: is all this rechunking really necessary?
+        ca = self._native_series.combine_chunks()
+        result = pa.chunked_array(
+            [
+                pa.chunked_array(
+                    [pa.array([None], type=ca.type), pc.subtract(ca[1:], ca[:-1])]
+                ).combine_chunks()
+            ]
+        )
+        return self._from_native_series(result)
 
     def any(self) -> bool:
         pc = get_pyarrow_compute()
