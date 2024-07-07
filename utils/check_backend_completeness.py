@@ -30,7 +30,6 @@ MISSING = [
     "DataFrame.unique",
     "DataFrame.with_row_index",
     "DataFrame.write_parquet",
-    "Series.diff",
     "Series.drop_nulls",
     "Series.fill_null",
     "Series.filter",

@@ -10,9 +10,9 @@ data = {
 }
 
 
-def test_diff(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
-    result = df.with_columns(c_diff=nw.col("c").diff()).filter(nw.col("i") > 0)
+def test_diff(constructor_with_pyarrow: Any) -> None:
+    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    result = df.with_columns(c_diff=nw.col("c").diff())[1:]
     expected = {
         "i": [1, 2, 3, 4],
         "b": [2, 3, 5, 3],
@@ -20,5 +20,5 @@ def test_diff(constructor: Any) -> None:
         "c_diff": [-1, -1, -1, -1],
     }
     compare_dicts(result, expected)
-    result = df.with_columns(c_diff=df["c"].diff()).filter(nw.col("i") > 0)
+    result = df.with_columns(c_diff=df["c"].diff())[1:]
     compare_dicts(result, expected)

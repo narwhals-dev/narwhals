@@ -12,7 +12,6 @@ from narwhals._arrow.utils import validate_column_comparand
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -116,6 +115,20 @@ class ArrowSeries:
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.cumulative_sum(self._native_series))
+
+    def diff(self) -> Self:
+        pc = get_pyarrow_compute()
+        pa = get_pyarrow()
+        # todo: is all this rechunking really necessary?
+        ca = self._native_series.combine_chunks()
+        result = pa.chunked_array(
+            [
+                pa.chunked_array(
+                    [pa.array([None], type=ca.type), pc.subtract(ca[1:], ca[:-1])]
+                ).combine_chunks()
+            ]
+        )
+        return self._from_native_series(result)
 
     def any(self) -> bool:
         pc = get_pyarrow_compute()
