@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import isinstance_or_issubclass
-
-if TYPE_CHECKING:
-    from narwhals._arrow.series import ArrowSeries
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
@@ -146,7 +142,7 @@ def validate_dataframe_comparand(other: Any) -> Any:
     raise AssertionError("Please report a bug")
 
 
-def item(version, obj: ArrowSeries) -> Any:
-    if version > (13,):
+def item(backend_version: tuple[int, ...], obj: Any) -> Any:
+    if backend_version > (13,):
         return obj
     return obj.as_py()
