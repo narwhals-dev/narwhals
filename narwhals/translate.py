@@ -199,7 +199,7 @@ def from_native(
 ) -> Any: ...
 
 
-def from_native(
+def from_native(  # noqa: PLR0915
     native_dataframe: Any,
     *,
     strict: bool = True,
@@ -233,6 +233,7 @@ def from_native(
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.utils import parse_version
 
     if series_only:
         allow_series = True
@@ -241,61 +242,112 @@ def from_native(
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with polars.DataFrame")
-        return DataFrame(native_dataframe)
+        return DataFrame(
+            native_dataframe,
+            is_polars=True,
+            backend_version=parse_version(pl.__version__),
+        )
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with polars.LazyFrame")
         if eager_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `eager_only` with polars.LazyFrame")
-        return LazyFrame(native_dataframe)
-    elif (
-        (pd := get_pandas()) is not None
-        and isinstance(native_dataframe, pd.DataFrame)
-        or (mpd := get_modin()) is not None
-        and isinstance(native_dataframe, mpd.DataFrame)
-        or (cudf := get_cudf()) is not None
-        and isinstance(native_dataframe, cudf.DataFrame)
-    ):
+        return LazyFrame(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(pl.__version__),
+        )
+    elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.DataFrame):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
-        return DataFrame(native_dataframe)
+        return DataFrame(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(pd.__version__),
+        )
+    elif (mpd := get_modin()) is not None and isinstance(native_dataframe, mpd.DataFrame):
+        if series_only:
+            raise TypeError("Cannot only use `series_only` with modin.DataFrame")
+        return DataFrame(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(mpd.__version__),
+        )
+    elif (cudf := get_cudf()) is not None and isinstance(
+        native_dataframe, cudf.DataFrame
+    ):
+        if series_only:
+            raise TypeError("Cannot only use `series_only` with modin.DataFrame")
+        return DataFrame(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(cudf.__version__),
+        )
     elif (pa := get_pyarrow()) is not None and isinstance(native_dataframe, pa.Table):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with arrow table")
-        return DataFrame(native_dataframe)
+        return DataFrame(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(pa.__version__),
+        )
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
-        return DataFrame(native_dataframe.__narwhals_dataframe__())
+        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
+        return DataFrame(
+            native_dataframe.__narwhals_dataframe__(),
+            is_polars=False,
+            backend_version=(0,),
+        )
     elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with lazyframe")
         if eager_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `eager_only` with lazyframe")
-        return LazyFrame(native_dataframe.__narwhals_lazyframe__())
-    elif (
-        (pl := get_polars()) is not None
-        and isinstance(native_dataframe, pl.Series)
-        or (pl := get_polars()) is not None
-        and isinstance(native_dataframe, pl.Series)
-        or (
-            (pd := get_pandas()) is not None
-            and isinstance(native_dataframe, pd.Series)
-            or (mpd := get_modin()) is not None
-            and isinstance(native_dataframe, mpd.Series)
-            or (cudf := get_cudf()) is not None
-            and isinstance(native_dataframe, cudf.Series)
-            or (pa := get_pyarrow()) is not None
-            and isinstance(native_dataframe, pa.ChunkedArray)
+        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
+        return LazyFrame(
+            native_dataframe.__narwhals_lazyframe__(),
+            is_polars=False,
+            backend_version=(0,),
         )
-    ):
+    elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.Series):
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
-        return Series(native_dataframe)
+        return Series(
+            native_dataframe,
+            is_polars=True,
+            backend_version=parse_version(pl.__version__),
+        )
+    elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.Series):
+        if not allow_series:  # pragma: no cover (todo)
+            raise TypeError("Please set `allow_series=True`")
+        return Series(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(pd.__version__),
+        )
+    elif (mpd := get_modin()) is not None and isinstance(native_dataframe, mpd.Series):
+        if not allow_series:  # pragma: no cover (todo)
+            raise TypeError("Please set `allow_series=True`")
+        return Series(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(mpd.__version__),
+        )
+    elif (cudf := get_cudf()) is not None and isinstance(native_dataframe, cudf.Series):
+        if not allow_series:  # pragma: no cover (todo)
+            raise TypeError("Please set `allow_series=True`")
+        return Series(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(cudf.__version__),
+        )
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
-        return Series(native_dataframe.__narwhals_series__())
+        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
+        return Series(native_dataframe.__narwhals_series__(), backend_version=(0,))
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)

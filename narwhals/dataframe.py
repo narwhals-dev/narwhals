@@ -123,6 +123,8 @@ class BaseFrame(Generic[FrameT]):
     def lazy(self) -> LazyFrame[Any]:
         return LazyFrame(
             self._dataframe.lazy(),
+            is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     def with_columns(
@@ -219,9 +221,11 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        is_polars: bool = False,
+        backend_version: tuple[int, ...],
+        is_polars: bool,
     ) -> None:
         self._is_polars = is_polars
+        self._backend_version = backend_version
         if hasattr(df, "__narwhals_dataframe__"):
             self._dataframe: Any = df.__narwhals_dataframe__()
         elif is_polars or (
@@ -450,7 +454,7 @@ class DataFrame(BaseFrame[FrameT]):
         if isinstance(item, str):
             from narwhals.series import Series
 
-            return Series(self._dataframe[item])
+            return Series(self._dataframe[item], backend_version=self._backend_version)
 
         elif isinstance(item, (Sequence, slice)) or (
             (np := get_numpy()) is not None
@@ -511,7 +515,7 @@ class DataFrame(BaseFrame[FrameT]):
 
         if as_series:
             return {
-                key: Series(value)
+                key: Series(value, backend_version=self._backend_version)
                 for key, value in self._dataframe.to_dict(as_series=as_series).items()
             }
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
@@ -1617,7 +1621,9 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_duplicated())
+        return Series(
+            self._dataframe.is_duplicated(), backend_version=self._backend_version
+        )
 
     def is_empty(self: Self) -> bool:
         r"""
@@ -1699,7 +1705,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_unique())
+        return Series(self._dataframe.is_unique(), backend_version=self._backend_version)
 
     def null_count(self: Self) -> Self:
         r"""
@@ -1838,9 +1844,11 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        is_polars: bool = False,
+        is_polars: bool,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._is_polars = is_polars
+        self._backend_version = backend_version
         if hasattr(df, "__narwhals_lazyframe__"):
             self._dataframe: Any = df.__narwhals_lazyframe__()
         elif is_polars or (
@@ -1907,6 +1915,8 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return DataFrame(
             self._dataframe.collect(),
+            is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     # inherited
