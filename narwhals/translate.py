@@ -265,7 +265,9 @@ def from_native(  # noqa: PLR0915
             is_polars=False,
             backend_version=parse_version(pd.__version__),
         )
-    elif (mpd := get_modin()) is not None and isinstance(native_dataframe, mpd.DataFrame):
+    elif (mpd := get_modin()) is not None and isinstance(
+        native_dataframe, mpd.DataFrame
+    ):  # pragma: no cover
         if series_only:
             raise TypeError("Cannot only use `series_only` with modin.DataFrame")
         return DataFrame(
@@ -273,7 +275,7 @@ def from_native(  # noqa: PLR0915
             is_polars=False,
             backend_version=parse_version(mpd.__version__),
         )
-    elif (cudf := get_cudf()) is not None and isinstance(
+    elif (cudf := get_cudf()) is not None and isinstance(  # pragma: no cover
         native_dataframe, cudf.DataFrame
     ):
         if series_only:
@@ -327,7 +329,9 @@ def from_native(  # noqa: PLR0915
             is_polars=False,
             backend_version=parse_version(pd.__version__),
         )
-    elif (mpd := get_modin()) is not None and isinstance(native_dataframe, mpd.Series):
+    elif (mpd := get_modin()) is not None and isinstance(
+        native_dataframe, mpd.Series
+    ):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
@@ -335,7 +339,9 @@ def from_native(  # noqa: PLR0915
             is_polars=False,
             backend_version=parse_version(mpd.__version__),
         )
-    elif (cudf := get_cudf()) is not None and isinstance(native_dataframe, cudf.Series):
+    elif (cudf := get_cudf()) is not None and isinstance(
+        native_dataframe, cudf.Series
+    ):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
