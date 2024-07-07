@@ -347,7 +347,9 @@ def from_native(  # noqa: PLR0915
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
-        return Series(native_dataframe.__narwhals_series__(), backend_version=(0,))
+        return Series(
+            native_dataframe.__narwhals_series__(), backend_version=(0,), is_polars=False
+        )
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)

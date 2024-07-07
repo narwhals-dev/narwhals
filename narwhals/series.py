@@ -37,7 +37,7 @@ class Series:
         series: Any,
         *,
         backend_version: tuple[int, ...],
-        is_polars: bool = False,
+        is_polars: bool,
     ) -> None:
         from narwhals._pandas_like.series import PandasSeries
 

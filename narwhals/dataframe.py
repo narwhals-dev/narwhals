@@ -454,7 +454,11 @@ class DataFrame(BaseFrame[FrameT]):
         if isinstance(item, str):
             from narwhals.series import Series
 
-            return Series(self._dataframe[item], backend_version=self._backend_version)
+            return Series(
+                self._dataframe[item],
+                backend_version=self._backend_version,
+                is_polars=self._is_polars,
+            )
 
         elif isinstance(item, (Sequence, slice)) or (
             (np := get_numpy()) is not None
@@ -515,7 +519,11 @@ class DataFrame(BaseFrame[FrameT]):
 
         if as_series:
             return {
-                key: Series(value, backend_version=self._backend_version)
+                key: Series(
+                    value,
+                    backend_version=self._backend_version,
+                    is_polars=self._is_polars,
+                )
                 for key, value in self._dataframe.to_dict(as_series=as_series).items()
             }
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
@@ -1622,7 +1630,9 @@ class DataFrame(BaseFrame[FrameT]):
         from narwhals.series import Series
 
         return Series(
-            self._dataframe.is_duplicated(), backend_version=self._backend_version
+            self._dataframe.is_duplicated(),
+            backend_version=self._backend_version,
+            is_polars=self._is_polars,
         )
 
     def is_empty(self: Self) -> bool:
@@ -1705,7 +1715,11 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_unique(), backend_version=self._backend_version)
+        return Series(
+            self._dataframe.is_unique(),
+            backend_version=self._backend_version,
+            is_polars=self._is_polars,
+        )
 
     def null_count(self: Self) -> Self:
         r"""
