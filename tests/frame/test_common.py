@@ -519,6 +519,9 @@ def test_lazy(df_raw: Any) -> None:
 
 
 def test_invalid() -> None:
+    df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
+    with pytest.raises(ValueError, match="Multi-output"):
+        df.select(nw.all() + nw.all())
     df = nw.from_native(df_pandas)
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
