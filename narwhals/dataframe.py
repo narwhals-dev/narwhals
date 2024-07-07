@@ -64,6 +64,7 @@ class BaseFrame(Generic[FrameT]):
         return self.__class__(  # type: ignore[call-arg]
             df,
             is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -228,12 +229,9 @@ class DataFrame(BaseFrame[FrameT]):
         self._backend_version = backend_version
         if hasattr(df, "__narwhals_dataframe__"):
             self._dataframe: Any = df.__narwhals_dataframe__()
-        elif is_polars or (
-            (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
-        ):
+        elif is_polars and isinstance(df, get_polars().DataFrame):
             self._dataframe = df
-            self._is_polars = True
-        elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
+        elif is_polars and isinstance(df, get_polars().LazyFrame):
             raise TypeError(
                 "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
             )

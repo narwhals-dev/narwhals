@@ -343,6 +343,16 @@ def from_native(  # noqa: PLR0915
             is_polars=False,
             backend_version=parse_version(cudf.__version__),
         )
+    elif (pa := get_pyarrow()) is not None and isinstance(
+        native_dataframe, pa.ChunkedArray
+    ):
+        if not allow_series:  # pragma: no cover (todo)
+            raise TypeError("Please set `allow_series=True`")
+        return Series(
+            native_dataframe,
+            is_polars=False,
+            backend_version=parse_version(pa.__version__),
+        )
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
