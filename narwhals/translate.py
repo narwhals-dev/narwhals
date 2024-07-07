@@ -230,6 +230,10 @@ def from_native(  # noqa: PLR0915
     Returns:
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
     """
+    from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.series import ArrowSeries
+    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.series import PandasSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -254,14 +258,18 @@ def from_native(  # noqa: PLR0915
             raise TypeError("Cannot only use `eager_only` with polars.LazyFrame")
         return LazyFrame(
             native_dataframe,
-            is_polars=False,
+            is_polars=True,
             backend_version=parse_version(pl.__version__),
         )
     elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.DataFrame):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
         return DataFrame(
-            native_dataframe,
+            PandasDataFrame(
+                native_dataframe,
+                backend_version=parse_version(pd.__version__),
+                implementation="pandas",
+            ),
             is_polars=False,
             backend_version=parse_version(pd.__version__),
         )
@@ -271,7 +279,11 @@ def from_native(  # noqa: PLR0915
         if series_only:
             raise TypeError("Cannot only use `series_only` with modin.DataFrame")
         return DataFrame(
-            native_dataframe,
+            PandasDataFrame(
+                native_dataframe,
+                implementation="modin",
+                backend_version=parse_version(mpd.__version__),
+            ),
             is_polars=False,
             backend_version=parse_version(mpd.__version__),
         )
@@ -281,7 +293,11 @@ def from_native(  # noqa: PLR0915
         if series_only:
             raise TypeError("Cannot only use `series_only` with modin.DataFrame")
         return DataFrame(
-            native_dataframe,
+            PandasDataFrame(
+                native_dataframe,
+                implementation="cudf",
+                backend_version=parse_version(cudf.__version__),
+            ),
             is_polars=False,
             backend_version=parse_version(cudf.__version__),
         )
@@ -289,7 +305,9 @@ def from_native(  # noqa: PLR0915
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with arrow table")
         return DataFrame(
-            native_dataframe,
+            ArrowDataFrame(
+                native_dataframe, backend_version=parse_version(pa.__version__)
+            ),
             is_polars=False,
             backend_version=parse_version(pa.__version__),
         )
@@ -325,7 +343,11 @@ def from_native(  # noqa: PLR0915
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
-            native_dataframe,
+            PandasSeries(
+                native_dataframe,
+                implementation="pandas",
+                backend_version=parse_version(pd.__version__),
+            ),
             is_polars=False,
             backend_version=parse_version(pd.__version__),
         )
@@ -335,7 +357,11 @@ def from_native(  # noqa: PLR0915
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
-            native_dataframe,
+            PandasSeries(
+                native_dataframe,
+                implementation="modin",
+                backend_version=parse_version(mpd.__version__),
+            ),
             is_polars=False,
             backend_version=parse_version(mpd.__version__),
         )
@@ -345,7 +371,11 @@ def from_native(  # noqa: PLR0915
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
-            native_dataframe,
+            PandasSeries(
+                native_dataframe,
+                implementation="cudf",
+                backend_version=parse_version(cudf.__version__),
+            ),
             is_polars=False,
             backend_version=parse_version(cudf.__version__),
         )
@@ -355,7 +385,9 @@ def from_native(  # noqa: PLR0915
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
-            native_dataframe,
+            ArrowSeries(
+                native_dataframe, backend_version=parse_version(pa.__version__), name=""
+            ),
             is_polars=False,
             backend_version=parse_version(pa.__version__),
         )

@@ -78,7 +78,10 @@ class PandasGroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasDataFrame]]:
-        return self._grouped.__iter__()  # type: ignore[no-any-return]
+        yield from (
+            (key, self._from_native_dataframe(sub_df))
+            for (key, sub_df) in self._grouped.__iter__()
+        )
 
 
 def agg_pandas(  # noqa: PLR0913

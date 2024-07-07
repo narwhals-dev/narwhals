@@ -240,12 +240,12 @@ def test_accepted_dataframes() -> None:
     array = np.array([[0, 4.0], [2, 5]])
     with pytest.raises(
         TypeError,
-        match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
+        match="Expected polars DataFrame or object which implements `__narwhals_dataframe__`",
     ):
         nw.DataFrame(array, is_polars=False, backend_version=(1,))
     with pytest.raises(
         TypeError,
-        match="Expected Polars lazyframe or object that implements `__narwhals_lazyframe__`, got: <class 'numpy.ndarray'>",
+        match="Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: <class 'numpy.ndarray'>",
     ):
         nw.LazyFrame(array, is_polars=False, backend_version=(1,))
 
