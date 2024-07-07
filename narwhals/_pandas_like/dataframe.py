@@ -22,7 +22,6 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.utils import flatten
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -311,9 +310,7 @@ class PandasDataFrame:
 
         if how == "cross":
             if self._implementation in {"modin", "cudf"} or (
-                self._implementation == "pandas"
-                and (pd := get_pandas()) is not None
-                and parse_version(pd.__version__) < parse_version("1.4.0")
+                self._implementation == "pandas" and self._backend_version < (1, 4)
             ):
                 key_token = generate_unique_token(
                     n_bytes=8, columns=[*self.columns, *other.columns]
