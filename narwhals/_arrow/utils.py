@@ -145,4 +145,4 @@ def validate_dataframe_comparand(other: Any) -> Any:
 def item(backend_version: tuple[int, ...], obj: Any) -> Any:
     if backend_version > (13,):
         return obj
-    return obj.as_py()
+    return obj.as_py()  # pragma: no cover
