@@ -29,6 +29,9 @@ class ArrowSeries:
         self._backend_version = backend_version
 
     def _from_native_series(self, series: Any) -> Self:
+        pa = get_pyarrow()
+        if isinstance(series, pa.Array):
+            series = pa.chunked_array([series])
         return self.__class__(
             series,
             name=self._name,
