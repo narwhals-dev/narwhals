@@ -221,13 +221,21 @@ class PandasNamespace:
         dfs: list[Any] = [item._native_dataframe for item in items]
         if how == "horizontal":
             return PandasDataFrame(
-                horizontal_concat(dfs, implementation=self._implementation),
+                horizontal_concat(
+                    dfs,
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                ),
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
         if how == "vertical":
             return PandasDataFrame(
-                vertical_concat(dfs, implementation=self._implementation),
+                vertical_concat(
+                    dfs,
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                ),
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )

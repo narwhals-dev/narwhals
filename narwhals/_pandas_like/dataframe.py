@@ -176,6 +176,7 @@ class PandasDataFrame:
         df = horizontal_concat(
             new_series,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
         return self._from_native_dataframe(df)
 
@@ -193,6 +194,7 @@ class PandasDataFrame:
             horizontal_concat(
                 [row_index._native_series, self._native_dataframe],
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         )
 
@@ -248,6 +250,7 @@ class PandasDataFrame:
             df = horizontal_concat(
                 to_concat,
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         else:
             df = self._native_dataframe.assign(
