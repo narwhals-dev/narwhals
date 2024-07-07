@@ -26,6 +26,7 @@ class PandasExpr:
         root_names: list[str] | None,
         output_names: list[str] | None,
         implementation: str,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -34,6 +35,7 @@ class PandasExpr:
         self._depth = depth
         self._output_names = output_names
         self._implementation = implementation
+        self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -47,17 +49,21 @@ class PandasExpr:
     def __narwhals_namespace__(self) -> PandasNamespace:
         from narwhals._pandas_like.namespace import PandasNamespace
 
-        return PandasNamespace(self._implementation)
+        return PandasNamespace(self._implementation, self._backend_version)
 
     @classmethod
     def from_column_names(
-        cls: type[Self], *column_names: str, implementation: str
+        cls: type[Self],
+        *column_names: str,
+        implementation: str,
+        backend_version: tuple[int, ...],
     ) -> Self:
         def func(df: PandasDataFrame) -> list[PandasSeries]:
             return [
                 PandasSeries(
                     df._native_dataframe.loc[:, column_name],
                     implementation=df._implementation,
+                    backend_version=df._backend_version,
                 )
                 for column_name in column_names
             ]
@@ -69,6 +75,7 @@ class PandasExpr:
             root_names=list(column_names),
             output_names=list(column_names),
             implementation=implementation,
+            backend_version=backend_version,
         )
 
     def cast(
@@ -206,7 +213,7 @@ class PandasExpr:
     def filter(self, *predicates: Any) -> Self:
         from narwhals._pandas_like.namespace import PandasNamespace
 
-        plx = PandasNamespace(self._implementation)
+        plx = PandasNamespace(self._implementation, self._backend_version)
         expr = plx.all_horizontal(*predicates)
         return reuse_series_implementation(self, "filter", other=expr)
 
@@ -252,6 +259,7 @@ class PandasExpr:
             root_names=self._root_names,
             output_names=[name],
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def over(self, keys: list[str]) -> Self:
@@ -274,6 +282,7 @@ class PandasExpr:
             root_names=self._root_names,
             output_names=self._output_names,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def is_duplicated(self) -> Self:

@@ -54,6 +54,7 @@ class ArrowNamespace:
             function_name=function_name,
             root_names=root_names,
             output_names=output_names,
+            backend_version=self._backend_version,
         )
 
     def _create_expr_from_series(self, series: ArrowSeries) -> ArrowExpr:
@@ -65,6 +66,7 @@ class ArrowNamespace:
             function_name="series",
             root_names=None,
             output_names=None,
+            backend_version=self._backend_version,
         )
 
     def _create_series_from_scalar(self, value: Any, series: ArrowSeries) -> ArrowSeries:
@@ -73,16 +75,20 @@ class ArrowNamespace:
         return ArrowSeries._from_iterable(
             [value],
             name=series.name,
+            backend_version=self._backend_version,
         )
 
     # --- not in spec ---
-    def __init__(self) -> None: ...
+    def __init__(self, *, backend_version: tuple[int, ...]) -> None:
+        self._backend_version = backend_version
 
     # --- selection ---
     def col(self, *column_names: str | Iterable[str]) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
-        return ArrowExpr.from_column_names(*flatten(column_names))
+        return ArrowExpr.from_column_names(
+            *flatten(column_names), backend_version=self._backend_version
+        )
 
     def all(self) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
@@ -90,11 +96,16 @@ class ArrowNamespace:
 
         return ArrowExpr(
             lambda df: [
-                ArrowSeries(df._native_dataframe[column_name], name=column_name)
+                ArrowSeries(
+                    df._native_dataframe[column_name],
+                    name=column_name,
+                    backend_version=df._backend_version,
+                )
                 for column_name in df.columns
             ],
             depth=0,
             function_name="all",
             root_names=None,
             output_names=None,
+            backend_version=self._backend_version,
         )

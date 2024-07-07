@@ -24,6 +24,7 @@ class ArrowExpr:
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._call = call
         self._depth = depth
@@ -32,6 +33,7 @@ class ArrowExpr:
         self._depth = depth
         self._output_names = output_names
         self._implementation = "arrow"
+        self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -43,7 +45,9 @@ class ArrowExpr:
         )
 
     @classmethod
-    def from_column_names(cls: type[Self], *column_names: str) -> Self:
+    def from_column_names(
+        cls: type[Self], *column_names: str, backend_version: tuple[int, ...]
+    ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -51,6 +55,7 @@ class ArrowExpr:
                 ArrowSeries(
                     df._native_dataframe[column_name],
                     name=column_name,
+                    backend_version=df._backend_version,
                 )
                 for column_name in column_names
             ]
@@ -61,12 +66,13 @@ class ArrowExpr:
             function_name="col",
             root_names=list(column_names),
             output_names=list(column_names),
+            backend_version=backend_version,
         )
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace()
+        return ArrowNamespace(backend_version=self._backend_version)
 
     def cast(self, dtype: DType) -> Self:
         return reuse_series_implementation(self, "cast", dtype)  # type: ignore[type-var]

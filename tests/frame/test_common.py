@@ -272,7 +272,7 @@ def test_lazy_instantiation_error(df_raw: Any) -> None:
     with pytest.raises(
         TypeError, match="Can't instantiate DataFrame from Polars LazyFrame."
     ):
-        _ = nw.DataFrame(df_raw).shape
+        _ = nw.DataFrame(df_raw, is_polars=True, backend_version=(0,)).shape
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
@@ -289,12 +289,12 @@ def test_accepted_dataframes() -> None:
         TypeError,
         match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: <class 'numpy.ndarray'>",
     ):
-        nw.DataFrame(array)
+        nw.DataFrame(array, is_polars=False, backend_version=(1,))
     with pytest.raises(
         TypeError,
         match="Expected Polars lazyframe or object that implements `__narwhals_lazyframe__`, got: <class 'numpy.ndarray'>",
     ):
-        nw.LazyFrame(array)
+        nw.LazyFrame(array, is_polars=False, backend_version=(1,))
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_pa])

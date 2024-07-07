@@ -44,6 +44,7 @@ FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 class BaseFrame(Generic[FrameT]):
     _dataframe: Any
     _is_polars: bool
+    _backend_version: tuple[int, ...]
 
     def __len__(self) -> Any:
         return self._dataframe.__len__()
@@ -63,6 +64,7 @@ class BaseFrame(Generic[FrameT]):
         return self.__class__(  # type: ignore[call-arg]
             df,
             is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -102,9 +104,7 @@ class BaseFrame(Generic[FrameT]):
         return function(self, *args, **kwargs)
 
     def with_row_index(self, name: str = "index") -> Self:
-        if self._is_polars and parse_version(get_polars().__version__) < parse_version(
-            "0.20.4"
-        ):  # pragma: no cover
+        if self._is_polars and self._backend_version < (0, 20, 4):  # pragma: no cover
             return self._from_dataframe(
                 self._dataframe.with_row_count(name),
             )
@@ -124,6 +124,8 @@ class BaseFrame(Generic[FrameT]):
     def lazy(self) -> LazyFrame[Any]:
         return LazyFrame(
             self._dataframe.lazy(),
+            is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     def with_columns(
@@ -220,34 +222,41 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        is_polars: bool = False,
+        backend_version: tuple[int, ...],
+        is_polars: bool,
     ) -> None:
         self._is_polars = is_polars
+        self._backend_version = backend_version
         if hasattr(df, "__narwhals_dataframe__"):
             self._dataframe: Any = df.__narwhals_dataframe__()
-        elif is_polars or (
-            (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
-        ):
+        elif is_polars and isinstance(df, get_polars().DataFrame):
             self._dataframe = df
-            self._is_polars = True
-        elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
+        elif is_polars and isinstance(df, get_polars().LazyFrame):
             raise TypeError(
                 "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
             )
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
+            self._dataframe = PandasDataFrame(
+                df, implementation="pandas", backend_version=parse_version(pd.__version__)
+            )
         elif (mpd := get_modin()) is not None and isinstance(
             df, mpd.DataFrame
         ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="modin")
+            self._dataframe = PandasDataFrame(
+                df, implementation="modin", backend_version=parse_version(mpd.__version__)
+            )
         elif (cudf := get_cudf()) is not None and isinstance(
             df, cudf.DataFrame
         ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="cudf")
+            self._dataframe = PandasDataFrame(
+                df, implementation="cudf", backend_version=parse_version(cudf.__version__)
+            )
         elif (pa := get_pyarrow()) is not None and isinstance(
             df, pa.Table
         ):  # pragma: no cover
-            self._dataframe = ArrowDataFrame(df)
+            self._dataframe = ArrowDataFrame(
+                df, backend_version=parse_version(pa.__version__)
+            )
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)
@@ -443,7 +452,11 @@ class DataFrame(BaseFrame[FrameT]):
         if isinstance(item, str):
             from narwhals.series import Series
 
-            return Series(self._dataframe[item])
+            return Series(
+                self._dataframe[item],
+                backend_version=self._backend_version,
+                is_polars=self._is_polars,
+            )
 
         elif isinstance(item, (Sequence, slice)) or (
             (np := get_numpy()) is not None
@@ -504,7 +517,11 @@ class DataFrame(BaseFrame[FrameT]):
 
         if as_series:
             return {
-                key: Series(value)
+                key: Series(
+                    value,
+                    backend_version=self._backend_version,
+                    is_polars=self._is_polars,
+                )
                 for key, value in self._dataframe.to_dict(as_series=as_series).items()
             }
         return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
@@ -1610,7 +1627,11 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_duplicated())
+        return Series(
+            self._dataframe.is_duplicated(),
+            backend_version=self._backend_version,
+            is_polars=self._is_polars,
+        )
 
     def is_empty(self: Self) -> bool:
         r"""
@@ -1692,7 +1713,11 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_unique())
+        return Series(
+            self._dataframe.is_unique(),
+            backend_version=self._backend_version,
+            is_polars=self._is_polars,
+        )
 
     def null_count(self: Self) -> Self:
         r"""
@@ -1831,9 +1856,11 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        is_polars: bool = False,
+        is_polars: bool,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._is_polars = is_polars
+        self._backend_version = backend_version
         if hasattr(df, "__narwhals_lazyframe__"):
             self._dataframe: Any = df.__narwhals_lazyframe__()
         elif is_polars or (
@@ -1900,6 +1927,8 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return DataFrame(
             self._dataframe.collect(),
+            is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     # inherited

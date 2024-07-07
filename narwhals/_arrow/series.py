@@ -19,35 +19,44 @@ if TYPE_CHECKING:
 
 class ArrowSeries:
     def __init__(
-        self,
-        native_series: Any,
-        *,
-        name: str,
+        self, native_series: Any, *, name: str, backend_version: tuple[int, ...]
     ) -> None:
         self._name = name
         self._native_series = native_series
         self._implementation = "arrow"  # for compatibility with PandasSeries
+        self._backend_version = backend_version
 
     def _from_native_series(self, series: Any) -> Self:
         return self.__class__(
             series,
             name=self._name,
+            backend_version=self._backend_version,
         )
 
     @classmethod
-    def _from_iterable(cls: type[Self], data: Iterable[Any], name: str) -> Self:
+    def _from_iterable(
+        cls: type[Self],
+        data: Iterable[Any],
+        name: str,
+        *,
+        backend_version: tuple[int, ...],
+    ) -> Self:
         return cls(
             native_series_from_iterable(
-                data, name=name, index=None, implementation="arrow"
+                data,
+                name=name,
+                index=None,
+                implementation="arrow",
             ),
             name=name,
+            backend_version=backend_version,
         )
 
     def __len__(self) -> int:
         return len(self._native_series)
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
-        return ArrowNamespace()
+        return ArrowNamespace(backend_version=self._backend_version)
 
     @property
     def name(self) -> str:
@@ -72,6 +81,7 @@ class ArrowSeries:
         return self.__class__(
             self._native_series,
             name=name,
+            backend_version=self._backend_version,
         )
 
     @property

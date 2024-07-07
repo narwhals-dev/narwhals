@@ -14,7 +14,6 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
-from narwhals.utils import parse_version
 
 T = TypeVar("T")
 
@@ -56,7 +55,10 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             return other.item()
         if other._native_series.index is not index:
             return set_axis(
-                other._native_series, index, implementation=other._implementation
+                other._native_series,
+                index,
+                implementation=other._implementation,
+                backend_version=other._backend_version,
             )
         return other._native_series
     return other
@@ -79,7 +81,10 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
             return other._native_series.iloc[0]
         if other._native_series.index is not index:
             return set_axis(
-                other._native_series, index, implementation=other._implementation
+                other._native_series,
+                index,
+                implementation=other._implementation,
+                backend_version=other._backend_version,
             )
         return other._native_series
     raise AssertionError("Please report a bug")
@@ -97,18 +102,31 @@ def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
 def parse_into_exprs(
     implementation: str,
     *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+    backend_version: tuple[int, ...],
     **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
+    out = [
+        parse_into_expr(
+            into_expr, implementation=implementation, backend_version=backend_version
+        )
+        for into_expr in flatten(exprs)
+    ]
     for name, expr in named_exprs.items():
-        out.append(parse_into_expr(implementation, expr).alias(name))
+        out.append(
+            parse_into_expr(
+                expr, implementation=implementation, backend_version=backend_version
+            ).alias(name)
+        )
     return out
 
 
 def parse_into_expr(
-    implementation: str, into_expr: IntoPandasExpr | IntoArrowExpr
+    into_expr: IntoPandasExpr | IntoArrowExpr,
+    *,
+    implementation: str,
+    backend_version: tuple[int, ...],
 ) -> PandasExpr:
     """Parse `into_expr` as an expression.
 
@@ -129,9 +147,13 @@ def parse_into_expr(
     from narwhals._pandas_like.series import PandasSeries
 
     if implementation == "arrow":
-        plx: ArrowNamespace | PandasNamespace = ArrowNamespace()
+        plx: ArrowNamespace | PandasNamespace = ArrowNamespace(
+            backend_version=backend_version
+        )
     else:
-        plx = PandasNamespace(implementation=implementation)
+        plx = PandasNamespace(
+            implementation=implementation, backend_version=backend_version
+        )
     if isinstance(into_expr, (PandasExpr, ArrowExpr)):
         return into_expr  # type: ignore[return-value]
     if isinstance(into_expr, (PandasSeries, ArrowSeries)):
@@ -139,7 +161,9 @@ def parse_into_expr(
     if isinstance(into_expr, str):
         return plx.col(into_expr)  # type: ignore[return-value]
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        series = create_native_series(into_expr, implementation=implementation)
+        series = create_native_series(
+            into_expr, implementation=implementation, backend_version=backend_version
+        )
         return plx._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
@@ -147,8 +171,10 @@ def parse_into_expr(
 
 def create_native_series(
     iterable: Any,
-    implementation: str,
     index: Any = None,
+    *,
+    implementation: str,
+    backend_version: tuple[int, ...],
 ) -> PandasSeries:
     from narwhals._pandas_like.series import PandasSeries
 
@@ -161,7 +187,9 @@ def create_native_series(
     elif implementation == "cudf":
         cudf = get_cudf()
         series = cudf.Series(iterable, index=index, name="")
-    return PandasSeries(series, implementation=implementation)
+    return PandasSeries(
+        series, implementation=implementation, backend_version=backend_version
+    )
 
 
 def evaluate_into_expr(
@@ -170,7 +198,9 @@ def evaluate_into_expr(
     """
     Return list of raw columns.
     """
-    expr = parse_into_expr(df._implementation, into_expr)
+    expr = parse_into_expr(
+        into_expr, implementation=df._implementation, backend_version=df._backend_version
+    )
     return expr._call(df)
 
 
@@ -278,6 +308,7 @@ def reuse_series_namespace_implementation(
         root_names=expr._root_names,
         output_names=expr._output_names,
         implementation=expr._implementation,
+        backend_version=expr._backend_version,
     )
 
 
@@ -298,7 +329,9 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
     return expr._depth < 2
 
 
-def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
+def horizontal_concat(
+    dfs: list[Any], *, implementation: str, backend_version: tuple[int, ...]
+) -> Any:
     """
     Concatenate (native) DataFrames horizontally.
 
@@ -307,7 +340,7 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     if implementation == "pandas":
         pd = get_pandas()
 
-        if parse_version(pd.__version__) < parse_version("3.0.0"):
+        if backend_version < (3,):
             return pd.concat(dfs, axis=1, copy=False)
         return pd.concat(dfs, axis=1)  # pragma: no cover
     if implementation == "cudf":  # pragma: no cover
@@ -322,7 +355,9 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     raise TypeError(msg)  # pragma: no cover
 
 
-def vertical_concat(dfs: list[Any], implementation: str) -> Any:
+def vertical_concat(
+    dfs: list[Any], *, implementation: str, backend_version: tuple[int, ...]
+) -> Any:
     """
     Concatenate (native) DataFrames vertically.
 
@@ -340,7 +375,7 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
     if implementation == "pandas":
         pd = get_pandas()
 
-        if parse_version(pd.__version__) < parse_version("3.0.0"):
+        if backend_version < (3,):
             return pd.concat(dfs, axis=0, copy=False)
         return pd.concat(dfs, axis=0)  # pragma: no cover
     if implementation == "cudf":  # pragma: no cover
@@ -356,7 +391,10 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
 
 
 def native_series_from_iterable(
-    data: Iterable[Any], name: str, index: Any, implementation: str
+    data: Iterable[Any],
+    name: str,
+    index: Any,
+    implementation: str,
 ) -> Any:
     """Return native series."""
     if implementation == "pandas":
@@ -378,16 +416,14 @@ def native_series_from_iterable(
     raise TypeError(msg)  # pragma: no cover
 
 
-def set_axis(obj: T, index: Any, implementation: str) -> T:
-    if implementation == "pandas" and parse_version(
-        get_pandas().__version__
-    ) < parse_version("1.0.0"):  # pragma: no cover
+def set_axis(
+    obj: T, index: Any, *, implementation: str, backend_version: tuple[int, ...]
+) -> T:
+    if implementation == "pandas" and backend_version < (1,):  # pragma: no cover
         kwargs = {"inplace": False}
     else:
         kwargs = {}
-    if implementation == "pandas" and parse_version(
-        get_pandas().__version__
-    ) >= parse_version("1.5.0"):
+    if implementation == "pandas" and backend_version >= (1, 5):  # pragma: no cover
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
@@ -602,7 +638,14 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
     reindexed = [series[0]._native_series]
     for s in series[1:]:
         if s._native_series.index is not idx:
-            reindexed.append(set_axis(s._native_series, idx, s._implementation))
+            reindexed.append(
+                set_axis(
+                    s._native_series,
+                    idx,
+                    implementation=s._implementation,
+                    backend_version=s._backend_version,
+                )
+            )
         else:
             reindexed.append(s._native_series)
     return reindexed
