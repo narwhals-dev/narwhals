@@ -44,6 +44,7 @@ FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 class BaseFrame(Generic[FrameT]):
     _dataframe: Any
     _is_polars: bool
+    _backend_version: tuple[int, ...]
 
     def __len__(self) -> Any:
         return self._dataframe.__len__()
@@ -102,9 +103,7 @@ class BaseFrame(Generic[FrameT]):
         return function(self, *args, **kwargs)
 
     def with_row_index(self, name: str = "index") -> Self:
-        if self._is_polars and parse_version(get_polars().__version__) < parse_version(
-            "0.20.4"
-        ):  # pragma: no cover
+        if self._is_polars and self._backend_version < (0, 20, 4):  # pragma: no cover
             return self._from_dataframe(
                 self._dataframe.with_row_count(name),
             )
