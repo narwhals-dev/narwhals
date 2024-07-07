@@ -56,7 +56,10 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             return other.item()
         if other._native_series.index is not index:
             return set_axis(
-                other._native_series, index, implementation=other._implementation
+                other._native_series,
+                index,
+                implementation=other._implementation,
+                backend_version=other._backend_version,
             )
         return other._native_series
     return other
@@ -79,7 +82,10 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
             return other._native_series.iloc[0]
         if other._native_series.index is not index:
             return set_axis(
-                other._native_series, index, implementation=other._implementation
+                other._native_series,
+                index,
+                implementation=other._implementation,
+                backend_version=other._backend_version,
             )
         return other._native_series
     raise AssertionError("Please report a bug")
@@ -407,16 +413,14 @@ def native_series_from_iterable(
     raise TypeError(msg)  # pragma: no cover
 
 
-def set_axis(obj: T, index: Any, implementation: str) -> T:
-    if implementation == "pandas" and parse_version(
-        get_pandas().__version__
-    ) < parse_version("1.0.0"):  # pragma: no cover
+def set_axis(
+    obj: T, index: Any, *, implementation: str, backend_version: tuple[int, ...]
+) -> T:
+    if implementation == "pandas" and backend_version < (1,):  # pragma: no cover
         kwargs = {"inplace": False}
     else:
         kwargs = {}
-    if implementation == "pandas" and parse_version(
-        get_pandas().__version__
-    ) >= parse_version("1.5.0"):
+    if implementation == "pandas" and backend_version >= (1, 5):  # pragma: no cover
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
@@ -631,7 +635,14 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
     reindexed = [series[0]._native_series]
     for s in series[1:]:
         if s._native_series.index is not idx:
-            reindexed.append(set_axis(s._native_series, idx, s._implementation))
+            reindexed.append(
+                set_axis(
+                    s._native_series,
+                    idx,
+                    implementation=s._implementation,
+                    backend_version=s._backend_version,
+                )
+            )
         else:
             reindexed.append(s._native_series)
     return reindexed
