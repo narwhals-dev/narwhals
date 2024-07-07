@@ -123,17 +123,9 @@ class ArrowSeries:
 
     def diff(self) -> Self:
         pc = get_pyarrow_compute()
-        pa = get_pyarrow()
-        # todo: is all this rechunking really necessary?
-        ca = self._native_series.combine_chunks()
-        result = pa.chunked_array(
-            [
-                pa.chunked_array(
-                    [pa.array([None], type=ca.type), pc.subtract(ca[1:], ca[:-1])]
-                ).combine_chunks()
-            ]
+        return self._from_native_series(
+            pc.pairwise_diff(self._native_series.combine_chunks())
         )
-        return self._from_native_series(result)
 
     def any(self) -> bool:
         pc = get_pyarrow_compute()
