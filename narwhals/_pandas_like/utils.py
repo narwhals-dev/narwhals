@@ -14,7 +14,6 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
-from narwhals.utils import parse_version
 
 T = TypeVar("T")
 
@@ -330,7 +329,9 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
     return expr._depth < 2
 
 
-def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
+def horizontal_concat(
+    dfs: list[Any], *, implementation: str, backend_version: tuple[int, ...]
+) -> Any:
     """
     Concatenate (native) DataFrames horizontally.
 
@@ -339,7 +340,7 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     if implementation == "pandas":
         pd = get_pandas()
 
-        if parse_version(pd.__version__) < parse_version("3.0.0"):
+        if backend_version < (3,):
             return pd.concat(dfs, axis=1, copy=False)
         return pd.concat(dfs, axis=1)  # pragma: no cover
     if implementation == "cudf":  # pragma: no cover
@@ -354,7 +355,9 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     raise TypeError(msg)  # pragma: no cover
 
 
-def vertical_concat(dfs: list[Any], implementation: str) -> Any:
+def vertical_concat(
+    dfs: list[Any], *, implementation: str, backend_version: tuple[int, ...]
+) -> Any:
     """
     Concatenate (native) DataFrames vertically.
 
@@ -372,7 +375,7 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
     if implementation == "pandas":
         pd = get_pandas()
 
-        if parse_version(pd.__version__) < parse_version("3.0.0"):
+        if backend_version < (3,):
             return pd.concat(dfs, axis=0, copy=False)
         return pd.concat(dfs, axis=0)  # pragma: no cover
     if implementation == "cudf":  # pragma: no cover
