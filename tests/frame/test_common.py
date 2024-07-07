@@ -72,29 +72,6 @@ def test_empty_select(constructor: Any) -> None:
     "df_raw",
     [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
 )
-def test_add(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result = df.with_columns(
-        c=nw.col("a") + nw.col("b"),
-        d=nw.col("a") - nw.col("a").mean(),
-        e=nw.col("a") - nw.col("a").std(),
-    )
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "c": [5, 7, 8],
-        "d": [-1.0, 1.0, 0.0],
-        "e": [0.0, 2.0, 1.0],
-    }
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw",
-    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
-)
 def test_std(df_raw: Any) -> None:
     df = nw.from_native(df_raw)
     result = df.select(

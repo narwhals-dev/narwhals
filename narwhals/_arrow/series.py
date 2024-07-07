@@ -7,6 +7,7 @@ from typing import Iterable
 from narwhals._arrow.namespace import ArrowNamespace
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
+from narwhals._arrow.utils import validate_column_comparand
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
@@ -54,6 +55,24 @@ class ArrowSeries:
 
     def __len__(self) -> int:
         return len(self._native_series)
+
+    def __add__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.add(self._native_series, other))
+
+    def __sub__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.subtract(self._native_series, other))
+
+    def mean(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.mean(self._native_series)  # type: ignore[no-any-return]
+
+    def std(self, ddof: int = 1) -> int:
+        pc = get_pyarrow_compute()
+        return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         return ArrowNamespace(backend_version=self._backend_version)

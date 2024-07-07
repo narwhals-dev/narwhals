@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Callable
 
 from narwhals._pandas_like.utils import reuse_series_implementation
@@ -73,6 +74,18 @@ class ArrowExpr:
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(backend_version=self._backend_version)
+
+    def __add__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__add__", other)  # type: ignore[type-var]
+
+    def __sub__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__sub__", other)  # type: ignore[type-var]
+
+    def mean(self) -> Self:
+        return reuse_series_implementation(self, "mean", returns_scalar=True)  # type: ignore[type-var]
+
+    def std(self, ddof: int = 1) -> Self:
+        return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)  # type: ignore[type-var]
 
     def cast(self, dtype: DType) -> Self:
         return reuse_series_implementation(self, "cast", dtype)  # type: ignore[type-var]

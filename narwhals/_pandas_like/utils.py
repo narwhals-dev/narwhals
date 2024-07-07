@@ -92,10 +92,11 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
 
 def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
+    from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasExpr
 
-    if isinstance(expr, PandasExpr):
-        return expr._call(df)
+    if isinstance(expr, (PandasExpr, ArrowExpr)):
+        return expr._call(df)  # type: ignore[arg-type]
     return expr
 
 
