@@ -12,6 +12,7 @@ from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import numpy as np
@@ -50,22 +51,36 @@ class Series:
             self._is_polars = True
             return
         if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
-            self._series = PandasSeries(series, implementation="pandas")
+            self._series = PandasSeries(
+                series,
+                implementation="pandas",
+                backend_version=parse_version(pd.__version__),
+            )
             return
-        if (pd := get_modin()) is not None and isinstance(
-            series, pd.Series
+        if (mpd := get_modin()) is not None and isinstance(
+            series, mpd.Series
         ):  # pragma: no cover
-            self._series = PandasSeries(series, implementation="modin")
+            self._series = PandasSeries(
+                series,
+                implementation="modin",
+                backend_version=parse_version(mpd.__version__),
+            )
             return
-        if (pd := get_cudf()) is not None and isinstance(
-            series, pd.Series
+        if (cudf := get_cudf()) is not None and isinstance(
+            series, cudf.Series
         ):  # pragma: no cover
-            self._series = PandasSeries(series, implementation="cudf")
+            self._series = PandasSeries(
+                series,
+                implementation="cudf",
+                backend_version=parse_version(cudf.__version__),
+            )
             return
         if (pa := get_pyarrow()) is not None and isinstance(
             series, pa.ChunkedArray
         ):  # pragma: no cover
-            self._series = ArrowSeries(series, name="")
+            self._series = ArrowSeries(
+                series, name="", backend_version=parse_version(pa.__version__)
+            )
             return
         msg = (  # pragma: no cover
             f"Expected pandas, Polars, modin, or cuDF Series, got: {type(series)}. "

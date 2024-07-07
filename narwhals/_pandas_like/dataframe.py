@@ -41,10 +41,12 @@ class PandasDataFrame:
         native_dataframe: Any,
         *,
         implementation: str,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._validate_columns(native_dataframe.columns)
         self._native_dataframe = native_dataframe
         self._implementation = implementation
+        self._backend_version = backend_version
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -55,7 +57,7 @@ class PandasDataFrame:
     def __narwhals_namespace__(self) -> PandasNamespace:
         from narwhals._pandas_like.namespace import PandasNamespace
 
-        return PandasNamespace(self._implementation)
+        return PandasNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
         if self._implementation == "pandas":
@@ -85,6 +87,7 @@ class PandasDataFrame:
         return self.__class__(
             df,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     @overload
@@ -100,13 +103,16 @@ class PandasDataFrame:
             return PandasSeries(
                 self._native_dataframe.loc[:, item],
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
 
         elif isinstance(item, (slice, Sequence)):
             from narwhals._pandas_like.dataframe import PandasDataFrame
 
             return PandasDataFrame(
-                self._native_dataframe.iloc[item], implementation=self._implementation
+                self._native_dataframe.iloc[item],
+                implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         elif (
             (np := get_numpy()) is not None
@@ -182,6 +188,7 @@ class PandasDataFrame:
             range(len(self._native_dataframe)),
             index=self._native_dataframe.index,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         ).alias(name)
         return self._from_native_dataframe(
             horizontal_concat(
@@ -196,7 +203,7 @@ class PandasDataFrame:
     ) -> Self:
         from narwhals._pandas_like.namespace import PandasNamespace
 
-        plx = PandasNamespace(self._implementation)
+        plx = PandasNamespace(self._implementation, self._backend_version)
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
@@ -277,6 +284,7 @@ class PandasDataFrame:
         return PandasDataFrame(
             self._native_dataframe,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     # --- actions ---
@@ -423,6 +431,7 @@ class PandasDataFrame:
         return PandasSeries(
             self._native_dataframe.duplicated(keep=False),
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def is_empty(self: Self) -> bool:
@@ -434,12 +443,14 @@ class PandasDataFrame:
         return PandasSeries(
             ~self._native_dataframe.duplicated(keep=False),
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def null_count(self: Self) -> PandasDataFrame:
         return PandasDataFrame(
             self._native_dataframe.isnull().sum(axis=0).to_frame().transpose(),
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:

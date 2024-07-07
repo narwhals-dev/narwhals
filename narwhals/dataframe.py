@@ -235,19 +235,27 @@ class DataFrame(BaseFrame[FrameT]):
                 "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
             )
         elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
+            self._dataframe = PandasDataFrame(
+                df, implementation="pandas", backend_version=parse_version(pd.__version__)
+            )
         elif (mpd := get_modin()) is not None and isinstance(
             df, mpd.DataFrame
         ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="modin")
+            self._dataframe = PandasDataFrame(
+                df, implementation="modin", backend_version=parse_version(mpd.__version__)
+            )
         elif (cudf := get_cudf()) is not None and isinstance(
             df, cudf.DataFrame
         ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="cudf")
+            self._dataframe = PandasDataFrame(
+                df, implementation="cudf", backend_version=parse_version(cudf.__version__)
+            )
         elif (pa := get_pyarrow()) is not None and isinstance(
             df, pa.Table
         ):  # pragma: no cover
-            self._dataframe = ArrowDataFrame(df)
+            self._dataframe = ArrowDataFrame(
+                df, backend_version=parse_version(pa.__version__)
+            )
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)

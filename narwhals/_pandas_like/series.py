@@ -15,7 +15,6 @@ from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -75,29 +74,25 @@ class PandasSeries:
         native_series: Any,
         *,
         implementation: str,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._name = native_series.name
         self._native_series = native_series
         self._implementation = implementation
+        self._backend_version = backend_version
 
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary
         # copies by using `copy=False` sometimes.
-        self._use_copy_false = False
-        if self._implementation == "pandas":
-            pd = get_pandas()
-
-            if parse_version(pd.__version__) < parse_version("3.0.0"):
-                self._use_copy_false = True
-            else:  # pragma: no cover
-                pass
-        else:  # pragma: no cover
-            pass
+        if self._implementation == "pandas" and self._backend_version < (3, 0, 0):
+            self._use_copy_false = True
+        else:
+            self._use_copy_false = False
 
     def __narwhals_namespace__(self) -> PandasNamespace:
         from narwhals._pandas_like.namespace import PandasNamespace
 
-        return PandasNamespace(self._implementation)
+        return PandasNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
         if self._implementation == "pandas":
@@ -124,17 +119,28 @@ class PandasSeries:
         return self.__class__(
             series,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     @classmethod
-    def _from_iterable(
-        cls: type[Self], data: Iterable[Any], name: str, index: Any, implementation: str
+    def _from_iterable(  # noqa: PLR0913
+        cls: type[Self],
+        data: Iterable[Any],
+        name: str,
+        index: Any,
+        *,
+        implementation: str,
+        backend_version: tuple[int, ...],
     ) -> Self:
         return cls(
             native_series_from_iterable(
-                data, name=name, index=index, implementation=implementation
+                data,
+                name=name,
+                index=index,
+                implementation=implementation,
             ),
             implementation=implementation,
+            backend_version=backend_version,
         )
 
     def __len__(self) -> int:
@@ -176,7 +182,9 @@ class PandasSeries:
         from narwhals._pandas_like.dataframe import PandasDataFrame
 
         return PandasDataFrame(
-            self._native_series.to_frame(), implementation=self._implementation
+            self._native_series.to_frame(),
+            implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def to_list(self) -> Any:
@@ -454,9 +462,9 @@ class PandasSeries:
             has_missing
             and str(self._native_series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING
         ):
-            if self._implementation == "pandas" and parse_version(
-                get_pandas().__version__
-            ) < parse_version("1.0.0"):  # pragma: no cover
+            if self._implementation == "pandas" and self._backend_version < (
+                1,
+            ):  # pragma: no cover
                 kwargs = {}
             else:
                 kwargs = {"na_value": float("nan")}
@@ -531,6 +539,7 @@ class PandasSeries:
         return PandasDataFrame(
             val_count,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def quantile(

@@ -97,18 +97,31 @@ def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
 def parse_into_exprs(
     implementation: str,
     *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
+    backend_version: tuple[int, ...],
     **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
+    out = [
+        parse_into_expr(
+            into_expr, implementation=implementation, backend_version=backend_version
+        )
+        for into_expr in flatten(exprs)
+    ]
     for name, expr in named_exprs.items():
-        out.append(parse_into_expr(implementation, expr).alias(name))
+        out.append(
+            parse_into_expr(
+                expr, implementation=implementation, backend_version=backend_version
+            ).alias(name)
+        )
     return out
 
 
 def parse_into_expr(
-    implementation: str, into_expr: IntoPandasExpr | IntoArrowExpr
+    into_expr: IntoPandasExpr | IntoArrowExpr,
+    *,
+    implementation: str,
+    backend_version: tuple[int, ...],
 ) -> PandasExpr:
     """Parse `into_expr` as an expression.
 
@@ -129,9 +142,13 @@ def parse_into_expr(
     from narwhals._pandas_like.series import PandasSeries
 
     if implementation == "arrow":
-        plx: ArrowNamespace | PandasNamespace = ArrowNamespace()
+        plx: ArrowNamespace | PandasNamespace = ArrowNamespace(
+            backend_version=backend_version
+        )
     else:
-        plx = PandasNamespace(implementation=implementation)
+        plx = PandasNamespace(
+            implementation=implementation, backend_version=backend_version
+        )
     if isinstance(into_expr, (PandasExpr, ArrowExpr)):
         return into_expr  # type: ignore[return-value]
     if isinstance(into_expr, (PandasSeries, ArrowSeries)):
@@ -139,7 +156,9 @@ def parse_into_expr(
     if isinstance(into_expr, str):
         return plx.col(into_expr)  # type: ignore[return-value]
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        series = create_native_series(into_expr, implementation=implementation)
+        series = create_native_series(
+            into_expr, implementation=implementation, backend_version=backend_version
+        )
         return plx._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
@@ -147,8 +166,10 @@ def parse_into_expr(
 
 def create_native_series(
     iterable: Any,
-    implementation: str,
     index: Any = None,
+    *,
+    implementation: str,
+    backend_version: tuple[int, ...],
 ) -> PandasSeries:
     from narwhals._pandas_like.series import PandasSeries
 
@@ -161,7 +182,9 @@ def create_native_series(
     elif implementation == "cudf":
         cudf = get_cudf()
         series = cudf.Series(iterable, index=index, name="")
-    return PandasSeries(series, implementation=implementation)
+    return PandasSeries(
+        series, implementation=implementation, backend_version=backend_version
+    )
 
 
 def evaluate_into_expr(
@@ -170,7 +193,9 @@ def evaluate_into_expr(
     """
     Return list of raw columns.
     """
-    expr = parse_into_expr(df._implementation, into_expr)
+    expr = parse_into_expr(
+        into_expr, implementation=df._implementation, backend_version=df._backend_version
+    )
     return expr._call(df)
 
 
@@ -278,6 +303,7 @@ def reuse_series_namespace_implementation(
         root_names=expr._root_names,
         output_names=expr._output_names,
         implementation=expr._implementation,
+        backend_version=expr._backend_version,
     )
 
 
@@ -356,7 +382,10 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
 
 
 def native_series_from_iterable(
-    data: Iterable[Any], name: str, index: Any, implementation: str
+    data: Iterable[Any],
+    name: str,
+    index: Any,
+    implementation: str,
 ) -> Any:
     """Return native series."""
     if implementation == "pandas":

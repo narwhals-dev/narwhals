@@ -106,7 +106,7 @@ class MockSeries:
 if __name__ == "__main__":
     missing = []
 
-    df_pa = ArrowDataFrame(MockDataFrame({"a": [1, 2, 3]}))
+    df_pa = ArrowDataFrame(MockDataFrame({"a": [1, 2, 3]}), backend_version=(13, 0))
     df_pd = nw.DataFrame(MockDataFrame({"a": [1, 2, 3]}), is_polars=True)
     pa_methods = [f"DataFrame.{x}" for x in df_pa.__dir__() if not x.startswith("_")]
     pd_methods = [f"DataFrame.{x}" for x in df_pd.__dir__() if not x.startswith("_")]

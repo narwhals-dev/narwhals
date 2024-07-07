@@ -23,14 +23,17 @@ if TYPE_CHECKING:
 
 class ArrowDataFrame:
     # --- not in the spec ---
-    def __init__(self, native_dataframe: Any) -> None:
+    def __init__(
+        self, native_dataframe: Any, *, backend_version: tuple[int, ...]
+    ) -> None:
         self._native_dataframe = native_dataframe
         self._implementation = "arrow"  # for compatibility with PandasDataFrame
+        self._backend_version = backend_version
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace()
+        return ArrowNamespace(backend_version=self._backend_version)
 
     def __native_namespace__(self) -> Any:
         return get_pyarrow()
@@ -42,7 +45,7 @@ class ArrowDataFrame:
         return self
 
     def _from_native_dataframe(self, df: Any) -> Self:
-        return self.__class__(df)
+        return self.__class__(df, backend_version=self._backend_version)
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -69,7 +72,11 @@ class ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
-            return ArrowSeries(self._native_dataframe[item], name=item)
+            return ArrowSeries(
+                self._native_dataframe[item],
+                name=item,
+                backend_version=self._backend_version,
+            )
 
         elif isinstance(item, slice):
             if item.step is not None and item.step != 1:
@@ -154,7 +161,9 @@ class ArrowDataFrame:
         return self
 
     def collect(self) -> ArrowDataFrame:
-        return ArrowDataFrame(self._native_dataframe)
+        return ArrowDataFrame(
+            self._native_dataframe, backend_version=self._backend_version
+        )
 
     def clone(self) -> Self:
         raise NotImplementedError("clone is not yet supported on PyArrow tables")

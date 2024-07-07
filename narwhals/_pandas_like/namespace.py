@@ -43,11 +43,14 @@ class PandasNamespace:
 
     @property
     def selectors(self) -> PandasSelectorNamespace:
-        return PandasSelectorNamespace(self._implementation)
+        return PandasSelectorNamespace(
+            implementation=self._implementation, backend_version=self._backend_version
+        )
 
     # --- not in spec ---
-    def __init__(self, implementation: str) -> None:
+    def __init__(self, implementation: str, backend_version: tuple[int, ...]) -> None:
         self._implementation = implementation
+        self._backend_version = backend_version
 
     def _create_expr_from_callable(  # noqa: PLR0913
         self,
@@ -65,6 +68,7 @@ class PandasNamespace:
             root_names=root_names,
             output_names=output_names,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def _create_series_from_scalar(
@@ -75,6 +79,7 @@ class PandasNamespace:
             name=series._native_series.name,
             index=series._native_series.index[0:1],
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def _create_expr_from_series(self, series: PandasSeries) -> PandasExpr:
@@ -85,12 +90,15 @@ class PandasNamespace:
             root_names=None,
             output_names=None,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     # --- selection ---
     def col(self, *column_names: str | Iterable[str]) -> PandasExpr:
         return PandasExpr.from_column_names(
-            *flatten(column_names), implementation=self._implementation
+            *flatten(column_names),
+            implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def all(self) -> PandasExpr:
@@ -99,6 +107,7 @@ class PandasNamespace:
                 PandasSeries(
                     df._native_dataframe.loc[:, column_name],
                     implementation=self._implementation,
+                    backend_version=self._backend_version,
                 )
                 for column_name in df.columns
             ],
@@ -107,6 +116,7 @@ class PandasNamespace:
             root_names=None,
             output_names=None,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasExpr:
@@ -116,6 +126,7 @@ class PandasNamespace:
                 name="lit",
                 index=df._native_dataframe.index[0:1],
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
             if dtype:
                 return pandas_series.cast(dtype)
@@ -128,27 +139,36 @@ class PandasNamespace:
             root_names=None,
             output_names=["lit"],
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     # --- reduction ---
     def sum(self, *column_names: str) -> PandasExpr:
         return PandasExpr.from_column_names(
-            *column_names, implementation=self._implementation
+            *column_names,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
         ).sum()
 
     def mean(self, *column_names: str) -> PandasExpr:
         return PandasExpr.from_column_names(
-            *column_names, implementation=self._implementation
+            *column_names,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
         ).mean()
 
     def max(self, *column_names: str) -> PandasExpr:
         return PandasExpr.from_column_names(
-            *column_names, implementation=self._implementation
+            *column_names,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
         ).max()
 
     def min(self, *column_names: str) -> PandasExpr:
         return PandasExpr.from_column_names(
-            *column_names, implementation=self._implementation
+            *column_names,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
         ).min()
 
     def len(self) -> PandasExpr:
@@ -159,6 +179,7 @@ class PandasNamespace:
                     name="len",
                     index=[0],
                     implementation=self._implementation,
+                    backend_version=self._backend_version,
                 )
             ],
             depth=0,
@@ -166,20 +187,29 @@ class PandasNamespace:
             root_names=None,
             output_names=["len"],
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     # --- horizontal ---
     def sum_horizontal(
         self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
     ) -> PandasExpr:
-        return reduce(lambda x, y: x + y, parse_into_exprs(self._implementation, *exprs))
+        return reduce(
+            lambda x, y: x + y,
+            parse_into_exprs(
+                self._implementation, *exprs, backend_version=self._backend_version
+            ),
+        )
 
     def all_horizontal(
         self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
     ) -> PandasExpr:
         # Why is this showing up as uncovered? It defo is?
         return reduce(
-            lambda x, y: x & y, parse_into_exprs(self._implementation, *exprs)
+            lambda x, y: x & y,
+            parse_into_exprs(
+                self._implementation, *exprs, backend_version=self._backend_version
+            ),
         )  # pragma: no cover
 
     def concat(
@@ -193,10 +223,12 @@ class PandasNamespace:
             return PandasDataFrame(
                 horizontal_concat(dfs, implementation=self._implementation),
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         if how == "vertical":
             return PandasDataFrame(
                 vertical_concat(dfs, implementation=self._implementation),
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         raise NotImplementedError

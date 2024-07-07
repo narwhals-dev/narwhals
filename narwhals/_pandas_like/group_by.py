@@ -44,6 +44,7 @@ class PandasGroupBy:
         exprs = parse_into_exprs(
             self._df._implementation,
             *aggs,
+            backend_version=self._df._backend_version,
             **named_aggs,
         )
         implementation: str = self._df._implementation
@@ -64,8 +65,8 @@ class PandasGroupBy:
             self._keys,
             output_names,
             self._from_native_dataframe,
-            implementation,
             dataframe_is_empty=self._df._native_dataframe.empty,
+            implementation=implementation,
         )
 
     def _from_native_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:
@@ -74,6 +75,7 @@ class PandasGroupBy:
         return PandasDataFrame(
             df,
             implementation=self._df._implementation,
+            backend_version=self._df._backend_version,
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasDataFrame]]:
@@ -86,8 +88,8 @@ def agg_pandas(  # noqa: PLR0913
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], PandasDataFrame],
-    implementation: Any,
     *,
+    implementation: Any,
     dataframe_is_empty: bool,
 ) -> PandasDataFrame:
     """
@@ -174,7 +176,10 @@ def agg_pandas(  # noqa: PLR0913
                 out_group.append(result_keys._native_series.iloc[0])
                 out_names.append(result_keys.name)
         return native_series_from_iterable(
-            out_group, index=out_names, name="", implementation=implementation
+            out_group,
+            index=out_names,
+            name="",
+            implementation=implementation,
         )
 
     if implementation == "pandas":

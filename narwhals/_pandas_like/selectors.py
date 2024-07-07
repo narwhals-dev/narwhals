@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 
 
 class PandasSelectorNamespace:
-    def __init__(self, implementation: str) -> None:
+    def __init__(self, *, implementation: str, backend_version: tuple[int, ...]) -> None:
         self._implementation = implementation
+        self._backend_version = backend_version
 
     def by_dtype(self, dtypes: list[DType | type[DType]]) -> PandasSelector:
         def func(df: PandasDataFrame) -> list[PandasSeries]:
@@ -28,6 +29,7 @@ class PandasSelectorNamespace:
             root_names=None,
             output_names=None,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def numeric(self) -> PandasSelector:
@@ -66,6 +68,7 @@ class PandasSelectorNamespace:
             root_names=None,
             output_names=None,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
 
@@ -87,6 +90,7 @@ class PandasSelector(PandasExpr):
             root_names=self._root_names,
             output_names=self._output_names,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def __sub__(self, other: PandasSelector | Any) -> PandasSelector | Any:
@@ -104,6 +108,7 @@ class PandasSelector(PandasExpr):
                 root_names=None,
                 output_names=None,
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         else:
             return self._to_expr() - other
@@ -123,6 +128,7 @@ class PandasSelector(PandasExpr):
                 root_names=None,
                 output_names=None,
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         else:
             return self._to_expr() | other
@@ -142,12 +148,18 @@ class PandasSelector(PandasExpr):
                 root_names=None,
                 output_names=None,
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         else:
             return self._to_expr() & other
 
     def __invert__(self) -> PandasSelector:
-        return PandasSelectorNamespace(self._implementation).all() - self
+        return (
+            PandasSelectorNamespace(
+                implementation=self._implementation, backend_version=self._backend_version
+            ).all()
+            - self
+        )
 
     def __rsub__(self, other: Any) -> NoReturn:
         raise NotImplementedError
