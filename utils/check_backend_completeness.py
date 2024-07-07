@@ -28,7 +28,6 @@ MISSING = [
     "DataFrame.to_dict",
     "DataFrame.to_numpy",
     "DataFrame.unique",
-    "DataFrame.with_columns",
     "DataFrame.with_row_index",
     "DataFrame.write_parquet",
     "Series.diff",
@@ -103,6 +102,7 @@ class MockSeries:
 
 if __name__ == "__main__":
     missing = []
+    no_longer_missing = []
 
     df_pa = ArrowDataFrame(MockDataFrame({"a": [1, 2, 3]}), backend_version=(13, 0))
     df_pd = nw.DataFrame(
@@ -111,12 +111,14 @@ if __name__ == "__main__":
     pa_methods = [f"DataFrame.{x}" for x in df_pa.__dir__() if not x.startswith("_")]
     pd_methods = [f"DataFrame.{x}" for x in df_pd.__dir__() if not x.startswith("_")]
     missing.extend([x for x in pd_methods if x not in pa_methods and x not in MISSING])
+    no_longer_missing.extend([x for x in MISSING if x in pa_methods and x in pd_methods])
 
     ser_pa = df_pa["a"]
     ser_pd = df_pd["a"]
     pa_methods = [f"Series.{x}" for x in ser_pa.__dir__() if not x.startswith("_")]
     pd_methods = [f"Series.{x}" for x in ser_pd.__dir__() if not x.startswith("_")]
     missing.extend([x for x in pd_methods if x not in pa_methods and x not in MISSING])
+    no_longer_missing.extend([x for x in MISSING if x in pa_methods and x in pd_methods])
 
     if missing:
         print(
@@ -125,7 +127,6 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    no_longer_missing = [x for x in MISSING if x in pa_methods and x in pd_methods]
     if no_longer_missing:
         print(
             "Please remove the following from MISSING in utils/check_backend_completeness.py: ",
