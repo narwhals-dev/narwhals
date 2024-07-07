@@ -132,6 +132,7 @@ def from_native(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
 
 
+# from_native(df, strict=False)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -143,6 +144,8 @@ def from_native(
 ) -> DataFrame[Any] | Series: ...
 
 
+# from_native(df, strict=True, eager_only=True, allow_series=True)
+# from_native(df, eager_only=True, allow_series=True)
 @overload
 def from_native(
     native_dataframe: IntoDataFrameT,
@@ -154,6 +157,8 @@ def from_native(
 ) -> DataFrame[IntoDataFrameT]: ...
 
 
+# from_native(df, strict=True, eager_only=True)
+# from_native(df, eager_only=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -165,6 +170,8 @@ def from_native(
 ) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
 
 
+# from_native(df, strict=True, series_only=True)
+# from_native(df, series_only=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -176,6 +183,8 @@ def from_native(
 ) -> Series: ...
 
 
+# from_native(df, strict=True)
+# from_native(df)
 @overload
 def from_native(
     native_dataframe: IntoFrameT,
@@ -187,7 +196,7 @@ def from_native(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 
 
-# Nothing was specified
+# All params passed in as variables
 @overload
 def from_native(
     native_dataframe: Any,

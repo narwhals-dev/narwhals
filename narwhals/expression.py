@@ -34,6 +34,11 @@ class Expr:
         # callable from namespace to expr
         self._call = call
 
+    def _taxicab_norm(self) -> Self:
+        # This is just used to test out the stable api feature in a realistic-ish way.
+        # It's not intended to be used.
+        return self.__class__(lambda plx: self._call(plx).abs().sum())
+
     # --- convert ---
     def alias(self, name: str) -> Self:
         """

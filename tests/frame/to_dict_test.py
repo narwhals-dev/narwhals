@@ -1,6 +1,6 @@
 from typing import Any
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 
 def test_to_dict(constructor: Any) -> None:

@@ -14,6 +14,7 @@ nav:
   - Other concepts:
     - other/pandas_index.md
   - overhead.md
+  - backcompat.md
   - extending.md
   - how_it_works.md
   - Roadmap: roadmap.md

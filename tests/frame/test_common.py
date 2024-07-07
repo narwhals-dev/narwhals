@@ -12,7 +12,7 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.functions import _get_deps_info
 from narwhals.functions import _get_sys_info
 from narwhals.functions import show_versions
