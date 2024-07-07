@@ -19,7 +19,7 @@ def test_lazy_instantiation_error() -> None:
     with pytest.raises(
         TypeError, match="Can't instantiate DataFrame from Polars LazyFrame."
     ):
-        _ = nw.DataFrame(df_lazy).shape
+        _ = nw.DataFrame(df_lazy, is_polars=True, backend_version=(0,)).shape
 
 
 def test_eager_instantiation(constructor: Any) -> None:
