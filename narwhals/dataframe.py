@@ -1830,11 +1830,10 @@ class LazyFrame(BaseFrame[FrameT]):
         self._backend_version = backend_version
         if hasattr(df, "__narwhals_lazyframe__"):
             self._dataframe: Any = df.__narwhals_lazyframe__()
-        elif is_polars or (
+        elif is_polars and (
             (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
         ):
             self._dataframe = df
-            self._is_polars = True
         else:
             msg = f"Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise TypeError(msg)
