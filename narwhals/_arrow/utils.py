@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import isinstance_or_issubclass
+
+if TYPE_CHECKING:
+    from narwhals._arrow.series import ArrowSeries
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
@@ -121,3 +125,28 @@ def validate_column_comparand(other: Any) -> Any:
             return other[0]
         return other._native_series
     return other
+
+
+def validate_dataframe_comparand(other: Any) -> Any:
+    """Validate RHS of binary operation.
+
+    If the comparison isn't supported, return `NotImplemented` so that the
+    "right-hand-side" operation (e.g. `__radd__`) can be tried.
+    """
+    from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.series import ArrowSeries
+
+    if isinstance(other, ArrowDataFrame):
+        return NotImplemented
+    if isinstance(other, ArrowSeries):
+        if len(other) == 1:
+            # broadcast
+            return other[0]
+        return other._native_series
+    raise AssertionError("Please report a bug")
+
+
+def item(version, obj: ArrowSeries) -> Any:
+    if version > (13,):
+        return obj
+    return obj.as_py()

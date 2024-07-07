@@ -7,6 +7,7 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import translate_dtype
+from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
@@ -139,12 +140,18 @@ class ArrowDataFrame:
         # Make sure to preserve column order
         for name in self.columns:
             if name in new_column_name_to_new_column_map:
-                to_concat.append(new_column_name_to_new_column_map.pop(name))
+                to_concat.append(
+                    validate_dataframe_comparand(
+                        new_column_name_to_new_column_map.pop(name)
+                    )
+                )
             else:
                 to_concat.append(self._native_dataframe[name])
             output_names.append(name)
         for s in new_column_name_to_new_column_map:
-            to_concat.append(new_column_name_to_new_column_map[s])
+            to_concat.append(
+                validate_dataframe_comparand(new_column_name_to_new_column_map[s])
+            )
             output_names.append(s)
         df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)
         return self._from_native_dataframe(df)
