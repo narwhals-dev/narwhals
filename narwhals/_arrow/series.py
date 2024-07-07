@@ -67,6 +67,11 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.subtract(self._native_series, other))
 
+    def __mul__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.multiply(self._native_series, other))
+
     def mean(self) -> int:
         pc = get_pyarrow_compute()
         return item(self._backend_version, pc.mean(self._native_series))  # type: ignore[no-any-return]
