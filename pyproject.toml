@@ -86,6 +86,8 @@ filterwarnings = [
   "error",
   'ignore:distutils Version classes are deprecated:DeprecationWarning',
   'ignore:In the future `np.bool`',
+  'ignore:The copy keyword is deprecated and will be removed',
+  'ignore:make_block is deprecated and will be removed',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
