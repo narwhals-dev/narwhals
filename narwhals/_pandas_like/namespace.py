@@ -7,12 +7,12 @@ from typing import Callable
 from typing import Iterable
 
 from narwhals import dtypes
+from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasSeries
 from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import parse_into_exprs
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten
 
@@ -201,9 +201,7 @@ class PandasNamespace:
             ),
         )
 
-    def all_horizontal(
-        self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
-    ) -> PandasExpr:
+    def all_horizontal(self, *exprs: IntoPandasExpr) -> PandasExpr:
         # Why is this showing up as uncovered? It defo is?
         return reduce(
             lambda x, y: x & y,

@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
-from narwhals._pandas_like.utils import reuse_series_implementation
-from narwhals._pandas_like.utils import reuse_series_namespace_implementation
+from narwhals._expression_parsing import reuse_series_implementation
+from narwhals._expression_parsing import reuse_series_namespace_implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -74,6 +74,8 @@ class ArrowExpr:
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(backend_version=self._backend_version)
+
+    def __narwhals_expr__(self) -> None: ...
 
     def __add__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other)  # type: ignore[type-var]

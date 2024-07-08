@@ -8,7 +8,7 @@ from typing import overload
 
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
-from narwhals._pandas_like.utils import evaluate_into_exprs
+from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten

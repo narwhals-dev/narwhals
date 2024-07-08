@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 # Anything which can be converted to an expression.
-IntoExpr: TypeAlias = Union["Expr", str, int, float, "Series"]
+IntoExpr: TypeAlias = Union["Expr", str, "Series"]
 # Anything which can be converted to a Narwhals DataFrame.
 IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]"]
 # Anything which can be converted to a Narwhals DataFrame or LazyFrame.

@@ -9,9 +9,9 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.utils import create_native_series
-from narwhals._pandas_like.utils import evaluate_into_exprs
 from narwhals._pandas_like.utils import generate_unique_token
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
