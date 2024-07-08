@@ -1,9 +1,6 @@
 # Utilities for expression parsing
 # Useful for backends which don't have any concept of expressions, such
 # and pandas or PyArrow.
-
-# The type annotations can definitely be improved here, there quite a few
-# internal type: ignores. But, the signatures should be correct.
 from __future__ import annotations
 
 from copy import copy
@@ -93,7 +90,7 @@ def maybe_evaluate_expr(
 ) -> ListOfCompliantSeries | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
     if hasattr(expr, "__narwhals_expr__"):
-        expr = cast(CompliantExpr, expr)
+        expr = cast("CompliantExpr", expr)
         return expr._call(df)  # type: ignore[arg-type]
     return expr
 
