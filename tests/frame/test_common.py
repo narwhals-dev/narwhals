@@ -185,7 +185,7 @@ def test_cross_join_non_pandas() -> None:
         df_polars,
         df_lazy,
         df_pandas,
-        # df_mpd, (todo: understand the difference between ipython/jupyter and pytest runs)
+        # df_mpd, #  (todo: understand the difference between ipython/jupyter and pytest runs)
     ],
 )
 @pytest.mark.parametrize(
@@ -202,6 +202,32 @@ def test_anti_join(
     df = nw.from_native(df_raw)
     other = df.filter(filter_expr)
     result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    "df_raw",
+    [
+        df_polars,
+        df_lazy,
+        df_pandas,
+        df_mpd,
+    ],
+)
+@pytest.mark.parametrize(
+    ("join_key", "filter_expr", "expected"),
+    [
+        (["a"], (nw.col("b") > 5), {"a": [2], "b": [6], "z": [9]}),
+        (["b"], (nw.col("b") < 5), {"a": [1, 3], "b": [4, 4], "z": [7, 8]}),
+        (["a", "b"], (nw.col("b") < 5), {"a": [1, 3], "b": [4, 4], "z": [7, 8]}),
+    ],
+)
+def test_semi_join(
+    df_raw: Any, join_key: list[str], filter_expr: nw.Expr, expected: dict[str, list[Any]]
+) -> None:
+    df = nw.from_native(df_raw)
+    other = df.filter(filter_expr)
+    result = df.join(other, how="semi", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
     compare_dicts(result, expected)
 
 
