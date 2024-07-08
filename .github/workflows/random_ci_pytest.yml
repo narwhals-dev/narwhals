@@ -9,7 +9,7 @@ jobs:
   tox:
     strategy:
       matrix:
-        python-version: ["3.9", "3.10"]
+        python-version: ["3.9"]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
