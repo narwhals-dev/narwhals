@@ -174,11 +174,11 @@ class BaseFrame(Generic[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "anti"] = "inner",
+        how: Literal["inner", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
-        _supported_joins = {"inner", "cross", "anti"}
+        _supported_joins = {"inner", "cross", "anti", "semi"}
         if how not in _supported_joins:
             msg = f"Only the following join stragies are supported: {_supported_joins}"
             raise NotImplementedError(msg)
@@ -1475,7 +1475,7 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "anti"] = "inner",
+        how: Literal["inner", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -1487,8 +1487,9 @@ class DataFrame(BaseFrame[FrameT]):
 
             how: Join strategy.
 
-                  * *inner*: Returns rows that have matching values in both tables
-                  * *cross*: Returns the Cartesian product of rows from both tables
+                  * *inner*: Returns rows that have matching values in both tables.
+                  * *cross*: Returns the Cartesian product of rows from both tables.
+                  * *semi*: Filter rows that have a match in the right table..
                   * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Name(s) of the left join column(s).
@@ -2900,7 +2901,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "anti"] = "inner",
+        how: Literal["inner", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -2912,8 +2913,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
             how: Join strategy.
 
-                  * *inner*: Returns rows that have matching values in both tables
-                  * *cross*: Returns the Cartesian product of rows from both tables
+                  * *inner*: Returns rows that have matching values in both tables.
+                  * *cross*: Returns the Cartesian product of rows from both tables.
+                  * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Join column of the left DataFrame.

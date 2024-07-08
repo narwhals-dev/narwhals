@@ -295,7 +295,7 @@ class PandasDataFrame:
         self,
         other: Self,
         *,
-        how: Literal["left", "inner", "outer", "cross", "anti"] = "inner",
+        how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -339,7 +339,7 @@ class PandasDataFrame:
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
-            other = (
+            other_native = (
                 other._native_dataframe.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
@@ -348,7 +348,7 @@ class PandasDataFrame:
             )
             return self._from_native_dataframe(
                 self._native_dataframe.merge(
-                    other,
+                    other_native,
                     how="outer",
                     indicator=indicator_token,
                     left_on=left_on,
@@ -357,6 +357,23 @@ class PandasDataFrame:
                 .loc[lambda t: t[indicator_token] == "left_only"]
                 .drop(columns=[indicator_token])
                 .reset_index(drop=True)
+            )
+
+        if how == "semi":
+            other_native = (
+                other._native_dataframe.loc[:, right_on]
+                .rename(  # rename to avoid creating extra columns in join
+                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                )
+                .drop_duplicates()  # avoids potential rows duplication from inner join
+            )
+            return self._from_native_dataframe(
+                self._native_dataframe.merge(
+                    other_native,
+                    how="inner",
+                    left_on=left_on,
+                    right_on=left_on,
+                ).reset_index(drop=True)
             )
 
         return self._from_native_dataframe(
