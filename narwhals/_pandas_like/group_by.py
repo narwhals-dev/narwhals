@@ -78,9 +78,17 @@ class PandasGroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasDataFrame]]:
+        with warnings.catch_warnings():
+            # we already use `tupleify` above, so we're already opting in to
+            # the new behaviour
+            warnings.filterwarnings(
+                "ignore",
+                message="In a future version of pandas, a length 1 tuple will be returned",
+                category=FutureWarning,
+            )
+            iterator = self._grouped.__iter__()
         yield from (
-            (key, self._from_native_dataframe(sub_df))
-            for (key, sub_df) in self._grouped.__iter__()
+            (key, self._from_native_dataframe(sub_df)) for (key, sub_df) in iterator
         )
 
 
