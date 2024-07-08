@@ -18,14 +18,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}
       - name: install package
         run: pip install -e .
       - name: generate-random-versions
