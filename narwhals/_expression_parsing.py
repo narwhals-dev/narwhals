@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from copy import copy
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Protocol
@@ -15,17 +16,13 @@ from narwhals._pandas_like.utils import create_native_series
 from narwhals.dependencies import get_numpy
 from narwhals.utils import flatten
 
-
-class CompliantDataFrame(Protocol):
-    def __narwhals_dataframe__(self) -> Any: ...
-
-
-class CompliantSeries(Protocol):
-    def __narwhals_series__(self) -> Any: ...
+if TYPE_CHECKING:
+    from narwhals.dataframe import DataFrame as CompliantDataFrame
+    from narwhals.series import Series as CompliantSeries
 
 
 class CompliantExpr(Protocol):
-    def _call(self) -> Callable[[CompliantDataFrame], list[CompliantSeries]]: ...
+    def _call(self) -> Callable[[CompliantDataFrame[Any]], list[CompliantSeries]]: ...
 
 
 T = TypeVar("T")
@@ -33,13 +30,13 @@ IntoCompliantExpr: TypeAlias = Union["CompliantExpr", str, "CompliantSeries"]
 
 
 def evaluate_into_expr(
-    df: CompliantDataFrame, into_expr: IntoCompliantExpr
+    df: CompliantDataFrame[Any], into_expr: IntoCompliantExpr
 ) -> list[CompliantSeries]:
     """
     Return list of raw columns.
     """
     expr = parse_into_expr(
-        into_expr, implementation=df._implementation, backend_version=df._backend_version
+        into_expr, namespace=df.__narwhals_namespace__()
     )
     return expr._call(df)
 
@@ -74,23 +71,22 @@ def maybe_evaluate_expr(
 
 
 def parse_into_exprs(
-    implementation: str,
     *exprs: IntoCompliantExpr,
-    backend_version: tuple[int, ...],
+    namespace: Any,
     **named_exprs: IntoCompliantExpr,
 ) -> list[CompliantExpr]:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
     out = [
         parse_into_expr(
-            into_expr, implementation=implementation, backend_version=backend_version
+            into_expr, namespace=namespace
         )
         for into_expr in flatten(exprs)
     ]
     for name, expr in named_exprs.items():
         out.append(
             parse_into_expr(
-                expr, implementation=implementation, backend_version=backend_version
+                expr, namespace=namespace
             ).alias(name)
         )
     return out
@@ -99,8 +95,7 @@ def parse_into_exprs(
 def parse_into_expr(
     into_expr: IntoCompliantExpr,
     *,
-    implementation: str,
-    backend_version: tuple[int, ...],
+    namespace: Any,
 ) -> CompliantExpr:
     """Parse `into_expr` as an expression.
 
@@ -113,32 +108,19 @@ def parse_into_expr(
     - if it's a string, then convert it to an expression
     - else, raise
     """
-    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.series import ArrowSeries
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
 
-    if implementation == "arrow":
-        plx: ArrowNamespace | PandasNamespace = ArrowNamespace(
-            backend_version=backend_version
-        )
-    else:
-        plx = PandasNamespace(
-            implementation=implementation, backend_version=backend_version
-        )
-    if isinstance(into_expr, (PandasExpr, ArrowExpr)):
+    if hasattr(into_expr, '__narwhals_expr__'):
         return into_expr  # type: ignore[return-value]
-    if isinstance(into_expr, (PandasSeries, ArrowSeries)):
-        return plx._create_expr_from_series(into_expr)  # type: ignore[arg-type, return-value]
+    if hasattr(into_expr, '__narwhals_series__'):
+        return namespace._create_expr_from_series(into_expr)  # type: ignore[arg-type, return-value]
     if isinstance(into_expr, str):
-        return plx.col(into_expr)  # type: ignore[return-value]
+        return namespace.col(into_expr)  # type: ignore[return-value]
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
         series = create_native_series(
-            into_expr, implementation=implementation, backend_version=backend_version
+            into_expr, implementation=namespace._implementation, backend_version=namespace._backend_version,
         )
-        return plx._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
+        return namespace._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 

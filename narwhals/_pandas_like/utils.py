@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -15,6 +16,7 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.series import PandasSeries
     from narwhals.dtypes import DType

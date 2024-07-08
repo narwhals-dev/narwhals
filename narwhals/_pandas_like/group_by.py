@@ -40,9 +40,8 @@ class PandasGroupBy:
         **named_aggs: IntoPandasExpr,
     ) -> PandasDataFrame:
         exprs = parse_into_exprs(
-            self._df._implementation,
             *aggs,
-            backend_version=self._df._backend_version,
+            namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
         )
         implementation: str = self._df._implementation

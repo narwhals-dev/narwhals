@@ -197,7 +197,7 @@ class PandasNamespace:
         return reduce(
             lambda x, y: x + y,
             parse_into_exprs(
-                self._implementation, *exprs, backend_version=self._backend_version
+                *exprs, namespace=self,
             ),
         )
 
@@ -206,7 +206,7 @@ class PandasNamespace:
         return reduce(
             lambda x, y: x & y,
             parse_into_exprs(
-                self._implementation, *exprs, backend_version=self._backend_version
+                *exprs, namespace=self
             ),
         )  # pragma: no cover
 
