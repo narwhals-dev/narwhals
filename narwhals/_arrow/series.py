@@ -9,7 +9,6 @@ from narwhals._arrow.namespace import ArrowNamespace
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
-from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 
@@ -46,13 +45,9 @@ class ArrowSeries:
         *,
         backend_version: tuple[int, ...],
     ) -> Self:
+        pa = get_pyarrow()
         return cls(
-            native_series_from_iterable(
-                data,
-                name=name,
-                index=None,
-                implementation="arrow",
-            ),
+            pa.chunked_array([data]),
             name=name,
             backend_version=backend_version,
         )
