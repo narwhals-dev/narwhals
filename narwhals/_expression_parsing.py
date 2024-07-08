@@ -1,6 +1,9 @@
 # Utilities for expression parsing
 # Useful for backends which don't have any concept of expressions, such
 # and pandas or PyArrow.
+
+# The type annotations can definitely be improved here, there quite a few
+# internal type: ignores. But, the signatures should be correct.
 from __future__ import annotations
 
 from copy import copy
@@ -8,22 +11,25 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
 from typing import Union
+from typing import cast
 from typing import overload
 
-from narwhals._pandas_like.utils import create_native_series
 from narwhals.dependencies import get_numpy
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.expr import PandasExpr
+    from narwhals._pandas_like.namespace import PandasNamespace
     from narwhals._pandas_like.series import PandasSeries
     from narwhals._pandas_like.typing import IntoPandasExpr
 
+    CompliantNamespace = Union[PandasNamespace, ArrowNamespace]
     CompliantExpr = Union[PandasExpr, ArrowExpr]
     IntoCompliantExpr = Union[IntoPandasExpr, IntoArrowExpr]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
@@ -33,7 +39,7 @@ if TYPE_CHECKING:
     ListOfCompliantExpr = Union[list[PandasExpr], list[ArrowExpr]]
     CompliantDataFrame = Union[PandasDataFrame, ArrowDataFrame]
 
-T = TypeVar("T")
+    T = TypeVar("T")
 
 
 def evaluate_into_expr(
@@ -84,17 +90,18 @@ def evaluate_into_exprs(
 
 def maybe_evaluate_expr(
     df: CompliantDataFrame, expr: CompliantExpr | T
-) -> list[CompliantSeries] | T:
+) -> ListOfCompliantSeries | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
     if hasattr(expr, "__narwhals_expr__"):
-        return expr._call(df)  # type: ignore[union-attr, return-value, arg-type]
+        expr = cast(CompliantExpr, expr)
+        return expr._call(df)  # type: ignore[arg-type]
     return expr
 
 
 @overload
-def parse_into_exprs(  # type: ignore[overload-overlap]
+def parse_into_exprs(
     *exprs: IntoPandasExpr,
-    namespace: Any,
+    namespace: PandasNamespace,
     **named_exprs: IntoPandasExpr,
 ) -> list[PandasExpr]: ...
 
@@ -102,16 +109,16 @@ def parse_into_exprs(  # type: ignore[overload-overlap]
 @overload
 def parse_into_exprs(
     *exprs: IntoArrowExpr,
-    namespace: Any,
+    namespace: ArrowNamespace,
     **named_exprs: IntoArrowExpr,
 ) -> list[ArrowExpr]: ...
 
 
-def parse_into_exprs(  # type: ignore[misc]
+def parse_into_exprs(
     *exprs: IntoCompliantExpr,
-    namespace: Any,
+    namespace: CompliantNamespace,
     **named_exprs: IntoCompliantExpr,
-) -> ListOfCompliantSeries:
+) -> ListOfCompliantExpr:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
     out = [
@@ -125,7 +132,7 @@ def parse_into_exprs(  # type: ignore[misc]
 def parse_into_expr(
     into_expr: IntoCompliantExpr,
     *,
-    namespace: Any,
+    namespace: CompliantNamespace,
 ) -> CompliantExpr:
     """Parse `into_expr` as an expression.
 
@@ -142,16 +149,12 @@ def parse_into_expr(
     if hasattr(into_expr, "__narwhals_expr__"):
         return into_expr  # type: ignore[return-value]
     if hasattr(into_expr, "__narwhals_series__"):
-        return namespace._create_expr_from_series(into_expr)  # type: ignore[no-any-return]
+        return namespace._create_expr_from_series(into_expr)  # type: ignore[arg-type]
     if isinstance(into_expr, str):
-        return namespace.col(into_expr)  # type: ignore[no-any-return]
+        return namespace.col(into_expr)
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        series = create_native_series(
-            into_expr,
-            implementation=namespace._implementation,
-            backend_version=namespace._backend_version,
-        )
-        return namespace._create_expr_from_series(series)  # type: ignore[no-any-return]
+        series = namespace._create_native_series(into_expr)
+        return namespace._create_expr_from_series(series)
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -227,7 +230,7 @@ def reuse_series_implementation(
 
 
 def reuse_series_namespace_implementation(
-    expr: CompliantExprT, namespace: str, attr: str, *args: Any, **kwargs: Any
+    expr: CompliantExprT, series_namespace: str, attr: str, *args: Any, **kwargs: Any
 ) -> CompliantExprT:
     """Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
     of `Expr.foo`.
@@ -235,11 +238,11 @@ def reuse_series_namespace_implementation(
     plx = expr.__narwhals_namespace__()
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         lambda df: [
-            getattr(getattr(series, namespace), attr)(*args, **kwargs)
+            getattr(getattr(series, series_namespace), attr)(*args, **kwargs)
             for series in expr._call(df)  # type: ignore[arg-type]
         ],
         depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{namespace}.{attr}",
+        function_name=f"{expr._function_name}->{series_namespace}.{attr}",
         root_names=expr._root_names,
         output_names=expr._output_names,
     )
