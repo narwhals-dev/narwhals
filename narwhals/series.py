@@ -2190,6 +2190,12 @@ class SeriesStringNamespace:
         """
         return self._series._from_series(self._series._series.str.slice(-n))
 
+    def to_uppercase(self) -> Series:
+        return self._series._from_series(self._series._series.str.to_uppercase())
+
+    def to_lowercase(self) -> Series:
+        return self._series._from_series(self._series._series.str.to_lowercase())
+
 
 class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:

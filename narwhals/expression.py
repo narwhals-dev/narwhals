@@ -2081,6 +2081,12 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)
         )
 
+    def to_uppercase(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_uppercase())
+
+    def to_lowercase(self) -> Expr:
+        return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_lowercase())
+
 
 class ExprDateTimeNamespace:
     def __init__(self, expr: Expr) -> None:

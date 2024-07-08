@@ -385,6 +385,20 @@ class PandasExprStringNamespace:
             format,
         )
 
+    def to_uppercase(self) -> PandasExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_uppercase",
+        )
+
+    def to_lowercase(self) -> PandasExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_lowercase",
+        )
+
 
 class PandasExprDateTimeNamespace:
     def __init__(self, expr: PandasExpr) -> None:

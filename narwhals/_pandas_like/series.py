@@ -622,6 +622,16 @@ class PandasSeriesStringNamespace:
             )
         )
 
+    def to_uppercase(self) -> PandasSeries:
+        return self._series._from_native_series(
+            self._series._native_series.str.upper(),
+        )
+
+    def to_lowercase(self) -> PandasSeries:
+        return self._series._from_native_series(
+            self._series._native_series.str.lower(),
+        )
+
 
 class PandasSeriesDateTimeNamespace:
     def __init__(self, series: PandasSeries) -> None:
