@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_pyarrow_compute
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -657,31 +658,30 @@ class PandasSeriesDateTimeNamespace:
         )
 
     def millisecond(self) -> PandasSeries:
-        if "pyarrow" in str(self._series._native_series.dtype):
-            msg = ".dt.millisecond not implemented for pyarrow-backed pandas"
-            raise NotImplementedError(msg)
-        return self._series._from_native_series(
-            self._series._native_series.dt.microsecond // 1000,
-        )
+        return self.microsecond() // 1000
 
     def microsecond(self) -> PandasSeries:
-        if "pyarrow" in str(self._series._native_series.dtype):
-            msg = ".dt.microsecond not implemented for pyarrow-backed pandas"
-            raise NotImplementedError(msg)
+        if self._series._backend_version < (3, 0, 0) and "pyarrow" in str(
+            self._series._native_series.dtype
+        ):
+            # crazy workaround for https://github.com/pandas-dev/pandas/issues/59154
+            pc = get_pyarrow_compute()
+            native_series = self._series._native_series
+            arr = native_series.array._pa_array
+            result_arr = pc.add(
+                pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr)
+            )
+            result = native_series.__class__(
+                native_series.array.__class__(result_arr), name=native_series.name
+            )
+            return self._series._from_native_series(result)
+
         return self._series._from_native_series(
             self._series._native_series.dt.microsecond
         )
 
     def nanosecond(self) -> PandasSeries:
-        if "pyarrow" in str(self._series._native_series.dtype):
-            msg = ".dt.nanosecond not implemented for pyarrow-backed pandas"
-            raise NotImplementedError(msg)
-        return self._series._from_native_series(
-            (
-                (self._series._native_series.dt.microsecond * 1_000)
-                + self._series._native_series.dt.nanosecond
-            ),
-        )
+        return self.microsecond() * 1_000 + self._series._native_series.dt.nanosecond  # type: ignore[no-any-return]
 
     def ordinal_day(self) -> PandasSeries:
         ser = self._series._native_series
