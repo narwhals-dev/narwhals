@@ -141,9 +141,3 @@ def validate_dataframe_comparand(other: Any) -> Any:
             raise NotImplementedError(msg)
         return other._native_series
     raise AssertionError("Please report a bug")
-
-
-def item(backend_version: tuple[int, ...], obj: Any) -> Any:
-    if backend_version > (13,):
-        return obj
-    return obj.as_py()  # pragma: no cover

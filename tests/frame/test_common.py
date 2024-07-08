@@ -265,9 +265,6 @@ def test_convert_pandas(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_polars, df_pandas, df_mpd, df_pandas_nullable, df_pandas_pyarrow]
 )
-@pytest.mark.filterwarnings(
-    r"ignore:np\.find_common_type is deprecated\.:DeprecationWarning"
-)
 def test_convert_numpy(df_raw: Any) -> None:
     result = nw.from_native(df_raw, eager_only=True).to_numpy()
     expected = np.array([[1, 3, 2], [4, 4, 6], [7.0, 8, 9]]).T
