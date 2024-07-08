@@ -667,7 +667,7 @@ class PandasSeriesDateTimeNamespace:
             # crazy workaround for https://github.com/pandas-dev/pandas/issues/59154
             pc = get_pyarrow_compute()
             native_series = self._series._native_series
-            arr = native_series.array._pa_array
+            arr = native_series.array.__arrow_array__()
             result_arr = pc.add(
                 pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr)
             )
