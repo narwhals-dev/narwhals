@@ -6,6 +6,7 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import reverse_translate_dtype
@@ -74,7 +75,7 @@ class PandasSeries:
         self,
         native_series: Any,
         *,
-        implementation: str,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
     ) -> None:
         self._name = native_series.name
@@ -85,7 +86,11 @@ class PandasSeries:
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary
         # copies by using `copy=False` sometimes.
-        if self._implementation == "pandas" and self._backend_version < (3, 0, 0):
+        if self._implementation is Implementation.PANDAS and self._backend_version < (
+            3,
+            0,
+            0,
+        ):
             self._use_copy_false = True
         else:
             self._use_copy_false = False
@@ -96,11 +101,11 @@ class PandasSeries:
         return PandasNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
-        if self._implementation == "pandas":
+        if self._implementation is Implementation.PANDAS:
             return get_pandas()
-        if self._implementation == "modin":  # pragma: no cover
+        if self._implementation is Implementation.MODIN:  # pragma: no cover
             return get_modin()
-        if self._implementation == "cudf":  # pragma: no cover
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
             return get_cudf()
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
@@ -132,7 +137,7 @@ class PandasSeries:
         name: str,
         index: Any,
         *,
-        implementation: str,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
     ) -> Self:
         return cls(
@@ -465,7 +470,7 @@ class PandasSeries:
             has_missing
             and str(self._native_series.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING
         ):
-            if self._implementation == "pandas" and self._backend_version < (
+            if self._implementation is Implementation.PANDAS and self._backend_version < (
                 1,
             ):  # pragma: no cover
                 kwargs = {}
@@ -489,11 +494,11 @@ class PandasSeries:
         return self._native_series.to_numpy(dtype=dtype, copy=copy)
 
     def to_pandas(self) -> Any:
-        if self._implementation == "pandas":
+        if self._implementation is Implementation.PANDAS:
             return self._native_series
-        elif self._implementation == "cudf":  # pragma: no cover
+        elif self._implementation is Implementation.CUDF:  # pragma: no cover
             return self._native_series.to_pandas()
-        elif self._implementation == "modin":  # pragma: no cover
+        elif self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._native_series._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)

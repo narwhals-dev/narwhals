@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import secrets
+from enum import Enum
+from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -19,6 +21,12 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
     ExprT = TypeVar("ExprT", bound=PandasExpr)
+
+
+class Implementation(Enum):
+    PANDAS = auto()
+    MODIN = auto()
+    CUDF = auto()
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:
@@ -86,18 +94,18 @@ def create_native_series(
     iterable: Any,
     index: Any = None,
     *,
-    implementation: str,
+    implementation: Implementation,
     backend_version: tuple[int, ...],
 ) -> PandasSeries:
     from narwhals._pandas_like.series import PandasSeries
 
-    if implementation == "pandas":
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
         series = pd.Series(iterable, index=index, name="")
-    elif implementation == "modin":
+    elif implementation is Implementation.MODIN:
         mpd = get_modin()
         series = mpd.Series(iterable, index=index, name="")
-    elif implementation == "cudf":
+    elif implementation is Implementation.CUDF:
         cudf = get_cudf()
         series = cudf.Series(iterable, index=index, name="")
     return PandasSeries(
@@ -123,24 +131,24 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
 
 
 def horizontal_concat(
-    dfs: list[Any], *, implementation: str, backend_version: tuple[int, ...]
+    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
 ) -> Any:
     """
     Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
-    if implementation == "pandas":
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
 
         if backend_version < (3,):
             return pd.concat(dfs, axis=1, copy=False)
         return pd.concat(dfs, axis=1)  # pragma: no cover
-    if implementation == "cudf":  # pragma: no cover
+    if implementation is Implementation.CUDF:  # pragma: no cover
         cudf = get_cudf()
 
         return cudf.concat(dfs, axis=1)
-    if implementation == "modin":  # pragma: no cover
+    if implementation is Implementation.MODIN:  # pragma: no cover
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=1)
@@ -149,7 +157,7 @@ def horizontal_concat(
 
 
 def vertical_concat(
-    dfs: list[Any], *, implementation: str, backend_version: tuple[int, ...]
+    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
 ) -> Any:
     """
     Concatenate (native) DataFrames vertically.
@@ -165,17 +173,17 @@ def vertical_concat(
         if cols_current != cols:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
-    if implementation == "pandas":
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
 
         if backend_version < (3,):
             return pd.concat(dfs, axis=0, copy=False)
         return pd.concat(dfs, axis=0)  # pragma: no cover
-    if implementation == "cudf":  # pragma: no cover
+    if implementation is Implementation.CUDF:  # pragma: no cover
         cudf = get_cudf()
 
         return cudf.concat(dfs, axis=0)
-    if implementation == "modin":  # pragma: no cover
+    if implementation is Implementation.MODIN:  # pragma: no cover
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=0)
@@ -187,18 +195,18 @@ def native_series_from_iterable(
     data: Iterable[Any],
     name: str,
     index: Any,
-    implementation: str,
+    implementation: Implementation,
 ) -> Any:
     """Return native series."""
-    if implementation == "pandas":
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
 
         return pd.Series(data, name=name, index=index, copy=False)
-    if implementation == "cudf":  # pragma: no cover
+    if implementation is Implementation.CUDF:  # pragma: no cover
         cudf = get_cudf()
 
         return cudf.Series(data, name=name, index=index)
-    if implementation == "modin":  # pragma: no cover
+    if implementation is Implementation.MODIN:  # pragma: no cover
         mpd = get_modin()
 
         return mpd.Series(data, name=name, index=index)
@@ -207,13 +215,22 @@ def native_series_from_iterable(
 
 
 def set_axis(
-    obj: T, index: Any, *, implementation: str, backend_version: tuple[int, ...]
+    obj: T,
+    index: Any,
+    *,
+    implementation: Implementation,
+    backend_version: tuple[int, ...],
 ) -> T:
-    if implementation == "pandas" and backend_version < (1,):  # pragma: no cover
+    if implementation is Implementation.PANDAS and backend_version < (
+        1,
+    ):  # pragma: no cover
         kwargs = {"inplace": False}
     else:
         kwargs = {}
-    if implementation == "pandas" and backend_version >= (1, 5):  # pragma: no cover
+    if implementation is Implementation.PANDAS and backend_version >= (
+        1,
+        5,
+    ):  # pragma: no cover
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
@@ -292,8 +309,8 @@ def translate_dtype(column: Any) -> DType:
     return dtypes.Unknown()
 
 
-def get_dtype_backend(dtype: Any, implementation: str) -> str:
-    if implementation == "pandas":
+def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
@@ -310,7 +327,7 @@ def get_dtype_backend(dtype: Any, implementation: str) -> str:
 
 
 def reverse_translate_dtype(  # noqa: PLR0915
-    dtype: DType | type[DType], starting_dtype: Any, implementation: str
+    dtype: DType | type[DType], starting_dtype: Any, implementation: Implementation
 ) -> Any:
     from narwhals import dtypes
 
@@ -441,12 +458,12 @@ def validate_indices(series: list[PandasSeries]) -> list[Any]:
     return reindexed
 
 
-def to_datetime(implementation: str) -> Any:
-    if implementation == "pandas":
+def to_datetime(implementation: Implementation) -> Any:
+    if implementation is Implementation.PANDAS:
         return get_pandas().to_datetime
-    if implementation == "modin":
+    if implementation is Implementation.MODIN:
         return get_modin().to_datetime
-    if implementation == "cudf":
+    if implementation is Implementation.CUDF:
         return get_cudf().to_datetime
     raise AssertionError
 

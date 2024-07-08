@@ -11,6 +11,7 @@ from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasExpr
+from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import generate_unique_token
 from narwhals._pandas_like.utils import horizontal_concat
@@ -39,7 +40,7 @@ class PandasDataFrame:
         self,
         native_dataframe: Any,
         *,
-        implementation: str,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
     ) -> None:
         self._validate_columns(native_dataframe.columns)
@@ -59,11 +60,11 @@ class PandasDataFrame:
         return PandasNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
-        if self._implementation == "pandas":
+        if self._implementation is Implementation.PANDAS:
             return get_pandas()
-        if self._implementation == "modin":  # pragma: no cover
+        if self._implementation is Implementation.MODIN:  # pragma: no cover
             return get_modin()
-        if self._implementation == "cudf":  # pragma: no cover
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
             return get_cudf()
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
@@ -304,8 +305,12 @@ class PandasDataFrame:
             right_on = [right_on]
 
         if how == "cross":
-            if self._implementation in {"modin", "cudf"} or (
-                self._implementation == "pandas" and self._backend_version < (1, 4)
+            if (
+                self._implementation is Implementation.MODIN
+                or self._implementation is Implementation.CUDF
+            ) or (
+                self._implementation is Implementation.PANDAS
+                and self._backend_version < (1, 4)
             ):
                 key_token = generate_unique_token(
                     n_bytes=8, columns=[*self.columns, *other.columns]
@@ -416,9 +421,9 @@ class PandasDataFrame:
         return self._native_dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
-        if self._implementation == "pandas":
+        if self._implementation is Implementation.PANDAS:
             return self._native_dataframe
-        if self._implementation == "modin":  # pragma: no cover
+        if self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._native_dataframe._to_pandas()
         return self._native_dataframe.to_pandas()  # pragma: no cover
 

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.utils import Implementation
 
 
 class PandasExpr:
@@ -25,7 +26,7 @@ class PandasExpr:
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-        implementation: str,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
     ) -> None:
         self._call = call
@@ -57,7 +58,7 @@ class PandasExpr:
     def from_column_names(
         cls: type[Self],
         *column_names: str,
-        implementation: str,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
     ) -> Self:
         def func(df: PandasDataFrame) -> list[PandasSeries]:
