@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Sequence
 
 from narwhals._arrow.namespace import ArrowNamespace
 from narwhals._arrow.utils import item
@@ -93,8 +94,10 @@ class ArrowSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __getitem__(self, idx: int) -> Any:
-        return self._native_series[idx]
+    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any:
+        if isinstance(idx, int):
+            return self._native_series[idx]
+        return self._from_native_series(self._native_series[idx])
 
     def to_list(self) -> Any:
         return self._native_series.to_pylist()

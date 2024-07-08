@@ -107,8 +107,10 @@ class PandasSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __getitem__(self, idx: int) -> Any:
-        return self._native_series.iloc[idx]
+    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any:
+        if isinstance(idx, int):
+            return self._native_series.iloc[idx]
+        return self._from_native_series(self._native_series.iloc[idx])
 
     def _rename(self, series: Any, name: str) -> Any:
         if self._use_copy_false:

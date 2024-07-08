@@ -105,15 +105,7 @@ class PandasDataFrame:
                 backend_version=self._backend_version,
             )
 
-        elif isinstance(item, (slice, Sequence)):
-            from narwhals._pandas_like.dataframe import PandasDataFrame
-
-            return PandasDataFrame(
-                self._native_dataframe.iloc[item],
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
-        elif (
+        elif isinstance(item, (slice, Sequence)) or (
             (np := get_numpy()) is not None
             and isinstance(item, np.ndarray)
             and item.ndim == 1
@@ -395,9 +387,18 @@ class PandasDataFrame:
         return self._native_dataframe.shape  # type: ignore[no-any-return]
 
     def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
+        from narwhals._pandas_like.series import PandasSeries
+
         if as_series:
             # todo: should this return narwhals series?
-            return {col: self._native_dataframe.loc[:, col] for col in self.columns}
+            return {
+                col: PandasSeries(
+                    self._native_dataframe.loc[:, col],
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                )
+                for col in self.columns
+            }
         return self._native_dataframe.to_dict(orient="list")  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
