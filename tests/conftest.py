@@ -105,8 +105,14 @@ def modin_series_constructor(obj: Any) -> Any:  # pragma: no cover
     return mpd.Series(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
+def dask_series_constructor(obj: Any) -> Any:  # pragma: no cover
+    dd = get_dask()
+    return dd.Series(obj)
+
 def polars_series_constructor(obj: Any) -> Any:
     return pl.Series(obj)
+
+
 
 
 if parse_version(pd.__version__) >= parse_version("2.0.0"):
@@ -120,6 +126,8 @@ else:  # pragma: no cover
 params_series.append(polars_series_constructor)
 if get_modin() is not None:  # pragma: no cover
     params_series.append(modin_series_constructor)
+if get_dask() is not None:  # pragma: no cover
+    params_series.append(dask_series_constructor)
 
 
 @pytest.fixture(params=params_series)

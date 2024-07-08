@@ -166,6 +166,11 @@ class PandasSeries:
         return self._from_series(ser.astype(dtype))
 
     def item(self: Self, index: int | None = None) -> Any:
+        if self._implementation == "dask":
+            msg = (
+                "Positional indexing is not available in Dask"
+            )
+            raise NotImplementedError(msg)
         # cuDF doesn't have Series.item().
         if index is None:
             if len(self) != 1:
@@ -480,11 +485,19 @@ class PandasSeries:
             return self._series.to_pandas()
         elif self._implementation == "modin":  # pragma: no cover
             return self._series._to_pandas()
+        elif self._implementation == "dask":  # pragma: no cover
+            return self._series.compute()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
+        if self._implementation == "dask":
+            msg = (
+                "Checking for duplication requires 'duplicated' method "
+                "which is not currently implemented in dask"
+            )
+            raise NotImplementedError(msg)
         return self._from_series(self._series.duplicated(keep=False))
 
     def is_empty(self: Self) -> bool:
@@ -497,9 +510,13 @@ class PandasSeries:
         return self._series.isnull().sum()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
+        if self._implementation == "dask":
+            raise NotImplementedError("Not currently implemented in dask")
         return self._from_series(~self._series.duplicated(keep="first"))
 
     def is_last_distinct(self: Self) -> Self:
+        if self._implementation == "dask":
+            raise NotImplementedError("Not currently implemented in dask")
         return self._from_series(~self._series.duplicated(keep="last"))
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
@@ -532,6 +549,16 @@ class PandasSeries:
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Any:
+        if self._implementation == "dask":
+            if interpolation == "linear":
+                return self._series.quantile(q=quantile)
+            message = (
+                "Dask performs approximate quantile calculations "
+
+                "and does not support specific interpolations methods. "
+                "Interpolation keywords other than 'linear' are not supported"
+            )
+            raise NotImplementedError(message)
         return self._series.quantile(q=quantile, interpolation=interpolation)
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasSeries:

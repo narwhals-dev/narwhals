@@ -271,9 +271,15 @@ class PandasDataFrame:
 
     # --- convert ---
     def collect(self) -> PandasDataFrame:
+        if self._implementation == "dask":
+            return_df = self._dataframe.compute()
+            return_implementation = "pandas"
+        else:
+            return_df = self._dataframe
+            return_implementation = self._implementation
         return PandasDataFrame(
-            self._dataframe,
-            implementation=self._implementation,
+            return_df,
+            implementation=return_implementation,
         )
 
     # --- actions ---

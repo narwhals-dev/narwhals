@@ -6,6 +6,7 @@ from typing import Literal
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -61,6 +62,11 @@ class Series:
             series, pd.Series
         ):  # pragma: no cover
             self._series = PandasSeries(series, implementation="cudf")
+            return
+        if (dd := get_dask()) is not None and isinstance(
+            series, dd.Series
+        ):  #pragma: no cover
+            self._series = PandasSeries(series, implementation="dask")
             return
         if (pa := get_pyarrow()) is not None and isinstance(
             series, pa.ChunkedArray
