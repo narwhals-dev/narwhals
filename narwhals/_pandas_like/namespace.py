@@ -7,12 +7,13 @@ from typing import Callable
 from typing import Iterable
 
 from narwhals import dtypes
+from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals._pandas_like.expr import PandasExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasSeries
+from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import parse_into_exprs
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten
 
@@ -89,6 +90,13 @@ class PandasNamespace:
             function_name="series",
             root_names=None,
             output_names=None,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+
+    def _create_native_series(self, value: Any) -> Any:
+        return create_native_series(
+            value,
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
@@ -191,25 +199,20 @@ class PandasNamespace:
         )
 
     # --- horizontal ---
-    def sum_horizontal(
-        self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
-    ) -> PandasExpr:
+    def sum_horizontal(self, *exprs: IntoPandasExpr) -> PandasExpr:
         return reduce(
             lambda x, y: x + y,
             parse_into_exprs(
-                self._implementation, *exprs, backend_version=self._backend_version
+                *exprs,
+                namespace=self,
             ),
         )
 
-    def all_horizontal(
-        self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
-    ) -> PandasExpr:
+    def all_horizontal(self, *exprs: IntoPandasExpr) -> PandasExpr:
         # Why is this showing up as uncovered? It defo is?
         return reduce(
             lambda x, y: x & y,
-            parse_into_exprs(
-                self._implementation, *exprs, backend_version=self._backend_version
-            ),
+            parse_into_exprs(*exprs, namespace=self),
         )  # pragma: no cover
 
     def concat(

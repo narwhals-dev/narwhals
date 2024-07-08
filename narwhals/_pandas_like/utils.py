@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import secrets
-from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -9,24 +8,17 @@ from typing import TypeVar
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
-from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T")
 
 if TYPE_CHECKING:
-    from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.expr import PandasExpr
     from narwhals._pandas_like.series import PandasSeries
     from narwhals.dtypes import DType
 
     ExprT = TypeVar("ExprT", bound=PandasExpr)
-
-    from narwhals._arrow.typing import IntoArrowExpr
-    from narwhals._pandas_like.typing import IntoPandasExpr
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:
@@ -90,86 +82,6 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     raise AssertionError("Please report a bug")
 
 
-def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
-    """Evaluate `expr` if it's an expression, otherwise return it as is."""
-    from narwhals._arrow.expr import ArrowExpr
-    from narwhals._pandas_like.expr import PandasExpr
-
-    if isinstance(expr, (PandasExpr, ArrowExpr)):
-        return expr._call(df)  # type: ignore[arg-type]
-    return expr
-
-
-def parse_into_exprs(
-    implementation: str,
-    *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
-    backend_version: tuple[int, ...],
-    **named_exprs: IntoPandasExpr,
-) -> list[PandasExpr]:
-    """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
-    more details."""
-    out = [
-        parse_into_expr(
-            into_expr, implementation=implementation, backend_version=backend_version
-        )
-        for into_expr in flatten(exprs)
-    ]
-    for name, expr in named_exprs.items():
-        out.append(
-            parse_into_expr(
-                expr, implementation=implementation, backend_version=backend_version
-            ).alias(name)
-        )
-    return out
-
-
-def parse_into_expr(
-    into_expr: IntoPandasExpr | IntoArrowExpr,
-    *,
-    implementation: str,
-    backend_version: tuple[int, ...],
-) -> PandasExpr:
-    """Parse `into_expr` as an expression.
-
-    For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
-    We do the same in Narwhals:
-
-    - if `into_expr` is already an expression, just return it
-    - if it's a Series, then convert it to an expression
-    - if it's a numpy array, then convert it to a Series and then to an expression
-    - if it's a string, then convert it to an expression
-    - else, raise
-    """
-    from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.series import ArrowSeries
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
-
-    if implementation == "arrow":
-        plx: ArrowNamespace | PandasNamespace = ArrowNamespace(
-            backend_version=backend_version
-        )
-    else:
-        plx = PandasNamespace(
-            implementation=implementation, backend_version=backend_version
-        )
-    if isinstance(into_expr, (PandasExpr, ArrowExpr)):
-        return into_expr  # type: ignore[return-value]
-    if isinstance(into_expr, (PandasSeries, ArrowSeries)):
-        return plx._create_expr_from_series(into_expr)  # type: ignore[arg-type, return-value]
-    if isinstance(into_expr, str):
-        return plx.col(into_expr)  # type: ignore[return-value]
-    if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        series = create_native_series(
-            into_expr, implementation=implementation, backend_version=backend_version
-        )
-        return plx._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
-    msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
-    raise AssertionError(msg)
-
-
 def create_native_series(
     iterable: Any,
     index: Any = None,
@@ -190,126 +102,6 @@ def create_native_series(
         series = cudf.Series(iterable, index=index, name="")
     return PandasSeries(
         series, implementation=implementation, backend_version=backend_version
-    )
-
-
-def evaluate_into_expr(
-    df: PandasDataFrame, into_expr: IntoPandasExpr
-) -> list[PandasSeries]:
-    """
-    Return list of raw columns.
-    """
-    expr = parse_into_expr(
-        into_expr, implementation=df._implementation, backend_version=df._backend_version
-    )
-    return expr._call(df)
-
-
-def evaluate_into_exprs(
-    df: PandasDataFrame,
-    *exprs: IntoPandasExpr,
-    **named_exprs: IntoPandasExpr,
-) -> list[PandasSeries]:
-    """Evaluate each expr into Series."""
-    series: list[PandasSeries] = [
-        item
-        for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten(exprs)]
-        for item in sublist
-    ]
-    for name, expr in named_exprs.items():
-        evaluated_expr = evaluate_into_expr(df, expr)
-        if len(evaluated_expr) > 1:
-            msg = "Named expressions must return a single column"  # pragma: no cover
-            raise AssertionError(msg)
-        series.append(evaluated_expr[0].alias(name))
-    return series
-
-
-def reuse_series_implementation(
-    expr: ExprT, attr: str, *args: Any, returns_scalar: bool = False, **kwargs: Any
-) -> ExprT:
-    """Reuse Series implementation for expression.
-
-    If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
-    leverage this method to do that for us.
-
-    Arguments
-        expr: expression object.
-        attr: name of method.
-        returns_scalar: whether the Series version returns a scalar. In this case,
-            the expression version should return a 1-row Series.
-        args, kwargs: arguments and keyword arguments to pass to function.
-    """
-    plx = expr.__narwhals_namespace__()
-
-    def func(df: PandasDataFrame) -> list[PandasSeries]:
-        out: list[PandasSeries] = []
-        for column in expr._call(df):
-            _out = getattr(column, attr)(
-                *[maybe_evaluate_expr(df, arg) for arg in args],
-                **{
-                    arg_name: maybe_evaluate_expr(df, arg_value)
-                    for arg_name, arg_value in kwargs.items()
-                },
-            )
-            if returns_scalar:
-                out.append(plx._create_series_from_scalar(_out, column))
-            else:
-                out.append(_out)
-        if expr._output_names is not None:  # safety check
-            assert [s.name for s in out] == expr._output_names
-        return out
-
-    # Try tracking root and output names by combining them from all
-    # expressions appearing in args and kwargs. If any anonymous
-    # expression appears (e.g. nw.all()), then give up on tracking root names
-    # and just set it to None.
-    root_names = copy(expr._root_names)
-    output_names = expr._output_names
-    for arg in list(args) + list(kwargs.values()):
-        if root_names is not None and isinstance(arg, expr.__class__):
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
-            else:
-                root_names = None
-                output_names = None
-                break
-        elif root_names is None:
-            output_names = None
-            break
-
-    assert (output_names is None and root_names is None) or (
-        output_names is not None and root_names is not None
-    )  # safety check
-
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
-        func,
-        depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{attr}",
-        root_names=root_names,
-        output_names=output_names,
-    )
-
-
-def reuse_series_namespace_implementation(
-    expr: ExprT, namespace: str, attr: str, *args: Any, **kwargs: Any
-) -> PandasExpr:
-    """Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
-    of `Expr.foo`.
-    """
-    from narwhals._pandas_like.expr import PandasExpr
-
-    return PandasExpr(
-        lambda df: [
-            getattr(getattr(series, namespace), attr)(*args, **kwargs)
-            for series in expr._call(df)
-        ],
-        depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{namespace}.{attr}",
-        root_names=expr._root_names,
-        output_names=expr._output_names,
-        implementation=expr._implementation,
-        backend_version=expr._backend_version,
     )
 
 
@@ -410,9 +202,6 @@ def native_series_from_iterable(
         mpd = get_modin()
 
         return mpd.Series(data, name=name, index=index)
-    if implementation == "arrow":
-        pa = get_pyarrow()
-        return pa.chunked_array([data])
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
