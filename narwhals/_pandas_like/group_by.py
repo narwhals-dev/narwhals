@@ -6,7 +6,6 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Iterable
 from typing import Iterator
 
 from narwhals._expression_parsing import parse_into_exprs
@@ -36,7 +35,7 @@ class PandasGroupBy:
 
     def agg(
         self,
-        *aggs: IntoPandasExpr | Iterable[IntoPandasExpr],
+        *aggs: IntoPandasExpr,
         **named_aggs: IntoPandasExpr,
     ) -> PandasDataFrame:
         exprs = parse_into_exprs(

@@ -117,7 +117,7 @@ class ArrowDataFrame:
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)  # type: ignore[arg-type]
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_dataframe(
@@ -133,7 +133,7 @@ class ArrowDataFrame:
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
-        new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)  # type: ignore[arg-type]
+        new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
         new_column_name_to_new_column_map = {s.name: s for s in new_columns}
         to_concat = []
         output_names = []

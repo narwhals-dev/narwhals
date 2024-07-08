@@ -192,7 +192,7 @@ class PandasDataFrame:
 
     def filter(
         self,
-        *predicates: IntoPandasExpr | Iterable[IntoPandasExpr],
+        *predicates: IntoPandasExpr,
     ) -> Self:
         from narwhals._pandas_like.namespace import PandasNamespace
 

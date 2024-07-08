@@ -191,13 +191,12 @@ class PandasNamespace:
         )
 
     # --- horizontal ---
-    def sum_horizontal(
-        self, *exprs: IntoPandasExpr | Iterable[IntoPandasExpr]
-    ) -> PandasExpr:
+    def sum_horizontal(self, *exprs: IntoPandasExpr) -> PandasExpr:
         return reduce(
             lambda x, y: x + y,
             parse_into_exprs(
-                *exprs, namespace=self,
+                *exprs,
+                namespace=self,
             ),
         )
 
@@ -205,9 +204,7 @@ class PandasNamespace:
         # Why is this showing up as uncovered? It defo is?
         return reduce(
             lambda x, y: x & y,
-            parse_into_exprs(
-                *exprs, namespace=self
-            ),
+            parse_into_exprs(*exprs, namespace=self),
         )  # pragma: no cover
 
     def concat(
