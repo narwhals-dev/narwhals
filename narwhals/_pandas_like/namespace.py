@@ -19,6 +19,7 @@ from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasExpr
+    from narwhals._pandas_like.utils import Implementation
 
 
 class PandasNamespace:
@@ -49,7 +50,9 @@ class PandasNamespace:
         )
 
     # --- not in spec ---
-    def __init__(self, implementation: str, backend_version: tuple[int, ...]) -> None:
+    def __init__(
+        self, implementation: Implementation, backend_version: tuple[int, ...]
+    ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
 

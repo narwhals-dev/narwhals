@@ -9,6 +9,7 @@ from typing import Callable
 from typing import Iterator
 
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import is_simple_aggregation
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.utils import remove_prefix
@@ -43,7 +44,7 @@ class PandasGroupBy:
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
         )
-        implementation: str = self._df._implementation
+        implementation: Implementation = self._df._implementation
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:
@@ -189,7 +190,7 @@ def agg_pandas(  # noqa: PLR0913
             implementation=implementation,
         )
 
-    if implementation == "pandas" and backend_version >= (2, 2):
+    if implementation is Implementation.PANDAS and backend_version >= (2, 2):
         result_complex = grouped.apply(func, include_groups=False)
     else:  # pragma: no cover
         result_complex = grouped.apply(func)
