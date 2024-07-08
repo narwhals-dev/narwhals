@@ -89,6 +89,7 @@ filterwarnings = [
   'ignore:The copy keyword is deprecated and will be removed',
   'ignore:make_block is deprecated and will be removed',
   'ignore:np.find_common_type is deprecated',
+  'ignore:is_sparse is deprecated and will be removed',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
