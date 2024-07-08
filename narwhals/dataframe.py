@@ -14,6 +14,7 @@ from typing import overload
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._pandas_like.dataframe import PandasDataFrame
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
@@ -248,6 +249,10 @@ class DataFrame(BaseFrame[FrameT]):
             df, pa.Table
         ):  # pragma: no cover
             self._dataframe = ArrowDataFrame(df)
+        elif (dd := get_dask()) is not None and isinstance(
+            df, dd.DataFrame
+        ):  # pragma: no cover
+            self._dataframe = PandasDataFrame(df, implementation="dask")
         else:
             msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
             raise TypeError(msg)

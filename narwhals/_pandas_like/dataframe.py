@@ -18,6 +18,7 @@ from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals._pandas_like.utils import validate_indices
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
@@ -64,6 +65,8 @@ class PandasDataFrame:
             return get_modin()
         if self._implementation == "cudf":  # pragma: no cover
             return get_cudf()
+        if self._implementation == "dask":  # pragma: no cover
+            return get_dask()
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -104,7 +107,6 @@ class PandasDataFrame:
 
         elif isinstance(item, (slice, Sequence)):
             from narwhals._pandas_like.dataframe import PandasDataFrame
-
             return PandasDataFrame(
                 self._dataframe.iloc[item], implementation=self._implementation
             )
@@ -397,6 +399,8 @@ class PandasDataFrame:
                 import numpy as np
 
                 return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
+        if self._implementation == "dask":
+            return self._dataframe.compute().to_numpy()
         return self._dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
@@ -404,6 +408,8 @@ class PandasDataFrame:
             return self._dataframe
         if self._implementation == "modin":  # pragma: no cover
             return self._dataframe._to_pandas()
+        if self._implementation == "dask":  # pragma: no cover
+            return self._dataframe.compute()
         return self._dataframe.to_pandas()  # pragma: no cover
 
     def write_parquet(self, file: Any) -> Any:

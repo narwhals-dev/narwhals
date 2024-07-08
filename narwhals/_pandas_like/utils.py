@@ -8,6 +8,7 @@ from typing import Iterable
 from typing import TypeVar
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
@@ -54,7 +55,7 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other.item()
-        if other._series.index is not index:
+        if other._series.index is not index and other._implementation != "dask":
             return set_axis(other._series, index, implementation=other._implementation)
         return other._series
     return other
@@ -75,7 +76,7 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other._series.iloc[0]
-        if other._series.index is not index:
+        if other._series.index is not index and other._implementation != "dask":
             return set_axis(other._series, index, implementation=other._implementation)
         return other._series
     raise AssertionError("Please report a bug")
@@ -314,6 +315,10 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=1)
+    if implementation == "dask":  # pragma: no cover
+        dd = get_dask()
+
+        return dd.concat(dfs, axis=1)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -347,6 +352,10 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=0)
+    if implementation == "dask":  # pragma: no cover
+        dd = get_dask()
+
+        return dd.concat(dfs, axis=0)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -387,6 +396,8 @@ def set_axis(obj: T, index: Any, implementation: str) -> T:
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
+    if implementation == "dask":
+        raise NotImplementedError("figuring this bit out still!")
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
 
 

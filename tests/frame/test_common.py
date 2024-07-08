@@ -18,7 +18,7 @@ from narwhals.functions import _get_sys_info
 from narwhals.functions import show_versions
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
-from tests.utils import maybe_get_modin_df
+from tests.utils import maybe_get_modin_df, maybe_get_dask_df
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -53,6 +53,7 @@ df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9
 df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_mpd = maybe_get_modin_df(df_pandas)
+df_dd = maybe_get_dask_df(df_pandas)
 df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_pa_na = pa.table({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
 
@@ -301,6 +302,7 @@ def test_cross_join_non_pandas() -> None:
         df_lazy,
         df_pandas,
         # df_mpd, (todo: understand the difference between ipython/jupyter and pytest runs)
+        df_dd,
     ],
 )
 @pytest.mark.parametrize(
@@ -318,7 +320,6 @@ def test_anti_join(
     other = df.filter(filter_expr)
     result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
     compare_dicts(result, expected)
-
 
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
@@ -352,7 +353,7 @@ def test_columns(df_raw: Any) -> None:
     assert result == expected
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_dd, df_lazy])
 def test_lazy_instantiation(df_raw: Any) -> None:
     result = nw.from_native(df_raw)
     result_native = nw.to_native(result)
@@ -368,7 +369,7 @@ def test_lazy_instantiation_error(df_raw: Any) -> None:
         _ = nw.DataFrame(df_raw).shape
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd])
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_dd])
 def test_eager_instantiation(df_raw: Any) -> None:
     result = nw.from_native(df_raw, eager_only=True)
     result_native = nw.to_native(result)
@@ -390,7 +391,7 @@ def test_accepted_dataframes() -> None:
         nw.LazyFrame(array)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_pa])
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_dd, df_pa])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("2.0.0"),
@@ -403,7 +404,7 @@ def test_convert_pandas(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize(
-    "df_raw", [df_polars, df_pandas, df_mpd, df_pandas_nullable, df_pandas_pyarrow]
+    "df_raw", [df_polars, df_pandas, df_mpd, df_dd, df_pandas_nullable, df_pandas_pyarrow]
 )
 @pytest.mark.filterwarnings(
     r"ignore:np\.find_common_type is deprecated\.:DeprecationWarning"
@@ -418,7 +419,7 @@ def test_convert_numpy(df_raw: Any) -> None:
     assert result.dtype == "float64"
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_dd, df_lazy])
 def test_expr_binary(df_raw: Any) -> None:
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
@@ -481,7 +482,7 @@ def test_expr_unary(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
+@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_dd, df_lazy])
 def test_expr_transform(df_raw: Any) -> None:
     result = nw.from_native(df_raw).with_columns(
         a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5])
@@ -574,6 +575,7 @@ def test_drop_nulls(df_raw: Any) -> None:
         df_pandas,
         df_polars,
         df_mpd,
+        df_dd,
         df_pa,
     ],
 )

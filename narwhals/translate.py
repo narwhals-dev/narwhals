@@ -9,6 +9,7 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -216,6 +217,7 @@ def from_native(
             - pandas.DataFrame
             - polars.DataFrame
             - polars.LazyFrame
+            - dask.dataframe.DataFrame
             - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
             - pandas.Series
             - polars.Series
@@ -254,6 +256,8 @@ def from_native(
         and isinstance(native_dataframe, mpd.DataFrame)
         or (cudf := get_cudf()) is not None
         and isinstance(native_dataframe, cudf.DataFrame)
+        or (dd := get_dask()) is not None
+        and isinstance(native_dataframe, dd.DataFrame)
     ):
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")

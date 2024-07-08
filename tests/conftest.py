@@ -6,7 +6,7 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
-from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_modin, get_dask
 from narwhals.typing import IntoDataFrame
 from narwhals.utils import parse_version
 
@@ -47,6 +47,10 @@ def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     mpd = get_modin()
     return mpd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
+def dask_contructor(obj: Any) -> IntoDataFrame:
+    dd = get_dask()
+    return dd.DataFrame(obj)  # type: ignore[no-any-return]
+
 
 def polars_constructor(obj: Any) -> IntoDataFrame:
     return pl.DataFrame(obj)
@@ -63,6 +67,8 @@ else:  # pragma: no cover
 params.append(polars_constructor)
 if get_modin() is not None:  # pragma: no cover
     params.append(modin_constructor)
+if get_dask() is not None:
+    params.append(dask_contructor)
 
 
 @pytest.fixture(params=params)

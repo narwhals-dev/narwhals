@@ -13,6 +13,7 @@ from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.utils import parse_version
@@ -106,6 +107,8 @@ class PandasSeries:
             return get_modin()
         if self._implementation == "cudf":  # pragma: no cover
             return get_cudf()
+        if self._implementation == "dask":  # pragma: no cover
+            return get_dask()
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -138,6 +141,8 @@ class PandasSeries:
         )
 
     def __len__(self) -> int:
+        if self._implementation == "dask":
+            return len(self._series)
         return self.shape[0]
 
     @property
