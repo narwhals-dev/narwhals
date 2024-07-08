@@ -36,5 +36,7 @@ jobs:
         run: python -m pip install -r random-requirements.txt
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip && python -m pip install -r requirements-dev.txt
+      - name: show versions
+        run: python -m pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=80
