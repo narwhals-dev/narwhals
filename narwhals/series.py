@@ -4,15 +4,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 
-from narwhals._arrow.series import ArrowSeries
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import numpy as np
@@ -39,58 +33,19 @@ class Series:
         backend_version: tuple[int, ...],
         is_polars: bool,
     ) -> None:
-        from narwhals._pandas_like.series import PandasSeries
-
         self._is_polars = is_polars
         self._backend_version = backend_version
         if hasattr(series, "__narwhals_series__"):
             self._series = series.__narwhals_series__()
-            return
-        if is_polars or (
+        elif is_polars and (
             (pl := get_polars()) is not None and isinstance(series, pl.Series)
         ):
             self._series = series
-            self._is_polars = True
-            return
-        if (pd := get_pandas()) is not None and isinstance(series, pd.Series):
-            self._series = PandasSeries(
-                series,
-                implementation="pandas",
-                backend_version=parse_version(pd.__version__),
+        else:
+            msg = (  # pragma: no cover
+                f"Expected Polars Series or and object which implements `__narwhals_series__`, got: {type(series)}."
             )
-            return
-        if (mpd := get_modin()) is not None and isinstance(
-            series, mpd.Series
-        ):  # pragma: no cover
-            self._series = PandasSeries(
-                series,
-                implementation="modin",
-                backend_version=parse_version(mpd.__version__),
-            )
-            return
-        if (cudf := get_cudf()) is not None and isinstance(
-            series, cudf.Series
-        ):  # pragma: no cover
-            self._series = PandasSeries(
-                series,
-                implementation="cudf",
-                backend_version=parse_version(cudf.__version__),
-            )
-            return
-        if (pa := get_pyarrow()) is not None and isinstance(
-            series, pa.ChunkedArray
-        ):  # pragma: no cover
-            self._series = ArrowSeries(
-                series, name="", backend_version=parse_version(pa.__version__)
-            )
-            return
-        msg = (  # pragma: no cover
-            f"Expected pandas, Polars, modin, or cuDF Series, got: {type(series)}. "
-            "If passing something which is not already a Series, but is convertible "
-            "to one, you must specify `implementation=` "
-            "(e.g. `nw.Series([1,2,3], implementation='polars')`)"
-        )
-        raise TypeError(msg)  # pragma: no cover
+            raise TypeError(msg)  # pragma: no cover
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._series.__array__(dtype=dtype, copy=copy)
