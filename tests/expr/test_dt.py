@@ -79,7 +79,7 @@ def test_duration_attributes(
     request: Any,
 ) -> None:
     if (
-        parse_version(pd.__version__) == parse_version("2.0.3")
+        parse_version(pd.__version__) == (2, 2)
         and "pyarrow" in str(constructor)
         and attribute in ("total_minutes", "total_seconds", "total_milliseconds")
     ):  # pragma: no cover
