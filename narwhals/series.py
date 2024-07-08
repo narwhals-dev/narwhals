@@ -48,7 +48,7 @@ class Series:
             raise TypeError(msg)  # pragma: no cover
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        if self._is_polars and self._backend_version < (0, 20, 29):
+        if self._is_polars and self._backend_version < (0, 20, 29):  # pragma: no cover
             return self._series.__array__(dtype=dtype)
         return self._series.__array__(dtype=dtype, copy=copy)
 
