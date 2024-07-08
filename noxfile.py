@@ -30,12 +30,10 @@ def pytest_coverage(session: Session) -> None:
     run_common(session, coverage_threshold)
 
 
-
-
 @nox.session(python=PYTHON_VERSIONS[0])  # type: ignore[misc]
 def minimum_versions(session: Session) -> None:
     session.install(
-        "pandas==0.25.3",
+        "pandas==1.1.5",
         "polars==0.20.3",
         "numpy==1.17.5",
         "pyarrow==11.0.0",
