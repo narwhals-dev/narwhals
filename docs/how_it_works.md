@@ -81,49 +81,49 @@ interesting to us, and you're still reading, so maybe it'll be interesting to yo
 
 When we called `nw.col('a')._call(pl)`, we got a Narwhals-compliant Polars namespace.
 The pandas namespace (`pd`) isn't Narwhals-compliant, as the pandas API is very different
-from Polars'. So...Narwhals implements a `PandasNamespace`, which includes the top-level
+from Polars'. So...Narwhals implements a `PandasLikeNamespace`, which includes the top-level
 Polars functions included in the Narwhals API:
 
 ```python exec="1" source="above", result="python" session="pandas_impl"
 import pandas as pd
 import narwhals as nw
-from narwhals._pandas_like.namespace import PandasNamespace
+from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
 from narwhals.utils import parse_version
 
-pn = PandasNamespace(
+pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
 )
 print(nw.col('a')._call(pn))
 ```
 The result from the last line above is the same as we'd get from `pn.col('a')`, and it's
-a `narwhals._pandas_like.expr.PandasExpr` object, which we'll call `PandasExpr` for
+a `narwhals._pandas_like.expr.PandasLikeExpr` object, which we'll call `PandasLikeExpr` for
 short.
 
-`PandasExpr` also has a `_call` method - but this one expects a `PandasDataFrame` as input.
+`PandasLikeExpr` also has a `_call` method - but this one expects a `PandasLikeDataFrame` as input.
 Recall from above that an expression is a function from a dataframe to a sequence of series.
 The `_call` method gives us that function! Let's see it in action.
 
-Note: the following examples use `PandasDataFrame` and `PandasSeries`. These are backed
+Note: the following examples use `PandasLikeDataFrame` and `PandasLikeSeries`. These are backed
 by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
-underlying pandas objects via `PandasDataFrame._native_dataframe` and `PandasSeries._native_series`.
+underlying pandas objects via `PandasLikeDataFrame._native_dataframe` and `PandasLikeSeries._native_series`.
 
 ```python exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
-from narwhals._pandas_like.namespace import PandasNamespace
+from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
-from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals.utils import parse_version
 import pandas as pd
 
-pn = PandasNamespace(
+pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
 )
 
 df_pd = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
-df = PandasDataFrame(
+df = PandasLikeDataFrame(
     df_pd,
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
@@ -175,7 +175,7 @@ In Narwhals, here's what we do:
   users of the performance penalty and advising them to refactor their code so that the aggregation they perform
   ends up being a simple one.
 
-In order to tell whether an aggregation is simple, Narwhals uses the private `_depth` attribute of `PandasExpr`:
+In order to tell whether an aggregation is simple, Narwhals uses the private `_depth` attribute of `PandasLikeExpr`:
 
 ```python exec="1" result="python" session="pandas_impl" source="above"
 print(pn.col('a').mean())

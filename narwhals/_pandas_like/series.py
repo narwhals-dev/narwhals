@@ -21,7 +21,7 @@ from narwhals.dependencies import get_pyarrow_compute
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
@@ -70,7 +70,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasSeries:
+class PandasLikeSeries:
     def __init__(
         self,
         native_series: Any,
@@ -95,10 +95,10 @@ class PandasSeries:
         else:
             self._use_copy_false = False
 
-    def __narwhals_namespace__(self) -> PandasNamespace:
-        from narwhals._pandas_like.namespace import PandasNamespace
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasNamespace(self._implementation, self._backend_version)
+        return PandasLikeNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
         if self._implementation is Implementation.PANDAS:
@@ -187,9 +187,9 @@ class PandasSeries:
         return self._native_series.iloc[index]
 
     def to_frame(self) -> Any:
-        from narwhals._pandas_like.dataframe import PandasDataFrame
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        return PandasDataFrame(
+        return PandasLikeDataFrame(
             self._native_series.to_frame(),
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -200,7 +200,7 @@ class PandasSeries:
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
-    ) -> PandasSeries:
+    ) -> PandasLikeSeries:
         ser = self._native_series
         if closed == "left":
             res = ser.ge(lower_bound) & ser.lt(upper_bound)
@@ -214,141 +214,141 @@ class PandasSeries:
             raise AssertionError
         return self._from_native_series(res)
 
-    def is_in(self, other: Any) -> PandasSeries:
+    def is_in(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         res = ser.isin(other)
         return self._from_native_series(res)
 
     # Binary comparisons
 
-    def filter(self, other: Any) -> PandasSeries:
+    def filter(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.loc[other], ser.name))
 
-    def __eq__(self, other: object) -> PandasSeries:  # type: ignore[override]
+    def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__eq__(other), ser.name))
 
-    def __ne__(self, other: object) -> PandasSeries:  # type: ignore[override]
+    def __ne__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__ne__(other), ser.name))
 
-    def __ge__(self, other: Any) -> PandasSeries:
+    def __ge__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__ge__(other), ser.name))
 
-    def __gt__(self, other: Any) -> PandasSeries:
+    def __gt__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__gt__(other), ser.name))
 
-    def __le__(self, other: Any) -> PandasSeries:
+    def __le__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__le__(other), ser.name))
 
-    def __lt__(self, other: Any) -> PandasSeries:
+    def __lt__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__lt__(other), ser.name))
 
-    def __and__(self, other: Any) -> PandasSeries:
+    def __and__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__and__(other), ser.name))
 
-    def __rand__(self, other: Any) -> PandasSeries:
+    def __rand__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rand__(other), ser.name))
 
-    def __or__(self, other: Any) -> PandasSeries:
+    def __or__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__or__(other), ser.name))
 
-    def __ror__(self, other: Any) -> PandasSeries:
+    def __ror__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__ror__(other), ser.name))
 
-    def __add__(self, other: Any) -> PandasSeries:
+    def __add__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__add__(other), ser.name))
 
-    def __radd__(self, other: Any) -> PandasSeries:
+    def __radd__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__radd__(other), ser.name))
 
-    def __sub__(self, other: Any) -> PandasSeries:
+    def __sub__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__sub__(other), ser.name))
 
-    def __rsub__(self, other: Any) -> PandasSeries:
+    def __rsub__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rsub__(other), ser.name))
 
-    def __mul__(self, other: Any) -> PandasSeries:
+    def __mul__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__mul__(other), ser.name))
 
-    def __rmul__(self, other: Any) -> PandasSeries:
+    def __rmul__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rmul__(other), ser.name))
 
-    def __truediv__(self, other: Any) -> PandasSeries:
+    def __truediv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__truediv__(other), ser.name))
 
-    def __rtruediv__(self, other: Any) -> PandasSeries:
+    def __rtruediv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rtruediv__(other), ser.name))
 
-    def __floordiv__(self, other: Any) -> PandasSeries:
+    def __floordiv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__floordiv__(other), ser.name))
 
-    def __rfloordiv__(self, other: Any) -> PandasSeries:
+    def __rfloordiv__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rfloordiv__(other), ser.name))
 
-    def __pow__(self, other: Any) -> PandasSeries:
+    def __pow__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__pow__(other), ser.name))
 
-    def __rpow__(self, other: Any) -> PandasSeries:  # pragma: no cover
+    def __rpow__(self, other: Any) -> PandasLikeSeries:  # pragma: no cover
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rpow__(other), ser.name))
 
-    def __mod__(self, other: Any) -> PandasSeries:
+    def __mod__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__mod__(other), ser.name))
 
-    def __rmod__(self, other: Any) -> PandasSeries:  # pragma: no cover
+    def __rmod__(self, other: Any) -> PandasLikeSeries:  # pragma: no cover
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rmod__(other), ser.name))
 
     # Unary
 
-    def __invert__(self: PandasSeries) -> PandasSeries:
+    def __invert__(self: PandasLikeSeries) -> PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(~ser)
 
@@ -391,15 +391,15 @@ class PandasSeries:
 
     # Transformations
 
-    def is_null(self) -> PandasSeries:
+    def is_null(self) -> PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(ser.isna())
 
-    def fill_null(self, value: Any) -> PandasSeries:
+    def fill_null(self, value: Any) -> PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(ser.fillna(value))
 
-    def drop_nulls(self) -> PandasSeries:
+    def drop_nulls(self) -> PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(ser.dropna())
 
@@ -413,36 +413,36 @@ class PandasSeries:
         fraction: float | None = None,
         *,
         with_replacement: bool = False,
-    ) -> PandasSeries:
+    ) -> PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(
             ser.sample(n=n, frac=fraction, replace=with_replacement)
         )
 
-    def abs(self) -> PandasSeries:
+    def abs(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.abs())
 
-    def cum_sum(self) -> PandasSeries:
+    def cum_sum(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.cumsum())
 
-    def unique(self) -> PandasSeries:
+    def unique(self) -> PandasLikeSeries:
         return self._from_native_series(
             self._native_series.__class__(
                 self._native_series.unique(), name=self._native_series.name
             )
         )
 
-    def diff(self) -> PandasSeries:
+    def diff(self) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.diff())
 
-    def shift(self, n: int) -> PandasSeries:
+    def shift(self, n: int) -> PandasLikeSeries:
         return self._from_native_series(self._native_series.shift(n))
 
     def sort(
         self,
         *,
         descending: bool | Sequence[bool] = False,
-    ) -> PandasSeries:
+    ) -> PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(
             ser.sort_values(ascending=not descending, na_position="first").rename(
@@ -534,7 +534,7 @@ class PandasSeries:
 
     def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
         """Parallel is unused, exists for compatibility"""
-        from narwhals._pandas_like.dataframe import PandasDataFrame
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         name_ = "index" if self._native_series.name is None else self._native_series.name
         val_count = self._native_series.value_counts(
@@ -544,7 +544,7 @@ class PandasSeries:
         if sort:
             val_count = val_count.sort_values(name_)
 
-        return PandasDataFrame(
+        return PandasLikeDataFrame(
             val_count,
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -557,7 +557,7 @@ class PandasSeries:
     ) -> Any:
         return self._native_series.quantile(q=quantile, interpolation=interpolation)
 
-    def zip_with(self: Self, mask: Any, other: Any) -> PandasSeries:
+    def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         res = ser.where(mask._native_series, other._native_series)
         return self._from_native_series(res)
@@ -572,112 +572,112 @@ class PandasSeries:
         return self._from_native_series(self._native_series.round(decimals=decimals))
 
     @property
-    def str(self) -> PandasSeriesStringNamespace:
-        return PandasSeriesStringNamespace(self)
+    def str(self) -> PandasLikeSeriesStringNamespace:
+        return PandasLikeSeriesStringNamespace(self)
 
     @property
-    def dt(self) -> PandasSeriesDateTimeNamespace:
-        return PandasSeriesDateTimeNamespace(self)
+    def dt(self) -> PandasLikeSeriesDateTimeNamespace:
+        return PandasLikeSeriesDateTimeNamespace(self)
 
     @property
-    def cat(self) -> PandasSeriesCatNamespace:
-        return PandasSeriesCatNamespace(self)
+    def cat(self) -> PandasLikeSeriesCatNamespace:
+        return PandasLikeSeriesCatNamespace(self)
 
 
-class PandasSeriesCatNamespace:
-    def __init__(self, series: PandasSeries) -> None:
+class PandasLikeSeriesCatNamespace:
+    def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
-    def get_categories(self) -> PandasSeries:
+    def get_categories(self) -> PandasLikeSeries:
         s = self._pandas_series._native_series
         return self._pandas_series._from_native_series(
             s.__class__(s.cat.categories, name=s.name)
         )
 
 
-class PandasSeriesStringNamespace:
-    def __init__(self, series: PandasSeries) -> None:
+class PandasLikeSeriesStringNamespace:
+    def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
-    def starts_with(self, prefix: str) -> PandasSeries:
+    def starts_with(self, prefix: str) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.startswith(prefix),
         )
 
-    def ends_with(self, suffix: str) -> PandasSeries:
+    def ends_with(self, suffix: str) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.endswith(suffix),
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> PandasSeries:
+    def contains(self, pattern: str, *, literal: bool = False) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.contains(
                 pat=pattern, regex=not literal
             )
         )
 
-    def slice(self, offset: int, length: int | None = None) -> PandasSeries:
+    def slice(self, offset: int, length: int | None = None) -> PandasLikeSeries:
         stop = offset + length if length else None
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.slice(start=offset, stop=stop),
         )
 
-    def to_datetime(self, format: str | None = None) -> PandasSeries:  # noqa: A002
+    def to_datetime(self, format: str | None = None) -> PandasLikeSeries:  # noqa: A002
         return self._pandas_series._from_native_series(
             to_datetime(self._pandas_series._implementation)(
                 self._pandas_series._native_series, format=format
             )
         )
 
-    def to_uppercase(self) -> PandasSeries:
+    def to_uppercase(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.upper(),
         )
 
-    def to_lowercase(self) -> PandasSeries:
+    def to_lowercase(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.lower(),
         )
 
 
-class PandasSeriesDateTimeNamespace:
-    def __init__(self, series: PandasSeries) -> None:
+class PandasLikeSeriesDateTimeNamespace:
+    def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
-    def year(self) -> PandasSeries:
+    def year(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.year,
         )
 
-    def month(self) -> PandasSeries:
+    def month(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.month,
         )
 
-    def day(self) -> PandasSeries:
+    def day(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.day,
         )
 
-    def hour(self) -> PandasSeries:
+    def hour(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.hour,
         )
 
-    def minute(self) -> PandasSeries:
+    def minute(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.minute,
         )
 
-    def second(self) -> PandasSeries:
+    def second(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.second,
         )
 
-    def millisecond(self) -> PandasSeries:
+    def millisecond(self) -> PandasLikeSeries:
         return self.microsecond() // 1000
 
-    def microsecond(self) -> PandasSeries:
+    def microsecond(self) -> PandasLikeSeries:
         if self._pandas_series._backend_version < (3, 0, 0) and "pyarrow" in str(
             self._pandas_series._native_series.dtype
         ):
@@ -697,12 +697,12 @@ class PandasSeriesDateTimeNamespace:
             self._pandas_series._native_series.dt.microsecond
         )
 
-    def nanosecond(self) -> PandasSeries:
+    def nanosecond(self) -> PandasLikeSeries:
         return (  # type: ignore[no-any-return]
             self.microsecond() * 1_000 + self._pandas_series._native_series.dt.nanosecond
         )
 
-    def ordinal_day(self) -> PandasSeries:
+    def ordinal_day(self) -> PandasLikeSeries:
         ser = self._pandas_series._native_series
         year_start = ser.dt.year
         result = (
@@ -716,7 +716,7 @@ class PandasSeriesDateTimeNamespace:
             )
         )
 
-    def total_minutes(self) -> PandasSeries:
+    def total_minutes(self) -> PandasLikeSeries:
         s = self._pandas_series._native_series.dt.total_seconds()
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
@@ -726,7 +726,7 @@ class PandasSeriesDateTimeNamespace:
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
-    def total_seconds(self) -> PandasSeries:
+    def total_seconds(self) -> PandasLikeSeries:
         s = self._pandas_series._native_series.dt.total_seconds()
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
@@ -736,7 +736,7 @@ class PandasSeriesDateTimeNamespace:
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
-    def total_milliseconds(self) -> PandasSeries:
+    def total_milliseconds(self) -> PandasLikeSeries:
         s = self._pandas_series._native_series.dt.total_seconds() * 1e3
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
@@ -746,7 +746,7 @@ class PandasSeriesDateTimeNamespace:
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
-    def total_microseconds(self) -> PandasSeries:
+    def total_microseconds(self) -> PandasLikeSeries:
         s = self._pandas_series._native_series.dt.total_seconds() * 1e6
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
@@ -756,7 +756,7 @@ class PandasSeriesDateTimeNamespace:
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
-    def total_nanoseconds(self) -> PandasSeries:
+    def total_nanoseconds(self) -> PandasLikeSeries:
         s = self._pandas_series._native_series.dt.total_seconds() * 1e9
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
@@ -766,7 +766,7 @@ class PandasSeriesDateTimeNamespace:
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
-    def to_string(self, format: str) -> PandasSeries:  # noqa: A002
+    def to_string(self, format: str) -> PandasLikeSeries:  # noqa: A002
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
         # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
         # and doesn't support `%f`

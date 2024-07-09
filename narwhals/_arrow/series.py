@@ -24,7 +24,7 @@ class ArrowSeries:
     ) -> None:
         self._name = name
         self._native_series = native_series
-        self._implementation = "arrow"  # for compatibility with PandasSeries
+        self._implementation = "arrow"  # for compatibility with PandasLikeSeries
         self._backend_version = backend_version
 
     def _from_native_series(self, series: Any) -> Self:

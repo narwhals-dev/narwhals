@@ -133,8 +133,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
         4  2
         3  1
     """
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
 
     def _validate_index(index: Any) -> None:
         if not index.is_unique:
@@ -143,8 +143,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     lhs_any = cast(Any, lhs)
     rhs_any = cast(Any, rhs)
     if isinstance(
-        getattr(lhs_any, "_compliant_frame", None), PandasDataFrame
-    ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasDataFrame):
+        getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
+    ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_frame._native_dataframe.index)
         _validate_index(rhs_any._compliant_frame._native_dataframe.index)
         return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
@@ -155,8 +155,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
             )
         )
     if isinstance(
-        getattr(lhs_any, "_compliant_frame", None), PandasDataFrame
-    ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasSeries):
+        getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
+    ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_frame._native_dataframe.index)
         _validate_index(rhs_any._compliant_series._native_series.index)
         return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
@@ -167,8 +167,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
             )
         )
     if isinstance(
-        getattr(lhs_any, "_compliant_series", None), PandasSeries
-    ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasDataFrame):
+        getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
+    ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_series._native_series.index)
         _validate_index(rhs_any._compliant_frame._native_dataframe.index)
         return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
@@ -179,8 +179,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
             )
         )
     if isinstance(
-        getattr(lhs_any, "_compliant_series", None), PandasSeries
-    ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasSeries):
+        getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
+    ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_series._native_series.index)
         _validate_index(rhs_any._compliant_series._native_series.index)
         return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
@@ -219,10 +219,10 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         4  1
         5  2
     """
-    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
     df_any = cast(Any, df)
-    if isinstance(getattr(df_any, "_compliant_frame", None), PandasDataFrame):
+    if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
         return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
             df_any._compliant_frame._from_native_dataframe(
                 df_any._compliant_frame._native_dataframe.set_index(column_names)
@@ -256,10 +256,10 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         b           boolean
         dtype: object
     """
-    from narwhals._pandas_like.dataframe import PandasDataFrame
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
     df_any = cast(Any, df)
-    if isinstance(getattr(df_any, "_compliant_frame", None), PandasDataFrame):
+    if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
         return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
             df_any._compliant_frame._from_native_dataframe(
                 df_any._compliant_frame._native_dataframe.convert_dtypes(*args, **kwargs)
