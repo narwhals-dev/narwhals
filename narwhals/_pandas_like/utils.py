@@ -317,7 +317,8 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
         return mpd.concat(dfs, axis=1)
     if implementation == "dask":  # pragma: no cover
         dd = get_dask()
-
+        if hasattr(dfs[0], "_series"):  # TODO: sort out this hack
+            return dd.concat([i._series for i in dfs], axis=1)
         return dd.concat(dfs, axis=1)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
@@ -397,7 +398,8 @@ def set_axis(obj: T, index: Any, implementation: str) -> T:
     else:  # pragma: no cover
         pass
     if implementation == "dask":
-        raise NotImplementedError("figuring this bit out still!")
+        msg = "Setting axis on columns is not currently supported for dask"
+        raise NotImplementedError(msg)
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
 
 

@@ -30,10 +30,13 @@ class PandasGroupBy:
     def __init__(self, df: PandasDataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
+        keywords = {}
+        if df._implementation != "dask":
+            keywords |= {"as_index": True}
         self._grouped = self._df._dataframe.groupby(
             list(self._keys),
             sort=False,
-            as_index=True,
+            **keywords,
         )
 
     def agg(
@@ -58,6 +61,7 @@ class PandasGroupBy:
                 raise ValueError(msg)
             output_names.extend(expr._output_names)
 
+        dataframe_is_empty=self._df._dataframe.empty if self._df._implementation != "dask" else len(self._df) == 0
         return agg_pandas(
             self._grouped,
             exprs,
@@ -65,7 +69,7 @@ class PandasGroupBy:
             output_names,
             self._from_dataframe,
             implementation,
-            dataframe_is_empty=self._df._dataframe.empty,
+            dataframe_is_empty=dataframe_is_empty,
         )
 
     def _from_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:

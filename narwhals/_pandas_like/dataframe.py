@@ -167,7 +167,8 @@ class PandasDataFrame:
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_dataframe(self._dataframe.__class__())
-        new_series = validate_indices(new_series)
+        if self._implementation != "dask":
+            new_series = validate_indices(new_series)
         df = horizontal_concat(
             new_series,
             implementation=self._implementation,
