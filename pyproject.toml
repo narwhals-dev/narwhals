@@ -47,12 +47,10 @@ lint.ignore = [
   'A003',
   'ANN101',
   'ANN401',
-  'ARG002',  # TODO(Unassigned): enable
-  'ARG003',  # TODO(Unassigned): enable
   'C901',
   'COM812',
   'D',
-  'DTZ',
+  'DTZ001',
   'E501',
   'EM101',  # TODO(Unassigned): enable
   'ERA001',  # TODO(Unassigned): enable
@@ -63,7 +61,6 @@ lint.ignore = [
   'PD',
   'PLR0911',
   'PLR0912',
-  'PLR5501',
   'PLR2004',
   'PT011',
   'PTH',
