@@ -62,11 +62,11 @@ class BaseFrame(Generic[FrameT]):
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
         """Process `args` and `kwargs`, extracting underlying objects as we go."""
-        args = [self._extract_native(v) for v in flatten(args)]  # type: ignore[assignment]
-        kwargs = {k: self._extract_native(v) for k, v in kwargs.items()}
+        args = [self._extract_compliant(v) for v in flatten(args)]  # type: ignore[assignment]
+        kwargs = {k: self._extract_compliant(v) for k, v in kwargs.items()}
         return args, kwargs
 
-    def _extract_native(self, arg: Any) -> Any:
+    def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expression import Expr
         from narwhals.series import Series
 
@@ -191,7 +191,7 @@ class BaseFrame(Generic[FrameT]):
         validate_same_library([self, other])
         return self._from_compliant_dataframe(
             self._compliant_frame.join(
-                self._extract_native(other),
+                self._extract_compliant(other),
                 how=how,
                 left_on=left_on,
                 right_on=right_on,
