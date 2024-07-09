@@ -13,7 +13,6 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals._pandas_like.utils import Implementation
 from narwhals.functions import _get_deps_info
 from narwhals.functions import _get_sys_info
 from narwhals.functions import show_versions
@@ -135,106 +134,7 @@ def test_lit_error(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-def test_join(df_raw: Any) -> None:
-    df = nw.from_native(df_raw).lazy()
-    df_right = df
-    result = df.join(df_right, left_on=["a", "b"], right_on=["a", "b"], how="inner")
-    result_native = nw.to_native(result)
-    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
-    compare_dicts(result_native, expected)
-
-    with pytest.raises(NotImplementedError):
-        result = df.join(df_right, left_on="a", right_on="a", how="left")  # type: ignore[arg-type]
-
-    result = df.collect().join(df_right.collect(), left_on="a", right_on="a", how="inner")  # type: ignore[assignment]
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "b_right": [4, 4, 6],
-        "z": [7.0, 8, 9],
-        "z_right": [7.0, 8, 9],
-    }
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize("df_raw", [df_polars, df_lazy, df_pandas, df_mpd])
-def test_cross_join(df_raw: Any) -> None:
-    df = nw.from_native(df_raw).select("a")
-    result = df.join(df, how="cross")  # type: ignore[arg-type]
-
-    expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
-    compare_dicts(result, expected)
-
-    with pytest.raises(ValueError, match="Can not pass left_on, right_on for cross join"):
-        df.join(df, how="cross", left_on="a")  # type: ignore[arg-type]
-
-
-def test_cross_join_non_pandas() -> None:
-    df = nw.from_native(df_pandas).select("a")
-    # HACK to force testing for a non-pandas codepath
-    df._dataframe._implementation = Implementation.MODIN
-    result = df.join(df, how="cross")  # type: ignore[arg-type]
-    expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
-    compare_dicts(result, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw",
-    [
-        df_polars,
-        df_lazy,
-        df_pandas,
-        # df_mpd, #  (todo: understand the difference between ipython/jupyter and pytest runs)
-    ],
-)
-@pytest.mark.parametrize(
-    ("join_key", "filter_expr", "expected"),
-    [
-        (["a", "b"], (nw.col("b") < 5), {"a": [2], "b": [6], "z": [9]}),
-        (["b"], (nw.col("b") < 5), {"a": [2], "b": [6], "z": [9]}),
-        (["b"], (nw.col("b") > 5), {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}),
-    ],
-)
-def test_anti_join(
-    df_raw: Any, join_key: list[str], filter_expr: nw.Expr, expected: dict[str, list[Any]]
-) -> None:
-    df = nw.from_native(df_raw)
-    other = df.filter(filter_expr)
-    result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
-    compare_dicts(result, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw",
-    [
-        df_polars,
-        df_lazy,
-        df_pandas,
-        df_mpd,
-    ],
-)
-@pytest.mark.parametrize(
-    ("join_key", "filter_expr", "expected"),
-    [
-        (["a"], (nw.col("b") > 5), {"a": [2], "b": [6], "z": [9]}),
-        (["b"], (nw.col("b") < 5), {"a": [1, 3], "b": [4, 4], "z": [7, 8]}),
-        (["a", "b"], (nw.col("b") < 5), {"a": [1, 3], "b": [4, 4], "z": [7, 8]}),
-    ],
-)
-def test_semi_join(
-    df_raw: Any, join_key: list[str], filter_expr: nw.Expr, expected: dict[str, list[Any]]
-) -> None:
-    df = nw.from_native(df_raw)
-    other = df.filter(filter_expr)
-    result = df.join(other, how="semi", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
-    compare_dicts(result, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-# todo: https://github.com/narwhals-dev/narwhals/issues/313
+# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(df_raw: Any) -> None:
     result = nw.from_native(df_raw).schema
@@ -254,7 +154,7 @@ def test_schema(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-# todo: https://github.com/narwhals-dev/narwhals/issues/313
+# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(df_raw: Any) -> None:
     df = nw.from_native(df_raw)

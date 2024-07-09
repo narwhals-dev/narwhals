@@ -47,31 +47,23 @@ lint.ignore = [
   'A003',
   'ANN101',
   'ANN401',
-  'ARG002',  # todo: enable
-  'ARG003',  # todo: enable
   'C901',
   'COM812',
   'D',
-  'DTZ',
+  'DTZ001',
   'E501',
-  'EM101',  # todo: enable
-  'ERA001',  # todo: enable
-  'FBT003',  # todo: enable
+  'EM101',
   'FIX',
-  'ICN001',
-  'ISC001',
-  'PD',
+  'PD901',  # This is a auxiliary library so dataframe variables have no concrete business meaning
   'PLR0911',
   'PLR0912',
-  'PLR5501',
   'PLR2004',
-  'PT011',
   'PTH',
   'RET505',
   'S',
   'SLF001',
-  'TD',
-  'TRY003',  # todo: enable
+  'TD003',
+  'TRY003',  # TODO(Unassigned): enable
   'TRY004'
 ]
 

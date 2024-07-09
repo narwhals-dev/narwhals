@@ -134,7 +134,7 @@ class PandasDataFrame:
         self,
         *,
         named: bool = False,
-        buffer_size: int = 512,
+        buffer_size: int = 512,  # noqa: ARG002
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         """
         NOTE:
@@ -412,7 +412,7 @@ class PandasDataFrame:
         from narwhals._pandas_like.series import PandasSeries
 
         if as_series:
-            # todo: should this return narwhals series?
+            # TODO(Unassigned): should this return narwhals series?
             return {
                 col: PandasSeries(
                     self._native_dataframe.loc[:, col],
@@ -471,7 +471,7 @@ class PandasDataFrame:
 
     def null_count(self: Self) -> PandasDataFrame:
         return PandasDataFrame(
-            self._native_dataframe.isnull().sum(axis=0).to_frame().transpose(),
+            self._native_dataframe.isna().sum(axis=0).to_frame().transpose(),
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
@@ -485,14 +485,14 @@ class PandasDataFrame:
                     f" frame has shape {self.shape!r}"
                 )
                 raise ValueError(msg)
-            return self._native_dataframe.iat[0, 0]
+            return self._native_dataframe.iloc[0, 0]
 
         elif row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
-        return self._native_dataframe.iat[row, _col]
+        return self._native_dataframe.iloc[row, _col]
 
     def clone(self: Self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.copy())

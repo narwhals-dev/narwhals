@@ -514,7 +514,7 @@ class PandasSeries:
         return self._from_native_series(~self._native_series.duplicated(keep=False))
 
     def null_count(self: Self) -> int:
-        return self._native_series.isnull().sum()  # type: ignore[no-any-return]
+        return self._native_series.isna().sum()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
         return self._from_native_series(~self._native_series.duplicated(keep="first"))
@@ -532,7 +532,7 @@ class PandasSeries:
         else:
             return self._native_series.is_monotonic_increasing  # type: ignore[no-any-return]
 
-    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:
+    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
         """Parallel is unused, exists for compatibility"""
         from narwhals._pandas_like.dataframe import PandasDataFrame
 
