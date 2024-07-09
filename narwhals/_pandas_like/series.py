@@ -586,102 +586,104 @@ class PandasSeries:
 
 class PandasSeriesCatNamespace:
     def __init__(self, series: PandasSeries) -> None:
-        self._series = series
+        self._pandas_series = series
 
     def get_categories(self) -> PandasSeries:
-        s = self._series._native_series
-        return self._series._from_native_series(
+        s = self._pandas_series._native_series
+        return self._pandas_series._from_native_series(
             s.__class__(s.cat.categories, name=s.name)
         )
 
 
 class PandasSeriesStringNamespace:
     def __init__(self, series: PandasSeries) -> None:
-        self._series = series
+        self._pandas_series = series
 
     def starts_with(self, prefix: str) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.str.startswith(prefix),
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.startswith(prefix),
         )
 
     def ends_with(self, suffix: str) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.str.endswith(suffix),
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.endswith(suffix),
         )
 
     def contains(self, pattern: str, *, literal: bool = False) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.str.contains(pat=pattern, regex=not literal)
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.contains(
+                pat=pattern, regex=not literal
+            )
         )
 
     def slice(self, offset: int, length: int | None = None) -> PandasSeries:
         stop = offset + length if length else None
-        return self._series._from_native_series(
-            self._series._native_series.str.slice(start=offset, stop=stop),
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.slice(start=offset, stop=stop),
         )
 
     def to_datetime(self, format: str | None = None) -> PandasSeries:  # noqa: A002
-        return self._series._from_native_series(
-            to_datetime(self._series._implementation)(
-                self._series._native_series, format=format
+        return self._pandas_series._from_native_series(
+            to_datetime(self._pandas_series._implementation)(
+                self._pandas_series._native_series, format=format
             )
         )
 
     def to_uppercase(self) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.str.upper(),
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.upper(),
         )
 
     def to_lowercase(self) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.str.lower(),
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.lower(),
         )
 
 
 class PandasSeriesDateTimeNamespace:
     def __init__(self, series: PandasSeries) -> None:
-        self._series = series
+        self._pandas_series = series
 
     def year(self) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.dt.year,
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.year,
         )
 
     def month(self) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.dt.month,
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.month,
         )
 
     def day(self) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.dt.day,
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.day,
         )
 
     def hour(self) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.dt.hour,
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.hour,
         )
 
     def minute(self) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.dt.minute,
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.minute,
         )
 
     def second(self) -> PandasSeries:
-        return self._series._from_native_series(
-            self._series._native_series.dt.second,
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.second,
         )
 
     def millisecond(self) -> PandasSeries:
         return self.microsecond() // 1000
 
     def microsecond(self) -> PandasSeries:
-        if self._series._backend_version < (3, 0, 0) and "pyarrow" in str(
-            self._series._native_series.dtype
+        if self._pandas_series._backend_version < (3, 0, 0) and "pyarrow" in str(
+            self._pandas_series._native_series.dtype
         ):
             # crazy workaround for https://github.com/pandas-dev/pandas/issues/59154
             pc = get_pyarrow_compute()
-            native_series = self._series._native_series
+            native_series = self._pandas_series._native_series
             arr = native_series.array.__arrow_array__()
             result_arr = pc.add(
                 pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr)
@@ -689,87 +691,89 @@ class PandasSeriesDateTimeNamespace:
             result = native_series.__class__(
                 native_series.array.__class__(result_arr), name=native_series.name
             )
-            return self._series._from_native_series(result)
+            return self._pandas_series._from_native_series(result)
 
-        return self._series._from_native_series(
-            self._series._native_series.dt.microsecond
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.microsecond
         )
 
     def nanosecond(self) -> PandasSeries:
-        return self.microsecond() * 1_000 + self._series._native_series.dt.nanosecond  # type: ignore[no-any-return]
+        return (  # type: ignore[no-any-return]
+            self.microsecond() * 1_000 + self._pandas_series._native_series.dt.nanosecond
+        )
 
     def ordinal_day(self) -> PandasSeries:
-        ser = self._series._native_series
+        ser = self._pandas_series._native_series
         year_start = ser.dt.year
         result = (
             ser.to_numpy().astype("datetime64[D]")
             - (year_start.to_numpy() - 1970).astype("datetime64[Y]")
         ).astype("int32") + 1
         dtype = "Int64[pyarrow]" if "pyarrow" in str(ser.dtype) else "int32"
-        return self._series._from_native_series(
-            self._series._native_series.__class__(
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.__class__(
                 result, dtype=dtype, name=year_start.name
             )
         )
 
     def total_minutes(self) -> PandasSeries:
-        s = self._series._native_series.dt.total_seconds()
+        s = self._pandas_series._native_series.dt.total_seconds()
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 60
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._series._from_native_series(s_abs * s_sign)
+        return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def total_seconds(self) -> PandasSeries:
-        s = self._series._native_series.dt.total_seconds()
+        s = self._pandas_series._native_series.dt.total_seconds()
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 1
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._series._from_native_series(s_abs * s_sign)
+        return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def total_milliseconds(self) -> PandasSeries:
-        s = self._series._native_series.dt.total_seconds() * 1e3
+        s = self._pandas_series._native_series.dt.total_seconds() * 1e3
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 1
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._series._from_native_series(s_abs * s_sign)
+        return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def total_microseconds(self) -> PandasSeries:
-        s = self._series._native_series.dt.total_seconds() * 1e6
+        s = self._pandas_series._native_series.dt.total_seconds() * 1e6
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 1
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._series._from_native_series(s_abs * s_sign)
+        return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def total_nanoseconds(self) -> PandasSeries:
-        s = self._series._native_series.dt.total_seconds() * 1e9
+        s = self._pandas_series._native_series.dt.total_seconds() * 1e9
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
         s_abs = s.abs() // 1
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self._series._from_native_series(s_abs * s_sign)
+        return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def to_string(self, format: str) -> PandasSeries:  # noqa: A002
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
         # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
         # and doesn't support `%f`
-        if "pyarrow" not in str(self._series._native_series.dtype):
+        if "pyarrow" not in str(self._pandas_series._native_series.dtype):
             format = format.replace("%S%.f", "%S.%f")
         else:
             format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
-        return self._series._from_native_series(
-            self._series._native_series.dt.strftime(format)
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.strftime(format)
         )

@@ -11,7 +11,7 @@ order to make sense of Narwhals:
 For example, `nw.col('a')` means "given a dataframe `df`, give me the Series `'a'` from `df`".
 Translating this to pandas syntax, we get:
 
-```python
+```python exec="1" source="above"
 def col_a(df):
     return [df.loc[:, 'a']]
 ```
@@ -19,7 +19,7 @@ def col_a(df):
 Let's step up the complexity. How about `nw.col('a')+1`? We already know what the
 `nw.col('a')` part looks like, so we just need to add `1` to each of its outputs:
 
-```python
+```python exec="1"
 def col_a(df):
     return [df.loc[:, 'a']]
 
@@ -29,7 +29,7 @@ def col_a_plus_1(df):
 
 Expressions can return multiple Series - for example, `nw.col('a', 'b')` translates to:
 
-```python
+```python exec="1"
 def col_a_b(df):
     return [df.loc[:, 'a'], df.loc[:, 'b']]
 ```
@@ -37,7 +37,7 @@ def col_a_b(df):
 Expressions can also take multiple columns as input - for example, `nw.sum_horizontal('a', 'b')`
 translates to:
 
-```python
+```python exec="1"
 def sum_horizontal_a_b(df):
     return [df.loc[:, 'a'] + df.loc[:, 'b']]
 ```
@@ -61,7 +61,7 @@ Now let's turn our attention to the implementation.
 ## Polars implementation
 
 For Polars, Narwhals just "passes everything through". For example consider the following:
-```python
+```python exec="1"
 import polars as pl
 import narwhals as nw
 
@@ -84,15 +84,21 @@ The pandas namespace (`pd`) isn't Narwhals-compliant, as the pandas API is very 
 from Polars'. So...Narwhals implements a `PandasNamespace`, which includes the top-level
 Polars functions included in the Narwhals API:
 
-```python
+```python exec="1" source="above", result="python" session="pandas_impl"
+import pandas as pd
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasNamespace
+from narwhals._pandas_like.utils import Implementation
+from narwhals.utils import parse_version
 
-pn = PandasNamespace(implementation='pandas')
-nw.col('a')._call(pn)
+pn = PandasNamespace(
+    implementation=Implementation.PANDAS,
+    backend_version=parse_version(pd.__version__),
+)
+print(nw.col('a')._call(pn))
 ```
 The result from the last line above is the same as we'd get from `pn.col('a')`, and it's
-a `narwhals._pandas_like.expression.PandasExpr` object, which we'll call `PandasExpr` for
+a `narwhals._pandas_like.expr.PandasExpr` object, which we'll call `PandasExpr` for
 short.
 
 `PandasExpr` also has a `_call` method - but this one expects a `PandasDataFrame` as input.
@@ -101,28 +107,32 @@ The `_call` method gives us that function! Let's see it in action.
 
 Note: the following examples use `PandasDataFrame` and `PandasSeries`. These are backed
 by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
-underlying pandas objects via `PandasDataFrame._dataframe` and `PandasSeries._series`.
+underlying pandas objects via `PandasDataFrame._native_dataframe` and `PandasSeries._native_series`.
 
-```python
+```python exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasNamespace
+from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals.utils import parse_version
 import pandas as pd
 
-pn = PandasNamespace(implementation='pandas')
+pn = PandasNamespace(
+    implementation=Implementation.PANDAS,
+    backend_version=parse_version(pd.__version__),
+)
 
 df_pd = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
-df = PandasDataFrame(df_pd, implementation='pandas')
+df = PandasDataFrame(
+    df_pd,
+    implementation=Implementation.PANDAS,
+    backend_version=parse_version(pd.__version__),
+)
 expression = pn.col('a') + 1
 result = expression._call(df)
-print([x._series for x in result])
-```
-The first (and only) Series to be output is:
-```
-0    2
-1    3
-2    4
-Name: a, dtype: int64
+print(f'length of result: {len(result)}\n')
+print('native series of first value of result: ')
+print([x._native_series for x in result][0])
 ```
 
 So indeed, our expression did what it said on the tin - it took some dataframe, took
@@ -167,13 +177,10 @@ In Narwhals, here's what we do:
 
 In order to tell whether an aggregation is simple, Narwhals uses the private `_depth` attribute of `PandasExpr`:
 
-```python
->>> pn.col('a').mean()
-PandasExpr(depth=1, function_name=col->mean, root_names=['a'], output_names=['a']
->>> (pn.col('a')+1).mean()
-PandasExpr(depth=2, function_name=col->__add__->mean, root_names=['a'], output_names=['a']
->>> pn.mean('a')
-PandasExpr(depth=1, function_name=col->mean, root_names=['a'], output_names=['a']
+```python exec="1" result="python" session="pandas_impl" source="above"
+print(pn.col('a').mean())
+print((pn.col('a')+1).mean())
+print(pn.mean('a'))
 ```
 
 For simple aggregations, Narwhals can just look at `_depth` and `function_name` and figure out

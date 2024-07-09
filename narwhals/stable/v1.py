@@ -429,15 +429,21 @@ def _stableify(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._dataframe, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_frame,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._dataframe, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_frame,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwSeries):
         return Series(
-            obj._series, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_series,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwExpr):
         return Expr(obj._call)
