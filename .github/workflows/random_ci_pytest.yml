@@ -23,7 +23,7 @@ jobs:
       - name: generate-random-versions
         run: python utils/generate_random_versions.py
       - name: install-random-verions
-        run: python -m pip install -r random-requirements.txt "numpy<2.0"
+        run: python -m pip install -r random-requirements.txt
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip && python -m pip install -r requirements-dev.txt
       - name: show versions
