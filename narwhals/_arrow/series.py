@@ -156,6 +156,10 @@ class ArrowSeries:
     def cat(self) -> ArrowSeriesCatNamespace:
         return ArrowSeriesCatNamespace(self)
 
+    @property
+    def str(self) -> ArrowSeriesStringNamespace:
+        return ArrowSeriesStringNamespace(self)
+
 
 class ArrowSeriesDateTimeNamespace:
     def __init__(self, series: ArrowSeries) -> None:
@@ -184,3 +188,20 @@ class ArrowSeriesCatNamespace:
             [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
         )
         return self._series._from_native_series(out)
+
+
+class ArrowSeriesStringNamespace:
+    def __init__(self, series: ArrowSeries) -> None:
+        self._series = series
+
+    def to_uppercase(self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._series._from_native_series(
+            pc.utf8_upper(self._series._native_series),
+        )
+
+    def to_lowercase(self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._series._from_native_series(
+            pc.utf8_lower(self._series._native_series),
+        )

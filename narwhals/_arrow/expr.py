@@ -126,6 +126,10 @@ class ArrowExpr:
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
 
+    @property
+    def str(self) -> ArrowExprStringNamespace:
+        return ArrowExprStringNamespace(self)
+
 
 class ArrowExprDateTimeNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
@@ -134,4 +138,23 @@ class ArrowExprDateTimeNamespace:
     def to_string(self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
+        )
+
+
+class ArrowExprStringNamespace:
+    def __init__(self, expr: ArrowExpr) -> None:
+        self._expr = expr
+
+    def to_uppercase(self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_uppercase",
+        )
+
+    def to_lowercase(self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_lowercase",
         )
