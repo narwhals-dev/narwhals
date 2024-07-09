@@ -15,9 +15,9 @@ from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.typing import IntoPandasExpr
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.typing import IntoPandasLikeExpr
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
     "len": "size",
@@ -25,7 +25,7 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
 
 
 class PandasGroupBy:
-    def __init__(self, df: PandasDataFrame, keys: list[str]) -> None:
+    def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
         self._grouped = self._df._native_dataframe.groupby(
@@ -36,9 +36,9 @@ class PandasGroupBy:
 
     def agg(
         self,
-        *aggs: IntoPandasExpr,
-        **named_aggs: IntoPandasExpr,
-    ) -> PandasDataFrame:
+        *aggs: IntoPandasLikeExpr,
+        **named_aggs: IntoPandasLikeExpr,
+    ) -> PandasLikeDataFrame:
         exprs = parse_into_exprs(
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
@@ -67,16 +67,16 @@ class PandasGroupBy:
             backend_version=self._df._backend_version,
         )
 
-    def _from_native_dataframe(self, df: PandasDataFrame) -> PandasDataFrame:
-        from narwhals._pandas_like.dataframe import PandasDataFrame
+    def _from_native_dataframe(self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        return PandasDataFrame(
+        return PandasLikeDataFrame(
             df,
             implementation=self._df._implementation,
             backend_version=self._df._backend_version,
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, PandasDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
             # we already use `tupleify` above, so we're already opting in to
             # the new behaviour
@@ -93,15 +93,15 @@ class PandasGroupBy:
 
 def agg_pandas(  # noqa: PLR0913
     grouped: Any,
-    exprs: list[PandasExpr],
+    exprs: list[PandasLikeExpr],
     keys: list[str],
     output_names: list[str],
-    from_dataframe: Callable[[Any], PandasDataFrame],
+    from_dataframe: Callable[[Any], PandasLikeDataFrame],
     *,
     implementation: Any,
     backend_version: tuple[int, ...],
     dataframe_is_empty: bool,
-) -> PandasDataFrame:
+) -> PandasLikeDataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
 

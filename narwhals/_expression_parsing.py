@@ -20,21 +20,21 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
-    from narwhals._pandas_like.typing import IntoPandasExpr
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._pandas_like.typing import IntoPandasLikeExpr
 
-    CompliantNamespace = Union[PandasNamespace, ArrowNamespace]
-    CompliantExpr = Union[PandasExpr, ArrowExpr]
-    IntoCompliantExpr = Union[IntoPandasExpr, IntoArrowExpr]
+    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr]
+    IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
-    CompliantSeries = Union[PandasSeries, ArrowSeries]
-    ListOfCompliantSeries = Union[list[PandasSeries], list[ArrowSeries]]
-    ListOfCompliantExpr = Union[list[PandasExpr], list[ArrowExpr]]
-    CompliantDataFrame = Union[PandasDataFrame, ArrowDataFrame]
+    CompliantSeries = Union[PandasLikeSeries, ArrowSeries]
+    ListOfCompliantSeries = Union[list[PandasLikeSeries], list[ArrowSeries]]
+    ListOfCompliantExpr = Union[list[PandasLikeExpr], list[ArrowExpr]]
+    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame]
 
     T = TypeVar("T")
 
@@ -51,10 +51,10 @@ def evaluate_into_expr(
 
 @overload
 def evaluate_into_exprs(
-    df: PandasDataFrame,
-    *exprs: IntoPandasExpr,
-    **named_exprs: IntoPandasExpr,
-) -> list[PandasSeries]: ...
+    df: PandasLikeDataFrame,
+    *exprs: IntoPandasLikeExpr,
+    **named_exprs: IntoPandasLikeExpr,
+) -> list[PandasLikeSeries]: ...
 
 
 @overload
@@ -97,10 +97,10 @@ def maybe_evaluate_expr(
 
 @overload
 def parse_into_exprs(
-    *exprs: IntoPandasExpr,
-    namespace: PandasNamespace,
-    **named_exprs: IntoPandasExpr,
-) -> list[PandasExpr]: ...
+    *exprs: IntoPandasLikeExpr,
+    namespace: PandasLikeNamespace,
+    **named_exprs: IntoPandasLikeExpr,
+) -> list[PandasLikeExpr]: ...
 
 
 @overload
