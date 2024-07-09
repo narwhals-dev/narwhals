@@ -1490,7 +1490,7 @@ class DataFrame(BaseFrame[FrameT]):
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *cross*: Returns the Cartesian product of rows from both tables.
-                  * *semi*: Filter rows that have a match in the right table..
+                  * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Name(s) of the left join column(s).
