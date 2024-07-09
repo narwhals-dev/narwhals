@@ -1,15 +1,15 @@
 import random
 
-PANDAS_VERSION = [
-    "1.0.5",
-    "1.1.5",
-    "1.2.5",
-    "1.3.5",
-    "1.4.4",
-    "1.5.3",
-    "2.0.3",
-    "2.1.4",
-    "2.2.2",
+PANDAS_AND_NUMPY_VERSION = [
+    ("1.0.5", "1.18.5"),
+    ("1.1.5", "1.19.5"),
+    ("1.2.5", "1.20.3"),
+    ("1.3.5", "1.21.6"),
+    ("1.4.4", "1.22.4"),
+    ("1.5.3", "1.23.5"),
+    ("2.0.3", "1.24.4"),
+    ("2.1.4", "1.25.2"),
+    ("2.2.2", "1.26.4"),
 ]
 POLARS_VERSION = [
     "0.20.3",
@@ -52,13 +52,11 @@ PYARROW_VERSION = [
     "16.1.0",
 ]
 
-pandas_version = random.choice(PANDAS_VERSION)
+pandas_version, numpy_version = random.choice(PANDAS_AND_NUMPY_VERSION)
 polars_version = random.choice(POLARS_VERSION)
 pyarrow_version = random.choice(PYARROW_VERSION)
 
-content = (
-    f"pandas=={pandas_version}\npolars=={polars_version}\npyarrow=={pyarrow_version}\n"
-)
+content = f"pandas=={pandas_version}\nnumpy=={numpy_version}\npolars=={polars_version}\npyarrow=={pyarrow_version}\n"
 with open("random-requirements.txt", "w") as fd:
     fd.write(content)
 
