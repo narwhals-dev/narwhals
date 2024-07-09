@@ -11,7 +11,7 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -55,7 +55,6 @@ def test_len(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_is_in(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).is_in([1, 2])
     assert result[0]
@@ -64,7 +63,6 @@ def test_is_in(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_is_in_other(df_raw: Any) -> None:
     with pytest.raises(
         NotImplementedError,
@@ -76,7 +74,6 @@ def test_is_in_other(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_filter(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
     expected = np.array([3, 2])

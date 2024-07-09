@@ -5,7 +5,7 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 
 def test_is_ordered_categorical() -> None:

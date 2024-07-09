@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "0.9.28"
+version = "1.0.2"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -47,31 +47,23 @@ lint.ignore = [
   'A003',
   'ANN101',
   'ANN401',
-  'ARG002',  # todo: enable
-  'ARG003',  # todo: enable
   'C901',
   'COM812',
   'D',
-  'DTZ',
+  'DTZ001',
   'E501',
-  'EM101',  # todo: enable
-  'ERA001',  # todo: enable
-  'FBT003',  # todo: enable
+  'EM101',
   'FIX',
-  'ICN001',
-  'ISC001',
-  'PD',
+  'PD901',  # This is a auxiliary library so dataframe variables have no concrete business meaning
   'PLR0911',
   'PLR0912',
-  'PLR5501',
   'PLR2004',
-  'PT011',
   'PTH',
   'RET505',
   'S',
   'SLF001',
-  'TD',
-  'TRY003',  # todo: enable
+  'TD003',
+  'TRY003',  # TODO(Unassigned): enable
   'TRY004'
 ]
 
@@ -86,6 +78,10 @@ filterwarnings = [
   "error",
   'ignore:distutils Version classes are deprecated:DeprecationWarning',
   'ignore:In the future `np.bool`',
+  'ignore:The copy keyword is deprecated and will be removed',
+  'ignore:make_block is deprecated and will be removed',
+  'ignore:np.find_common_type is deprecated',
+  'ignore:is_sparse is deprecated and will be removed',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -98,8 +94,8 @@ omit = ['narwhals/typing.py']
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
-  "if implementation == \"modin\"",
-  "if implementation == \"cudf\"",
+  "if implementation is Implementation.MODIN",
+  "if implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail\)'
 ]
 

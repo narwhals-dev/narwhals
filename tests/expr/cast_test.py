@@ -3,14 +3,15 @@ from typing import Any
 import pyarrow as pa
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 
+@pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
 def test_cast(constructor_with_pyarrow: Any, request: Any) -> None:
-    if "table" in str(constructor_with_pyarrow) and parse_version(
-        pa.__version__
-    ) <= parse_version("12.0.0"):  # pragma: no cover
+    if "table" in str(constructor_with_pyarrow) and parse_version(pa.__version__) <= (
+        15,
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [1],

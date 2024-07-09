@@ -7,7 +7,7 @@ import pyarrow as pa
 import pytest
 from polars.testing import assert_frame_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 

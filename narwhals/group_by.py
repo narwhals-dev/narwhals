@@ -2,27 +2,33 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
 from typing import Iterable
 from typing import Iterator
+from typing import TypeVar
+from typing import cast
 
+from narwhals.dataframe import DataFrame
+from narwhals.dataframe import LazyFrame
 from narwhals.utils import flatten
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
     from narwhals.typing import IntoExpr
 
+DataFrameT = TypeVar("DataFrameT")
+LazyFrameT = TypeVar("LazyFrameT")
 
-class GroupBy:
-    def __init__(self, df: DataFrame, *keys: str | Iterable[str]) -> None:
-        self._df = df
+
+class GroupBy(Generic[DataFrameT]):
+    def __init__(self, df: DataFrameT, *keys: str | Iterable[str]) -> None:
+        self._df = cast(DataFrame[Any], df)
         self._keys = flatten(keys)
-        self._grouped = self._df._dataframe.group_by(self._keys)
+        self._grouped = self._df._compliant_frame.group_by(self._keys)
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> DataFrame:
+    ) -> DataFrameT:
         """
         Compute aggregations for each group of a group by operation.
 
@@ -104,27 +110,27 @@ class GroupBy:
             └─────┴─────┴─────┘
         """
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
-        return self._df.__class__(
+        return self._df._from_compliant_dataframe(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, DataFrame]]:
-        yield from (
-            (tupleify(key), self._df._from_dataframe(df))
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
+        yield from (  # type: ignore[misc]
+            (tupleify(key), self._df._from_compliant_dataframe(df))
             for (key, df) in self._grouped.__iter__()
         )
 
 
-class LazyGroupBy:
-    def __init__(self, df: LazyFrame, *keys: str | Iterable[str]) -> None:
-        self._df = df
+class LazyGroupBy(Generic[LazyFrameT]):
+    def __init__(self, df: LazyFrameT, *keys: str | Iterable[str]) -> None:
+        self._df = cast(LazyFrame[Any], df)
         self._keys = keys
-        self._grouped = self._df._dataframe.group_by(*self._keys)
+        self._grouped = self._df._compliant_frame.group_by(*self._keys)
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> LazyFrame:
+    ) -> LazyFrameT:
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
-        return self._df.__class__(
+        return self._df._from_compliant_dataframe(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
         )
