@@ -20,10 +20,12 @@ jobs:
         run: pip install -e .
       - name: generate-random-versions
         run: python utils/generate_random_versions.py
-      - name: install-random-verions
-        run: python -m pip install -r random-requirements.txt
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip && python -m pip install -r requirements-dev.txt
+      - name: uninstall scipy/sklearn
+        run: python -m pip uninstall -y scipy scikit-learn
+      - name: install-random-verions
+        run: python -m pip install -r random-requirements.txt
       - name: show versions
         run: python -m pip freeze
       - name: Run pytest
