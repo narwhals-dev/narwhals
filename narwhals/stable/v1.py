@@ -488,7 +488,6 @@ def from_native(
 ) -> Any: ...
 
 
-# from_native(df, strict=False)
 @overload
 def from_native(
     native_dataframe: IntoFrameT | T,
@@ -497,11 +496,12 @@ def from_native(
     eager_only: bool | None = ...,
     series_only: bool | None = ...,
     allow_series: bool | None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T:
+    """
+    from_native(df, strict=False)
+    """
 
 
-# from_native(df, strict=True, eager_only=True, allow_series=True)
-# from_native(df, eager_only=True, allow_series=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -510,11 +510,13 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | Series: ...
+) -> DataFrame[Any] | Series:
+    """
+    from_native(df, strict=True, eager_only=True, allow_series=True)
+    from_native(df, eager_only=True, allow_series=True)
+    """
 
 
-# from_native(df, strict=True, eager_only=True)
-# from_native(df, eager_only=True)
 @overload
 def from_native(
     native_dataframe: IntoDataFrameT,
@@ -523,11 +525,13 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
+) -> DataFrame[IntoDataFrameT]:
+    """
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
+    """
 
 
-# from_native(df, strict=True, allow_series=True)
-# from_native(df, allow_series=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -536,11 +540,13 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
+) -> DataFrame[Any] | LazyFrame[Any] | Series:
+    """
+    from_native(df, strict=True, allow_series=True)
+    from_native(df, allow_series=True)
+    """
 
 
-# from_native(df, strict=True, series_only=True)
-# from_native(df, series_only=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -549,11 +555,13 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series: ...
+) -> Series:
+    """
+    from_native(df, strict=True, series_only=True)
+    from_native(df, series_only=True)
+    """
 
 
-# from_native(df, strict=True)
-# from_native(df)
 @overload
 def from_native(
     native_dataframe: IntoFrameT,
@@ -562,7 +570,11 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
+    """
+    from_native(df, strict=True)
+    from_native(df)
+    """
 
 
 # All params passed in as variables

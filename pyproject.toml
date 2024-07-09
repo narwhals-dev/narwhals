@@ -52,9 +52,6 @@ lint.ignore = [
   'D',
   'DTZ001',
   'E501',
-  'EM101',  # TODO(Unassigned): enable
-  'ERA001',  # TODO(Unassigned): enable
-  'FBT003',  # TODO(Unassigned): enable
   'FIX',
   'ICN001',
   'ISC001',
