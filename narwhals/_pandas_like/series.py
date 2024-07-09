@@ -514,7 +514,7 @@ class PandasSeries:
         return self._from_native_series(~self._native_series.duplicated(keep=False))
 
     def null_count(self: Self) -> int:
-        return self._native_series.isnull().sum()  # type: ignore[no-any-return]
+        return self._native_series.isna().sum()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
         return self._from_native_series(~self._native_series.duplicated(keep="first"))
