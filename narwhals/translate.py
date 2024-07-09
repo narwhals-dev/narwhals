@@ -132,7 +132,6 @@ def from_native(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
 
 
-# from_native(df, strict=False)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -141,11 +140,12 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | Series: ...
+) -> DataFrame[Any] | Series:
+    """
+    from_native(df, strict=False)
+    """
 
 
-# from_native(df, strict=True, eager_only=True, allow_series=True)
-# from_native(df, eager_only=True, allow_series=True)
 @overload
 def from_native(
     native_dataframe: IntoDataFrameT,
@@ -154,11 +154,13 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
+) -> DataFrame[IntoDataFrameT]:
+    """
+    from_native(df, strict=True, eager_only=True, allow_series=True)
+    from_native(df, eager_only=True, allow_series=True)
+    """
 
 
-# from_native(df, strict=True, eager_only=True)
-# from_native(df, eager_only=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -167,11 +169,13 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
+) -> DataFrame[Any] | LazyFrame[Any] | Series:
+    """
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
+    """
 
 
-# from_native(df, strict=True, series_only=True)
-# from_native(df, series_only=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -180,11 +184,13 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series: ...
+) -> Series:
+    """
+    from_native(df, strict=True, series_only=True)
+    from_native(df, series_only=True)
+    """
 
 
-# from_native(df, strict=True)
-# from_native(df)
 @overload
 def from_native(
     native_dataframe: IntoFrameT,
@@ -193,7 +199,11 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
+    """
+    from_native(df, strict=True)
+    from_native(df)
+    """
 
 
 # All params passed in as variables
@@ -251,7 +261,7 @@ def from_native(  # noqa: PLR0915
 
     if series_only:
         allow_series = True
-    # todo: raise on invalid combinations
+    # TODO(Unassigned): raise on invalid combinations
 
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         if series_only:  # pragma: no cover (todo)

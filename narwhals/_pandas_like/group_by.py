@@ -118,7 +118,7 @@ def agg_pandas(  # noqa: PLR0913
         simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
             if expr._depth == 0:
-                # e.g. agg(nw.len())
+                # e.g. agg(nw.len()) # noqa: ERA001
                 assert expr._output_names is not None
                 function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                     expr._function_name, expr._function_name
@@ -127,7 +127,7 @@ def agg_pandas(  # noqa: PLR0913
                     simple_aggregations[output_name] = (keys[0], function_name)
                 continue
 
-            # e.g. agg(nw.mean('a'))
+            # e.g. agg(nw.mean('a')) # noqa: ERA001
             assert expr._depth == 1
             assert expr._root_names is not None
             assert expr._output_names is not None
