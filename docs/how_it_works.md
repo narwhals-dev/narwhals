@@ -92,7 +92,7 @@ pn = PandasNamespace(implementation='pandas')
 nw.col('a')._call(pn)
 ```
 The result from the last line above is the same as we'd get from `pn.col('a')`, and it's
-a `narwhals._pandas_like.expression.PandasExpr` object, which we'll call `PandasExpr` for
+a `narwhals._pandas_like.expr.PandasExpr` object, which we'll call `PandasExpr` for
 short.
 
 `PandasExpr` also has a `_call` method - but this one expects a `PandasDataFrame` as input.
@@ -101,21 +101,23 @@ The `_call` method gives us that function! Let's see it in action.
 
 Note: the following examples use `PandasDataFrame` and `PandasSeries`. These are backed
 by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
-underlying pandas objects via `PandasDataFrame._compliant_frame` and `PandasSeries._series`.
+underlying pandas objects via `PandasDataFrame._native_dataframe` and `PandasSeries._native_series`.
 
 ```python
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasNamespace
+from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.dataframe import PandasDataFrame
+from narwhals.utils import parse_version
 import pandas as pd
 
-pn = PandasNamespace(implementation='pandas')
+pn = PandasNamespace(implementation=Implementation.PANDAS, backend_version=pd.__version__, backend_version=parse_version(pd.__version__))
 
 df_pd = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
 df = PandasDataFrame(df_pd, implementation='pandas')
 expression = pn.col('a') + 1
 result = expression._call(df)
-print([x._series for x in result])
+print([x._native_series for x in result])
 ```
 The first (and only) Series to be output is:
 ```
