@@ -27,7 +27,7 @@ from narwhals.utils import flatten
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._pandas_like.group_by import PandasGroupBy
+    from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
@@ -283,10 +283,10 @@ class PandasLikeDataFrame:
         )
 
     # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> PandasGroupBy:
-        from narwhals._pandas_like.group_by import PandasGroupBy
+    def group_by(self, *keys: str | Iterable[str]) -> PandasLikeGroupBy:
+        from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
-        return PandasGroupBy(
+        return PandasLikeGroupBy(
             self,
             flatten(keys),
         )
