@@ -5,15 +5,16 @@ from typing import Any
 from typing import Callable
 from typing import Literal
 
+from narwhals._expression_parsing import reuse_series_implementation
+from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasSeries
-from narwhals._pandas_like.utils import reuse_series_implementation
-from narwhals._pandas_like.utils import reuse_series_namespace_implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.namespace import PandasNamespace
+    from narwhals._pandas_like.utils import Implementation
 
 
 class PandasExpr:
@@ -25,7 +26,7 @@ class PandasExpr:
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-        implementation: str,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
     ) -> None:
         self._call = call
@@ -51,11 +52,13 @@ class PandasExpr:
 
         return PandasNamespace(self._implementation, self._backend_version)
 
+    def __narwhals_expr__(self) -> None: ...
+
     @classmethod
     def from_column_names(
         cls: type[Self],
         *column_names: str,
-        implementation: str,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
     ) -> Self:
         def func(df: PandasDataFrame) -> list[PandasSeries]:

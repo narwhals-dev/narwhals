@@ -6,6 +6,7 @@ from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
+from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -79,6 +80,10 @@ class ArrowNamespace:
             name=series.name,
             backend_version=self._backend_version,
         )
+
+    def _create_native_series(self, value: Any) -> Any:  # pragma: no cover (todo!)
+        pa = get_pyarrow()
+        return pa.chunked_array([value])
 
     # --- not in spec ---
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:

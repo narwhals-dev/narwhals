@@ -1,7 +1,6 @@
 import random
 
 PANDAS_VERSION = [
-    "0.25.3",
     "1.0.5",
     "1.1.5",
     "1.2.5",

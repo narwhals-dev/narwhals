@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.0.0"
+version = "1.0.2"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -102,8 +102,8 @@ omit = ['narwhals/typing.py']
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
-  "if implementation == \"modin\"",
-  "if implementation == \"cudf\"",
+  "if implementation is Implementation.MODIN",
+  "if implementation is Implementation.CUDF",
   'request.applymarker\(pytest.mark.xfail\)'
 ]
 

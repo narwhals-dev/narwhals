@@ -10,11 +10,14 @@ from narwhals._pandas_like.expr import PandasExpr
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.utils import Implementation
     from narwhals.dtypes import DType
 
 
 class PandasSelectorNamespace:
-    def __init__(self, *, implementation: str, backend_version: tuple[int, ...]) -> None:
+    def __init__(
+        self, *, implementation: Implementation, backend_version: tuple[int, ...]
+    ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
 

@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
-from narwhals._pandas_like.utils import reuse_series_implementation
-from narwhals._pandas_like.utils import reuse_series_namespace_implementation
+from narwhals._expression_parsing import reuse_series_implementation
+from narwhals._expression_parsing import reuse_series_namespace_implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -75,38 +75,40 @@ class ArrowExpr:
 
         return ArrowNamespace(backend_version=self._backend_version)
 
+    def __narwhals_expr__(self) -> None: ...
+
     def __add__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__add__", other)  # type: ignore[type-var]
+        return reuse_series_implementation(self, "__add__", other)
 
     def __sub__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__sub__", other)  # type: ignore[type-var]
+        return reuse_series_implementation(self, "__sub__", other)
 
     def __mul__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__mul__", other)  # type: ignore[type-var]
+        return reuse_series_implementation(self, "__mul__", other)
 
     def mean(self) -> Self:
-        return reuse_series_implementation(self, "mean", returns_scalar=True)  # type: ignore[type-var]
+        return reuse_series_implementation(self, "mean", returns_scalar=True)
 
     def std(self, ddof: int = 1) -> Self:
-        return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)  # type: ignore[type-var]
+        return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
     def cast(self, dtype: DType) -> Self:
-        return reuse_series_implementation(self, "cast", dtype)  # type: ignore[type-var]
+        return reuse_series_implementation(self, "cast", dtype)
 
     def abs(self) -> Self:
-        return reuse_series_implementation(self, "abs")  # type: ignore[type-var]
+        return reuse_series_implementation(self, "abs")
 
     def diff(self) -> Self:
-        return reuse_series_implementation(self, "diff")  # type: ignore[type-var]
+        return reuse_series_implementation(self, "diff")
 
     def cum_sum(self) -> Self:
-        return reuse_series_implementation(self, "cum_sum")  # type: ignore[type-var]
+        return reuse_series_implementation(self, "cum_sum")
 
     def any(self) -> Self:
-        return reuse_series_implementation(self, "any", returns_scalar=True)  # type: ignore[type-var]
+        return reuse_series_implementation(self, "any", returns_scalar=True)
 
     def all(self) -> Self:
-        return reuse_series_implementation(self, "all", returns_scalar=True)  # type: ignore[type-var]
+        return reuse_series_implementation(self, "all", returns_scalar=True)
 
     def alias(self, name: str) -> Self:
         # Define this one manually, so that we can
@@ -130,6 +132,6 @@ class ArrowExprDateTimeNamespace:
         self._expr = expr
 
     def to_string(self, format: str) -> ArrowExpr:  # noqa: A002
-        return reuse_series_namespace_implementation(  # type: ignore[type-var, return-value]
+        return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
         )

@@ -243,6 +243,7 @@ def from_native(  # noqa: PLR0915
     from narwhals._arrow.series import ArrowSeries
     from narwhals._pandas_like.dataframe import PandasDataFrame
     from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.utils import Implementation
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -277,7 +278,7 @@ def from_native(  # noqa: PLR0915
             PandasDataFrame(
                 native_dataframe,
                 backend_version=parse_version(pd.__version__),
-                implementation="pandas",
+                implementation=Implementation.PANDAS,
             ),
             is_polars=False,
             backend_version=parse_version(pd.__version__),
@@ -290,7 +291,7 @@ def from_native(  # noqa: PLR0915
         return DataFrame(
             PandasDataFrame(
                 native_dataframe,
-                implementation="modin",
+                implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
             ),
             is_polars=False,
@@ -304,7 +305,7 @@ def from_native(  # noqa: PLR0915
         return DataFrame(
             PandasDataFrame(
                 native_dataframe,
-                implementation="cudf",
+                implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
             ),
             is_polars=False,
@@ -354,7 +355,7 @@ def from_native(  # noqa: PLR0915
         return Series(
             PandasSeries(
                 native_dataframe,
-                implementation="pandas",
+                implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
             ),
             is_polars=False,
@@ -368,7 +369,7 @@ def from_native(  # noqa: PLR0915
         return Series(
             PandasSeries(
                 native_dataframe,
-                implementation="modin",
+                implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
             ),
             is_polars=False,
@@ -382,7 +383,7 @@ def from_native(  # noqa: PLR0915
         return Series(
             PandasSeries(
                 native_dataframe,
-                implementation="cudf",
+                implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
             ),
             is_polars=False,

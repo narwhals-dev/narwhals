@@ -13,6 +13,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals._pandas_like.utils import Implementation
 from narwhals.functions import _get_deps_info
 from narwhals.functions import _get_sys_info
 from narwhals.functions import show_versions
@@ -172,7 +173,7 @@ def test_cross_join(df_raw: Any) -> None:
 def test_cross_join_non_pandas() -> None:
     df = nw.from_native(df_pandas).select("a")
     # HACK to force testing for a non-pandas codepath
-    df._dataframe._implementation = "modin"
+    df._dataframe._implementation = Implementation.MODIN
     result = df.join(df, how="cross")  # type: ignore[arg-type]
     expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
     compare_dicts(result, expected)
