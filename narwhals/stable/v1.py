@@ -691,7 +691,7 @@ def narwhalify(
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
     """
 
-    # TODO: do we have a way to de-dupe this a bit?
+    # TODO(Unassigned): do we have a way to de-dupe this a bit?
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
