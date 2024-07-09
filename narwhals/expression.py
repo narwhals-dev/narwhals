@@ -2087,7 +2087,7 @@ class ExprStringNamespace:
 
         Notes:
             The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
-            For more info see: https://github.com/apache/arrow/issues/34599
+            For more info see [the related issue](https://github.com/apache/arrow/issues/34599).
             Other Unicode edge cases may be present and are not tested.
 
         Examples:

@@ -11,5 +11,7 @@
         - starts_with
         - tail
         - to_datetime
+        - to_uppercase
+        - to_lowercase
       show_source: false
       show_bases: false
