@@ -2211,7 +2211,7 @@ class SeriesStringNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(upper_col=nw.col("fruits").str.to_uppercase()))
+            ...     return df.with_columns(upper_col=nw.col("fruits").str.to_uppercase())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2221,17 +2221,18 @@ class SeriesStringNamespace:
             1  mango      MANGO
             2   None       None
 
-            >>> func(df_pl)
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 2)
-            ┌────────┬────────────┐
-            │ fruits ┆ upper_col  │
-            │ ---    ┆ ---        │
-            │ str    ┆ bool       │
-            ╞════════╪════════════╡
-            │ apple  ┆ APPLE      │
-            │ mango  ┆ MANGO      │
-            │ null   ┆ null       │
-            └────────┴────────────┘
+            ┌────────┬───────────┐
+            │ fruits ┆ upper_col │
+            │ ---    ┆ ---       │
+            │ str    ┆ str       │
+            ╞════════╪═══════════╡
+            │ apple  ┆ APPLE     │
+            │ mango  ┆ MANGO     │
+            │ null   ┆ null      │
+            └────────┴───────────┘
+
         """
         return self._series._from_series(self._series._series.str.to_uppercase())
 
@@ -2251,27 +2252,28 @@ class SeriesStringNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.with_columns(lower_col=nw.col("fruits").str.to_lowercase()))
+            ...     return df.with_columns(lower_col=nw.col("fruits").str.to_lowercase())
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
-              fruits  lower_col
-            0  APPLE      apple
-            1  MANGO      mango
-            2   None       None
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+              fruits lower_col
+            0  APPLE     apple
+            1  MANGO     mango
+            2   None      None
 
-            >>> func(df_pl)
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3, 2)
-            ┌────────┬────────────┐
-            │ fruits ┆ lower_col  │
-            │ ---    ┆ ---        │
-            │ str    ┆ bool       │
-            ╞════════╪════════════╡
-            │ APPLE  ┆ apple      │
-            │ MANGO  ┆ mango      │
-            │ null   ┆ null       │
-            └────────┴────────────┘
+            ┌────────┬───────────┐
+            │ fruits ┆ lower_col │
+            │ ---    ┆ ---       │
+            │ str    ┆ str       │
+            ╞════════╪═══════════╡
+            │ APPLE  ┆ apple     │
+            │ MANGO  ┆ mango     │
+            │ null   ┆ null      │
+            └────────┴───────────┘
         """
         return self._series._from_series(self._series._series.str.to_lowercase())
 
