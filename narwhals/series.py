@@ -2215,8 +2215,8 @@ class SeriesStringNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
-              fruits  upper_col
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+             fruits  upper_col
             0  apple      APPLE
             1  mango      MANGO
             2   None       None
