@@ -1913,7 +1913,7 @@ class Series:
 
 class SeriesCatNamespace:
     def __init__(self, series: Series) -> None:
-        self._series = series
+        self._narwhals_series = series
 
     def get_categories(self) -> Series:
         """
@@ -1950,14 +1950,14 @@ class SeriesCatNamespace:
                "mango"
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.cat.get_categories()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.cat.get_categories()
         )
 
 
 class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
-        self._series = series
+        self._narwhals_series = series
 
     def starts_with(self, prefix: str) -> Series:
         r"""
@@ -1997,8 +1997,8 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.str.starts_with(prefix)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.starts_with(prefix)
         )
 
     def ends_with(self, suffix: str) -> Series:
@@ -2039,8 +2039,8 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.str.ends_with(suffix)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.ends_with(suffix)
         )
 
     def contains(self, pattern: str, *, literal: bool = False) -> Series:
@@ -2087,8 +2087,8 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.str.contains(pattern, literal=literal)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.contains(pattern, literal=literal)
         )
 
     def slice(self, offset: int, length: int | None = None) -> Series:
@@ -2156,8 +2156,10 @@ class SeriesStringNamespace:
                 "uit"
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.str.slice(offset=offset, length=length)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.slice(
+                offset=offset, length=length
+            )
         )
 
     def head(self, n: int = 5) -> Series:
@@ -2204,8 +2206,8 @@ class SeriesStringNamespace:
                "zukky"
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.str.slice(0, n)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.slice(0, n)
         )
 
     def tail(self, n: int = 5) -> Series:
@@ -2252,8 +2254,8 @@ class SeriesStringNamespace:
                "kkyun"
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.str.slice(-n)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.slice(-n)
         )
 
     def to_uppercase(self) -> Series:
@@ -2300,8 +2302,8 @@ class SeriesStringNamespace:
             └────────┴───────────┘
 
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.str.to_uppercase()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.to_uppercase()
         )
 
     def to_lowercase(self) -> Series:
@@ -2343,14 +2345,14 @@ class SeriesStringNamespace:
             │ null   ┆ null      │
             └────────┴───────────┘
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.str.to_lowercase()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
 
 class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:
-        self._series = series
+        self._narwhals_series = series
 
     def year(self) -> Series:
         """
@@ -2385,8 +2387,8 @@ class SeriesDateTimeNamespace:
                2023
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.year()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.year()
         )
 
     def month(self) -> Series:
@@ -2422,8 +2424,8 @@ class SeriesDateTimeNamespace:
                8
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.month()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.month()
         )
 
     def day(self) -> Series:
@@ -2459,8 +2461,8 @@ class SeriesDateTimeNamespace:
                5
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.day()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.day()
         )
 
     def hour(self) -> Series:
@@ -2496,8 +2498,8 @@ class SeriesDateTimeNamespace:
                9
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.hour()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.hour()
         )
 
     def minute(self) -> Series:
@@ -2533,8 +2535,8 @@ class SeriesDateTimeNamespace:
                12
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.minute()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.minute()
         )
 
     def second(self) -> Series:
@@ -2570,8 +2572,8 @@ class SeriesDateTimeNamespace:
                 4
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.second()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.second()
         )
 
     def millisecond(self) -> Series:
@@ -2620,8 +2622,8 @@ class SeriesDateTimeNamespace:
                 200
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.millisecond()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.millisecond()
         )
 
     def microsecond(self) -> Series:
@@ -2670,8 +2672,8 @@ class SeriesDateTimeNamespace:
                200000
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.microsecond()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.microsecond()
         )
 
     def nanosecond(self) -> Series:
@@ -2710,8 +2712,8 @@ class SeriesDateTimeNamespace:
                60000000
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.nanosecond()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.nanosecond()
         )
 
     def ordinal_day(self) -> Series:
@@ -2747,8 +2749,8 @@ class SeriesDateTimeNamespace:
                216
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.ordinal_day()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.ordinal_day()
         )
 
     def total_minutes(self) -> Series:
@@ -2789,8 +2791,8 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.total_minutes()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_minutes()
         )
 
     def total_seconds(self) -> Series:
@@ -2831,8 +2833,8 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.total_seconds()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_seconds()
         )
 
     def total_milliseconds(self) -> Series:
@@ -2876,8 +2878,8 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.total_milliseconds()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_milliseconds()
         )
 
     def total_microseconds(self) -> Series:
@@ -2921,8 +2923,8 @@ class SeriesDateTimeNamespace:
                     1200
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.total_microseconds()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_microseconds()
         )
 
     def total_nanoseconds(self) -> Series:
@@ -2963,8 +2965,8 @@ class SeriesDateTimeNamespace:
                     1
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.total_nanoseconds()
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_nanoseconds()
         )
 
     def to_string(self, format: str) -> Series:  # noqa: A002
@@ -3038,6 +3040,6 @@ class SeriesDateTimeNamespace:
                "2020/05/01"
             ]
         """
-        return self._series._from_compliant_series(
-            self._series._compliant_series.dt.to_string(format)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.to_string(format)
         )
