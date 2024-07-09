@@ -140,4 +140,5 @@ def validate_dataframe_comparand(other: Any) -> Any:
             msg = "not implemented yet"  # pragma: no cover
             raise NotImplementedError(msg)
         return other._native_series
-    raise AssertionError("Please report a bug")
+    error_message = "Please report a bug"  # pragma: no cover
+    raise AssertionError(error_message)

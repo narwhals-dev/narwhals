@@ -71,8 +71,6 @@ lint.ignore = [
   'S',
   'SLF001',
   'TD',
-  'TRY003',  # todo: enable
-  'TRY004'
 ]
 
 [tool.ruff.lint.isort]
