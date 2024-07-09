@@ -179,7 +179,7 @@ class ArrowSeriesCatNamespace:
     def get_categories(self) -> ArrowSeries:
         pa = get_pyarrow()
         ca = self._series._native_series
-        # TODO: this looks potentially expensive - is there no better way?
+        # TODO(Unassigned): this looks potentially expensive - is there no better way?
         out = pa.chunked_array(
             [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
         )

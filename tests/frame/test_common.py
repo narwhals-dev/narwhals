@@ -185,7 +185,7 @@ def test_cross_join_non_pandas() -> None:
         df_polars,
         df_lazy,
         df_pandas,
-        # df_mpd, (todo: understand the difference between ipython/jupyter and pytest runs)
+        # df_mpd, (TODO(Unassigned): understand the difference between ipython/jupyter and pytest runs)
     ],
 )
 @pytest.mark.parametrize(
@@ -208,7 +208,7 @@ def test_anti_join(
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-# TODO: https://github.com/narwhals-dev/narwhals/issues/313
+# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(df_raw: Any) -> None:
     result = nw.from_native(df_raw).schema
@@ -228,7 +228,7 @@ def test_schema(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-# TODO: https://github.com/narwhals-dev/narwhals/issues/313
+# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(df_raw: Any) -> None:
     df = nw.from_native(df_raw)
