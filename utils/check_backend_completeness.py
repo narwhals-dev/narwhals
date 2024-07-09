@@ -54,7 +54,6 @@ MISSING = [
     "Series.sample",
     "Series.shift",
     "Series.sort",
-    "Series.str",
     "Series.sum",
     "Series.tail",
     "Series.to_frame",

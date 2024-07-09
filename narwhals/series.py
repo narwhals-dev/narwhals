@@ -2190,6 +2190,93 @@ class SeriesStringNamespace:
         """
         return self._series._from_series(self._series._series.str.slice(-n))
 
+    def to_uppercase(self) -> Series:
+        r"""
+        Transform string to uppercase variant.
+
+        Notes:
+            The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
+            For more info see: https://github.com/apache/arrow/issues/34599
+            There may be other unicode-edge-case-related variations across implementations.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "mango", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(upper_col=nw.col("fruits").str.to_uppercase())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+             fruits  upper_col
+            0  apple      APPLE
+            1  mango      MANGO
+            2   None       None
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 2)
+            ┌────────┬───────────┐
+            │ fruits ┆ upper_col │
+            │ ---    ┆ ---       │
+            │ str    ┆ str       │
+            ╞════════╪═══════════╡
+            │ apple  ┆ APPLE     │
+            │ mango  ┆ MANGO     │
+            │ null   ┆ null      │
+            └────────┴───────────┘
+
+        """
+        return self._series._from_series(self._series._series.str.to_uppercase())
+
+    def to_lowercase(self) -> Series:
+        r"""
+        Transform string to lowercase variant.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["APPLE", "MANGO", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(lower_col=nw.col("fruits").str.to_lowercase())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+              fruits lower_col
+            0  APPLE     apple
+            1  MANGO     mango
+            2   None      None
+
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 2)
+            ┌────────┬───────────┐
+            │ fruits ┆ lower_col │
+            │ ---    ┆ ---       │
+            │ str    ┆ str       │
+            ╞════════╪═══════════╡
+            │ APPLE  ┆ apple     │
+            │ MANGO  ┆ mango     │
+            │ null   ┆ null      │
+            └────────┴───────────┘
+        """
+        return self._series._from_series(self._series._series.str.to_lowercase())
+
 
 class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:
