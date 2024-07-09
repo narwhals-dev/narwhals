@@ -25,7 +25,7 @@ def extract_native(expr: Expr, other: Any) -> Any:
     if isinstance(other, Expr):
         return other._call(expr)
     if isinstance(other, Series):
-        return other._series
+        return other._compliant_series
     return other
 
 

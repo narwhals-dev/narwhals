@@ -48,7 +48,7 @@ def test_cross_join_non_pandas() -> None:
     data = {"a": [1, 3, 2]}
     df = nw.from_native(pd.DataFrame(data))
     # HACK to force testing for a non-pandas codepath
-    df._dataframe._implementation = Implementation.MODIN
+    df._compliant_frame._implementation = Implementation.MODIN
     result = df.join(df, how="cross")  # type: ignore[arg-type]
     expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
     compare_dicts(result, expected)

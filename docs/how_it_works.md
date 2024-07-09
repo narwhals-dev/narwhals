@@ -101,7 +101,7 @@ The `_call` method gives us that function! Let's see it in action.
 
 Note: the following examples use `PandasDataFrame` and `PandasSeries`. These are backed
 by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
-underlying pandas objects via `PandasDataFrame._dataframe` and `PandasSeries._series`.
+underlying pandas objects via `PandasDataFrame._compliant_frame` and `PandasSeries._series`.
 
 ```python
 import narwhals as nw

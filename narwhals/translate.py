@@ -58,15 +58,15 @@ def to_native(
 
     if isinstance(narwhals_object, BaseFrame):
         return (
-            narwhals_object._dataframe
+            narwhals_object._compliant_frame
             if narwhals_object._is_polars
-            else narwhals_object._dataframe._native_dataframe
+            else narwhals_object._compliant_frame._native_dataframe
         )
     if isinstance(narwhals_object, Series):
         return (
-            narwhals_object._series
+            narwhals_object._compliant_series
             if narwhals_object._is_polars
-            else narwhals_object._series._native_series
+            else narwhals_object._compliant_series._native_series
         )
 
     if strict:  # pragma: no cover (todo)

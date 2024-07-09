@@ -88,8 +88,8 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
 def validate_same_library(items: Iterable[Any]) -> None:
     if all(item._is_polars for item in items):
         return
-    if all(hasattr(item._dataframe, "_implementation") for item in items) and (
-        len({item._dataframe._implementation for item in items}) == 1
+    if all(hasattr(item._compliant_frame, "_implementation") for item in items) and (
+        len({item._compliant_frame._implementation for item in items}) == 1
     ):
         return
     raise NotImplementedError("Cross-library comparisons aren't supported")
@@ -142,50 +142,52 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
 
     lhs_any = cast(Any, lhs)
     rhs_any = cast(Any, rhs)
-    if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
-        getattr(rhs_any, "_dataframe", None), PandasDataFrame
-    ):
-        _validate_index(lhs_any._dataframe._native_dataframe.index)
-        _validate_index(rhs_any._dataframe._native_dataframe.index)
-        return lhs_any._from_dataframe(  # type: ignore[no-any-return]
-            lhs_any._dataframe._from_native_dataframe(
-                lhs_any._dataframe._native_dataframe.loc[
-                    rhs_any._dataframe._native_dataframe.index
+    if isinstance(
+        getattr(lhs_any, "_compliant_frame", None), PandasDataFrame
+    ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasDataFrame):
+        _validate_index(lhs_any._compliant_frame._native_dataframe.index)
+        _validate_index(rhs_any._compliant_frame._native_dataframe.index)
+        return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            lhs_any._compliant_frame._from_native_dataframe(
+                lhs_any._compliant_frame._native_dataframe.loc[
+                    rhs_any._compliant_frame._native_dataframe.index
                 ]
             )
         )
-    if isinstance(getattr(lhs_any, "_dataframe", None), PandasDataFrame) and isinstance(
-        getattr(rhs_any, "_series", None), PandasSeries
-    ):
-        _validate_index(lhs_any._dataframe._native_dataframe.index)
-        _validate_index(rhs_any._series._native_series.index)
-        return lhs_any._from_dataframe(  # type: ignore[no-any-return]
-            lhs_any._dataframe._from_native_dataframe(
-                lhs_any._dataframe._native_dataframe.loc[
-                    rhs_any._series._native_series.index
+    if isinstance(
+        getattr(lhs_any, "_compliant_frame", None), PandasDataFrame
+    ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasSeries):
+        _validate_index(lhs_any._compliant_frame._native_dataframe.index)
+        _validate_index(rhs_any._compliant_series._native_series.index)
+        return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            lhs_any._compliant_frame._from_native_dataframe(
+                lhs_any._compliant_frame._native_dataframe.loc[
+                    rhs_any._compliant_series._native_series.index
                 ]
             )
         )
-    if isinstance(getattr(lhs_any, "_series", None), PandasSeries) and isinstance(
-        getattr(rhs_any, "_dataframe", None), PandasDataFrame
-    ):
-        _validate_index(lhs_any._series._native_series.index)
-        _validate_index(rhs_any._dataframe._native_dataframe.index)
-        return lhs_any._from_series(  # type: ignore[no-any-return]
-            lhs_any._series._from_native_series(
-                lhs_any._series._native_series.loc[
-                    rhs_any._dataframe._native_dataframe.index
+    if isinstance(
+        getattr(lhs_any, "_compliant_series", None), PandasSeries
+    ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasDataFrame):
+        _validate_index(lhs_any._compliant_series._native_series.index)
+        _validate_index(rhs_any._compliant_frame._native_dataframe.index)
+        return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
+            lhs_any._compliant_series._from_native_series(
+                lhs_any._compliant_series._native_series.loc[
+                    rhs_any._compliant_frame._native_dataframe.index
                 ]
             )
         )
-    if isinstance(getattr(lhs_any, "_series", None), PandasSeries) and isinstance(
-        getattr(rhs_any, "_series", None), PandasSeries
-    ):
-        _validate_index(lhs_any._series._native_series.index)
-        _validate_index(rhs_any._series._native_series.index)
-        return lhs_any._from_series(  # type: ignore[no-any-return]
-            lhs_any._series._from_native_series(
-                lhs_any._series._native_series.loc[rhs_any._series._native_series.index]
+    if isinstance(
+        getattr(lhs_any, "_compliant_series", None), PandasSeries
+    ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasSeries):
+        _validate_index(lhs_any._compliant_series._native_series.index)
+        _validate_index(rhs_any._compliant_series._native_series.index)
+        return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
+            lhs_any._compliant_series._from_native_series(
+                lhs_any._compliant_series._native_series.loc[
+                    rhs_any._compliant_series._native_series.index
+                ]
             )
         )
     if len(lhs_any) != len(rhs_any):
@@ -220,10 +222,10 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     from narwhals._pandas_like.dataframe import PandasDataFrame
 
     df_any = cast(Any, df)
-    if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
-        return df_any._from_dataframe(  # type: ignore[no-any-return]
-            df_any._dataframe._from_native_dataframe(
-                df_any._dataframe._native_dataframe.set_index(column_names)
+    if isinstance(getattr(df_any, "_compliant_frame", None), PandasDataFrame):
+        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            df_any._compliant_frame._from_native_dataframe(
+                df_any._compliant_frame._native_dataframe.set_index(column_names)
             )
         )
     return df
@@ -257,10 +259,10 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     from narwhals._pandas_like.dataframe import PandasDataFrame
 
     df_any = cast(Any, df)
-    if isinstance(getattr(df_any, "_dataframe", None), PandasDataFrame):
-        return df_any._from_dataframe(  # type: ignore[no-any-return]
-            df_any._dataframe._from_native_dataframe(
-                df_any._dataframe._native_dataframe.convert_dtypes(*args, **kwargs)
+    if isinstance(getattr(df_any, "_compliant_frame", None), PandasDataFrame):
+        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            df_any._compliant_frame._from_native_dataframe(
+                df_any._compliant_frame._native_dataframe.convert_dtypes(*args, **kwargs)
             )
         )
     return df
