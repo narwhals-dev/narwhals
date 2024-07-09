@@ -5,6 +5,7 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
+from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
@@ -69,3 +70,12 @@ def test_gather_pandas_index() -> None:
     result = nw.from_native(df, eager_only=True)[[1, 2]]
     expected = {"a": [1, 2], "b": [4, 2]}
     compare_dicts(result, expected)
+
+
+def test_gather_rows_cols(constructor: Any) -> None:
+    df = nw.from_native(constructor(data), eager_only=True)
+    result = df[[0, 3, 1], 1].to_pandas()
+    expected = pd.Series([11, 14, 12], name="b")
+    assert_series_equal(result, expected)
+    result = df[np.array([0, 3, 1]), "b"].to_pandas()
+    assert_series_equal(result, expected)

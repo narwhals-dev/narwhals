@@ -408,7 +408,10 @@ class DataFrame(BaseFrame[FrameT]):
         return self._compliant_frame.shape  # type: ignore[no-any-return]
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> Series: ...
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
     def __getitem__(self, item: str) -> Series: ...
@@ -416,8 +419,10 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: slice) -> Self: ...
 
-    def __getitem__(self, item: str | slice | Sequence[int]) -> Series | Self:
-        if isinstance(item, str):
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> Series | Self:
+        if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             from narwhals.series import Series
 
             return Series(
