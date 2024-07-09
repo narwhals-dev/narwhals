@@ -48,12 +48,12 @@ class PandasGroupBy:
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:
-                msg = (
+                error_message = (
                     "Anonymous expressions are not supported in group_by.agg.\n"
                     "Instead of `nw.all()`, try using a named expression, such as "
                     "`nw.col('a', 'b')`\n"
                 )
-                raise ValueError(msg)
+                raise ValueError(error_message)
             output_names.extend(expr._output_names)
 
         return agg_pandas(
@@ -146,16 +146,17 @@ def agg_pandas(  # noqa: PLR0913
         try:
             result_simple = grouped.agg(aggs)
         except AttributeError as exc:
-            raise RuntimeError(
+            error_message = (
                 "Failed to aggregated - does your aggregation function return a scalar?"
-            ) from exc
+            )
+            raise RuntimeError(error_message) from exc
         result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
         result_simple = result_simple.rename(columns=name_mapping).reset_index()
         return from_dataframe(result_simple.loc[:, output_names])
 
     if dataframe_is_empty:
         # Don't even attempt this, it's way too inconsistent across pandas versions.
-        msg = (
+        error_message = (
             "No results for group-by aggregation.\n\n"
             "Hint: you were probably trying to apply a non-elementary aggregation with a "
             "pandas-like API.\n"
@@ -165,7 +166,7 @@ def agg_pandas(  # noqa: PLR0913
             "use:\n\n"
             "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
         )
-        raise ValueError(msg)
+        raise ValueError(error_message)
 
     warnings.warn(
         "Found complex group-by expression, which can't be expressed efficiently with the "

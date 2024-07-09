@@ -917,9 +917,8 @@ class Expr:
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(lambda plx: self._call(plx).is_in(other))
         else:
-            raise NotImplementedError(
-                "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
-            )
+            error_message = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
+            raise NotImplementedError(error_message)
 
     def filter(self, *predicates: Any) -> Self:
         """
@@ -3271,14 +3270,15 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
     """
     if (np := get_numpy()) is not None and isinstance(value, np.ndarray):
-        raise ValueError(
+        error_message = (
             "numpy arrays are not supported as literal values. "
             "Consider using `with_columns` to create a new column from the array."
         )
+        raise ValueError(error_message)
 
     if isinstance(value, (list, tuple)):
-        msg = f"Nested datatypes are not supported yet. Got {value}"
-        raise NotImplementedError(msg)
+        error_message = f"Nested datatypes are not supported yet. Got {value}"
+        raise NotImplementedError(error_message)
 
     if dtype is None:
         return Expr(lambda plx: plx.lit(value, dtype))

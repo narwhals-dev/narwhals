@@ -712,8 +712,8 @@ def narwhalify(
             }
 
             if backends.__len__() > 1:
-                msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
-                raise ValueError(msg)
+                error_message = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+                raise ValueError(error_message)
 
             result = func(*args, **kwargs)
 

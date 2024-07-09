@@ -268,12 +268,12 @@ class PandasExpr:
     def over(self, keys: list[str]) -> Self:
         def func(df: PandasDataFrame) -> list[PandasSeries]:
             if self._output_names is None:
-                msg = (
+                error_message = (
                     "Anonymous expressions are not supported in over.\n"
                     "Instead of `nw.all()`, try using a named expression, such as "
                     "`nw.col('a', 'b')`\n"
                 )
-                raise ValueError(msg)
+                raise ValueError(error_message)
             tmp = df.group_by(keys).agg(self)
             tmp = df.select(*keys).join(tmp, how="left", left_on=keys, right_on=keys)
             return [tmp[name] for name in self._output_names]

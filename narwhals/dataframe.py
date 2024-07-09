@@ -77,13 +77,13 @@ class BaseFrame(Generic[FrameT]):
         if isinstance(arg, Expr):
             return arg._call(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):
-            msg = (
+            error_message = (
                 f"Expected Narwhals object, got: {type(arg)}.\n\n"
                 "Perhaps you:\n"
                 "- Forgot a `nw.from_native` somewhere?\n"
                 "- Used `pl.col` instead of `nw.col`?"
             )
-            raise TypeError(msg)
+            raise TypeError(error_message)
         return arg
 
     @property
@@ -180,12 +180,14 @@ class BaseFrame(Generic[FrameT]):
     ) -> Self:
         _supported_joins = {"inner", "cross", "anti"}
         if how not in _supported_joins:
-            msg = f"Only the following join stragies are supported: {_supported_joins}"
-            raise NotImplementedError(msg)
+            error_message = (
+                f"Only the following join stragies are supported: {_supported_joins}"
+            )
+            raise NotImplementedError(error_message)
 
         if how == "cross" and (left_on or right_on):
-            msg = "Can not pass left_on, right_on for cross join"
-            raise ValueError(msg)
+            error_message = "Can not pass left_on, right_on for cross join"
+            raise ValueError(error_message)
 
         validate_same_library([self, other])
         return self._from_dataframe(
@@ -225,8 +227,8 @@ class DataFrame(BaseFrame[FrameT]):
         elif is_polars and isinstance(df, get_polars().DataFrame):
             self._dataframe = df
         else:
-            msg = f"Expected polars DataFrame or object which implements `__narwhals_dataframe__`, got: {type(df)}"
-            raise TypeError(msg)
+            error_message = f"Expected polars DataFrame or object which implements `__narwhals_dataframe__`, got: {type(df)}"
+            raise TypeError(error_message)
 
     def __array__(self) -> np.ndarray:
         return self._dataframe.to_numpy()
@@ -433,8 +435,8 @@ class DataFrame(BaseFrame[FrameT]):
             return self._from_dataframe(self._dataframe[item])
 
         else:
-            msg = f"Expected str or slice, got: {type(item)}"
-            raise TypeError(msg)
+            error_message = f"Expected str or slice, got: {type(item)}"
+            raise TypeError(error_message)
 
     @overload
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
@@ -1835,8 +1837,8 @@ class LazyFrame(BaseFrame[FrameT]):
         ):
             self._dataframe = df
         else:
-            msg = f"Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
-            raise TypeError(msg)
+            error_message = f"Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
+            raise TypeError(error_message)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals LazyFrame                            "
@@ -1853,7 +1855,8 @@ class LazyFrame(BaseFrame[FrameT]):
         )
 
     def __getitem__(self, item: str | slice) -> Series | Self:
-        raise TypeError("Slicing is not supported on LazyFrame")
+        error_message = "Slicing is not supported on LazyFrame"
+        raise TypeError(error_message)
 
     def collect(self) -> DataFrame[Any]:
         r"""

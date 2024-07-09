@@ -66,8 +66,8 @@ class PandasDataFrame:
             return get_modin()
         if self._implementation is Implementation.CUDF:  # pragma: no cover
             return get_cudf()
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
-        raise AssertionError(msg)
+        error_message = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(error_message)
 
     def __len__(self) -> int:
         return len(self._native_dataframe)
@@ -77,11 +77,12 @@ class PandasDataFrame:
             counter = collections.Counter(columns)
             for col, count in counter.items():
                 if count > 1:
-                    msg = f"Expected unique column names, got {col!r} {count} time(s)"
-                    raise ValueError(
-                        msg,
+                    error_message = (
+                        f"Expected unique column names, got {col!r} {count} time(s)"
                     )
-            raise AssertionError("Pls report bug")
+                    raise ValueError(error_message)
+            error_message = "Please report a bug"  # pragma: no cover
+            raise AssertionError(error_message)
 
     def _from_native_dataframe(self, df: Any) -> Self:
         return self.__class__(
@@ -114,8 +115,8 @@ class PandasDataFrame:
             return self._from_native_dataframe(self._native_dataframe.iloc[item])
 
         else:  # pragma: no cover
-            msg = f"Expected str or slice, got: {type(item)}"
-            raise TypeError(msg)
+            error_message = f"Expected str or slice, got: {type(item)}"
+            raise TypeError(error_message)
 
     # --- properties ---
     @property
@@ -462,17 +463,17 @@ class PandasDataFrame:
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         if row is None and column is None:
             if self.shape != (1, 1):
-                msg = (
+                error_message = (
                     "can only call `.item()` if the dataframe is of shape (1, 1),"
                     " or if explicit row/col values are provided;"
                     f" frame has shape {self.shape!r}"
                 )
-                raise ValueError(msg)
+                raise ValueError(error_message)
             return self._native_dataframe.iat[0, 0]
 
         elif row is None or column is None:
-            msg = "cannot call `.item()` with only one of `row` or `column`"
-            raise ValueError(msg)
+            error_message = "cannot call `.item()` with only one of `row` or `column`"
+            raise ValueError(error_message)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
         return self._native_dataframe.iat[row, _col]

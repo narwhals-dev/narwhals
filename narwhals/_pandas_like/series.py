@@ -107,8 +107,8 @@ class PandasSeries:
             return get_modin()
         if self._implementation is Implementation.CUDF:  # pragma: no cover
             return get_cudf()
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
-        raise AssertionError(msg)
+        error_message = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(error_message)
 
     def __narwhals_series__(self) -> Self:
         return self
@@ -178,11 +178,11 @@ class PandasSeries:
         # cuDF doesn't have Series.item().
         if index is None:
             if len(self) != 1:
-                msg = (
+                error_message = (
                     "can only call '.item()' if the Series is of length 1,"
                     f" or an explicit index is provided (Series is of length {len(self)})"
                 )
-                raise ValueError(msg)
+                raise ValueError(error_message)
             return self._native_series.iloc[0]
         return self._native_series.iloc[index]
 
@@ -500,8 +500,10 @@ class PandasSeries:
             return self._native_series.to_pandas()
         elif self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._native_series._to_pandas()
-        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
-        raise AssertionError(msg)
+        error_message = (
+            f"Unknown implementation: {self._implementation}"  # pragma: no cover
+        )
+        raise AssertionError(error_message)
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
@@ -524,8 +526,10 @@ class PandasSeries:
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
         if not isinstance(descending, bool):
-            msg = f"argument 'descending' should be boolean, found {type(descending)}"
-            raise TypeError(msg)
+            error_message = (
+                f"argument 'descending' should be boolean, found {type(descending)}"
+            )
+            raise TypeError(error_message)
 
         if descending:
             return self._native_series.is_monotonic_decreasing  # type: ignore[no-any-return]

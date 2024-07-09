@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import platform
 import sys
+from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import TypeVar
@@ -21,14 +22,14 @@ FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[ty
 def concat(
     items: Iterable[FrameT],
     *,
-    how: Literal["horizontal", "vertical"] = "vertical",
+    how: Literal["horizontal", "vertical"] | Any = "vertical",
 ) -> FrameT:
-    if how not in ("horizontal", "vertical"):
-        raise NotImplementedError(
-            "Only horizontal and vertical concatenations are supported"
-        )
+    if how != "horizontal" and how != "vertical":  # noqa: PLR1714 - This is for type narrowing
+        error_message = "Only horizontal and vertical concatenations are supported"  # pragma: no cover
+        raise NotImplementedError(error_message)
     if not items:
-        raise ValueError("No items to concatenate")
+        error_message = "No items to concatenate"
+        raise ValueError(error_message)
     items = list(items)
     validate_same_library(items)
     validate_laziness(items)

@@ -90,13 +90,13 @@ class Date(TemporalType): ...
 
 def translate_dtype(plx: Any, dtype: DType) -> Any:
     if "polars" in str(type(dtype)):
-        msg = (
+        error_message = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
             "Perhaps you:\n"
             "- Forgot a `nw.from_native` somewhere?\n"
             "- Used `pl.Int64` instead of `nw.Int64`?"
         )
-        raise TypeError(msg)
+        raise TypeError(error_message)
     if dtype == Float64:
         return plx.Float64
     if dtype == Float32:
@@ -124,16 +124,16 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
     if dtype == Categorical:
         return plx.Categorical
     if dtype == Enum:
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+        error_message = "Converting to Enum is not (yet) supported"
+        raise NotImplementedError(error_message)
     if dtype == Datetime:
         return plx.Datetime
     if dtype == Duration:
         return plx.Duration
     if dtype == Date:
         return plx.Date
-    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
-    raise AssertionError(msg)
+    error_message = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(error_message)
 
 
 def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:

@@ -53,18 +53,18 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
     if (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame)):
-        msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
-        raise TypeError(msg)
+        error_message = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
+        raise TypeError(error_message)
     if (pl := get_polars()) is not None and isinstance(
         arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
     ):
-        msg = (
+        error_message = (
             f"Expected Narwhals class or scalar, got: {type(arg)}.\n\n"
             "Hint: Perhaps you\n"
             "- forgot a `nw.from_native` somewhere?\n"
             "- used `pl.col` instead of `nw.col`?"
         )
-        raise TypeError(msg)
+        raise TypeError(error_message)
 
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
@@ -92,7 +92,8 @@ def validate_same_library(items: Iterable[Any]) -> None:
         len({item._dataframe._implementation for item in items}) == 1
     ):
         return
-    raise NotImplementedError("Cross-library comparisons aren't supported")
+    error_message = "Cross-library comparisons aren't supported"
+    raise NotImplementedError(error_message)
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
@@ -103,9 +104,8 @@ def validate_laziness(items: Iterable[Any]) -> None:
         all(isinstance(item, LazyFrame) for item in items)
     ):
         return
-    raise NotImplementedError(
-        "The items to concatenate should either all be eager, or all lazy"
-    )
+    error_message = "The items to concatenate should either all be eager, or all lazy"
+    raise NotImplementedError(error_message)
 
 
 def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
@@ -138,7 +138,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
 
     def _validate_index(index: Any) -> None:
         if not index.is_unique:
-            raise ValueError("given index doesn't have a unique index")
+            error_message = "given index doesn't have a unique index"
+            raise ValueError(error_message)
 
     lhs_any = cast(Any, lhs)
     rhs_any = cast(Any, rhs)
@@ -189,8 +190,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
             )
         )
     if len(lhs_any) != len(rhs_any):
-        msg = f"Expected `lhs` and `rhs` to have the same length, got {len(lhs_any)} and {len(rhs_any)}"
-        raise ValueError(msg)
+        error_message = f"Expected `lhs` and `rhs` to have the same length, got {len(lhs_any)} and {len(rhs_any)}"
+        raise ValueError(error_message)
     return lhs
 
 

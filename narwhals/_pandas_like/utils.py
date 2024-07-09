@@ -44,8 +44,8 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, list):
         if len(other) > 1:
             # e.g. `plx.all() + plx.all()`
-            msg = "Multi-output expressions are not supported in this context"
-            raise ValueError(msg)
+            error_message = "Multi-output expressions are not supported in this context"
+            raise ValueError(error_message)
         other = other[0]
     if isinstance(other, PandasDataFrame):
         return NotImplemented
@@ -87,7 +87,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
                 backend_version=other._backend_version,
             )
         return other._native_series
-    raise AssertionError("Please report a bug")
+    error_message = "Please report a bug"  # pragma: no cover
+    raise AssertionError(error_message)
 
 
 def create_native_series(
@@ -152,8 +153,8 @@ def horizontal_concat(
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=1)
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    error_message = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(error_message)  # pragma: no cover
 
 
 def vertical_concat(
@@ -165,14 +166,14 @@ def vertical_concat(
     Should be in namespace.
     """
     if not dfs:
-        msg = "No dataframes to concatenate"  # pragma: no cover
-        raise AssertionError(msg)
+        error_message = "No dataframes to concatenate"  # pragma: no cover
+        raise AssertionError(error_message)
     cols = set(dfs[0].columns)
     for df in dfs:
         cols_current = set(df.columns)
         if cols_current != cols:
-            msg = "unable to vstack, column names don't match"
-            raise TypeError(msg)
+            error_message = "unable to vstack, column names don't match"
+            raise TypeError(error_message)
     if implementation is Implementation.PANDAS:
         pd = get_pandas()
 
@@ -187,8 +188,8 @@ def vertical_concat(
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=0)
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    error_message = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(error_message)  # pragma: no cover
 
 
 def native_series_from_iterable(
@@ -210,8 +211,8 @@ def native_series_from_iterable(
         mpd = get_modin()
 
         return mpd.Series(data, name=name, index=index)
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    error_message = f"Unknown implementation: {implementation}"  # pragma: no cover
+    raise TypeError(error_message)  # pragma: no cover
 
 
 def set_axis(
@@ -434,10 +435,12 @@ def reverse_translate_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Date):
         if dtype_backend == "pyarrow-nullable":
             return "date32[pyarrow]"
-        msg = "Date dtype only supported for pyarrow-backed data types in pandas"
-        raise NotImplementedError(msg)
-    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
-    raise AssertionError(msg)
+        error_message = (
+            "Date dtype only supported for pyarrow-backed data types in pandas"
+        )
+        raise NotImplementedError(error_message)
+    error_message = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(error_message)
 
 
 def validate_indices(series: list[PandasSeries]) -> list[Any]:
@@ -497,8 +500,8 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
 
         counter += 1
         if counter > 100:
-            msg = (
+            error_message = (
                 "Internal Error: Narwhals was not able to generate a column name to perform cross "
                 "join operation"
             )
-            raise AssertionError(msg)
+            raise AssertionError(error_message)

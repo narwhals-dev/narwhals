@@ -59,8 +59,8 @@ class ArrowDataFrame:
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
-            msg = "Unnamed rows are not yet supported on PyArrow tables"
-            raise NotImplementedError(msg)
+            error_message = "Unnamed rows are not yet supported on PyArrow tables"
+            raise NotImplementedError(error_message)
         return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
 
     @overload
@@ -81,8 +81,8 @@ class ArrowDataFrame:
 
         elif isinstance(item, slice):
             if item.step is not None and item.step != 1:
-                msg = "Slicing with step is not supported on PyArrow tables"
-                raise NotImplementedError(msg)
+                error_message = "Slicing with step is not supported on PyArrow tables"
+                raise NotImplementedError(error_message)
             start = item.start or 0
             stop = item.stop or len(self._native_dataframe)
             return self._from_native_dataframe(
@@ -97,8 +97,8 @@ class ArrowDataFrame:
             return self._from_native_dataframe(self._native_dataframe.take(item))
 
         else:  # pragma: no cover
-            msg = f"Expected str or slice, got: {type(item)}"
-            raise TypeError(msg)
+            error_message = f"Expected str or slice, got: {type(item)}"
+            raise TypeError(error_message)
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -195,4 +195,5 @@ class ArrowDataFrame:
         )
 
     def clone(self) -> Self:
-        raise NotImplementedError("clone is not yet supported on PyArrow tables")
+        error_message = "clone is not yet supported on PyArrow tables"  # pragma: no cover
+        raise NotImplementedError(error_message)

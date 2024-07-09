@@ -91,8 +91,8 @@ def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         return pa.duration("us")
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
-    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
-    raise AssertionError(msg)
+    error_message = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(error_message)
 
 
 def validate_column_comparand(other: Any) -> Any:
@@ -110,8 +110,8 @@ def validate_column_comparand(other: Any) -> Any:
     if isinstance(other, list):
         if len(other) > 1:
             # e.g. `plx.all() + plx.all()`
-            msg = "Multi-output expressions are not supported in this context"
-            raise ValueError(msg)
+            error_message = "Multi-output expressions are not supported in this context"
+            raise ValueError(error_message)
         other = other[0]
     if isinstance(other, ArrowDataFrame):
         return NotImplemented
@@ -137,7 +137,8 @@ def validate_dataframe_comparand(other: Any) -> Any:
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
             # broadcast
-            msg = "not implemented yet"  # pragma: no cover
-            raise NotImplementedError(msg)
+            error_message = "not implemented yet"  # pragma: no cover
+            raise NotImplementedError(error_message)
         return other._native_series
-    raise AssertionError("Please report a bug")
+    error_message = "Please report a bug"  # pragma: no cover
+    raise AssertionError(error_message)

@@ -79,8 +79,10 @@ def evaluate_into_exprs(
     for name, expr in named_exprs.items():
         evaluated_expr = evaluate_into_expr(df, expr)
         if len(evaluated_expr) > 1:
-            msg = "Named expressions must return a single column"  # pragma: no cover
-            raise AssertionError(msg)
+            error_message = (
+                "Named expressions must return a single column"  # pragma: no cover
+            )
+            raise AssertionError(error_message)
         series.append(evaluated_expr[0].alias(name))  # type: ignore[arg-type]
     return series
 
@@ -152,8 +154,8 @@ def parse_into_expr(
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
         series = namespace._create_native_series(into_expr)
         return namespace._create_expr_from_series(series)
-    msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
-    raise AssertionError(msg)
+    error_message = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
+    raise AssertionError(error_message)
 
 
 def reuse_series_implementation(
