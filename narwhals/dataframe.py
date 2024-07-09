@@ -178,9 +178,10 @@ class BaseFrame(Generic[FrameT]):
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
-        _supported_joins = {"inner", "cross", "anti", "semi"}
+        _supported_joins = ("inner", "cross", "anti", "semi")
+
         if how not in _supported_joins:
-            msg = f"Only the following join stragies are supported: {_supported_joins}"
+            msg = f"Only the following join stragies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
         if how == "cross" and (left_on or right_on):
