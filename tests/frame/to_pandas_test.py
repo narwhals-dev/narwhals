@@ -18,5 +18,10 @@ def test_convert_pandas(constructor_with_pyarrow: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor_with_pyarrow(data)
     result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]
-    expected = pd.DataFrame(data)
+
+    if constructor_with_pyarrow.__name__.startswith("pandas"):
+        expected = constructor_with_pyarrow(data)
+    else:
+        expected = pd.DataFrame(data)
+
     pd.testing.assert_frame_equal(result, expected)
