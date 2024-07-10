@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class PandasLikeExpr:
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         call: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
         *,
