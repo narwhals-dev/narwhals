@@ -43,27 +43,27 @@ lint.select = [
   "ALL",
 ]
 lint.ignore = [
-  'A001',
+  'A001',     # Won't fix - See #446
   'A003',
-  'ANN101',
+  'ANN101',   # deprecated and will be removed in future ruff release: https://docs.astral.sh/ruff/rules/missing-type-self/
   'ANN401',
   'C901',
   'COM812',
   'D',
   'DTZ001',
   'E501',
-  'EM101',
+  'EM101',    # Won't fix - See #447
   'FIX',
-  'PD901',  # This is a auxiliary library so dataframe variables have no concrete business meaning
-  'PLR0911',
+  'PD901',    # This is a auxiliary library so dataframe variables have no concrete business meaning
+  'PLR0911',  # Won't fix - See #442
   'PLR0912',
   'PLR2004',
-  'PTH',
+  'PTH',      # Won't fix - See #443
   'RET505',
   'S',
   'SLF001',
   'TD003',
-  'TRY003',  # TODO(Unassigned): enable
+  'TRY003',   # TODO(Unassigned): enable
   'TRY004'
 ]
 
