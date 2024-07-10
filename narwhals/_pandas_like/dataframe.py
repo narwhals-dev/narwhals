@@ -90,6 +90,15 @@ class PandasLikeDataFrame:
             backend_version=self._backend_version,
         )
 
+    def get_column(self, name: str) -> PandasLikeSeries:
+        from narwhals._pandas_like.series import PandasLikeSeries
+
+        return PandasLikeSeries(
+            self._native_dataframe.loc[:, name],
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+
     @overload
     def __getitem__(self, item: str) -> PandasLikeSeries: ...
 
