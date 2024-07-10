@@ -305,8 +305,8 @@ class PandasLikeDataFrame:
         other: Self,
         *,
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
-        left_on: str | list[str],
-        right_on: str | list[str],
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
     ) -> Self:
         if isinstance(left_on, str):
             left_on = [left_on]
@@ -351,7 +351,7 @@ class PandasLikeDataFrame:
             other_native = (
                 other._native_dataframe.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))
+                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
                 .drop_duplicates()
             )
@@ -372,7 +372,7 @@ class PandasLikeDataFrame:
             other_native = (
                 other._native_dataframe.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))
+                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
                 .drop_duplicates()  # avoids potential rows duplication from inner join
             )
@@ -395,7 +395,7 @@ class PandasLikeDataFrame:
                 suffixes=("", "_right"),
             )
             extra = []
-            for left_key, right_key in zip(left_on, right_on):
+            for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
                 if right_key != left_key and right_key not in self.columns:
                     extra.append(right_key)
                 elif right_key != left_key:
