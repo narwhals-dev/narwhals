@@ -82,7 +82,7 @@ def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         # TODO(Unassigned): what should the key be? let's keep it consistent
         # with Polars for now
-        # 465
+        # https://github.com/narwhals-dev/narwhals/issues/465
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # Use Polars' default

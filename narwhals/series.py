@@ -1277,35 +1277,35 @@ class Series:
         )
 
     # TODO(Unassigned): Increase Coverage
-    # 473
+    # https://github.com/narwhals-dev/narwhals/issues/473
     def __ge__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__ge__(self._extract_native(other))
         )
 
     # TODO(Unassigned): Increase Coverage
-    # 473
+    # https://github.com/narwhals-dev/narwhals/issues/473
     def __lt__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__lt__(self._extract_native(other))
         )
 
     # TODO(Unassigned): Increase Coverage
-    # 473
+    # https://github.com/narwhals-dev/narwhals/issues/473
     def __le__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__le__(self._extract_native(other))
         )
 
     # TODO(Unassigned): Increase Coverage
-    # 473
+    # https://github.com/narwhals-dev/narwhals/issues/473
     def __and__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__and__(self._extract_native(other))
         )
 
     # TODO(Unassigned): Increase Coverage
-    # 473
+    # https://github.com/narwhals-dev/narwhals/issues/473
     def __or__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__or__(self._extract_native(other))

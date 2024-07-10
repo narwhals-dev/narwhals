@@ -70,7 +70,7 @@ def to_native(
         )
 
     # TODO(Unassigned): Increase Coverage
-    # 473
+    # https://github.com/narwhals-dev/narwhals/issues/473
     if strict:  # pragma: no cover
         msg = (
             f"Expected Narwhals object, got {type(narwhals_object)}."  # pragma: no cover
@@ -264,11 +264,11 @@ def from_native(  # noqa: PLR0915
     if series_only:
         allow_series = True
     # TODO(Unassigned): raise on invalid combinations
-    # 470
+    # https://github.com/narwhals-dev/narwhals/issues/470
 
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with polars.DataFrame")
         return DataFrame(
@@ -278,12 +278,12 @@ def from_native(  # noqa: PLR0915
         )
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with polars.LazyFrame")
 
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if eager_only:  # pragma: no cover
             raise TypeError("Cannot only use `eager_only` with polars.LazyFrame")
         return LazyFrame(
@@ -293,7 +293,7 @@ def from_native(  # noqa: PLR0915
         )
     elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.DataFrame):
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with dataframe")
         return DataFrame(
@@ -335,7 +335,7 @@ def from_native(  # noqa: PLR0915
         )
     elif (pa := get_pyarrow()) is not None and isinstance(native_dataframe, pa.Table):
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with arrow table")
         return DataFrame(
@@ -347,7 +347,7 @@ def from_native(  # noqa: PLR0915
         )
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with dataframe")
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
@@ -358,11 +358,11 @@ def from_native(  # noqa: PLR0915
         )
     elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with lazyframe")
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if eager_only:  # pragma: no cover
             raise TypeError("Cannot only use `eager_only` with lazyframe")
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
@@ -373,7 +373,7 @@ def from_native(  # noqa: PLR0915
         )
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.Series):
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
@@ -383,7 +383,7 @@ def from_native(  # noqa: PLR0915
         )
     elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.Series):
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
@@ -399,7 +399,7 @@ def from_native(  # noqa: PLR0915
         native_dataframe, mpd.Series
     ):  # pragma: no cover
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
@@ -415,7 +415,7 @@ def from_native(  # noqa: PLR0915
         native_dataframe, cudf.Series
     ):  # pragma: no cover
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
@@ -431,7 +431,7 @@ def from_native(  # noqa: PLR0915
         native_dataframe, pa.ChunkedArray
     ):
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
@@ -443,7 +443,7 @@ def from_native(  # noqa: PLR0915
         )
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
         # TODO(Unassigned): Increase Coverage
-        # 473
+        # https://github.com/narwhals-dev/narwhals/issues/473
         if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
@@ -455,7 +455,7 @@ def from_native(  # noqa: PLR0915
         raise TypeError(msg)
 
     # TODO(Unassigned): Increase Coverage
-    # 473
+    # https://github.com/narwhals-dev/narwhals/issues/473
     return native_dataframe  # pragma: no cover
 
 

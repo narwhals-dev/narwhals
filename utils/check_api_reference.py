@@ -10,7 +10,7 @@ from narwhals.utils import remove_suffix
 ret = 0
 
 # TODO(Unassigned): make dtypes reference page as well
-# 472
+# https://github.com/narwhals-dev/narwhals/issues/472
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions = [
     i

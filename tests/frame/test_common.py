@@ -132,7 +132,7 @@ def test_lit_error(df_raw: Any) -> None:
 
 
 # TODO(Unassigned): Fix polars 1.0 compatibility
-# 313
+# https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
@@ -153,7 +153,7 @@ def test_schema(df_raw: Any) -> None:
 
 
 # TODO(Unassigned): Fix polars 1.0 compatibility
-# 313
+# https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )

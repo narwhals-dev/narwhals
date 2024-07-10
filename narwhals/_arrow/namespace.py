@@ -82,7 +82,7 @@ class ArrowNamespace:
         )
 
     # TODO(Unassigned): Increase Coverage
-    # 473
+    # https://github.com/narwhals-dev/narwhals/issues/473
     def _create_native_series(self, value: Any) -> Any:  # pragma: no cover
         pa = get_pyarrow()
         return pa.chunked_array([value])

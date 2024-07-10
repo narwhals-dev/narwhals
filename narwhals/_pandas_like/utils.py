@@ -286,16 +286,16 @@ def translate_dtype(column: Any) -> DType:
         return dtypes.Categorical()
     if str(dtype).startswith("datetime64"):
         # TODO(Unassigned): different time units and time zones
-        # 467
+        # https://github.com/narwhals-dev/narwhals/issues/467
         return dtypes.Datetime()
     if str(dtype).startswith("timedelta64") or str(dtype).startswith("duration"):
         # TODO(Unassigned): different time units
-        # 467
+        # https://github.com/narwhals-dev/narwhals/issues/467
         return dtypes.Duration()
     if str(dtype).startswith("timestamp["):
         # pyarrow-backed datetime
         # TODO(Unassigned): different time units and time zones
-        # 467
+        # https://github.com/narwhals-dev/narwhals/issues/467
         return dtypes.Datetime()
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
@@ -423,17 +423,17 @@ def reverse_translate_dtype(  # noqa: PLR0915
         # TODO(Unassigned): is there no pyarrow-backed categorical?
         # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
         # convert to it?
-        # 468
+        # https://github.com/narwhals-dev/narwhals/issues/468
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # TODO(Unassigned): different time units and time zones
-        # 467
+        # https://github.com/narwhals-dev/narwhals/issues/467
         if dtype_backend == "pyarrow-nullable":
             return "timestamp[ns][pyarrow]"
         return "datetime64[ns]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         # TODO(Unassigned): different time units and time zones
-        # 467
+        # https://github.com/narwhals-dev/narwhals/issues/467
         if dtype_backend == "pyarrow-nullable":
             return "duration[ns][pyarrow]"
         return "timedelta64[ns]"

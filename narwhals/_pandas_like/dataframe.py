@@ -413,7 +413,7 @@ class PandasLikeDataFrame:
 
         if as_series:
             # TODO(Unassigned): should this return narwhals series?
-            # 466
+            # https://github.com/narwhals-dev/narwhals/issues/466
             return {
                 col: PandasLikeSeries(
                     self._native_dataframe.loc[:, col],
