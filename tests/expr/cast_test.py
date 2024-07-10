@@ -7,6 +7,7 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 
+@pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
 def test_cast(constructor_with_pyarrow: Any, request: Any) -> None:
     if "table" in str(constructor_with_pyarrow) and parse_version(pa.__version__) <= (
         15,

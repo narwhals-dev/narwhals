@@ -54,7 +54,6 @@ MISSING = [
     "Series.sample",
     "Series.shift",
     "Series.sort",
-    "Series.str",
     "Series.sum",
     "Series.tail",
     "Series.to_frame",
@@ -67,7 +66,7 @@ MISSING = [
 
 class MockDataFrame:
     # Make a little mock object so we can instantiate
-    # PandasDataFrame without having pandas installed
+    # PandasLikeDataFrame without having pandas installed
     def __init__(self, dataframe): ...
 
     def __narwhals_dataframe__(self):

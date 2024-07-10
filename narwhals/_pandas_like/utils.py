@@ -16,11 +16,11 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
 
-    ExprT = TypeVar("ExprT", bound=PandasExpr)
+    ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
 
 class Implementation(Enum):
@@ -38,8 +38,8 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
     If RHS is length 1, return the scalar value, so that the underlying
     library can broadcast it.
     """
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
 
     if isinstance(other, list):
         if len(other) > 1:
@@ -47,9 +47,9 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             msg = "Multi-output expressions are not supported in this context"
             raise ValueError(msg)
         other = other[0]
-    if isinstance(other, PandasDataFrame):
+    if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
-    if isinstance(other, PandasSeries):
+    if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
             return other.item()
@@ -70,12 +70,12 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
 
-    if isinstance(other, PandasDataFrame):
+    if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
-    if isinstance(other, PandasSeries):
+    if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
             return other._native_series.iloc[0]
@@ -97,8 +97,8 @@ def create_native_series(
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
-) -> PandasSeries:
-    from narwhals._pandas_like.series import PandasSeries
+) -> PandasLikeSeries:
+    from narwhals._pandas_like.series import PandasLikeSeries
 
     if implementation is Implementation.PANDAS:
         pd = get_pandas()
@@ -109,12 +109,12 @@ def create_native_series(
     elif implementation is Implementation.CUDF:
         cudf = get_cudf()
         series = cudf.Series(iterable, index=index, name="")
-    return PandasSeries(
+    return PandasLikeSeries(
         series, implementation=implementation, backend_version=backend_version
     )
 
 
-def is_simple_aggregation(expr: PandasExpr) -> bool:
+def is_simple_aggregation(expr: PandasLikeExpr) -> bool:
     """
     Check if expr is a very simple one, such as:
 
@@ -286,14 +286,14 @@ def translate_dtype(column: Any) -> DType:
     if str(dtype) in ("category",) or str(dtype).startswith("dictionary<"):
         return dtypes.Categorical()
     if str(dtype).startswith("datetime64"):
-        # todo: different time units and time zones
+        # TODO(Unassigned): different time units and time zones
         return dtypes.Datetime()
     if str(dtype).startswith("timedelta64") or str(dtype).startswith("duration"):
-        # todo: different time units
+        # TODO(Unassigned): different time units
         return dtypes.Duration()
     if str(dtype).startswith("timestamp["):
         # pyarrow-backed datetime
-        # todo: different time units and time zones
+        # TODO(Unassigned): different time units and time zones
         return dtypes.Datetime()
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
@@ -418,17 +418,17 @@ def reverse_translate_dtype(  # noqa: PLR0915
         else:
             return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        # todo: is there no pyarrow-backed categorical?
+        # TODO(Unassigned): is there no pyarrow-backed categorical?
         # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
         # convert to it?
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # todo: different time units and time zones
+        # TODO(Unassigned): different time units and time zones
         if dtype_backend == "pyarrow-nullable":
             return "timestamp[ns][pyarrow]"
         return "datetime64[ns]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # todo: different time units and time zones
+        # TODO(Unassigned): different time units and time zones
         if dtype_backend == "pyarrow-nullable":
             return "duration[ns][pyarrow]"
         return "timedelta64[ns]"
@@ -441,7 +441,7 @@ def reverse_translate_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def validate_indices(series: list[PandasSeries]) -> list[Any]:
+def validate_indices(series: list[PandasLikeSeries]) -> list[Any]:
     idx = series[0]._native_series.index
     reindexed = [series[0]._native_series]
     for s in series[1:]:

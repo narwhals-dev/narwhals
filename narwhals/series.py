@@ -36,11 +36,11 @@ class Series:
         self._is_polars = is_polars
         self._backend_version = backend_version
         if hasattr(series, "__narwhals_series__"):
-            self._series = series.__narwhals_series__()
+            self._compliant_series = series.__narwhals_series__()
         elif is_polars and (
             (pl := get_polars()) is not None and isinstance(series, pl.Series)
         ):
-            self._series = series
+            self._compliant_series = series
         else:
             msg = (  # pragma: no cover
                 f"Expected Polars Series or and object which implements `__narwhals_series__`, got: {type(series)}."
@@ -49,23 +49,23 @@ class Series:
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         if self._is_polars and self._backend_version < (0, 20, 29):  # pragma: no cover
-            return self._series.__array__(dtype=dtype)
-        return self._series.__array__(dtype=dtype, copy=copy)
+            return self._compliant_series.__array__(dtype=dtype)
+        return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
     def __getitem__(self, idx: int | slice) -> Any:
         if isinstance(idx, int):
-            return self._series[idx]
-        return self._from_series(self._series[idx])
+            return self._compliant_series[idx]
+        return self._from_compliant_series(self._compliant_series[idx])
 
     def __native_namespace__(self) -> Any:
         if self._is_polars:
             return get_polars()
-        return self._series.__native_namespace__()
+        return self._compliant_series.__native_namespace__()
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
             return get_polars()
-        return self._series.__narwhals_namespace__()
+        return self._compliant_series.__narwhals_namespace__()
 
     @property
     def shape(self) -> tuple[int]:
@@ -93,16 +93,16 @@ class Series:
             >>> func(s_pl)
             (3,)
         """
-        return self._series.shape  # type: ignore[no-any-return]
+        return self._compliant_series.shape  # type: ignore[no-any-return]
 
     def _extract_native(self, arg: Any) -> Any:
         from narwhals.series import Series
 
         if isinstance(arg, Series):
-            return arg._series
+            return arg._compliant_series
         return arg
 
-    def _from_series(self, series: Any) -> Self:
+    def _from_compliant_series(self, series: Any) -> Self:
         return self.__class__(
             series, is_polars=self._is_polars, backend_version=self._backend_version
         )
@@ -122,7 +122,7 @@ class Series:
         )
 
     def __len__(self) -> int:
-        return len(self._series)
+        return len(self._compliant_series)
 
     def len(self) -> int:
         r"""
@@ -151,7 +151,7 @@ class Series:
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             3
         """
-        return len(self._series)
+        return len(self._compliant_series)
 
     @property
     def dtype(self) -> Any:
@@ -179,7 +179,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return to_narwhals_dtype(self._series.dtype, is_polars=self._is_polars)
+        return to_narwhals_dtype(self._compliant_series.dtype, is_polars=self._is_polars)
 
     @property
     def name(self) -> str:
@@ -207,7 +207,7 @@ class Series:
             >>> func(s_pl)
             'foo'
         """
-        return self._series.name  # type: ignore[no-any-return]
+        return self._compliant_series.name  # type: ignore[no-any-return]
 
     def cast(
         self,
@@ -249,8 +249,10 @@ class Series:
                1
             ]
         """
-        return self._from_series(
-            self._series.cast(translate_dtype(self.__narwhals_namespace__(), dtype))
+        return self._from_compliant_series(
+            self._compliant_series.cast(
+                translate_dtype(self.__narwhals_namespace__(), dtype)
+            )
         )
 
     def to_frame(self) -> DataFrame[Any]:
@@ -293,7 +295,7 @@ class Series:
         from narwhals.dataframe import DataFrame
 
         return DataFrame(
-            self._series.to_frame(),
+            self._compliant_series.to_frame(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
         )
@@ -323,7 +325,7 @@ class Series:
             >>> func(s_pl)
             [1, 2, 3]
         """
-        return self._series.to_list()  # type: ignore[no-any-return]
+        return self._compliant_series.to_list()  # type: ignore[no-any-return]
 
     def mean(self) -> Any:
         """
@@ -350,7 +352,7 @@ class Series:
             >>> func(s_pl)
             2.0
         """
-        return self._series.mean()
+        return self._compliant_series.mean()
 
     def any(self) -> Any:
         """
@@ -380,7 +382,7 @@ class Series:
             >>> func(s_pl)
             True
         """
-        return self._series.any()
+        return self._compliant_series.any()
 
     def all(self) -> Any:
         """
@@ -408,7 +410,7 @@ class Series:
             False
 
         """
-        return self._series.all()
+        return self._compliant_series.all()
 
     def min(self) -> Any:
         """
@@ -435,7 +437,7 @@ class Series:
             >>> func(s_pl)
             1
         """
-        return self._series.min()
+        return self._compliant_series.min()
 
     def max(self) -> Any:
         """
@@ -462,7 +464,7 @@ class Series:
             >>> func(s_pl)
             3
         """
-        return self._series.max()
+        return self._compliant_series.max()
 
     def sum(self) -> Any:
         """
@@ -489,7 +491,7 @@ class Series:
             >>> func(s_pl)
             6
         """
-        return self._series.sum()
+        return self._compliant_series.sum()
 
     def std(self, *, ddof: int = 1) -> Any:
         """
@@ -520,7 +522,7 @@ class Series:
             >>> func(s_pl)
             1.0
         """
-        return self._series.std(ddof=ddof)
+        return self._compliant_series.std(ddof=ddof)
 
     def is_in(self, other: Any) -> Self:
         """
@@ -558,7 +560,9 @@ class Series:
                true
             ]
         """
-        return self._from_series(self._series.is_in(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.is_in(self._extract_native(other))
+        )
 
     def drop_nulls(self) -> Self:
         """
@@ -603,7 +607,7 @@ class Series:
              5
           ]
         """
-        return self._from_series(self._series.drop_nulls())
+        return self._from_compliant_series(self._compliant_series.drop_nulls())
 
     def abs(self) -> Self:
         """
@@ -639,7 +643,7 @@ class Series:
                3
             ]
         """
-        return self._from_series(self._series.abs())
+        return self._from_compliant_series(self._compliant_series.abs())
 
     def cum_sum(self) -> Self:
         """
@@ -675,7 +679,7 @@ class Series:
                9
             ]
         """
-        return self._from_series(self._series.cum_sum())
+        return self._from_compliant_series(self._compliant_series.cum_sum())
 
     def unique(self) -> Self:
         """
@@ -711,7 +715,7 @@ class Series:
                6
             ]
         """
-        return self._from_series(self._series.unique())
+        return self._from_compliant_series(self._compliant_series.unique())
 
     def diff(self) -> Self:
         """
@@ -756,7 +760,7 @@ class Series:
                -1
             ]
         """
-        return self._from_series(self._series.diff())
+        return self._from_compliant_series(self._compliant_series.diff())
 
     def shift(self, n: int) -> Self:
         """
@@ -805,7 +809,7 @@ class Series:
                4
             ]
         """
-        return self._from_series(self._series.shift(n))
+        return self._from_compliant_series(self._compliant_series.shift(n))
 
     def sample(
         self,
@@ -861,8 +865,10 @@ class Series:
                4
             ]
         """
-        return self._from_series(
-            self._series.sample(n=n, fraction=fraction, with_replacement=with_replacement)
+        return self._from_compliant_series(
+            self._compliant_series.sample(
+                n=n, fraction=fraction, with_replacement=with_replacement
+            )
         )
 
     def alias(self, name: str) -> Self:
@@ -902,7 +908,7 @@ class Series:
                3
             ]
         """
-        return self._from_series(self._series.alias(name=name))
+        return self._from_compliant_series(self._compliant_series.alias(name=name))
 
     def sort(self, *, descending: bool = False) -> Self:
         """
@@ -962,7 +968,9 @@ class Series:
                1
             ]
         """
-        return self._from_series(self._series.sort(descending=descending))
+        return self._from_compliant_series(
+            self._compliant_series.sort(descending=descending)
+        )
 
     def is_null(self) -> Self:
         """
@@ -1002,7 +1010,7 @@ class Series:
                true
             ]
         """
-        return self._from_series(self._series.is_null())
+        return self._from_compliant_series(self._compliant_series.is_null())
 
     def fill_null(self, value: Any) -> Self:
         """
@@ -1045,7 +1053,7 @@ class Series:
                5
             ]
         """
-        return self._from_series(self._series.fill_null(value))
+        return self._from_compliant_series(self._compliant_series.fill_null(value))
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
@@ -1097,8 +1105,8 @@ class Series:
                false
             ]
         """
-        return self._from_series(
-            self._series.is_between(lower_bound, upper_bound, closed=closed)
+        return self._from_compliant_series(
+            self._compliant_series.is_between(lower_bound, upper_bound, closed=closed)
         )
 
     def n_unique(self) -> int:
@@ -1126,7 +1134,7 @@ class Series:
             >>> func(s_pl)
             3
         """
-        return self._series.n_unique()  # type: ignore[no-any-return]
+        return self._compliant_series.n_unique()  # type: ignore[no-any-return]
 
     def to_numpy(self) -> Any:
         """
@@ -1153,7 +1161,7 @@ class Series:
             >>> func(s_pl)
             array([1, 2, 3]...)
         """
-        return self._series.to_numpy()
+        return self._compliant_series.to_numpy()
 
     def to_pandas(self) -> Any:
         """
@@ -1186,74 +1194,116 @@ class Series:
             2    3
             Name: a, dtype: int64
         """
-        return self._series.to_pandas()
+        return self._compliant_series.to_pandas()
 
     def __add__(self, other: object) -> Self:
-        return self._from_series(self._series.__add__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__add__(self._extract_native(other))
+        )
 
     def __radd__(self, other: object) -> Self:
-        return self._from_series(self._series.__radd__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__radd__(self._extract_native(other))
+        )
 
     def __sub__(self, other: object) -> Self:
-        return self._from_series(self._series.__sub__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__sub__(self._extract_native(other))
+        )
 
     def __rsub__(self, other: object) -> Self:
-        return self._from_series(self._series.__rsub__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__rsub__(self._extract_native(other))
+        )
 
     def __mul__(self, other: object) -> Self:
-        return self._from_series(self._series.__mul__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__mul__(self._extract_native(other))
+        )
 
     def __rmul__(self, other: object) -> Self:
-        return self._from_series(self._series.__rmul__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__rmul__(self._extract_native(other))
+        )
 
     def __truediv__(self, other: object) -> Self:
-        return self._from_series(self._series.__truediv__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__truediv__(self._extract_native(other))
+        )
 
     def __floordiv__(self, other: object) -> Self:
-        return self._from_series(self._series.__floordiv__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__floordiv__(self._extract_native(other))
+        )
 
     def __rfloordiv__(self, other: object) -> Self:
-        return self._from_series(self._series.__rfloordiv__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__rfloordiv__(self._extract_native(other))
+        )
 
     def __pow__(self, other: object) -> Self:
-        return self._from_series(self._series.__pow__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__pow__(self._extract_native(other))
+        )
 
     def __rpow__(self, other: object) -> Self:
-        return self._from_series(self._series.__rpow__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__rpow__(self._extract_native(other))
+        )
 
     def __mod__(self, other: object) -> Self:
-        return self._from_series(self._series.__mod__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__mod__(self._extract_native(other))
+        )
 
     def __rmod__(self, other: object) -> Self:
-        return self._from_series(self._series.__rmod__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__rmod__(self._extract_native(other))
+        )
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
-        return self._from_series(self._series.__eq__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__eq__(self._extract_native(other))
+        )
 
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
-        return self._from_series(self._series.__ne__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__ne__(self._extract_native(other))
+        )
 
     def __gt__(self, other: Any) -> Self:
-        return self._from_series(self._series.__gt__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__gt__(self._extract_native(other))
+        )
 
     def __ge__(self, other: Any) -> Self:  # pragma: no cover (todo)
-        return self._from_series(self._series.__ge__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__ge__(self._extract_native(other))
+        )
 
     def __lt__(self, other: Any) -> Self:  # pragma: no cover (todo)
-        return self._from_series(self._series.__lt__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__lt__(self._extract_native(other))
+        )
 
     def __le__(self, other: Any) -> Self:  # pragma: no cover (todo)
-        return self._from_series(self._series.__le__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__le__(self._extract_native(other))
+        )
 
     def __and__(self, other: Any) -> Self:  # pragma: no cover (todo)
-        return self._from_series(self._series.__and__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__and__(self._extract_native(other))
+        )
 
     def __or__(self, other: Any) -> Self:  # pragma: no cover (todo)
-        return self._from_series(self._series.__or__(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.__or__(self._extract_native(other))
+        )
 
     # unary
     def __invert__(self) -> Self:
-        return self._from_series(self._series.__invert__())
+        return self._from_compliant_series(self._compliant_series.__invert__())
 
     def filter(self, other: Any) -> Self:
         """
@@ -1289,7 +1339,9 @@ class Series:
                50
             ]
         """
-        return self._from_series(self._series.filter(self._extract_native(other)))
+        return self._from_compliant_series(
+            self._compliant_series.filter(self._extract_native(other))
+        )
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
@@ -1327,7 +1379,7 @@ class Series:
                 true
             ]
         """
-        return self._from_series(self._series.is_duplicated())
+        return self._from_compliant_series(self._compliant_series.is_duplicated())
 
     def is_empty(self: Self) -> bool:
         r"""
@@ -1357,7 +1409,7 @@ class Series:
             >>> func(s_pd), func(s_pl)
             (False, False)
         """
-        return self._series.is_empty()  # type: ignore[no-any-return]
+        return self._compliant_series.is_empty()  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Self:
         r"""
@@ -1395,7 +1447,7 @@ class Series:
                 false
             ]
         """
-        return self._from_series(self._series.is_unique())
+        return self._from_compliant_series(self._compliant_series.is_unique())
 
     def null_count(self: Self) -> int:
         r"""
@@ -1426,7 +1478,7 @@ class Series:
             2
         """
 
-        return self._series.null_count()  # type: ignore[no-any-return]
+        return self._compliant_series.null_count()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
         r"""
@@ -1466,7 +1518,7 @@ class Series:
                 false
             ]
         """
-        return self._from_series(self._series.is_first_distinct())
+        return self._from_compliant_series(self._compliant_series.is_first_distinct())
 
     def is_last_distinct(self: Self) -> Self:
         r"""
@@ -1506,7 +1558,7 @@ class Series:
                 true
             ]
         """
-        return self._from_series(self._series.is_last_distinct())
+        return self._from_compliant_series(self._compliant_series.is_last_distinct())
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
         r"""
@@ -1539,7 +1591,7 @@ class Series:
             >>> func(pd.Series(sorted_data), descending=True)
             True
         """
-        return self._series.is_sorted(descending=descending)  # type: ignore[no-any-return]
+        return self._compliant_series.is_sorted(descending=descending)  # type: ignore[no-any-return]
 
     def value_counts(
         self: Self, *, sort: bool = False, parallel: bool = False
@@ -1588,7 +1640,7 @@ class Series:
         from narwhals.dataframe import DataFrame
 
         return DataFrame(
-            self._series.value_counts(sort=sort, parallel=parallel),
+            self._compliant_series.value_counts(sort=sort, parallel=parallel),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
         )
@@ -1635,7 +1687,9 @@ class Series:
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             [5.0, 12.0, 25.0, 37.0, 44.0]
         """
-        return self._series.quantile(quantile=quantile, interpolation=interpolation)
+        return self._compliant_series.quantile(
+            quantile=quantile, interpolation=interpolation
+        )
 
     def zip_with(self, mask: Any, other: Any) -> Self:
         """
@@ -1679,8 +1733,10 @@ class Series:
             dtype: int64
         """
 
-        return self._from_series(
-            self._series.zip_with(self._extract_native(mask), self._extract_native(other))
+        return self._from_compliant_series(
+            self._compliant_series.zip_with(
+                self._extract_native(mask), self._extract_native(other)
+            )
         )
 
     def item(self: Self, index: int | None = None) -> Any:
@@ -1709,7 +1765,7 @@ class Series:
             >>> func(pl.Series("a", [9, 8, 7]), -1), func(pl.Series([9, 8, 7]), -2)
             (7, 8)
         """
-        return self._series.item(index=index)
+        return self._compliant_series.item(index=index)
 
     def head(self: Self, n: int = 10) -> Self:
         r"""
@@ -1751,7 +1807,7 @@ class Series:
             ]
         """
 
-        return self._from_series(self._series.head(n))
+        return self._from_compliant_series(self._compliant_series.head(n))
 
     def tail(self: Self, n: int = 10) -> Self:
         r"""
@@ -1792,7 +1848,7 @@ class Series:
             ]
         """
 
-        return self._from_series(self._series.tail(n))
+        return self._from_compliant_series(self._compliant_series.tail(n))
 
     def round(self: Self, decimals: int = 0) -> Self:
         r"""
@@ -1840,7 +1896,7 @@ class Series:
                3.9
             ]
         """
-        return self._from_series(self._series.round(decimals))
+        return self._from_compliant_series(self._compliant_series.round(decimals))
 
     @property
     def str(self) -> SeriesStringNamespace:
@@ -1857,7 +1913,7 @@ class Series:
 
 class SeriesCatNamespace:
     def __init__(self, series: Series) -> None:
-        self._series = series
+        self._narwhals_series = series
 
     def get_categories(self) -> Series:
         """
@@ -1894,12 +1950,14 @@ class SeriesCatNamespace:
                "mango"
             ]
         """
-        return self._series._from_series(self._series._series.cat.get_categories())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.cat.get_categories()
+        )
 
 
 class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
-        self._series = series
+        self._narwhals_series = series
 
     def starts_with(self, prefix: str) -> Series:
         r"""
@@ -1939,7 +1997,9 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series._from_series(self._series._series.str.starts_with(prefix))
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.starts_with(prefix)
+        )
 
     def ends_with(self, suffix: str) -> Series:
         r"""
@@ -1979,7 +2039,9 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series._from_series(self._series._series.str.ends_with(suffix))
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.ends_with(suffix)
+        )
 
     def contains(self, pattern: str, *, literal: bool = False) -> Series:
         r"""
@@ -2025,8 +2087,8 @@ class SeriesStringNamespace:
                null
             ]
         """
-        return self._series._from_series(
-            self._series._series.str.contains(pattern, literal=literal)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.contains(pattern, literal=literal)
         )
 
     def slice(self, offset: int, length: int | None = None) -> Series:
@@ -2094,8 +2156,10 @@ class SeriesStringNamespace:
                 "uit"
             ]
         """
-        return self._series._from_series(
-            self._series._series.str.slice(offset=offset, length=length)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.slice(
+                offset=offset, length=length
+            )
         )
 
     def head(self, n: int = 5) -> Series:
@@ -2142,7 +2206,9 @@ class SeriesStringNamespace:
                "zukky"
             ]
         """
-        return self._series._from_series(self._series._series.str.slice(0, n))
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.slice(0, n)
+        )
 
     def tail(self, n: int = 5) -> Series:
         r"""
@@ -2188,12 +2254,105 @@ class SeriesStringNamespace:
                "kkyun"
             ]
         """
-        return self._series._from_series(self._series._series.str.slice(-n))
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.slice(-n)
+        )
+
+    def to_uppercase(self) -> Series:
+        r"""
+        Transform string to uppercase variant.
+
+        Notes:
+            The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
+            For more info see: https://github.com/apache/arrow/issues/34599
+            There may be other unicode-edge-case-related variations across implementations.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "mango", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(upper_col=nw.col("fruits").str.to_uppercase())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+             fruits  upper_col
+            0  apple      APPLE
+            1  mango      MANGO
+            2   None       None
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 2)
+            ┌────────┬───────────┐
+            │ fruits ┆ upper_col │
+            │ ---    ┆ ---       │
+            │ str    ┆ str       │
+            ╞════════╪═══════════╡
+            │ apple  ┆ APPLE     │
+            │ mango  ┆ MANGO     │
+            │ null   ┆ null      │
+            └────────┴───────────┘
+
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.to_uppercase()
+        )
+
+    def to_lowercase(self) -> Series:
+        r"""
+        Transform string to lowercase variant.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["APPLE", "MANGO", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(lower_col=nw.col("fruits").str.to_lowercase())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+              fruits lower_col
+            0  APPLE     apple
+            1  MANGO     mango
+            2   None      None
+
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 2)
+            ┌────────┬───────────┐
+            │ fruits ┆ lower_col │
+            │ ---    ┆ ---       │
+            │ str    ┆ str       │
+            ╞════════╪═══════════╡
+            │ APPLE  ┆ apple     │
+            │ MANGO  ┆ mango     │
+            │ null   ┆ null      │
+            └────────┴───────────┘
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.to_lowercase()
+        )
 
 
 class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:
-        self._series = series
+        self._narwhals_series = series
 
     def year(self) -> Series:
         """
@@ -2228,7 +2387,9 @@ class SeriesDateTimeNamespace:
                2023
             ]
         """
-        return self._series._from_series(self._series._series.dt.year())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.year()
+        )
 
     def month(self) -> Series:
         """
@@ -2263,7 +2424,9 @@ class SeriesDateTimeNamespace:
                8
             ]
         """
-        return self._series._from_series(self._series._series.dt.month())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.month()
+        )
 
     def day(self) -> Series:
         """
@@ -2298,7 +2461,9 @@ class SeriesDateTimeNamespace:
                5
             ]
         """
-        return self._series._from_series(self._series._series.dt.day())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.day()
+        )
 
     def hour(self) -> Series:
         """
@@ -2333,7 +2498,9 @@ class SeriesDateTimeNamespace:
                9
             ]
         """
-        return self._series._from_series(self._series._series.dt.hour())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.hour()
+        )
 
     def minute(self) -> Series:
         """
@@ -2368,7 +2535,9 @@ class SeriesDateTimeNamespace:
                12
             ]
         """
-        return self._series._from_series(self._series._series.dt.minute())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.minute()
+        )
 
     def second(self) -> Series:
         """
@@ -2403,7 +2572,9 @@ class SeriesDateTimeNamespace:
                 4
             ]
         """
-        return self._series._from_series(self._series._series.dt.second())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.second()
+        )
 
     def millisecond(self) -> Series:
         """
@@ -2451,7 +2622,9 @@ class SeriesDateTimeNamespace:
                 200
             ]
         """
-        return self._series._from_series(self._series._series.dt.millisecond())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.millisecond()
+        )
 
     def microsecond(self) -> Series:
         """
@@ -2499,7 +2672,9 @@ class SeriesDateTimeNamespace:
                200000
             ]
         """
-        return self._series._from_series(self._series._series.dt.microsecond())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.microsecond()
+        )
 
     def nanosecond(self) -> Series:
         """
@@ -2537,7 +2712,9 @@ class SeriesDateTimeNamespace:
                60000000
             ]
         """
-        return self._series._from_series(self._series._series.dt.nanosecond())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.nanosecond()
+        )
 
     def ordinal_day(self) -> Series:
         """
@@ -2572,7 +2749,9 @@ class SeriesDateTimeNamespace:
                216
             ]
         """
-        return self._series._from_series(self._series._series.dt.ordinal_day())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.ordinal_day()
+        )
 
     def total_minutes(self) -> Series:
         """
@@ -2612,7 +2791,9 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series._from_series(self._series._series.dt.total_minutes())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_minutes()
+        )
 
     def total_seconds(self) -> Series:
         """
@@ -2652,7 +2833,9 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series._from_series(self._series._series.dt.total_seconds())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_seconds()
+        )
 
     def total_milliseconds(self) -> Series:
         """
@@ -2695,7 +2878,9 @@ class SeriesDateTimeNamespace:
                     20
             ]
         """
-        return self._series._from_series(self._series._series.dt.total_milliseconds())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_milliseconds()
+        )
 
     def total_microseconds(self) -> Series:
         """
@@ -2738,7 +2923,9 @@ class SeriesDateTimeNamespace:
                     1200
             ]
         """
-        return self._series._from_series(self._series._series.dt.total_microseconds())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_microseconds()
+        )
 
     def total_nanoseconds(self) -> Series:
         """
@@ -2778,7 +2965,9 @@ class SeriesDateTimeNamespace:
                     1
             ]
         """
-        return self._series._from_series(self._series._series.dt.total_nanoseconds())
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.total_nanoseconds()
+        )
 
     def to_string(self, format: str) -> Series:  # noqa: A002
         """
@@ -2851,4 +3040,6 @@ class SeriesDateTimeNamespace:
                "2020/05/01"
             ]
         """
-        return self._series._from_series(self._series._series.dt.to_string(format))
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.to_string(format)
+        )

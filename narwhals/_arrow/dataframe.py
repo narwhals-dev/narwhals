@@ -28,7 +28,7 @@ class ArrowDataFrame:
         self, native_dataframe: Any, *, backend_version: tuple[int, ...]
     ) -> None:
         self._native_dataframe = native_dataframe
-        self._implementation = "arrow"  # for compatibility with PandasDataFrame
+        self._implementation = "arrow"  # for compatibility with PandasLikeDataFrame
         self._backend_version = backend_version
 
     def __narwhals_namespace__(self) -> ArrowNamespace:

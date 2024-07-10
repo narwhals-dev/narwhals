@@ -58,15 +58,15 @@ def to_native(
 
     if isinstance(narwhals_object, BaseFrame):
         return (
-            narwhals_object._dataframe
+            narwhals_object._compliant_frame
             if narwhals_object._is_polars
-            else narwhals_object._dataframe._native_dataframe
+            else narwhals_object._compliant_frame._native_dataframe
         )
     if isinstance(narwhals_object, Series):
         return (
-            narwhals_object._series
+            narwhals_object._compliant_series
             if narwhals_object._is_polars
-            else narwhals_object._series._native_series
+            else narwhals_object._compliant_series._native_series
         )
 
     if strict:  # pragma: no cover (todo)
@@ -132,7 +132,6 @@ def from_native(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
 
 
-# from_native(df, strict=False)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -141,11 +140,12 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | Series: ...
+) -> DataFrame[Any] | Series:
+    """
+    from_native(df, strict=False)
+    """
 
 
-# from_native(df, strict=True, eager_only=True, allow_series=True)
-# from_native(df, eager_only=True, allow_series=True)
 @overload
 def from_native(
     native_dataframe: IntoDataFrameT,
@@ -154,11 +154,13 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
+) -> DataFrame[IntoDataFrameT]:
+    """
+    from_native(df, strict=True, eager_only=True, allow_series=True)
+    from_native(df, eager_only=True, allow_series=True)
+    """
 
 
-# from_native(df, strict=True, eager_only=True)
-# from_native(df, eager_only=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -167,11 +169,13 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
+) -> DataFrame[Any] | LazyFrame[Any] | Series:
+    """
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
+    """
 
 
-# from_native(df, strict=True, series_only=True)
-# from_native(df, series_only=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -180,11 +184,13 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series: ...
+) -> Series:
+    """
+    from_native(df, strict=True, series_only=True)
+    from_native(df, series_only=True)
+    """
 
 
-# from_native(df, strict=True)
-# from_native(df)
 @overload
 def from_native(
     native_dataframe: IntoFrameT,
@@ -193,7 +199,11 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
+    """
+    from_native(df, strict=True)
+    from_native(df)
+    """
 
 
 # All params passed in as variables
@@ -241,8 +251,8 @@ def from_native(  # noqa: PLR0915
     """
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.utils import Implementation
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
@@ -251,7 +261,7 @@ def from_native(  # noqa: PLR0915
 
     if series_only:
         allow_series = True
-    # todo: raise on invalid combinations
+    # TODO(Unassigned): raise on invalid combinations
 
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         if series_only:  # pragma: no cover (todo)
@@ -279,7 +289,7 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `series_only` with dataframe"
             raise TypeError(msg)
         return DataFrame(
-            PandasDataFrame(
+            PandasLikeDataFrame(
                 native_dataframe,
                 backend_version=parse_version(pd.__version__),
                 implementation=Implementation.PANDAS,
@@ -294,7 +304,7 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `series_only` with modin.DataFrame"
             raise TypeError(msg)
         return DataFrame(
-            PandasDataFrame(
+            PandasLikeDataFrame(
                 native_dataframe,
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
@@ -309,7 +319,7 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `series_only` with modin.DataFrame"
             raise TypeError(msg)
         return DataFrame(
-            PandasDataFrame(
+            PandasLikeDataFrame(
                 native_dataframe,
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
@@ -365,7 +375,7 @@ def from_native(  # noqa: PLR0915
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
         return Series(
-            PandasSeries(
+            PandasLikeSeries(
                 native_dataframe,
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
@@ -380,7 +390,7 @@ def from_native(  # noqa: PLR0915
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
         return Series(
-            PandasSeries(
+            PandasLikeSeries(
                 native_dataframe,
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
@@ -395,7 +405,7 @@ def from_native(  # noqa: PLR0915
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
         return Series(
-            PandasSeries(
+            PandasLikeSeries(
                 native_dataframe,
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
