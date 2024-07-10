@@ -8,6 +8,7 @@ import pytest
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 data = {
@@ -75,7 +76,8 @@ def test_gather_pandas_index() -> None:
 def test_gather_rows_cols(constructor_with_pyarrow: Any) -> None:
     native_df = constructor_with_pyarrow(data)
     df = nw.from_native(native_df, eager_only=True)
-    if isinstance(native_df, pa.Table):
+    is_pandas_wo_pyarrow = parse_version(pd.__version__) < parse_version("1.0.0")
+    if isinstance(native_df, pa.Table) or is_pandas_wo_pyarrow:
         # PyArrowSeries do not have `to_pandas`
         result = df[[0, 3, 1], 1].to_numpy()
         expected = np.array([11, 14, 12])
