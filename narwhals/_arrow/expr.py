@@ -92,6 +92,9 @@ class ArrowExpr:
     def min(self) -> Self:
         return reuse_series_implementation(self, "min", returns_scalar=True)
 
+    def max(self) -> Self:
+        return reuse_series_implementation(self, "max", returns_scalar=True)
+
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
