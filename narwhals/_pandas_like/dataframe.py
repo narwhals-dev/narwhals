@@ -365,7 +365,6 @@ class PandasLikeDataFrame:
                 )
                 .loc[lambda t: t[indicator_token] == "left_only"]
                 .drop(columns=[indicator_token])
-                .reset_index(drop=True)
             )
 
         if how == "semi":
@@ -382,7 +381,7 @@ class PandasLikeDataFrame:
                     how="inner",
                     left_on=left_on,
                     right_on=left_on,
-                ).reset_index(drop=True)
+                )
             )
 
         return self._from_native_dataframe(
