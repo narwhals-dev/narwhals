@@ -492,7 +492,7 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> @nw.narwhalify(eager_only=True)
             ... def func(df):
-            ...     return df.get_column("a")
+            ...     return df["a"]
 
             We can then pass either pandas or Polars to `func`:
 
