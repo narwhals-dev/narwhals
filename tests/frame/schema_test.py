@@ -8,7 +8,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 data = {
@@ -66,6 +66,7 @@ def test_dtypes() -> None:
             "o": [datetime(2020, 1, 1)],
             "p": ["a"],
             "q": [timedelta(1)],
+            "r": ["a"],
         },
         schema={
             "a": pl.Int64,
@@ -85,9 +86,10 @@ def test_dtypes() -> None:
             "o": pl.Datetime,
             "p": pl.Categorical,
             "q": pl.Duration,
+            "r": pl.Enum(["a", "b"]),
         },
     )
-    df = nw.DataFrame(df_pl)
+    df = nw.from_native(df_pl, eager_only=True)
     result = df.schema
     expected = {
         "a": nw.Int64,
@@ -107,16 +109,20 @@ def test_dtypes() -> None:
         "o": nw.Datetime,
         "p": nw.Categorical,
         "q": nw.Duration,
+        "r": nw.Enum,
     }
     assert result == expected
     assert {name: df[name].dtype for name in df.columns} == expected
+
+    # pandas/pyarrow only have categorical, not enum
+    expected["r"] = nw.Categorical
     df_pd = df_pl.to_pandas(use_pyarrow_extension_array=True)
-    df = nw.DataFrame(df_pd)
+    df = nw.from_native(df_pd, eager_only=True)
     result_pd = df.schema
     assert result_pd == expected
     assert {name: df[name].dtype for name in df.columns} == expected
     df_pa = df_pl.to_arrow()
-    df = nw.DataFrame(df_pa)
+    df = nw.from_native(df_pa, eager_only=True)
     result_pa = df.schema
     assert result_pa == expected
     assert {name: df[name].dtype for name in df.columns} == expected
@@ -130,3 +136,7 @@ def test_unknown_dtype() -> None:
 def test_unknown_dtype_polars() -> None:
     df = pl.DataFrame({"a": [[1, 2, 3]]})
     assert nw.from_native(df).schema == {"a": nw.Unknown}
+
+
+def test_hash() -> None:
+    assert nw.Int64() in {nw.Int64, nw.Int32}

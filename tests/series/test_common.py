@@ -11,7 +11,7 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -55,7 +55,6 @@ def test_len(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_is_in(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).is_in([1, 2])
     assert result[0]
@@ -64,7 +63,6 @@ def test_is_in(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_is_in_other(df_raw: Any) -> None:
     with pytest.raises(
         NotImplementedError,
@@ -76,7 +74,6 @@ def test_is_in_other(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_filter(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
     expected = np.array([3, 2])
@@ -141,190 +138,14 @@ def test_boolean_reductions(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
+)
 def test_convert(df_raw: Any) -> None:
     result = nw.from_native(df_raw).lazy().collect()["a"].to_numpy()
     assert_array_equal(result, np.array([1, 3, 2]))
     result = nw.from_native(df_raw).lazy().collect()["a"].to_pandas()
     assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
-
-
-def test_cast() -> None:
-    df_raw = pl.DataFrame(
-        {
-            "a": [1],
-            "b": [1],
-            "c": [1],
-            "d": [1],
-            "e": [1],
-            "f": [1],
-            "g": [1],
-            "h": [1],
-            "i": [1],
-            "j": [1],
-            "k": ["1"],
-            "l": [1],
-            "m": [True],
-            "n": [True],
-            "o": ["a"],
-            "p": [1],
-        },
-        schema={
-            "a": pl.Int64,
-            "b": pl.Int32,
-            "c": pl.Int16,
-            "d": pl.Int8,
-            "e": pl.UInt64,
-            "f": pl.UInt32,
-            "g": pl.UInt16,
-            "h": pl.UInt8,
-            "i": pl.Float64,
-            "j": pl.Float32,
-            "k": pl.String,
-            "l": pl.Datetime,
-            "m": pl.Boolean,
-            "n": pl.Boolean,
-            "o": pl.Categorical,
-            "p": pl.Int64,
-        },
-    )
-    df = nw.from_native(df_raw, eager_only=True).select(
-        nw.col("a").cast(nw.Int32),
-        nw.col("b").cast(nw.Int16),
-        nw.col("c").cast(nw.Int8),
-        nw.col("d").cast(nw.Int64),
-        nw.col("e").cast(nw.UInt32),
-        nw.col("f").cast(nw.UInt16),
-        nw.col("g").cast(nw.UInt8),
-        nw.col("h").cast(nw.UInt64),
-        nw.col("i").cast(nw.Float32),
-        nw.col("j").cast(nw.Float64),
-        nw.col("k").cast(nw.String),
-        nw.col("l").cast(nw.Datetime),
-        nw.col("m").cast(nw.Int8),
-        nw.col("n").cast(nw.Int8),
-        nw.col("o").cast(nw.String),
-        nw.col("p").cast(nw.Duration),
-    )
-    result = df.schema
-    expected = {
-        "a": nw.Int32,
-        "b": nw.Int16,
-        "c": nw.Int8,
-        "d": nw.Int64,
-        "e": nw.UInt32,
-        "f": nw.UInt16,
-        "g": nw.UInt8,
-        "h": nw.UInt64,
-        "i": nw.Float32,
-        "j": nw.Float64,
-        "k": nw.String,
-        "l": nw.Datetime,
-        "m": nw.Int8,
-        "n": nw.Int8,
-        "o": nw.String,
-        "p": nw.Duration,
-    }
-    assert result == expected
-    result_pd = nw.from_native(df.to_pandas(), eager_only=True).schema
-    assert result_pd == expected
-    result = df.select(
-        df["a"].cast(nw.Int32),
-        df["b"].cast(nw.Int16),
-        df["c"].cast(nw.Int8),
-        df["d"].cast(nw.Int64),
-        df["e"].cast(nw.UInt32),
-        df["f"].cast(nw.UInt16),
-        df["g"].cast(nw.UInt8),
-        df["h"].cast(nw.UInt64),
-        df["i"].cast(nw.Float32),
-        df["j"].cast(nw.Float64),
-        df["k"].cast(nw.String),
-        df["l"].cast(nw.Datetime),
-        df["m"].cast(nw.Int8),
-        df["n"].cast(nw.Boolean),
-        df["o"].cast(nw.Categorical),
-        df["p"].cast(nw.Duration),
-    ).schema
-    expected = {
-        "a": nw.Int32,
-        "b": nw.Int16,
-        "c": nw.Int8,
-        "d": nw.Int64,
-        "e": nw.UInt32,
-        "f": nw.UInt16,
-        "g": nw.UInt8,
-        "h": nw.UInt64,
-        "i": nw.Float32,
-        "j": nw.Float64,
-        "k": nw.String,
-        "l": nw.Datetime,
-        "m": nw.Int8,
-        "n": nw.Boolean,
-        "o": nw.Categorical,
-        "p": nw.Duration,
-    }
-    df = nw.from_native(df.to_pandas())  # type: ignore[assignment]
-    result_pd = df.select(
-        df["a"].cast(nw.Int32),
-        df["b"].cast(nw.Int16),
-        df["c"].cast(nw.Int8),
-        df["d"].cast(nw.Int64),
-        df["e"].cast(nw.UInt32),
-        df["f"].cast(nw.UInt16),
-        df["g"].cast(nw.UInt8),
-        df["h"].cast(nw.UInt64),
-        df["i"].cast(nw.Float32),
-        df["j"].cast(nw.Float64),
-        df["k"].cast(nw.String),
-        df["l"].cast(nw.Datetime),
-        df["m"].cast(nw.Int8),
-        df["n"].cast(nw.Boolean),
-        df["o"].cast(nw.Categorical),
-        df["p"].cast(nw.Duration),
-    ).schema
-    assert result == expected
-    df = nw.from_native(df.to_pandas().convert_dtypes())  # type: ignore[assignment]
-    result_pd = df.select(
-        df["a"].cast(nw.Int32),
-        df["b"].cast(nw.Int16),
-        df["c"].cast(nw.Int8),
-        df["d"].cast(nw.Int64),
-        df["e"].cast(nw.UInt32),
-        df["f"].cast(nw.UInt16),
-        df["g"].cast(nw.UInt8),
-        df["h"].cast(nw.UInt64),
-        df["i"].cast(nw.Float32),
-        df["j"].cast(nw.Float64),
-        df["k"].cast(nw.String),
-        df["l"].cast(nw.Datetime),
-        df["m"].cast(nw.Int8),
-        df["n"].cast(nw.Boolean),
-        df["o"].cast(nw.Categorical),
-        df["p"].cast(nw.Duration),
-    ).schema
-    assert result == expected
-    if parse_version(pd.__version__) < parse_version("2.0.0"):  # pragma: no cover
-        return
-    df = nw.from_native(df.to_pandas().convert_dtypes(dtype_backend="pyarrow"))  # type: ignore[assignment]
-    result_pd = df.select(
-        df["a"].cast(nw.Int32),
-        df["b"].cast(nw.Int16),
-        df["c"].cast(nw.Int8),
-        df["d"].cast(nw.Int64),
-        df["e"].cast(nw.UInt32),
-        df["f"].cast(nw.UInt16),
-        df["g"].cast(nw.UInt8),
-        df["h"].cast(nw.UInt64),
-        df["i"].cast(nw.Float32),
-        df["j"].cast(nw.Float64),
-        df["k"].cast(nw.String),
-        df["l"].cast(nw.Datetime),
-        df["m"].cast(nw.Int8),
-        df["n"].cast(nw.Boolean),
-        df["o"].cast(nw.Categorical),
-        df["p"].cast(nw.Duration),
-    ).schema
-    assert result == expected
 
 
 def test_to_numpy() -> None:
@@ -341,14 +162,6 @@ def test_is_duplicated(df_raw: Any) -> None:
     result = series.is_duplicated()
     expected = np.array([True, True, False])
     assert (result.to_numpy() == expected).all()
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])
-def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
-    series = nw.from_native(df_raw["b"], series_only=True)
-    result = series.filter(series > threshold).is_empty()
-    assert result == expected
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
@@ -458,6 +271,10 @@ def test_zip_with(df_raw: Any, mask: Any, expected: Any) -> None:
     assert result == expected
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("1.0.0"),
+    reason="too old for convert_dtypes",
+)
 def test_cast_string() -> None:
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)

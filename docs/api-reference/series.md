@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - abs
         - alias
         - all
         - any

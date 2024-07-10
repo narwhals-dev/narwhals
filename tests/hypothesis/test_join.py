@@ -7,10 +7,11 @@ from hypothesis import given
 from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 pl_version = parse_version(pl.__version__)
+pd_version = parse_version(pd.__version__)
 
 
 @given(
@@ -37,6 +38,7 @@ pl_version = parse_version(pl.__version__)
     ),
 )  # type: ignore[misc]
 @pytest.mark.skipif(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
+@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
 @pytest.mark.slow()
 def test_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
@@ -48,14 +50,14 @@ def test_join(  # pragma: no cover
 
     df_polars = pl.DataFrame(data)
     df_polars2 = pl.DataFrame(data)
-    df_pl = nw.DataFrame(df_polars)
-    other_pl = nw.DataFrame(df_polars2)
+    df_pl = nw.from_native(df_polars, eager_only=True)
+    other_pl = nw.from_native(df_polars2, eager_only=True)
     dframe_pl = df_pl.join(other_pl, left_on=cols, right_on=cols, how="inner")
 
     df_pandas = pd.DataFrame(data)
     df_pandas2 = pd.DataFrame(data)
-    df_pd = nw.DataFrame(df_pandas)
-    other_pd = nw.DataFrame(df_pandas2)
+    df_pd = nw.from_native(df_pandas, eager_only=True)
+    other_pd = nw.from_native(df_pandas2, eager_only=True)
     dframe_pd = df_pd.join(other_pd, left_on=cols, right_on=cols, how="inner")
 
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()
@@ -84,6 +86,7 @@ def test_join(  # pragma: no cover
     ),
 )  # type: ignore[misc]
 @pytest.mark.slow()
+@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
 def test_cross_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
@@ -92,14 +95,14 @@ def test_cross_join(  # pragma: no cover
 
     df_polars = pl.DataFrame(data)
     df_polars2 = pl.DataFrame(data)
-    df_pl = nw.DataFrame(df_polars)
-    other_pl = nw.DataFrame(df_polars2)
+    df_pl = nw.from_native(df_polars, eager_only=True)
+    other_pl = nw.from_native(df_polars2, eager_only=True)
     dframe_pl = df_pl.join(other_pl, how="cross")
 
     df_pandas = pd.DataFrame(data)
     df_pandas2 = pd.DataFrame(data)
-    df_pd = nw.DataFrame(df_pandas)
-    other_pd = nw.DataFrame(df_pandas2)
+    df_pd = nw.from_native(df_pandas, eager_only=True)
+    other_pd = nw.from_native(df_pandas2, eager_only=True)
     dframe_pd = df_pd.join(other_pd, how="cross")
 
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()

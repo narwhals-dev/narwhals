@@ -4,7 +4,8 @@ import pytest
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_series_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 
 
 def test_maybe_align_index_pandas() -> None:
@@ -64,6 +65,10 @@ def test_maybe_set_index_polars() -> None:
     assert result is df
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("1.0.0"),
+    reason="too old for convert_dtypes",
+)
 def test_maybe_convert_dtypes_pandas() -> None:
     import numpy as np
 

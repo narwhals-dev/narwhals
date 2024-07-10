@@ -6,7 +6,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
@@ -25,9 +25,9 @@ def test_group_by_complex() -> None:
         )
     compare_dicts(result, expected)
 
-    df = nw.from_native(df_lazy).lazy()
+    lf = nw.from_native(df_lazy).lazy()
     result = nw.to_native(
-        df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
+        lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
     )
     compare_dicts(result, expected)
 
@@ -70,3 +70,12 @@ def test_group_by_len(constructor: Any) -> None:
     )
     expected = {"a": [1, 3], "b": [2, 1]}
     compare_dicts(result, expected)
+
+
+def test_group_by_empty_result_pandas() -> None:
+    df_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 3, 2]})
+    df = nw.from_native(df_any, eager_only=True)
+    with pytest.raises(ValueError, match="No results"):
+        df.filter(nw.col("a") < 0).group_by("a").agg(
+            nw.col("b").sum().round(2).alias("c")
+        )

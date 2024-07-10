@@ -4,10 +4,13 @@
     handler: python
     options:
       members:
+        - __getitem__
+        - clone
         - columns
         - drop
         - drop_nulls
         - filter
+        - get_column
         - group_by
         - head
         - is_duplicated

@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {

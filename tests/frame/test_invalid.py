@@ -1,10 +1,8 @@
 import pandas as pd
 import polars as pl
 import pytest
-from sklearn.utils import check_X_y
-from sklearn.utils._testing import create_memmap_backed_data
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 
@@ -33,6 +31,12 @@ def test_validate_laziness() -> None:
 )
 def test_memmap() -> None:
     # the headache this caused me...
+    try:
+        from sklearn.utils import check_X_y
+    except ImportError:  # pragma: no cover
+        return
+    from sklearn.utils._testing import create_memmap_backed_data
+
     x_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     y_any = create_memmap_backed_data(x_any["b"])
 

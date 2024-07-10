@@ -1,12 +1,12 @@
 from typing import Any
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_any_all(constructor: Any) -> None:
+def test_any_all(constructor_with_pyarrow: Any) -> None:
     df = nw.from_native(
-        constructor(
+        constructor_with_pyarrow(
             {
                 "a": [True, False, True],
                 "b": [True, True, True],
@@ -14,9 +14,9 @@ def test_any_all(constructor: Any) -> None:
             }
         )
     )
-    result = nw.to_native(df.select(nw.all().all()))
+    result = df.select(nw.all().all())
     expected = {"a": [False], "b": [True], "c": [False]}
     compare_dicts(result, expected)
-    result = nw.to_native(df.select(nw.all().any()))
+    result = df.select(nw.all().any())
     expected = {"a": [True], "b": [True], "c": [False]}
     compare_dicts(result, expected)
