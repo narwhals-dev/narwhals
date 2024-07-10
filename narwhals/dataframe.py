@@ -411,6 +411,13 @@ class DataFrame(BaseFrame[FrameT]):
         """
         Get a single column by name.
 
+        Notes:
+            Although `name` is typed as `str`, pandas does allow non-string column
+            names, and they will work when passed to this function if the
+            `narwhals.DataFrame` is backed by a pandas dataframe with non-string
+            columns. This function can only be used to extract a column by name, so
+            there is no risk of ambiguity.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl

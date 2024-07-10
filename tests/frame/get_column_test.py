@@ -13,6 +13,9 @@ def test_get_column(constructor_with_pyarrow: Any) -> None:
     result = df.get_column("a")
     assert result.to_list() == [1, 2]
     assert result.name == "a"
+    with pytest.raises(TypeError):
+        # Check that trying to get a column by position is disallowed here.
+        nw.from_native(df, eager_only=True).get_column(0)  # type: ignore[arg-type]
 
 
 def test_non_string_name() -> None:
@@ -21,4 +24,5 @@ def test_non_string_name() -> None:
     assert result.to_list() == [1, 2]
     assert result.name == 0  # type: ignore[comparison-overlap]
     with pytest.raises(TypeError, match="Expected str or slice"):
+        # Check that getitem would have raised
         nw.from_native(df, eager_only=True)[0]  # type: ignore[call-overload]
