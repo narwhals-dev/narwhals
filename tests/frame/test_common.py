@@ -21,7 +21,6 @@ from tests.utils import compare_dicts
 from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
-    from narwhals.dtypes import DType
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrameT
 
@@ -95,45 +94,6 @@ def test_std(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-@pytest.mark.parametrize(
-    ("dtype", "expected_lit"),
-    [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
-)
-def test_lit(df_raw: Any, dtype: DType | None, expected_lit: list[Any]) -> None:
-    df = nw.from_native(df_raw)
-    result = df.with_columns(nw.lit(2, dtype).alias("lit"))
-    result_native = nw.to_native(result)
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "lit": expected_lit,
-    }
-    compare_dicts(result_native, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_lit_error(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    with pytest.raises(
-        ValueError, match="numpy arrays are not supported as literal values"
-    ):
-        _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))
-    with pytest.raises(
-        NotImplementedError, match="Nested datatypes are not supported yet."
-    ):
-        _ = df.with_columns(nw.lit((1, 2)).alias("lit"))
-    with pytest.raises(
-        NotImplementedError, match="Nested datatypes are not supported yet."
-    ):
-        _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
 # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(df_raw: Any) -> None:
@@ -175,31 +135,6 @@ def test_accepted_dataframes() -> None:
         match="Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: <class 'numpy.ndarray'>",
     ):
         nw.LazyFrame(array, is_polars=False, backend_version=(1,))
-
-
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_pa])
-@pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
-    reason="too old for pandas-pyarrow",
-)
-def test_convert_pandas(df_raw: Any) -> None:
-    result = nw.from_native(df_raw).to_pandas()  # type: ignore[union-attr]
-    expected = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-    pd.testing.assert_frame_equal(result, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_polars, df_pandas, df_mpd, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_convert_numpy(df_raw: Any) -> None:
-    result = nw.from_native(df_raw, eager_only=True).to_numpy()
-    expected = np.array([[1, 3, 2], [4, 4, 6], [7.0, 8, 9]]).T
-    np.testing.assert_array_equal(result, expected)
-    assert result.dtype == "float64"
-    result = nw.from_native(df_raw, eager_only=True).__array__()
-    np.testing.assert_array_equal(result, expected)
-    assert result.dtype == "float64"
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
@@ -294,51 +229,6 @@ def test_expr_na(df_raw: Any) -> None:
     )
     expected = {"a": [2], "b": [6], "z": [9]}
     compare_dicts(result_nna, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_head(df_raw: Any) -> None:
-    df = nw.from_native(df_raw).lazy()
-    result = nw.to_native(df.head(2))
-    expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
-    compare_dicts(result, expected)
-    result = nw.to_native(df.collect().head(2))
-    expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
-    compare_dicts(result, expected)
-    result = nw.to_native(df.collect().select(nw.col("a").head(2)))
-    expected = {"a": [1, 3]}
-    compare_dicts(result, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_tail(df_raw: Any) -> None:
-    df = nw.from_native(df_raw).lazy()
-    result = nw.to_native(df.tail(2))
-    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
-    compare_dicts(result, expected)
-    result = nw.to_native(df.collect().tail(2))
-    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
-    compare_dicts(result, expected)
-    result = nw.to_native(df.collect().select(nw.col("a").tail(2)))
-    expected = {"a": [3, 2]}
-    compare_dicts(result, expected)
-
-
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_unique(df_raw: Any) -> None:
-    df = nw.from_native(df_raw).lazy()
-    result = nw.to_native(df.unique("b").sort("b"))
-    expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
-    compare_dicts(result, expected)
-    result = nw.to_native(df.collect().unique("b").sort("b"))
-    expected = {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}
-    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])
