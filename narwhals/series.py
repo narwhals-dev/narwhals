@@ -1276,27 +1276,37 @@ class Series:
             self._compliant_series.__gt__(self._extract_native(other))
         )
 
-    def __ge__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    # TODO(Unassigned): Increase Coverage
+    # 473
+    def __ge__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__ge__(self._extract_native(other))
         )
 
-    def __lt__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    # TODO(Unassigned): Increase Coverage
+    # 473
+    def __lt__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__lt__(self._extract_native(other))
         )
 
-    def __le__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    # TODO(Unassigned): Increase Coverage
+    # 473
+    def __le__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__le__(self._extract_native(other))
         )
 
-    def __and__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    # TODO(Unassigned): Increase Coverage
+    # 473
+    def __and__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__and__(self._extract_native(other))
         )
 
-    def __or__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    # TODO(Unassigned): Increase Coverage
+    # 473
+    def __or__(self, other: Any) -> Self:  # pragma: no cover
         return self._from_compliant_series(
             self._compliant_series.__or__(self._extract_native(other))
         )

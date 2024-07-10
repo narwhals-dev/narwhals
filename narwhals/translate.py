@@ -69,12 +69,14 @@ def to_native(
             else narwhals_object._compliant_series._native_series
         )
 
-    if strict:  # pragma: no cover (todo)
+    # TODO(Unassigned): Increase Coverage
+    # 473
+    if strict:  # pragma: no cover
         msg = (
             f"Expected Narwhals object, got {type(narwhals_object)}."  # pragma: no cover
         )
         raise TypeError(msg)  # pragma: no cover
-    return narwhals_object  # pragma: no cover (todo)
+    return narwhals_object  # pragma: no cover
 
 
 @overload
@@ -262,9 +264,12 @@ def from_native(  # noqa: PLR0915
     if series_only:
         allow_series = True
     # TODO(Unassigned): raise on invalid combinations
+    # 470
 
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
-        if series_only:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with polars.DataFrame")
         return DataFrame(
             native_dataframe,
@@ -272,9 +277,14 @@ def from_native(  # noqa: PLR0915
             backend_version=parse_version(pl.__version__),
         )
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
-        if series_only:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with polars.LazyFrame")
-        if eager_only:  # pragma: no cover (todo)
+
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if eager_only:  # pragma: no cover
             raise TypeError("Cannot only use `eager_only` with polars.LazyFrame")
         return LazyFrame(
             native_dataframe,
@@ -282,7 +292,9 @@ def from_native(  # noqa: PLR0915
             backend_version=parse_version(pl.__version__),
         )
     elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.DataFrame):
-        if series_only:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with dataframe")
         return DataFrame(
             PandasLikeDataFrame(
@@ -322,7 +334,9 @@ def from_native(  # noqa: PLR0915
             backend_version=parse_version(cudf.__version__),
         )
     elif (pa := get_pyarrow()) is not None and isinstance(native_dataframe, pa.Table):
-        if series_only:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with arrow table")
         return DataFrame(
             ArrowDataFrame(
@@ -332,7 +346,9 @@ def from_native(  # noqa: PLR0915
             backend_version=parse_version(pa.__version__),
         )
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
-        if series_only:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with dataframe")
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(
@@ -341,9 +357,13 @@ def from_native(  # noqa: PLR0915
             backend_version=(0,),
         )
     elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
-        if series_only:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if series_only:  # pragma: no cover
             raise TypeError("Cannot only use `series_only` with lazyframe")
-        if eager_only:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if eager_only:  # pragma: no cover
             raise TypeError("Cannot only use `eager_only` with lazyframe")
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return LazyFrame(
@@ -352,7 +372,9 @@ def from_native(  # noqa: PLR0915
             backend_version=(0,),
         )
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.Series):
-        if not allow_series:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
             native_dataframe,
@@ -360,7 +382,9 @@ def from_native(  # noqa: PLR0915
             backend_version=parse_version(pl.__version__),
         )
     elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.Series):
-        if not allow_series:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
             PandasLikeSeries(
@@ -374,7 +398,9 @@ def from_native(  # noqa: PLR0915
     elif (mpd := get_modin()) is not None and isinstance(
         native_dataframe, mpd.Series
     ):  # pragma: no cover
-        if not allow_series:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
             PandasLikeSeries(
@@ -388,7 +414,9 @@ def from_native(  # noqa: PLR0915
     elif (cudf := get_cudf()) is not None and isinstance(
         native_dataframe, cudf.Series
     ):  # pragma: no cover
-        if not allow_series:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
             PandasLikeSeries(
@@ -402,7 +430,9 @@ def from_native(  # noqa: PLR0915
     elif (pa := get_pyarrow()) is not None and isinstance(
         native_dataframe, pa.ChunkedArray
     ):
-        if not allow_series:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         return Series(
             ArrowSeries(
@@ -412,7 +442,9 @@ def from_native(  # noqa: PLR0915
             backend_version=parse_version(pa.__version__),
         )
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
-        if not allow_series:  # pragma: no cover (todo)
+        # TODO(Unassigned): Increase Coverage
+        # 473
+        if not allow_series:  # pragma: no cover
             raise TypeError("Please set `allow_series=True`")
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return Series(
@@ -421,7 +453,10 @@ def from_native(  # noqa: PLR0915
     elif strict:  # pragma: no cover
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_dataframe)}"
         raise TypeError(msg)
-    return native_dataframe  # pragma: no cover (todo)
+
+    # TODO(Unassigned): Increase Coverage
+    # 473
+    return native_dataframe  # pragma: no cover
 
 
 def get_native_namespace(obj: Any) -> Any:

@@ -131,10 +131,11 @@ def test_lit_error(df_raw: Any) -> None:
         _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
 
 
+# TODO(Unassigned): Fix polars 1.0 compatibility
+# 313
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(df_raw: Any) -> None:
     result = nw.from_native(df_raw).schema
@@ -151,10 +152,11 @@ def test_schema(df_raw: Any) -> None:
     assert result == expected
 
 
+# TODO(Unassigned): Fix polars 1.0 compatibility
+# 313
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(df_raw: Any) -> None:
     df = nw.from_native(df_raw)

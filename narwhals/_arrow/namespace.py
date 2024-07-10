@@ -81,7 +81,9 @@ class ArrowNamespace:
             backend_version=self._backend_version,
         )
 
-    def _create_native_series(self, value: Any) -> Any:  # pragma: no cover (todo!)
+    # TODO(Unassigned): Increase Coverage
+    # 473
+    def _create_native_series(self, value: Any) -> Any:  # pragma: no cover
         pa = get_pyarrow()
         return pa.chunked_array([value])
 

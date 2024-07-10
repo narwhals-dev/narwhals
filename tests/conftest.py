@@ -77,6 +77,7 @@ def constructor_with_lazy(request: Any) -> Callable[[Any], Any]:
 
 # TODO(Unassigned): once pyarrow has complete coverage, we can remove this one,
 # and just put `pa.table` into `constructor`
+# 471
 @pytest.fixture(params=[*params, pa.table])
 def constructor_with_pyarrow(request: Any) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
@@ -127,6 +128,7 @@ def pyarrow_chunked_array_constructor(obj: Any) -> Any:
 
 # TODO(Unassigned): once pyarrow has complete coverage, we can remove this one,
 # and just put `pa.table` into `constructor`
+# 471
 @pytest.fixture(params=[*params_series, pyarrow_chunked_array_constructor])
 def constructor_series_with_pyarrow(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]

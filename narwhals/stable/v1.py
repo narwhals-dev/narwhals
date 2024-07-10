@@ -698,6 +698,7 @@ def narwhalify(
     """
 
     # TODO(Unassigned): do we have a way to de-dupe this a bit?
+    # 469
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:

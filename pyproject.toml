@@ -62,7 +62,6 @@ lint.ignore = [
   'RET505',
   'S',
   'SLF001',
-  'TD003',
   'TRY003',  # TODO(Unassigned): enable
   'TRY004'
 ]
