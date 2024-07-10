@@ -305,8 +305,8 @@ class PandasLikeDataFrame:
         other: Self,
         *,
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
     ) -> Self:
         if isinstance(left_on, str):
             left_on = [left_on]
@@ -383,6 +383,23 @@ class PandasLikeDataFrame:
                     right_on=left_on,
                 )
             )
+
+        if how == "left":
+            other_native = other._native_dataframe
+            result_native = self._native_dataframe.merge(
+                other_native,
+                how="left",
+                left_on=left_on,
+                right_on=right_on,
+                suffixes=("", "_right"),
+            )
+            extra = []
+            for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
+                if right_key != left_key and right_key not in self.columns:
+                    extra.append(right_key)
+                elif right_key != left_key:
+                    extra.append(f"{right_key}_right")
+            return self._from_native_dataframe(result_native.drop(columns=extra))
 
         return self._from_native_dataframe(
             self._native_dataframe.merge(

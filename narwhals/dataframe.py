@@ -174,11 +174,11 @@ class BaseFrame(Generic[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
-        _supported_joins = ("inner", "cross", "anti", "semi")
+        _supported_joins = ("inner", "left", "cross", "anti", "semi")
 
         if how not in _supported_joins:
             msg = f"Only the following join stragies are supported: {_supported_joins}; found '{how}'."
@@ -1569,7 +1569,7 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -2995,7 +2995,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
