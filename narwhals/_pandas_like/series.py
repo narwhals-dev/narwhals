@@ -131,7 +131,7 @@ class PandasLikeSeries:
         )
 
     @classmethod
-    def _from_iterable(  # noqa: PLR0913
+    def _from_iterable(
         cls: type[Self],
         data: Iterable[Any],
         name: str,

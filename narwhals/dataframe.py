@@ -174,11 +174,11 @@ class BaseFrame(Generic[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
-        _supported_joins = ("inner", "cross", "anti", "semi")
+        _supported_joins = ("inner", "left", "cross", "anti", "semi")
 
         if how not in _supported_joins:
             msg = f"Only the following join stragies are supported: {_supported_joins}; found '{how}'."
@@ -407,6 +407,54 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return self._compliant_frame.shape  # type: ignore[no-any-return]
 
+    def get_column(self, name: str) -> Series:
+        """
+        Get a single column by name.
+
+        Notes:
+            Although `name` is typed as `str`, pandas does allow non-string column
+            names, and they will work when passed to this function if the
+            `narwhals.DataFrame` is backed by a pandas dataframe with non-string
+            columns. This function can only be used to extract a column by name, so
+            there is no risk of ambiguity.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 2], "b": [3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify(eager_only=True)
+            ... def func(df):
+            ...     name = df.columns[0]
+            ...     return df.get_column(name)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            0    1
+            1    2
+            Name: a, dtype: int64
+            >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [i64]
+            [
+                1
+                2
+            ]
+        """
+        from narwhals.series import Series
+
+        return Series(
+            self._compliant_frame.get_column(name),
+            backend_version=self._backend_version,
+            is_polars=self._is_polars,
+        )
+
     @overload
     def __getitem__(self, item: Sequence[int]) -> Series: ...
 
@@ -417,6 +465,49 @@ class DataFrame(BaseFrame[FrameT]):
     def __getitem__(self, item: slice) -> Self: ...
 
     def __getitem__(self, item: str | slice | Sequence[int]) -> Series | Self:
+        """
+        Extract column or slice of DataFrame.
+
+        Arguments:
+            item: how to slice dataframe:
+
+                - str: extract column
+                - slice or Sequence of integers: slice rows from dataframe.
+
+        Notes:
+            In contrast with Polars, pandas allows non-string column names.
+            If you don't know whether the column name you're trying to extract
+            is definitely a string (e.g. `df[df.columns[0]]`) then you should
+            use `DataFrame.get_column` instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 2], "b": [3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify(eager_only=True)
+            ... def func(df):
+            ...     return df["a"]
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            0    1
+            1    2
+            Name: a, dtype: int64
+            >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [i64]
+            [
+                1
+                2
+            ]
+        """
         if isinstance(item, str):
             from narwhals.series import Series
 
@@ -1478,7 +1569,7 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -2904,7 +2995,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:

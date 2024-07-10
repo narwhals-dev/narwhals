@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class ArrowExpr:
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         call: Callable[[ArrowDataFrame], list[ArrowSeries]],
         *,
