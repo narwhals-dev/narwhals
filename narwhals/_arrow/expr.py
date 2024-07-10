@@ -88,7 +88,7 @@ class ArrowExpr:
 
     def mean(self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
-
+    
     def min(self) -> Self:
         return reuse_series_implementation(self, "min", returns_scalar=True)
 
