@@ -89,14 +89,12 @@ class ArrowDataFrame:
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._arrow.series import ArrowSeries
 
-            if isinstance(item[1], str):
-                # PyArrow columns are always strings
-                native_dataframe = self._native_dataframe[item[1]].take(item[0])
-            else:
-                col_name = self.columns[item[1]]
-                native_dataframe = self._native_dataframe[col_name].take(item[0])
+            # PyArrow columns are always strings
+            col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
             return ArrowSeries(
-                native_dataframe, name=col_name, backend_version=self._backend_version
+                self._native_dataframe[col_name].take(item[0]),
+                name=col_name,
+                backend_version=self._backend_version,
             )
 
         elif isinstance(item, slice):
