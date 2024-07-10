@@ -81,8 +81,8 @@ class PandasDataFrame:
                     raise ValueError(
                         msg,
                     )
-            error_message = "Please report a bug"  # pragma: no cover
-            raise AssertionError(error_message)
+            msg = "Please report a bug"  # pragma: no cover
+            raise AssertionError(msg)
 
     def _from_native_dataframe(self, df: Any) -> Self:
         return self.__class__(

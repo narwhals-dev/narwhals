@@ -255,8 +255,8 @@ def from_native(  # noqa: PLR0915
 
     if (pl := get_polars()) is not None and isinstance(native_dataframe, pl.DataFrame):
         if series_only:  # pragma: no cover (todo)
-            error_message = "Cannot only use `series_only` with polars.DataFrame"
-            raise TypeError(error_message)
+            msg = "Cannot only use `series_only` with polars.DataFrame"
+            raise TypeError(msg)
         return DataFrame(
             native_dataframe,
             is_polars=True,
@@ -264,11 +264,11 @@ def from_native(  # noqa: PLR0915
         )
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.LazyFrame):
         if series_only:  # pragma: no cover (todo)
-            error_message = "Cannot only use `series_only` with polars.LazyFrame"
-            raise TypeError(error_message)
+            msg = "Cannot only use `series_only` with polars.LazyFrame"
+            raise TypeError(msg)
         if eager_only:  # pragma: no cover (todo)
-            error_message = "Cannot only use `eager_only` with polars.LazyFrame"
-            raise TypeError(error_message)
+            msg = "Cannot only use `eager_only` with polars.LazyFrame"
+            raise TypeError(msg)
         return LazyFrame(
             native_dataframe,
             is_polars=True,
@@ -276,8 +276,8 @@ def from_native(  # noqa: PLR0915
         )
     elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.DataFrame):
         if series_only:  # pragma: no cover (todo)
-            error_message = "Cannot only use `series_only` with dataframe"
-            raise TypeError(error_message)
+            msg = "Cannot only use `series_only` with dataframe"
+            raise TypeError(msg)
         return DataFrame(
             PandasDataFrame(
                 native_dataframe,
@@ -291,8 +291,8 @@ def from_native(  # noqa: PLR0915
         native_dataframe, mpd.DataFrame
     ):  # pragma: no cover
         if series_only:
-            error_message = "Cannot only use `series_only` with modin.DataFrame"
-            raise TypeError(error_message)
+            msg = "Cannot only use `series_only` with modin.DataFrame"
+            raise TypeError(msg)
         return DataFrame(
             PandasDataFrame(
                 native_dataframe,
@@ -306,8 +306,8 @@ def from_native(  # noqa: PLR0915
         native_dataframe, cudf.DataFrame
     ):
         if series_only:
-            error_message = "Cannot only use `series_only` with modin.DataFrame"
-            raise TypeError(error_message)
+            msg = "Cannot only use `series_only` with modin.DataFrame"
+            raise TypeError(msg)
         return DataFrame(
             PandasDataFrame(
                 native_dataframe,
@@ -319,8 +319,8 @@ def from_native(  # noqa: PLR0915
         )
     elif (pa := get_pyarrow()) is not None and isinstance(native_dataframe, pa.Table):
         if series_only:  # pragma: no cover (todo)
-            error_message = "Cannot only use `series_only` with arrow table"
-            raise TypeError(error_message)
+            msg = "Cannot only use `series_only` with arrow table"
+            raise TypeError(msg)
         return DataFrame(
             ArrowDataFrame(
                 native_dataframe, backend_version=parse_version(pa.__version__)
@@ -330,8 +330,8 @@ def from_native(  # noqa: PLR0915
         )
     elif hasattr(native_dataframe, "__narwhals_dataframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
-            error_message = "Cannot only use `series_only` with dataframe"
-            raise TypeError(error_message)
+            msg = "Cannot only use `series_only` with dataframe"
+            raise TypeError(msg)
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(
             native_dataframe.__narwhals_dataframe__(),
@@ -340,11 +340,11 @@ def from_native(  # noqa: PLR0915
         )
     elif hasattr(native_dataframe, "__narwhals_lazyframe__"):  # pragma: no cover
         if series_only:  # pragma: no cover (todo)
-            error_message = "Cannot only use `series_only` with lazyframe"
-            raise TypeError(error_message)
+            msg = "Cannot only use `series_only` with lazyframe"
+            raise TypeError(msg)
         if eager_only:  # pragma: no cover (todo)
-            error_message = "Cannot only use `eager_only` with lazyframe"
-            raise TypeError(error_message)
+            msg = "Cannot only use `eager_only` with lazyframe"
+            raise TypeError(msg)
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return LazyFrame(
             native_dataframe.__narwhals_lazyframe__(),
@@ -353,8 +353,8 @@ def from_native(  # noqa: PLR0915
         )
     elif (pl := get_polars()) is not None and isinstance(native_dataframe, pl.Series):
         if not allow_series:  # pragma: no cover (todo)
-            error_message = "Please set `allow_series=True`"
-            raise TypeError(error_message)
+            msg = "Please set `allow_series=True`"
+            raise TypeError(msg)
         return Series(
             native_dataframe,
             is_polars=True,
@@ -362,8 +362,8 @@ def from_native(  # noqa: PLR0915
         )
     elif (pd := get_pandas()) is not None and isinstance(native_dataframe, pd.Series):
         if not allow_series:  # pragma: no cover (todo)
-            error_message = "Please set `allow_series=True`"
-            raise TypeError(error_message)
+            msg = "Please set `allow_series=True`"
+            raise TypeError(msg)
         return Series(
             PandasSeries(
                 native_dataframe,
@@ -377,8 +377,8 @@ def from_native(  # noqa: PLR0915
         native_dataframe, mpd.Series
     ):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
-            error_message = "Please set `allow_series=True`"
-            raise TypeError(error_message)
+            msg = "Please set `allow_series=True`"
+            raise TypeError(msg)
         return Series(
             PandasSeries(
                 native_dataframe,
@@ -392,8 +392,8 @@ def from_native(  # noqa: PLR0915
         native_dataframe, cudf.Series
     ):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
-            error_message = "Please set `allow_series=True`"
-            raise TypeError(error_message)
+            msg = "Please set `allow_series=True`"
+            raise TypeError(msg)
         return Series(
             PandasSeries(
                 native_dataframe,
@@ -407,8 +407,8 @@ def from_native(  # noqa: PLR0915
         native_dataframe, pa.ChunkedArray
     ):
         if not allow_series:  # pragma: no cover (todo)
-            error_message = "Please set `allow_series=True`"
-            raise TypeError(error_message)
+            msg = "Please set `allow_series=True`"
+            raise TypeError(msg)
         return Series(
             ArrowSeries(
                 native_dataframe, backend_version=parse_version(pa.__version__), name=""
@@ -418,8 +418,8 @@ def from_native(  # noqa: PLR0915
         )
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)
-            error_message = "Please set `allow_series=True`"
-            raise TypeError(error_message)
+            msg = "Please set `allow_series=True`"
+            raise TypeError(msg)
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return Series(
             native_dataframe.__narwhals_series__(), backend_version=(0,), is_polars=False

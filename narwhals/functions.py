@@ -28,8 +28,8 @@ def concat(
             "Only horizontal and vertical concatenations are supported"
         )
     if not items:
-        error_message = "No items to concatenate"
-        raise ValueError(error_message)
+        msg = "No items to concatenate"
+        raise ValueError(msg)
     items = list(items)
     validate_same_library(items)
     validate_laziness(items)

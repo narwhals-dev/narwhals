@@ -87,8 +87,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
                 backend_version=other._backend_version,
             )
         return other._native_series
-    error_message = "Please report a bug"  # pragma: no cover
-    raise AssertionError(error_message)
+    msg = "Please report a bug"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def create_native_series(
