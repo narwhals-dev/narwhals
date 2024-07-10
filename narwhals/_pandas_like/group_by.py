@@ -91,7 +91,7 @@ class PandasLikeGroupBy:
         )
 
 
-def agg_pandas(  # noqa: PLR0913
+def agg_pandas(
     grouped: Any,
     exprs: list[PandasLikeExpr],
     keys: list[str],

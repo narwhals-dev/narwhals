@@ -38,7 +38,7 @@ class ArrowNamespace:
     Duration = dtypes.Duration
     Date = dtypes.Date
 
-    def _create_expr_from_callable(  # noqa: PLR0913
+    def _create_expr_from_callable(
         self,
         func: Callable[[ArrowDataFrame], list[ArrowSeries]],
         *,

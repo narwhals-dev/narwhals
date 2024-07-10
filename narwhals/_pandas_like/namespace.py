@@ -56,7 +56,7 @@ class PandasLikeNamespace:
         self._implementation = implementation
         self._backend_version = backend_version
 
-    def _create_expr_from_callable(  # noqa: PLR0913
+    def _create_expr_from_callable(
         self,
         func: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
         *,
