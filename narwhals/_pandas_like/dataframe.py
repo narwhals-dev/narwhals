@@ -91,17 +91,39 @@ class PandasLikeDataFrame:
         )
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> PandasLikeDataFrame: ...
+
+    @overload
     def __getitem__(self, item: str) -> PandasLikeSeries: ...
 
     @overload
     def __getitem__(self, item: slice) -> PandasLikeDataFrame: ...
 
-    def __getitem__(self, item: str | slice) -> PandasLikeSeries | PandasLikeDataFrame:
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
 
             return PandasLikeSeries(
                 self._native_dataframe.loc[:, item],
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
+
+        elif isinstance(item, tuple) and len(item) == 2:
+            from narwhals._pandas_like.series import PandasLikeSeries
+
+            if item[1] in self.columns:
+                native_series = self._native_dataframe.loc[item]
+            else:
+                native_series = self._native_dataframe.iloc[item]
+
+            return PandasLikeSeries(
+                native_series,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )

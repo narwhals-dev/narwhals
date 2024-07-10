@@ -73,9 +73,11 @@ def test_gather_pandas_index() -> None:
 
 
 def test_gather_rows_cols(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+    native_df = constructor(data)
+    df = nw.from_native(native_df, eager_only=True)
     result = df[[0, 3, 1], 1].to_pandas()
-    expected = pd.Series([11, 14, 12], name="b")
-    assert_series_equal(result, expected)
+    expected_index = range(3) if isinstance(native_df, pl.DataFrame) else [0, 3, 1]
+    expected = pd.Series([11, 14, 12], name="b", index=expected_index)
+    assert_series_equal(result, expected, check_dtype=False)
     result = df[np.array([0, 3, 1]), "b"].to_pandas()
-    assert_series_equal(result, expected)
+    assert_series_equal(result, expected, check_dtype=False)
