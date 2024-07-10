@@ -385,6 +385,18 @@ class PandasLikeDataFrame:
                 ).reset_index(drop=True)
             )
 
+        if how == "left":
+            other_native = other._native_dataframe
+            breakpoint()
+            result = self._native_dataframe.merge(
+                other_native,
+                how="inner",
+                left_on=left_on,
+                right_on=right_on,
+            ).reset_index(drop=True)
+            extra_keys = set(right_on).difference(left_on)
+            return self._from_native_dataframe(result.drop(columns=extra_keys))
+
         return self._from_native_dataframe(
             self._native_dataframe.merge(
                 other._native_dataframe,
