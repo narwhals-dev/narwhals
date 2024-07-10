@@ -11,7 +11,7 @@ def test_expr_min_max(constructor_with_pyarrow: Any) -> None:
     df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
     result_min = nw.to_native(df.select(nw.col("a", "b", "z").min()))
     result_max = nw.to_native(df.select(nw.col("a", "b", "z").max()))
-    expected_min = {"a": [1], "b": [4], "z": [7]}
+    expected_min = {"a": [1], "b": [4], "z": [7.0]}
     expected_max = {"a": [3], "b": [6], "z": [9]}
     compare_dicts(result_min, expected_min)
     compare_dicts(result_max, expected_max)
