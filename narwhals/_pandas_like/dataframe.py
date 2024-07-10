@@ -126,10 +126,13 @@ class PandasLikeDataFrame:
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._pandas_like.series import PandasLikeSeries
 
-            if item[1] in self.columns:
+            if isinstance(item[1], str):
                 native_series = self._native_dataframe.loc[item]
-            else:
+            elif isinstance(item[1], int):
                 native_series = self._native_dataframe.iloc[item]
+            else:  # pragma: no cover
+                msg = f"Expected str or int, got: {type(item[1])}"
+                raise TypeError(msg)
 
             return PandasLikeSeries(
                 native_series,
