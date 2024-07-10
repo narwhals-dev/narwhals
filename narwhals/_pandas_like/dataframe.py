@@ -389,7 +389,7 @@ class PandasLikeDataFrame:
             other_native = other._native_dataframe
             result = self._native_dataframe.merge(
                 other_native,
-                how="inner",
+                how="left",
                 left_on=left_on,
                 right_on=right_on,
                 suffixes=("", "_right"),
