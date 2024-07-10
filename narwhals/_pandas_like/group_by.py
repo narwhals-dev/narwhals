@@ -91,7 +91,7 @@ class PandasGroupBy:
         )
 
 
-def agg_pandas(  # noqa: PLR0913
+def agg_pandas(  # noqa: PLR0913,PLR0915
     grouped: Any,
     exprs: list[PandasExpr],
     keys: list[str],
@@ -119,7 +119,10 @@ def agg_pandas(  # noqa: PLR0913
         for expr in exprs:
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
-                assert expr._output_names is not None
+                if expr._output_names is None:
+                    msg = "`Expr._output_names` cannot be None"
+                    raise ValueError(msg)
+
                 function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                     expr._function_name, expr._function_name
                 )
@@ -128,9 +131,16 @@ def agg_pandas(  # noqa: PLR0913
                 continue
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
-            assert expr._depth == 1
-            assert expr._root_names is not None
-            assert expr._output_names is not None
+            if expr._depth != 1:
+                msg = f"Expr._depth should be 1, found {expr._depth}"
+                raise ValueError(msg)
+            if expr._root_names is None:
+                msg = "`Expr._root_names` cannot be None"
+                raise ValueError(msg)
+            if expr._output_names is None:
+                msg = "`Expr._output_names` cannot be None"
+                raise ValueError(msg)
+
             function_name = remove_prefix(expr._function_name, "col->")
             function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                 function_name, function_name

@@ -191,8 +191,11 @@ def reuse_series_implementation(
                 out.append(plx._create_series_from_scalar(_out, column))  # type: ignore[arg-type]
             else:
                 out.append(_out)
-        if expr._output_names is not None:  # safety check
-            assert [s.name for s in out] == expr._output_names
+        if expr._output_names is not None and (
+            [s.name for s in out] != expr._output_names
+        ):
+            msg = "Found invalid series name"
+            raise ValueError(msg)
         return out
 
     # Try tracking root and output names by combining them from all
@@ -213,9 +216,12 @@ def reuse_series_implementation(
             output_names = None
             break
 
-    assert (output_names is None and root_names is None) or (
-        output_names is not None and root_names is not None
-    )  # safety check
+    if not (
+        (output_names is None and root_names is None)
+        or (output_names is not None and root_names is not None)
+    ):
+        msg = "output_names and root_names are incompatible"
+        raise ValueError(msg)
 
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
