@@ -60,7 +60,8 @@ lint.ignore = [
   'PLR2004',
   'PTH',
   'RET505',
-  'S',
+  'S101',    # Won't fix
+  'S311',    # Won't fix
   'SLF001',
   'TD003',
   'TRY003',  # TODO(Unassigned): enable
