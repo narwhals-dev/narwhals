@@ -89,6 +89,9 @@ class ArrowExpr:
     def mean(self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
 
+    def min(self) -> Self:
+        return reuse_series_implementation(self, "min", returns_scalar=True)
+
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
@@ -126,6 +129,10 @@ class ArrowExpr:
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
 
+    @property
+    def str(self) -> ArrowExprStringNamespace:
+        return ArrowExprStringNamespace(self)
+
 
 class ArrowExprDateTimeNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
@@ -134,4 +141,23 @@ class ArrowExprDateTimeNamespace:
     def to_string(self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
+        )
+
+
+class ArrowExprStringNamespace:
+    def __init__(self, expr: ArrowExpr) -> None:
+        self._expr = expr
+
+    def to_uppercase(self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_uppercase",
+        )
+
+    def to_lowercase(self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_lowercase",
         )
