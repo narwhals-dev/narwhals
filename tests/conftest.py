@@ -36,7 +36,7 @@ def pandas_constructor(obj: Any) -> IntoDataFrame:
 
 
 def pandas_nullable_constructor(obj: Any) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes()  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
 
 
 def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:

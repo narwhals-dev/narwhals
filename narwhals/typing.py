@@ -29,14 +29,17 @@ if TYPE_CHECKING:
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-# Anything which can be converted to an expression.
 IntoExpr: TypeAlias = Union["Expr", str, "Series"]
-# Anything which can be converted to a Narwhals DataFrame.
+"""Anything which can be converted to an expression."""
+
 IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]"]
-# Anything which can be converted to a Narwhals DataFrame or LazyFrame.
+"""Anything which can be converted to a Narwhals DataFrame."""
+
 IntoFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "LazyFrame[Any]"]
-# DataFrame or LazyFrame
+"""Anything which can be converted to a Narwhals DataFrame or LazyFrame."""
+
 Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
+"""DataFrame or LazyFrame"""
 
 # TypeVars for some of the above
 IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")

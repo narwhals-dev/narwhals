@@ -63,6 +63,15 @@ class ArrowDataFrame:
             raise NotImplementedError(msg)
         return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
 
+    def get_column(self, name: str) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
+        return ArrowSeries(
+            self._native_dataframe[name],
+            name=name,
+            backend_version=self._backend_version,
+        )
+
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
 

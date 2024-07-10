@@ -51,7 +51,7 @@ if missing := set(top_level_functions).difference(documented):
     print("DataFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(top_level_functions).difference({"__getitem__"}):
     print("DataFrame: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
