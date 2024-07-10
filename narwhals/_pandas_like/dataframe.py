@@ -305,8 +305,8 @@ class PandasLikeDataFrame:
         other: Self,
         *,
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
+        left_on: str | list[str],
+        right_on: str | list[str],
     ) -> Self:
         if isinstance(left_on, str):
             left_on = [left_on]
@@ -351,7 +351,7 @@ class PandasLikeDataFrame:
             other_native = (
                 other._native_dataframe.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                    columns=dict(zip(right_on, left_on))
                 )
                 .drop_duplicates()
             )
@@ -372,7 +372,7 @@ class PandasLikeDataFrame:
             other_native = (
                 other._native_dataframe.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                    columns=dict(zip(right_on, left_on))
                 )
                 .drop_duplicates()  # avoids potential rows duplication from inner join
             )
@@ -387,13 +387,13 @@ class PandasLikeDataFrame:
 
         if how == "left":
             other_native = other._native_dataframe
-            breakpoint()
             result = self._native_dataframe.merge(
                 other_native,
                 how="inner",
                 left_on=left_on,
                 right_on=right_on,
-            ).reset_index(drop=True)
+                suffixes=("", "_right"),
+            )
             extra_keys = set(right_on).difference(left_on)
             return self._from_native_dataframe(result.drop(columns=extra_keys))
 

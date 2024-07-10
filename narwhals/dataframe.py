@@ -174,7 +174,7 @@ class BaseFrame(Generic[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -2995,7 +2995,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
