@@ -64,12 +64,20 @@ class ArrowDataFrame:
         return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> ArrowDataFrame: ...
+
+    @overload
     def __getitem__(self, item: str) -> ArrowSeries: ...
 
     @overload
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
-    def __getitem__(self, item: str | slice) -> ArrowSeries | ArrowDataFrame:
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
@@ -77,6 +85,18 @@ class ArrowDataFrame:
                 self._native_dataframe[item],
                 name=item,
                 backend_version=self._backend_version,
+            )
+        elif isinstance(item, tuple) and len(item) == 2:
+            from narwhals._arrow.series import ArrowSeries
+
+            if isinstance(item[1], str):
+                # PyArrow columns are always strings
+                native_dataframe = self._native_dataframe[item[1]].take(item[0])
+            else:
+                col_name = self.columns[item[1]]
+                native_dataframe = self._native_dataframe[col_name].take(item[0])
+            return ArrowSeries(
+                native_dataframe, name=col_name, backend_version=self._backend_version
             )
 
         elif isinstance(item, slice):
