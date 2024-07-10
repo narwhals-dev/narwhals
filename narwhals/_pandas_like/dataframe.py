@@ -387,15 +387,20 @@ class PandasLikeDataFrame:
 
         if how == "left":
             other_native = other._native_dataframe
-            result = self._native_dataframe.merge(
+            result_native = self._native_dataframe.merge(
                 other_native,
                 how="left",
                 left_on=left_on,
                 right_on=right_on,
                 suffixes=("", "_right"),
             )
-            extra_keys = set(right_on).difference(left_on)
-            return self._from_native_dataframe(result.drop(columns=extra_keys))
+            extra = []
+            for left_key, right_key in zip(left_on, right_on):
+                if right_key != left_key and right_key not in self.columns:
+                    extra.append(right_key)
+                elif right_key != left_key:
+                    extra.append(f"{right_key}_right")
+            return self._from_native_dataframe(result_native.drop(columns=extra))
 
         return self._from_native_dataframe(
             self._native_dataframe.merge(

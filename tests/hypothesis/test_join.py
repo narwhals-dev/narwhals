@@ -121,12 +121,12 @@ def test_cross_join(  # pragma: no cover
 
 
 @given(  # type: ignore[misc]
-    a_left_data=st.lists(st.integers(min_value=0, max_value=3), min_size=3, max_size=3),
-    b_left_data=st.lists(st.integers(min_value=0, max_value=3), min_size=3, max_size=3),
-    c_left_data=st.lists(st.integers(min_value=0, max_value=3), min_size=3, max_size=3),
-    a_right_data=st.lists(st.integers(min_value=0, max_value=3), min_size=3, max_size=3),
-    b_right_data=st.lists(st.integers(min_value=0, max_value=3), min_size=3, max_size=3),
-    d_right_data=st.lists(st.integers(min_value=0, max_value=3), min_size=3, max_size=3),
+    a_left_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),
+    b_left_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),
+    c_left_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),
+    a_right_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),
+    b_right_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),
+    d_right_data=st.lists(st.integers(min_value=0, max_value=5), min_size=3, max_size=3),
     left_key=st.lists(
         st.sampled_from(["a", "b", "c"]), min_size=1, max_size=3, unique=True
     ),
@@ -154,10 +154,12 @@ def test_left_join(  # pragma: no cover
         left_on=left_key,
         right_on=right_key,
     )
-    result_pl = nw.from_native(pd.DataFrame(data_left), eager_only=True).join(
-        nw.from_native(pd.DataFrame(data_right), eager_only=True),
-        how="left",
-        left_on=left_key,
-        right_on=right_key,
-    )
+    result_pl = nw.to_native(
+        nw.from_native(pl.DataFrame(data_left), eager_only=True).join(
+            nw.from_native(pl.DataFrame(data_right), eager_only=True),
+            how="left",
+            left_on=left_key,
+            right_on=right_key,
+        )
+    ).select(pl.all().fill_null(float("nan")))
     compare_dicts(result_pd.to_dict(as_series=False), result_pl.to_dict(as_series=False))
