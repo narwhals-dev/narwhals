@@ -478,7 +478,9 @@ class DataFrame(BaseFrame[FrameT]):
 
                 - str: extract column
                 - slice or Sequence of integers: slice rows from dataframe.
-
+                - tuple of Sequence of integers and str or int: slice rows and extract column at the same time.
+                  If the second element of the tuple is an integer, it is interpreted as the column index. Otherwise,
+                  it is interpreted as the column name.
         Notes:
             In contrast with Polars, pandas allows non-string column names.
             If you don't know whether the column name you're trying to extract
