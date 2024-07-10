@@ -4,7 +4,6 @@ import re
 import warnings
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -21,7 +20,6 @@ from tests.utils import compare_dicts
 from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrameT
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -361,64 +359,6 @@ def test_library(df_raw: Any, df_raw_right: Any) -> None:
         NotImplementedError, match="Cross-library comparisons aren't supported"
     ):
         df_left.join(df_right, left_on=["a"], right_on=["a"], how="inner")
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_duplicated(df_raw: IntoDataFrame) -> None:
-    df = nw.from_native(df_raw, eager_only=True)
-    result = nw.concat([df, df.head(1)]).is_duplicated()
-    expected = np.array([True, False, False, True])
-    assert (result.to_numpy() == expected).all()
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])
-def test_is_empty(df_raw: Any, threshold: Any, expected: Any) -> None:
-    df = nw.from_native(df_raw, eager_only=True)
-    result = df.filter(nw.col("a") > threshold).is_empty()
-    assert result == expected
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_unique(df_raw: Any) -> None:
-    df = nw.from_native(df_raw, eager_only=True)
-    result = nw.concat([df, df.head(1)]).is_unique()
-    expected = np.array([False, True, True, False])
-    assert (result.to_numpy() == expected).all()
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na.collect()])
-def test_null_count(df_raw: Any) -> None:
-    df = nw.from_native(df_raw, eager_only=True)
-    result = nw.to_native(df.null_count())
-    expected = {"a": [1], "b": [0], "z": [1]}
-    compare_dicts(result, expected)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize(
-    ("interpolation", "expected"),
-    [
-        ("lower", {"a": [1.0], "b": [4.0], "z": [7.0]}),
-        ("higher", {"a": [2.0], "b": [4.0], "z": [8.0]}),
-        ("midpoint", {"a": [1.5], "b": [4.0], "z": [7.5]}),
-        ("linear", {"a": [1.6], "b": [4.0], "z": [7.6]}),
-        ("nearest", {"a": [2.0], "b": [4.0], "z": [8.0]}),
-    ],
-)
-@pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
-def test_quantile(
-    df_raw: Any,
-    interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
-    expected: dict[str, list[float]],
-) -> None:
-    q = 0.3
-
-    df = nw.from_native(df_raw)
-    result = nw.to_native(
-        df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
-    )
-    compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
