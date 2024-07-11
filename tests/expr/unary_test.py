@@ -4,10 +4,10 @@ import narwhals as nw
 from tests.utils import compare_dicts
 
 
-def test_unary(constructor: Any) -> None:
+def test_unary(constructor_with_lazy: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     result = (
-        nw.from_native(constructor(data))
+        nw.from_native(constructor_with_lazy(data))
         .with_columns(
             a_mean=nw.col("a").mean(),
             a_sum=nw.col("a").sum(),
