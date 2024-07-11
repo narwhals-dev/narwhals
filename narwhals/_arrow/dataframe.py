@@ -73,18 +73,36 @@ class ArrowDataFrame:
         )
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> ArrowDataFrame: ...
+
+    @overload
     def __getitem__(self, item: str) -> ArrowSeries: ...
 
     @overload
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
-    def __getitem__(self, item: str | slice) -> ArrowSeries | ArrowDataFrame:
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
             return ArrowSeries(
                 self._native_dataframe[item],
                 name=item,
+                backend_version=self._backend_version,
+            )
+        elif isinstance(item, tuple) and len(item) == 2:
+            from narwhals._arrow.series import ArrowSeries
+
+            # PyArrow columns are always strings
+            col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
+            return ArrowSeries(
+                self._native_dataframe[col_name].take(item[0]),
+                name=col_name,
                 backend_version=self._backend_version,
             )
 

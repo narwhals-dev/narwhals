@@ -456,7 +456,10 @@ class DataFrame(BaseFrame[FrameT]):
         )
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> Series: ...
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
     def __getitem__(self, item: str) -> Series: ...
@@ -464,7 +467,9 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: slice) -> Self: ...
 
-    def __getitem__(self, item: str | slice | Sequence[int]) -> Series | Self:
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
 
@@ -473,7 +478,9 @@ class DataFrame(BaseFrame[FrameT]):
 
                 - str: extract column
                 - slice or Sequence of integers: slice rows from dataframe.
-
+                - tuple of Sequence of integers and str or int: slice rows and extract column at the same time.
+                  If the second element of the tuple is an integer, it is interpreted as the column index. Otherwise,
+                  it is interpreted as the column name.
         Notes:
             In contrast with Polars, pandas allows non-string column names.
             If you don't know whether the column name you're trying to extract
@@ -508,7 +515,7 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
-        if isinstance(item, str):
+        if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             from narwhals.series import Series
 
             return Series(
