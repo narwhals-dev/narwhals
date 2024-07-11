@@ -1955,7 +1955,8 @@ class LazyFrame(BaseFrame[FrameT]):
         )
 
     def __getitem__(self, item: str | slice) -> Series | Self:
-        raise TypeError("Slicing is not supported on LazyFrame")
+        msg = "Slicing is not supported on LazyFrame"
+        raise TypeError(msg)
 
     def collect(self) -> DataFrame[Any]:
         r"""
