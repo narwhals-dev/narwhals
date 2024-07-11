@@ -144,6 +144,25 @@ class ArrowSeries:
         dtype = reverse_translate_dtype(dtype)
         return self._from_native_series(pc.cast(ser, dtype))
 
+    def null_count(self: Self) -> int:
+        return self._native_series.null_count  # type: ignore[no-any-return]
+
+    def head(self, n: int) -> Self:
+        ser = self._native_series
+        if n >= 0:
+            return self._from_native_series(ser.slice(0, n))
+        else:
+            num_rows = len(ser)
+            return self._from_native_series(ser.slice(0, max(0, num_rows + n)))
+
+    def tail(self, n: int) -> Self:
+        ser = self._native_series
+        if n >= 0:
+            num_rows = len(ser)
+            return self._from_native_series(ser.slice(max(0, num_rows - n)))
+        else:
+            return self._from_native_series(ser.slice(abs(n)))
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)

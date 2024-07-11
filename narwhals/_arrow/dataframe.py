@@ -239,6 +239,31 @@ class ArrowDataFrame:
         row_indices = pa.array(range(df.num_rows))
         return self._from_native_dataframe(df.append_column(name, row_indices))
 
+    def null_count(self) -> Self:
+        pa = get_pyarrow()
+        df = self._native_dataframe
+        names_and_values = zip(df.column_names, df.columns)
+
+        return self._from_native_dataframe(
+            pa.table({name: [col.null_count] for name, col in names_and_values})
+        )
+
+    def head(self, n: int) -> Self:
+        df = self._native_dataframe
+        if n >= 0:
+            return self._from_native_dataframe(df.slice(0, n))
+        else:
+            num_rows = df.num_rows
+            return self._from_native_dataframe(df.slice(0, max(0, num_rows + n)))
+
+    def tail(self, n: int) -> Self:
+        df = self._native_dataframe
+        if n >= 0:
+            num_rows = df.num_rows
+            return self._from_native_dataframe(df.slice(max(0, num_rows - n)))
+        else:
+            return self._from_native_dataframe(df.slice(abs(n)))
+
     def lazy(self) -> Self:
         return self
 
