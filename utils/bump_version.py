@@ -4,6 +4,9 @@ import re
 import subprocess
 import sys
 
+subprocess.run(["git", "fetch", "upstream"])
+subprocess.run(["git", "reset", "--hard", "upstream/main"])
+
 how = sys.argv[1]
 
 with open("pyproject.toml", encoding="utf-8") as f:
