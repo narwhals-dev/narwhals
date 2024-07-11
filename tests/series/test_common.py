@@ -147,13 +147,6 @@ def test_is_unique(df_raw: Any) -> None:
     assert (result.to_numpy() == expected).all()
 
 
-@pytest.mark.parametrize("s_raw", [pd.Series([1, 2, None]), pl.Series([1, 2, None])])
-def test_null_count(s_raw: Any) -> None:
-    series = nw.from_native(s_raw, series_only=True)
-    result = series.null_count()
-    assert result == 1
-
-
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_first_distinct(df_raw: Any) -> None:
     series = nw.from_native(df_raw["b"], series_only=True)
@@ -274,21 +267,3 @@ def test_item(df_raw: Any, index: int, expected: int) -> None:
         match=re.escape("can only call '.item()' if the Series is of length 1,"),
     ):
         s.item(None)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize("n", [1, 2, 3, 10])
-def test_head(df_raw: Any, n: int) -> None:
-    s_raw = df_raw["z"]
-    s = nw.from_native(s_raw, allow_series=True)
-
-    assert s.head(n) == nw.from_native(s_raw.head(n), series_only=True)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize("n", [1, 2, 3, 10])
-def test_tail(df_raw: Any, n: int) -> None:
-    s_raw = df_raw["z"]
-    s = nw.from_native(s_raw, allow_series=True)
-
-    assert s.tail(n) == nw.from_native(s_raw.tail(n), series_only=True)
