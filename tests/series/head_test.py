@@ -11,4 +11,4 @@ import narwhals as nw
 def test_head(constructor_series_with_pyarrow: Any, n: int) -> None:
     s = nw.from_native(constructor_series_with_pyarrow([1, 2, 3]), series_only=True)
 
-    assert (s.head(n).__array__() == [1, 2]).all()
+    assert s.head(n).to_list() == [1, 2]

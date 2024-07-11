@@ -11,4 +11,4 @@ import narwhals as nw
 def test_tail(constructor_series_with_pyarrow: Any, n: int) -> None:
     s = nw.from_native(constructor_series_with_pyarrow([1, 2, 3]), series_only=True)
 
-    assert (s.tail(n).__array__() == [2, 3]).all()
+    assert s.tail(n).to_list() == [2, 3]
