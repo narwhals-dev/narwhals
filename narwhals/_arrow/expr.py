@@ -89,7 +89,7 @@ class ArrowExpr:
     def mean(self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
 
-    def count(self) -> int:
+    def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
     def std(self, ddof: int = 1) -> Self:
