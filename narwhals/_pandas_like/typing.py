@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.series import PandasLikeSeries
 
-    IntoPandasExpr: TypeAlias = Union[PandasExpr, str, PandasSeries]
+    IntoPandasLikeExpr: TypeAlias = Union[PandasLikeExpr, str, PandasLikeSeries]

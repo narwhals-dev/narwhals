@@ -67,7 +67,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     """
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> Series: ...
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
     def __getitem__(self, item: str) -> Series: ...
@@ -429,15 +432,21 @@ def _stableify(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._dataframe, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_frame,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._dataframe, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_frame,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwSeries):
         return Series(
-            obj._series, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_series,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwExpr):
         return Expr(obj._call)
@@ -488,7 +497,6 @@ def from_native(
 ) -> Any: ...
 
 
-# from_native(df, strict=False)
 @overload
 def from_native(
     native_dataframe: IntoFrameT | T,
@@ -497,11 +505,12 @@ def from_native(
     eager_only: bool | None = ...,
     series_only: bool | None = ...,
     allow_series: bool | None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T:
+    """
+    from_native(df, strict=False)
+    """
 
 
-# from_native(df, strict=True, eager_only=True, allow_series=True)
-# from_native(df, eager_only=True, allow_series=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -510,11 +519,13 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | Series: ...
+) -> DataFrame[Any] | Series:
+    """
+    from_native(df, strict=True, eager_only=True, allow_series=True)
+    from_native(df, eager_only=True, allow_series=True)
+    """
 
 
-# from_native(df, strict=True, eager_only=True)
-# from_native(df, eager_only=True)
 @overload
 def from_native(
     native_dataframe: IntoDataFrameT,
@@ -523,11 +534,13 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
+) -> DataFrame[IntoDataFrameT]:
+    """
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
+    """
 
 
-# from_native(df, strict=True, allow_series=True)
-# from_native(df, allow_series=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -536,11 +549,13 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series: ...
+) -> DataFrame[Any] | LazyFrame[Any] | Series:
+    """
+    from_native(df, strict=True, allow_series=True)
+    from_native(df, allow_series=True)
+    """
 
 
-# from_native(df, strict=True, series_only=True)
-# from_native(df, series_only=True)
 @overload
 def from_native(
     native_dataframe: Any,
@@ -549,11 +564,13 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series: ...
+) -> Series:
+    """
+    from_native(df, strict=True, series_only=True)
+    from_native(df, series_only=True)
+    """
 
 
-# from_native(df, strict=True)
-# from_native(df)
 @overload
 def from_native(
     native_dataframe: IntoFrameT,
@@ -562,7 +579,11 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
+    """
+    from_native(df, strict=True)
+    from_native(df)
+    """
 
 
 # All params passed in as variables
@@ -679,7 +700,7 @@ def narwhalify(
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
     """
 
-    # TODO: do we have a way to de-dupe this a bit?
+    # TODO(Unassigned): do we have a way to de-dupe this a bit?
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:

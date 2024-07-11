@@ -25,10 +25,7 @@ MISSING = [
     "DataFrame.pipe",
     "DataFrame.rename",
     "DataFrame.tail",
-    "DataFrame.to_dict",
-    "DataFrame.to_numpy",
     "DataFrame.unique",
-    "DataFrame.with_row_index",
     "DataFrame.write_parquet",
     "Series.drop_nulls",
     "Series.fill_null",
@@ -52,7 +49,6 @@ MISSING = [
     "Series.sample",
     "Series.shift",
     "Series.sort",
-    "Series.str",
     "Series.sum",
     "Series.tail",
     "Series.to_frame",
@@ -65,7 +61,7 @@ MISSING = [
 
 class MockDataFrame:
     # Make a little mock object so we can instantiate
-    # PandasDataFrame without having pandas installed
+    # PandasLikeDataFrame without having pandas installed
     def __init__(self, dataframe): ...
 
     def __narwhals_dataframe__(self):

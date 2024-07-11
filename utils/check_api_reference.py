@@ -9,7 +9,7 @@ from narwhals.utils import remove_suffix
 
 ret = 0
 
-# todo: make dtypes reference page as well
+# TODO(Unassigned): make dtypes reference page as well
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions = [
     i
@@ -51,7 +51,7 @@ if missing := set(top_level_functions).difference(documented):
     print("DataFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(top_level_functions).difference({"__getitem__"}):
     print("DataFrame: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
