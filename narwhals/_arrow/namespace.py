@@ -74,7 +74,7 @@ class ArrowNamespace:
         from narwhals._arrow.series import ArrowSeries
 
         if self._backend_version < (13,):  # pragma: no cover
-            value = value.as_py()
+            value = value.as_py() if hasattr(value, "as_py") else value
         return ArrowSeries._from_iterable(
             [value],
             name=series.name,
