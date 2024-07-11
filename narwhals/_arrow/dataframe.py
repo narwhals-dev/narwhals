@@ -195,6 +195,32 @@ class ArrowDataFrame:
     def to_pandas(self) -> Any:
         return self._native_dataframe.to_pandas()
 
+    def to_numpy(self) -> Any:
+        import numpy as np
+
+        return np.column_stack([col.to_numpy() for col in self._native_dataframe.columns])
+
+    def to_dict(self, *, as_series: bool) -> Any:
+        df = self._native_dataframe
+
+        names_and_values = zip(df.column_names, df.columns)
+        if as_series:
+            from narwhals._arrow.series import ArrowSeries
+
+            return {
+                name: ArrowSeries(col, name=name, backend_version=self._backend_version)
+                for name, col in names_and_values
+            }
+        else:
+            return {name: col.to_pylist() for name, col in names_and_values}
+
+    def with_row_index(self, name: str) -> Self:
+        pa = get_pyarrow()
+        df = self._native_dataframe
+
+        row_indices = pa.array(range(df.num_rows))
+        return self._from_native_dataframe(df.append_column(name, row_indices))
+
     def lazy(self) -> Self:
         return self
 
