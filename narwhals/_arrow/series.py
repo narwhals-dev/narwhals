@@ -144,6 +144,9 @@ class ArrowSeries:
         dtype = reverse_translate_dtype(dtype)
         return self._from_native_series(pc.cast(ser, dtype))
 
+    def null_count(self: Self) -> int:
+        return self._native_series.null_count  # type: ignore[no-any-return]
+
     def head(self, n: int) -> Self:
         ser = self._native_series
         if n >= 0:
