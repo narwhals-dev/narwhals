@@ -1,7 +1,7 @@
 from typing import Any
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+
 
 def test_series_sum(constructor: Any) -> None:
     data = {
@@ -10,7 +10,6 @@ def test_series_sum(constructor: Any) -> None:
         "c": [5, 4, None, 2, 1],
     }
     df = nw.from_native(constructor(data), eager_only=True, allow_series=True)
-
 
     # Test sum of series "a"
     result = df.select(nw.col("c").sum())
