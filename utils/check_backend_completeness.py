@@ -22,6 +22,7 @@ MISSING = [
     "DataFrame.iter_rows",
     "DataFrame.join",
     "DataFrame.null_count",
+    "DataFrame.pipe",
     "DataFrame.rename",
     "DataFrame.tail",
     "DataFrame.unique",

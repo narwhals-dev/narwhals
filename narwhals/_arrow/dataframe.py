@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Sequence
 from typing import overload
@@ -214,9 +213,6 @@ class ArrowDataFrame:
             }
         else:
             return {name: col.to_pylist() for name, col in names_and_values}
-
-    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
-        return function(self, *args, **kwargs)
 
     def with_row_index(self, name: str) -> Self:
         pa = get_pyarrow()
