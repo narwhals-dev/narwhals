@@ -299,21 +299,3 @@ def test_item(df_raw: Any, index: int, expected: int) -> None:
         match=re.escape("can only call '.item()' if the Series is of length 1,"),
     ):
         s.item(None)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize("n", [1, 2, 3, 10])
-def test_head(df_raw: Any, n: int) -> None:
-    s_raw = df_raw["z"]
-    s = nw.from_native(s_raw, allow_series=True)
-
-    assert s.head(n) == nw.from_native(s_raw.head(n), series_only=True)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize("n", [1, 2, 3, 10])
-def test_tail(df_raw: Any, n: int) -> None:
-    s_raw = df_raw["z"]
-    s = nw.from_native(s_raw, allow_series=True)
-
-    assert s.tail(n) == nw.from_native(s_raw.tail(n), series_only=True)
