@@ -73,8 +73,8 @@ class ArrowNamespace:
     def _create_series_from_scalar(self, value: Any, series: ArrowSeries) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
-        if self._backend_version < (13,):  # pragma: no cover
-            value = value.as_py() if hasattr(value, "as_py") else value
+        if self._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+            value = value.as_py()
         return ArrowSeries._from_iterable(
             [value],
             name=series.name,
