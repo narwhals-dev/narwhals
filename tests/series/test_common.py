@@ -73,31 +73,6 @@ def test_is_in_other(df_raw: Any) -> None:
         nw.from_native(df_raw).with_columns(contains=nw.col("c").is_in("sets"))
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_filter(df_raw: Any) -> None:
-    result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
-    expected = np.array([3, 2])
-    assert (result.to_numpy() == expected).all()
-    result = nw.from_native(df_raw, eager_only=True).select(
-        nw.col("a").filter(nw.col("a") > 1)
-    )["a"]
-    expected = np.array([3, 2])
-    assert (result.to_numpy() == expected).all()
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_gt(df_raw: Any) -> None:
-    s = nw.from_native(df_raw["a"], series_only=True)
-    result = s > s  # noqa: PLR0124
-    assert not result[0]
-    assert not result[1]
-    assert not result[2]
-    result = s > 1
-    assert not result[0]
-    assert result[1]
-    assert result[2]
-
-
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
