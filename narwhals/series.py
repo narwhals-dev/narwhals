@@ -353,6 +353,34 @@ class Series:
             2.0
         """
         return self._compliant_series.mean()
+    
+    def count(self) -> Any:
+        """
+        Returns the number of non-null elements in the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s_any):
+            ...     return s_any.count()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  
+            3
+            >>> func(s_pl)
+            3
+
+        """
+        return self._compliant_series.count()
 
     def any(self) -> Any:
         """
@@ -1011,6 +1039,7 @@ class Series:
             ]
         """
         return self._from_compliant_series(self._compliant_series.is_null())
+    
 
     def fill_null(self, value: Any) -> Self:
         """
