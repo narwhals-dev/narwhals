@@ -149,13 +149,13 @@ class ArrowSeries:
         if n >= 0:
             return self._from_native_series(ser.slice(0, n))
         else:
-            num_rows = ser.num_rows
+            num_rows = len(ser)
             return self._from_native_series(ser.slice(0, max(0, num_rows + n)))
 
     def tail(self, n: int) -> Self:
         ser = self._native_series
         if n >= 0:
-            num_rows = ser.num_rows
+            num_rows = len(ser)
             return self._from_native_series(ser.slice(max(0, num_rows - n)))
         else:
             return self._from_native_series(ser.slice(abs(n)))
