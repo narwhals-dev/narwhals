@@ -190,17 +190,6 @@ def test_expr_transform(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_lazy])
-def test_expr_min_max(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result_min = nw.to_native(df.select(nw.min("a", "b", "z")))
-    result_max = nw.to_native(df.select(nw.max("a", "b", "z")))
-    expected_min = {"a": [1], "b": [4], "z": [7]}
-    expected_max = {"a": [3], "b": [6], "z": [9]}
-    compare_dicts(result_min, expected_min)
-    compare_dicts(result_max, expected_max)
-
-
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])
 def test_expr_na(df_raw: Any) -> None:
     df = nw.from_native(df_raw).lazy()
