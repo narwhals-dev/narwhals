@@ -496,7 +496,7 @@ class Expr:
             └─────┴─────┘
         """
         return self.__class__(lambda plx: self._call(plx).max())
-    
+
     def count(self) -> Self:
         """
         Returns the number of non-null elements in the column.
