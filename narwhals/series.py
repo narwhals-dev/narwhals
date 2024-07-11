@@ -353,7 +353,7 @@ class Series:
             2.0
         """
         return self._compliant_series.mean()
-    
+
     def count(self) -> Any:
         """
         Returns the number of non-null elements in the Series.
@@ -1039,7 +1039,6 @@ class Series:
             ]
         """
         return self._from_compliant_series(self._compliant_series.is_null())
-    
 
     def fill_null(self, value: Any) -> Self:
         """
