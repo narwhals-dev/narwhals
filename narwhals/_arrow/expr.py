@@ -122,6 +122,12 @@ class ArrowExpr:
             backend_version=self._backend_version,
         )
 
+    def head(self, n: int) -> Self:
+        return reuse_series_implementation(self, "head", n)
+
+    def tail(self, n: int) -> Self:
+        return reuse_series_implementation(self, "tail", n)
+
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
