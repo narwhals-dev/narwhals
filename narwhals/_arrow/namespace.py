@@ -97,22 +97,6 @@ class ArrowNamespace:
             *flatten(column_names), backend_version=self._backend_version
         )
 
-    def min(self, *column_names: str) -> ArrowExpr:
-        from narwhals._arrow.expr import ArrowExpr
-
-        return ArrowExpr.from_column_names(
-            *column_names,
-            backend_version=self._backend_version,
-        ).min()
-
-    def max(self, *column_names: str) -> ArrowExpr:
-        from narwhals._arrow.expr import ArrowExpr
-
-        return ArrowExpr.from_column_names(
-            *column_names,
-            backend_version=self._backend_version,
-        ).max()
-
     def all(self) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
         from narwhals._arrow.series import ArrowSeries
