@@ -110,12 +110,6 @@ class ArrowExpr:
     def __mul__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other)
 
-    def __truediv__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__truediv__", other)
-
-    def __floordiv__(self, other: ArrowExpr | Any) -> Self:
-        return reuse_series_implementation(self, "__floordiv__", other)
-
     def __pow__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other)
 
