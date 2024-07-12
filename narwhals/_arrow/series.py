@@ -118,28 +118,6 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.multiply(self._native_series, other))
 
-    def __truediv__(self, other: Any) -> Self:
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
-
-        ser = self._native_series
-        native_type = ser.type
-        original_type_is_int = pa.types.is_integer(
-            native_type
-        ) or pa.types.is_unsigned_integer(native_type)
-
-        if original_type_is_int:
-            ser = ser.cast(pa.float64())
-
-        other = validate_column_comparand(other)
-        return self._from_native_series(pc.divide(ser, other))
-
-    def __floordiv__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
-        ser = self._native_series
-        other = validate_column_comparand(other)
-        return self._from_native_series(pc.floor(pc.divide(ser, other)))
-
     def __pow__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series

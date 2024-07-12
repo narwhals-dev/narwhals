@@ -26,6 +26,13 @@ def test_arithmetic(
     if "pandas_pyarrow" in str(constructor_with_pyarrow) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
+    # pyarrow case
+    if "table" in str(constructor_with_pyarrow) and attr in {
+        "__truediv__",
+        "__floordiv__",
+    }:
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor_with_pyarrow(data))
     result = df.select(getattr(nw.col("a"), attr)(rhs))

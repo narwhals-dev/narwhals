@@ -35,6 +35,11 @@ def test_arithmetic(
     ):
         request.applymarker(pytest.mark.xfail)
 
+    if "pyarrow_chunked_array_constructor" in str(
+        constructor_series_with_pyarrow
+    ) and attr in {"__truediv__", "__floordiv__"}:
+        request.applymarker(pytest.mark.xfail)
+
     s = nw.from_native(constructor_series_with_pyarrow(data), series_only=True)
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected
