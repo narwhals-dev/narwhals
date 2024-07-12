@@ -314,11 +314,11 @@ class PandasLikeDataFrame:
 
     # --- convert ---
     def collect(self) -> PandasLikeDataFrame:
-        if self._implementation == "dask":
-            return_df = self._dataframe.compute()
-            return_implementation = "pandas"
+        if self._implementation is Implementation.DASK:
+            return_df = self._native_dataframe.compute()
+            return_implementation = Implementation.PANDAS
         else:
-            return_df = self._dataframe
+            return_df = self._native_dataframe
             return_implementation = self._implementation
         return PandasLikeDataFrame(
             return_df,
@@ -495,9 +495,9 @@ class PandasLikeDataFrame:
                 import numpy as np
 
                 return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
-        if self._implementation == Implementation.DASK:
-            return self._dataframe.compute().to_numpy()
-        return self._dataframe.to_numpy()
+        if self._implementation is Implementation.DASK:
+            return self._native_dataframe.compute().to_numpy()
+        return self._native_dataframe.to_numpy()
 
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
@@ -505,7 +505,7 @@ class PandasLikeDataFrame:
         if self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._native_dataframe._to_pandas()
         if self._implementation is Implementation.DASK:  # pragma: no cover
-            return self._dataframe.compute()
+            return self._native_dataframe.compute()
         return self._native_dataframe.to_pandas()  # pragma: no cover
 
     def write_parquet(self, file: Any) -> Any:

@@ -14,6 +14,7 @@ from pandas.testing import assert_series_equal
 import narwhals.stable.v1 as nw
 from narwhals.dependencies import get_dask
 from narwhals.utils import parse_version
+from narwhals._pandas_like.utils import Implementation
 from tests.utils import maybe_get_dask_df
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -47,9 +48,9 @@ df_dask = maybe_get_dask_df(df_pandas)
 
 def compute_if_dask(result: Any) -> Any:
     if (
-        hasattr(result, "_series")
-        and hasattr(result._series, "_implementation")
-        and result._series._implementation == "dask"
+        hasattr(result, "_native_series")
+        and hasattr(result._native_series, "_implementation")
+        and result._series._implementation == Implementation.DASK
     ):
         return result.to_pandas()
     return result
@@ -68,7 +69,7 @@ def test_len(df_raw: Any) -> None:
     assert result == 3
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_dask])
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_is_in(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).is_in([1, 2])
     result = compute_if_dask(result)

@@ -344,11 +344,12 @@ def from_native(  # noqa: PLR0915
         if series_only:  # pragma: no cover (todo)
             msg = "Cannot only use `series_only` with dask.dataframe.DataFrame"
             raise TypeError(msg)
+        import dask
         return DataFrame(
             PandasLikeDataFrame(
                 native_dataframe,
                 implementation=Implementation.DASK,
-                backend_version=parse_version(dd.__version__),
+                backend_version=parse_version(dask.__version__),
             ),
             is_polars=False,
             backend_version=parse_version(pa.__version__),
@@ -440,6 +441,20 @@ def from_native(  # noqa: PLR0915
             ),
             is_polars=False,
             backend_version=parse_version(pa.__version__),
+        )
+    elif (dd := get_dask()) is not None and isinstance(native_dataframe, dd.Series):
+        if not allow_series:  # pragma: no cover (todo)
+            msg = "Please set `allow_series=True`"
+            raise TypeError(msg)
+        import dask
+        return Series(
+            PandasLikeSeries(
+                native_dataframe,
+                implementation=Implementation.DASK,
+                backend_version=parse_version(dask.__version__),
+            ),
+            is_polars=False,
+            backend_version=parse_version(dask.__version__)
         )
     elif hasattr(native_dataframe, "__narwhals_series__"):  # pragma: no cover
         if not allow_series:  # pragma: no cover (todo)

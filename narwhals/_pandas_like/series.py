@@ -117,6 +117,7 @@ class PandasLikeSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
+    @not_implemented_in(Implementation.DASK)
     def __getitem__(self, idx: int | slice | Sequence[int]) -> Any:
         if isinstance(idx, int):
             return self._native_series.iloc[idx]
@@ -156,7 +157,7 @@ class PandasLikeSeries:
         )
 
     def __len__(self) -> int:
-        return len(self._series)
+        return len(self._native_series)
 
     @property
     def name(self) -> str:
@@ -509,7 +510,8 @@ class PandasLikeSeries:
             return self._native_series.to_pandas()
         elif self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._native_series._to_pandas()
-        elif self._implementation is Iplmementation.DASK:  # pragma: no cover
+        elif self._implementation is Implementation.DASK:  # pragma: no cover
+            return self._native_series.compute()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -568,7 +570,7 @@ class PandasLikeSeries:
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Any:
-        if self._implementation == "dask":
+        if self._implementation is Implementation.DASK:
             if interpolation == "linear":
                 return self._native_series.quantile(q=quantile)
             message = (

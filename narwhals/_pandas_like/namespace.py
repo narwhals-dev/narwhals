@@ -14,6 +14,7 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
+from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten
 
@@ -79,8 +80,8 @@ class PandasLikeNamespace:
         self, value: Any, series: PandasLikeSeries
     ) -> PandasLikeSeries:
         index = (
-            series._series.index[0:1]
-            if self._implementation != Implementation.DASK
+            series._native_series.index[0:1]
+            if self._implementation is not Implementation.DASK
             else None
         )
         return PandasLikeSeries._from_iterable(

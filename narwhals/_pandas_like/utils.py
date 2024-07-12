@@ -83,8 +83,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
-            return other._series.iloc[0]
-        if other._native_series.index is not index and other._implementation != Implementation.DASK:
+            return other._native_series.iloc[0]
+        if other._native_series.index is not index and other._implementation is not Implementation.DASK:
             return set_axis(
                 other._native_series,
                 index,
@@ -92,7 +92,6 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
                 backend_version=other._backend_version,
             )
         return other._native_series
-    msg = "Please report a bug"  # pragma: no cover
         return other._series
     raise AssertionError("Please report a bug")
 
@@ -205,7 +204,7 @@ def horizontal_concat(
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=1)
-    if implementation == "dask":  # pragma: no cover
+    if implementation is Implementation.DASK:  # pragma: no cover
         dd = get_dask()
         if hasattr(dfs[0], "_series"):
             return dd.concat([i._series for i in dfs], axis=1)
@@ -597,7 +596,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
             raise AssertionError(msg)
 
 
-def not_implemented_in(*implementations: list[str]) -> Callable:
+def not_implemented_in(*implementations: list[Implementation]) -> Callable:
     """
     Produces method decorator to raise not implemented warnings for given implementations
     """
