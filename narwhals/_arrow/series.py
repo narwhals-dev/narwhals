@@ -119,8 +119,6 @@ class ArrowSeries:
         return self._from_native_series(pc.multiply(self._native_series, other))
 
     def __truediv__(self, other: Any) -> Self:
-        import contextlib
-
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
 
@@ -134,13 +132,7 @@ class ArrowSeries:
             ser = ser.cast(pa.float64())
 
         other = validate_column_comparand(other)
-        result = pc.divide(ser, other)
-
-        if original_type_is_int:
-            with contextlib.suppress(pa.ArrowInvalid):
-                result = result.cast(native_type)
-
-        return self._from_native_series(result)
+        return self._from_native_series(pc.divide(ser, other))
 
     def __floordiv__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
