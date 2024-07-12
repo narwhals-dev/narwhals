@@ -71,7 +71,7 @@ class PandasNamespace:
         self, value: Any, series: PandasSeries
     ) -> PandasSeries:
 
-        index = series._series.index[0:1] if self.implementation != "dask" else None
+        index = series._series.index[0:1] if self._implementation != "dask" else None
         return PandasSeries._from_iterable(
             [value],
             name=series._series.name,

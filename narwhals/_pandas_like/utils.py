@@ -397,7 +397,6 @@ def native_series_from_iterable(
             )
         # TODO: This is a current workaround, but needs more logic to avoid
         # computing everything
-        breakpoint()
         return (
             pd.Series(
                 [i.compute() for i in data],
@@ -406,9 +405,6 @@ def native_series_from_iterable(
             )
             .pipe(dd.from_pandas)
         )
-
-        breakpoint()
-        raise NotImplementedError
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -653,6 +649,8 @@ def to_datetime(implementation: str) -> Any:
         return get_modin().to_datetime
     if implementation == "cudf":
         return get_cudf().to_datetime
+    if implementation == "dask":
+        return get_dask().to_datetime
     raise AssertionError
 
 
