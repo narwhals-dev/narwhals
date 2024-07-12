@@ -11,8 +11,8 @@ data = {
 }
 
 
-def test_filter(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_filter(constructor_with_pyarrow: Any) -> None:
+    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
     result = df.select(nw.col("a").filter(nw.col("i") < 2, nw.col("c") == 5))
     expected = {
         "a": [0],
