@@ -1108,9 +1108,65 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 12  │
         │ 18  │
         └─────┘
-
     """
     return _stableify(nw.sum_horizontal(*exprs))
+
+
+def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    r"""
+    Compute the bitwise AND horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+
+    Notes:
+        pandas and Polars handle null values differently. Polars distinguishes
+        between NaN and Null, whereas pandas doesn't.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {
+        ...     "a": [False, False, True, True, False, None],
+        ...     "b": [False, True, True, None, None, None],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select("a", "b", all=nw.all_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+               a      b    all
+        0  False  False  False
+        1  False   True  False
+        2   True   True   True
+        3   True   None  False
+        4  False   None  False
+        5   None   None  False
+
+        >>> func(df_pl)
+        shape: (6, 3)
+        ┌───────┬───────┬───────┐
+        │ a     ┆ b     ┆ all   │
+        │ ---   ┆ ---   ┆ ---   │
+        │ bool  ┆ bool  ┆ bool  │
+        ╞═══════╪═══════╪═══════╡
+        │ false ┆ false ┆ false │
+        │ false ┆ true  ┆ false │
+        │ true  ┆ true  ┆ true  │
+        │ true  ┆ null  ┆ null  │
+        │ false ┆ null  ┆ false │
+        │ null  ┆ null  ┆ null  │
+        └───────┴───────┴───────┘
+    """
+    return _stableify(nw.all_horizontal(*exprs))
 
 
 def is_ordered_categorical(series: Series) -> bool:
@@ -1264,6 +1320,7 @@ __all__ = [
     "maybe_set_index",
     "get_native_namespace",
     "all",
+    "all_horizontal",
     "col",
     "len",
     "lit",
