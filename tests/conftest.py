@@ -6,7 +6,8 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
-from narwhals.dependencies import get_modin, get_dask
+from narwhals.dependencies import get_dask
+from narwhals.dependencies import get_modin
 from narwhals.typing import IntoDataFrame
 from narwhals.utils import parse_version
 
@@ -46,6 +47,7 @@ def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
 def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     mpd = get_modin()
     return mpd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
+
 
 def dask_contructor(obj: Any) -> IntoDataFrame:
     dd = get_dask()
@@ -109,10 +111,9 @@ def dask_series_constructor(obj: Any) -> Any:  # pragma: no cover
     dd = get_dask()
     return dd.Series(obj)
 
+
 def polars_series_constructor(obj: Any) -> Any:
     return pl.Series(obj)
-
-
 
 
 if parse_version(pd.__version__) >= parse_version("2.0.0"):

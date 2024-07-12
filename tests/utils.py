@@ -22,7 +22,11 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
 def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
     if hasattr(result, "collect"):
         result = result.collect()
-    if hasattr(result, "_dataframe") and hasattr(result._dataframe, "_implementation") and result._dataframe._implementation == "dask":
+    if (
+        hasattr(result, "_dataframe")
+        and hasattr(result._dataframe, "_implementation")
+        and result._dataframe._implementation == "dask"
+    ):
         result = result.to_pandas()
     if hasattr(result, "columns"):
         for key in result.columns:
@@ -52,6 +56,7 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
             warnings.filterwarnings("ignore", category=UserWarning)
             return mpd.DataFrame(df_pandas.to_dict(orient="list"))
 
+
 def maybe_get_dask_df(df_pandas: pd.DataFrame) -> Any:
     """Convert a pandas DataFrame to a Dask Dataframe if Dask is availabile."""
     try:
@@ -61,6 +66,7 @@ def maybe_get_dask_df(df_pandas: pd.DataFrame) -> Any:
         return df_pandas.copy()
     else:
         return dd.from_pandas(df_pandas, npartitions=1)
+
 
 def is_windows() -> bool:
     """Check if the current platform is Windows."""

@@ -11,11 +11,6 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
-from narwhals._arrow.dataframe import ArrowDataFrame
-from narwhals._pandas_like.dataframe import PandasDataFrame
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_dask
-from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
 from narwhals.dtypes import to_narwhals_dtype

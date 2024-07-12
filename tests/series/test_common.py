@@ -11,8 +11,8 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
 
-from narwhals.dependencies import get_dask
 import narwhals.stable.v1 as nw
+from narwhals.dependencies import get_dask
 from narwhals.utils import parse_version
 from tests.utils import maybe_get_dask_df
 
@@ -44,11 +44,15 @@ df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_dask = maybe_get_dask_df(df_pandas)
 
+
 def compute_if_dask(result: Any) -> Any:
-    if hasattr(result, "_series") and hasattr(result._series, "_implementation") and result._series._implementation == "dask":
-        return result.to_pandas() 
+    if (
+        hasattr(result, "_series")
+        and hasattr(result._series, "_implementation")
+        and result._series._implementation == "dask"
+    ):
+        return result.to_pandas()
     return result
-    
 
 
 @pytest.mark.parametrize(
@@ -62,7 +66,6 @@ def test_len(df_raw: Any) -> None:
     assert result == 3
     result = len(nw.from_native(df_raw)["a"])
     assert result == 3
-
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_dask])

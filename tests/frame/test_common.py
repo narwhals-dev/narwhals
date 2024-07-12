@@ -17,7 +17,8 @@ from narwhals.functions import _get_sys_info
 from narwhals.functions import show_versions
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
-from tests.utils import maybe_get_modin_df, maybe_get_dask_df
+from tests.utils import maybe_get_dask_df
+from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrameT
@@ -88,6 +89,7 @@ def test_std(df_raw: Any) -> None:
         "z_ddof_0": [0.816497],
     }
     compare_dicts(result_native, expected)
+
 
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]

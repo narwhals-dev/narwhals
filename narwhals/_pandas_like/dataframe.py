@@ -508,7 +508,6 @@ class PandasLikeDataFrame:
             return self._dataframe.compute()
         return self._native_dataframe.to_pandas()  # pragma: no cover
 
-
     def write_parquet(self, file: Any) -> Any:
         self._native_dataframe.to_parquet(file)
 

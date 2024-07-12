@@ -78,7 +78,11 @@ class PandasLikeNamespace:
     def _create_series_from_scalar(
         self, value: Any, series: PandasLikeSeries
     ) -> PandasLikeSeries:
-        index = series._series.index[0:1] if self._implementation != Implementation.DASK else None
+        index = (
+            series._series.index[0:1]
+            if self._implementation != Implementation.DASK
+            else None
+        )
         return PandasLikeSeries._from_iterable(
             [value],
             name=series._native_series.name,
