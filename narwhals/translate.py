@@ -58,15 +58,15 @@ def to_native(
 
     if isinstance(narwhals_object, BaseFrame):
         return (
-            narwhals_object._dataframe
+            narwhals_object._compliant_frame
             if narwhals_object._is_polars
-            else narwhals_object._dataframe._native_dataframe
+            else narwhals_object._compliant_frame._native_dataframe
         )
     if isinstance(narwhals_object, Series):
         return (
-            narwhals_object._series
+            narwhals_object._compliant_series
             if narwhals_object._is_polars
-            else narwhals_object._series._native_series
+            else narwhals_object._compliant_series._native_series
         )
 
     if strict:  # pragma: no cover (todo)
@@ -251,8 +251,8 @@ def from_native(  # noqa: PLR0915
     """
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.utils import Implementation
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
@@ -285,7 +285,7 @@ def from_native(  # noqa: PLR0915
         if series_only:  # pragma: no cover (todo)
             raise TypeError("Cannot only use `series_only` with dataframe")
         return DataFrame(
-            PandasDataFrame(
+            PandasLikeDataFrame(
                 native_dataframe,
                 backend_version=parse_version(pd.__version__),
                 implementation=Implementation.PANDAS,
@@ -299,7 +299,7 @@ def from_native(  # noqa: PLR0915
         if series_only:
             raise TypeError("Cannot only use `series_only` with modin.DataFrame")
         return DataFrame(
-            PandasDataFrame(
+            PandasLikeDataFrame(
                 native_dataframe,
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
@@ -313,7 +313,7 @@ def from_native(  # noqa: PLR0915
         if series_only:
             raise TypeError("Cannot only use `series_only` with modin.DataFrame")
         return DataFrame(
-            PandasDataFrame(
+            PandasLikeDataFrame(
                 native_dataframe,
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
@@ -363,7 +363,7 @@ def from_native(  # noqa: PLR0915
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
-            PandasSeries(
+            PandasLikeSeries(
                 native_dataframe,
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
@@ -377,7 +377,7 @@ def from_native(  # noqa: PLR0915
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
-            PandasSeries(
+            PandasLikeSeries(
                 native_dataframe,
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
@@ -391,7 +391,7 @@ def from_native(  # noqa: PLR0915
         if not allow_series:  # pragma: no cover (todo)
             raise TypeError("Please set `allow_series=True`")
         return Series(
-            PandasSeries(
+            PandasLikeSeries(
                 native_dataframe,
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),

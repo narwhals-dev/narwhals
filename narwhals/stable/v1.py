@@ -67,7 +67,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     """
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> Series: ...
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
     def __getitem__(self, item: str) -> Series: ...
@@ -429,15 +432,21 @@ def _stableify(
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
-            obj._dataframe, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_frame,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
-            obj._dataframe, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_frame,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwSeries):
         return Series(
-            obj._series, is_polars=obj._is_polars, backend_version=obj._backend_version
+            obj._compliant_series,
+            is_polars=obj._is_polars,
+            backend_version=obj._backend_version,
         )
     if isinstance(obj, NwExpr):
         return Expr(obj._call)

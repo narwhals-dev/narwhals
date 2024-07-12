@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class ArrowExpr:
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         call: Callable[[ArrowDataFrame], list[ArrowSeries]],
         *,
@@ -122,9 +122,22 @@ class ArrowExpr:
             backend_version=self._backend_version,
         )
 
+    def null_count(self) -> Self:
+        return reuse_series_implementation(self, "null_count", returns_scalar=True)
+
+    def head(self, n: int) -> Self:
+        return reuse_series_implementation(self, "head", n)
+
+    def tail(self, n: int) -> Self:
+        return reuse_series_implementation(self, "tail", n)
+
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
+
+    @property
+    def str(self) -> ArrowExprStringNamespace:
+        return ArrowExprStringNamespace(self)
 
 
 class ArrowExprDateTimeNamespace:
@@ -134,4 +147,23 @@ class ArrowExprDateTimeNamespace:
     def to_string(self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
+        )
+
+
+class ArrowExprStringNamespace:
+    def __init__(self, expr: ArrowExpr) -> None:
+        self._expr = expr
+
+    def to_uppercase(self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_uppercase",
+        )
+
+    def to_lowercase(self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_lowercase",
         )

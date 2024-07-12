@@ -8,21 +8,21 @@ from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals._pandas_like.dataframe import PandasDataFrame
-from narwhals._pandas_like.expr import PandasExpr
+from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
-from narwhals._pandas_like.series import PandasSeries
+from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
-    from narwhals._pandas_like.typing import IntoPandasExpr
+    from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals._pandas_like.utils import Implementation
 
 
-class PandasNamespace:
+class PandasLikeNamespace:
     Int64 = dtypes.Int64
     Int32 = dtypes.Int32
     Int16 = dtypes.Int16
@@ -56,16 +56,16 @@ class PandasNamespace:
         self._implementation = implementation
         self._backend_version = backend_version
 
-    def _create_expr_from_callable(  # noqa: PLR0913
+    def _create_expr_from_callable(
         self,
-        func: Callable[[PandasDataFrame], list[PandasSeries]],
+        func: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
         *,
         depth: int,
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-    ) -> PandasExpr:
-        return PandasExpr(
+    ) -> PandasLikeExpr:
+        return PandasLikeExpr(
             func,
             depth=depth,
             function_name=function_name,
@@ -76,9 +76,9 @@ class PandasNamespace:
         )
 
     def _create_series_from_scalar(
-        self, value: Any, series: PandasSeries
-    ) -> PandasSeries:
-        return PandasSeries._from_iterable(
+        self, value: Any, series: PandasLikeSeries
+    ) -> PandasLikeSeries:
+        return PandasLikeSeries._from_iterable(
             [value],
             name=series._native_series.name,
             index=series._native_series.index[0:1],
@@ -86,8 +86,8 @@ class PandasNamespace:
             backend_version=self._backend_version,
         )
 
-    def _create_expr_from_series(self, series: PandasSeries) -> PandasExpr:
-        return PandasExpr(
+    def _create_expr_from_series(self, series: PandasLikeSeries) -> PandasLikeExpr:
+        return PandasLikeExpr(
             lambda _df: [series],
             depth=0,
             function_name="series",
@@ -105,17 +105,17 @@ class PandasNamespace:
         )
 
     # --- selection ---
-    def col(self, *column_names: str | Iterable[str]) -> PandasExpr:
-        return PandasExpr.from_column_names(
+    def col(self, *column_names: str | Iterable[str]) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_names(
             *flatten(column_names),
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
 
-    def all(self) -> PandasExpr:
-        return PandasExpr(
+    def all(self) -> PandasLikeExpr:
+        return PandasLikeExpr(
             lambda df: [
-                PandasSeries(
+                PandasLikeSeries(
                     df._native_dataframe.loc[:, column_name],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
@@ -130,9 +130,9 @@ class PandasNamespace:
             backend_version=self._backend_version,
         )
 
-    def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasExpr:
-        def _lit_pandas_series(df: PandasDataFrame) -> PandasSeries:
-            pandas_series = PandasSeries._from_iterable(
+    def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasLikeExpr:
+        def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
+            pandas_series = PandasLikeSeries._from_iterable(
                 data=[value],
                 name="lit",
                 index=df._native_dataframe.index[0:1],
@@ -143,7 +143,7 @@ class PandasNamespace:
                 return pandas_series.cast(dtype)
             return pandas_series
 
-        return PandasExpr(
+        return PandasLikeExpr(
             lambda df: [_lit_pandas_series(df)],
             depth=0,
             function_name="lit",
@@ -154,38 +154,38 @@ class PandasNamespace:
         )
 
     # --- reduction ---
-    def sum(self, *column_names: str) -> PandasExpr:
-        return PandasExpr.from_column_names(
+    def sum(self, *column_names: str) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_names(
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
         ).sum()
 
-    def mean(self, *column_names: str) -> PandasExpr:
-        return PandasExpr.from_column_names(
+    def mean(self, *column_names: str) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_names(
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
         ).mean()
 
-    def max(self, *column_names: str) -> PandasExpr:
-        return PandasExpr.from_column_names(
+    def max(self, *column_names: str) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_names(
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
         ).max()
 
-    def min(self, *column_names: str) -> PandasExpr:
-        return PandasExpr.from_column_names(
+    def min(self, *column_names: str) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_names(
             *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
         ).min()
 
-    def len(self) -> PandasExpr:
-        return PandasExpr(
+    def len(self) -> PandasLikeExpr:
+        return PandasLikeExpr(
             lambda df: [
-                PandasSeries._from_iterable(
+                PandasLikeSeries._from_iterable(
                     [len(df._native_dataframe)],
                     name="len",
                     index=[0],
@@ -202,7 +202,7 @@ class PandasNamespace:
         )
 
     # --- horizontal ---
-    def sum_horizontal(self, *exprs: IntoPandasExpr) -> PandasExpr:
+    def sum_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         return reduce(
             lambda x, y: x + y,
             parse_into_exprs(
@@ -211,7 +211,7 @@ class PandasNamespace:
             ),
         )
 
-    def all_horizontal(self, *exprs: IntoPandasExpr) -> PandasExpr:
+    def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         # Why is this showing up as uncovered? It defo is?
         return reduce(
             lambda x, y: x & y,
@@ -220,13 +220,13 @@ class PandasNamespace:
 
     def concat(
         self,
-        items: Iterable[PandasDataFrame],
+        items: Iterable[PandasLikeDataFrame],
         *,
         how: str = "vertical",
-    ) -> PandasDataFrame:
+    ) -> PandasLikeDataFrame:
         dfs: list[Any] = [item._native_dataframe for item in items]
         if how == "horizontal":
-            return PandasDataFrame(
+            return PandasLikeDataFrame(
                 horizontal_concat(
                     dfs,
                     implementation=self._implementation,
@@ -236,7 +236,7 @@ class PandasNamespace:
                 backend_version=self._backend_version,
             )
         if how == "vertical":
-            return PandasDataFrame(
+            return PandasLikeDataFrame(
                 vertical_concat(
                     dfs,
                     implementation=self._implementation,

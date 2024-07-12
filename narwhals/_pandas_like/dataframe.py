@@ -10,7 +10,7 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals._pandas_like.expr import PandasExpr
+from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import generate_unique_token
@@ -27,14 +27,14 @@ from narwhals.utils import flatten
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._pandas_like.group_by import PandasGroupBy
-    from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
-    from narwhals._pandas_like.typing import IntoPandasExpr
+    from narwhals._pandas_like.group_by import PandasLikeGroupBy
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
 
 
-class PandasDataFrame:
+class PandasLikeDataFrame:
     # --- not in the spec ---
     def __init__(
         self,
@@ -54,10 +54,10 @@ class PandasDataFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def __narwhals_namespace__(self) -> PandasNamespace:
-        from narwhals._pandas_like.namespace import PandasNamespace
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasNamespace(self._implementation, self._backend_version)
+        return PandasLikeNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
         if self._implementation is Implementation.PANDAS:
@@ -90,18 +90,52 @@ class PandasDataFrame:
             backend_version=self._backend_version,
         )
 
-    @overload
-    def __getitem__(self, item: str) -> PandasSeries: ...
+    def get_column(self, name: str) -> PandasLikeSeries:
+        from narwhals._pandas_like.series import PandasLikeSeries
+
+        return PandasLikeSeries(
+            self._native_dataframe.loc[:, name],
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
 
     @overload
-    def __getitem__(self, item: slice) -> PandasDataFrame: ...
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
 
-    def __getitem__(self, item: str | slice) -> PandasSeries | PandasDataFrame:
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> PandasLikeDataFrame: ...
+
+    @overload
+    def __getitem__(self, item: str) -> PandasLikeSeries: ...
+
+    @overload
+    def __getitem__(self, item: slice) -> PandasLikeDataFrame: ...
+
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, str):
-            from narwhals._pandas_like.series import PandasSeries
+            from narwhals._pandas_like.series import PandasLikeSeries
 
-            return PandasSeries(
+            return PandasLikeSeries(
                 self._native_dataframe.loc[:, item],
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
+
+        elif isinstance(item, tuple) and len(item) == 2:
+            from narwhals._pandas_like.series import PandasLikeSeries
+
+            if isinstance(item[1], str):
+                native_series = self._native_dataframe.loc[item]
+            elif isinstance(item[1], int):
+                native_series = self._native_dataframe.iloc[item]
+            else:  # pragma: no cover
+                msg = f"Expected str or int, got: {type(item[1])}"
+                raise TypeError(msg)
+
+            return PandasLikeSeries(
+                native_series,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
@@ -158,8 +192,8 @@ class PandasDataFrame:
     # --- reshape ---
     def select(
         self,
-        *exprs: IntoPandasExpr,
-        **named_exprs: IntoPandasExpr,
+        *exprs: IntoPandasLikeExpr,
+        **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
@@ -193,11 +227,11 @@ class PandasDataFrame:
 
     def filter(
         self,
-        *predicates: IntoPandasExpr,
+        *predicates: IntoPandasLikeExpr,
     ) -> Self:
-        from narwhals._pandas_like.namespace import PandasNamespace
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        plx = PandasNamespace(self._implementation, self._backend_version)
+        plx = PandasLikeNamespace(self._implementation, self._backend_version)
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
@@ -206,8 +240,8 @@ class PandasDataFrame:
 
     def with_columns(
         self,
-        *exprs: IntoPandasExpr,
-        **named_exprs: IntoPandasExpr,
+        *exprs: IntoPandasLikeExpr,
+        **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
         index = self._native_dataframe.index
         new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
@@ -218,8 +252,8 @@ class PandasDataFrame:
         # See `test_memmap` for an example of where this is necessary.
         fast_path = (
             all(len(s) > 1 for s in new_columns)
-            and all(isinstance(x, PandasExpr) for x in exprs)
-            and all(isinstance(x, PandasExpr) for (_, x) in named_exprs.items())
+            and all(isinstance(x, PandasLikeExpr) for x in exprs)
+            and all(isinstance(x, PandasLikeExpr) for (_, x) in named_exprs.items())
         )
 
         if fast_path:
@@ -275,18 +309,18 @@ class PandasDataFrame:
         return self._from_native_dataframe(df.sort_values(flat_keys, ascending=ascending))
 
     # --- convert ---
-    def collect(self) -> PandasDataFrame:
-        return PandasDataFrame(
+    def collect(self) -> PandasLikeDataFrame:
+        return PandasLikeDataFrame(
             self._native_dataframe,
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
 
     # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> PandasGroupBy:
-        from narwhals._pandas_like.group_by import PandasGroupBy
+    def group_by(self, *keys: str | Iterable[str]) -> PandasLikeGroupBy:
+        from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
-        return PandasGroupBy(
+        return PandasLikeGroupBy(
             self,
             flatten(keys),
         )
@@ -296,8 +330,8 @@ class PandasDataFrame:
         other: Self,
         *,
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
     ) -> Self:
         if isinstance(left_on, str):
             left_on = [left_on]
@@ -356,7 +390,6 @@ class PandasDataFrame:
                 )
                 .loc[lambda t: t[indicator_token] == "left_only"]
                 .drop(columns=[indicator_token])
-                .reset_index(drop=True)
             )
 
         if how == "semi":
@@ -373,8 +406,25 @@ class PandasDataFrame:
                     how="inner",
                     left_on=left_on,
                     right_on=left_on,
-                ).reset_index(drop=True)
+                )
             )
+
+        if how == "left":
+            other_native = other._native_dataframe
+            result_native = self._native_dataframe.merge(
+                other_native,
+                how="left",
+                left_on=left_on,
+                right_on=right_on,
+                suffixes=("", "_right"),
+            )
+            extra = []
+            for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
+                if right_key != left_key and right_key not in self.columns:
+                    extra.append(right_key)
+                elif right_key != left_key:
+                    extra.append(f"{right_key}_right")
+            return self._from_native_dataframe(result_native.drop(columns=extra))
 
         return self._from_native_dataframe(
             self._native_dataframe.merge(
@@ -409,12 +459,12 @@ class PandasDataFrame:
         return self._native_dataframe.shape  # type: ignore[no-any-return]
 
     def to_dict(self, *, as_series: bool = False) -> dict[str, Any]:
-        from narwhals._pandas_like.series import PandasSeries
+        from narwhals._pandas_like.series import PandasLikeSeries
 
         if as_series:
             # TODO(Unassigned): should this return narwhals series?
             return {
-                col: PandasSeries(
+                col: PandasLikeSeries(
                     self._native_dataframe.loc[:, col],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
@@ -448,10 +498,10 @@ class PandasDataFrame:
         self._native_dataframe.to_parquet(file)
 
     # --- descriptive ---
-    def is_duplicated(self: Self) -> PandasSeries:
-        from narwhals._pandas_like.series import PandasSeries
+    def is_duplicated(self: Self) -> PandasLikeSeries:
+        from narwhals._pandas_like.series import PandasLikeSeries
 
-        return PandasSeries(
+        return PandasLikeSeries(
             self._native_dataframe.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -460,17 +510,17 @@ class PandasDataFrame:
     def is_empty(self: Self) -> bool:
         return self._native_dataframe.empty  # type: ignore[no-any-return]
 
-    def is_unique(self: Self) -> PandasSeries:
-        from narwhals._pandas_like.series import PandasSeries
+    def is_unique(self: Self) -> PandasLikeSeries:
+        from narwhals._pandas_like.series import PandasLikeSeries
 
-        return PandasSeries(
+        return PandasLikeSeries(
             ~self._native_dataframe.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
 
-    def null_count(self: Self) -> PandasDataFrame:
-        return PandasDataFrame(
+    def null_count(self: Self) -> PandasLikeDataFrame:
+        return PandasLikeDataFrame(
             self._native_dataframe.isna().sum(axis=0).to_frame().transpose(),
             implementation=self._implementation,
             backend_version=self._backend_version,

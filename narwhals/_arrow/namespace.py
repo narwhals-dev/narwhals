@@ -38,7 +38,7 @@ class ArrowNamespace:
     Duration = dtypes.Duration
     Date = dtypes.Date
 
-    def _create_expr_from_callable(  # noqa: PLR0913
+    def _create_expr_from_callable(
         self,
         func: Callable[[ArrowDataFrame], list[ArrowSeries]],
         *,
@@ -73,7 +73,7 @@ class ArrowNamespace:
     def _create_series_from_scalar(self, value: Any, series: ArrowSeries) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
-        if self._backend_version < (13,):  # pragma: no cover
+        if self._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
             value = value.as_py()
         return ArrowSeries._from_iterable(
             [value],

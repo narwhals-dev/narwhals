@@ -24,7 +24,7 @@ class ArrowSeries:
     ) -> None:
         self._name = name
         self._native_series = native_series
-        self._implementation = "arrow"  # for compatibility with PandasSeries
+        self._implementation = "arrow"  # for compatibility with PandasLikeSeries
         self._backend_version = backend_version
 
     def _from_native_series(self, series: Any) -> Self:
@@ -144,6 +144,25 @@ class ArrowSeries:
         dtype = reverse_translate_dtype(dtype)
         return self._from_native_series(pc.cast(ser, dtype))
 
+    def null_count(self: Self) -> int:
+        return self._native_series.null_count  # type: ignore[no-any-return]
+
+    def head(self, n: int) -> Self:
+        ser = self._native_series
+        if n >= 0:
+            return self._from_native_series(ser.slice(0, n))
+        else:
+            num_rows = len(ser)
+            return self._from_native_series(ser.slice(0, max(0, num_rows + n)))
+
+    def tail(self, n: int) -> Self:
+        ser = self._native_series
+        if n >= 0:
+            num_rows = len(ser)
+            return self._from_native_series(ser.slice(max(0, num_rows - n)))
+        else:
+            return self._from_native_series(ser.slice(abs(n)))
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)
@@ -156,10 +175,14 @@ class ArrowSeries:
     def cat(self) -> ArrowSeriesCatNamespace:
         return ArrowSeriesCatNamespace(self)
 
+    @property
+    def str(self) -> ArrowSeriesStringNamespace:
+        return ArrowSeriesStringNamespace(self)
+
 
 class ArrowSeriesDateTimeNamespace:
     def __init__(self, series: ArrowSeries) -> None:
-        self._series = series
+        self._arrow_series = series
 
     def to_string(self, format: str) -> ArrowSeries:  # noqa: A002
         pc = get_pyarrow_compute()
@@ -167,20 +190,37 @@ class ArrowSeriesDateTimeNamespace:
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
         format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
-        return self._series._from_native_series(
-            pc.strftime(self._series._native_series, format)
+        return self._arrow_series._from_native_series(
+            pc.strftime(self._arrow_series._native_series, format)
         )
 
 
 class ArrowSeriesCatNamespace:
     def __init__(self, series: ArrowSeries) -> None:
-        self._series = series
+        self._arrow_series = series
 
     def get_categories(self) -> ArrowSeries:
         pa = get_pyarrow()
-        ca = self._series._native_series
+        ca = self._arrow_series._native_series
         # TODO(Unassigned): this looks potentially expensive - is there no better way?
         out = pa.chunked_array(
             [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
         )
-        return self._series._from_native_series(out)
+        return self._arrow_series._from_native_series(out)
+
+
+class ArrowSeriesStringNamespace:
+    def __init__(self, series: ArrowSeries) -> None:
+        self._arrow_series = series
+
+    def to_uppercase(self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.utf8_upper(self._arrow_series._native_series),
+        )
+
+    def to_lowercase(self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.utf8_lower(self._arrow_series._native_series),
+        )

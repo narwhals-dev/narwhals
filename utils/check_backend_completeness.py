@@ -14,27 +14,20 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 MISSING = [
     "DataFrame.filter",
     "DataFrame.group_by",
-    "DataFrame.head",
     "DataFrame.is_duplicated",
     "DataFrame.is_empty",
     "DataFrame.is_unique",
     "DataFrame.item",
     "DataFrame.iter_rows",
     "DataFrame.join",
-    "DataFrame.null_count",
     "DataFrame.pipe",
     "DataFrame.rename",
-    "DataFrame.tail",
-    "DataFrame.to_dict",
-    "DataFrame.to_numpy",
     "DataFrame.unique",
-    "DataFrame.with_row_index",
     "DataFrame.write_parquet",
     "Series.drop_nulls",
     "Series.fill_null",
     "Series.filter",
     "Series.from_iterable",
-    "Series.head",
     "Series.is_between",
     "Series.is_duplicated",
     "Series.is_first_distinct",
@@ -48,15 +41,12 @@ MISSING = [
     "Series.max",
     "Series.min",
     "Series.n_unique",
-    "Series.null_count",
     "Series.quantile",
     "Series.round",
     "Series.sample",
     "Series.shift",
     "Series.sort",
-    "Series.str",
     "Series.sum",
-    "Series.tail",
     "Series.to_frame",
     "Series.to_pandas",
     "Series.unique",
@@ -67,7 +57,7 @@ MISSING = [
 
 class MockDataFrame:
     # Make a little mock object so we can instantiate
-    # PandasDataFrame without having pandas installed
+    # PandasLikeDataFrame without having pandas installed
     def __init__(self, dataframe): ...
 
     def __narwhals_dataframe__(self):

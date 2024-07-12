@@ -28,7 +28,7 @@ class ArrowDataFrame:
         self, native_dataframe: Any, *, backend_version: tuple[int, ...]
     ) -> None:
         self._native_dataframe = native_dataframe
-        self._implementation = "arrow"  # for compatibility with PandasDataFrame
+        self._implementation = "arrow"  # for compatibility with PandasLikeDataFrame
         self._backend_version = backend_version
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
@@ -63,19 +63,46 @@ class ArrowDataFrame:
             raise NotImplementedError(msg)
         return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
 
+    def get_column(self, name: str) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
+        return ArrowSeries(
+            self._native_dataframe[name],
+            name=name,
+            backend_version=self._backend_version,
+        )
+
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> ArrowDataFrame: ...
+
     @overload
     def __getitem__(self, item: str) -> ArrowSeries: ...
 
     @overload
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
-    def __getitem__(self, item: str | slice) -> ArrowSeries | ArrowDataFrame:
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
             return ArrowSeries(
                 self._native_dataframe[item],
                 name=item,
+                backend_version=self._backend_version,
+            )
+        elif isinstance(item, tuple) and len(item) == 2:
+            from narwhals._arrow.series import ArrowSeries
+
+            # PyArrow columns are always strings
+            col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
+            return ArrowSeries(
+                self._native_dataframe[col_name].take(item[0]),
+                name=col_name,
                 backend_version=self._backend_version,
             )
 
@@ -185,6 +212,57 @@ class ArrowDataFrame:
 
     def to_pandas(self) -> Any:
         return self._native_dataframe.to_pandas()
+
+    def to_numpy(self) -> Any:
+        import numpy as np
+
+        return np.column_stack([col.to_numpy() for col in self._native_dataframe.columns])
+
+    def to_dict(self, *, as_series: bool) -> Any:
+        df = self._native_dataframe
+
+        names_and_values = zip(df.column_names, df.columns)
+        if as_series:
+            from narwhals._arrow.series import ArrowSeries
+
+            return {
+                name: ArrowSeries(col, name=name, backend_version=self._backend_version)
+                for name, col in names_and_values
+            }
+        else:
+            return {name: col.to_pylist() for name, col in names_and_values}
+
+    def with_row_index(self, name: str) -> Self:
+        pa = get_pyarrow()
+        df = self._native_dataframe
+
+        row_indices = pa.array(range(df.num_rows))
+        return self._from_native_dataframe(df.append_column(name, row_indices))
+
+    def null_count(self) -> Self:
+        pa = get_pyarrow()
+        df = self._native_dataframe
+        names_and_values = zip(df.column_names, df.columns)
+
+        return self._from_native_dataframe(
+            pa.table({name: [col.null_count] for name, col in names_and_values})
+        )
+
+    def head(self, n: int) -> Self:
+        df = self._native_dataframe
+        if n >= 0:
+            return self._from_native_dataframe(df.slice(0, n))
+        else:
+            num_rows = df.num_rows
+            return self._from_native_dataframe(df.slice(0, max(0, num_rows + n)))
+
+    def tail(self, n: int) -> Self:
+        df = self._native_dataframe
+        if n >= 0:
+            num_rows = df.num_rows
+            return self._from_native_dataframe(df.slice(max(0, num_rows - n)))
+        else:
+            return self._from_native_dataframe(df.slice(abs(n)))
 
     def lazy(self) -> Self:
         return self
