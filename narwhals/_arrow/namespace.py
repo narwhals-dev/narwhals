@@ -121,7 +121,6 @@ class ArrowNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        # Why is this showing up as uncovered? It defo is?
         return reduce(
             lambda x, y: x & y,
             parse_into_exprs(*exprs, namespace=self),
