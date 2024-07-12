@@ -30,6 +30,7 @@ def test_arithmetic(
     if "table" in str(constructor_with_pyarrow) and attr in {
         "__truediv__",
         "__floordiv__",
+        "__mod__",
     }:
         request.applymarker(pytest.mark.xfail)
 

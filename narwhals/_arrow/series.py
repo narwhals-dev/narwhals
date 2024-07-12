@@ -124,13 +124,6 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(ser, other))
 
-    def __mod__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
-        ser = self._native_series
-        other = validate_column_comparand(other)
-        res = pc.subtract(ser, pc.multiply(pc.floor(pc.divide(ser, other)), other))
-        return self._from_native_series(res)
-
     def filter(self, other: Any) -> Self:
         other = validate_column_comparand(other)
         return self._from_native_series(self._native_series.filter(other))

@@ -37,7 +37,7 @@ def test_arithmetic(
 
     if "pyarrow_chunked_array_constructor" in str(
         constructor_series_with_pyarrow
-    ) and attr in {"__truediv__", "__floordiv__"}:
+    ) and attr in {"__truediv__", "__floordiv__", "__mod__"}:
         request.applymarker(pytest.mark.xfail)
 
     s = nw.from_native(constructor_series_with_pyarrow(data), series_only=True)
