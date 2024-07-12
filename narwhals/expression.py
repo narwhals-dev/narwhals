@@ -3358,8 +3358,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
 
     Notes:
-        pandas and Polars handle null values differently. Polars distinguishes
-        between NaN and Null, whereas pandas doesn't.
+        pandas and Polars handle null values differently.
 
     Examples:
         >>> import pandas as pd
