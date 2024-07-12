@@ -125,3 +125,12 @@ class ArrowNamespace:
             lambda x, y: x & y,
             parse_into_exprs(*exprs, namespace=self),
         )
+
+    def sum_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        return reduce(
+            lambda x, y: x + y,
+            parse_into_exprs(
+                *exprs,
+                namespace=self,
+            )
+        )
