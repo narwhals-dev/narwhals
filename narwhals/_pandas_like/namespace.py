@@ -70,10 +70,12 @@ class PandasNamespace:
     def _create_series_from_scalar(
         self, value: Any, series: PandasSeries
     ) -> PandasSeries:
+
+        index = series._series.index[0:1] if self.implementation != "dask" else None
         return PandasSeries._from_iterable(
             [value],
             name=series._series.name,
-            index=series._series.index[0:1],
+            index=index,
             implementation=self._implementation,
         )
 

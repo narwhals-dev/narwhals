@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import secrets
 from copy import copy
+from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import TypeVar
 
@@ -317,7 +319,7 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
         return mpd.concat(dfs, axis=1)
     if implementation == "dask":  # pragma: no cover
         dd = get_dask()
-        if hasattr(dfs[0], "_series"):  # TODO: sort out this hack
+        if hasattr(dfs[0], "_series"):
             return dd.concat([i._series for i in dfs], axis=1)
         return dd.concat(dfs, axis=1)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
@@ -380,6 +382,33 @@ def native_series_from_iterable(
     if implementation == "arrow":
         pa = get_pyarrow()
         return pa.chunked_array([data])
+    if implementation == "dask":  # pragma: no cover
+        dd = get_dask()
+        pd = get_pandas()
+        if not hasattr(data[0], "compute"):
+            return (
+                pd.Series(
+                    data,
+                    name=name,
+                    index=index,
+                    copy=False,
+                )
+                .pipe(dd.from_pandas)
+            )
+        # TODO: This is a current workaround, but needs more logic to avoid
+        # computing everything
+        breakpoint()
+        return (
+            pd.Series(
+                [i.compute() for i in data],
+                name=name,
+                copy=False,
+            )
+            .pipe(dd.from_pandas)
+        )
+
+        breakpoint()
+        raise NotImplementedError
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -661,3 +690,18 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
                 "join operation"
             )
             raise AssertionError(msg)
+
+
+def not_implemented_in(*implementations: list[str]) -> Callable:
+    """
+    Produces method decorator to raise not implemented warnings for given implementations
+    """
+    def check_implementation_wrapper(func: Callable) -> Callable:
+        """Wraps function to return same function + implementation check"""
+        @wraps(func)
+        def wrapped_func(self, *args, **kwargs):
+            if (implementation := self._implementation) in implementations:
+                raise NotImplementedError(f"Not implemented in {implementation}")
+            return func(self, *args, **kwargs)
+        return wrapped_func
+    return check_implementation_wrapper

@@ -8,6 +8,7 @@ from typing import Sequence
 
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import not_implemented_in
 from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
@@ -141,9 +142,7 @@ class PandasSeries:
         )
 
     def __len__(self) -> int:
-        if self._implementation == "dask":
-            return len(self._series)
-        return self.shape[0]
+        return len(self._series)
 
     @property
     def name(self) -> str:
@@ -165,12 +164,8 @@ class PandasSeries:
         dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
         return self._from_series(ser.astype(dtype))
 
+    @not_implemented_in("dask")
     def item(self: Self, index: int | None = None) -> Any:
-        if self._implementation == "dask":
-            msg = (
-                "Positional indexing is not available in Dask"
-            )
-            raise NotImplementedError(msg)
         # cuDF doesn't have Series.item().
         if index is None:
             if len(self) != 1:
@@ -491,13 +486,8 @@ class PandasSeries:
         raise AssertionError(msg)
 
     # --- descriptive ---
+    @not_implemented_in("dask")
     def is_duplicated(self: Self) -> Self:
-        if self._implementation == "dask":
-            msg = (
-                "Checking for duplication requires 'duplicated' method "
-                "which is not currently implemented in dask"
-            )
-            raise NotImplementedError(msg)
         return self._from_series(self._series.duplicated(keep=False))
 
     def is_empty(self: Self) -> bool:
@@ -509,14 +499,12 @@ class PandasSeries:
     def null_count(self: Self) -> int:
         return self._series.isnull().sum()  # type: ignore[no-any-return]
 
+    @not_implemented_in("dask")
     def is_first_distinct(self: Self) -> Self:
-        if self._implementation == "dask":
-            raise NotImplementedError("Not currently implemented in dask")
         return self._from_series(~self._series.duplicated(keep="first"))
 
+    @not_implemented_in("dask")
     def is_last_distinct(self: Self) -> Self:
-        if self._implementation == "dask":
-            raise NotImplementedError("Not currently implemented in dask")
         return self._from_series(~self._series.duplicated(keep="last"))
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
