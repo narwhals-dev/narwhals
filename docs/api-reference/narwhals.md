@@ -1,4 +1,4 @@
-# `narwhals`
+# Top-level functions
 
 Here are the top-level functions available in Narwhals.
 

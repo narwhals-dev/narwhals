@@ -7,7 +7,8 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import translate_dtype
-from narwhals._pandas_like.utils import evaluate_into_exprs
+from narwhals._arrow.utils import validate_dataframe_comparand
+from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
@@ -23,14 +24,17 @@ if TYPE_CHECKING:
 
 class ArrowDataFrame:
     # --- not in the spec ---
-    def __init__(self, dataframe: Any) -> None:
-        self._dataframe = dataframe
-        self._implementation = "arrow"  # for compatibility with PandasDataFrame
+    def __init__(
+        self, native_dataframe: Any, *, backend_version: tuple[int, ...]
+    ) -> None:
+        self._native_dataframe = native_dataframe
+        self._implementation = "arrow"  # for compatibility with PandasLikeDataFrame
+        self._backend_version = backend_version
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace()
+        return ArrowNamespace(backend_version=self._backend_version)
 
     def __native_namespace__(self) -> Any:
         return get_pyarrow()
@@ -41,15 +45,15 @@ class ArrowDataFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def _from_dataframe(self, df: Any) -> Self:
-        return self.__class__(df)
+    def _from_native_dataframe(self, df: Any) -> Self:
+        return self.__class__(df, backend_version=self._backend_version)
 
     @property
     def shape(self) -> tuple[int, int]:
-        return self._dataframe.shape  # type: ignore[no-any-return]
+        return self._native_dataframe.shape  # type: ignore[no-any-return]
 
     def __len__(self) -> int:
-        return len(self._dataframe)
+        return len(self._native_dataframe)
 
     def rows(
         self, *, named: bool = False
@@ -57,7 +61,22 @@ class ArrowDataFrame:
         if not named:
             msg = "Unnamed rows are not yet supported on PyArrow tables"
             raise NotImplementedError(msg)
-        return self._dataframe.to_pylist()  # type: ignore[no-any-return]
+        return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
+
+    def get_column(self, name: str) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
+        return ArrowSeries(
+            self._native_dataframe[name],
+            name=name,
+            backend_version=self._backend_version,
+        )
+
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> ArrowDataFrame: ...
 
     @overload
     def __getitem__(self, item: str) -> ArrowSeries: ...
@@ -65,20 +84,36 @@ class ArrowDataFrame:
     @overload
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
-    def __getitem__(self, item: str | slice) -> ArrowSeries | ArrowDataFrame:
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
-            return ArrowSeries(self._dataframe[item], name=item)
+            return ArrowSeries(
+                self._native_dataframe[item],
+                name=item,
+                backend_version=self._backend_version,
+            )
+        elif isinstance(item, tuple) and len(item) == 2:
+            from narwhals._arrow.series import ArrowSeries
+
+            # PyArrow columns are always strings
+            col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
+            return ArrowSeries(
+                self._native_dataframe[col_name].take(item[0]),
+                name=col_name,
+                backend_version=self._backend_version,
+            )
 
         elif isinstance(item, slice):
             if item.step is not None and item.step != 1:
                 msg = "Slicing with step is not supported on PyArrow tables"
                 raise NotImplementedError(msg)
             start = item.start or 0
-            stop = item.stop or len(self._dataframe)
-            return self._from_dataframe(
-                self._dataframe.slice(item.start, stop - start),
+            stop = item.stop or len(self._native_dataframe)
+            return self._from_native_dataframe(
+                self._native_dataframe.slice(item.start, stop - start),
             )
 
         elif isinstance(item, Sequence) or (
@@ -86,7 +121,7 @@ class ArrowDataFrame:
             and isinstance(item, np.ndarray)
             and item.ndim == 1
         ):
-            return self._from_dataframe(self._dataframe.take(item))
+            return self._from_native_dataframe(self._native_dataframe.take(item))
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
@@ -94,7 +129,7 @@ class ArrowDataFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
-        schema = self._dataframe.schema
+        schema = self._native_dataframe.schema
         return {
             name: translate_dtype(dtype)
             for name, dtype in zip(schema.names, schema.types)
@@ -102,27 +137,59 @@ class ArrowDataFrame:
 
     @property
     def columns(self) -> list[str]:
-        return self._dataframe.schema.names  # type: ignore[no-any-return]
+        return self._native_dataframe.schema.names  # type: ignore[no-any-return]
 
     def select(
         self,
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)  # type: ignore[arg-type]
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
-            return self._from_dataframe(self._dataframe.__class__.from_arrays([]))
+            return self._from_native_dataframe(
+                self._native_dataframe.__class__.from_arrays([])
+            )
         names = [s.name for s in new_series]
         pa = get_pyarrow()
-        df = pa.Table.from_arrays([s._series for s in new_series], names=names)
-        return self._from_dataframe(df)
+        df = pa.Table.from_arrays([s._native_series for s in new_series], names=names)
+        return self._from_native_dataframe(df)
+
+    def with_columns(
+        self,
+        *exprs: IntoArrowExpr,
+        **named_exprs: IntoArrowExpr,
+    ) -> Self:
+        new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_column_name_to_new_column_map = {s.name: s for s in new_columns}
+        to_concat = []
+        output_names = []
+        # Make sure to preserve column order
+        for name in self.columns:
+            if name in new_column_name_to_new_column_map:
+                to_concat.append(
+                    validate_dataframe_comparand(
+                        new_column_name_to_new_column_map.pop(name)
+                    )
+                )
+            else:
+                to_concat.append(self._native_dataframe[name])
+            output_names.append(name)
+        for s in new_column_name_to_new_column_map:
+            to_concat.append(
+                validate_dataframe_comparand(new_column_name_to_new_column_map[s])
+            )
+            output_names.append(s)
+        df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)
+        return self._from_native_dataframe(df)
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        return self._from_dataframe(self._dataframe.drop(list(flatten(columns))))
+        return self._from_native_dataframe(
+            self._native_dataframe.drop(list(flatten(columns)))
+        )
 
     def drop_nulls(self) -> Self:
-        return self._from_dataframe(self._dataframe.drop_null())
+        return self._from_native_dataframe(self._native_dataframe.drop_null())
 
     def sort(
         self,
@@ -131,7 +198,7 @@ class ArrowDataFrame:
         descending: bool | Sequence[bool] = False,
     ) -> Self:
         flat_keys = flatten([*flatten([by]), *more_by])
-        df = self._dataframe
+        df = self._native_dataframe
 
         if isinstance(descending, bool):
             order = "descending" if descending else "ascending"
@@ -141,16 +208,83 @@ class ArrowDataFrame:
                 (key, "descending" if is_descending else "ascending")
                 for key, is_descending in zip(flat_keys, descending)
             ]
-        return self._from_dataframe(df.sort_by(sorting=sorting))
+        return self._from_native_dataframe(df.sort_by(sorting=sorting))
 
     def to_pandas(self) -> Any:
-        return self._dataframe.to_pandas()
+        return self._native_dataframe.to_pandas()
+
+    def to_numpy(self) -> Any:
+        import numpy as np
+
+        return np.column_stack([col.to_numpy() for col in self._native_dataframe.columns])
+
+    def to_dict(self, *, as_series: bool) -> Any:
+        df = self._native_dataframe
+
+        names_and_values = zip(df.column_names, df.columns)
+        if as_series:
+            from narwhals._arrow.series import ArrowSeries
+
+            return {
+                name: ArrowSeries(col, name=name, backend_version=self._backend_version)
+                for name, col in names_and_values
+            }
+        else:
+            return {name: col.to_pylist() for name, col in names_and_values}
+
+    def with_row_index(self, name: str) -> Self:
+        pa = get_pyarrow()
+        df = self._native_dataframe
+
+        row_indices = pa.array(range(df.num_rows))
+        return self._from_native_dataframe(df.append_column(name, row_indices))
+
+    def filter(
+        self,
+        *predicates: IntoArrowExpr,
+    ) -> Self:
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        plx = ArrowNamespace(backend_version=self._backend_version)
+        expr = plx.all_horizontal(*predicates)
+        # Safety: all_horizontal's expression only returns a single column.
+        mask = expr._call(self)[0]
+        return self._from_native_dataframe(
+            self._native_dataframe.filter(mask._native_series)
+        )
+
+    def null_count(self) -> Self:
+        pa = get_pyarrow()
+        df = self._native_dataframe
+        names_and_values = zip(df.column_names, df.columns)
+
+        return self._from_native_dataframe(
+            pa.table({name: [col.null_count] for name, col in names_and_values})
+        )
+
+    def head(self, n: int) -> Self:
+        df = self._native_dataframe
+        if n >= 0:
+            return self._from_native_dataframe(df.slice(0, n))
+        else:
+            num_rows = df.num_rows
+            return self._from_native_dataframe(df.slice(0, max(0, num_rows + n)))
+
+    def tail(self, n: int) -> Self:
+        df = self._native_dataframe
+        if n >= 0:
+            num_rows = df.num_rows
+            return self._from_native_dataframe(df.slice(max(0, num_rows - n)))
+        else:
+            return self._from_native_dataframe(df.slice(abs(n)))
 
     def lazy(self) -> Self:
         return self
 
     def collect(self) -> ArrowDataFrame:
-        return ArrowDataFrame(self._dataframe)
+        return ArrowDataFrame(
+            self._native_dataframe, backend_version=self._backend_version
+        )
 
     def clone(self) -> Self:
         raise NotImplementedError("clone is not yet supported on PyArrow tables")

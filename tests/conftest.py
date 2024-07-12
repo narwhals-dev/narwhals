@@ -36,7 +36,7 @@ def pandas_constructor(obj: Any) -> IntoDataFrame:
 
 
 def pandas_nullable_constructor(obj: Any) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes()  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
 
 
 def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
@@ -81,7 +81,7 @@ def constructor_with_lazy(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]
 
 
-# TODO: once pyarrow has complete coverage, we can remove this one,
+# TODO(Unassigned): once pyarrow has complete coverage, we can remove this one,
 # and just put `pa.table` into `constructor`
 @pytest.fixture(params=[*params, pa.table])
 def constructor_with_pyarrow(request: Any) -> Callable[[Any], IntoDataFrame]:
@@ -139,7 +139,7 @@ def pyarrow_chunked_array_constructor(obj: Any) -> Any:
     return pa.chunked_array([obj])
 
 
-# TODO: once pyarrow has complete coverage, we can remove this one,
+# TODO(Unassigned): once pyarrow has complete coverage, we can remove this one,
 # and just put `pa.table` into `constructor`
 @pytest.fixture(params=[*params_series, pyarrow_chunked_array_constructor])
 def constructor_series_with_pyarrow(request: Any) -> Callable[[Any], Any]:

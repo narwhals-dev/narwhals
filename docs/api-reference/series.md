@@ -9,6 +9,7 @@
         - all
         - any
         - cast
+        - count
         - cum_sum
         - diff
         - drop_nulls

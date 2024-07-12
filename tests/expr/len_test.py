@@ -1,6 +1,6 @@
 from typing import Any
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {"a": list("xyz"), "b": [1, 2, 1]}

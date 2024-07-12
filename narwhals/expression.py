@@ -25,7 +25,7 @@ def extract_native(expr: Expr, other: Any) -> Any:
     if isinstance(other, Expr):
         return other._call(expr)
     if isinstance(other, Series):
-        return other._series
+        return other._compliant_series
     return other
 
 
@@ -33,6 +33,11 @@ class Expr:
     def __init__(self, call: Callable[[Any], Any]) -> None:
         # callable from namespace to expr
         self._call = call
+
+    def _taxicab_norm(self) -> Self:
+        # This is just used to test out the stable api feature in a realistic-ish way.
+        # It's not intended to be used.
+        return self.__class__(lambda plx: self._call(plx).abs().sum())
 
     # --- convert ---
     def alias(self, name: str) -> Self:
@@ -491,6 +496,40 @@ class Expr:
             └─────┴─────┘
         """
         return self.__class__(lambda plx: self._call(plx).max())
+
+    def count(self) -> Self:
+        """
+        Returns the number of non-null elements in the column.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all().count())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  3  2
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ u32 ┆ u32 │
+            ╞═════╪═════╡
+            │ 3   ┆ 2   │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).count())
 
     def n_unique(self) -> Self:
         """
@@ -2076,6 +2115,92 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)
         )
 
+    def to_uppercase(self) -> Expr:
+        r"""
+        Transform string to uppercase variant.
+
+        Notes:
+            The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
+            For more info see [the related issue](https://github.com/apache/arrow/issues/34599).
+            There may be other unicode-edge-case-related variations across implementations.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "mango", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(upper_col=nw.col("fruits").str.to_uppercase())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+               fruits upper_col
+            0  apple     APPLE
+            1  mango     MANGO
+            2   None      None
+
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌────────┬───────────┐
+            │ fruits ┆ upper_col │
+            │ ---    ┆ ---       │
+            │ str    ┆ str       │
+            ╞════════╪═══════════╡
+            │ apple  ┆ APPLE     │
+            │ mango  ┆ MANGO     │
+            │ null   ┆ null      │
+            └────────┴───────────┘
+
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_uppercase())
+
+    def to_lowercase(self) -> Expr:
+        r"""
+        Transform string to lowercase variant.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["APPLE", "MANGO", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(lower_col=nw.col("fruits").str.to_lowercase())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+              fruits  lower_col
+            0  APPLE      apple
+            1  MANGO      mango
+            2   None       None
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 2)
+            ┌────────┬───────────┐
+            │ fruits ┆ lower_col │
+            │ ---    ┆ ---       │
+            │ str    ┆ str       │
+            ╞════════╪═══════════╡
+            │ APPLE  ┆ apple     │
+            │ MANGO  ┆ mango     │
+            │ null   ┆ null      │
+            └────────┴───────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_lowercase())
+
 
 class ExprDateTimeNamespace:
     def __init__(self, expr: Expr) -> None:
@@ -3006,7 +3131,7 @@ def len() -> Expr:
         if (
             (pl := get_polars()) is not None
             and plx is pl
-            and parse_version(pl.__version__) < parse_version("0.20.4")
+            and parse_version(pl.__version__) <= (0, 20, 4)
         ):  # pragma: no cover
             return plx.count().alias("len")
         return plx.len()
@@ -3266,10 +3391,11 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
     """
     if (np := get_numpy()) is not None and isinstance(value, np.ndarray):
-        raise ValueError(
+        msg = (
             "numpy arrays are not supported as literal values. "
             "Consider using `with_columns` to create a new column from the array."
         )
+        raise ValueError(msg)
 
     if isinstance(value, (list, tuple)):
         msg = f"Nested datatypes are not supported yet. Got {value}"

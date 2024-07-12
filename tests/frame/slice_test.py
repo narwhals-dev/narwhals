@@ -5,8 +5,10 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
+from pandas.testing import assert_series_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 data = {
@@ -69,3 +71,23 @@ def test_gather_pandas_index() -> None:
     result = nw.from_native(df, eager_only=True)[[1, 2]]
     expected = {"a": [1, 2], "b": [4, 2]}
     compare_dicts(result, expected)
+
+
+def test_gather_rows_cols(constructor_with_pyarrow: Any) -> None:
+    native_df = constructor_with_pyarrow(data)
+    df = nw.from_native(native_df, eager_only=True)
+    is_pandas_wo_pyarrow = parse_version(pd.__version__) < parse_version("1.0.0")
+    if isinstance(native_df, pa.Table) or is_pandas_wo_pyarrow:
+        # PyArrowSeries do not have `to_pandas`
+        result = df[[0, 3, 1], 1].to_numpy()
+        expected = np.array([11, 14, 12])
+        assert np.array_equal(result, expected)
+        result = df[np.array([0, 3, 1]), "b"].to_numpy()
+        assert np.array_equal(result, expected)
+    else:
+        result = df[[0, 3, 1], 1].to_pandas()
+        expected_index = range(3) if isinstance(native_df, pl.DataFrame) else [0, 3, 1]
+        expected = pd.Series([11, 14, 12], name="b", index=expected_index)
+        assert_series_equal(result, expected, check_dtype=False)
+        result = df[np.array([0, 3, 1]), "b"].to_pandas()
+        assert_series_equal(result, expected, check_dtype=False)

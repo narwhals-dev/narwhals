@@ -3,7 +3,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {

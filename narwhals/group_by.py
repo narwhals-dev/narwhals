@@ -24,7 +24,7 @@ class GroupBy(Generic[DataFrameT]):
     def __init__(self, df: DataFrameT, *keys: str | Iterable[str]) -> None:
         self._df = cast(DataFrame[Any], df)
         self._keys = flatten(keys)
-        self._grouped = self._df._dataframe.group_by(self._keys)
+        self._grouped = self._df._compliant_frame.group_by(self._keys)
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
@@ -110,13 +110,13 @@ class GroupBy(Generic[DataFrameT]):
             └─────┴─────┴─────┘
         """
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
-        return self._df.__class__(  # type: ignore[return-value]
+        return self._df._from_compliant_dataframe(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
         )
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
         yield from (  # type: ignore[misc]
-            (tupleify(key), self._df._from_dataframe(df))
+            (tupleify(key), self._df._from_compliant_dataframe(df))
             for (key, df) in self._grouped.__iter__()
         )
 
@@ -125,12 +125,12 @@ class LazyGroupBy(Generic[LazyFrameT]):
     def __init__(self, df: LazyFrameT, *keys: str | Iterable[str]) -> None:
         self._df = cast(LazyFrame[Any], df)
         self._keys = keys
-        self._grouped = self._df._dataframe.group_by(*self._keys)
+        self._grouped = self._df._compliant_frame.group_by(*self._keys)
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
     ) -> LazyFrameT:
         aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
-        return self._df.__class__(  # type: ignore[return-value]
+        return self._df._from_compliant_dataframe(  # type: ignore[return-value]
             self._grouped.agg(*aggs, **named_aggs),
         )

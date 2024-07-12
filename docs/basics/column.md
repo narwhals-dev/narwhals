@@ -15,9 +15,10 @@ This can stay lazy, so we just use `nw.from_native` and expressions:
 
 ```python exec="1" source="above" session="ex1"
 import narwhals as nw
+from narwhals.typing import FrameT
 
 @nw.narwhalify
-def my_func(df):
+def my_func(df: FrameT) -> FrameT:
     return df.filter(nw.col('a') > 0)
 ```
 
@@ -52,9 +53,10 @@ Let's write a dataframe-agnostic function which multiplies the values in column
 
 ```python exec="1" source="above" session="ex2"
 import narwhals as nw
+from narwhals.typing import FrameT
 
 @nw.narwhalify
-def my_func(df):
+def my_func(df: FrameT) -> FrameT:
     return df.with_columns(nw.col('a')*2)
 ```
 
@@ -87,9 +89,10 @@ values multiplied by 2, we could have used `Expr.alias`:
 
 ```python exec="1" source="above" session="ex2.1"
 import narwhals as nw
+from narwhals.typing import FrameT
 
 @nw.narwhalify
-def my_func(df):
+def my_func(df: FrameT) -> FrameT:
     return df.with_columns((nw.col('a')*2).alias('c'))
 ```
 
@@ -121,15 +124,16 @@ def my_func(df):
 
 Now, we want to find the mean of column `'a'`, and we need it as a Python scalar.
 This means that computation cannot stay lazy - it must execute!
-Therefore, we'll pass `eager_only=True` to `nw.from_native`, and then, instead
+Therefore, we'll pass `eager_only=True` to `nw.narwhalify`, and then, instead
 of using expressions, we'll extract a `Series`.
 
 ```python exec="1" source="above" session="ex2"
+from __future__ import annotations
 import narwhals as nw
 
-@nw.narwhalify
-def my_func(df_any):
-    return df_any['a'].mean()
+@nw.narwhalify(eager_only=True)
+def my_func(df: nw.DataFrame) -> float | None:
+    return df['a'].mean()
 ```
 
 === "pandas"
@@ -150,6 +154,3 @@ def my_func(df_any):
 
 Note that, even though the output of our function is not a dataframe nor a series, we can
 still use `narwhalify`.
-
-In general, we recommend using the decorator where possible, as it looks a lot cleaner,
-and only using `nw.from_native` / `nw.to_native` explicitly when you need them.

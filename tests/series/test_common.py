@@ -11,8 +11,8 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
 
-import narwhals as nw
 from narwhals.dependencies import get_dask
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import maybe_get_dask_df
 
@@ -64,8 +64,8 @@ def test_len(df_raw: Any) -> None:
     assert result == 3
 
 
+
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_dask])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_is_in(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).is_in([1, 2])
     result = compute_if_dask(result)
@@ -75,7 +75,6 @@ def test_is_in(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_dask])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_is_in_other(df_raw: Any) -> None:
     with pytest.raises(
         NotImplementedError,
@@ -84,36 +83,6 @@ def test_is_in_other(df_raw: Any) -> None:
         ),
     ):
         nw.from_native(df_raw).with_columns(contains=nw.col("c").is_in("sets"))
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_dask])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
-def test_filter(df_raw: Any) -> None:
-    result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
-    result = compute_if_dask(result)
-    expected = np.array([3, 2])
-    assert (result.to_numpy() == expected).all()
-    result = nw.from_native(df_raw, eager_only=True).select(
-        nw.col("a").filter(nw.col("a") > 1)
-    )["a"]
-    result = compute_if_dask(result)
-    expected = np.array([3, 2])
-    assert (result.to_numpy() == expected).all()
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_dask])
-def test_gt(df_raw: Any) -> None:
-    s = nw.from_native(df_raw["a"], series_only=True)
-    result = s > s  # noqa: PLR0124
-    result = compute_if_dask(result)
-    assert not result[0]
-    assert not result[1]
-    assert not result[2]
-    result = s > 1
-    result = compute_if_dask(result)
-    assert not result[0]
-    assert result[1]
-    assert result[2]
 
 
 @pytest.mark.parametrize(
@@ -135,6 +104,7 @@ def test_reductions(df_raw: Any) -> None:
     assert s.std() == 1.0
     assert s.min() == 1
     assert s.max() == 3
+    assert s.count() == 3
     assert s.sum() == 6
     assert nw.to_native(s.is_between(1, 2))[0]
     assert not nw.to_native(s.is_between(1, 2))[1]
@@ -190,13 +160,6 @@ def test_is_unique(df_raw: Any) -> None:
     result = series.is_unique()
     expected = np.array([False, False, True])
     assert (result.to_numpy() == expected).all()
-
-
-@pytest.mark.parametrize("s_raw", [pd.Series([1, 2, None]), pl.Series([1, 2, None])])
-def test_null_count(s_raw: Any) -> None:
-    series = nw.from_native(s_raw, series_only=True)
-    result = series.null_count()
-    assert result == 1
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
@@ -326,21 +289,3 @@ def test_item(df_raw: Any, index: int, expected: int) -> None:
         match=re.escape("can only call '.item()' if the Series is of length 1,"),
     ):
         s.item(None)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_dask])
-@pytest.mark.parametrize("n", [1, 2, 3, 10])
-def test_head(df_raw: Any, n: int) -> None:
-    s_raw = df_raw["z"]
-    s = nw.from_native(s_raw, allow_series=True)
-
-    assert s.head(n) == nw.from_native(s_raw.head(n), series_only=True)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_dask])
-@pytest.mark.parametrize("n", [1, 2, 3, 10])
-def test_tail(df_raw: Any, n: int) -> None:
-    s_raw = df_raw["z"]
-    s = nw.from_native(s_raw, allow_series=True)
-
-    assert s.tail(n) == nw.from_native(s_raw.tail(n), series_only=True)

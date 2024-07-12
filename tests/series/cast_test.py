@@ -7,7 +7,7 @@ import pyarrow as pa
 import pytest
 from polars.testing import assert_frame_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 
@@ -106,7 +106,7 @@ def test_cast_date_datetime_invalid() -> None:
 
 
 def test_unknown_to_int() -> None:
-    df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="M")})
+    df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="min")})
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
 
 

@@ -17,12 +17,9 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
-from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.utils import flatten
-from narwhals.utils import parse_version
 from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
@@ -43,43 +40,45 @@ FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
 
 class BaseFrame(Generic[FrameT]):
-    _dataframe: Any
+    _compliant_frame: Any
     _is_polars: bool
+    _backend_version: tuple[int, ...]
 
     def __len__(self) -> Any:
-        return self._dataframe.__len__()
+        return self._compliant_frame.__len__()
 
     def __native_namespace__(self) -> Any:
         if self._is_polars:
             return get_polars()
-        return self._dataframe.__native_namespace__()
+        return self._compliant_frame.__native_namespace__()
 
     def __narwhals_namespace__(self) -> Any:
         if self._is_polars:
             return get_polars()
-        return self._dataframe.__narwhals_namespace__()
+        return self._compliant_frame.__narwhals_namespace__()
 
-    def _from_dataframe(self, df: Any) -> Self:
+    def _from_compliant_dataframe(self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
             df,
             is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
         """Process `args` and `kwargs`, extracting underlying objects as we go."""
-        args = [self._extract_native(v) for v in flatten(args)]  # type: ignore[assignment]
-        kwargs = {k: self._extract_native(v) for k, v in kwargs.items()}
+        args = [self._extract_compliant(v) for v in flatten(args)]  # type: ignore[assignment]
+        kwargs = {k: self._extract_compliant(v) for k, v in kwargs.items()}
         return args, kwargs
 
-    def _extract_native(self, arg: Any) -> Any:
+    def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expression import Expr
         from narwhals.series import Series
 
         if isinstance(arg, BaseFrame):
-            return arg._dataframe
+            return arg._compliant_frame
         if isinstance(arg, Series):
-            return arg._series
+            return arg._compliant_series
         if isinstance(arg, Expr):
             return arg._call(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):
@@ -96,43 +95,43 @@ class BaseFrame(Generic[FrameT]):
     def schema(self) -> dict[str, DType]:
         return {
             k: to_narwhals_dtype(v, is_polars=self._is_polars)
-            for k, v in self._dataframe.schema.items()
+            for k, v in self._compliant_frame.schema.items()
         }
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         return function(self, *args, **kwargs)
 
     def with_row_index(self, name: str = "index") -> Self:
-        if self._is_polars and parse_version(get_polars().__version__) < parse_version(
-            "0.20.4"
-        ):  # pragma: no cover
-            return self._from_dataframe(
-                self._dataframe.with_row_count(name),
+        if self._is_polars and self._backend_version < (0, 20, 4):  # pragma: no cover
+            return self._from_compliant_dataframe(
+                self._compliant_frame.with_row_count(name),
             )
-        return self._from_dataframe(
-            self._dataframe.with_row_index(name),
+        return self._from_compliant_dataframe(
+            self._compliant_frame.with_row_index(name),
         )
 
     def drop_nulls(self) -> Self:
-        return self._from_dataframe(
-            self._dataframe.drop_nulls(),
+        return self._from_compliant_dataframe(
+            self._compliant_frame.drop_nulls(),
         )
 
     @property
     def columns(self) -> list[str]:
-        return self._dataframe.columns  # type: ignore[no-any-return]
+        return self._compliant_frame.columns  # type: ignore[no-any-return]
 
     def lazy(self) -> LazyFrame[Any]:
         return LazyFrame(
-            self._dataframe.lazy(),
+            self._compliant_frame.lazy(),
+            is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         exprs, named_exprs = self._flatten_and_extract(*exprs, **named_exprs)
-        return self._from_dataframe(
-            self._dataframe.with_columns(*exprs, **named_exprs),
+        return self._from_compliant_dataframe(
+            self._compliant_frame.with_columns(*exprs, **named_exprs),
         )
 
     def select(
@@ -141,29 +140,29 @@ class BaseFrame(Generic[FrameT]):
         **named_exprs: IntoExpr,
     ) -> Self:
         exprs, named_exprs = self._flatten_and_extract(*exprs, **named_exprs)
-        return self._from_dataframe(
-            self._dataframe.select(*exprs, **named_exprs),
+        return self._from_compliant_dataframe(
+            self._compliant_frame.select(*exprs, **named_exprs),
         )
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        return self._from_dataframe(self._dataframe.rename(mapping))
+        return self._from_compliant_dataframe(self._compliant_frame.rename(mapping))
 
     def head(self, n: int) -> Self:
-        return self._from_dataframe(self._dataframe.head(n))
+        return self._from_compliant_dataframe(self._compliant_frame.head(n))
 
     def tail(self, n: int) -> Self:
-        return self._from_dataframe(self._dataframe.tail(n))
+        return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        return self._from_dataframe(self._dataframe.drop(*columns))
+        return self._from_compliant_dataframe(self._compliant_frame.drop(*columns))
 
     def unique(self, subset: str | list[str]) -> Self:
-        return self._from_dataframe(self._dataframe.unique(subset=subset))
+        return self._from_compliant_dataframe(self._compliant_frame.unique(subset=subset))
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         predicates, _ = self._flatten_and_extract(*predicates)
-        return self._from_dataframe(
-            self._dataframe.filter(*predicates),
+        return self._from_compliant_dataframe(
+            self._compliant_frame.filter(*predicates),
         )
 
     def sort(
@@ -172,21 +171,22 @@ class BaseFrame(Generic[FrameT]):
         *more_by: str,
         descending: bool | Sequence[bool] = False,
     ) -> Self:
-        return self._from_dataframe(
-            self._dataframe.sort(by, *more_by, descending=descending)
+        return self._from_compliant_dataframe(
+            self._compliant_frame.sort(by, *more_by, descending=descending)
         )
 
     def join(
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
-        _supported_joins = {"inner", "cross", "anti"}
+        _supported_joins = ("inner", "left", "cross", "anti", "semi")
+
         if how not in _supported_joins:
-            msg = f"Only the following join stragies are supported: {_supported_joins}"
+            msg = f"Only the following join stragies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
         if how == "cross" and (left_on or right_on):
@@ -194,9 +194,9 @@ class BaseFrame(Generic[FrameT]):
             raise ValueError(msg)
 
         validate_same_library([self, other])
-        return self._from_dataframe(
-            self._dataframe.join(
-                self._extract_native(other),
+        return self._from_compliant_dataframe(
+            self._compliant_frame.join(
+                self._extract_compliant(other),
                 how=how,
                 left_on=left_on,
                 right_on=right_on,
@@ -204,7 +204,7 @@ class BaseFrame(Generic[FrameT]):
         )
 
     def clone(self) -> Self:
-        return self._from_dataframe(self._dataframe.clone())
+        return self._from_compliant_dataframe(self._compliant_frame.clone())
 
 
 class DataFrame(BaseFrame[FrameT]):
@@ -221,44 +221,21 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        is_polars: bool = False,
+        backend_version: tuple[int, ...],
+        is_polars: bool,
     ) -> None:
         self._is_polars = is_polars
+        self._backend_version = backend_version
         if hasattr(df, "__narwhals_dataframe__"):
-            self._dataframe: Any = df.__narwhals_dataframe__()
-        elif is_polars or (
-            (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
-        ):
-            self._dataframe = df
-            self._is_polars = True
-        elif (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame):
-            raise TypeError(
-                "Can't instantiate DataFrame from Polars LazyFrame. Call `collect()` first, or use `narwhals.LazyFrame` if you don't specifically require eager execution."
-            )
-        elif (pd := get_pandas()) is not None and isinstance(df, pd.DataFrame):
-            self._dataframe = PandasDataFrame(df, implementation="pandas")
-        elif (mpd := get_modin()) is not None and isinstance(
-            df, mpd.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="modin")
-        elif (cudf := get_cudf()) is not None and isinstance(
-            df, cudf.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="cudf")
-        elif (pa := get_pyarrow()) is not None and isinstance(
-            df, pa.Table
-        ):  # pragma: no cover
-            self._dataframe = ArrowDataFrame(df)
-        elif (dd := get_dask()) is not None and isinstance(
-            df, dd.DataFrame
-        ):  # pragma: no cover
-            self._dataframe = PandasDataFrame(df, implementation="dask")
+            self._compliant_frame: Any = df.__narwhals_dataframe__()
+        elif is_polars and isinstance(df, get_polars().DataFrame):
+            self._compliant_frame = df
         else:
-            msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(df)}"
+            msg = f"Expected polars DataFrame or object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __array__(self) -> np.ndarray:
-        return self._dataframe.to_numpy()
+        return self._compliant_frame.to_numpy()
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "
@@ -342,7 +319,7 @@ class DataFrame(BaseFrame[FrameT]):
             1    2  7.0   b
             2    3  8.0   c
         """
-        return self._dataframe.to_pandas()
+        return self._compliant_frame.to_pandas()
 
     def write_parquet(self, file: str | Path | BytesIO) -> Any:
         """
@@ -369,7 +346,7 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pd)  # doctest:+SKIP
             >>> func(df_pl)  # doctest:+SKIP
         """
-        self._dataframe.write_parquet(file)
+        self._compliant_frame.write_parquet(file)
 
     def to_numpy(self) -> Any:
         """
@@ -403,7 +380,7 @@ class DataFrame(BaseFrame[FrameT]):
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
         """
-        return self._dataframe.to_numpy()
+        return self._compliant_frame.to_numpy()
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -433,10 +410,61 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pl)
             (5, 1)
         """
-        return self._dataframe.shape  # type: ignore[no-any-return]
+        return self._compliant_frame.shape  # type: ignore[no-any-return]
+
+    def get_column(self, name: str) -> Series:
+        """
+        Get a single column by name.
+
+        Notes:
+            Although `name` is typed as `str`, pandas does allow non-string column
+            names, and they will work when passed to this function if the
+            `narwhals.DataFrame` is backed by a pandas dataframe with non-string
+            columns. This function can only be used to extract a column by name, so
+            there is no risk of ambiguity.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 2], "b": [3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify(eager_only=True)
+            ... def func(df):
+            ...     name = df.columns[0]
+            ...     return df.get_column(name)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            0    1
+            1    2
+            Name: a, dtype: int64
+            >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [i64]
+            [
+                1
+                2
+            ]
+        """
+        from narwhals.series import Series
+
+        return Series(
+            self._compliant_frame.get_column(name),
+            backend_version=self._backend_version,
+            is_polars=self._is_polars,
+        )
 
     @overload
-    def __getitem__(self, item: Sequence[int]) -> Series: ...
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
     def __getitem__(self, item: str) -> Series: ...
@@ -444,18 +472,69 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: slice) -> Self: ...
 
-    def __getitem__(self, item: str | slice | Sequence[int]) -> Series | Self:
-        if isinstance(item, str):
+    def __getitem__(
+        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+    ) -> Series | Self:
+        """
+        Extract column or slice of DataFrame.
+
+        Arguments:
+            item: how to slice dataframe:
+
+                - str: extract column
+                - slice or Sequence of integers: slice rows from dataframe.
+                - tuple of Sequence of integers and str or int: slice rows and extract column at the same time.
+                  If the second element of the tuple is an integer, it is interpreted as the column index. Otherwise,
+                  it is interpreted as the column name.
+        Notes:
+            In contrast with Polars, pandas allows non-string column names.
+            If you don't know whether the column name you're trying to extract
+            is definitely a string (e.g. `df[df.columns[0]]`) then you should
+            use `DataFrame.get_column` instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 2], "b": [3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify(eager_only=True)
+            ... def func(df):
+            ...     return df["a"]
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            0    1
+            1    2
+            Name: a, dtype: int64
+            >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [i64]
+            [
+                1
+                2
+            ]
+        """
+        if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             from narwhals.series import Series
 
-            return Series(self._dataframe[item])
+            return Series(
+                self._compliant_frame[item],
+                backend_version=self._backend_version,
+                is_polars=self._is_polars,
+            )
 
         elif isinstance(item, (Sequence, slice)) or (
             (np := get_numpy()) is not None
             and isinstance(item, np.ndarray)
             and item.ndim == 1
         ):
-            return self._from_dataframe(self._dataframe[item])
+            return self._from_compliant_dataframe(self._compliant_frame[item])
 
         else:
             msg = f"Expected str or slice, got: {type(item)}"
@@ -509,10 +588,16 @@ class DataFrame(BaseFrame[FrameT]):
 
         if as_series:
             return {
-                key: Series(value)
-                for key, value in self._dataframe.to_dict(as_series=as_series).items()
+                key: Series(
+                    value,
+                    backend_version=self._backend_version,
+                    is_polars=self._is_polars,
+                )
+                for key, value in self._compliant_frame.to_dict(
+                    as_series=as_series
+                ).items()
             }
-        return self._dataframe.to_dict(as_series=as_series)  # type: ignore[no-any-return]
+        return self._compliant_frame.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
@@ -762,7 +847,7 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pl, named=True)
             [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
         """
-        return self._dataframe.rows(named=named)  # type: ignore[no-any-return]
+        return self._compliant_frame.rows(named=named)  # type: ignore[no-any-return]
 
     @overload
     def iter_rows(
@@ -818,7 +903,7 @@ class DataFrame(BaseFrame[FrameT]):
             >>> [row for row in func(df_pl, named=True)]
             [{'foo': 1, 'bar': 6.0, 'ham': 'a'}, {'foo': 2, 'bar': 7.0, 'ham': 'b'}, {'foo': 3, 'bar': 8.0, 'ham': 'c'}]
         """
-        return self._dataframe.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[no-any-return]
+        return self._compliant_frame.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[no-any-return]
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
@@ -1496,7 +1581,7 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -1508,8 +1593,9 @@ class DataFrame(BaseFrame[FrameT]):
 
             how: Join strategy.
 
-                  * *inner*: Returns rows that have matching values in both tables
-                  * *cross*: Returns the Cartesian product of rows from both tables
+                  * *inner*: Returns rows that have matching values in both tables.
+                  * *cross*: Returns the Cartesian product of rows from both tables.
+                  * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Name(s) of the left join column(s).
@@ -1615,7 +1701,11 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_duplicated())
+        return Series(
+            self._compliant_frame.is_duplicated(),
+            backend_version=self._backend_version,
+            is_polars=self._is_polars,
+        )
 
     def is_empty(self: Self) -> bool:
         r"""
@@ -1646,7 +1736,7 @@ class DataFrame(BaseFrame[FrameT]):
             (False, False)
         """
 
-        return self._dataframe.is_empty()  # type: ignore[no-any-return]
+        return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Series:
         r"""
@@ -1697,7 +1787,11 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.series import Series
 
-        return Series(self._dataframe.is_unique())
+        return Series(
+            self._compliant_frame.is_unique(),
+            backend_version=self._backend_version,
+            is_polars=self._is_polars,
+        )
 
     def null_count(self: Self) -> Self:
         r"""
@@ -1751,7 +1845,7 @@ class DataFrame(BaseFrame[FrameT]):
             └─────┴─────┴─────┘
         """
 
-        return self._from_dataframe(self._dataframe.null_count())
+        return self._from_compliant_dataframe(self._compliant_frame.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""
@@ -1783,7 +1877,7 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pl, 1, 1), func(df_pl, 2, "b")
             (5, 6)
         """
-        return self._dataframe.item(row=row, column=column)
+        return self._compliant_frame.item(row=row, column=column)
 
     def clone(self) -> Self:
         r"""
@@ -1836,18 +1930,19 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        is_polars: bool = False,
+        is_polars: bool,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._is_polars = is_polars
+        self._backend_version = backend_version
         if hasattr(df, "__narwhals_lazyframe__"):
-            self._dataframe: Any = df.__narwhals_lazyframe__()
-        elif is_polars or (
+            self._compliant_frame: Any = df.__narwhals_lazyframe__()
+        elif is_polars and (
             (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
         ):
-            self._dataframe = df
-            self._is_polars = True
+            self._compliant_frame = df
         else:
-            msg = f"Expected Polars lazyframe or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
+            msg = f"Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -1865,7 +1960,8 @@ class LazyFrame(BaseFrame[FrameT]):
         )
 
     def __getitem__(self, item: str | slice) -> Series | Self:
-        raise TypeError("Slicing is not supported on LazyFrame")
+        msg = "Slicing is not supported on LazyFrame"
+        raise TypeError(msg)
 
     def collect(self) -> DataFrame[Any]:
         r"""
@@ -1904,7 +2000,9 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────┴─────┴─────┘
         """
         return DataFrame(
-            self._dataframe.collect(),
+            self._compliant_frame.collect(),
+            is_polars=self._is_polars,
+            backend_version=self._backend_version,
         )
 
     # inherited
@@ -2910,7 +3008,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        how: Literal["inner", "cross", "anti"] = "inner",
+        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -2922,8 +3020,9 @@ class LazyFrame(BaseFrame[FrameT]):
 
             how: Join strategy.
 
-                  * *inner*: Returns rows that have matching values in both tables
-                  * *cross*: Returns the Cartesian product of rows from both tables
+                  * *inner*: Returns rows that have matching values in both tables.
+                  * *cross*: Returns the Cartesian product of rows from both tables.
+                  * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
 
             left_on: Join column of the left DataFrame.

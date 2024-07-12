@@ -1,6 +1,10 @@
 from typing import Any
 
-import narwhals as nw
+import pyarrow as pa
+import pytest
+
+import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 data = {
@@ -10,9 +14,12 @@ data = {
 }
 
 
-def test_diff(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
-    result = df.with_columns(c_diff=nw.col("c").diff()).filter(nw.col("i") > 0)
+def test_diff(constructor_with_pyarrow: Any, request: Any) -> None:
+    if "table" in str(constructor_with_pyarrow) and parse_version(pa.__version__) < (13,):
+        # pc.pairwisediff is available since pyarrow 13.0.0
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    result = df.with_columns(c_diff=nw.col("c").diff())[1:]
     expected = {
         "i": [1, 2, 3, 4],
         "b": [2, 3, 5, 3],
@@ -20,5 +27,5 @@ def test_diff(constructor: Any) -> None:
         "c_diff": [-1, -1, -1, -1],
     }
     compare_dicts(result, expected)
-    result = df.with_columns(c_diff=df["c"].diff()).filter(nw.col("i") > 0)
+    result = df.with_columns(c_diff=df["c"].diff())[1:]
     compare_dicts(result, expected)

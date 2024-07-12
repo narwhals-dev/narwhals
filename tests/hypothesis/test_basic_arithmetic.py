@@ -7,7 +7,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from numpy.testing import assert_allclose
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 
 @given(
