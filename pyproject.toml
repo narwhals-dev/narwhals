@@ -85,7 +85,6 @@ filterwarnings = [
   'ignore:np.find_common_type is deprecated',
   'ignore:is_sparse is deprecated and will be removed',
   'ignore:Passing a BlockManager to DataFrame is deprecated',
-  'ignore:casting period[M] values to int64'
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
