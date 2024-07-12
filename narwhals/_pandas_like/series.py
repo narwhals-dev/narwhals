@@ -374,6 +374,10 @@ class PandasLikeSeries:
         ser = self._native_series
         return ser.sum()
 
+    def count(self) -> Any:
+        ser = self._native_series
+        return ser.count()
+
     def mean(self) -> Any:
         ser = self._native_series
         return ser.mean()

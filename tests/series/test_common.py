@@ -116,6 +116,7 @@ def test_reductions(df_raw: Any) -> None:
     assert s.std() == 1.0
     assert s.min() == 1
     assert s.max() == 3
+    assert s.count() == 3
     assert s.sum() == 6
     assert nw.to_native(s.is_between(1, 2))[0]
     assert not nw.to_native(s.is_between(1, 2))[1]

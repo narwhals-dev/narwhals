@@ -86,6 +86,10 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
 
+    def count(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.count(self._native_series)  # type: ignore[no-any-return]
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         return ArrowNamespace(backend_version=self._backend_version)
 
