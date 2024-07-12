@@ -74,6 +74,14 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.mean(self._native_series)  # type: ignore[no-any-return]
 
+    def min(self) -> Self:
+        pc = get_pyarrow_compute()
+        return self._from_native_series(pc.min(self._native_series))
+
+    def max(self) -> Self:
+        pc = get_pyarrow_compute()
+        return self._from_native_series(pc.max(self._native_series))
+
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
@@ -126,7 +134,6 @@ class ArrowSeries:
         return self._from_native_series(
             pc.pairwise_diff(self._native_series.combine_chunks())
         )
-
     def any(self) -> bool:
         pc = get_pyarrow_compute()
         return pc.any(self._native_series)  # type: ignore[no-any-return]
