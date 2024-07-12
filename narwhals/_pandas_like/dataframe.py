@@ -78,9 +78,7 @@ class PandasLikeDataFrame:
             for col, count in counter.items():
                 if count > 1:
                     msg = f"Expected unique column names, got {col!r} {count} time(s)"
-                    raise ValueError(
-                        msg,
-                    )
+                    raise ValueError(msg)
             msg = "Please report a bug"  # pragma: no cover
             raise AssertionError(msg)
 

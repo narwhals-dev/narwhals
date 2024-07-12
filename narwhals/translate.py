@@ -397,7 +397,7 @@ def from_native(  # noqa: PLR0915
     elif (cudf := get_cudf()) is not None and isinstance(
         native_dataframe, cudf.Series
     ):  # pragma: no cover
-        if not allow_series:  # pragma: no cover (todo)
+        if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
         return Series(
