@@ -7,7 +7,7 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -62,7 +62,7 @@ def test_iter_rows(
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     result = list(df.iter_rows(named=named))
     assert result == expected
 
@@ -89,7 +89,7 @@ def test_rows(
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     if isinstance(df_raw, pa.Table) and not named:
         with pytest.raises(
             NotImplementedError,
@@ -104,7 +104,7 @@ def test_rows(
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_polars_na])
 def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
     # GIVEN
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
 
     # WHEN
     result = list(df.iter_rows(named=False))
@@ -115,7 +115,7 @@ def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
         for j, value in enumerate(row):
             value_in_result = result[i][j]
             if value is None:
-                assert pd.isnull(value_in_result)  # because float('nan') != float('nan')
+                assert pd.isna(value_in_result)  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value
 
@@ -123,7 +123,7 @@ def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
 @pytest.mark.parametrize("df_raw", [df_pandas_na, df_polars_na])
 def test_rows_with_nulls_named(df_raw: Any) -> None:
     # GIVEN
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
 
     # WHEN
     result = list(df.iter_rows(named=True))
@@ -138,6 +138,6 @@ def test_rows_with_nulls_named(df_raw: Any) -> None:
         for col, value in row.items():
             value_in_result = result[i][col]
             if value is None:
-                assert pd.isnull(value_in_result)  # because float('nan') != float('nan')
+                assert pd.isna(value_in_result)  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value

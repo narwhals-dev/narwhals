@@ -2,7 +2,6 @@ exclude-labels:
   - skip changelog
   - release
 name-template: 'Narwhals v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
 
 change-template: '- $TITLE (#$NUMBER)' 
     

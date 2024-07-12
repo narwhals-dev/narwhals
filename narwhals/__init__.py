@@ -1,4 +1,5 @@
 from narwhals import selectors
+from narwhals import stable
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Boolean
@@ -42,7 +43,7 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "0.9.26"
+__version__ = "1.0.5"
 
 __all__ = [
     "selectors",
@@ -88,4 +89,5 @@ __all__ = [
     "Date",
     "narwhalify",
     "show_versions",
+    "stable",
 ]

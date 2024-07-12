@@ -7,7 +7,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from numpy.testing import assert_allclose
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 
 @given(
@@ -39,8 +39,8 @@ def test_mean(
             "floats": floats,
         },
     )
-    df_nw1 = nw.DataFrame(df_pandas)
-    df_nw2 = nw.DataFrame(df_polars)
+    df_nw1 = nw.from_native(df_pandas, eager_only=True)
+    df_nw2 = nw.from_native(df_polars, eager_only=True)
 
     assert_allclose(
         nw.to_native(df_nw1.select(nw.col("integer").mean())),

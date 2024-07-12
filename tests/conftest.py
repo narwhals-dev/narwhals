@@ -36,7 +36,7 @@ def pandas_constructor(obj: Any) -> IntoDataFrame:
 
 
 def pandas_nullable_constructor(obj: Any) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes()  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
 
 
 def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
@@ -50,6 +50,10 @@ def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
 
 def polars_constructor(obj: Any) -> IntoDataFrame:
     return pl.DataFrame(obj)
+
+
+def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
+    return pl.LazyFrame(obj)
 
 
 if parse_version(pd.__version__) >= parse_version("2.0.0"):
@@ -66,7 +70,12 @@ def constructor(request: Any) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
-# TODO: once pyarrow has complete coverage, we can remove this one,
+@pytest.fixture(params=[*params, polars_lazy_constructor])
+def constructor_with_lazy(request: Any) -> Callable[[Any], Any]:
+    return request.param  # type: ignore[no-any-return]
+
+
+# TODO(Unassigned): once pyarrow has complete coverage, we can remove this one,
 # and just put `pa.table` into `constructor`
 @pytest.fixture(params=[*params, pa.table])
 def constructor_with_pyarrow(request: Any) -> Callable[[Any], IntoDataFrame]:
@@ -116,7 +125,7 @@ def pyarrow_chunked_array_constructor(obj: Any) -> Any:
     return pa.chunked_array([obj])
 
 
-# TODO: once pyarrow has complete coverage, we can remove this one,
+# TODO(Unassigned): once pyarrow has complete coverage, we can remove this one,
 # and just put `pa.table` into `constructor`
 @pytest.fixture(params=[*params_series, pyarrow_chunked_array_constructor])
 def constructor_series_with_pyarrow(request: Any) -> Callable[[Any], Any]:

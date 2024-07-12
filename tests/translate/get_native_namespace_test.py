@@ -2,7 +2,7 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 
 def test_native_namespace() -> None:

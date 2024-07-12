@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {
@@ -21,7 +21,7 @@ data = {
         ("none", [False, True, True, False]),
     ],
 )
-def test_over_single(constructor: Any, closed: str, expected: list[bool]) -> None:
+def test_is_between(constructor: Any, closed: str, expected: list[bool]) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.select(nw.col("a").is_between(1, 5, closed=closed))
     expected_dict = {"a": expected}

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
@@ -13,7 +12,7 @@ import pyarrow as pa
 import pytest
 from hypothesis import given
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 from tests.utils import is_windows
@@ -57,21 +56,11 @@ def test_datetime_attributes(
     expected: list[int],
     constructor: Any,
 ) -> None:
-    if "pyarrow" in str(constructor) and attribute in {
-        "millisecond",
-        "microsecond",
-        "nanosecond",
-    }:
-        ctx: Any = pytest.raises(NotImplementedError, match="pyarrow")
-    else:
-        ctx = contextlib.nullcontext()
     df = nw.from_native(constructor(data), eager_only=True)
-    with ctx:
-        result = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)()))
-        compare_dicts(result, {"a": expected})
-    with ctx:
-        result = nw.to_native(df.select(getattr(df["a"].dt, attribute)()))
-        compare_dicts(result, {"a": expected})
+    result = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)()))
+    compare_dicts(result, {"a": expected})
+    result = nw.to_native(df.select(getattr(df["a"].dt, attribute)()))
+    compare_dicts(result, {"a": expected})
 
 
 @pytest.mark.parametrize(
@@ -90,7 +79,7 @@ def test_duration_attributes(
     request: Any,
 ) -> None:
     if (
-        parse_version(pd.__version__) == parse_version("2.0.3")
+        parse_version(pd.__version__) < (2, 2)
         and "pyarrow" in str(constructor)
         and attribute in ("total_minutes", "total_seconds", "total_milliseconds")
     ):  # pragma: no cover
@@ -121,7 +110,7 @@ def test_duration_micro_nano(
     request: Any,
 ) -> None:
     if (
-        parse_version(pd.__version__) == parse_version("2.0.3")
+        parse_version(pd.__version__) < (2, 2)
         and "pyarrow" in str(constructor)
         and attribute
         in (

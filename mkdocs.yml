@@ -15,11 +15,13 @@ nav:
   - Other concepts:
     - other/pandas_index.md
   - overhead.md
+  - backcompat.md
   - extending.md
   - how_it_works.md
   - Roadmap: roadmap.md
   - Related projects: related.md
   - API Reference:
+    - api-reference/narwhals.md
     - api-reference/dataframe.md
     - api-reference/expressions.md
     - api-reference/expressions_cat.md
@@ -34,8 +36,8 @@ nav:
     - api-reference/dependencies.md
     - api-reference/dtypes.md
     - api-reference/index.md
-    - api-reference/narwhals.md
     - api-reference/selectors.md
+    - api-reference/typing.md
 theme:
   name: material
   font: false
@@ -44,6 +46,26 @@ theme:
     - content.code.annotate
     - navigation.footer
     - navigation.indexes
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
 plugins:
 - search
 - mkdocstrings:

@@ -4,7 +4,7 @@ import pytest
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_series_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 

@@ -4,10 +4,12 @@
     handler: python
     options:
       members:
+        - abs
         - alias
         - all
         - any
         - cast
+        - count
         - cum_sum
         - diff
         - drop_nulls

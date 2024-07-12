@@ -1,6 +1,6 @@
 from typing import Any
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {
@@ -11,7 +11,7 @@ data = {
 }
 
 
-def test_over_single(constructor: Any) -> None:
+def test_shift(constructor: Any) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {

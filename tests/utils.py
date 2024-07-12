@@ -14,9 +14,8 @@ if TYPE_CHECKING:
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     if len(left) != len(right):
-        raise ValueError(
-            "left len != right len", len(left), len(right)
-        )  # pragma: no cover
+        msg = f"left {len(left)=} != right {len(right)=}"  # pragma: no cover
+        raise ValueError(msg)  # pragma: no cover
     return zip(left, right)
 
 

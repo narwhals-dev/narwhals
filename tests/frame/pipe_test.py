@@ -1,6 +1,6 @@
 from typing import Any
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {
@@ -9,8 +9,8 @@ data = {
 }
 
 
-def test_pipe(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_pipe(constructor_with_pyarrow: Any) -> None:
+    df = nw.from_native(constructor_with_pyarrow(data))
     columns = df.lazy().collect().columns
     result = df.pipe(lambda _df: _df.select([x for x in columns if len(x) == 2]))
     expected = {"ab": ["foo", "bars"]}

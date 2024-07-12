@@ -15,13 +15,16 @@ they are not required dependencies - Narwhals only ever uses what the user passe
 Create a Python file `t.py` with the following content:
 
 ```python exec="1" source="above" session="quickstart" result="python"
+from __future__ import annotations
+
 import pandas as pd
 import polars as pl
 import narwhals as nw
+from narwhals.typing import IntoFrame
 
 
-def my_function(df_any):
-    df = nw.from_native(df_any)
+def my_function(df_native: IntoFrame) -> list[str]:
+    df = nw.from_native(df_native)
     column_names = df.columns
     return column_names
 

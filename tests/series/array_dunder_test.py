@@ -1,19 +1,14 @@
 from typing import Any
 
 import numpy as np
-import polars as pl
 import pyarrow as pa
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 
 def test_array_dunder(constructor_series_with_pyarrow: Any, request: Any) -> None:
-    if "polars" in str(constructor_series_with_pyarrow) and parse_version(
-        pl.__version__
-    ) < parse_version("0.20.10"):
-        request.applymarker(pytest.mark.xfail)
     if "chunked_array" in str(constructor_series_with_pyarrow) and parse_version(
         pa.__version__
     ) < parse_version("16.0.0"):

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import secrets
-from copy import copy
+from enum import Enum
+from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -9,25 +10,23 @@ from typing import TypeVar
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
-from narwhals.utils import flatten
 from narwhals.utils import isinstance_or_issubclass
-from narwhals.utils import parse_version
 
 T = TypeVar("T")
 
 if TYPE_CHECKING:
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
 
-    ExprT = TypeVar("ExprT", bound=PandasExpr)
+    ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
-    from narwhals._arrow.typing import IntoArrowExpr
-    from narwhals._pandas_like.typing import IntoPandasExpr
+
+class Implementation(Enum):
+    PANDAS = auto()
+    MODIN = auto()
+    CUDF = auto()
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:
@@ -39,8 +38,8 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
     If RHS is length 1, return the scalar value, so that the underlying
     library can broadcast it.
     """
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
 
     if isinstance(other, list):
         if len(other) > 1:
@@ -48,15 +47,20 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             msg = "Multi-output expressions are not supported in this context"
             raise ValueError(msg)
         other = other[0]
-    if isinstance(other, PandasDataFrame):
+    if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
-    if isinstance(other, PandasSeries):
+    if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
             return other.item()
-        if other._series.index is not index:
-            return set_axis(other._series, index, implementation=other._implementation)
-        return other._series
+        if other._native_series.index is not index:
+            return set_axis(
+                other._native_series,
+                index,
+                implementation=other._implementation,
+                backend_version=other._backend_version,
+            )
+        return other._native_series
     return other
 
 
@@ -66,218 +70,51 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
 
-    if isinstance(other, PandasDataFrame):
+    if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
-    if isinstance(other, PandasSeries):
+    if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
-            return other._series.iloc[0]
-        if other._series.index is not index:
-            return set_axis(other._series, index, implementation=other._implementation)
-        return other._series
-    raise AssertionError("Please report a bug")
-
-
-def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
-    """Evaluate `expr` if it's an expression, otherwise return it as is."""
-    from narwhals._pandas_like.expr import PandasExpr
-
-    if isinstance(expr, PandasExpr):
-        return expr._call(df)
-    return expr
-
-
-def parse_into_exprs(
-    implementation: str,
-    *exprs: IntoPandasExpr | Iterable[IntoPandasExpr],
-    **named_exprs: IntoPandasExpr,
-) -> list[PandasExpr]:
-    """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
-    more details."""
-    out = [parse_into_expr(implementation, into_expr) for into_expr in flatten(exprs)]
-    for name, expr in named_exprs.items():
-        out.append(parse_into_expr(implementation, expr).alias(name))
-    return out
-
-
-def parse_into_expr(
-    implementation: str, into_expr: IntoPandasExpr | IntoArrowExpr
-) -> PandasExpr:
-    """Parse `into_expr` as an expression.
-
-    For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
-    We do the same in Narwhals:
-
-    - if `into_expr` is already an expression, just return it
-    - if it's a Series, then convert it to an expression
-    - if it's a numpy array, then convert it to a Series and then to an expression
-    - if it's a string, then convert it to an expression
-    - else, raise
-    """
-    from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.series import ArrowSeries
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
-
-    if implementation == "arrow":
-        plx: ArrowNamespace | PandasNamespace = ArrowNamespace()
-    else:
-        plx = PandasNamespace(implementation=implementation)
-    if isinstance(into_expr, (PandasExpr, ArrowExpr)):
-        return into_expr  # type: ignore[return-value]
-    if isinstance(into_expr, (PandasSeries, ArrowSeries)):
-        return plx._create_expr_from_series(into_expr)  # type: ignore[arg-type, return-value]
-    if isinstance(into_expr, str):
-        return plx.col(into_expr)  # type: ignore[return-value]
-    if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        series = create_native_series(into_expr, implementation=implementation)
-        return plx._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
-    msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
+            return other._native_series.iloc[0]
+        if other._native_series.index is not index:
+            return set_axis(
+                other._native_series,
+                index,
+                implementation=other._implementation,
+                backend_version=other._backend_version,
+            )
+        return other._native_series
+    msg = "Please report a bug"  # pragma: no cover
     raise AssertionError(msg)
 
 
 def create_native_series(
     iterable: Any,
-    implementation: str,
     index: Any = None,
-) -> PandasSeries:
-    from narwhals._pandas_like.series import PandasSeries
+    *,
+    implementation: Implementation,
+    backend_version: tuple[int, ...],
+) -> PandasLikeSeries:
+    from narwhals._pandas_like.series import PandasLikeSeries
 
-    if implementation == "pandas":
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
         series = pd.Series(iterable, index=index, name="")
-    elif implementation == "modin":
+    elif implementation is Implementation.MODIN:
         mpd = get_modin()
         series = mpd.Series(iterable, index=index, name="")
-    elif implementation == "cudf":
+    elif implementation is Implementation.CUDF:
         cudf = get_cudf()
         series = cudf.Series(iterable, index=index, name="")
-    return PandasSeries(series, implementation=implementation)
-
-
-def evaluate_into_expr(
-    df: PandasDataFrame, into_expr: IntoPandasExpr
-) -> list[PandasSeries]:
-    """
-    Return list of raw columns.
-    """
-    expr = parse_into_expr(df._implementation, into_expr)
-    return expr._call(df)
-
-
-def evaluate_into_exprs(
-    df: PandasDataFrame,
-    *exprs: IntoPandasExpr,
-    **named_exprs: IntoPandasExpr,
-) -> list[PandasSeries]:
-    """Evaluate each expr into Series."""
-    series: list[PandasSeries] = [
-        item
-        for sublist in [evaluate_into_expr(df, into_expr) for into_expr in flatten(exprs)]
-        for item in sublist
-    ]
-    for name, expr in named_exprs.items():
-        evaluated_expr = evaluate_into_expr(df, expr)
-        if len(evaluated_expr) > 1:
-            msg = "Named expressions must return a single column"  # pragma: no cover
-            raise AssertionError(msg)
-        series.append(evaluated_expr[0].alias(name))
-    return series
-
-
-def reuse_series_implementation(
-    expr: ExprT, attr: str, *args: Any, returns_scalar: bool = False, **kwargs: Any
-) -> ExprT:
-    """Reuse Series implementation for expression.
-
-    If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
-    leverage this method to do that for us.
-
-    Arguments
-        expr: expression object.
-        attr: name of method.
-        returns_scalar: whether the Series version returns a scalar. In this case,
-            the expression version should return a 1-row Series.
-        args, kwargs: arguments and keyword arguments to pass to function.
-    """
-    plx = expr.__narwhals_namespace__()
-
-    def func(df: PandasDataFrame) -> list[PandasSeries]:
-        out: list[PandasSeries] = []
-        for column in expr._call(df):
-            _out = getattr(column, attr)(
-                *[maybe_evaluate_expr(df, arg) for arg in args],
-                **{
-                    arg_name: maybe_evaluate_expr(df, arg_value)
-                    for arg_name, arg_value in kwargs.items()
-                },
-            )
-            if returns_scalar:
-                out.append(plx._create_series_from_scalar(_out, column))
-            else:
-                out.append(_out)
-        if expr._output_names is not None:  # safety check
-            assert [s.name for s in out] == expr._output_names
-        return out
-
-    # Try tracking root and output names by combining them from all
-    # expressions appearing in args and kwargs. If any anonymous
-    # expression appears (e.g. nw.all()), then give up on tracking root names
-    # and just set it to None.
-    root_names = copy(expr._root_names)
-    output_names = expr._output_names
-    for arg in list(args) + list(kwargs.values()):
-        if root_names is not None and isinstance(arg, expr.__class__):
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
-            else:
-                root_names = None
-                output_names = None
-                break
-        elif root_names is None:
-            output_names = None
-            break
-
-    assert (output_names is None and root_names is None) or (
-        output_names is not None and root_names is not None
-    )  # safety check
-
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
-        func,
-        depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{attr}",
-        root_names=root_names,
-        output_names=output_names,
+    return PandasLikeSeries(
+        series, implementation=implementation, backend_version=backend_version
     )
 
 
-def reuse_series_namespace_implementation(
-    expr: ExprT, namespace: str, attr: str, *args: Any, **kwargs: Any
-) -> PandasExpr:
-    """Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
-    of `Expr.foo`.
-    """
-    from narwhals._pandas_like.expr import PandasExpr
-
-    return PandasExpr(
-        lambda df: [
-            getattr(getattr(series, namespace), attr)(*args, **kwargs)
-            for series in expr._call(df)
-        ],
-        depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{namespace}.{attr}",
-        root_names=expr._root_names,
-        output_names=expr._output_names,
-        implementation=expr._implementation,
-    )
-
-
-def is_simple_aggregation(expr: PandasExpr) -> bool:
+def is_simple_aggregation(expr: PandasLikeExpr) -> bool:
     """
     Check if expr is a very simple one, such as:
 
@@ -294,23 +131,25 @@ def is_simple_aggregation(expr: PandasExpr) -> bool:
     return expr._depth < 2
 
 
-def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
+def horizontal_concat(
+    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
+) -> Any:
     """
     Concatenate (native) DataFrames horizontally.
 
     Should be in namespace.
     """
-    if implementation == "pandas":
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
 
-        if parse_version(pd.__version__) < parse_version("3.0.0"):
+        if backend_version < (3,):
             return pd.concat(dfs, axis=1, copy=False)
         return pd.concat(dfs, axis=1)  # pragma: no cover
-    if implementation == "cudf":  # pragma: no cover
+    if implementation is Implementation.CUDF:  # pragma: no cover
         cudf = get_cudf()
 
         return cudf.concat(dfs, axis=1)
-    if implementation == "modin":  # pragma: no cover
+    if implementation is Implementation.MODIN:  # pragma: no cover
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=1)
@@ -318,7 +157,9 @@ def horizontal_concat(dfs: list[Any], implementation: str) -> Any:
     raise TypeError(msg)  # pragma: no cover
 
 
-def vertical_concat(dfs: list[Any], implementation: str) -> Any:
+def vertical_concat(
+    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
+) -> Any:
     """
     Concatenate (native) DataFrames vertically.
 
@@ -333,17 +174,17 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
         if cols_current != cols:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
-    if implementation == "pandas":
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
 
-        if parse_version(pd.__version__) < parse_version("3.0.0"):
+        if backend_version < (3,):
             return pd.concat(dfs, axis=0, copy=False)
         return pd.concat(dfs, axis=0)  # pragma: no cover
-    if implementation == "cudf":  # pragma: no cover
+    if implementation is Implementation.CUDF:  # pragma: no cover
         cudf = get_cudf()
 
         return cudf.concat(dfs, axis=0)
-    if implementation == "modin":  # pragma: no cover
+    if implementation is Implementation.MODIN:  # pragma: no cover
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=0)
@@ -352,38 +193,45 @@ def vertical_concat(dfs: list[Any], implementation: str) -> Any:
 
 
 def native_series_from_iterable(
-    data: Iterable[Any], name: str, index: Any, implementation: str
+    data: Iterable[Any],
+    name: str,
+    index: Any,
+    implementation: Implementation,
 ) -> Any:
     """Return native series."""
-    if implementation == "pandas":
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
 
         return pd.Series(data, name=name, index=index, copy=False)
-    if implementation == "cudf":  # pragma: no cover
+    if implementation is Implementation.CUDF:  # pragma: no cover
         cudf = get_cudf()
 
         return cudf.Series(data, name=name, index=index)
-    if implementation == "modin":  # pragma: no cover
+    if implementation is Implementation.MODIN:  # pragma: no cover
         mpd = get_modin()
 
         return mpd.Series(data, name=name, index=index)
-    if implementation == "arrow":
-        pa = get_pyarrow()
-        return pa.chunked_array([data])
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
 
-def set_axis(obj: T, index: Any, implementation: str) -> T:
-    if implementation == "pandas" and parse_version(
-        get_pandas().__version__
-    ) < parse_version("1.0.0"):  # pragma: no cover
+def set_axis(
+    obj: T,
+    index: Any,
+    *,
+    implementation: Implementation,
+    backend_version: tuple[int, ...],
+) -> T:
+    if implementation is Implementation.PANDAS and backend_version < (
+        1,
+    ):  # pragma: no cover
         kwargs = {"inplace": False}
     else:
         kwargs = {}
-    if implementation == "pandas" and parse_version(
-        get_pandas().__version__
-    ) >= parse_version("1.5.0"):
+    if implementation is Implementation.PANDAS and backend_version >= (
+        1,
+        5,
+    ):  # pragma: no cover
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
@@ -438,14 +286,14 @@ def translate_dtype(column: Any) -> DType:
     if str(dtype) in ("category",) or str(dtype).startswith("dictionary<"):
         return dtypes.Categorical()
     if str(dtype).startswith("datetime64"):
-        # todo: different time units and time zones
+        # TODO(Unassigned): different time units and time zones
         return dtypes.Datetime()
     if str(dtype).startswith("timedelta64") or str(dtype).startswith("duration"):
-        # todo: different time units
+        # TODO(Unassigned): different time units
         return dtypes.Duration()
     if str(dtype).startswith("timestamp["):
         # pyarrow-backed datetime
-        # todo: different time units and time zones
+        # TODO(Unassigned): different time units and time zones
         return dtypes.Datetime()
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
@@ -462,8 +310,8 @@ def translate_dtype(column: Any) -> DType:
     return dtypes.Unknown()
 
 
-def get_dtype_backend(dtype: Any, implementation: str) -> str:
-    if implementation == "pandas":
+def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
+    if implementation is Implementation.PANDAS:
         pd = get_pandas()
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
@@ -480,7 +328,7 @@ def get_dtype_backend(dtype: Any, implementation: str) -> str:
 
 
 def reverse_translate_dtype(  # noqa: PLR0915
-    dtype: DType | type[DType], starting_dtype: Any, implementation: str
+    dtype: DType | type[DType], starting_dtype: Any, implementation: Implementation
 ) -> Any:
     from narwhals import dtypes
 
@@ -570,17 +418,17 @@ def reverse_translate_dtype(  # noqa: PLR0915
         else:
             return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        # todo: is there no pyarrow-backed categorical?
+        # TODO(Unassigned): is there no pyarrow-backed categorical?
         # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
         # convert to it?
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # todo: different time units and time zones
+        # TODO(Unassigned): different time units and time zones
         if dtype_backend == "pyarrow-nullable":
             return "timestamp[ns][pyarrow]"
         return "datetime64[ns]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # todo: different time units and time zones
+        # TODO(Unassigned): different time units and time zones
         if dtype_backend == "pyarrow-nullable":
             return "duration[ns][pyarrow]"
         return "timedelta64[ns]"
@@ -593,23 +441,30 @@ def reverse_translate_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def validate_indices(series: list[PandasSeries]) -> list[Any]:
-    idx = series[0]._series.index
-    reindexed = [series[0]._series]
+def validate_indices(series: list[PandasLikeSeries]) -> list[Any]:
+    idx = series[0]._native_series.index
+    reindexed = [series[0]._native_series]
     for s in series[1:]:
-        if s._series.index is not idx:
-            reindexed.append(set_axis(s._series, idx, s._implementation))
+        if s._native_series.index is not idx:
+            reindexed.append(
+                set_axis(
+                    s._native_series,
+                    idx,
+                    implementation=s._implementation,
+                    backend_version=s._backend_version,
+                )
+            )
         else:
-            reindexed.append(s._series)
+            reindexed.append(s._native_series)
     return reindexed
 
 
-def to_datetime(implementation: str) -> Any:
-    if implementation == "pandas":
+def to_datetime(implementation: Implementation) -> Any:
+    if implementation is Implementation.PANDAS:
         return get_pandas().to_datetime
-    if implementation == "modin":
+    if implementation is Implementation.MODIN:
         return get_modin().to_datetime
-    if implementation == "cudf":
+    if implementation is Implementation.CUDF:
         return get_cudf().to_datetime
     raise AssertionError
 

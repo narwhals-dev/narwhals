@@ -11,7 +11,7 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -55,7 +55,6 @@ def test_len(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_is_in(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).is_in([1, 2])
     assert result[0]
@@ -64,7 +63,6 @@ def test_is_in(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_is_in_other(df_raw: Any) -> None:
     with pytest.raises(
         NotImplementedError,
@@ -76,7 +74,6 @@ def test_is_in_other(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.filterwarnings("ignore:np.find_common_type is deprecated:DeprecationWarning")
 def test_filter(df_raw: Any) -> None:
     result = nw.from_native(df_raw["a"], series_only=True).filter(df_raw["a"] > 1)
     expected = np.array([3, 2])
@@ -119,6 +116,7 @@ def test_reductions(df_raw: Any) -> None:
     assert s.std() == 1.0
     assert s.min() == 1
     assert s.max() == 3
+    assert s.count() == 3
     assert s.sum() == 6
     assert nw.to_native(s.is_between(1, 2))[0]
     assert not nw.to_native(s.is_between(1, 2))[1]
@@ -173,13 +171,6 @@ def test_is_unique(df_raw: Any) -> None:
     result = series.is_unique()
     expected = np.array([False, False, True])
     assert (result.to_numpy() == expected).all()
-
-
-@pytest.mark.parametrize("s_raw", [pd.Series([1, 2, None]), pl.Series([1, 2, None])])
-def test_null_count(s_raw: Any) -> None:
-    series = nw.from_native(s_raw, series_only=True)
-    result = series.null_count()
-    assert result == 1
 
 
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
@@ -302,21 +293,3 @@ def test_item(df_raw: Any, index: int, expected: int) -> None:
         match=re.escape("can only call '.item()' if the Series is of length 1,"),
     ):
         s.item(None)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize("n", [1, 2, 3, 10])
-def test_head(df_raw: Any, n: int) -> None:
-    s_raw = df_raw["z"]
-    s = nw.from_native(s_raw, allow_series=True)
-
-    assert s.head(n) == nw.from_native(s_raw.head(n), series_only=True)
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-@pytest.mark.parametrize("n", [1, 2, 3, 10])
-def test_tail(df_raw: Any, n: int) -> None:
-    s_raw = df_raw["z"]
-    s = nw.from_native(s_raw, allow_series=True)
-
-    assert s.tail(n) == nw.from_native(s_raw.tail(n), series_only=True)
