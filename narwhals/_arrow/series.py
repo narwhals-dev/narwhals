@@ -134,6 +134,7 @@ class ArrowSeries:
         return self._from_native_series(
             pc.pairwise_diff(self._native_series.combine_chunks())
         )
+
     def any(self) -> bool:
         pc = get_pyarrow_compute()
         return pc.any(self._native_series)  # type: ignore[no-any-return]
