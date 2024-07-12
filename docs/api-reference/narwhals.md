@@ -7,6 +7,7 @@ Here are the top-level functions available in Narwhals.
     options:
       members:
         - all
+        - all_horizontal
         - col
         - concat
         - from_native
