@@ -239,6 +239,20 @@ class ArrowDataFrame:
         row_indices = pa.array(range(df.num_rows))
         return self._from_native_dataframe(df.append_column(name, row_indices))
 
+    def filter(
+        self,
+        *predicates: IntoArrowExpr,
+    ) -> Self:
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        plx = ArrowNamespace(backend_version=self._backend_version)
+        expr = plx.all_horizontal(*predicates)
+        # Safety: all_horizontal's expression only returns a single column.
+        mask = expr._call(self)[0]
+        return self._from_native_dataframe(
+            self._native_dataframe.filter(mask._native_series)
+        )
+
     def null_count(self) -> Self:
         pa = get_pyarrow()
         df = self._native_dataframe

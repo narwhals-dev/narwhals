@@ -497,6 +497,40 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).max())
 
+    def count(self) -> Self:
+        """
+        Returns the number of non-null elements in the column.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.all().count())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  3  2
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ u32 ┆ u32 │
+            ╞═════╪═════╡
+            │ 3   ┆ 2   │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).count())
+
     def n_unique(self) -> Self:
         """
          Returns count of unique values

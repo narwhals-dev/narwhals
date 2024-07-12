@@ -348,11 +348,39 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            2.0
+            np.float64(2.0)
             >>> func(s_pl)
             2.0
         """
         return self._compliant_series.mean()
+
+    def count(self) -> Any:
+        """
+        Returns the number of non-null elements in the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s_any):
+            ...     return s_any.count()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+            np.int64(3)
+            >>> func(s_pl)
+            3
+
+        """
+        return self._compliant_series.count()
 
     def any(self) -> Any:
         """
@@ -378,7 +406,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            True
+            np.True_
             >>> func(s_pl)
             True
         """
@@ -405,7 +433,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            False
+            np.False_
             >>> func(s_pl)
             False
 
@@ -433,7 +461,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            1
+            np.int64(1)
             >>> func(s_pl)
             1
         """
@@ -460,7 +488,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            3
+            np.int64(3)
             >>> func(s_pl)
             3
         """
@@ -487,7 +515,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            6
+            np.int64(6)
             >>> func(s_pl)
             6
         """
@@ -518,7 +546,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            1.0
+            np.float64(1.0)
             >>> func(s_pl)
             1.0
         """

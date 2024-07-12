@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
+from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 
@@ -15,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import IntoArrowExpr
 
 
 class ArrowNamespace:
@@ -116,3 +119,9 @@ class ArrowNamespace:
             output_names=None,
             backend_version=self._backend_version,
         )
+
+    def all_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        return reduce(
+            lambda x, y: x & y,
+            parse_into_exprs(*exprs, namespace=self),
+        )  # pragma: no cover
