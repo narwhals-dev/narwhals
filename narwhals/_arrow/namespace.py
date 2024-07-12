@@ -132,5 +132,5 @@ class ArrowNamespace:
             parse_into_exprs(
                 *exprs,
                 namespace=self,
-            )
+            ),
         )
