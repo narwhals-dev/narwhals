@@ -74,6 +74,14 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.mean(self._native_series)  # type: ignore[no-any-return]
 
+    def min(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.min(self._native_series)  # type: ignore[no-any-return]
+
+    def max(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.max(self._native_series)  # type: ignore[no-any-return]
+
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
@@ -147,6 +155,25 @@ class ArrowSeries:
         ser = self._native_series
         dtype = reverse_translate_dtype(dtype)
         return self._from_native_series(pc.cast(ser, dtype))
+
+    def null_count(self: Self) -> int:
+        return self._native_series.null_count  # type: ignore[no-any-return]
+
+    def head(self, n: int) -> Self:
+        ser = self._native_series
+        if n >= 0:
+            return self._from_native_series(ser.slice(0, n))
+        else:
+            num_rows = len(ser)
+            return self._from_native_series(ser.slice(0, max(0, num_rows + n)))
+
+    def tail(self, n: int) -> Self:
+        ser = self._native_series
+        if n >= 0:
+            num_rows = len(ser)
+            return self._from_native_series(ser.slice(max(0, num_rows - n)))
+        else:
+            return self._from_native_series(ser.slice(abs(n)))
 
     @property
     def shape(self) -> tuple[int]:

@@ -110,6 +110,12 @@ class ArrowExpr:
     def any(self) -> Self:
         return reuse_series_implementation(self, "any", returns_scalar=True)
 
+    def min(self) -> Self:
+        return reuse_series_implementation(self, "min", returns_scalar=True)
+
+    def max(self) -> Self:
+        return reuse_series_implementation(self, "max", returns_scalar=True)
+
     def all(self) -> Self:
         return reuse_series_implementation(self, "all", returns_scalar=True)
 
@@ -124,6 +130,15 @@ class ArrowExpr:
             output_names=[name],
             backend_version=self._backend_version,
         )
+
+    def null_count(self) -> Self:
+        return reuse_series_implementation(self, "null_count", returns_scalar=True)
+
+    def head(self, n: int) -> Self:
+        return reuse_series_implementation(self, "head", n)
+
+    def tail(self, n: int) -> Self:
+        return reuse_series_implementation(self, "tail", n)
 
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:

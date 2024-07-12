@@ -3391,10 +3391,11 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
 
     """
     if (np := get_numpy()) is not None and isinstance(value, np.ndarray):
-        raise ValueError(
+        msg = (
             "numpy arrays are not supported as literal values. "
             "Consider using `with_columns` to create a new column from the array."
         )
+        raise ValueError(msg)
 
     if isinstance(value, (list, tuple)):
         msg = f"Nested datatypes are not supported yet. Got {value}"
