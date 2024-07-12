@@ -87,14 +87,12 @@ def test_strict(strict: Any, context: Any) -> None:
         assert isinstance(res, np.ndarray)
 
 
+@pytest.mark.parametrize("dframe", lazy_frames)
 @pytest.mark.parametrize(
-    ("dframe", "eager_only", "context"),
+    ("eager_only", "context"),
     [
-        *[(lf, False, does_not_raise()) for lf in lazy_frames],
-        *[
-            (lf, True, pytest.raises(TypeError, match="Cannot only use `eager_only`"))
-            for lf in lazy_frames
-        ],
+        (False, does_not_raise()),
+        (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
     ],
 )
 def test_eager_only_lazy(dframe: Any, eager_only: Any, context: Any) -> None:
@@ -103,17 +101,11 @@ def test_eager_only_lazy(dframe: Any, eager_only: Any, context: Any) -> None:
         assert isinstance(res, nw.LazyFrame)
 
 
-@pytest.mark.parametrize(
-    ("dframe", "eager_only", "context"),
-    [
-        *[(df, False, does_not_raise()) for df in eager_frames],
-        *[(df, True, does_not_raise()) for df in eager_frames],
-    ],
-)
-def test_eager_only_eager(dframe: Any, eager_only: Any, context: Any) -> None:
-    with context:
-        res = nw.from_native(dframe, eager_only=eager_only)
-        assert isinstance(res, nw.DataFrame)
+@pytest.mark.parametrize("dframe", eager_frames)
+@pytest.mark.parametrize("eager_only", [True, False])
+def test_eager_only_eager(dframe: Any, eager_only: Any) -> None:
+    res = nw.from_native(dframe, eager_only=eager_only)
+    assert isinstance(res, nw.DataFrame)
 
 
 @pytest.mark.parametrize(
@@ -132,21 +124,24 @@ def test_series_only(obj: Any, context: Any) -> None:
         assert isinstance(res, nw.Series)
 
 
+@pytest.mark.parametrize("series", all_series)
 @pytest.mark.parametrize(
-    ("series", "allow_series", "context"),
+    ("allow_series", "context"),
     [
-        *[(series, True, does_not_raise()) for series in all_series],
-        *[
-            (
-                series,
-                False,
-                pytest.raises(TypeError, match="Please set `allow_series=True`"),
-            )
-            for series in all_series
-        ],
+        (True, does_not_raise()),
+        (False, pytest.raises(TypeError, match="Please set `allow_series=True`")),
     ],
 )
 def test_allow_series(series: Any, allow_series: Any, context: Any) -> None:
     with context:
         res = nw.from_native(series, allow_series=allow_series)
         assert isinstance(res, nw.Series)
+
+
+def test_pandas_like_validate() -> None:
+    df1 = pd.DataFrame({"a": [1, 2, 3]})
+    df2 = pd.DataFrame({"b": [1, 2, 3]})
+    df = pd.concat([df1, df2, df2], axis=1)
+
+    with pytest.raises(ValueError, match="Expected unique column names"):
+        nw.from_native(df)
