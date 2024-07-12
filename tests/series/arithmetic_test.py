@@ -6,9 +6,8 @@ import pytest
 
 import narwhals.stable.v1 as nw
 
-data = [1, 2, 3]
 
-
+@pytest.mark.parametrize("data", [[1, 2, 3], [1.0, 2, 3]])
 @pytest.mark.parametrize(
     ("attr", "rhs", "expected"),
     [
@@ -23,6 +22,7 @@ data = [1, 2, 3]
     ],
 )
 def test_arithmetic(
+    data: list[int | float],
     attr: str,
     rhs: Any,
     expected: list[Any],
@@ -34,11 +34,13 @@ def test_arithmetic(
         and attr == "__mod__"
     ):
         request.applymarker(pytest.mark.xfail)
+
     s = nw.from_native(constructor_series_with_pyarrow(data), series_only=True)
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected
 
 
+@pytest.mark.parametrize("data", [[1, 2, 3]])
 @pytest.mark.parametrize(
     ("attr", "rhs", "expected"),
     [
@@ -51,7 +53,12 @@ def test_arithmetic(
     ],
 )
 def test_rarithmetic(
-    attr: str, rhs: Any, expected: list[Any], constructor_series: Any, request: Any
+    data: list[int | float],
+    attr: str,
+    rhs: Any,
+    expected: list[Any],
+    constructor_series: Any,
+    request: Any,
 ) -> None:
     if "pyarrow" in str(constructor_series) and attr == "__rmod__":
         request.applymarker(pytest.mark.xfail)

@@ -158,7 +158,7 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
-        res = pc.subtract(ser, pc.multiply(pc.divide(ser, other), other))
+        res = pc.subtract(ser, pc.multiply(pc.floor(pc.divide(ser, other)), other))
         return self._from_native_series(res)
 
     def filter(self, other: Any) -> Self:
