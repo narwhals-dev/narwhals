@@ -347,7 +347,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             2.0
             >>> func(s_pl)
             2.0
@@ -374,7 +374,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             3
             >>> func(s_pl)
             3
@@ -405,7 +405,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             True
             >>> func(s_pl)
             True
@@ -460,7 +460,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             1
             >>> func(s_pl)
             1
@@ -487,7 +487,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             3
             >>> func(s_pl)
             3
@@ -514,7 +514,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             6
             >>> func(s_pl)
             6
@@ -545,7 +545,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             1.0
             >>> func(s_pl)
             1.0
