@@ -30,6 +30,8 @@ def extract_native(expr: Expr, other: Any) -> Any:
 
 
 class Expr:
+    __slots__ = ("_call",)
+
     def __init__(self, call: Callable[[Any], Any]) -> None:
         # callable from namespace to expr
         self._call = call

@@ -21,6 +21,8 @@ LazyFrameT = TypeVar("LazyFrameT")
 
 
 class GroupBy(Generic[DataFrameT]):
+    __slots__ = ("_df", "_keys", "_grouped")
+
     def __init__(self, df: DataFrameT, *keys: str | Iterable[str]) -> None:
         self._df = cast(DataFrame[Any], df)
         self._keys = flatten(keys)

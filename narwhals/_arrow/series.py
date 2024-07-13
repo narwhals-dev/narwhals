@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
 
 class ArrowSeries:
+    __slots__ = ("_name", "_native_series", "_implementation", "_backend_version")
+
     def __init__(
         self, native_series: Any, *, name: str, backend_version: tuple[int, ...]
     ) -> None:
@@ -251,6 +253,8 @@ class ArrowSeries:
 
 
 class ArrowSeriesDateTimeNamespace:
+    __slots__ = ("_arrow_series",)
+
     def __init__(self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
@@ -266,6 +270,8 @@ class ArrowSeriesDateTimeNamespace:
 
 
 class ArrowSeriesCatNamespace:
+    __slots__ = ("_arrow_series",)
+
     def __init__(self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
@@ -280,6 +286,8 @@ class ArrowSeriesCatNamespace:
 
 
 class ArrowSeriesStringNamespace:
+    __slots__ = ("_arrow_series",)
+
     def __init__(self, series: ArrowSeries) -> None:
         self._arrow_series = series
 

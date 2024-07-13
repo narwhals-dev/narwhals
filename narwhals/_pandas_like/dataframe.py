@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 
 class PandasLikeDataFrame:
     # --- not in the spec ---
+    __slots__ = ("_native_dataframe", "_implementation", "_backend_version")
+
     def __init__(
         self,
         native_dataframe: Any,

@@ -71,6 +71,14 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 
 
 class PandasLikeSeries:
+    __slots__ = (
+        "_name",
+        "_native_series",
+        "_implementation",
+        "_backend_version",
+        "_use_copy_false",
+    )
+
     def __init__(
         self,
         native_series: Any,
@@ -589,6 +597,8 @@ class PandasLikeSeries:
 
 
 class PandasLikeSeriesCatNamespace:
+    __slots__ = ("_pandas_series",)
+
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
@@ -600,6 +610,8 @@ class PandasLikeSeriesCatNamespace:
 
 
 class PandasLikeSeriesStringNamespace:
+    __slots__ = ("_pandas_series",)
+
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
@@ -645,6 +657,8 @@ class PandasLikeSeriesStringNamespace:
 
 
 class PandasLikeSeriesDateTimeNamespace:
+    __slots__ = ("_pandas_series",)
+
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 

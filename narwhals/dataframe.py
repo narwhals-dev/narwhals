@@ -35,6 +35,8 @@ FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
 
 class BaseFrame(Generic[FrameT]):
+    __slots__ = ("_compliant_frame", "_is_polars", "_backend_version")
+
     _compliant_frame: Any
     _is_polars: bool
     _backend_version: tuple[int, ...]
@@ -211,6 +213,8 @@ class DataFrame(BaseFrame[FrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    __slots__ = ("_compliant_frame", "_is_polars", "_backend_version")
 
     def __init__(
         self,
@@ -1920,6 +1924,8 @@ class LazyFrame(BaseFrame[FrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    __slots__ = ("_compliant_frame", "_is_polars", "_backend_version")
 
     def __init__(
         self,

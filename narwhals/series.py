@@ -26,6 +26,8 @@ class Series:
     `series_only=True`.
     """
 
+    __slots__ = ("_compliant_series", "_is_polars", "_backend_version")
+
     def __init__(
         self,
         series: Any,

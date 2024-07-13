@@ -18,6 +18,16 @@ if TYPE_CHECKING:
 
 
 class PandasLikeExpr:
+    __slots__ = (
+        "_call",
+        "_depth",
+        "_function_name",
+        "_root_names",
+        "_output_names",
+        "_implementation",
+        "_backend_version",
+    )
+
     def __init__(
         self,
         call: Callable[[PandasLikeDataFrame], list[PandasLikeSeries]],
@@ -33,7 +43,6 @@ class PandasLikeExpr:
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
-        self._depth = depth
         self._output_names = output_names
         self._implementation = implementation
         self._backend_version = backend_version

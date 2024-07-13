@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
 class ArrowDataFrame:
     # --- not in the spec ---
+    __slots__ = ("_native_dataframe", "_implementation", "_backend_version")
+
     def __init__(
         self, native_dataframe: Any, *, backend_version: tuple[int, ...]
     ) -> None:

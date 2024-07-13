@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
 
 class PandasLikeNamespace:
+    __slots__ = ("_implementation", "_backend_version")
+
     Int64 = dtypes.Int64
     Int32 = dtypes.Int32
     Int16 = dtypes.Int16
