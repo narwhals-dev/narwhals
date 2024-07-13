@@ -70,9 +70,7 @@ def to_native(
         )
 
     if strict:
-        msg = (
-            f"Expected Narwhals object, got {type(narwhals_object)}."  # pragma: no cover
-        )
+        msg = f"Expected Narwhals object, got {type(narwhals_object)}."
         raise TypeError(msg)
     return narwhals_object
 

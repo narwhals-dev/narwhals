@@ -331,7 +331,7 @@ class PandasLikeSeries:
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__pow__(other), ser.name))
 
-    def __rpow__(self, other: Any) -> PandasLikeSeries:  # pragma: no cover
+    def __rpow__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rpow__(other), ser.name))
@@ -341,7 +341,7 @@ class PandasLikeSeries:
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__mod__(other), ser.name))
 
-    def __rmod__(self, other: Any) -> PandasLikeSeries:  # pragma: no cover
+    def __rmod__(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
         other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.__rmod__(other), ser.name))

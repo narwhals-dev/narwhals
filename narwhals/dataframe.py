@@ -226,7 +226,7 @@ class DataFrame(BaseFrame[FrameT]):
         elif is_polars and isinstance(df, get_polars().DataFrame):
             self._compliant_frame = df
         else:
-            msg = f"Expected polars DataFrame or object which implements `__narwhals_dataframe__`, got: {type(df)}"
+            msg = f"Expected Polars DataFrame or an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __array__(self) -> np.ndarray:
@@ -1937,7 +1937,7 @@ class LazyFrame(BaseFrame[FrameT]):
         ):
             self._compliant_frame = df
         else:
-            msg = f"Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: {type(df)}"
+            msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise TypeError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
