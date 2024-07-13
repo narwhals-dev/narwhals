@@ -104,8 +104,14 @@ class ArrowExpr:
     def __add__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other)
 
+    def __radd__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__radd__", other)
+
     def __sub__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other)
+
+    def __rsub__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rsub__", other)
 
     def __mul__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other)

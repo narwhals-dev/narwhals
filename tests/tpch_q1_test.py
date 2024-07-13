@@ -6,6 +6,7 @@ from unittest import mock
 
 import pandas as pd
 import polars as pl
+import pyarrow.parquet as pq
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -15,7 +16,7 @@ from tests.utils import compare_dicts
 
 @pytest.mark.parametrize(
     "library",
-    ["pandas", "polars"],
+    ["pandas", "polars", "pyarrow"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 @pytest.mark.skipif(
@@ -25,8 +26,10 @@ def test_q1(library: str) -> None:
     if library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
-    else:
+    elif library == "polars":
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
+    else:
+        df_raw = pq.read_table("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
     query_result = (
