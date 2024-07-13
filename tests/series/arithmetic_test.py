@@ -62,11 +62,15 @@ def test_rarithmetic(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor_series: Any,
+    constructor_series_with_pyarrow: Any,
     request: Any,
 ) -> None:
-    if "pyarrow" in str(constructor_series) and attr == "__rmod__":
+    if "pyarrow" in str(constructor_series_with_pyarrow) and attr in {"__rmod__"}:
         request.applymarker(pytest.mark.xfail)
-    s = nw.from_native(constructor_series(data), series_only=True)
+    if "chunked_array" in str(constructor_series_with_pyarrow) and attr in {
+        "__rfloordiv__"
+    }:
+        request.applymarker(pytest.mark.xfail)
+    s = nw.from_native(constructor_series_with_pyarrow(data), series_only=True)
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected

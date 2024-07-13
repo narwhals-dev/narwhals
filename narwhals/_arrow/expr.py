@@ -116,6 +116,9 @@ class ArrowExpr:
     def __mul__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other)
 
+    def __rmul__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rmul__", other)
+
     def __pow__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other)
 
