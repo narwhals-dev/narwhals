@@ -14,6 +14,9 @@ data = {
 
 
 def test_over_single(constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_max=nw.col("c").max().over("a"))
     expected = {
@@ -26,6 +29,9 @@ def test_over_single(constructor: Any) -> None:
 
 
 def test_over_multiple(constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
     expected = {

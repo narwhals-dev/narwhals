@@ -22,6 +22,9 @@ data = {
     ],
 )
 def test_is_between(constructor: Any, closed: str, expected: list[bool]) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.select(nw.col("a").is_between(1, 5, closed=closed))
     expected_dict = {"a": expected}

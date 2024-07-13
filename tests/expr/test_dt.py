@@ -8,7 +8,6 @@ import hypothesis.strategies as st
 import numpy as np
 import pandas as pd
 import polars as pl
-import pyarrow as pa
 import pytest
 from hypothesis import given
 
@@ -52,10 +51,11 @@ data_timedelta = {
     ],
 )
 def test_datetime_attributes(
-    attribute: str,
-    expected: list[int],
-    constructor: Any,
+    constructor: Any, attribute: str, expected: list[int]
 ) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     df = nw.from_native(constructor(data), eager_only=True)
     result = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)()))
     compare_dicts(result, {"a": expected})
@@ -72,18 +72,18 @@ def test_datetime_attributes(
     ],
 )
 def test_duration_attributes(
+    constructor: Any,
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],
-    constructor: Any,
-    request: Any,
 ) -> None:
     if (
         parse_version(pd.__version__) < (2, 2)
-        and "pyarrow" in str(constructor)
+        and "pandas_pyarrow" in str(constructor)
         and attribute in ("total_minutes", "total_seconds", "total_milliseconds")
-    ):  # pragma: no cover
-        request.applymarker(pytest.mark.xfail)
+    ) or ("pyarrow_table" in str(constructor)):
+        pytest.xfail()
+
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_a = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)().fill_null(0)))
     compare_dicts(result_a, {"a": expected_a})
@@ -103,15 +103,14 @@ def test_duration_attributes(
     ],
 )
 def test_duration_micro_nano(
+    constructor: Any,
     attribute: str,
     expected_b: list[int],
     expected_c: list[int],
-    constructor: Any,
-    request: Any,
 ) -> None:
     if (
         parse_version(pd.__version__) < (2, 2)
-        and "pyarrow" in str(constructor)
+        and "pandas_pyarrow" in str(constructor)
         and attribute
         in (
             "total_minutes",
@@ -120,8 +119,8 @@ def test_duration_micro_nano(
             "total_microseconds",
             "total_nanoseconds",
         )
-    ):  # pragma: no cover
-        request.applymarker(pytest.mark.xfail)
+    ) or ("pyarrow_table" in str(constructor)):
+        pytest.xfail()
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_b = nw.to_native(df.select(getattr(nw.col("b").dt, attribute)().fill_null(0)))
     compare_dicts(result_b, {"b": expected_b})
@@ -194,20 +193,20 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string(constructor_with_pyarrow: Any, fmt: str) -> None:
-    input_frame = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+def test_dt_to_string(constructor: Any, fmt: str) -> None:
+    input_frame = nw.from_native(constructor(data), eager_only=True)
     input_series = input_frame["a"]
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
     result = input_series.dt.to_string(fmt).to_list()
-    if constructor_with_pyarrow is pa.table or "pyarrow" in str(constructor_with_pyarrow):
+    if "pandas_pyarrow" in str(constructor) or "pyarrow_table" in str(constructor):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = [x[: x.find(".")] if "." in x else x for x in result]
     assert result == expected_col
     result = input_frame.select(nw.col("a").dt.to_string(fmt))["a"].to_list()
-    if constructor_with_pyarrow is pa.table or "pyarrow" in str(constructor_with_pyarrow):
+    if "pandas_pyarrow" in str(constructor) or "pyarrow_table" in str(constructor):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = [x[: x.find(".")] if "." in x else x for x in result]
@@ -225,7 +224,7 @@ def test_dt_to_string(constructor_with_pyarrow: Any, fmt: str) -> None:
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_datetime(
-    constructor_with_pyarrow: Any, data: datetime, expected: str
+    constructor: Any, data: datetime, expected: str
 ) -> None:
     def _clean_string(result: str) -> str:
         # rstrip '0' to remove trailing zeros, as different libraries handle this differently
@@ -234,7 +233,7 @@ def test_dt_to_string_iso_local_datetime(
             result = result.rstrip("0").rstrip(".")
         return result
 
-    df = constructor_with_pyarrow({"a": [data]})
+    df = constructor({"a": [data]})
     result = (
         nw.from_native(df, eager_only=True)["a"]
         .dt.to_string("%Y-%m-%dT%H:%M:%S.%f")
@@ -272,9 +271,9 @@ def test_dt_to_string_iso_local_datetime(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date(
-    constructor_with_pyarrow: Any, data: datetime, expected: str
+    constructor: Any, data: datetime, expected: str
 ) -> None:
-    df = constructor_with_pyarrow({"a": [data]})
+    df = constructor({"a": [data]})
     result = (
         nw.from_native(df, eager_only=True)["a"].dt.to_string("%Y-%m-%d").to_list()[0]
     )

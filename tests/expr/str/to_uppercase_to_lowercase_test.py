@@ -24,17 +24,21 @@ from tests.utils import compare_dicts
     ],
 )
 def test_str_to_uppercase(
-    constructor_with_pyarrow: Any,
+    constructor: Any,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
     request: Any,
 ) -> None:
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     result_frame = df.select(nw.col("a").str.to_uppercase())
 
     if any("ß" in s for value in data.values() for s in value) & (
-        constructor_with_pyarrow.__name__
-        not in ("pandas_constructor", "pandas_nullable_constructor", "polars_constructor")
+        constructor.__name__
+        not in (
+            "pandas_constructor",
+            "pandas_nullable_constructor",
+            "polars_eager_constructor",
+        )
     ):
         # We are marking it xfail for these conditions above
         # since the pyarrow backend will convert
@@ -63,11 +67,11 @@ def test_str_to_uppercase(
     ],
 )
 def test_str_to_lowercase(
-    constructor_with_pyarrow: Any,
+    constructor: Any,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     result_frame = df.select(nw.col("a").str.to_lowercase())
     compare_dicts(result_frame, expected)
 

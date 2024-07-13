@@ -7,9 +7,12 @@ from tests.utils import compare_dicts
 
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
-def test_sumh(constructor_with_pyarrow: Any, col_expr: Any) -> None:
+def test_sumh(constructor: Any, col_expr: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     result = df.with_columns(horizontal_sum=nw.sum_horizontal(col_expr, nw.col("b")))
     expected = {
         "a": [1, 3, 2],

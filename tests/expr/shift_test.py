@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -12,6 +14,9 @@ data = {
 
 
 def test_shift(constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {
