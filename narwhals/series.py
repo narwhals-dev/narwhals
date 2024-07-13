@@ -1257,6 +1257,11 @@ class Series:
             self._compliant_series.__truediv__(self._extract_native(other))
         )
 
+    def __rtruediv__(self, other: object) -> Self:
+        return self._from_compliant_series(
+            self._compliant_series.__rtruediv__(self._extract_native(other))
+        )
+
     def __floordiv__(self, other: object) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__floordiv__(self._extract_native(other))
