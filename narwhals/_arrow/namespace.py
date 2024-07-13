@@ -85,9 +85,15 @@ class ArrowNamespace:
             backend_version=self._backend_version,
         )
 
-    def _create_native_series(self, value: Any) -> Any:  # pragma: no cover (todo!)
+    def _create_compliant_series(self, value: Any) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
         pa = get_pyarrow()
-        return pa.chunked_array([value])
+        return ArrowSeries(
+            native_series=pa.chunked_array([value]),
+            name="",
+            backend_version=self._backend_version,
+        )
 
     # --- not in spec ---
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:

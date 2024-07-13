@@ -11,17 +11,20 @@ from narwhals._pandas_like.utils import Implementation
 from tests.utils import compare_dicts
 
 
-def test_inner_join(constructor_with_lazy: Any) -> None:
+def test_inner_join_two_keys(constructor_with_pyarrow: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_with_lazy(data)).lazy()
+    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
     df_right = df
     result = df.join(df_right, left_on=["a", "b"], right_on=["a", "b"], how="inner")
-    result_native = nw.to_native(result)
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
-    result = df.collect().join(df_right.collect(), left_on="a", right_on="a", how="inner")  # type: ignore[assignment]
-    result_native = nw.to_native(result)
+
+def test_inner_join_single_key(constructor_with_pyarrow: Any) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df_right = df
+    result = df.join(df_right, left_on="a", right_on="a", how="inner")
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -29,12 +32,12 @@ def test_inner_join(constructor_with_lazy: Any) -> None:
         "z": [7.0, 8, 9],
         "z_right": [7.0, 8, 9],
     }
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
 
-def test_cross_join(constructor_with_lazy: Any) -> None:
+def test_cross_join(constructor: Any) -> None:
     data = {"a": [1, 3, 2]}
-    df = nw.from_native(constructor_with_lazy(data))
+    df = nw.from_native(constructor(data))
     result = df.join(df, how="cross")  # type: ignore[arg-type]
 
     expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
@@ -63,13 +66,13 @@ def test_cross_join_non_pandas() -> None:
     ],
 )
 def test_anti_join(
-    constructor_with_lazy: Any,
+    constructor: Any,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_with_lazy(data))
+    df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
     compare_dicts(result, expected)
@@ -97,9 +100,9 @@ def test_semi_join(
 
 
 @pytest.mark.parametrize("how", ["right", "full"])
-def test_join_not_implemented(constructor_with_lazy: Any, how: str) -> None:
+def test_join_not_implemented(constructor: Any, how: str) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_with_lazy(data))
+    df = nw.from_native(constructor(data))
 
     with pytest.raises(
         NotImplementedError,
@@ -112,12 +115,14 @@ def test_join_not_implemented(constructor_with_lazy: Any, how: str) -> None:
 
 @pytest.mark.filterwarnings("ignore:the default coalesce behavior")
 def test_left_join(constructor: Any) -> None:
-    data_left = {"a": [1, 2, 3], "b": [4, 5, 6]}
-    data_right = {"a": [1, 2, 3], "c": [4, 5, 6]}
+    data_left = {"a": [1.0, 2, 3], "b": [4.0, 5, 6]}
+    data_right = {"a": [1.0, 2, 3], "c": [4.0, 5, 7]}
     df_left = nw.from_native(constructor(data_left), eager_only=True)
     df_right = nw.from_native(constructor(data_right), eager_only=True)
-    result = df_left.join(df_right, left_on="b", right_on="c", how="left")
-    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "a_right": [1, 2, 3]}
+    result = df_left.join(df_right, left_on="b", right_on="c", how="left").select(
+        nw.all().fill_null(float("nan"))
+    )
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "a_right": [1, 2, float("nan")]}
     compare_dicts(result, expected)
 
 
@@ -139,11 +144,22 @@ def test_left_join_overlapping_column(constructor: Any) -> None:
     df_left = nw.from_native(constructor(data_left), eager_only=True)
     df_right = nw.from_native(constructor(data_right), eager_only=True)
     result = df_left.join(df_right, left_on="b", right_on="c", how="left")
-    expected = {
+    expected: dict[str, list[Any]] = {
         "a": [1, 2, 3],
         "b": [4, 5, 6],
         "d": [1, 4, 2],
         "a_right": [1, 2, 3],
         "d_right": [1, 4, 2],
+    }
+    compare_dicts(result, expected)
+    result = df_left.join(df_right, left_on="a", right_on="d", how="left").select(
+        nw.all().fill_null(float("nan"))
+    )
+    expected = {
+        "a": [1, 2, 3],
+        "b": [4, 5, 6],
+        "d": [1, 4, 2],
+        "a_right": [1.0, 3.0, float("nan")],
+        "c": [4.0, 6.0, float("nan")],
     }
     compare_dicts(result, expected)

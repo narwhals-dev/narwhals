@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 from typing import overload
 
@@ -184,6 +185,41 @@ class ArrowDataFrame:
             output_names.append(s)
         df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)
         return self._from_native_dataframe(df)
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: Literal["inner"] = "inner",
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+    ) -> Self:
+        if isinstance(left_on, str):
+            left_on = [left_on]
+        if isinstance(right_on, str):
+            right_on = [right_on]
+
+        if how == "cross":  # type: ignore[comparison-overlap]
+            raise NotImplementedError
+
+        if how == "anti":  # type: ignore[comparison-overlap]
+            raise NotImplementedError
+
+        if how == "semi":  # type: ignore[comparison-overlap]
+            raise NotImplementedError
+
+        if how == "left":  # type: ignore[comparison-overlap]
+            raise NotImplementedError
+
+        return self._from_native_dataframe(
+            self._native_dataframe.join(
+                other._native_dataframe,
+                keys=left_on,
+                right_keys=right_on,
+                join_type=how,
+                right_suffix="_right",
+            ),
+        )
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_native_dataframe(

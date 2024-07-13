@@ -3,13 +3,11 @@ from __future__ import annotations
 import math
 import sys
 import warnings
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Sequence
 
-if TYPE_CHECKING:
-    import pandas as pd
+import pandas as pd
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
@@ -35,6 +33,8 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
                 assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
             elif isinstance(lhs, float) and math.isnan(lhs):
                 assert math.isnan(rhs), (lhs, rhs)  # pragma: no cover
+            elif pd.isna(lhs):
+                assert pd.isna(rhs), (lhs, rhs)
             else:
                 assert lhs == rhs, (lhs, rhs)
 

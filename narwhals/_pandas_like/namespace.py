@@ -99,7 +99,7 @@ class PandasLikeNamespace:
             backend_version=self._backend_version,
         )
 
-    def _create_native_series(self, value: Any) -> Any:
+    def _create_compliant_series(self, value: Any) -> PandasLikeSeries:
         return create_native_series(
             value,
             implementation=self._implementation,
