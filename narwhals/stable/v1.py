@@ -607,10 +607,10 @@ def from_native(
     allow_series: bool | None = None,
 ) -> Any:
     """
-    Convert dataframe to Narwhals DataFrame, LazyFrame, or Series.
+    Convert dataframe/series to Narwhals DataFrame, LazyFrame, or Series.
 
     Arguments:
-        native_dataframe: Raw dataframe from user.
+        native_dataframe: Raw object from user.
             Depending on the other arguments, input object can be:
 
             - pandas.DataFrame
