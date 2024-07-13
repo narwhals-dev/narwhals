@@ -108,21 +108,36 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.add(self._native_series, other))
 
+    def __radd__(self, other: Any) -> Self:
+        return self + other  # type: ignore[no-any-return]
+
     def __sub__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         other = validate_column_comparand(other)
         return self._from_native_series(pc.subtract(self._native_series, other))
+
+    def __rsub__(self, other: Any) -> Self:
+        return (self - other) * (-1)  # type: ignore[no-any-return]
 
     def __mul__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         other = validate_column_comparand(other)
         return self._from_native_series(pc.multiply(self._native_series, other))
 
+    def __rmul__(self, other: Any) -> Self:
+        return self * other  # type: ignore[no-any-return]
+
     def __pow__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(ser, other))
+
+    def __rpow__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.power(other, ser))
 
     def filter(self, other: Any) -> Self:
         other = validate_column_comparand(other)

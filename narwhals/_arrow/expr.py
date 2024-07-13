@@ -104,14 +104,26 @@ class ArrowExpr:
     def __add__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other)
 
+    def __radd__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__radd__", other)
+
     def __sub__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other)
+
+    def __rsub__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rsub__", other)
 
     def __mul__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other)
 
+    def __rmul__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rmul__", other)
+
     def __pow__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other)
+
+    def __rpow__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rpow__", other)
 
     def filter(self, *predicates: Any) -> Self:
         from narwhals._arrow.namespace import ArrowNamespace
