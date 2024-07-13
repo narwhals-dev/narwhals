@@ -5,7 +5,6 @@ import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 
-import numpy as np
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -119,20 +118,6 @@ def test_columns(df_raw: Any) -> None:
     result = df.columns
     expected = ["a", "b", "z"]
     assert result == expected
-
-
-def test_accepted_dataframes() -> None:
-    array = np.array([[0, 4.0], [2, 5]])
-    with pytest.raises(
-        TypeError,
-        match="Expected polars DataFrame or object which implements `__narwhals_dataframe__`",
-    ):
-        nw.DataFrame(array, is_polars=False, backend_version=(1,))
-    with pytest.raises(
-        TypeError,
-        match="Expected Polars LazyFrame or object that implements `__narwhals_lazyframe__`, got: <class 'numpy.ndarray'>",
-    ):
-        nw.LazyFrame(array, is_polars=False, backend_version=(1,))
 
 
 @pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])

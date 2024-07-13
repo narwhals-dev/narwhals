@@ -42,9 +42,7 @@ if TYPE_CHECKING:
 def evaluate_into_expr(
     df: CompliantDataFrame, into_expr: IntoCompliantExpr
 ) -> ListOfCompliantSeries:
-    """
-    Return list of raw columns.
-    """
+    """Return list of raw columns."""
     expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
     return expr._call(df)  # type: ignore[arg-type]
 
@@ -150,8 +148,8 @@ def parse_into_expr(
     if isinstance(into_expr, str):
         return namespace.col(into_expr)
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        series = namespace._create_native_series(into_expr)
-        return namespace._create_expr_from_series(series)
+        series = namespace._create_compliant_series(into_expr)
+        return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 

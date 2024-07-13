@@ -25,19 +25,16 @@ series_pa = pa.chunked_array([data["a"]])
 
 
 class MockDataFrame:
-    def __init__(self, *arg: Any, **kwargs: Any) -> None: ...
     def __narwhals_dataframe__(self) -> Any:
         return self
 
 
 class MockLazyFrame:
-    def __init__(self, *arg: Any, **kwargs: Any) -> None: ...
     def __narwhals_lazyframe__(self) -> Any:
         return self
 
 
 class MockSeries:
-    def __init__(self, *arg: Any, **kwargs: Any) -> None: ...
     def __narwhals_series__(self) -> Any:
         return self
 
@@ -145,3 +142,109 @@ def test_pandas_like_validate() -> None:
 
     with pytest.raises(ValueError, match="Expected unique column names"):
         nw.from_native(df)
+
+
+@pytest.mark.parametrize(
+    ("series", "is_polars", "context"),
+    [
+        (MockSeries(), False, does_not_raise()),
+        (MockSeries(), True, does_not_raise()),
+        (series_pl, True, does_not_raise()),
+        (
+            series_pd,
+            False,
+            pytest.raises(
+                TypeError,
+                match="Expected Polars Series or an object which implements `__narwhals_series__`",
+            ),
+        ),
+        (
+            MockDataFrame(),
+            False,
+            pytest.raises(
+                TypeError,
+                match="Expected Polars Series or an object which implements `__narwhals_series__`",
+            ),
+        ),
+    ],
+)
+def test_init_series(series: Any, is_polars: Any, context: Any) -> None:
+    with context:
+        result = nw.Series(series, is_polars=is_polars, backend_version=(1, 2, 3))
+        assert isinstance(result, nw.Series)
+
+
+@pytest.mark.parametrize(
+    ("dframe", "is_polars", "context"),
+    [
+        (MockDataFrame(), False, does_not_raise()),
+        (MockDataFrame(), True, does_not_raise()),
+        (df_pl, True, does_not_raise()),
+        (
+            df_pd,
+            False,
+            pytest.raises(
+                TypeError,
+                match="Expected Polars DataFrame or an object which implements `__narwhals_dataframe__`",
+            ),
+        ),
+        (
+            MockLazyFrame(),
+            False,
+            pytest.raises(
+                TypeError,
+                match="Expected Polars DataFrame or an object which implements `__narwhals_dataframe__`",
+            ),
+        ),
+        (
+            MockSeries(),
+            True,
+            pytest.raises(
+                TypeError,
+                match="Expected Polars DataFrame or an object which implements `__narwhals_dataframe__`",
+            ),
+        ),
+    ],
+)
+def test_init_eager(dframe: Any, is_polars: Any, context: Any) -> None:
+    with context:
+        result = nw.DataFrame(dframe, is_polars=is_polars, backend_version=(1, 2, 3))  # type: ignore[var-annotated]
+        assert isinstance(result, nw.DataFrame)
+
+
+@pytest.mark.parametrize(
+    ("dframe", "is_polars", "context"),
+    [
+        (MockLazyFrame(), False, does_not_raise()),
+        (MockLazyFrame(), True, does_not_raise()),
+        (lf_pl, True, does_not_raise()),
+        (
+            df_pd,
+            False,
+            pytest.raises(
+                TypeError,
+                match="Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`",
+            ),
+        ),
+        (
+            MockDataFrame(),
+            False,
+            pytest.raises(
+                TypeError,
+                match="Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`",
+            ),
+        ),
+        (
+            MockSeries(),
+            True,
+            pytest.raises(
+                TypeError,
+                match="Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`",
+            ),
+        ),
+    ],
+)
+def test_init_lazy(dframe: Any, is_polars: Any, context: Any) -> None:
+    with context:
+        result = nw.LazyFrame(dframe, is_polars=is_polars, backend_version=(1, 2, 3))  # type: ignore[var-annotated]
+        assert isinstance(result, nw.LazyFrame)

@@ -42,10 +42,8 @@ class Series:
         ):
             self._compliant_series = series
         else:
-            msg = (  # pragma: no cover
-                f"Expected Polars Series or and object which implements `__narwhals_series__`, got: {type(series)}."
-            )
-            raise TypeError(msg)  # pragma: no cover
+            msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
+            raise TypeError(msg)
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         if self._is_polars and self._backend_version < (0, 20, 29):  # pragma: no cover
@@ -1257,6 +1255,11 @@ class Series:
     def __truediv__(self, other: object) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__truediv__(self._extract_native(other))
+        )
+
+    def __rtruediv__(self, other: object) -> Self:
+        return self._from_compliant_series(
+            self._compliant_series.__rtruediv__(self._extract_native(other))
         )
 
     def __floordiv__(self, other: object) -> Self:
