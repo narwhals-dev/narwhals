@@ -91,7 +91,6 @@ def test_std(df_raw: Any) -> None:
 @pytest.mark.parametrize(
     "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
 )
-# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 def test_schema(df_raw: Any) -> None:
     result = nw.from_native(df_raw).schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}

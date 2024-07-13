@@ -734,6 +734,9 @@ class DataFrame(BaseFrame[FrameT]):
         r"""
         Get a dict[column name, DataType].
 
+        Notes:
+            Remark that Polars returns its own `Schema` type instead of a dictionary.
+
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
@@ -769,7 +772,7 @@ class DataFrame(BaseFrame[FrameT]):
         Get a dict[column name, DataType].
 
         Notes:
-            Remark that Polars return its own `Schema` type instead.
+            Remark that Polars returns its own `Schema` type instead of a dictionary.
 
         Examples:
             >>> import polars as pl
@@ -2172,6 +2175,9 @@ class LazyFrame(BaseFrame[FrameT]):
         r"""
         Get a dict[column name, DType].
 
+        Notes:
+            Remark that Polars returns its own `Schema` type instead of a dictionary.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -2193,7 +2199,7 @@ class LazyFrame(BaseFrame[FrameT]):
         Get a dict[column name, DType].
 
         Notes:
-            Remark that Polars return its own `Schema` type instead.
+            Remark that Polars returns its own `Schema` type instead of a dictionary.
 
         Examples:
             >>> import polars as pl
