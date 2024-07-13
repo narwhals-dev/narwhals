@@ -122,6 +122,9 @@ class ArrowExpr:
     def __pow__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other)
 
+    def __rpow__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rpow__", other)
+
     def filter(self, *predicates: Any) -> Self:
         from narwhals._arrow.namespace import ArrowNamespace
 
