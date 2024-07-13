@@ -23,6 +23,7 @@ from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
 from narwhals.expression import Expr
 from narwhals.expression import all
+from narwhals.expression import all_horizontal
 from narwhals.expression import col
 from narwhals.expression import len
 from narwhals.expression import lit
@@ -43,7 +44,7 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 __all__ = [
     "selectors",
@@ -56,6 +57,7 @@ __all__ = [
     "maybe_set_index",
     "get_native_namespace",
     "all",
+    "all_horizontal",
     "col",
     "len",
     "lit",

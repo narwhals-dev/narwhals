@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.0.5"
+version = "1.0.6"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -84,6 +84,7 @@ filterwarnings = [
   'ignore:make_block is deprecated and will be removed',
   'ignore:np.find_common_type is deprecated',
   'ignore:is_sparse is deprecated and will be removed',
+  'ignore:Passing a BlockManager to DataFrame is deprecated',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

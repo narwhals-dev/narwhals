@@ -55,6 +55,54 @@ class ArrowSeries:
     def __len__(self) -> int:
         return len(self._native_series)
 
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.equal(ser, other))
+
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.not_equal(ser, other))
+
+    def __ge__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.greater_equal(ser, other))
+
+    def __gt__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.greater(ser, other))
+
+    def __le__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.less_equal(ser, other))
+
+    def __lt__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.less(ser, other))
+
+    def __and__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.and_kleene(ser, other))
+
+    def __or__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.or_kleene(ser, other))
+
     def __add__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         other = validate_column_comparand(other)
@@ -70,13 +118,35 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.multiply(self._native_series, other))
 
+    def __pow__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.power(ser, other))
+
+    def filter(self, other: Any) -> Self:
+        other = validate_column_comparand(other)
+        return self._from_native_series(self._native_series.filter(other))
+
     def mean(self) -> int:
         pc = get_pyarrow_compute()
         return pc.mean(self._native_series)  # type: ignore[no-any-return]
 
+    def min(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.min(self._native_series)  # type: ignore[no-any-return]
+
+    def max(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.max(self._native_series)  # type: ignore[no-any-return]
+
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
+
+    def count(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.count(self._native_series)  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         return ArrowNamespace(backend_version=self._backend_version)
