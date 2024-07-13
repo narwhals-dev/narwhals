@@ -1,12 +1,13 @@
 from typing import Any
 
+import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-@pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
+@pytest.mark.parametrize("col_expr", [np.array([False, False, True]), nw.col("a"), "a"])
 def test_allh(constructor_with_pyarrow: Any, col_expr: Any) -> None:
     data = {
         "a": [False, False, True],
