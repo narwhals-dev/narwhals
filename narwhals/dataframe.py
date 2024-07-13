@@ -88,10 +88,17 @@ class BaseFrame(Generic[FrameT]):
 
     @property
     def schema(self) -> dict[str, DType]:
+        if self._is_polars and self._backend_version >= (1, 0, 0):
+            native_schema = dict(self._compliant_frame.collect_schema())
+        else:
+            native_schema = self._compliant_frame.schema
         return {
             k: to_narwhals_dtype(v, is_polars=self._is_polars)
-            for k, v in self._compliant_frame.schema.items()
+            for k, v in native_schema.items()
         }
+
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         return function(self, *args, **kwargs)
@@ -112,6 +119,9 @@ class BaseFrame(Generic[FrameT]):
 
     @property
     def columns(self) -> list[str]:
+        if self._is_polars and self._backend_version >= (1, 0, 0):
+            return self._compliant_frame.collect_schema().names()  # type: ignore[no-any-return]
+
         return self._compliant_frame.columns  # type: ignore[no-any-return]
 
     def lazy(self) -> LazyFrame[Any]:
@@ -751,9 +761,45 @@ class DataFrame(BaseFrame[FrameT]):
             >>> df_pl_schema = func(df_pl)
             >>> df_pl_schema
             {'foo': Int64, 'bar': Float64, 'ham': String}
-
         """
         return super().schema
+
+    def collect_schema(self: Self) -> dict[str, DType]:
+        r"""
+        Get a dict[column name, DataType].
+
+        Notes:
+            Remark that Polars return its own `Schema` type instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.collect_schema()
+
+            You can pass either pandas or Polars to `func`:
+
+            >>> df_pd_schema = func(df_pd)
+            >>> df_pd_schema
+            {'foo': Int64, 'bar': Float64, 'ham': String}
+
+            >>> df_pl_schema = func(df_pl)
+            >>> df_pl_schema
+            {'foo': Int64, 'bar': Float64, 'ham': String}
+        """
+        return super().collect_schema()
 
     @property
     def columns(self) -> list[str]:
@@ -2141,6 +2187,29 @@ class LazyFrame(BaseFrame[FrameT]):
             OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().schema
+
+    def collect_schema(self: Self) -> dict[str, DType]:
+        r"""
+        Get a dict[column name, DType].
+
+        Notes:
+            Remark that Polars return its own `Schema` type instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.from_native(lf_pl)
+            >>> lf.collect_schema()  # doctest: +SKIP
+            {'foo': Int64, 'bar': Float64, 'ham': String}
+        """
+        return super().collect_schema()
 
     @property
     def columns(self) -> list[str]:

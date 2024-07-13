@@ -136,6 +136,9 @@ class ArrowDataFrame:
             for name, dtype in zip(schema.names, schema.types)
         }
 
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
+
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.schema.names  # type: ignore[no-any-return]
