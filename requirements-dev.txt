@@ -1,4 +1,5 @@
 covdefaults
+ibis-framework
 pandas
 polars[timezones]
 pre-commit

@@ -249,6 +249,7 @@ def from_native(  # noqa: PLR0915
     """
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._interchange.dataframe import InterchangeFrame
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.utils import Implementation
@@ -331,6 +332,16 @@ def from_native(  # noqa: PLR0915
             ArrowDataFrame(native_object, backend_version=parse_version(pa.__version__)),
             is_polars=False,
             backend_version=parse_version(pa.__version__),
+        )
+    elif hasattr(native_object, "__dataframe__"):
+        if series_only:
+            msg = "Cannot only use `series_only` with object which only implements __dataframe__"
+            raise TypeError(msg)
+        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
+        return DataFrame(
+            InterchangeFrame(native_object.__dataframe__()),
+            is_polars=False,
+            backend_version=(0,),
         )
     elif hasattr(native_object, "__narwhals_dataframe__"):
         if series_only:
