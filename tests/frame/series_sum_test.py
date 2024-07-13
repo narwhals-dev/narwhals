@@ -3,6 +3,7 @@ from typing import Any
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
+
 def test_series_sum(constructor: Any) -> None:
     data = {
         "a": [0, 1, 2, 3, 4],
