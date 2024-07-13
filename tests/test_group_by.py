@@ -43,6 +43,9 @@ def test_invalid_group_by() -> None:
 
 
 def test_group_by_iter(constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     df = nw.from_native(constructor(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
@@ -65,6 +68,9 @@ def test_group_by_iter(constructor: Any) -> None:
 
 
 def test_group_by_len(constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     result = (
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
     )

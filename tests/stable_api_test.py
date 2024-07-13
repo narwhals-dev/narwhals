@@ -16,6 +16,10 @@ def test_renamed_taxicab_norm(constructor: Any) -> None:
     # Here, we check that anyone who wrote code using the old
     # API will still be able to use it, without the main namespace
     # getting cluttered by the new name.
+
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.with_columns(b=nw.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}

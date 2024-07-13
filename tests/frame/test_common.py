@@ -46,8 +46,10 @@ def test_std(constructor: Any) -> None:
 
 # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(constructor: Any) -> None:
-    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
+def test_schema(constructor_with_lazy: Any) -> None:
+    df = nw.from_native(
+        constructor_with_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
+    )
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
     assert result == expected
@@ -64,8 +66,8 @@ def test_schema(constructor: Any) -> None:
 
 # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_columns(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_columns(constructor_with_lazy: Any) -> None:
+    df = nw.from_native(constructor_with_lazy(data))
     result = df.columns
     expected = ["a", "b", "z"]
     assert result == expected
