@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import narwhals.stable.v1 as nw
@@ -12,12 +14,20 @@ def test_series_sum(constructor: Any) -> None:
     }
     df = nw.from_native(constructor(data), eager_only=True, allow_series=True)
 
-    result = df.select(nw.col("a", "b", "c").sum())
-    result_native = nw.to_native(result)
-        # Extract the sum values from the resulting DataFrame
-    expected_sum = {
-        "a": [10],
-        "b": [14],
-        "c": [12]
-    }
-    compare_dicts(result_native, expected_sum)
+    # Calculating the sum for each column seperately
+    result_sum_a = df.select(nw.col("a").sum())
+    result_sum_b = df.select(nw.col("b").sum())
+    result_sum_c = df.select(nw.col("c").sum())
+
+    # Convert the results to Narwhals Native Frame
+    result_native_a = nw.to_native(result_sum_a)
+    result_native_b = nw.to_native(result_sum_b)
+    result_native_c = nw.to_native(result_sum_c)
+
+    expected_sum_a = {"a": [10]}
+    expected_sum_b = {"b": [14]}
+    expected_sum_c = {"c": [12]}
+
+    compare_dicts(result_native_a, expected_sum_a)
+    compare_dicts(result_native_b, expected_sum_b)
+    compare_dicts(result_native_c, expected_sum_c)
