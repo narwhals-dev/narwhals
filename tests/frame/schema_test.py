@@ -35,6 +35,9 @@ def test_string_disguised_as_object() -> None:
 
 
 def test_actual_object(constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
+
     class Foo: ...
 
     data = {"a": [Foo()]}

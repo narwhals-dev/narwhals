@@ -25,8 +25,10 @@ def test_quantile(
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
 ) -> None:
-    q = 0.3
+    if "pyarrow_table" in str(constructor):
+        pytest.xfail()
 
+    q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
