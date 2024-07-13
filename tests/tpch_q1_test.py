@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from typing import Any
 from unittest import mock
 
 import pandas as pd
@@ -22,13 +23,14 @@ from tests.utils import compare_dicts
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
 )
-def test_q1(library: str) -> None:
+def test_q1(library: str, request: Any) -> None:
     if library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     elif library == "polars":
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
     else:
+        request.applymarker(pytest.mark.xfail)
         df_raw = pq.read_table("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()

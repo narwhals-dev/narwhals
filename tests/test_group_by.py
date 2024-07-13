@@ -4,6 +4,7 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -40,6 +41,14 @@ def test_invalid_group_by() -> None:
         ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
     ):
         df.group_by("a").agg(nw.all().mean())
+    with pytest.raises(
+        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
+    ):
+        nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(nw.all().mean())
+    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+        nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(
+            nw.col("b").mean().min()
+        )
 
 
 def test_group_by_iter(constructor: Any) -> None:
@@ -115,5 +124,25 @@ def test_group_by_simple_unnamed(constructor_with_pyarrow: Any) -> None:
         "a": [1, 2],
         "b": [4, 6],
         "c": [7, 1],
+    }
+    compare_dicts(result, expected)
+
+
+def test_group_by_multiple_keys(constructor_with_pyarrow: Any) -> None:
+    data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
+    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    result = (
+        df.group_by("a", "b")
+        .agg(
+            c_min=nw.col("c").min(),
+            c_max=nw.col("c").max(),
+        )
+        .sort("a")
+    )
+    expected = {
+        "a": [1, 2],
+        "b": [4, 6],
+        "c_min": [2, 1],
+        "c_max": [7, 1],
     }
     compare_dicts(result, expected)
