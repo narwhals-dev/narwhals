@@ -14,10 +14,6 @@ def test_series_sum(constructor: Any) -> None:
 
     result = df.select(nw.col("a", "b", "c").sum())
     result_native = nw.to_native(result)
-        # Extract the sum values from the resulting DataFrame
-    expected_sum = {
-        "a": [10],
-        "b": [14],
-        "c": [12]
-    }
+    # Extract the sum values from the resulting DataFrame
+    expected_sum = {"a": [10], "b": [14], "c": [12]}
     compare_dicts(result_native, expected_sum)
