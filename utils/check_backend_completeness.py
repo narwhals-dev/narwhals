@@ -18,7 +18,6 @@ MISSING = [
     "DataFrame.is_unique",
     "DataFrame.item",
     "DataFrame.iter_rows",
-    "DataFrame.join",
     "DataFrame.pipe",
     "DataFrame.rename",
     "DataFrame.unique",

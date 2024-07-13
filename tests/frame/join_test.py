@@ -11,21 +11,20 @@ from narwhals._pandas_like.utils import Implementation
 from tests.utils import compare_dicts
 
 
-def test_inner_join_two_keys(constructor: Any) -> None:
+def test_inner_join_two_keys(constructor_with_pyarrow: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
     df_right = df
     result = df.join(df_right, left_on=["a", "b"], right_on=["a", "b"], how="inner")
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
     compare_dicts(result, expected)
 
 
-def test_inner_join_single_key(constructor: Any) -> None:
+def test_inner_join_single_key(constructor_with_pyarrow: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
     df_right = df
     result = df.join(df_right, left_on="a", right_on="a", how="inner")
-    result_native = nw.to_native(result)
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -33,7 +32,7 @@ def test_inner_join_single_key(constructor: Any) -> None:
         "z": [7.0, 8, 9],
         "z_right": [7.0, 8, 9],
     }
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
 
 def test_cross_join(constructor: Any) -> None:
