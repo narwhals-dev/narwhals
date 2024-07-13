@@ -12,7 +12,6 @@ def test_series_sum(constructor: Any) -> None:
     }
     df = nw.from_native(constructor(data), eager_only=True, allow_series=True)
 
-
     result = df.select(nw.col("a", "b", "c").sum())
     result_native = nw.to_native(result)
         # Extract the sum values from the resulting DataFrame
