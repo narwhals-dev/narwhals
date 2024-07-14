@@ -8,7 +8,7 @@ import narwhals.stable.v1 as nw
 
 
 def test_interchange_schema() -> None:
-    df = pl.DataFrame(
+    df_pl = pl.DataFrame(
         {
             "a": [1, 1, 2],
             "b": [4, 5, 6],
@@ -42,8 +42,9 @@ def test_interchange_schema() -> None:
             "n": pl.Boolean,
         },
     )
-    tbl = ibis.memtable(df)
-    result = nw.from_native(tbl, allow_interchange_protocol=True).schema
+    tbl = ibis.memtable(df_pl)
+    df = nw.from_native(tbl, eager_only=True, allow_interchange_protocol=True)
+    result = df.schema
     expected = {
         "a": nw.Int64,
         "b": nw.Int32,
@@ -61,6 +62,7 @@ def test_interchange_schema() -> None:
         "n": nw.Boolean,
     }
     assert result == expected
+    assert df["a"].dtype == nw.Int64
 
 
 def test_invalid() -> None:
@@ -70,6 +72,8 @@ def test_invalid() -> None:
         NotImplementedError, match="is not supported for metadata-only dataframes"
     ):
         nw.from_native(tbl, allow_interchange_protocol=True).select("a")
+    with pytest.raises(TypeError, match="allow_interchange_protocol=False"):
+        nw.from_native(tbl)
 
 
 def test_get_level() -> None:

@@ -7,6 +7,7 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
+import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from tests.utils import maybe_get_modin_df
 
@@ -262,3 +263,21 @@ def test_init_lazy(dframe: Any, is_polars: Any, context: Any) -> None:
             dframe, is_polars=is_polars, backend_version=(1, 2, 3), level="full"
         )  # type: ignore[var-annotated]
         assert isinstance(result, nw.LazyFrame)
+
+
+def test_init_already_narwhals() -> None:
+    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    result = nw.from_native(df)
+    assert result is df  # type: ignore[comparison-overlap]
+    s = df["a"]
+    result_s = nw.from_native(s, allow_series=True)
+    assert result_s is s
+
+
+def test_init_already_narwhals_unstable() -> None:
+    df = unstable_nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    result = unstable_nw.from_native(df)
+    assert result is df  # type: ignore[comparison-overlap]
+    s = df["a"]
+    result_s = unstable_nw.from_native(s, allow_series=True)
+    assert result_s is s
