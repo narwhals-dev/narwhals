@@ -83,6 +83,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
+    allow_interchange_protocol: bool = ...,
 ) -> Any: ...
 
 
@@ -94,6 +95,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[IntoDataFrameT] | T: ...
 
 
@@ -105,6 +107,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
+    allow_interchange_protocol: bool = ...,
 ) -> Any: ...
 
 
@@ -116,6 +119,7 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> Any: ...
 
 
@@ -127,6 +131,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
 
 
@@ -138,6 +143,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[Any] | Series:
     """
     from_native(df, strict=False)
@@ -152,6 +158,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
     from_native(df, strict=True, eager_only=True, allow_series=True)
@@ -167,6 +174,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[Any] | LazyFrame[Any] | Series:
     """
     from_native(df, strict=True, eager_only=True)
@@ -182,6 +190,7 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> Series:
     """
     from_native(df, strict=True, series_only=True)
@@ -197,6 +206,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
     """
     from_native(df, strict=True)
@@ -213,6 +223,7 @@ def from_native(
     eager_only: bool | None,
     series_only: bool | None,
     allow_series: bool | None,
+    allow_interchange_protocol: bool = ...,
 ) -> Any: ...
 
 
@@ -223,6 +234,7 @@ def from_native(  # noqa: PLR0915
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
+    allow_interchange_protocol: bool = False,
 ) -> Any:
     """
     Convert dataframe/series to Narwhals DataFrame, LazyFrame, or Series.
@@ -243,6 +255,8 @@ def from_native(  # noqa: PLR0915
         eager_only: Whether to only allow eager objects.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
+        allow_interchange_protocol: Whether to allow objects which only implement `__dataframe__` and
+            are otherwise unsupported by Narwhals.
 
     Returns:
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
@@ -257,6 +271,12 @@ def from_native(  # noqa: PLR0915
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
     from narwhals.utils import parse_version
+
+    # Early returns
+    if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
+        return native_object
+    if isinstance(native_object, Series) and (series_only or allow_series):
+        return native_object
 
     if series_only:
         allow_series = True
@@ -340,8 +360,11 @@ def from_native(  # noqa: PLR0915
             level="full",
         )
     elif hasattr(native_object, "__dataframe__"):
-        if series_only:
-            msg = "Cannot only use `series_only` with object which only implements __dataframe__"
+        if not allow_interchange_protocol or series_only:
+            msg = (
+                "Cannot only use `series_only=True` or `allow_interchange_protocol=False` "
+                "(the default) with object which only implements __dataframe__"
+            )
             raise TypeError(msg)
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(

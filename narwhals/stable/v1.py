@@ -464,6 +464,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
+    allow_interchange_protocol: bool = ...,
 ) -> Any: ...
 
 
@@ -475,6 +476,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[IntoDataFrame] | T: ...
 
 
@@ -486,6 +488,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
+    allow_interchange_protocol: bool = ...,
 ) -> Any: ...
 
 
@@ -497,6 +500,7 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> Any: ...
 
 
@@ -508,6 +512,7 @@ def from_native(
     eager_only: bool | None = ...,
     series_only: bool | None = ...,
     allow_series: bool | None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T:
     """
     from_native(df, strict=False)
@@ -522,6 +527,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[Any] | Series:
     """
     from_native(df, strict=True, eager_only=True, allow_series=True)
@@ -537,6 +543,7 @@ def from_native(
     eager_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
     from_native(df, strict=True, eager_only=True)
@@ -552,6 +559,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[Any] | LazyFrame[Any] | Series:
     """
     from_native(df, strict=True, allow_series=True)
@@ -567,6 +575,7 @@ def from_native(
     eager_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> Series:
     """
     from_native(df, strict=True, series_only=True)
@@ -582,6 +591,7 @@ def from_native(
     eager_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
+    allow_interchange_protocol: bool = ...,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
     """
     from_native(df, strict=True)
@@ -598,6 +608,7 @@ def from_native(
     eager_only: bool | None,
     series_only: bool | None,
     allow_series: bool | None,
+    allow_interchange_protocol: bool = ...,
 ) -> Any: ...
 
 
@@ -608,6 +619,7 @@ def from_native(
     eager_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
+    allow_interchange_protocol: bool = False,
 ) -> Any:
     """
     Convert dataframe/series to Narwhals DataFrame, LazyFrame, or Series.
@@ -628,16 +640,24 @@ def from_native(
         eager_only: Whether to only allow eager objects.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
+        allow_interchange_protocol: Whether to allow objects which only implement `__dataframe__` and
+            are otherwise unsupported by Narwhals.
 
     Returns:
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
     """
+    # Early returns
+    if isinstance(native_dataframe, (DataFrame, LazyFrame)) and not series_only:
+        return native_dataframe
+    if isinstance(native_dataframe, Series) and (series_only or allow_series):
+        return native_dataframe
     result = nw.from_native(
         native_dataframe,
         strict=strict,
         eager_only=eager_only,
         series_only=series_only,
         allow_series=allow_series,
+        allow_interchange_protocol=allow_interchange_protocol,
     )
     return _stableify(result)
 

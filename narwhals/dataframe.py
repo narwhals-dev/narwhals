@@ -59,6 +59,7 @@ class BaseFrame(Generic[FrameT]):
             df,
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:

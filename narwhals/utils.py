@@ -306,6 +306,15 @@ def is_ordered_categorical(series: Series) -> bool:
         >>> func(s_pl)
         True
     """
+    from narwhals._interchange.series import InterchangeSeries
+
+    if (
+        isinstance(series._compliant_series, InterchangeSeries)
+        and series.dtype == dtypes.Categorical
+    ):
+        return series._compliant_series._native_series.describe_categorical()[  # type: ignore[no-any-return]
+            "is_ordered"
+        ]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:
