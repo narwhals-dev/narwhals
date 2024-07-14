@@ -36,6 +36,7 @@ from narwhals.dtypes import Unknown
 from narwhals.expression import Expr as NwExpr
 from narwhals.functions import concat
 from narwhals.functions import show_versions
+from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
@@ -412,6 +413,39 @@ class Series(NwSeries):
 class Expr(NwExpr):
     def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
+
+
+class Schema(NwSchema):
+    """
+    Ordered mapping of column names to their data type.
+
+    Arguments:
+        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None
+            The schema definition given by column names and their associated.
+            *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
+
+    Examples:
+        Define a schema by passing *instantiated* data types.
+
+        >>> import narwhals.stable.v1 as nw
+        >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
+        >>> schema  # doctest:+SKIP
+        Schema({'foo': Int8, 'bar': String})
+
+        Access the data type associated with a specific column name.
+
+        >>> schema["foo"]
+        Int8
+
+        Access various schema properties using the `names`, `dtypes`, and `len` methods.
+
+        >>> schema.names()
+        ['foo', 'bar']
+        >>> schema.dtypes()
+        [Int8, String]
+        >>> schema.len()
+        2
+    """
 
 
 @overload
@@ -1413,4 +1447,5 @@ __all__ = [
     "Date",
     "narwhalify",
     "show_versions",
+    "Schema",
 ]
