@@ -248,6 +248,17 @@ class ArrowSeries:
         else:
             return self._from_native_series(ser.slice(abs(n)))
 
+    def item(self: Self, index: int | None = None) -> Any:
+        if index is None:
+            if len(self) != 1:
+                msg = (
+                    "can only call '.item()' if the Series is of length 1,"
+                    f" or an explicit index is provided (Series is of length {len(self)})"
+                )
+                raise ValueError(msg)
+            return self._native_series[0].as_py()
+        return self._native_series[index].as_py()
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)

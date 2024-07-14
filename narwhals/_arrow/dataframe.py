@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -12,6 +13,7 @@ from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyarrow_parquet
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -59,10 +61,13 @@ class ArrowDataFrame:
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        df = self._native_dataframe
         if not named:
-            msg = "Unnamed rows are not yet supported on PyArrow tables"
-            raise NotImplementedError(msg)
-        return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
+            return [
+                tuple(df[_col][row].as_py() for _col in df.column_names)
+                for row in range(df.num_rows)
+            ]
+        return df.to_pylist()  # type: ignore[no-any-return]
 
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
@@ -324,3 +329,55 @@ class ArrowDataFrame:
 
     def clone(self) -> Self:
         raise NotImplementedError("clone is not yet supported on PyArrow tables")
+
+    def is_empty(self: Self) -> bool:
+        return self.shape[0] == 0
+
+    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+        if row is None and column is None:
+            if self.shape != (1, 1):
+                msg = (
+                    "can only call `.item()` if the dataframe is of shape (1, 1),"
+                    " or if explicit row/col values are provided;"
+                    f" frame has shape {self.shape!r}"
+                )
+                raise ValueError(msg)
+            return self._native_dataframe[0][0].as_py()
+
+        elif row is None or column is None:
+            msg = "cannot call `.item()` with only one of `row` or `column`"
+            raise ValueError(msg)
+
+        _col = self.columns.index(column) if isinstance(column, str) else column
+        return self._native_dataframe[_col][row].as_py()
+
+    def iter_rows(
+        self,
+        *,
+        named: bool = False,
+        buffer_size: int = 512,  # noqa: ARG002
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
+        """
+        NOTE:
+            The param ``buffer_size`` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
+        df = self._native_dataframe
+
+        num_rows = df.num_rows
+        columns = df.column_names
+
+        for row in range(num_rows):
+            if not named:
+                yield tuple(df[_col][row].as_py() for _col in columns)
+            else:
+                yield {_col: df[_col][row].as_py() for _col in columns}
+
+    def rename(self, mapping: dict[str, str]) -> Self:
+        df = self._native_dataframe
+        new_cols = [mapping.get(c, c) for c in df.column_names]
+        return self._from_native_dataframe(df.rename_columns(new_cols))
+
+    def write_parquet(self, file: Any) -> Any:
+        pp = get_pyarrow_parquet()
+        pp.write_table(self._native_dataframe, file)
