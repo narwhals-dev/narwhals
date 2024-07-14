@@ -38,6 +38,7 @@ class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _is_polars: bool
     _backend_version: tuple[int, ...]
+    _level: Literal["full", "metadata"]
 
     def __len__(self) -> Any:
         return self._compliant_frame.__len__()
@@ -119,6 +120,7 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.lazy(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def with_columns(
@@ -218,7 +220,7 @@ class DataFrame(BaseFrame[FrameT]):
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
-        level: Literal["full", "metadata"] = "full",
+        level: Literal["full", "metadata"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
@@ -1929,7 +1931,7 @@ class LazyFrame(BaseFrame[FrameT]):
         *,
         is_polars: bool,
         backend_version: tuple[int, ...],
-        level: Literal["full", "metadata"] = "full",
+        level: Literal["full", "metadata"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
@@ -2002,6 +2004,7 @@ class LazyFrame(BaseFrame[FrameT]):
             self._compliant_frame.collect(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     # inherited

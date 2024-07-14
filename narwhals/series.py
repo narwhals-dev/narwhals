@@ -298,6 +298,7 @@ class Series:
             self._compliant_series.to_frame(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def to_list(self) -> list[Any]:
@@ -1676,6 +1677,7 @@ class Series:
             self._compliant_series.value_counts(sort=sort, parallel=parallel),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def quantile(

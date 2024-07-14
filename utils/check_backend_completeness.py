@@ -90,7 +90,10 @@ if __name__ == "__main__":
 
     df_pa = ArrowDataFrame(MockDataFrame({"a": [1, 2, 3]}), backend_version=(13, 0))
     df_nw = nw.DataFrame(
-        MockDataFrame({"a": [1, 2, 3]}), is_polars=True, backend_version=(1,)
+        MockDataFrame({"a": [1, 2, 3]}),
+        is_polars=True,
+        backend_version=(1,),
+        level="full",
     )
     pa_methods = [f"DataFrame.{x}" for x in df_pa.__dir__() if not x.startswith("_")]
     nw_methods = [f"DataFrame.{x}" for x in df_nw.__dir__() if not x.startswith("_")]

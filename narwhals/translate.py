@@ -270,6 +270,7 @@ def from_native(  # noqa: PLR0915
             native_object,
             is_polars=True,
             backend_version=parse_version(pl.__version__),
+            level="full",
         )
     elif (pl := get_polars()) is not None and isinstance(native_object, pl.LazyFrame):
         if series_only:
@@ -282,6 +283,7 @@ def from_native(  # noqa: PLR0915
             native_object,
             is_polars=True,
             backend_version=parse_version(pl.__version__),
+            level="full",
         )
     elif (pd := get_pandas()) is not None and isinstance(native_object, pd.DataFrame):
         if series_only:
@@ -295,6 +297,7 @@ def from_native(  # noqa: PLR0915
             ),
             is_polars=False,
             backend_version=parse_version(pd.__version__),
+            level="full",
         )
     elif (mpd := get_modin()) is not None and isinstance(native_object, mpd.DataFrame):
         if series_only:
@@ -308,6 +311,7 @@ def from_native(  # noqa: PLR0915
             ),
             is_polars=False,
             backend_version=parse_version(mpd.__version__),
+            level="full",
         )
     elif (cudf := get_cudf()) is not None and isinstance(  # pragma: no cover
         native_object, cudf.DataFrame
@@ -323,6 +327,7 @@ def from_native(  # noqa: PLR0915
             ),
             is_polars=False,
             backend_version=parse_version(cudf.__version__),
+            level="full",
         )
     elif (pa := get_pyarrow()) is not None and isinstance(native_object, pa.Table):
         if series_only:
@@ -332,6 +337,7 @@ def from_native(  # noqa: PLR0915
             ArrowDataFrame(native_object, backend_version=parse_version(pa.__version__)),
             is_polars=False,
             backend_version=parse_version(pa.__version__),
+            level="full",
         )
     elif hasattr(native_object, "__dataframe__"):
         if series_only:
@@ -353,6 +359,7 @@ def from_native(  # noqa: PLR0915
             native_object.__narwhals_dataframe__(),
             is_polars=False,
             backend_version=(0,),
+            level="full",
         )
     elif hasattr(native_object, "__narwhals_lazyframe__"):
         if series_only:
@@ -366,6 +373,7 @@ def from_native(  # noqa: PLR0915
             native_object.__narwhals_lazyframe__(),
             is_polars=False,
             backend_version=(0,),
+            level="full",
         )
     elif (pl := get_polars()) is not None and isinstance(native_object, pl.Series):
         if not allow_series:

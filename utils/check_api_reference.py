@@ -37,7 +37,9 @@ if extra := set(documented).difference(top_level_functions):
 
 top_level_functions = [
     i
-    for i in nw.DataFrame(pl.DataFrame(), is_polars=True, backend_version=(0,)).__dir__()
+    for i in nw.DataFrame(
+        pl.DataFrame(), is_polars=True, backend_version=(0,), level="full"
+    ).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/dataframe.md") as fd:
@@ -58,7 +60,9 @@ if extra := set(documented).difference(top_level_functions).difference({"__getit
 
 top_level_functions = [
     i
-    for i in nw.LazyFrame(pl.LazyFrame(), is_polars=True, backend_version=(0,)).__dir__()
+    for i in nw.LazyFrame(
+        pl.LazyFrame(), is_polars=True, backend_version=(0,), level="full"
+    ).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/lazyframe.md") as fd:
