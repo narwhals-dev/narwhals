@@ -48,7 +48,7 @@ def test_interchange_schema() -> None:
         },
     )
     tbl = ibis.memtable(df_pl)
-    df = nw.from_native(tbl, eager_only=True, allow_interchange_protocol=True)
+    df = nw.from_native(tbl, eager_or_interchange_only=True)
     result = df.schema
     expected = {
         "a": nw.Int64,
@@ -80,9 +80,9 @@ def test_invalid() -> None:
     with pytest.raises(
         NotImplementedError, match="is not supported for metadata-only dataframes"
     ):
-        nw.from_native(tbl, allow_interchange_protocol=True).select("a")
-    with pytest.raises(TypeError, match="allow_interchange_protocol=False"):
-        nw.from_native(tbl)
+        nw.from_native(tbl, eager_or_interchange_only=True).select("a")
+    with pytest.raises(TypeError, match="Cannot only use `series_only=True`"):
+        nw.from_native(tbl, eager_only=True)
 
 
 @pytest.mark.skipif(
@@ -92,7 +92,5 @@ def test_invalid() -> None:
 def test_get_level() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
     tbl = ibis.memtable(df)
-    assert (
-        nw.get_level(nw.from_native(tbl, allow_interchange_protocol=True)) == "metadata"
-    )
+    assert nw.get_level(nw.from_native(tbl, eager_or_interchange_only=True)) == "metadata"
     assert nw.get_level(nw.from_native(df)) == "full"

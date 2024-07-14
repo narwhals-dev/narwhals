@@ -34,7 +34,7 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
         {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
     ).__dataframe__()
     assert nw.is_ordered_categorical(
-        nw.from_native(df, eager_only=True, allow_interchange_protocol=True)["a"]
+        nw.from_native(df, eager_or_interchange_only=True)["a"]
     )
 
 
