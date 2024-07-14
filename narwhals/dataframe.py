@@ -763,12 +763,12 @@ class DataFrame(BaseFrame[FrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema
-            Schema([('foo', Int64), ('bar', Float64), ('ham', String)])
+            >>> df_pd_schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema
-            Schema([('foo', Int64), ('bar', Float64), ('ham', String)])
+            >>> df_pl_schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().schema
 
@@ -800,12 +800,12 @@ class DataFrame(BaseFrame[FrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema
-            Schema([('foo', Int64), ('bar', Float64), ('ham', String)])
+            >>> df_pd_schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema
-            Schema([('foo', Int64), ('bar', Float64), ('ham', String)])
+            >>> df_pl_schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().collect_schema()
 
@@ -2194,8 +2194,8 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.schema  # doctest: +SKIP
-            Schema([('foo', Int64), ('bar', Float64), ('ham', String)])
+            >>> lf.schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().schema
 
@@ -2217,8 +2217,8 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.collect_schema()
-            Schema([('foo', Int64), ('bar', Float64), ('ham', String)])
+            >>> lf.collect_schema()  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().collect_schema()
 
