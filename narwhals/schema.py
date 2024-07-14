@@ -1,3 +1,8 @@
+"""
+Adapted from Polars implementation at:
+https://github.com/pola-rs/polars/blob/main/py-polars/polars/schema.py
+"""
+
 from __future__ import annotations
 
 from collections import OrderedDict
