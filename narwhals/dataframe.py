@@ -96,10 +96,15 @@ class BaseFrame(Generic[FrameT]):
         )
 
     def collect_schema(self) -> Schema:
+        if self._is_polars and self._backend_version < (1, 0, 0):
+            native_schema = self._compliant_frame.schema
+        else:
+            native_schema = dict(self._compliant_frame.collect_schema())
+
         return Schema(
             {
                 k: to_narwhals_dtype(v, is_polars=self._is_polars)
-                for k, v in self._compliant_frame.collect_schema().items()
+                for k, v in native_schema.items()
             }
         )
 
