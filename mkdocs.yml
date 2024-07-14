@@ -13,6 +13,7 @@ nav:
     - basics/complete_example.md
   - Other concepts:
     - other/pandas_index.md
+  - levels.md
   - overhead.md
   - backcompat.md
   - extending.md
