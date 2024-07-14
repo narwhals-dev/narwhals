@@ -14,6 +14,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 MISSING = [
     "DataFrame.is_duplicated",
     "DataFrame.is_unique",
+    "DataFrame.iter_rows",
     "DataFrame.pipe",
     "DataFrame.unique",
     "Series.drop_nulls",

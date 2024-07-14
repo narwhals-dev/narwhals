@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -62,13 +61,10 @@ class ArrowDataFrame:
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
-        df = self._native_dataframe
         if not named:
-            return [
-                tuple(df[_col][row].as_py() for _col in df.column_names)
-                for row in range(df.num_rows)
-            ]
-        return df.to_pylist()  # type: ignore[no-any-return]
+            msg = "Unnamed rows are not yet supported on PyArrow tables"
+            raise NotImplementedError(msg)
+        return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
 
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
@@ -366,28 +362,6 @@ class ArrowDataFrame:
 
         _col = self.columns.index(column) if isinstance(column, str) else column
         return self._native_dataframe[_col][row].as_py()
-
-    def iter_rows(
-        self,
-        *,
-        named: bool = False,
-        buffer_size: int = 512,  # noqa: ARG002
-    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
-        """
-        NOTE:
-            The param ``buffer_size`` is only here for compatibility with the polars API
-            and has no effect on the output.
-        """
-        df = self._native_dataframe
-
-        num_rows = df.num_rows
-        columns = df.column_names
-
-        for row in range(num_rows):
-            if not named:
-                yield tuple(df[_col][row].as_py() for _col in columns)
-            else:
-                yield {_col: df[_col][row].as_py() for _col in columns}
 
     def rename(self, mapping: dict[str, str]) -> Self:
         df = self._native_dataframe
