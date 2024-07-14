@@ -17,14 +17,13 @@ from tests.utils import compare_dicts
 
 @pytest.mark.parametrize(
     "library",
-    ["pandas", "polars" "pyarrow"],
+    ["pandas", "polars", "pyarrow"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
-)
 def test_q1(library: str, request: Any) -> None:
-    if library == "pandas":
+    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+        request.applymarker(pytest.mark.xfail)
+    elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     elif library == "polars":
@@ -93,11 +92,10 @@ def test_q1(library: str, request: Any) -> None:
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
     "ignore:.*Complex.*:UserWarning",
 )
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
-)
-def test_q1_w_generic_funcs(library: str) -> None:
-    if library == "pandas":
+def test_q1_w_generic_funcs(library: str, request: Any) -> None:
+    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+        request.applymarker(pytest.mark.xfail)
+    elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     else:
