@@ -135,6 +135,14 @@ def test_allow_series(series: Any, allow_series: Any, context: Any) -> None:
         assert isinstance(res, nw.Series)
 
 
+def test_invalid_series_combination() -> None:
+    with pytest.raises(
+        ValueError,
+        match="Invalid parameter combination: `series_only=True` and `allow_series=False`",
+    ):
+        nw.from_native(MockSeries(), series_only=True, allow_series=False)  # type: ignore[call-overload]
+
+
 def test_pandas_like_validate() -> None:
     df1 = pd.DataFrame({"a": [1, 2, 3]})
     df2 = pd.DataFrame({"b": [1, 2, 3]})
