@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
@@ -27,14 +28,11 @@ def test_validate_laziness() -> None:
 
 
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old"
+    parse_version(np.__version__) < parse_version("1.26.4"), reason="too old"
 )
 def test_memmap() -> None:
     # the headache this caused me...
-    try:
-        from sklearn.utils import check_X_y
-    except ImportError:  # pragma: no cover
-        return
+    from sklearn.utils import check_X_y
     from sklearn.utils._testing import create_memmap_backed_data
 
     x_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})

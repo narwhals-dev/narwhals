@@ -68,6 +68,10 @@ class ArrowDataFrame:
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
+        if not isinstance(name, str):
+            msg = f"Expected str, got: {type(name)}"
+            raise TypeError(msg)
+
         return ArrowSeries(
             self._native_dataframe[name],
             name=name,
@@ -136,6 +140,9 @@ class ArrowDataFrame:
             name: translate_dtype(dtype)
             for name, dtype in zip(schema.names, schema.types)
         }
+
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
 
     @property
     def columns(self) -> list[str]:

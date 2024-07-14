@@ -6,6 +6,7 @@
       members:
         - __getitem__
         - clone
+        - collect_schema
         - columns
         - drop
         - drop_nulls

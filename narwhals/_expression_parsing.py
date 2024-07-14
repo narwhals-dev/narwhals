@@ -42,9 +42,7 @@ if TYPE_CHECKING:
 def evaluate_into_expr(
     df: CompliantDataFrame, into_expr: IntoCompliantExpr
 ) -> ListOfCompliantSeries:
-    """
-    Return list of raw columns.
-    """
+    """Return list of raw columns."""
     expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
     return expr._call(df)  # type: ignore[arg-type]
 
