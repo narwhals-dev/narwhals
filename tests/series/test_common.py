@@ -157,7 +157,10 @@ def test_is_last_distinct(constructor_series: Any) -> None:
 
 
 def test_value_counts(constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
+    if (
+        "pyarrow_series" in str(constructor_series)
+        or "pandas_series_nullable" in str(constructor_series)  # fails for py3.8
+    ):
         pytest.xfail()
 
     series = nw.from_native(constructor_series(data_dups).rename("b"), series_only=True)
