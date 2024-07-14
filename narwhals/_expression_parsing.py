@@ -241,3 +241,20 @@ def reuse_series_namespace_implementation(
         root_names=expr._root_names,
         output_names=expr._output_names,
     )
+
+
+def is_simple_aggregation(expr: CompliantExpr) -> bool:
+    """
+    Check if expr is a very simple one, such as:
+
+    - nw.col('a').mean()  # depth 1
+    - nw.mean('a')  # depth 1
+    - nw.len()  # depth 0
+
+    as opposed to, say
+
+    - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
+
+    because then, we can use a fastpath in pandas.
+    """
+    return expr._depth < 2

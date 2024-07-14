@@ -12,7 +12,6 @@ import narwhals as nw
 from narwhals._arrow.dataframe import ArrowDataFrame
 
 MISSING = [
-    "DataFrame.group_by",
     "DataFrame.is_duplicated",
     "DataFrame.is_empty",
     "DataFrame.is_unique",

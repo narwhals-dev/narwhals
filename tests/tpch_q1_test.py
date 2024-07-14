@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from typing import Any
 from unittest import mock
 
 import pandas as pd
 import polars as pl
+import pyarrow.parquet as pq
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -15,18 +17,20 @@ from tests.utils import compare_dicts
 
 @pytest.mark.parametrize(
     "library",
-    ["pandas", "polars"],
+    ["pandas", "polars", "pyarrow"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
-)
-def test_q1(library: str) -> None:
-    if library == "pandas":
+def test_q1(library: str, request: Any) -> None:
+    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+        request.applymarker(pytest.mark.xfail)
+    elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
-    else:
+    elif library == "polars":
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
+    else:
+        request.applymarker(pytest.mark.xfail)
+        df_raw = pq.read_table("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
     query_result = (
@@ -88,11 +92,10 @@ def test_q1(library: str) -> None:
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
     "ignore:.*Complex.*:UserWarning",
 )
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
-)
-def test_q1_w_generic_funcs(library: str) -> None:
-    if library == "pandas":
+def test_q1_w_generic_funcs(library: str, request: Any) -> None:
+    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+        request.applymarker(pytest.mark.xfail)
+    elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     else:
