@@ -123,7 +123,7 @@ def validate_column_comparand(other: Any) -> Any:
     return other
 
 
-def validate_dataframe_comparand(other: Any) -> Any:
+def validate_dataframe_comparand(length: int, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -136,9 +136,8 @@ def validate_dataframe_comparand(other: Any) -> Any:
         return NotImplemented
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
-            # broadcast
-            msg = "not implemented yet"  # pragma: no cover
-            raise NotImplementedError(msg)
+            pa = get_pyarrow()
+            return pa.chunked_array([[other.item()] * length])
         return other._native_series
     msg = "Please report a bug"  # pragma: no cover
     raise AssertionError(msg)
