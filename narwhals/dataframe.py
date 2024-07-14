@@ -14,6 +14,7 @@ from typing import overload
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
 from narwhals.dtypes import to_narwhals_dtype
+from narwhals.schema import Schema
 from narwhals.utils import flatten
 from narwhals.utils import validate_same_library
 
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
-    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
@@ -38,6 +38,7 @@ class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _is_polars: bool
     _backend_version: tuple[int, ...]
+    _level: Literal["full", "interchange"]
 
     def __len__(self) -> Any:
         return self._compliant_frame.__len__()
@@ -58,6 +59,7 @@ class BaseFrame(Generic[FrameT]):
             df,
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -87,11 +89,26 @@ class BaseFrame(Generic[FrameT]):
         return arg
 
     @property
-    def schema(self) -> dict[str, DType]:
-        return {
-            k: to_narwhals_dtype(v, is_polars=self._is_polars)
-            for k, v in self._compliant_frame.schema.items()
-        }
+    def schema(self) -> Schema:
+        return Schema(
+            {
+                k: to_narwhals_dtype(v, is_polars=self._is_polars)
+                for k, v in self._compliant_frame.schema.items()
+            }
+        )
+
+    def collect_schema(self) -> Schema:
+        if self._is_polars and self._backend_version < (1, 0, 0):  # pragma: no cover
+            native_schema = self._compliant_frame.schema
+        else:
+            native_schema = dict(self._compliant_frame.collect_schema())
+
+        return Schema(
+            {
+                k: to_narwhals_dtype(v, is_polars=self._is_polars)
+                for k, v in native_schema.items()
+            }
+        )
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         return function(self, *args, **kwargs)
@@ -119,6 +136,7 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.lazy(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def with_columns(
@@ -218,9 +236,11 @@ class DataFrame(BaseFrame[FrameT]):
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
+        level: Literal["full", "interchange"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
+        self._level: Literal["full", "interchange"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
         elif is_polars and isinstance(df, get_polars().DataFrame):
@@ -453,6 +473,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.get_column(name),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     @overload
@@ -522,6 +543,7 @@ class DataFrame(BaseFrame[FrameT]):
                 self._compliant_frame[item],
                 backend_version=self._backend_version,
                 is_polars=self._is_polars,
+                level=self._level,
             )
 
         elif isinstance(item, (Sequence, slice)) or (
@@ -587,6 +609,7 @@ class DataFrame(BaseFrame[FrameT]):
                     value,
                     backend_version=self._backend_version,
                     is_polars=self._is_polars,
+                    level=self._level,
                 )
                 for key, value in self._compliant_frame.to_dict(
                     as_series=as_series
@@ -720,9 +743,9 @@ class DataFrame(BaseFrame[FrameT]):
         return super().with_row_index(name)
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self) -> Schema:
         r"""
-        Get a dict[column name, DataType].
+        Get an ordered mapping of column names to their data type.
 
         Examples:
             >>> import polars as pl
@@ -745,15 +768,48 @@ class DataFrame(BaseFrame[FrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema
-            {'foo': Int64, 'bar': Float64, 'ham': String}
+            >>> df_pd_schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema
-            {'foo': Int64, 'bar': Float64, 'ham': String}
-
+            >>> df_pl_schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().schema
+
+    def collect_schema(self: Self) -> Schema:
+        r"""
+        Get an ordered mapping of column names to their data type.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> def func(df_any):
+            ...     df = nw.from_native(df_any)
+            ...     return df.collect_schema()
+
+            You can pass either pandas or Polars to `func`:
+
+            >>> df_pd_schema = func(df_pd)
+            >>> df_pd_schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+
+            >>> df_pl_schema = func(df_pl)
+            >>> df_pl_schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+        """
+        return super().collect_schema()
 
     @property
     def columns(self) -> list[str]:
@@ -1700,6 +1756,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.is_duplicated(),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     def is_empty(self: Self) -> bool:
@@ -1786,6 +1843,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.is_unique(),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     def null_count(self: Self) -> Self:
@@ -1927,9 +1985,11 @@ class LazyFrame(BaseFrame[FrameT]):
         *,
         is_polars: bool,
         backend_version: tuple[int, ...],
+        level: Literal["full", "interchange"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
+        self._level = level
         if hasattr(df, "__narwhals_lazyframe__"):
             self._compliant_frame: Any = df.__narwhals_lazyframe__()
         elif is_polars and (
@@ -1998,6 +2058,7 @@ class LazyFrame(BaseFrame[FrameT]):
             self._compliant_frame.collect(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     # inherited
@@ -2122,9 +2183,9 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().with_row_index(name)
 
     @property
-    def schema(self) -> dict[str, DType]:
+    def schema(self) -> Schema:
         r"""
-        Get a dict[column name, DType].
+        Get an ordered mapping of column names to their data type.
 
         Examples:
             >>> import polars as pl
@@ -2137,10 +2198,30 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.schema  # doctest: +SKIP
-            OrderedDict({'foo': Int64, 'bar': Float64, 'ham': String})
+            >>> lf.schema  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().schema
+
+    def collect_schema(self: Self) -> Schema:
+        r"""
+        Get an ordered mapping of column names to their data type.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "foo": [1, 2, 3],
+            ...         "bar": [6.0, 7.0, 8.0],
+            ...         "ham": ["a", "b", "c"],
+            ...     }
+            ... )
+            >>> lf = nw.from_native(lf_pl)
+            >>> lf.collect_schema()  # doctest:+SKIP
+            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+        """
+        return super().collect_schema()
 
     @property
     def columns(self) -> list[str]:

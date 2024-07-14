@@ -44,7 +44,6 @@ def test_std(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(constructor_with_lazy: Any) -> None:
     df = nw.from_native(
@@ -52,19 +51,25 @@ def test_schema(constructor_with_lazy: Any) -> None:
     )
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+
+    result = df.schema
     assert result == expected
     result = df.lazy().collect().schema
+    assert result == expected
+
+
+def test_collect_schema(constructor_with_lazy: Any) -> None:
+    df = nw.from_native(
+        constructor_with_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
+    )
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+
+    result = df.collect_schema()
     assert result == expected
-    result = df.columns  # type: ignore[assignment]
-    expected = ["a", "b", "z"]  # type: ignore[assignment]
-    assert result == expected
-    result = df.lazy().collect().columns  # type: ignore[assignment]
-    expected = ["a", "b", "z"]  # type: ignore[assignment]
+    result = df.lazy().collect().collect_schema()
     assert result == expected
 
 
-# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/313
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(constructor_with_lazy: Any) -> None:
     df = nw.from_native(constructor_with_lazy(data))
@@ -295,9 +300,6 @@ def test_library(c_left: Any, c_right: Any) -> None:
 def test_item(
     constructor: Any, row: int | None, column: int | str | None, expected: Any
 ) -> None:
-    if "pyarrow_table" in str(constructor):
-        pytest.xfail()
-
     df = nw.from_native(constructor(data), eager_only=True)
     assert df.item(row, column) == expected
     assert df.select("a").head(1).item() == 1
@@ -318,9 +320,6 @@ def test_item(
 def test_item_value_error(
     constructor: Any, row: int | None, column: int | str | None, err_msg: str
 ) -> None:
-    if "pyarrow_table" in str(constructor):
-        pytest.xfail()
-
     with pytest.raises(ValueError, match=err_msg):
         nw.from_native(constructor(data), eager_only=True).item(row, column)
 

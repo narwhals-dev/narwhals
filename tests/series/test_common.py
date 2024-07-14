@@ -260,9 +260,6 @@ def test_cast_string() -> None:
 
 @pytest.mark.parametrize(("index", "expected"), [(0, 1), (1, 3)])
 def test_item(constructor_series: Any, index: int, expected: int) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
-
     series = nw.from_native(constructor_series(data), series_only=True)
     result = series.item(index)
     assert result == expected

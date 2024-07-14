@@ -138,7 +138,7 @@ def test_left_join(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
+@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_multiple_column(constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
         pytest.xfail()

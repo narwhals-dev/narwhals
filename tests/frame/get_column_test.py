@@ -11,7 +11,9 @@ def test_get_column(constructor: Any) -> None:
     result = df.get_column("a")
     assert result.to_list() == [1, 2]
     assert result.name == "a"
-    with pytest.raises(TypeError):
+    with pytest.raises(
+        (KeyError, TypeError), match="Expected str|'int' object cannot be converted|0"
+    ):
         # Check that trying to get a column by position is disallowed here.
         nw.from_native(df, eager_only=True).get_column(0)  # type: ignore[arg-type]
 
