@@ -32,9 +32,11 @@ class Series:
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
+        level: Literal["full", "metadata"] = "full",
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
+        self._level = level
         if hasattr(series, "__narwhals_series__"):
             self._compliant_series = series.__narwhals_series__()
         elif is_polars and (

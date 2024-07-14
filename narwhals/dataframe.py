@@ -218,9 +218,11 @@ class DataFrame(BaseFrame[FrameT]):
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
+        level: Literal["full", "metadata"] = "full",
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
+        self._level: Literal["full", "metadata"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
         elif is_polars and isinstance(df, get_polars().DataFrame):
@@ -1927,9 +1929,11 @@ class LazyFrame(BaseFrame[FrameT]):
         *,
         is_polars: bool,
         backend_version: tuple[int, ...],
+        level: Literal["full", "metadata"] = "full",
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
+        self._level = level
         if hasattr(df, "__narwhals_lazyframe__"):
             self._compliant_frame: Any = df.__narwhals_lazyframe__()
         elif is_polars and (

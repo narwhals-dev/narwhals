@@ -342,6 +342,7 @@ def from_native(  # noqa: PLR0915
             InterchangeFrame(native_object.__dataframe__()),
             is_polars=False,
             backend_version=(0,),
+            level="metadata",
         )
     elif hasattr(native_object, "__narwhals_dataframe__"):
         if series_only:
