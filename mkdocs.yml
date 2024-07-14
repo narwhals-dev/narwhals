@@ -28,6 +28,7 @@ nav:
     - api-reference/expressions_str.md
     - api-reference/group_by.md
     - api-reference/lazyframe.md
+    - api-reference/schema.md
     - api-reference/series.md
     - api-reference/series_cat.md
     - api-reference/series_dt.md

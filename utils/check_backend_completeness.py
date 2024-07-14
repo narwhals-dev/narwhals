@@ -12,7 +12,6 @@ import narwhals as nw
 from narwhals._arrow.dataframe import ArrowDataFrame
 
 MISSING = [
-    "DataFrame.group_by",
     "DataFrame.is_duplicated",
     "DataFrame.is_unique",
     "DataFrame.pipe",
@@ -83,20 +82,29 @@ if __name__ == "__main__":
     no_longer_missing = []
 
     df_pa = ArrowDataFrame(MockDataFrame({"a": [1, 2, 3]}), backend_version=(13, 0))
-    df_pd = nw.DataFrame(
-        MockDataFrame({"a": [1, 2, 3]}), is_polars=True, backend_version=(1,)
+    df_nw = nw.DataFrame(
+        MockDataFrame({"a": [1, 2, 3]}),
+        is_polars=True,
+        backend_version=(1,),
+        level="full",
     )
     pa_methods = [f"DataFrame.{x}" for x in df_pa.__dir__() if not x.startswith("_")]
-    pd_methods = [f"DataFrame.{x}" for x in df_pd.__dir__() if not x.startswith("_")]
-    missing.extend([x for x in pd_methods if x not in pa_methods and x not in MISSING])
-    no_longer_missing.extend([x for x in MISSING if x in pa_methods and x in pd_methods])
+    nw_methods = [f"DataFrame.{x}" for x in df_nw.__dir__() if not x.startswith("_")]
+    missing.extend(
+        [
+            x
+            for x in nw_methods
+            if x not in pa_methods and x not in MISSING and x not in {"level"}
+        ]
+    )
+    no_longer_missing.extend([x for x in MISSING if x in pa_methods and x in nw_methods])
 
     ser_pa = df_pa["a"]
-    ser_pd = df_pd["a"]
+    ser_pd = df_nw["a"]
     pa_methods = [f"Series.{x}" for x in ser_pa.__dir__() if not x.startswith("_")]
-    pd_methods = [f"Series.{x}" for x in ser_pd.__dir__() if not x.startswith("_")]
-    missing.extend([x for x in pd_methods if x not in pa_methods and x not in MISSING])
-    no_longer_missing.extend([x for x in MISSING if x in pa_methods and x in pd_methods])
+    nw_methods = [f"Series.{x}" for x in ser_pd.__dir__() if not x.startswith("_")]
+    missing.extend([x for x in nw_methods if x not in pa_methods and x not in MISSING])
+    no_longer_missing.extend([x for x in MISSING if x in pa_methods and x in nw_methods])
 
     if missing:
         print(

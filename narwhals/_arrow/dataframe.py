@@ -19,6 +19,7 @@ from narwhals.utils import flatten
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
@@ -71,6 +72,10 @@ class ArrowDataFrame:
 
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
+
+        if not isinstance(name, str):
+            msg = f"Expected str, got: {type(name)}"
+            raise TypeError(msg)
 
         return ArrowSeries(
             self._native_dataframe[name],
@@ -141,6 +146,9 @@ class ArrowDataFrame:
             for name, dtype in zip(schema.names, schema.types)
         }
 
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
+
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.schema.names  # type: ignore[no-any-return]
@@ -188,6 +196,14 @@ class ArrowDataFrame:
             output_names.append(s)
         df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)
         return self._from_native_dataframe(df)
+
+    def group_by(self, *keys: str | Iterable[str]) -> ArrowGroupBy:
+        from narwhals._arrow.group_by import ArrowGroupBy
+
+        return ArrowGroupBy(
+            self,
+            flatten(keys),
+        )
 
     def join(
         self,

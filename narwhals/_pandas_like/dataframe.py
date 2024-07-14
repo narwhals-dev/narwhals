@@ -188,6 +188,9 @@ class PandasLikeDataFrame:
             for col in self._native_dataframe.columns
         }
 
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
+
     # --- reshape ---
     def select(
         self,

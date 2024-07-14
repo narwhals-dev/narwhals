@@ -6,6 +6,7 @@
       members:
         - clone
         - collect
+        - collect_schema
         - columns
         - drop
         - drop_nulls

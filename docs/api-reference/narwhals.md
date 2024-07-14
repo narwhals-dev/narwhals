@@ -11,6 +11,7 @@ Here are the top-level functions available in Narwhals.
         - col
         - concat
         - from_native
+        - get_level
         - get_native_namespace
         - is_ordered_categorical
         - len
