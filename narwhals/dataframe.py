@@ -737,10 +737,7 @@ class DataFrame(BaseFrame[FrameT]):
     @property
     def schema(self) -> Schema:
         r"""
-        Get a dict[column name, DataType].
-
-        Notes:
-            Remark that Polars returns its own `Schema` type instead of a dictionary.
+        Get an ordered mapping of column names to their data type.
 
         Examples:
             >>> import polars as pl
@@ -774,10 +771,7 @@ class DataFrame(BaseFrame[FrameT]):
 
     def collect_schema(self: Self) -> Schema:
         r"""
-        Get a dict[column name, DataType].
-
-        Notes:
-            Remark that Polars returns its own `Schema` type instead of a dictionary.
+        Get an ordered mapping of column names to their data type.
 
         Examples:
             >>> import polars as pl
@@ -2178,10 +2172,7 @@ class LazyFrame(BaseFrame[FrameT]):
     @property
     def schema(self) -> Schema:
         r"""
-        Get a dict[column name, DType].
-
-        Notes:
-            Remark that Polars returns its own `Schema` type instead of a dictionary.
+        Get an ordered mapping of column names to their data type.
 
         Examples:
             >>> import polars as pl
@@ -2201,10 +2192,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def collect_schema(self: Self) -> Schema:
         r"""
-        Get a dict[column name, DType].
-
-        Notes:
-            Remark that Polars returns its own `Schema` type instead of a dictionary.
+        Get an ordered mapping of column names to their data type.
 
         Examples:
             >>> import polars as pl
