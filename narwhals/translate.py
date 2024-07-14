@@ -258,8 +258,10 @@ def from_native(  # noqa: PLR0915
     from narwhals.utils import parse_version
 
     if series_only:
+        if allow_series is False:
+            msg = "Invalid parameter combination: `series_only=True` and `allow_series=False`"
+            raise ValueError(msg)
         allow_series = True
-    # TODO(Unassigned): raise on invalid combinations
 
     if (pl := get_polars()) is not None and isinstance(native_object, pl.DataFrame):
         if series_only:
