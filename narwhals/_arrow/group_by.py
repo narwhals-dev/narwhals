@@ -88,11 +88,7 @@ def agg_arrow(
         result_simple = grouped.aggregate(aggs)
         result_simple = result_simple.rename_columns(
             [name_mapping.get(col, col) for col in result_simple.column_names]
-        )
-        assert result_simple.column_names == output_names, (
-            result_simple.column_names,
-            output_names,
-        )
+        ).select(output_names)
         return from_dataframe(result_simple)
 
     msg = (
