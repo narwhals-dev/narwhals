@@ -38,7 +38,7 @@ class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _is_polars: bool
     _backend_version: tuple[int, ...]
-    _level: Literal["full", "metadata"]
+    _level: Literal["full", "interchange"]
 
     def __len__(self) -> Any:
         return self._compliant_frame.__len__()
@@ -221,11 +221,11 @@ class DataFrame(BaseFrame[FrameT]):
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
-        level: Literal["full", "metadata"],
+        level: Literal["full", "interchange"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
-        self._level: Literal["full", "metadata"] = level
+        self._level: Literal["full", "interchange"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
         elif is_polars and isinstance(df, get_polars().DataFrame):
@@ -1937,7 +1937,7 @@ class LazyFrame(BaseFrame[FrameT]):
         *,
         is_polars: bool,
         backend_version: tuple[int, ...],
-        level: Literal["full", "metadata"],
+        level: Literal["full", "interchange"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version

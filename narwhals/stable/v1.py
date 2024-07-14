@@ -1355,7 +1355,7 @@ def get_native_namespace(obj: Any) -> Any:
 
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series,
-) -> Literal["full", "metadata"]:
+) -> Literal["full", "interchange"]:
     """
     Level of support Narwhals has for current object.
 

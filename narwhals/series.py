@@ -32,7 +32,7 @@ class Series:
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
-        level: Literal["full", "metadata"],
+        level: Literal["full", "interchange"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version

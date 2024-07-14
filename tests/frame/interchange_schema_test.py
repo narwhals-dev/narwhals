@@ -94,5 +94,7 @@ def test_invalid() -> None:
 def test_get_level() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
     tbl = ibis.memtable(df)
-    assert nw.get_level(nw.from_native(tbl, eager_or_interchange_only=True)) == "metadata"
+    assert (
+        nw.get_level(nw.from_native(tbl, eager_or_interchange_only=True)) == "interchange"
+    )
     assert nw.get_level(nw.from_native(df)) == "full"
