@@ -6,6 +6,7 @@ from typing import Any
 from typing import Iterable
 
 from narwhals import dtypes
+from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
@@ -14,7 +15,6 @@ from narwhals.utils import flatten
 if TYPE_CHECKING:
     from typing import Callable
 
-    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
@@ -140,3 +140,42 @@ class ArrowNamespace:
                 namespace=self,
             ),
         )
+
+    def concat(
+        self,
+        items: Iterable[ArrowDataFrame],
+        *,
+        how: str = "vertical",
+    ) -> ArrowDataFrame:
+        dfs: list[Any] = [item._native_dataframe for item in items]
+
+        if len(dfs) == 0:
+            msg = "No items to concatenate"
+            raise ValueError(msg)
+
+        pa = get_pyarrow()
+        if how == "horizontal":
+            names = [name for df in dfs for name in df.column_names]
+            arrays = [a for df in dfs for a in df]
+
+            if len(set(names)) < len(names):  # pragma: no cover
+                msg = "Expected unique column names"
+                raise ValueError(msg)
+
+            return ArrowDataFrame(
+                pa.Table.from_arrays(arrays, names=names),
+                backend_version=self._backend_version,
+            )
+        if how == "vertical":
+            cols = set(dfs[0].column_names)
+            for df in dfs:
+                cols_current = set(df.column_names)
+                if cols_current != cols:
+                    msg = "unable to vstack, column names don't match"
+                    raise TypeError(msg)
+
+            return ArrowDataFrame(
+                pa.concat_tables(dfs).combine_chunks(),
+                backend_version=self._backend_version,
+            )
+        raise NotImplementedError

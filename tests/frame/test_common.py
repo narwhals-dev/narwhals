@@ -53,6 +53,7 @@ df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
 df_mpd = maybe_get_modin_df(df_pandas)
 df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_pa_na = pa.table({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
+df_right_pa = pa.table({"c": [6, 12, -1], "d": [0, -4, 2]})
 
 
 @pytest.mark.parametrize(
@@ -236,13 +237,13 @@ def test_drop(df_raw: Any, drop: list[str], left: list[str]) -> None:
 
 
 @pytest.mark.parametrize(
-    ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
+    ("df_raw", "df_raw_right"),
+    [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy), (df_pa, df_right_pa)],
 )
 def test_concat_horizontal(df_raw: IntoFrameT, df_raw_right: IntoFrameT) -> None:
     df_left = nw.from_native(df_raw)
     df_right = nw.from_native(df_raw_right)
     result = nw.concat([df_left, df_right], how="horizontal")
-    result_native = nw.to_native(result)
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -250,25 +251,27 @@ def test_concat_horizontal(df_raw: IntoFrameT, df_raw_right: IntoFrameT) -> None
         "c": [6, 12, -1],
         "d": [0, -4, 2],
     }
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([])
 
 
 @pytest.mark.parametrize(
-    ("df_raw", "df_raw_right"), [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy)]
+    ("df_raw", "df_raw_right"),
+    [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy), (df_pa, df_right_pa)],
 )
 def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
     df_left = nw.from_native(df_raw).rename({"a": "c", "b": "d"}).drop("z").lazy()
     df_right = nw.from_native(df_raw_right).lazy()
     result = nw.concat([df_left, df_right], how="vertical")
-    result_native = nw.to_native(result)
     expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
+
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="vertical")
-    with pytest.raises(Exception, match="unable to vstack"):
+
+    with pytest.raises((Exception, TypeError), match="unable to vstack"):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
 
 
