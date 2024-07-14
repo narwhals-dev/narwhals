@@ -43,7 +43,7 @@ def test_interchange_schema() -> None:
         },
     )
     tbl = ibis.memtable(df)
-    result = nw.from_native(tbl).schema
+    result = nw.from_native(tbl, allow_interchange_protocol=True).schema
     expected = {
         "a": nw.Int64,
         "b": nw.Int32,
@@ -69,11 +69,13 @@ def test_invalid() -> None:
     with pytest.raises(
         NotImplementedError, match="is not supported for metadata-only dataframes"
     ):
-        nw.from_native(tbl).select("a")
+        nw.from_native(tbl, allow_interchange_protocol=True).select("a")
 
 
 def test_get_level() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
     tbl = ibis.memtable(df)
-    assert nw.get_level(nw.from_native(tbl)) == "metadata"
+    assert (
+        nw.get_level(nw.from_native(tbl, allow_interchange_protocol=True)) == "metadata"
+    )
     assert nw.get_level(nw.from_native(df)) == "full"

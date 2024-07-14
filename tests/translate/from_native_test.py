@@ -170,7 +170,9 @@ def test_pandas_like_validate() -> None:
 )
 def test_init_series(series: Any, is_polars: Any, context: Any) -> None:
     with context:
-        result = nw.Series(series, is_polars=is_polars, backend_version=(1, 2, 3))
+        result = nw.Series(
+            series, is_polars=is_polars, backend_version=(1, 2, 3), level="full"
+        )
         assert isinstance(result, nw.Series)
 
 
