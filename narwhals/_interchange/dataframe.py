@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from typing import Any
-from typing import Never
+from typing import NoReturn
 
 from narwhals import dtypes
 
@@ -76,7 +76,7 @@ class InterchangeFrame:
             for column_name in self._df.column_names()
         }
 
-    def __getattr__(self, attr: str) -> Never:
+    def __getattr__(self, attr: str) -> NoReturn:
         msg = (
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "Hint: you probably called `nw.from_native` on an object which isn't fully "

@@ -1308,6 +1308,20 @@ def get_native_namespace(obj: Any) -> Any:
     return nw_get_native_namespace(obj)
 
 
+def get_level(
+    obj: DataFrame[Any] | LazyFrame[Any] | Series,
+) -> Literal["full", "metadata"]:
+    """
+    Level of support Narwhals has for current object.
+
+    This can be one of:
+
+    - 'full': full Narwhals API support
+    - 'metadata': only metadata operations are supported (`df.schema`)
+    """
+    return nw.get_level(obj)
+
+
 __all__ = [
     "selectors",
     "concat",
@@ -1318,6 +1332,7 @@ __all__ = [
     "maybe_convert_dtypes",
     "maybe_set_index",
     "get_native_namespace",
+    "get_level",
     "all",
     "all_horizontal",
     "col",
