@@ -5,8 +5,13 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 
 
+@pytest.mark.skipif(
+    parse_version(ibis.__version__) < (6, 0),
+    reason="too old, requires interchange protocol",
+)
 def test_interchange_schema() -> None:
     df_pl = pl.DataFrame(
         {
