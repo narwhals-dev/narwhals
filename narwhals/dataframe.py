@@ -38,6 +38,7 @@ class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _is_polars: bool
     _backend_version: tuple[int, ...]
+    _level: Literal["full", "interchange"]
 
     def __len__(self) -> Any:
         return self._compliant_frame.__len__()
@@ -58,6 +59,7 @@ class BaseFrame(Generic[FrameT]):
             df,
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def _flatten_and_extract(self, *args: Any, **kwargs: Any) -> Any:
@@ -119,6 +121,7 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.lazy(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def with_columns(
@@ -218,9 +221,11 @@ class DataFrame(BaseFrame[FrameT]):
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
+        level: Literal["full", "interchange"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
+        self._level: Literal["full", "interchange"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
         elif is_polars and isinstance(df, get_polars().DataFrame):
@@ -453,6 +458,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.get_column(name),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     @overload
@@ -522,6 +528,7 @@ class DataFrame(BaseFrame[FrameT]):
                 self._compliant_frame[item],
                 backend_version=self._backend_version,
                 is_polars=self._is_polars,
+                level=self._level,
             )
 
         elif isinstance(item, (Sequence, slice)) or (
@@ -587,6 +594,7 @@ class DataFrame(BaseFrame[FrameT]):
                     value,
                     backend_version=self._backend_version,
                     is_polars=self._is_polars,
+                    level=self._level,
                 )
                 for key, value in self._compliant_frame.to_dict(
                     as_series=as_series
@@ -1700,6 +1708,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.is_duplicated(),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     def is_empty(self: Self) -> bool:
@@ -1786,6 +1795,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.is_unique(),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     def null_count(self: Self) -> Self:
@@ -1927,9 +1937,11 @@ class LazyFrame(BaseFrame[FrameT]):
         *,
         is_polars: bool,
         backend_version: tuple[int, ...],
+        level: Literal["full", "interchange"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
+        self._level = level
         if hasattr(df, "__narwhals_lazyframe__"):
             self._compliant_frame: Any = df.__narwhals_lazyframe__()
         elif is_polars and (
@@ -1998,6 +2010,7 @@ class LazyFrame(BaseFrame[FrameT]):
             self._compliant_frame.collect(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     # inherited

@@ -67,6 +67,10 @@ class ArrowDataFrame:
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
+        if not isinstance(name, str):
+            msg = f"Expected str, got: {type(name)}"
+            raise TypeError(msg)
+
         return ArrowSeries(
             self._native_dataframe[name],
             name=name,

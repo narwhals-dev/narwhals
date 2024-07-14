@@ -50,7 +50,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
 
 T = TypeVar("T")
@@ -435,18 +434,21 @@ def _stableify(
             obj._compliant_frame,
             is_polars=obj._is_polars,
             backend_version=obj._backend_version,
+            level=obj._level,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
             obj._compliant_frame,
             is_polars=obj._is_polars,
             backend_version=obj._backend_version,
+            level=obj._level,
         )
     if isinstance(obj, NwSeries):
         return Series(
             obj._compliant_series,
             is_polars=obj._is_polars,
             backend_version=obj._backend_version,
+            level=obj._level,
         )
     if isinstance(obj, NwExpr):
         return Expr(obj._call)
@@ -458,7 +460,8 @@ def from_native(
     native_dataframe: Any,
     *,
     strict: Literal[False],
-    eager_only: Literal[True],
+    eager_only: None = ...,
+    eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
 ) -> Any: ...
@@ -466,13 +469,38 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: IntoDataFrame | T,
+    native_dataframe: Any,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
+    eager_or_interchange_only: None = ...,
+    series_only: None = ...,
+    allow_series: Literal[True],
+) -> Any: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrameT | T,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrame] | T: ...
+) -> DataFrame[IntoDataFrameT] | T: ...
+
+
+@overload
+def from_native(
+    native_dataframe: IntoDataFrameT | T,
+    *,
+    strict: Literal[False],
+    eager_only: Literal[True],
+    eager_or_interchange_only: None = ...,
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame[IntoDataFrameT] | T: ...
 
 
 @overload
@@ -481,6 +509,7 @@ def from_native(
     *,
     strict: Literal[False],
     eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
 ) -> Any: ...
@@ -492,6 +521,7 @@ def from_native(
     *,
     strict: Literal[False],
     eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Any: ...
@@ -502,27 +532,26 @@ def from_native(
     native_dataframe: IntoFrameT | T,
     *,
     strict: Literal[False],
-    eager_only: bool | None = ...,
-    series_only: bool | None = ...,
-    allow_series: bool | None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T:
-    """
-    from_native(df, strict=False)
-    """
+    eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrameT,
     *,
     strict: Literal[True] = ...,
-    eager_only: Literal[True],
+    eager_only: None = ...,
+    eager_or_interchange_only: Literal[True],
     series_only: None = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | Series:
+    allow_series: None = ...,
+) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_only=True, allow_series=True)
-    from_native(df, eager_only=True, allow_series=True)
+    from_native(df, strict=True, eager_or_interchange_only=True, allow_series=True)
+    from_native(df, eager_or_interchange_only=True, allow_series=True)
     """
 
 
@@ -532,9 +561,26 @@ def from_native(
     *,
     strict: Literal[True] = ...,
     eager_only: Literal[True],
+    eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
+    """
+    from_native(df, strict=True, eager_only=True, allow_series=True)
+    from_native(df, eager_only=True, allow_series=True)
+    """
+
+
+@overload
+def from_native(
+    native_dataframe: Any,
+    *,
+    strict: Literal[True] = ...,
+    eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
+    series_only: None = ...,
+    allow_series: Literal[True],
+) -> DataFrame[Any] | LazyFrame[Any] | Series:
     """
     from_native(df, strict=True, eager_only=True)
     from_native(df, eager_only=True)
@@ -547,21 +593,7 @@ def from_native(
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
-    series_only: None = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series:
-    """
-    from_native(df, strict=True, allow_series=True)
-    from_native(df, allow_series=True)
-    """
-
-
-@overload
-def from_native(
-    native_dataframe: Any,
-    *,
-    strict: Literal[True] = ...,
-    eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Series:
@@ -577,6 +609,7 @@ def from_native(
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]:
@@ -593,6 +626,7 @@ def from_native(
     *,
     strict: bool,
     eager_only: bool | None,
+    eager_or_interchange_only: bool | None = None,
     series_only: bool | None,
     allow_series: bool | None,
 ) -> Any: ...
@@ -603,6 +637,7 @@ def from_native(
     *,
     strict: bool = True,
     eager_only: bool | None = None,
+    eager_or_interchange_only: bool | None = None,
     series_only: bool | None = None,
     allow_series: bool | None = None,
 ) -> Any:
@@ -623,16 +658,24 @@ def from_native(
         strict: Whether to raise if object can't be converted (default) or
             to just leave it as-is.
         eager_only: Whether to only allow eager objects.
+        eager_or_interchange_only: Whether to only allow eager objects or objects which
+            implement the Dataframe Interchange Protocol.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
 
     Returns:
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
     """
+    # Early returns
+    if isinstance(native_dataframe, (DataFrame, LazyFrame)) and not series_only:
+        return native_dataframe
+    if isinstance(native_dataframe, Series) and (series_only or allow_series):
+        return native_dataframe
     result = nw.from_native(
         native_dataframe,
         strict=strict,
         eager_only=eager_only,
+        eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
     )
@@ -696,6 +739,8 @@ def narwhalify(
         strict: Whether to raise if object can't be converted or to just leave it as-is
             (default).
         eager_only: Whether to only allow eager objects.
+        eager_or_interchange_only: Whether to only allow eager objects or objects which
+            implement the Dataframe Interchange Protocol.
         series_only: Whether to only allow series.
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
     """
@@ -1308,6 +1353,20 @@ def get_native_namespace(obj: Any) -> Any:
     return nw_get_native_namespace(obj)
 
 
+def get_level(
+    obj: DataFrame[Any] | LazyFrame[Any] | Series,
+) -> Literal["full", "interchange"]:
+    """
+    Level of support Narwhals has for current object.
+
+    This can be one of:
+
+    - 'full': full Narwhals API support
+    - 'metadata': only metadata operations are supported (`df.schema`)
+    """
+    return nw.get_level(obj)
+
+
 __all__ = [
     "selectors",
     "concat",
@@ -1318,6 +1377,7 @@ __all__ = [
     "maybe_convert_dtypes",
     "maybe_set_index",
     "get_native_namespace",
+    "get_level",
     "all",
     "all_horizontal",
     "col",
