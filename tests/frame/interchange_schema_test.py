@@ -70,6 +70,10 @@ def test_interchange_schema() -> None:
     assert df["a"].dtype == nw.Int64
 
 
+@pytest.mark.skipif(
+    parse_version(ibis.__version__) < (6, 0),
+    reason="too old, requires interchange protocol",
+)
 def test_invalid() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
     tbl = ibis.memtable(df)
@@ -81,6 +85,10 @@ def test_invalid() -> None:
         nw.from_native(tbl)
 
 
+@pytest.mark.skipif(
+    parse_version(ibis.__version__) < (6, 0),
+    reason="too old, requires interchange protocol",
+)
 def test_get_level() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
     tbl = ibis.memtable(df)
