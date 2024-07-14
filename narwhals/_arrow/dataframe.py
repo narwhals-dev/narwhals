@@ -12,6 +12,7 @@ from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyarrow_parquet
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -340,3 +341,33 @@ class ArrowDataFrame:
 
     def clone(self) -> Self:
         raise NotImplementedError("clone is not yet supported on PyArrow tables")
+
+    def is_empty(self: Self) -> bool:
+        return self.shape[0] == 0
+
+    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+        if row is None and column is None:
+            if self.shape != (1, 1):
+                msg = (
+                    "can only call `.item()` if the dataframe is of shape (1, 1),"
+                    " or if explicit row/col values are provided;"
+                    f" frame has shape {self.shape!r}"
+                )
+                raise ValueError(msg)
+            return self._native_dataframe[0][0].as_py()
+
+        elif row is None or column is None:
+            msg = "cannot call `.item()` with only one of `row` or `column`"
+            raise ValueError(msg)
+
+        _col = self.columns.index(column) if isinstance(column, str) else column
+        return self._native_dataframe[_col][row].as_py()
+
+    def rename(self, mapping: dict[str, str]) -> Self:
+        df = self._native_dataframe
+        new_cols = [mapping.get(c, c) for c in df.column_names]
+        return self._from_native_dataframe(df.rename_columns(new_cols))
+
+    def write_parquet(self, file: Any) -> Any:
+        pp = get_pyarrow_parquet()
+        pp.write_table(self._native_dataframe, file)

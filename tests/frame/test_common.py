@@ -334,7 +334,7 @@ def test_library(df_raw: Any, df_raw_right: Any) -> None:
         df_left.join(df_right, left_on=["a"], right_on=["a"], how="inner")
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
 @pytest.mark.parametrize(
     ("row", "column", "expected"),
     [(0, 2, 7), (1, "z", 8)],
@@ -350,7 +350,7 @@ def test_item(
     assert df.select("a").head(1).item() == 1
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
 @pytest.mark.parametrize(
     ("row", "column", "err_msg"),
     [

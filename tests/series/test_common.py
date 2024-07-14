@@ -7,6 +7,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
@@ -40,6 +41,7 @@ else:  # pragma: no cover
     df_pandas_nullable = df_pandas
 df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 
 
 @pytest.mark.parametrize(
@@ -255,13 +257,13 @@ def test_cast_string() -> None:
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
 @pytest.mark.parametrize(("index", "expected"), [(0, 1), (1, 3)])
 def test_item(df_raw: Any, index: int, expected: int) -> None:
     s = nw.from_native(df_raw["a"], series_only=True)
     result = s.item(index)
     assert result == expected
-    assert nw.from_native(df_raw["a"].head(1), series_only=True).item() == 1
+    assert s.head(1).item() == 1
 
     with pytest.raises(
         ValueError,

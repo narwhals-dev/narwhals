@@ -13,14 +13,10 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 
 MISSING = [
     "DataFrame.is_duplicated",
-    "DataFrame.is_empty",
     "DataFrame.is_unique",
-    "DataFrame.item",
     "DataFrame.iter_rows",
     "DataFrame.pipe",
-    "DataFrame.rename",
     "DataFrame.unique",
-    "DataFrame.write_parquet",
     "Series.drop_nulls",
     "Series.fill_null",
     "Series.from_iterable",
@@ -32,7 +28,6 @@ MISSING = [
     "Series.is_null",
     "Series.is_sorted",
     "Series.is_unique",
-    "Series.item",
     "Series.len",
     "Series.n_unique",
     "Series.quantile",

@@ -97,6 +97,7 @@ def test_rows(
         ):
             df.rows(named=named)
         return
+
     result = df.rows(named=named)
     assert result == expected
 
