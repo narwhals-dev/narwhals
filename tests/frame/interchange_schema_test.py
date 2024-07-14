@@ -83,6 +83,8 @@ def test_invalid() -> None:
         nw.from_native(tbl, eager_or_interchange_only=True).select("a")
     with pytest.raises(TypeError, match="Cannot only use `series_only=True`"):
         nw.from_native(tbl, eager_only=True)
+    with pytest.raises(ValueError, match="Invalid parameter combination"):
+        nw.from_native(tbl, eager_only=True, eager_or_interchange_only=True)  # type: ignore[call-overload]
 
 
 @pytest.mark.skipif(
