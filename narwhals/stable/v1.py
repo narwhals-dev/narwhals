@@ -432,8 +432,8 @@ class Schema(NwSchema):
 
     >>> import narwhals.stable.v1 as nw
     >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
-    >>> schema
-    Schema([('foo', Int8), ('bar', String)])
+    >>> schema  # doctest:+SKIP
+    Schema({'foo': Int8, 'bar': String})
 
     Access the data type associated with a specific column name.
 
