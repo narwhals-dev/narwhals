@@ -33,6 +33,7 @@ from narwhals.expression import min
 from narwhals.expression import sum
 from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
+from narwhals.functions import get_level
 from narwhals.functions import show_versions
 from narwhals.series import Series
 from narwhals.translate import from_native
@@ -49,6 +50,7 @@ __version__ = "1.0.6"
 __all__ = [
     "selectors",
     "concat",
+    "get_level",
     "to_native",
     "from_native",
     "is_ordered_categorical",
