@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
@@ -27,7 +28,7 @@ def test_validate_laziness() -> None:
 
 
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old"
+    parse_version(np.__version__) < parse_version("2.0.0"), reason="too old"
 )
 def test_memmap() -> None:
     # the headache this caused me...
