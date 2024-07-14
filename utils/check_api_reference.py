@@ -83,7 +83,9 @@ if extra := set(documented).difference(top_level_functions):
 
 top_level_functions = [
     i
-    for i in nw.Series(pl.Series(), backend_version=(1,), is_polars=True).__dir__()
+    for i in nw.Series(
+        pl.Series(), backend_version=(1,), is_polars=True, level="full"
+    ).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/series.md") as fd:
@@ -139,7 +141,9 @@ if extra := set(documented).difference(top_level_functions):
 expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
 series = [
     i
-    for i in nw.Series(pl.Series(), backend_version=(1,), is_polars=True).__dir__()
+    for i in nw.Series(
+        pl.Series(), backend_version=(1,), is_polars=True, level="full"
+    ).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 

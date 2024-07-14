@@ -32,7 +32,7 @@ class Series:
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
-        level: Literal["full", "metadata"] = "full",
+        level: Literal["full", "metadata"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
@@ -104,7 +104,10 @@ class Series:
 
     def _from_compliant_series(self, series: Any) -> Self:
         return self.__class__(
-            series, is_polars=self._is_polars, backend_version=self._backend_version
+            series,
+            is_polars=self._is_polars,
+            backend_version=self._backend_version,
+            level=self._level,
         )
 
     def __repr__(self) -> str:  # pragma: no cover

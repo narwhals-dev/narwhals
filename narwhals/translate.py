@@ -406,6 +406,7 @@ def from_native(  # noqa: PLR0915
             native_object,
             is_polars=True,
             backend_version=parse_version(pl.__version__),
+            level="full",
         )
     elif (pd := get_pandas()) is not None and isinstance(native_object, pd.Series):
         if not allow_series:
@@ -419,6 +420,7 @@ def from_native(  # noqa: PLR0915
             ),
             is_polars=False,
             backend_version=parse_version(pd.__version__),
+            level="full",
         )
     elif (mpd := get_modin()) is not None and isinstance(native_object, mpd.Series):
         if not allow_series:
@@ -432,6 +434,7 @@ def from_native(  # noqa: PLR0915
             ),
             is_polars=False,
             backend_version=parse_version(mpd.__version__),
+            level="full",
         )
     elif (cudf := get_cudf()) is not None and isinstance(
         native_object, cudf.Series
@@ -447,6 +450,7 @@ def from_native(  # noqa: PLR0915
             ),
             is_polars=False,
             backend_version=parse_version(cudf.__version__),
+            level="full",
         )
     elif (pa := get_pyarrow()) is not None and isinstance(native_object, pa.ChunkedArray):
         if not allow_series:
@@ -458,6 +462,7 @@ def from_native(  # noqa: PLR0915
             ),
             is_polars=False,
             backend_version=parse_version(pa.__version__),
+            level="full",
         )
     elif hasattr(native_object, "__narwhals_series__"):
         if not allow_series:
@@ -465,7 +470,10 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return Series(
-            native_object.__narwhals_series__(), backend_version=(0,), is_polars=False
+            native_object.__narwhals_series__(),
+            backend_version=(0,),
+            is_polars=False,
+            level="full",
         )
     elif strict:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"

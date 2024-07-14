@@ -458,6 +458,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.get_column(name),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     @overload
@@ -527,6 +528,7 @@ class DataFrame(BaseFrame[FrameT]):
                 self._compliant_frame[item],
                 backend_version=self._backend_version,
                 is_polars=self._is_polars,
+                level=self._level,
             )
 
         elif isinstance(item, (Sequence, slice)) or (
@@ -592,6 +594,7 @@ class DataFrame(BaseFrame[FrameT]):
                     value,
                     backend_version=self._backend_version,
                     is_polars=self._is_polars,
+                    level=self._level,
                 )
                 for key, value in self._compliant_frame.to_dict(
                     as_series=as_series
@@ -1705,6 +1708,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.is_duplicated(),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     def is_empty(self: Self) -> bool:
@@ -1791,6 +1795,7 @@ class DataFrame(BaseFrame[FrameT]):
             self._compliant_frame.is_unique(),
             backend_version=self._backend_version,
             is_polars=self._is_polars,
+            level=self._level,
         )
 
     def null_count(self: Self) -> Self:
