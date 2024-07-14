@@ -89,26 +89,36 @@ def test_std(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow, df_pa]
 )
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(df_raw: Any) -> None:
-    result = nw.from_native(df_raw).schema
+    df = nw.from_native(df_raw)
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+
+    result = df.schema
     assert result == expected
-    result = nw.from_native(df_raw).lazy().collect().schema
-    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
-    assert result == expected
-    result = nw.from_native(df_raw).columns  # type: ignore[assignment]
-    expected = ["a", "b", "z"]  # type: ignore[assignment]
-    assert result == expected
-    result = nw.from_native(df_raw).lazy().collect().columns  # type: ignore[assignment]
-    expected = ["a", "b", "z"]  # type: ignore[assignment]
+    result = df.lazy().collect().schema
     assert result == expected
 
 
 @pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow, df_pa]
 )
+def test_collect_schema(df_raw: Any) -> None:
+    df = nw.from_native(df_raw)
+    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+
+    result = df.collect_schema()
+    assert result == expected
+    result = df.lazy().collect().collect_schema()
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow, df_pa]
+)
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(df_raw: Any) -> None:
     df = nw.from_native(df_raw)
     result = df.columns

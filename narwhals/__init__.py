@@ -34,6 +34,7 @@ from narwhals.expression import sum
 from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
 from narwhals.functions import show_versions
+from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
@@ -92,4 +93,5 @@ __all__ = [
     "narwhalify",
     "show_versions",
     "stable",
+    "Schema",
 ]

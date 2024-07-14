@@ -36,6 +36,7 @@ from narwhals.dtypes import Unknown
 from narwhals.expression import Expr as NwExpr
 from narwhals.functions import concat
 from narwhals.functions import show_versions
+from narwhals.schema import Schema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
@@ -1353,4 +1354,5 @@ __all__ = [
     "Date",
     "narwhalify",
     "show_versions",
+    "Schema",
 ]
