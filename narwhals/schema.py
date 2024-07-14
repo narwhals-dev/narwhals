@@ -25,39 +25,36 @@ class Schema(BaseSchema):
     """
     Ordered mapping of column names to their data type.
 
-    Parameters
-    ----------
-    schema : Mapping[str, DType] | Iterable[tuple[str, DType]] | None
-        The schema definition given by column names and their associated *instantiated*
-        Narwhals data type. Accepts a mapping or an iterable of tuples.
+    Arguments:
+        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None
+            The schema definition given by column names and their associated.
+            *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
 
-    Examples
-    --------
-    Define a schema by passing *instantiated* data types.
+    Examples:
+        Define a schema by passing *instantiated* data types.
 
-    >>> import narwhals as nw
-    >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
-    >>> schema  # doctest:+SKIP
-    Schema({'foo': Int8, 'bar': String})
+        >>> import narwhals as nw
+        >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
+        >>> schema  # doctest:+SKIP
+        Schema({'foo': Int8, 'bar': String})
 
-    Access the data type associated with a specific column name.
+        Access the data type associated with a specific column name.
 
-    >>> schema["foo"]
-    Int8
+        >>> schema["foo"]
+        Int8
 
-    Access various schema properties using the `names`, `dtypes`, and `len` methods.
+        Access various schema properties using the `names`, `dtypes`, and `len` methods.
 
-    >>> schema.names()
-    ['foo', 'bar']
-    >>> schema.dtypes()
-    [Int8, String]
-    >>> schema.len()
-    2
+        >>> schema.names()
+        ['foo', 'bar']
+        >>> schema.dtypes()
+        [Int8, String]
+        >>> schema.len()
+        2
     """
 
     def __init__(
-        self,
-        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None,
+        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
     ) -> None:
         schema = schema or {}
         super().__init__(schema)
