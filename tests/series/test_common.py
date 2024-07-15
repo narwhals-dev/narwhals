@@ -28,9 +28,9 @@ def test_len(constructor_series: Any) -> None:
     assert result == 3
 
 
-def test_is_in(constructor_series: Any) -> None:
+def test_is_in(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     series = nw.from_native(constructor_series(data), series_only=True)
 
     result = series.is_in([1, 2])
@@ -57,9 +57,9 @@ def test_dtype(constructor_series: Any) -> None:
     assert result.is_numeric()
 
 
-def test_reductions(constructor_series: Any) -> None:
+def test_reductions(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     s = nw.from_native(constructor_series(data), series_only=True)
     assert s.mean() == 2.0
@@ -79,9 +79,9 @@ def test_reductions(constructor_series: Any) -> None:
     assert s.alias("foo").name == "foo"
 
 
-def test_boolean_reductions(constructor: Any) -> None:
+def test_boolean_reductions(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df_raw = constructor({"a": data})
     df = nw.from_native(df_raw).lazy().select(nw.col("a") > 1)
@@ -92,12 +92,12 @@ def test_boolean_reductions(constructor: Any) -> None:
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
 )
-def test_convert(constructor_series: Any) -> None:
+def test_convert(request: Any, constructor_series: Any) -> None:
     if any(
         cname in str(constructor_series)
         for cname in ("pyarrow_series", "pandas_series_nullable", "pandas_series_pyarrow")
     ):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_series(data).rename("a"), series_only=True)
 
@@ -116,9 +116,9 @@ def test_to_numpy() -> None:
     assert nw_series.shape == (3,)
 
 
-def test_is_duplicated(constructor_series: Any) -> None:
+def test_is_duplicated(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_series(data_dups), series_only=True)
     result = series.is_duplicated()
@@ -126,9 +126,9 @@ def test_is_duplicated(constructor_series: Any) -> None:
     assert (result.to_numpy() == expected).all()
 
 
-def test_is_unique(constructor_series: Any) -> None:
+def test_is_unique(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_series(data_dups), series_only=True)
     result = series.is_unique()
@@ -136,9 +136,9 @@ def test_is_unique(constructor_series: Any) -> None:
     assert (result.to_numpy() == expected).all()
 
 
-def test_is_first_distinct(constructor_series: Any) -> None:
+def test_is_first_distinct(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_series(data_dups), series_only=True)
     result = series.is_first_distinct()
@@ -146,9 +146,9 @@ def test_is_first_distinct(constructor_series: Any) -> None:
     assert (result.to_numpy() == expected).all()
 
 
-def test_is_last_distinct(constructor_series: Any) -> None:
+def test_is_last_distinct(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_series(data_dups), series_only=True)
     result = series.is_last_distinct()
@@ -156,12 +156,12 @@ def test_is_last_distinct(constructor_series: Any) -> None:
     assert (result.to_numpy() == expected).all()
 
 
-def test_value_counts(constructor_series: Any) -> None:
-    if (
-        "pyarrow_series" in str(constructor_series)
-        or "pandas_series_nullable" in str(constructor_series)  # fails for py3.8
-    ):
-        pytest.xfail()
+def test_value_counts(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    if "pandas_series_nullable" in str(constructor_series):  # fails for py3.8
+        pytest.skip()
 
     series = nw.from_native(constructor_series(data_dups).rename("b"), series_only=True)
 
@@ -184,22 +184,23 @@ def test_value_counts(constructor_series: Any) -> None:
     [(data, False, False), (data_sorted, False, True), (data_sorted, True, False)],
 )
 def test_is_sorted(
+    request: Any,
     constructor_series: Any,
     input_data: str,
     descending: bool,  # noqa: FBT001
     expected: bool,  # noqa: FBT001
 ) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_series(input_data), series_only=True)
     result = series.is_sorted(descending=descending)
     assert result == expected
 
 
-def test_is_sorted_invalid(constructor_series: Any) -> None:
+def test_is_sorted_invalid(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor_series(data_sorted), series_only=True)
 
@@ -219,12 +220,13 @@ def test_is_sorted_invalid(constructor_series: Any) -> None:
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile(
+    request: Any,
     constructor_series: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: float,
 ) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     q = 0.3
 
@@ -233,9 +235,9 @@ def test_quantile(
     assert result == expected
 
 
-def test_zip_with(constructor_series: Any) -> None:
+def test_zip_with(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     series1 = nw.from_native(constructor_series(data), series_only=True)
     series2 = nw.from_native(constructor_series(data_dups), series_only=True)

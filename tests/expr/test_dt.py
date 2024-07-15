@@ -51,10 +51,10 @@ data_timedelta = {
     ],
 )
 def test_datetime_attributes(
-    constructor: Any, attribute: str, expected: list[int]
+    request: Any, constructor: Any, attribute: str, expected: list[int]
 ) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data), eager_only=True)
     result = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)()))
@@ -72,6 +72,7 @@ def test_datetime_attributes(
     ],
 )
 def test_duration_attributes(
+    request: Any,
     constructor: Any,
     attribute: str,
     expected_a: list[int],
@@ -82,7 +83,7 @@ def test_duration_attributes(
         and "pandas_pyarrow" in str(constructor)
         and attribute in ("total_minutes", "total_seconds", "total_milliseconds")
     ) or ("pyarrow_table" in str(constructor)):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_a = nw.to_native(df.select(getattr(nw.col("a").dt, attribute)().fill_null(0)))
@@ -103,6 +104,7 @@ def test_duration_attributes(
     ],
 )
 def test_duration_micro_nano(
+    request: Any,
     constructor: Any,
     attribute: str,
     expected_b: list[int],
@@ -120,7 +122,7 @@ def test_duration_micro_nano(
             "total_nanoseconds",
         )
     ) or ("pyarrow_table" in str(constructor)):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_timedelta), eager_only=True)
     result_b = nw.to_native(df.select(getattr(nw.col("b").dt, attribute)().fill_null(0)))
     compare_dicts(result_b, {"b": expected_b})

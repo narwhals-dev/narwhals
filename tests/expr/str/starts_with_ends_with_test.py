@@ -13,9 +13,9 @@ from tests.utils import compare_dicts
 data = {"a": ["fdas", "edfas"]}
 
 
-def test_ends_with(constructor_with_lazy: Any) -> None:
+def test_ends_with(request: Any, constructor_with_lazy: Any) -> None:
     if "pyarrow_table" in str(constructor_with_lazy):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_with_lazy(data)).lazy()
     result = df.select(nw.col("a").str.ends_with("das"))
@@ -31,9 +31,9 @@ def test_ends_with(constructor_with_lazy: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_starts_with(constructor_with_lazy: Any) -> None:
+def test_starts_with(request: Any, constructor_with_lazy: Any) -> None:
     if "pyarrow_table" in str(constructor_with_lazy):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_with_lazy(data)).lazy()
     result = df.select(nw.col("a").str.starts_with("fda"))

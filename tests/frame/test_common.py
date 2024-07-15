@@ -78,13 +78,13 @@ def test_columns(constructor_with_lazy: Any) -> None:
     assert result == expected
 
 
-def test_expr_binary(constructor: Any) -> None:
+def test_expr_binary(request: Any, constructor: Any) -> None:
     if (
         "pyarrow_table" in str(constructor)
         or "pandas_pyarrow"
         in str(constructor)  # pandas pyarrow raises NotImplementedError for __mod__
     ):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
@@ -129,9 +129,9 @@ def test_expr_binary(constructor: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-def test_expr_transform(constructor: Any) -> None:
+def test_expr_transform(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = df.with_columns(a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5]))
@@ -139,9 +139,9 @@ def test_expr_transform(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_expr_min_max(constructor: Any) -> None:
+def test_expr_min_max(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result_min = df.select(nw.min("a", "b", "z"))
@@ -152,9 +152,9 @@ def test_expr_min_max(constructor: Any) -> None:
     compare_dicts(result_max, expected_max)
 
 
-def test_expr_na(constructor_with_lazy: Any) -> None:
+def test_expr_na(request: Any, constructor_with_lazy: Any) -> None:
     if "pyarrow_table" in str(constructor_with_lazy):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_with_lazy(data_na)).lazy()
     result_nna = df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
@@ -162,9 +162,9 @@ def test_expr_na(constructor_with_lazy: Any) -> None:
     compare_dicts(result_nna, expected)
 
 
-def test_drop_nulls(constructor_with_lazy: Any) -> None:
+def test_drop_nulls(request: Any, constructor_with_lazy: Any) -> None:
     if "pyarrow_table" in str(constructor_with_lazy):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_with_lazy(data_na)).lazy()
 
@@ -190,9 +190,9 @@ def test_drop(constructor: Any, drop: list[str], left: list[str]) -> None:
     assert df.drop(*drop).columns == left
 
 
-def test_concat_horizontal(constructor_with_lazy: Any) -> None:
+def test_concat_horizontal(request: Any, constructor_with_lazy: Any) -> None:
     if "pyarrow_table" in str(constructor_with_lazy):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df_left = nw.from_native(constructor_with_lazy(data))
     df_right = nw.from_native(constructor_with_lazy(data_right))
@@ -210,9 +210,9 @@ def test_concat_horizontal(constructor_with_lazy: Any) -> None:
         nw.concat([])
 
 
-def test_concat_vertical(constructor_with_lazy: Any) -> None:
+def test_concat_vertical(request: Any, constructor_with_lazy: Any) -> None:
     if "pyarrow_table" in str(constructor_with_lazy):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df_left = (
         nw.from_native(constructor_with_lazy(data))
@@ -332,9 +332,9 @@ def test_with_columns_order(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_with_columns_order_single_row(constructor: Any) -> None:
+def test_with_columns_order_single_row(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data)[:1])
     assert len(df) == 1
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)

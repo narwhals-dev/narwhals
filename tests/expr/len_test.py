@@ -9,9 +9,9 @@ data = {"a": list("xyz"), "b": [1, 2, 1]}
 expected = {"a1": [2], "a2": [1]}
 
 
-def test_len(constructor: Any) -> None:
+def test_len(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw).select(
         nw.col("a").filter(nw.col("b") == 1).len().alias("a1"),

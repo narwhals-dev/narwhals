@@ -23,9 +23,9 @@ data = {
 }
 
 
-def test_selectors(constructor: Any) -> None:
+def test_selectors(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = nw.to_native(df.select(by_dtype([nw.Int64, nw.Float64]) + 1))
@@ -33,9 +33,9 @@ def test_selectors(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_numeric(constructor: Any) -> None:
+def test_numeric(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = nw.to_native(df.select(numeric() + 1))
@@ -43,9 +43,9 @@ def test_numeric(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_boolean(constructor: Any) -> None:
+def test_boolean(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = nw.to_native(df.select(boolean()))
@@ -53,9 +53,9 @@ def test_boolean(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_string(constructor: Any) -> None:
+def test_string(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = nw.to_native(df.select(string()))
@@ -89,10 +89,10 @@ def test_categorical() -> None:
     ],
 )
 def test_set_ops(
-    constructor: Any, selector: nw.selectors.Selector, expected: list[str]
+    request: Any, constructor: Any, selector: nw.selectors.Selector, expected: list[str]
 ) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = df.select(selector).columns

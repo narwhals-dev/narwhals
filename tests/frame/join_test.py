@@ -35,9 +35,9 @@ def test_inner_join_single_key(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_cross_join(constructor: Any) -> None:
+def test_cross_join(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2]}
     df = nw.from_native(constructor(data))
@@ -69,13 +69,14 @@ def test_cross_join_non_pandas() -> None:
     ],
 )
 def test_anti_join(
+    request: Any,
     constructor: Any,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
@@ -93,13 +94,14 @@ def test_anti_join(
     ],
 )
 def test_semi_join(
+    request: Any,
     constructor: Any,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
@@ -123,9 +125,9 @@ def test_join_not_implemented(constructor: Any, how: str) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:the default coalesce behavior")
-def test_left_join(constructor: Any) -> None:
+def test_left_join(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     data_left = {"a": [1.0, 2, 3], "b": [4.0, 5, 6]}
     data_right = {"a": [1.0, 2, 3], "c": [4.0, 5, 7]}
@@ -139,9 +141,9 @@ def test_left_join(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore: the default coalesce behavior")
-def test_left_join_multiple_column(constructor: Any) -> None:
+def test_left_join_multiple_column(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     data_left = {"a": [1, 2, 3], "b": [4, 5, 6]}
     data_right = {"a": [1, 2, 3], "c": [4, 5, 6]}
@@ -153,9 +155,9 @@ def test_left_join_multiple_column(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
-def test_left_join_overlapping_column(constructor: Any) -> None:
+def test_left_join_overlapping_column(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     data_left = {"a": [1, 2, 3], "b": [4, 5, 6], "d": [1, 4, 2]}
     data_right = {"a": [1, 2, 3], "c": [4, 5, 6], "d": [1, 4, 2]}

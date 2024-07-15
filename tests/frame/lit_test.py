@@ -18,10 +18,10 @@ if TYPE_CHECKING:
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
 def test_lit(
-    constructor_with_lazy: Any, dtype: DType | None, expected_lit: list[Any]
+    request: Any, constructor_with_lazy: Any, dtype: DType | None, expected_lit: list[Any]
 ) -> None:
     if "pyarrow_table" in str(constructor_with_lazy):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor_with_lazy(data)
     df = nw.from_native(df_raw)
@@ -37,9 +37,6 @@ def test_lit(
 
 
 def test_lit_error(constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        pytest.xfail()
-
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor_with_lazy(data)
     df = nw.from_native(df_raw)

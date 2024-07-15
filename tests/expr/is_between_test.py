@@ -21,9 +21,11 @@ data = {
         ("none", [False, True, True, False]),
     ],
 )
-def test_is_between(constructor: Any, closed: str, expected: list[bool]) -> None:
+def test_is_between(
+    request: Any, constructor: Any, closed: str, expected: list[bool]
+) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.select(nw.col("a").is_between(1, 5, closed=closed))

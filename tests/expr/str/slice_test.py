@@ -15,10 +15,10 @@ data = {"a": ["fdas", "edfas"]}
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
 )
 def test_str_slice(
-    constructor: Any, offset: int, length: int | None, expected: Any
+    request: Any, constructor: Any, offset: int, length: int | None, expected: Any
 ) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data), eager_only=True)
     result_frame = df.select(nw.col("a").str.slice(offset, length))

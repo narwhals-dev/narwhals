@@ -34,9 +34,9 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-def test_actual_object(constructor: Any) -> None:
+def test_actual_object(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
 

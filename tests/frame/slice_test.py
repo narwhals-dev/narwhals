@@ -31,9 +31,9 @@ def test_slice_rows(constructor: Any) -> None:
     compare_dicts(result, {"a": [3.0, 4.0], "b": [13, 14]})
 
 
-def test_slice_rows_with_step(constructor: Any) -> None:
+def test_slice_rows_with_step(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor(data))[1::2]
     compare_dicts(result, {"a": [2.0, 4.0, 6.0], "b": [12, 14, 16]})
 

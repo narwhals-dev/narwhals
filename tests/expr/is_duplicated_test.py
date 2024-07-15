@@ -11,9 +11,9 @@ data = {
 }
 
 
-def test_is_duplicated(constructor: Any) -> None:
+def test_is_duplicated(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.select(nw.all().is_duplicated())
     expected = {

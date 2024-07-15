@@ -13,9 +13,9 @@ data = {
 }
 
 
-def test_shift(constructor: Any) -> None:
+def test_shift(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)

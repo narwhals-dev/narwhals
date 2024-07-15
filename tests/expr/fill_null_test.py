@@ -12,9 +12,9 @@ data = {
 }
 
 
-def test_fill_null(constructor: Any) -> None:
+def test_fill_null(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data), eager_only=True)
 

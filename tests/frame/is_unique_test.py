@@ -8,9 +8,9 @@ import pytest
 import narwhals.stable.v1 as nw
 
 
-def test_is_unique(constructor: Any) -> None:
+def test_is_unique(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw, eager_only=True)

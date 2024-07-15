@@ -22,6 +22,7 @@ import narwhals.stable.v1 as nw
     ],
 )
 def test_arithmetic(
+    request: Any,
     data: list[int | float],
     attr: str,
     rhs: Any,
@@ -29,14 +30,14 @@ def test_arithmetic(
     constructor_series: Any,
 ) -> None:
     if "pandas_series_pyarrow" in str(constructor_series) and attr == "__mod__":
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     if "pyarrow_series" in str(constructor_series) and attr in {
         "__truediv__",
         "__floordiv__",
         "__mod__",
     }:
-        pytest.xfail()
+        request.applymarker(pytest.mark.xfail)
 
     s = nw.from_native(constructor_series(data), series_only=True)
     result = getattr(s, attr)(rhs)
