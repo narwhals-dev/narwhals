@@ -119,7 +119,10 @@ def agg_pandas(
         for expr in exprs:
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
-                assert expr._output_names is not None
+                if expr._output_names is None:  # pragma: no cover
+                    msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+                    raise AssertionError(msg)
+
                 function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                     expr._function_name, expr._function_name
                 )
@@ -128,9 +131,12 @@ def agg_pandas(
                 continue
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
-            assert expr._depth == 1
-            assert expr._root_names is not None
-            assert expr._output_names is not None
+            if (
+                expr._depth != 1 or expr._root_names is None or expr._output_names is None
+            ):  # pragma: no cover
+                msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+                raise AssertionError(msg)
+
             function_name = remove_prefix(expr._function_name, "col->")
             function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                 function_name, function_name
