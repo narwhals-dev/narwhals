@@ -190,10 +190,7 @@ def test_drop(constructor: Any, drop: list[str], left: list[str]) -> None:
     assert df.drop(*drop).columns == left
 
 
-def test_concat_horizontal(request: Any, constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        request.applymarker(pytest.mark.xfail)
-
+def test_concat_horizontal(constructor_with_lazy: Any) -> None:
     df_left = nw.from_native(constructor_with_lazy(data))
     df_right = nw.from_native(constructor_with_lazy(data_right))
     result = nw.concat([df_left, df_right], how="horizontal")
@@ -210,10 +207,7 @@ def test_concat_horizontal(request: Any, constructor_with_lazy: Any) -> None:
         nw.concat([])
 
 
-def test_concat_vertical(request: Any, constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        request.applymarker(pytest.mark.xfail)
-
+def test_concat_vertical(constructor_with_lazy: Any) -> None:
     df_left = (
         nw.from_native(constructor_with_lazy(data))
         .rename({"a": "c", "b": "d"})
@@ -228,7 +222,8 @@ def test_concat_vertical(request: Any, constructor_with_lazy: Any) -> None:
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([], how="vertical")
-    with pytest.raises(Exception, match="unable to vstack"):
+
+    with pytest.raises((Exception, TypeError), match="unable to vstack"):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
 
 

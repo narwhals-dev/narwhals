@@ -6,8 +6,11 @@ from typing import Any
 from typing import Iterable
 
 from narwhals import dtypes
+from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.series import ArrowSeries
+from narwhals._arrow.utils import horizontal_concat
+from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
@@ -15,7 +18,6 @@ from narwhals.utils import flatten
 if TYPE_CHECKING:
     from typing import Callable
 
-    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.typing import IntoArrowExpr
 
 
@@ -159,3 +161,23 @@ class ArrowNamespace:
                 namespace=self,
             ),
         )
+
+    def concat(
+        self,
+        items: Iterable[ArrowDataFrame],
+        *,
+        how: str = "vertical",
+    ) -> ArrowDataFrame:
+        dfs: list[Any] = [item._native_dataframe for item in items]
+
+        if how == "horizontal":
+            return ArrowDataFrame(
+                horizontal_concat(dfs),
+                backend_version=self._backend_version,
+            )
+        if how == "vertical":
+            return ArrowDataFrame(
+                vertical_concat(dfs),
+                backend_version=self._backend_version,
+            )
+        raise NotImplementedError
