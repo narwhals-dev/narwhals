@@ -119,7 +119,7 @@ def agg_pandas(  # noqa: PLR0915
         for expr in exprs:
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
-                if expr._output_names is None:
+                if expr._output_names is None:  # pragma: no cover
                     msg = "`Expr._output_names` cannot be None"
                     raise ValueError(msg)
 
