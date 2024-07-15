@@ -154,7 +154,7 @@ def test_left_join_multiple_column(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
+@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_overlapping_column(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
