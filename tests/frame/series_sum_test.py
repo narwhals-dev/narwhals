@@ -12,7 +12,9 @@ def test_series_sum(constructor_with_pyarrow: Any) -> None:
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, None, 2, 1],
     }
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True, allow_series=True)
+    df = nw.from_native(
+        constructor_with_pyarrow(data), eager_only=True, allow_series=True
+    )
 
     # Calculating the sum for each column seperately
     result_sum_a = df.select(nw.col("a").sum())
