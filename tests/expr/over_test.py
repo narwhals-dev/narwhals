@@ -13,7 +13,10 @@ data = {
 }
 
 
-def test_over_single(constructor: Any) -> None:
+def test_over_single(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_max=nw.col("c").max().over("a"))
     expected = {
@@ -25,7 +28,10 @@ def test_over_single(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_over_multiple(constructor: Any) -> None:
+def test_over_multiple(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
     expected = {

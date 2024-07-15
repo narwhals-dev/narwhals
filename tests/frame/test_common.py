@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import warnings
-from typing import TYPE_CHECKING
 from typing import Any
 
 import pandas as pd
@@ -14,63 +13,20 @@ import narwhals.stable.v1 as nw
 from narwhals.functions import _get_deps_info
 from narwhals.functions import _get_sys_info
 from narwhals.functions import show_versions
-from narwhals.utils import parse_version
 from tests.utils import compare_dicts
-from tests.utils import maybe_get_modin_df
 
-if TYPE_CHECKING:
-    from narwhals.typing import IntoFrameT
-
-df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-if parse_version(pd.__version__) >= parse_version("1.5.0"):
-    df_pandas_pyarrow = pd.DataFrame(
-        {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    ).astype(
-        {
-            "a": "Int64[pyarrow]",
-            "b": "Int64[pyarrow]",
-            "z": "Float64[pyarrow]",
-        }
-    )
-    df_pandas_nullable = pd.DataFrame(
-        {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    ).astype(
-        {
-            "a": "Int64",
-            "b": "Int64",
-            "z": "Float64",
-        }
-    )
-else:  # pragma: no cover
-    df_pandas_pyarrow = df_pandas
-    df_pandas_nullable = df_pandas
-df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
-df_lazy_na = pl.LazyFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
-df_right_pandas = pd.DataFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
-df_right_lazy = pl.LazyFrame({"c": [6, 12, -1], "d": [0, -4, 2]})
-df_mpd = maybe_get_modin_df(df_pandas)
-df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_pa_na = pa.table({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
-df_right_pa = pa.table({"c": [6, 12, -1], "d": [0, -4, 2]})
+data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+data_na = {"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]}
+data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
 
 
-@pytest.mark.parametrize(
-    "constructor",
-    [pd.DataFrame, pl.DataFrame, pa.table],
-)
 def test_empty_select(constructor: Any) -> None:
     result = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True).select()
     assert result.shape == (0, 0)
 
 
-@pytest.mark.parametrize(
-    "df_raw",
-    [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow],
-)
-def test_std(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
+def test_std(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("a").std().alias("a_ddof_default"),
         nw.col("a").std(ddof=1).alias("a_ddof_1"),
@@ -78,7 +34,6 @@ def test_std(df_raw: Any) -> None:
         nw.col("b").std(ddof=2).alias("b_ddof_2"),
         nw.col("z").std(ddof=0).alias("z_ddof_0"),
     )
-    result_native = nw.to_native(result)
     expected = {
         "a_ddof_default": [1.0],
         "a_ddof_1": [1.0],
@@ -86,15 +41,15 @@ def test_std(df_raw: Any) -> None:
         "b_ddof_2": [1.632993],
         "z_ddof_0": [0.816497],
     }
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow, df_pa]
-)
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
+def test_schema(constructor_with_lazy: Any) -> None:
+    df = nw.from_native(
+        constructor_with_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
+    )
+    result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
     result = df.schema
@@ -103,11 +58,10 @@ def test_schema(df_raw: Any) -> None:
     assert result == expected
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow, df_pa]
-)
-def test_collect_schema(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
+def test_collect_schema(constructor_with_lazy: Any) -> None:
+    df = nw.from_native(
+        constructor_with_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
+    )
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
     result = df.collect_schema()
@@ -116,19 +70,22 @@ def test_collect_schema(df_raw: Any) -> None:
     assert result == expected
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow, df_pa]
-)
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_columns(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
+def test_columns(constructor_with_lazy: Any) -> None:
+    df = nw.from_native(constructor_with_lazy(data))
     result = df.columns
     expected = ["a", "b", "z"]
     assert result == expected
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
-def test_expr_binary(df_raw: Any) -> None:
+def test_expr_binary(request: Any, constructor: Any) -> None:
+    if (
+        "pyarrow_table" in str(constructor)
+        or "pandas_pyarrow"
+        in str(constructor)  # pandas pyarrow raises NotImplementedError for __mod__
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
         b=nw.col("z") / (2 - nw.col("b")),
@@ -172,57 +129,54 @@ def test_expr_binary(df_raw: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_mpd, df_lazy])
-def test_expr_transform(df_raw: Any) -> None:
-    result = nw.from_native(df_raw).with_columns(
-        a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5])
-    )
-    result_native = nw.to_native(result)
+def test_expr_transform(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+    result = df.with_columns(a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5]))
     expected = {"a": [True, False, False], "b": [True, True, False], "z": [7, 8, 9]}
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_polars, df_pandas, df_lazy])
-def test_expr_min_max(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
-    result_min = nw.to_native(df.select(nw.min("a", "b", "z")))
-    result_max = nw.to_native(df.select(nw.max("a", "b", "z")))
+def test_expr_min_max(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+    result_min = df.select(nw.min("a", "b", "z"))
+    result_max = df.select(nw.max("a", "b", "z"))
     expected_min = {"a": [1], "b": [4], "z": [7]}
     expected_max = {"a": [3], "b": [6], "z": [9]}
     compare_dicts(result_min, expected_min)
     compare_dicts(result_max, expected_max)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])
-def test_expr_na(df_raw: Any) -> None:
-    df = nw.from_native(df_raw).lazy()
-    result_nna = nw.to_native(
-        df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
-    )
+def test_expr_na(request: Any, constructor_with_lazy: Any) -> None:
+    if "pyarrow_table" in str(constructor_with_lazy):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_with_lazy(data_na)).lazy()
+    result_nna = df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
     expected = {"a": [2], "b": [6], "z": [9]}
     compare_dicts(result_nna, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas_na, df_lazy_na])
-def test_drop_nulls(df_raw: Any) -> None:
-    df = nw.from_native(df_raw).lazy()
-    result = nw.to_native(df.select(nw.col("a").drop_nulls()))
+def test_drop_nulls(request: Any, constructor_with_lazy: Any) -> None:
+    if "pyarrow_table" in str(constructor_with_lazy):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_with_lazy(data_na)).lazy()
+
+    result = df.select(nw.col("a").drop_nulls())
     expected = {"a": [3, 2]}
     compare_dicts(result, expected)
-    result = nw.to_native(df.select(df.collect()["a"].drop_nulls()))
+
+    result = df.select(df.collect()["a"].drop_nulls())
     expected = {"a": [3, 2]}
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize(
-    "df_raw",
-    [
-        df_pandas,
-        df_polars,
-        df_mpd,
-        df_pa,
-    ],
-)
 @pytest.mark.parametrize(
     ("drop", "left"),
     [
@@ -230,19 +184,15 @@ def test_drop_nulls(df_raw: Any) -> None:
         (["a", "b"], ["z"]),
     ],
 )
-def test_drop(df_raw: Any, drop: list[str], left: list[str]) -> None:
-    df = nw.from_native(df_raw)
+def test_drop(constructor: Any, drop: list[str], left: list[str]) -> None:
+    df = nw.from_native(constructor(data))
     assert df.drop(drop).columns == left
     assert df.drop(*drop).columns == left
 
 
-@pytest.mark.parametrize(
-    ("df_raw", "df_raw_right"),
-    [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy), (df_pa, df_right_pa)],
-)
-def test_concat_horizontal(df_raw: IntoFrameT, df_raw_right: IntoFrameT) -> None:
-    df_left = nw.from_native(df_raw)
-    df_right = nw.from_native(df_raw_right)
+def test_concat_horizontal(constructor_with_lazy: Any) -> None:
+    df_left = nw.from_native(constructor_with_lazy(data))
+    df_right = nw.from_native(constructor_with_lazy(data_right))
     result = nw.concat([df_left, df_right], how="horizontal")
     expected = {
         "a": [1, 3, 2],
@@ -257,13 +207,15 @@ def test_concat_horizontal(df_raw: IntoFrameT, df_raw_right: IntoFrameT) -> None
         nw.concat([])
 
 
-@pytest.mark.parametrize(
-    ("df_raw", "df_raw_right"),
-    [(df_pandas, df_right_pandas), (df_lazy, df_right_lazy), (df_pa, df_right_pa)],
-)
-def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
-    df_left = nw.from_native(df_raw).rename({"a": "c", "b": "d"}).drop("z").lazy()
-    df_right = nw.from_native(df_raw_right).lazy()
+def test_concat_vertical(constructor_with_lazy: Any) -> None:
+    df_left = (
+        nw.from_native(constructor_with_lazy(data))
+        .rename({"a": "c", "b": "d"})
+        .drop("z")
+        .lazy()
+    )
+    df_right = nw.from_native(constructor_with_lazy(data_right)).lazy()
+
     result = nw.concat([df_left, df_right], how="vertical")
     expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
     compare_dicts(result, expected)
@@ -275,9 +227,8 @@ def test_concat_vertical(df_raw: Any, df_raw_right: Any) -> None:
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
-def test_lazy(df_raw: Any) -> None:
-    df = nw.from_native(df_raw, eager_only=True)
+def test_lazy(constructor: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True)
     result = df.lazy()
     assert isinstance(result, nw.LazyFrame)
 
@@ -286,7 +237,7 @@ def test_invalid() -> None:
     df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
-    df = nw.from_native(df_pandas)
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
     with pytest.raises(TypeError, match="Perhaps you:"):
@@ -295,7 +246,7 @@ def test_invalid() -> None:
         df.select([nw.col("a").cast(pl.Int64)])
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas])
+@pytest.mark.parametrize("df_raw", [pd.DataFrame(data)])
 def test_reindex(df_raw: Any) -> None:
     df = nw.from_native(df_raw, eager_only=True)
     result = df.select("b", df["a"].sort(descending=True))
@@ -317,12 +268,12 @@ def test_reindex(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize(
-    ("df_raw", "df_raw_right"),
-    [(df_pandas, df_polars), (df_polars, df_pandas)],
+    ("c_left", "c_right"),
+    [(pd.DataFrame, pl.DataFrame), (pa.table, pd.DataFrame)],
 )
-def test_library(df_raw: Any, df_raw_right: Any) -> None:
-    df_left = nw.from_native(df_raw).lazy()
-    df_right = nw.from_native(df_raw_right).lazy()
+def test_library(c_left: Any, c_right: Any) -> None:
+    df_left = nw.from_native(c_left(data)).lazy()
+    df_right = nw.from_native(c_right(data)).lazy()
     with pytest.raises(
         NotImplementedError, match="Cross-library comparisons aren't supported"
     ):
@@ -337,23 +288,18 @@ def test_library(df_raw: Any, df_raw_right: Any) -> None:
         df_left.join(df_right, left_on=["a"], right_on=["a"], how="inner")
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
 @pytest.mark.parametrize(
     ("row", "column", "expected"),
     [(0, 2, 7), (1, "z", 8)],
 )
 def test_item(
-    df_raw: Any,
-    row: int | None,
-    column: int | str | None,
-    expected: Any,
+    constructor: Any, row: int | None, column: int | str | None, expected: Any
 ) -> None:
-    df = nw.from_native(df_raw, eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     assert df.item(row, column) == expected
     assert df.select("a").head(1).item() == 1
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
 @pytest.mark.parametrize(
     ("row", "column", "err_msg"),
     [
@@ -367,27 +313,22 @@ def test_item(
     ],
 )
 def test_item_value_error(
-    df_raw: Any,
-    row: int | None,
-    column: int | str | None,
-    err_msg: str,
+    constructor: Any, row: int | None, column: int | str | None, err_msg: str
 ) -> None:
     with pytest.raises(ValueError, match=err_msg):
-        nw.from_native(df_raw, eager_only=True).item(row, column)
+        nw.from_native(constructor(data), eager_only=True).item(row, column)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_with_columns_order(df_raw: Any) -> None:
-    df = nw.from_native(df_raw)
+def test_with_columns_order(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.columns == ["a", "b", "z", "d"]
     expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8, 9], "d": [0, 2, 1]}
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_with_columns_order_single_row(df_raw: Any) -> None:
-    df = nw.from_native(df_raw[:1])
+def test_with_columns_order_single_row(constructor: Any) -> None:
+    df = nw.from_native(constructor(data)[:1])
     assert len(df) == 1
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.columns == ["a", "b", "z", "d"]
@@ -425,7 +366,7 @@ def test_show_versions(capsys: Any) -> None:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         show_versions()
-        out, err = capsys.readouterr()
+        out, _ = capsys.readouterr()
 
     assert "python" in out
     assert "machine" in out

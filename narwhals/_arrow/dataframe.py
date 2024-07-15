@@ -175,11 +175,12 @@ class ArrowDataFrame:
         to_concat = []
         output_names = []
         # Make sure to preserve column order
+        length = len(self)
         for name in self.columns:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     validate_dataframe_comparand(
-                        new_column_name_to_new_column_map.pop(name)
+                        length=length, other=new_column_name_to_new_column_map.pop(name)
                     )
                 )
             else:
@@ -187,7 +188,9 @@ class ArrowDataFrame:
             output_names.append(name)
         for s in new_column_name_to_new_column_map:
             to_concat.append(
-                validate_dataframe_comparand(new_column_name_to_new_column_map[s])
+                validate_dataframe_comparand(
+                    length=length, other=new_column_name_to_new_column_map[s]
+                )
             )
             output_names.append(s)
         df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)

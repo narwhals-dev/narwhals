@@ -19,10 +19,10 @@ import narwhals.stable.v1 as nw
     ],
 )
 def test_comparand_operators(
-    constructor_series_with_pyarrow: Any, operator: str, expected: list[bool]
+    constructor_series: Any, operator: str, expected: list[bool]
 ) -> None:
     data = [0, 1, 2]
-    s = nw.from_native(constructor_series_with_pyarrow(data), series_only=True)
+    s = nw.from_native(constructor_series(data), series_only=True)
     result = getattr(s, operator)(1)
     assert result.to_list() == expected
 
@@ -35,11 +35,11 @@ def test_comparand_operators(
     ],
 )
 def test_logic_operators(
-    constructor_series_with_pyarrow: Any, operator: str, expected: list[bool]
+    constructor_series: Any, operator: str, expected: list[bool]
 ) -> None:
     data = [True, True, False, False]
     other_data = [True, False, True, False]
-    series = nw.from_native(constructor_series_with_pyarrow(data), series_only=True)
-    other = nw.from_native(constructor_series_with_pyarrow(other_data), series_only=True)
+    series = nw.from_native(constructor_series(data), series_only=True)
+    other = nw.from_native(constructor_series(other_data), series_only=True)
     result = getattr(series, operator)(other)
     assert result.to_list() == expected

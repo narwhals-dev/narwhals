@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -9,7 +11,10 @@ data = {
 }
 
 
-def test_n_unique(constructor: Any) -> None:
+def test_n_unique(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data), eager_only=True)
     result = df.select(nw.all().n_unique())
     expected = {
