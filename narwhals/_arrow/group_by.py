@@ -72,13 +72,13 @@ def agg_arrow(
         simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
             # e.g. agg(nw.mean('a')) # noqa: ERA001
-            if expr._depth != 1:
+            if expr._depth != 1:  # pragma: no cover
                 msg = f"Expr._depth should be 1, found {expr._depth}"
                 raise ValueError(msg)
-            if expr._root_names is None:
+            if expr._root_names is None:  # pragma: no cover
                 msg = "`Expr._root_names` cannot be None"
                 raise ValueError(msg)
-            if expr._output_names is None:
+            if expr._output_names is None:  # pragma: no cover
                 msg = "`Expr._output_names` cannot be None"
                 raise ValueError(msg)
 

@@ -191,7 +191,7 @@ def reuse_series_implementation(
                 out.append(_out)
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
-        ):
+        ):  # pragma: no cover
             msg = "Found invalid series name"
             raise ValueError(msg)
         return out
@@ -217,7 +217,7 @@ def reuse_series_implementation(
     if not (
         (output_names is None and root_names is None)
         or (output_names is not None and root_names is not None)
-    ):
+    ):  # pragma: no cover
         msg = "output_names and root_names are incompatible"
         raise ValueError(msg)
 
