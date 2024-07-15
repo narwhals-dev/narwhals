@@ -685,6 +685,7 @@ def from_native(
             - pandas.DataFrame
             - polars.DataFrame
             - polars.LazyFrame
+            - dask.dataframe.DataFrame
             - anything with a `__narwhals_dataframe__` or `__narwhals_lazyframe__` method
             - pandas.Series
             - polars.Series
