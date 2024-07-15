@@ -91,7 +91,7 @@ class PandasLikeGroupBy:
         )
 
 
-def agg_pandas(  # noqa: PLR0915
+def agg_pandas(
     grouped: Any,
     exprs: list[PandasLikeExpr],
     keys: list[str],
@@ -120,8 +120,8 @@ def agg_pandas(  # noqa: PLR0915
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
                 if expr._output_names is None:  # pragma: no cover
-                    msg = "`Expr._output_names` cannot be None"
-                    raise ValueError(msg)
+                    msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+                    raise AssertionError(msg)
 
                 function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                     expr._function_name, expr._function_name
@@ -131,15 +131,11 @@ def agg_pandas(  # noqa: PLR0915
                 continue
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
-            if expr._depth != 1:  # pragma: no cover
-                msg = f"Expr._depth should be 1, found {expr._depth}"
-                raise ValueError(msg)
-            if expr._root_names is None:  # pragma: no cover
-                msg = "`Expr._root_names` cannot be None"
-                raise ValueError(msg)
-            if expr._output_names is None:  # pragma: no cover
-                msg = "`Expr._output_names` cannot be None"
-                raise ValueError(msg)
+            if (
+                expr._depth != 1 or expr._root_names is None or expr._output_names is None
+            ):  # pragma: no cover
+                msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+                raise AssertionError(msg)
 
             function_name = remove_prefix(expr._function_name, "col->")
             function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
