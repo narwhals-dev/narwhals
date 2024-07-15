@@ -11,7 +11,7 @@ In the following table it is possible to check which method is implemented for w
     - "pandas-like" means pandas, cuDF and Modin
     - Polars supports all the methods (by design)
 
-| class                   | method             | pandas-like        | arrow              |
+| Class                   | Method             | pandas-like        | arrow              |
 |-------------------------|--------------------|--------------------|--------------------|
 | DataFrame               | clone              | :white_check_mark: | :white_check_mark: |
 | DataFrame               | collect_schema     | :white_check_mark: | :white_check_mark: |

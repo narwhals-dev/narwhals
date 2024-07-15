@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import sys
 from pathlib import Path
 from typing import Any
 from typing import Final
@@ -65,16 +66,16 @@ def get_backend_completeness_table() -> str:
             pandas_methods = get_class_methods(pandas_class[0][1]) if pandas_class else []
 
             narhwals = pl.DataFrame(
-                {"class": nw_class_name, "backend": "narwhals", "method": nw_methods}
+                {"Class": nw_class_name, "Backend": "narwhals", "Method": nw_methods}
             )
             arrow = pl.DataFrame(
-                {"class": nw_class_name, "backend": "arrow", "method": arrow_methods}
+                {"Class": nw_class_name, "Backend": "arrow", "Method": arrow_methods}
             )
             pandas = pl.DataFrame(
                 {
-                    "class": nw_class_name,
-                    "backend": "pandas-like",
-                    "method": pandas_methods,
+                    "Class": nw_class_name,
+                    "Backend": "pandas-like",
+                    "Method": pandas_methods,
                 }
             )
 
@@ -83,11 +84,11 @@ def get_backend_completeness_table() -> str:
     results = (
         pl.concat(results)  # noqa: PD010
         .with_columns(supported=pl.lit(":white_check_mark:"))
-        .pivot(on="backend", values="supported", index=["class", "method"])
+        .pivot(on="Backend", values="supported", index=["Class", "Method"])
         .filter(pl.col("narwhals").is_not_null())
         .drop("narwhals")
         .fill_null(":x:")
-        .sort("class", "method")
+        .sort("Class", "Method")
     )
 
     with pl.Config(
@@ -107,3 +108,5 @@ if __name__ == "__main__":
 
     with DESTINATION_PATH.open(mode="w") as destination:
         destination.write(template)
+
+    sys.exit(0)
