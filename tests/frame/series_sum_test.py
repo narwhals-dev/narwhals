@@ -28,6 +28,6 @@ def test_series_sum(constructor_with_pyarrow: Any) -> None:
     expected_sum_b = {"b": [14]}
     expected_sum_c = {"c": [12]}
 
-    compare_dicts(result_native_a, expected_sum_a)
-    compare_dicts(result_native_b, expected_sum_b)
-    compare_dicts(result_native_c, expected_sum_c)
+    compare_dicts(result_sum_a, expected_sum_a)
+    compare_dicts(result_sum_b, expected_sum_b)
+    compare_dicts(result_sum_c, expected_sum_c)
