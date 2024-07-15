@@ -9,8 +9,8 @@ data = {
 }
 
 
-def test_null_count(constructor_with_pyarrow: Any) -> None:
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+def test_null_count(constructor: Any) -> None:
+    df = nw.from_native(constructor(data), eager_only=True)
     result = df.select(nw.all().null_count())
     expected = {
         "a": [2],

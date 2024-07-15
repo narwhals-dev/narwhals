@@ -9,9 +9,9 @@ data = {
 }
 
 
-def test_with_row_index(constructor_with_pyarrow: Any) -> None:
-    result = nw.from_native(constructor_with_pyarrow(data)).with_row_index()
+def test_with_row_index(constructor: Any) -> None:
+    result = nw.from_native(constructor(data)).with_row_index()
     expected = {"a": ["foo", "bars"], "ab": ["foo", "bars"], "index": [0, 1]}
     compare_dicts(result, expected)
-    result = nw.from_native(constructor_with_pyarrow(data)).lazy().with_row_index()
+    result = nw.from_native(constructor(data)).lazy().with_row_index()
     compare_dicts(result, expected)
