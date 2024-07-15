@@ -29,7 +29,7 @@ jobs:
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
       - name: install-docs-reqs
-        run: python -m pip install --upgrade -r docs/requirements-dev.txt
+        run: python -m pip install --upgrade -r docs/requirements-docs.txt
       - name: check-no-errors
         run: python -m mkdocs build > output.txt 2>&1
       - name: assert-no-errors
