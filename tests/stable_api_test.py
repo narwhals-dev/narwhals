@@ -16,6 +16,7 @@ def test_renamed_taxicab_norm(constructor: Any) -> None:
     # Here, we check that anyone who wrote code using the old
     # API will still be able to use it, without the main namespace
     # getting cluttered by the new name.
+
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.with_columns(b=nw.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
@@ -50,17 +51,17 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if getattr(nw, item).__doc__ is None:
             continue
+        v1_doc = getattr(nw_v1, item).__doc__
+        nw_doc = getattr(nw, item).__doc__
+        if item == "from_native":
+            v1_doc = v1_doc.replace("native_dataframe", "native_object")
         assert (
-            getattr(nw_v1, item).__doc__.replace(
-                "import narwhals.stable.v1 as nw", "import narwhals as nw"
-            )
-            == getattr(nw, item).__doc__
+            v1_doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
+            == nw_doc
         )
         assert (
-            getattr(nw, item).__doc__.replace(
-                "import narwhals as nw", "import narwhals.stable.v1 as nw"
-            )
-            == getattr(nw_v1, item).__doc__
+            nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1 as nw")
+            == v1_doc
         )
 
 

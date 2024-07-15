@@ -54,7 +54,7 @@ def dask_contructor(obj: Any) -> IntoDataFrame:
     return dd.DataFrame(obj)  # type: ignore[no-any-return]
 
 
-def polars_constructor(obj: Any) -> IntoDataFrame:
+def polars_eager_constructor(obj: Any) -> IntoDataFrame:
     return pl.DataFrame(obj)
 
 
@@ -62,31 +62,35 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
+def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
+    return pa.table(obj)  # type: ignore[no-any-return]
+
+
 if parse_version(pd.__version__) >= parse_version("2.0.0"):
-    params = [pandas_constructor, pandas_nullable_constructor, pandas_pyarrow_constructor]
+    eager_constructors = [
+        pandas_constructor,
+        pandas_nullable_constructor,
+        pandas_pyarrow_constructor,
+    ]
 else:  # pragma: no cover
-    params = [pandas_constructor]
-params.append(polars_constructor)
+    eager_constructors = [pandas_constructor]
+
+eager_constructors.extend([polars_eager_constructor, pyarrow_table_constructor])
+
 if get_modin() is not None:  # pragma: no cover
-    params.append(modin_constructor)
+    eager_constructors.append(modin_constructor)
+
 if get_dask() is not None:
-    params.append(dask_contructor)
+    eager_constructors.append(dask_contructor)
 
 
-@pytest.fixture(params=params)
+@pytest.fixture(params=eager_constructors)
 def constructor(request: Any) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture(params=[*params, polars_lazy_constructor])
+@pytest.fixture(params=[*eager_constructors, polars_lazy_constructor])
 def constructor_with_lazy(request: Any) -> Callable[[Any], Any]:
-    return request.param  # type: ignore[no-any-return]
-
-
-# TODO(Unassigned): once pyarrow has complete coverage, we can remove this one,
-# and just put `pa.table` into `constructor`
-@pytest.fixture(params=[*params, pa.table])
-def constructor_with_pyarrow(request: Any) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
@@ -116,6 +120,10 @@ def polars_series_constructor(obj: Any) -> Any:
     return pl.Series(obj)
 
 
+def pyarrow_series_constructor(obj: Any) -> Any:
+    return pa.chunked_array([obj])
+
+
 if parse_version(pd.__version__) >= parse_version("2.0.0"):
     params_series = [
         pandas_series_constructor,
@@ -124,24 +132,15 @@ if parse_version(pd.__version__) >= parse_version("2.0.0"):
     ]
 else:  # pragma: no cover
     params_series = [pandas_series_constructor]
-params_series.append(polars_series_constructor)
 if get_modin() is not None:  # pragma: no cover
     params_series.append(modin_series_constructor)
 if get_dask() is not None:  # pragma: no cover
     params_series.append(dask_series_constructor)
 
 
+params_series.extend([polars_series_constructor, pyarrow_series_constructor])
+
+
 @pytest.fixture(params=params_series)
 def constructor_series(request: Any) -> Callable[[Any], Any]:
-    return request.param  # type: ignore[no-any-return]
-
-
-def pyarrow_chunked_array_constructor(obj: Any) -> Any:
-    return pa.chunked_array([obj])
-
-
-# TODO(Unassigned): once pyarrow has complete coverage, we can remove this one,
-# and just put `pa.table` into `constructor`
-@pytest.fixture(params=[*params_series, pyarrow_chunked_array_constructor])
-def constructor_series_with_pyarrow(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]

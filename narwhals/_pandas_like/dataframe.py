@@ -81,9 +81,7 @@ class PandasLikeDataFrame:
             for col, count in counter.items():
                 if count > 1:
                     msg = f"Expected unique column names, got {col!r} {count} time(s)"
-                    raise ValueError(
-                        msg,
-                    )
+                    raise ValueError(msg)
             msg = "Please report a bug"  # pragma: no cover
             raise AssertionError(msg)
 
@@ -192,6 +190,9 @@ class PandasLikeDataFrame:
             col: translate_dtype(self._native_dataframe.loc[:, col])
             for col in self._native_dataframe.columns
         }
+
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
 
     # --- reshape ---
     def select(

@@ -8,10 +8,10 @@ from narwhals.utils import parse_version
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(constructor_with_pyarrow: Any, request: Any) -> None:
-    if "table" in str(constructor_with_pyarrow) and parse_version(pa.__version__) <= (
-        15,
-    ):  # pragma: no cover
+def test_cast(constructor: Any, request: Any) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and parse_version(
+        pa.__version__
+    ) <= (15,):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [1],
@@ -49,7 +49,7 @@ def test_cast(constructor_with_pyarrow: Any, request: Any) -> None:
         "o": nw.Categorical,
         "p": nw.Int64,
     }
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True).select(
+    df = nw.from_native(constructor(data), eager_only=True).select(
         nw.col(key).cast(value) for key, value in schema.items()
     )
     result = df.select(

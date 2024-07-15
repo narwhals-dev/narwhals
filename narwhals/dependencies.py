@@ -56,6 +56,15 @@ def get_pyarrow_compute() -> Any:  # pragma: no cover
     return None
 
 
+def get_pyarrow_parquet() -> Any:  # pragma: no cover
+    """Get pyarrow.parquet module (if pyarrow has already been imported - else return None)."""
+    if "pyarrow" in sys.modules:
+        import pyarrow.parquet as pp
+
+        return pp
+    return None
+
+
 def get_numpy() -> Any:
     """Get numpy module (if already imported - else return None)."""
     return sys.modules.get("numpy", None)

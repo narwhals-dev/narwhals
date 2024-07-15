@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 from typing import overload
 
@@ -11,11 +12,13 @@ from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyarrow_parquet
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
@@ -65,6 +68,10 @@ class ArrowDataFrame:
 
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
+
+        if not isinstance(name, str):
+            msg = f"Expected str, got: {type(name)}"
+            raise TypeError(msg)
 
         return ArrowSeries(
             self._native_dataframe[name],
@@ -135,6 +142,9 @@ class ArrowDataFrame:
             for name, dtype in zip(schema.names, schema.types)
         }
 
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
+
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.schema.names  # type: ignore[no-any-return]
@@ -165,11 +175,12 @@ class ArrowDataFrame:
         to_concat = []
         output_names = []
         # Make sure to preserve column order
+        length = len(self)
         for name in self.columns:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     validate_dataframe_comparand(
-                        new_column_name_to_new_column_map.pop(name)
+                        length=length, other=new_column_name_to_new_column_map.pop(name)
                     )
                 )
             else:
@@ -177,11 +188,56 @@ class ArrowDataFrame:
             output_names.append(name)
         for s in new_column_name_to_new_column_map:
             to_concat.append(
-                validate_dataframe_comparand(new_column_name_to_new_column_map[s])
+                validate_dataframe_comparand(
+                    length=length, other=new_column_name_to_new_column_map[s]
+                )
             )
             output_names.append(s)
         df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)
         return self._from_native_dataframe(df)
+
+    def group_by(self, *keys: str | Iterable[str]) -> ArrowGroupBy:
+        from narwhals._arrow.group_by import ArrowGroupBy
+
+        return ArrowGroupBy(
+            self,
+            flatten(keys),
+        )
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: Literal["inner"] = "inner",
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+    ) -> Self:
+        if isinstance(left_on, str):
+            left_on = [left_on]
+        if isinstance(right_on, str):
+            right_on = [right_on]
+
+        if how == "cross":  # type: ignore[comparison-overlap]
+            raise NotImplementedError
+
+        if how == "anti":  # type: ignore[comparison-overlap]
+            raise NotImplementedError
+
+        if how == "semi":  # type: ignore[comparison-overlap]
+            raise NotImplementedError
+
+        if how == "left":  # type: ignore[comparison-overlap]
+            raise NotImplementedError
+
+        return self._from_native_dataframe(
+            self._native_dataframe.join(
+                other._native_dataframe,
+                keys=left_on,
+                right_keys=right_on,
+                join_type=how,
+                right_suffix="_right",
+            ),
+        )
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_native_dataframe(
@@ -288,3 +344,33 @@ class ArrowDataFrame:
 
     def clone(self) -> Self:
         raise NotImplementedError("clone is not yet supported on PyArrow tables")
+
+    def is_empty(self: Self) -> bool:
+        return self.shape[0] == 0
+
+    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+        if row is None and column is None:
+            if self.shape != (1, 1):
+                msg = (
+                    "can only call `.item()` if the dataframe is of shape (1, 1),"
+                    " or if explicit row/col values are provided;"
+                    f" frame has shape {self.shape!r}"
+                )
+                raise ValueError(msg)
+            return self._native_dataframe[0][0].as_py()
+
+        elif row is None or column is None:
+            msg = "cannot call `.item()` with only one of `row` or `column`"
+            raise ValueError(msg)
+
+        _col = self.columns.index(column) if isinstance(column, str) else column
+        return self._native_dataframe[_col][row].as_py()
+
+    def rename(self, mapping: dict[str, str]) -> Self:
+        df = self._native_dataframe
+        new_cols = [mapping.get(c, c) for c in df.column_names]
+        return self._from_native_dataframe(df.rename_columns(new_cols))
+
+    def write_parquet(self, file: Any) -> Any:
+        pp = get_pyarrow_parquet()
+        pp.write_table(self._native_dataframe, file)

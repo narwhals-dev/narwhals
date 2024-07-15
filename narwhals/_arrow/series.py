@@ -5,7 +5,6 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 
-from narwhals._arrow.namespace import ArrowNamespace
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
@@ -15,6 +14,7 @@ from narwhals.dependencies import get_pyarrow_compute
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
 
 
@@ -95,34 +95,49 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
-        return self._from_native_series(pc.and_(ser, other))
+        return self._from_native_series(pc.and_kleene(ser, other))
 
     def __or__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
-        return self._from_native_series(pc.or_(ser, other))
+        return self._from_native_series(pc.or_kleene(ser, other))
 
     def __add__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         other = validate_column_comparand(other)
         return self._from_native_series(pc.add(self._native_series, other))
 
+    def __radd__(self, other: Any) -> Self:
+        return self + other  # type: ignore[no-any-return]
+
     def __sub__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         other = validate_column_comparand(other)
         return self._from_native_series(pc.subtract(self._native_series, other))
+
+    def __rsub__(self, other: Any) -> Self:
+        return (self - other) * (-1)  # type: ignore[no-any-return]
 
     def __mul__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         other = validate_column_comparand(other)
         return self._from_native_series(pc.multiply(self._native_series, other))
 
+    def __rmul__(self, other: Any) -> Self:
+        return self * other  # type: ignore[no-any-return]
+
     def __pow__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(ser, other))
+
+    def __rpow__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.power(other, ser))
 
     def filter(self, other: Any) -> Self:
         other = validate_column_comparand(other)
@@ -140,6 +155,10 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.max(self._native_series)  # type: ignore[no-any-return]
 
+    def sum(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.sum(self._native_series)  # type: ignore[no-any-return]
+
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
@@ -149,6 +168,8 @@ class ArrowSeries:
         return pc.count(self._native_series)  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
+        from narwhals._arrow.namespace import ArrowNamespace
+
         return ArrowNamespace(backend_version=self._backend_version)
 
     @property
@@ -232,6 +253,17 @@ class ArrowSeries:
             return self._from_native_series(ser.slice(max(0, num_rows - n)))
         else:
             return self._from_native_series(ser.slice(abs(n)))
+
+    def item(self: Self, index: int | None = None) -> Any:
+        if index is None:
+            if len(self) != 1:
+                msg = (
+                    "can only call '.item()' if the Series is of length 1,"
+                    f" or an explicit index is provided (Series is of length {len(self)})"
+                )
+                raise ValueError(msg)
+            return self._native_series[0].as_py()
+        return self._native_series[index].as_py()
 
     @property
     def shape(self) -> tuple[int]:

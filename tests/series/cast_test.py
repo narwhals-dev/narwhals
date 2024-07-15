@@ -105,6 +105,7 @@ def test_cast_date_datetime_invalid() -> None:
         df.select(nw.col("a").cast(nw.Date))
 
 
+@pytest.mark.filterwarnings("ignore: casting period")
 def test_unknown_to_int() -> None:
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="min")})
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}

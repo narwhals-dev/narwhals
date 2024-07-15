@@ -28,14 +28,19 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
+    class DataFrameLike(Protocol):
+        def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
+
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series"]
 """Anything which can be converted to an expression."""
 
-IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]"]
+IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame."""
 
-IntoFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "LazyFrame[Any]"]
+IntoFrame: TypeAlias = Union[
+    "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
+]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame."""
 
 Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]

@@ -42,9 +42,7 @@ if TYPE_CHECKING:
 def evaluate_into_expr(
     df: CompliantDataFrame, into_expr: IntoCompliantExpr
 ) -> ListOfCompliantSeries:
-    """
-    Return list of raw columns.
-    """
+    """Return list of raw columns."""
     expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
     return expr._call(df)  # type: ignore[arg-type]
 
@@ -150,8 +148,8 @@ def parse_into_expr(
     if isinstance(into_expr, str):
         return namespace.col(into_expr)
     if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        series = namespace._create_native_series(into_expr)
-        return namespace._create_expr_from_series(series)
+        series = namespace._create_compliant_series(into_expr)
+        return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -191,8 +189,11 @@ def reuse_series_implementation(
                 out.append(plx._create_series_from_scalar(_out, column))  # type: ignore[arg-type]
             else:
                 out.append(_out)
-        if expr._output_names is not None:  # safety check
-            assert [s.name for s in out] == expr._output_names
+        if expr._output_names is not None and (
+            [s.name for s in out] != expr._output_names
+        ):  # pragma: no cover
+            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+            raise AssertionError(msg)
         return out
 
     # Try tracking root and output names by combining them from all
@@ -213,9 +214,12 @@ def reuse_series_implementation(
             output_names = None
             break
 
-    assert (output_names is None and root_names is None) or (
-        output_names is not None and root_names is not None
-    )  # safety check
+    if not (
+        (output_names is None and root_names is None)
+        or (output_names is not None and root_names is not None)
+    ):  # pragma: no cover
+        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+        raise AssertionError(msg)
 
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
@@ -243,3 +247,20 @@ def reuse_series_namespace_implementation(
         root_names=expr._root_names,
         output_names=expr._output_names,
     )
+
+
+def is_simple_aggregation(expr: CompliantExpr) -> bool:
+    """
+    Check if expr is a very simple one, such as:
+
+    - nw.col('a').mean()  # depth 1
+    - nw.mean('a')  # depth 1
+    - nw.len()  # depth 0
+
+    as opposed to, say
+
+    - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
+
+    because then, we can use a fastpath in pandas.
+    """
+    return expr._depth < 2

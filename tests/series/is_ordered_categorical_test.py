@@ -6,6 +6,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 
 
 def test_is_ordered_categorical() -> None:
@@ -25,11 +26,23 @@ def test_is_ordered_categorical() -> None:
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < (2, 0), reason="requires interchange protocol"
+)
+def test_is_ordered_categorical_interchange_protocol() -> None:
+    df = pd.DataFrame(
+        {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
+    ).__dataframe__()
+    assert nw.is_ordered_categorical(
+        nw.from_native(df, eager_or_interchange_only=True)["a"]
+    )
+
+
 def test_is_definitely_not_ordered_categorical(
-    constructor_series_with_pyarrow: Any,
+    constructor_series: Any,
 ) -> None:
     assert not nw.is_ordered_categorical(
-        nw.from_native(constructor_series_with_pyarrow([1, 2, 3]), series_only=True)
+        nw.from_native(constructor_series([1, 2, 3]), series_only=True)
     )
 
 

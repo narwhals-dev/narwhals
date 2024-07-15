@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.0.5"
+version = "1.1.0"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
-description = "Extremely lightweight compatibility layer between pandas, Polars, cuDF, and Modin"
+description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -62,12 +62,15 @@ lint.ignore = [
   'PLR2004',
   'PTH',
   'RET505',
-  'S',
   'SLF001',
   'TD003',
   'TRY003',  # TODO(Unassigned): enable
   'TRY004'
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+"utils/*" = ["S311"]
 
 [tool.ruff.lint.isort]
 force-single-line = true

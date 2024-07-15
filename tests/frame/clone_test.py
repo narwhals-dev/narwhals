@@ -1,10 +1,15 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_clone(constructor_with_lazy: Any) -> None:
+def test_clone(request: Any, constructor_with_lazy: Any) -> None:
+    if "pyarrow_table" in str(constructor_with_lazy):
+        request.applymarker(pytest.mark.xfail)
+
     expected = {"a": [1, 2], "b": [3, 4]}
     df = nw.from_native(constructor_with_lazy(expected))
     df_clone = df.clone()
