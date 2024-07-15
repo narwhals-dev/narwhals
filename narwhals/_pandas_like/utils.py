@@ -9,7 +9,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import TypeVar
-from typing import Self
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
