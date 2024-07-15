@@ -12,7 +12,6 @@ from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
 from narwhals._pandas_like.utils import Implementation
-from narwhals.dependencies import get_dask
 from narwhals.utils import parse_version
 from tests.conftest import dask_series_constructor
 
@@ -209,8 +208,8 @@ def test_is_sorted(
 
     series = nw.from_native(constructor_series(input_data), series_only=True)
     result = series.is_sorted(descending=descending)
-    if (dd := get_dask()) is not None and isinstance(df_raw, dd.DataFrame):
-        result = result.compute()
+    if constructor_series == dask_series_constructor:
+        result = result.compute()  # type: ignore
     assert result == expected
 
 

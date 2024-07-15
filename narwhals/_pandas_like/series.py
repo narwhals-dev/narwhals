@@ -109,7 +109,7 @@ class PandasLikeSeries:
             return get_modin()
         if self._implementation is Implementation.CUDF:  # pragma: no cover
             return get_cudf()
-        if self._implementation == "dask":  # pragma: no cover
+        if self._implementation is Implementation.DASK:  # pragma: no cover
             return get_dask()
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
@@ -179,7 +179,7 @@ class PandasLikeSeries:
         dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
         return self._from_native_series(ser.astype(dtype))
 
-    @not_implemented_in("dask")
+    @not_implemented_in(Implementation.DASK)
     def item(self: Self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
         if index is None:
@@ -516,7 +516,7 @@ class PandasLikeSeries:
         raise AssertionError(msg)
 
     # --- descriptive ---
-    @not_implemented_in("dask")
+    @not_implemented_in(Implementation.DASK)
     def is_duplicated(self: Self) -> Self:
         return self._from_native_series(self._native_series.duplicated(keep=False))
 
@@ -529,11 +529,11 @@ class PandasLikeSeries:
     def null_count(self: Self) -> int:
         return self._native_series.isna().sum()  # type: ignore[no-any-return]
 
-    @not_implemented_in("dask")
+    @not_implemented_in(Implementation.DASK)
     def is_first_distinct(self: Self) -> Self:
         return self._from_native_series(~self._native_series.duplicated(keep="first"))
 
-    @not_implemented_in("dask")
+    @not_implemented_in(Implementation.DASK)
     def is_last_distinct(self: Self) -> Self:
         return self._from_native_series(~self._native_series.duplicated(keep="last"))
 

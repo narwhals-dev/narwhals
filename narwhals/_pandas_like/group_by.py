@@ -29,7 +29,7 @@ class PandasLikeGroupBy:
         self._df = df
         self._keys = list(keys)
         keywords = {}
-        if df._implementation != "dask":
+        if df._implementation is not Implementation.DASK:
             keywords |= {"as_index": True}
         self._grouped = self._df._native_dataframe.groupby(
             list(self._keys),

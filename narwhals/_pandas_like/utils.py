@@ -13,14 +13,19 @@ from typing import TypeVar
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_pyarrow
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from narwhals._arrow.typing import IntoArrowExpr
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
@@ -101,18 +106,17 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     raise AssertionError("Please report a bug")
 
 
-def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
+def maybe_evaluate_expr(df: PandasLikeDataFrame, expr: Any) -> Any:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
-    from narwhals._pandas_like.expr import PandasExpr
 
-    if isinstance(expr, PandasExpr):
+    if isinstance(expr, PandasLikeExpr):
         return expr._call(df)
     return expr
 
 
 def parse_into_expr(
-    implementation: str, into_expr: IntoPandasExpr | IntoArrowExpr
-) -> PandasExpr:
+    implementation: str, into_expr: IntoPandasLikeExpr | IntoArrowExpr
+) -> PandasLikeExpr:
     """Parse `into_expr` as an expression.
 
     For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
@@ -127,17 +131,17 @@ def parse_into_expr(
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._pandas_like.expr import PandasExpr
-    from narwhals._pandas_like.namespace import PandasNamespace
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._pandas_like.series import PandasLikeSeries
 
     if implementation == "arrow":
-        plx: ArrowNamespace | PandasNamespace = ArrowNamespace()
+        plx: ArrowNamespace | PandasLikeNamespace = ArrowNamespace()
     else:
-        plx = PandasNamespace(implementation=implementation)
-    if isinstance(into_expr, (PandasExpr, ArrowExpr)):
+        PandasLikeNamespace(implementation=implementation)
+    if isinstance(into_expr, (PandasLikeExpr, ArrowExpr)):
         return into_expr  # type: ignore[return-value]
-    if isinstance(into_expr, (PandasSeries, ArrowSeries)):
+    if isinstance(into_expr, (PandasLikeSeries, ArrowSeries)):
         return plx._create_expr_from_series(into_expr)  # type: ignore[arg-type, return-value]
     if isinstance(into_expr, str):
         return plx.col(into_expr)  # type: ignore[return-value]
@@ -233,7 +237,7 @@ def vertical_concat(
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=0)
-    if implementation == "dask":  # pragma: no cover
+    if implementation is Implementation.DASK:  # pragma: no cover
         dd = get_dask()
 
         return dd.concat(dfs, axis=0)
@@ -263,10 +267,10 @@ def native_series_from_iterable(
     if implementation == "arrow":
         pa = get_pyarrow()
         return pa.chunked_array([data])
-    if implementation is Implementation.ARROW:  # pragma: no cover
+    if implementation is Implementation.DASK:  # pragma: no cover
         dd = get_dask()
         pd = get_pandas()
-        if hasattr(data[0], "compute"):
+        if hasattr(next(data), "compute"):
             return dd.concat([i.to_series() for i in data])
         return pd.Series(
             data,
@@ -298,7 +302,7 @@ def set_axis(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    if implementation == "dask":
+    if implementation is Implementation.DASK:
         msg = "Setting axis on columns is not currently supported for dask"
         raise NotImplementedError(msg)
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
@@ -532,7 +536,7 @@ def to_datetime(implementation: Implementation) -> Any:
         return get_modin().to_datetime
     if implementation is Implementation.CUDF:
         return get_cudf().to_datetime
-    if implementation == "dask":
+    if implementation is Implementation.DASK:
         return get_dask().to_datetime
     raise AssertionError
 
@@ -573,12 +577,14 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
             raise AssertionError(msg)
 
 
-def not_implemented_in(*implementations: list[Implementation]) -> Callable:
+def not_implemented_in(
+    *implementations: Implementation,
+) -> Callable[[Callable[[Any], Any]], Callable[[Any], Any]]:
     """
     Produces method decorator to raise not implemented warnings for given implementations
     """
 
-    def check_implementation_wrapper(func: Callable) -> Callable:
+    def check_implementation_wrapper(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
         """Wraps function to return same function + implementation check"""
 
         @wraps(func)
