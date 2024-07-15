@@ -332,9 +332,7 @@ def test_with_columns_order(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_with_columns_order_single_row(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_with_columns_order_single_row(constructor: Any) -> None:
     df = nw.from_native(constructor(data)[:1])
     assert len(df) == 1
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)

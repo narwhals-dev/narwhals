@@ -7,6 +7,7 @@ from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
+from narwhals._arrow.series import ArrowSeries
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
@@ -15,8 +16,6 @@ if TYPE_CHECKING:
     from typing import Callable
 
     from narwhals._arrow.dataframe import ArrowDataFrame
-    from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
 
 
@@ -123,6 +122,26 @@ class ArrowNamespace:
             function_name="all",
             root_names=None,
             output_names=None,
+            backend_version=self._backend_version,
+        )
+
+    def lit(self, value: Any, dtype: dtypes.DType | None) -> ArrowExpr:
+        def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
+            arrow_series = ArrowSeries._from_iterable(
+                data=[value],
+                name="lit",
+                backend_version=self._backend_version,
+            )
+            if dtype:
+                return arrow_series.cast(dtype)
+            return arrow_series
+
+        return ArrowExpr(
+            lambda df: [_lit_arrow_series(df)],
+            depth=0,
+            function_name="lit",
+            root_names=None,
+            output_names=["lit"],
             backend_version=self._backend_version,
         )
 
