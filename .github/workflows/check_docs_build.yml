@@ -35,6 +35,6 @@ jobs:
       - name: check-no-errors
         run: python -m mkdocs build > output.txt 2>&1
       - name: assert-no-errors
-        run: grep -q -v 'Execution of python' output.txt
+        run: python utils/check_for_no_build_errors.py
       - name: strict-docs-build
         run: mkdocs build --strict
