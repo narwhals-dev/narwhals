@@ -33,7 +33,9 @@ from narwhals.expression import min
 from narwhals.expression import sum
 from narwhals.expression import sum_horizontal
 from narwhals.functions import concat
+from narwhals.functions import get_level
 from narwhals.functions import show_versions
+from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
@@ -44,11 +46,12 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.0.6"
+__version__ = "1.1.0"
 
 __all__ = [
     "selectors",
     "concat",
+    "get_level",
     "to_native",
     "from_native",
     "is_ordered_categorical",
@@ -92,4 +95,5 @@ __all__ = [
     "narwhalify",
     "show_versions",
     "stable",
+    "Schema",
 ]

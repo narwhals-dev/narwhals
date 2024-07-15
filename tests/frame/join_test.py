@@ -126,7 +126,7 @@ def test_left_join(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
+@pytest.mark.filterwarnings("ignore: the default coalesce behavior")
 def test_left_join_multiple_column(constructor: Any) -> None:
     data_left = {"a": [1, 2, 3], "b": [4, 5, 6]}
     data_right = {"a": [1, 2, 3], "c": [4, 5, 6]}
