@@ -34,7 +34,8 @@ def map_interchange_dtype_to_narwhals_dtype(
             return dtypes.Int16()
         if interchange_dtype[1] == 8:
             return dtypes.Int8()
-        raise AssertionError("Invalid bit width for INT")
+        msg = "Invalid bit width for INT"
+        raise AssertionError(msg)
     if interchange_dtype[0] == DtypeKind.UINT:
         if interchange_dtype[1] == 64:
             return dtypes.UInt64()
@@ -44,13 +45,15 @@ def map_interchange_dtype_to_narwhals_dtype(
             return dtypes.UInt16()
         if interchange_dtype[1] == 8:
             return dtypes.UInt8()
-        raise AssertionError("Invalid bit width for UINT")
+        msg = "Invalid bit width for UINT"
+        raise AssertionError(msg)
     if interchange_dtype[0] == DtypeKind.FLOAT:
         if interchange_dtype[1] == 64:
             return dtypes.Float64()
         if interchange_dtype[1] == 32:
             return dtypes.Float32()
-        raise AssertionError("Invalid bit width for FLOAT")
+        msg = "Invalid bit width for FLOAT"
+        raise AssertionError(msg)
     if interchange_dtype[0] == DtypeKind.BOOL:
         return dtypes.Boolean()
     if interchange_dtype[0] == DtypeKind.STRING:

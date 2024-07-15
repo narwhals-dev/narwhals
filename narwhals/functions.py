@@ -29,9 +29,8 @@ def concat(
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> FrameT:
     if how not in ("horizontal", "vertical"):
-        raise NotImplementedError(
-            "Only horizontal and vertical concatenations are supported"
-        )
+        msg = "Only horizontal and vertical concatenations are supported"
+        raise NotImplementedError(msg)
     if not items:
         msg = "No items to concatenate"
         raise ValueError(msg)
