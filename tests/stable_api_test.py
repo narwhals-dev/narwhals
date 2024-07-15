@@ -8,7 +8,7 @@ import narwhals.stable.v1 as nw_v1
 from tests.utils import compare_dicts
 
 
-def test_renamed_taxicab_norm(request: Any, constructor: Any) -> None:
+def test_renamed_taxicab_norm(constructor: Any) -> None:
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method
@@ -16,9 +16,6 @@ def test_renamed_taxicab_norm(request: Any, constructor: Any) -> None:
     # Here, we check that anyone who wrote code using the old
     # API will still be able to use it, without the main namespace
     # getting cluttered by the new name.
-
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.with_columns(b=nw.col("a")._taxicab_norm())

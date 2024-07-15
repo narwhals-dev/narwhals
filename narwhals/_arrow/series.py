@@ -155,6 +155,10 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.max(self._native_series)  # type: ignore[no-any-return]
 
+    def sum(self) -> int:
+        pc = get_pyarrow_compute()
+        return pc.sum(self._native_series)  # type: ignore[no-any-return]
+
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
