@@ -396,6 +396,7 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `series_only` with dask.dataframe.DataFrame"
             raise TypeError(msg)
         import dask
+
         return DataFrame(
             PandasLikeDataFrame(
                 native_dataframe,
@@ -515,6 +516,7 @@ def from_native(  # noqa: PLR0915
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
         import dask
+
         return Series(
             PandasLikeSeries(
                 native_dataframe,
@@ -522,7 +524,7 @@ def from_native(  # noqa: PLR0915
                 backend_version=parse_version(dask.__version__),
             ),
             is_polars=False,
-            backend_version=parse_version(dask.__version__)
+            backend_version=parse_version(dask.__version__),
         )
     elif hasattr(native_object, "__narwhals_series__"):
         if not allow_series:

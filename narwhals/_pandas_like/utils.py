@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import secrets
-from copy import copy
-from functools import wraps
 from enum import Enum
 from enum import auto
+from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -58,7 +57,10 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other.item()
-        if other._native_series.index is not index and other._implementation != Implementation.DASK:
+        if (
+            other._native_series.index is not index
+            and other._implementation != Implementation.DASK
+        ):
             return set_axis(
                 other._native_series,
                 index,
@@ -84,7 +86,10 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
         if other.len() == 1:
             # broadcast
             return other._native_series.iloc[0]
-        if other._native_series.index is not index and other._implementation is not Implementation.DASK:
+        if (
+            other._native_series.index is not index
+            and other._implementation is not Implementation.DASK
+        ):
             return set_axis(
                 other._native_series,
                 index,
@@ -103,6 +108,7 @@ def maybe_evaluate_expr(df: PandasDataFrame, expr: Any) -> Any:
     if isinstance(expr, PandasExpr):
         return expr._call(df)
     return expr
+
 
 def parse_into_expr(
     implementation: str, into_expr: IntoPandasExpr | IntoArrowExpr
@@ -262,15 +268,12 @@ def native_series_from_iterable(
         pd = get_pandas()
         if hasattr(data[0], "compute"):
             return dd.concat([i.to_series() for i in data])
-        return (
-            pd.Series(
-                data,
-                name=name,
-                index=index,
-                copy=False,
-            )
-            .pipe(dd.from_pandas)
-        )
+        return pd.Series(
+            data,
+            name=name,
+            index=index,
+            copy=False,
+        ).pipe(dd.from_pandas)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -574,12 +577,16 @@ def not_implemented_in(*implementations: list[Implementation]) -> Callable:
     """
     Produces method decorator to raise not implemented warnings for given implementations
     """
+
     def check_implementation_wrapper(func: Callable) -> Callable:
         """Wraps function to return same function + implementation check"""
+
         @wraps(func)
         def wrapped_func(self, *args, **kwargs):
             if (implementation := self._implementation) in implementations:
                 raise NotImplementedError(f"Not implemented in {implementation}")
             return func(self, *args, **kwargs)
+
         return wrapped_func
+
     return check_implementation_wrapper

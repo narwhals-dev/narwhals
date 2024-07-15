@@ -11,12 +11,10 @@ from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
+from narwhals._pandas_like.utils import Implementation
 from narwhals.dependencies import get_dask
 from narwhals.utils import parse_version
-from narwhals._pandas_like.utils import Implementation
-from tests.utils import maybe_get_dask_df
 from tests.conftest import dask_series_constructor
-
 
 data = [1, 3, 2]
 data_dups = [4, 4, 6]
@@ -29,7 +27,6 @@ def compute_if_dask(result: Any) -> Any:
         and hasattr(result._native_series, "_implementation")
         and result._series._implementation is Implementation.DASK
     ):
-
         return result.to_pandas()
     return result
 
@@ -44,7 +41,6 @@ def test_len(constructor_series: Any) -> None:
     assert result == 3
 
 
-
 def test_is_in(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
         request.applymarker(pytest.mark.xfail)
@@ -56,7 +52,6 @@ def test_is_in(request: Any, constructor_series: Any) -> None:
     assert result[2]
 
 
-
 def test_is_in_other(constructor: Any) -> None:
     df_raw = constructor({"a": data})
     with pytest.raises(
@@ -66,7 +61,6 @@ def test_is_in_other(constructor: Any) -> None:
         ),
     ):
         nw.from_native(df_raw).with_columns(contains=nw.col("a").is_in("sets"))
-
 
 
 def test_dtype(constructor_series: Any) -> None:
@@ -176,7 +170,6 @@ def test_is_last_distinct(request: Any, constructor_series: Any) -> None:
     assert (result.to_numpy() == expected).all()
 
 
-
 def test_value_counts(request: Any, constructor_series: Any) -> None:
     if "pyarrow_series" in str(constructor_series):
         request.applymarker(pytest.mark.xfail)
@@ -252,7 +245,7 @@ def test_quantile(
         request.applymarker(pytest.mark.xfail)
 
     q = 0.3
-    if (is_dask_test := constructor_series == dask_series_constructor):
+    if is_dask_test := constructor_series == dask_series_constructor:
         interpolation = "linear"  # other interpolation unsupported in dask
 
     series = nw.from_native(constructor_series(data_sorted), allow_series=True)

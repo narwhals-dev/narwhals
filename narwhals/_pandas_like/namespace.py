@@ -12,9 +12,9 @@ from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import flatten
 

@@ -59,7 +59,7 @@ class PandasLikeGroupBy:
                 raise ValueError(msg)
             output_names.extend(expr._output_names)
 
-        dataframe_is_empty= (
+        dataframe_is_empty = (
             self._df._native_dataframe.empty
             if self._df._implementation != Implementation.DASK
             else len(self._df._native_dataframe) == 0

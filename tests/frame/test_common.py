@@ -129,7 +129,6 @@ def test_expr_binary(request: Any, constructor: Any) -> None:
     compare_dicts(result_native, expected)
 
 
-
 def test_expr_transform(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)

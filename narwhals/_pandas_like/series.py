@@ -575,7 +575,6 @@ class PandasLikeSeries:
                 return self._native_series.quantile(q=quantile)
             message = (
                 "Dask performs approximate quantile calculations "
-
                 "and does not support specific interpolations methods. "
                 "Interpolation keywords other than 'linear' are not supported"
             )
