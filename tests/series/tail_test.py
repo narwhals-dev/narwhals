@@ -8,7 +8,7 @@ import narwhals as nw
 
 
 @pytest.mark.parametrize("n", [2, -1])
-def test_tail(constructor_series_with_pyarrow: Any, n: int) -> None:
-    s = nw.from_native(constructor_series_with_pyarrow([1, 2, 3]), series_only=True)
+def test_tail(constructor_series: Any, n: int) -> None:
+    s = nw.from_native(constructor_series([1, 2, 3]), series_only=True)
 
     assert s.tail(n).to_list() == [2, 3]

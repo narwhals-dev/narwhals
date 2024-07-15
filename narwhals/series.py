@@ -32,9 +32,11 @@ class Series:
         *,
         backend_version: tuple[int, ...],
         is_polars: bool,
+        level: Literal["full", "interchange"],
     ) -> None:
         self._is_polars = is_polars
         self._backend_version = backend_version
+        self._level = level
         if hasattr(series, "__narwhals_series__"):
             self._compliant_series = series.__narwhals_series__()
         elif is_polars and (
@@ -42,10 +44,8 @@ class Series:
         ):
             self._compliant_series = series
         else:
-            msg = (  # pragma: no cover
-                f"Expected Polars Series or and object which implements `__narwhals_series__`, got: {type(series)}."
-            )
-            raise TypeError(msg)  # pragma: no cover
+            msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
+            raise TypeError(msg)
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         if self._is_polars and self._backend_version < (0, 20, 29):  # pragma: no cover
@@ -104,7 +104,10 @@ class Series:
 
     def _from_compliant_series(self, series: Any) -> Self:
         return self.__class__(
-            series, is_polars=self._is_polars, backend_version=self._backend_version
+            series,
+            is_polars=self._is_polars,
+            backend_version=self._backend_version,
+            level=self._level,
         )
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -298,6 +301,7 @@ class Series:
             self._compliant_series.to_frame(),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def to_list(self) -> list[Any]:
@@ -348,11 +352,39 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            2.0
+            np.float64(2.0)
             >>> func(s_pl)
             2.0
         """
         return self._compliant_series.mean()
+
+    def count(self) -> Any:
+        """
+        Returns the number of non-null elements in the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s_any):
+            ...     return s_any.count()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+            np.int64(3)
+            >>> func(s_pl)
+            3
+
+        """
+        return self._compliant_series.count()
 
     def any(self) -> Any:
         """
@@ -378,7 +410,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            True
+            np.True_
             >>> func(s_pl)
             True
         """
@@ -405,7 +437,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            False
+            np.False_
             >>> func(s_pl)
             False
 
@@ -433,7 +465,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            1
+            np.int64(1)
             >>> func(s_pl)
             1
         """
@@ -460,7 +492,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            3
+            np.int64(3)
             >>> func(s_pl)
             3
         """
@@ -487,7 +519,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            6
+            np.int64(6)
             >>> func(s_pl)
             6
         """
@@ -518,7 +550,7 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)  # doctest:+SKIP
-            1.0
+            np.float64(1.0)
             >>> func(s_pl)
             1.0
         """
@@ -1231,6 +1263,11 @@ class Series:
             self._compliant_series.__truediv__(self._extract_native(other))
         )
 
+    def __rtruediv__(self, other: object) -> Self:
+        return self._from_compliant_series(
+            self._compliant_series.__rtruediv__(self._extract_native(other))
+        )
+
     def __floordiv__(self, other: object) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__floordiv__(self._extract_native(other))
@@ -1276,27 +1313,27 @@ class Series:
             self._compliant_series.__gt__(self._extract_native(other))
         )
 
-    def __ge__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    def __ge__(self, other: Any) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__ge__(self._extract_native(other))
         )
 
-    def __lt__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    def __lt__(self, other: Any) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__lt__(self._extract_native(other))
         )
 
-    def __le__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    def __le__(self, other: Any) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__le__(self._extract_native(other))
         )
 
-    def __and__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    def __and__(self, other: Any) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__and__(self._extract_native(other))
         )
 
-    def __or__(self, other: Any) -> Self:  # pragma: no cover (todo)
+    def __or__(self, other: Any) -> Self:
         return self._from_compliant_series(
             self._compliant_series.__or__(self._extract_native(other))
         )
@@ -1643,6 +1680,7 @@ class Series:
             self._compliant_series.value_counts(sort=sort, parallel=parallel),
             is_polars=self._is_polars,
             backend_version=self._backend_version,
+            level=self._level,
         )
 
     def quantile(

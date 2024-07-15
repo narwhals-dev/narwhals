@@ -138,7 +138,8 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
 
     def _validate_index(index: Any) -> None:
         if not index.is_unique:
-            raise ValueError("given index doesn't have a unique index")
+            msg = "given index doesn't have a unique index"
+            raise ValueError(msg)
 
     lhs_any = cast(Any, lhs)
     rhs_any = cast(Any, rhs)
@@ -305,6 +306,15 @@ def is_ordered_categorical(series: Series) -> bool:
         >>> func(s_pl)
         True
     """
+    from narwhals._interchange.series import InterchangeSeries
+
+    if (
+        isinstance(series._compliant_series, InterchangeSeries)
+        and series.dtype == dtypes.Categorical
+    ):
+        return series._compliant_series._native_series.describe_categorical[  # type: ignore[no-any-return]
+            "is_ordered"
+        ]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:

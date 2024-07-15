@@ -18,5 +18,6 @@ def test_filter(constructor: Any) -> None:
         "a": [0],
     }
     compare_dicts(result, expected)
+
     result = df.select(df["a"].filter((df["i"] < 2) & (df["c"] == 5)))
     compare_dicts(result, expected)

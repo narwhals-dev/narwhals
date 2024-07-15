@@ -8,9 +8,9 @@ from typing import Any
 from typing import Callable
 from typing import Iterator
 
+from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import Implementation
-from narwhals._pandas_like.utils import is_simple_aggregation
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.utils import remove_prefix
 
@@ -156,9 +156,8 @@ def agg_pandas(  # noqa: PLR0915
         try:
             result_simple = grouped.agg(aggs)
         except AttributeError as exc:
-            raise RuntimeError(
-                "Failed to aggregated - does your aggregation function return a scalar?"
-            ) from exc
+            msg = "Failed to aggregated - does your aggregation function return a scalar?"
+            raise RuntimeError(msg) from exc
         result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
         result_simple = result_simple.rename(columns=name_mapping).reset_index()
         return from_dataframe(result_simple.loc[:, output_names])

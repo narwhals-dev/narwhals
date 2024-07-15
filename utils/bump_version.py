@@ -4,6 +4,9 @@ import re
 import subprocess
 import sys
 
+subprocess.run(["git", "fetch", "upstream"])
+subprocess.run(["git", "reset", "--hard", "upstream/main"])
+
 how = sys.argv[1]
 
 with open("pyproject.toml", encoding="utf-8") as f:
@@ -39,5 +42,5 @@ with open("docs/installation.md", "w", encoding="utf-8") as f:
     f.write(content)
 
 subprocess.run(["git", "commit", "-a", "-m", f"Bump version to {version}"])
-subprocess.run(["git", "tag", "-a", version, "-m", version])
+subprocess.run(["git", "tag", "-a", f"v{version}", "-m", f"v{version}"])
 subprocess.run(["git", "push", "upstream", "HEAD", "--follow-tags"])

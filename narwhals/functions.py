@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import platform
 import sys
+from typing import TYPE_CHECKING
+from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import TypeVar
@@ -17,6 +19,9 @@ from narwhals.utils import validate_same_library
 # The rest of the annotations seem to work fine with this anyway
 FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
 
+if TYPE_CHECKING:
+    from narwhals.series import Series
+
 
 def concat(
     items: Iterable[FrameT],
@@ -28,7 +33,8 @@ def concat(
             "Only horizontal and vertical concatenations are supported"
         )
     if not items:
-        raise ValueError("No items to concatenate")
+        msg = "No items to concatenate"
+        raise ValueError(msg)
     items = list(items)
     validate_same_library(items)
     validate_laziness(items)
@@ -115,3 +121,17 @@ def show_versions() -> None:
     print("\nPython dependencies:")  # noqa: T201
     for k, stat in deps_info.items():
         print(f"{k:>13}: {stat}")  # noqa: T201
+
+
+def get_level(
+    obj: DataFrame[Any] | LazyFrame[Any] | Series,
+) -> Literal["full", "interchange"]:
+    """
+    Level of support Narwhals has for current object.
+
+    This can be one of:
+
+    - 'full': full Narwhals API support
+    - 'metadata': only metadata operations are supported (`df.schema`)
+    """
+    return obj._level

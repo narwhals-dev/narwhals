@@ -34,7 +34,10 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-def test_actual_object(constructor: Any) -> None:
+def test_actual_object(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     class Foo: ...
 
     data = {"a": [Foo()]}
@@ -89,8 +92,7 @@ def test_dtypes() -> None:
             "r": pl.Enum(["a", "b"]),
         },
     )
-    df = nw.from_native(df_pl, eager_only=True)
-    result = df.schema
+    df_from_pl = nw.from_native(df_pl, eager_only=True)
     expected = {
         "a": nw.Int64,
         "b": nw.Int32,
@@ -111,21 +113,24 @@ def test_dtypes() -> None:
         "q": nw.Duration,
         "r": nw.Enum,
     }
-    assert result == expected
-    assert {name: df[name].dtype for name in df.columns} == expected
+
+    assert df_from_pl.schema == df_from_pl.collect_schema() == expected
+    assert {name: df_from_pl[name].dtype for name in df_from_pl.columns} == expected
 
     # pandas/pyarrow only have categorical, not enum
     expected["r"] = nw.Categorical
-    df_pd = df_pl.to_pandas(use_pyarrow_extension_array=True)
-    df = nw.from_native(df_pd, eager_only=True)
-    result_pd = df.schema
-    assert result_pd == expected
-    assert {name: df[name].dtype for name in df.columns} == expected
-    df_pa = df_pl.to_arrow()
-    df = nw.from_native(df_pa, eager_only=True)
-    result_pa = df.schema
-    assert result_pa == expected
-    assert {name: df[name].dtype for name in df.columns} == expected
+
+    df_from_pd = nw.from_native(
+        df_pl.to_pandas(use_pyarrow_extension_array=True), eager_only=True
+    )
+
+    assert df_from_pd.schema == df_from_pd.collect_schema() == expected
+    assert {name: df_from_pd[name].dtype for name in df_from_pd.columns} == expected
+
+    df_from_pa = nw.from_native(df_pl.to_arrow(), eager_only=True)
+
+    assert df_from_pa.schema == df_from_pa.collect_schema() == expected
+    assert {name: df_from_pa[name].dtype for name in df_from_pa.columns} == expected
 
 
 def test_unknown_dtype() -> None:

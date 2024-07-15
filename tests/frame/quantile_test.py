@@ -21,12 +21,15 @@ from tests.utils import compare_dicts
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile(
+    request: Any,
     constructor: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
 ) -> None:
-    q = 0.3
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
+    q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)

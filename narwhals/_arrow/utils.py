@@ -123,7 +123,7 @@ def validate_column_comparand(other: Any) -> Any:
     return other
 
 
-def validate_dataframe_comparand(other: Any) -> Any:
+def validate_dataframe_comparand(length: int, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -136,8 +136,50 @@ def validate_dataframe_comparand(other: Any) -> Any:
         return NotImplemented
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
-            # broadcast
-            msg = "not implemented yet"  # pragma: no cover
-            raise NotImplementedError(msg)
+            pa = get_pyarrow()
+            return pa.chunked_array([[other.item()] * length])
         return other._native_series
-    raise AssertionError("Please report a bug")
+    msg = "Please report a bug"  # pragma: no cover
+    raise AssertionError(msg)
+
+
+def horizontal_concat(dfs: list[Any]) -> Any:
+    """
+    Concatenate (native) DataFrames horizontally.
+
+    Should be in namespace.
+    """
+    pa = get_pyarrow()
+    if not dfs:
+        msg = "No dataframes to concatenate"  # pragma: no cover
+        raise AssertionError(msg)
+
+    names = [name for df in dfs for name in df.column_names]
+
+    if len(set(names)) < len(names):  # pragma: no cover
+        msg = "Expected unique column names"
+        raise ValueError(msg)
+
+    arrays = [a for df in dfs for a in df]
+    return pa.Table.from_arrays(arrays, names=names)
+
+
+def vertical_concat(dfs: list[Any]) -> Any:
+    """
+    Concatenate (native) DataFrames vertically.
+
+    Should be in namespace.
+    """
+    if not dfs:
+        msg = "No dataframes to concatenate"  # pragma: no cover
+        raise AssertionError(msg)
+
+    cols = set(dfs[0].column_names)
+    for df in dfs:
+        cols_current = set(df.column_names)
+        if cols_current != cols:
+            msg = "unable to vstack, column names don't match"
+            raise TypeError(msg)
+
+    pa = get_pyarrow()
+    return pa.concat_tables(dfs).combine_chunks()

@@ -77,17 +77,66 @@ class ArrowExpr:
 
     def __narwhals_expr__(self) -> None: ...
 
+    def __eq__(self, other: ArrowExpr | Any) -> Self:  # type: ignore[override]
+        return reuse_series_implementation(self, "__eq__", other=other)
+
+    def __ne__(self, other: ArrowExpr | Any) -> Self:  # type: ignore[override]
+        return reuse_series_implementation(self, "__ne__", other=other)
+
+    def __ge__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__ge__", other=other)
+
+    def __gt__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__gt__", other=other)
+
+    def __le__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__le__", other=other)
+
+    def __lt__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__lt__", other=other)
+
+    def __and__(self, other: ArrowExpr | bool | Any) -> Self:
+        return reuse_series_implementation(self, "__and__", other=other)
+
+    def __or__(self, other: ArrowExpr | bool | Any) -> Self:
+        return reuse_series_implementation(self, "__or__", other=other)
+
     def __add__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other)
+
+    def __radd__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__radd__", other)
 
     def __sub__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other)
 
+    def __rsub__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rsub__", other)
+
     def __mul__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other)
 
+    def __rmul__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rmul__", other)
+
+    def __pow__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__pow__", other)
+
+    def __rpow__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rpow__", other)
+
+    def filter(self, *predicates: Any) -> Self:
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        plx = ArrowNamespace(backend_version=self._backend_version)
+        expr = plx.all_horizontal(*predicates)
+        return reuse_series_implementation(self, "filter", other=expr)
+
     def mean(self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
+
+    def count(self) -> Self:
+        return reuse_series_implementation(self, "count", returns_scalar=True)
 
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
@@ -107,8 +156,17 @@ class ArrowExpr:
     def any(self) -> Self:
         return reuse_series_implementation(self, "any", returns_scalar=True)
 
+    def min(self) -> Self:
+        return reuse_series_implementation(self, "min", returns_scalar=True)
+
+    def max(self) -> Self:
+        return reuse_series_implementation(self, "max", returns_scalar=True)
+
     def all(self) -> Self:
         return reuse_series_implementation(self, "all", returns_scalar=True)
+
+    def sum(self) -> Self:
+        return reuse_series_implementation(self, "sum", returns_scalar=True)
 
     def alias(self, name: str) -> Self:
         # Define this one manually, so that we can

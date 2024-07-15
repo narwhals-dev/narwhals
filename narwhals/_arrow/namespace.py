@@ -1,20 +1,24 @@
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 
 from narwhals import dtypes
+from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
+from narwhals._arrow.series import ArrowSeries
+from narwhals._arrow.utils import horizontal_concat
+from narwhals._arrow.utils import vertical_concat
+from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from typing import Callable
 
-    from narwhals._arrow.dataframe import ArrowDataFrame
-    from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import IntoArrowExpr
 
 
 class ArrowNamespace:
@@ -81,9 +85,15 @@ class ArrowNamespace:
             backend_version=self._backend_version,
         )
 
-    def _create_native_series(self, value: Any) -> Any:  # pragma: no cover (todo!)
+    def _create_compliant_series(self, value: Any) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
         pa = get_pyarrow()
-        return pa.chunked_array([value])
+        return ArrowSeries(
+            native_series=pa.chunked_array([value]),
+            name="",
+            backend_version=self._backend_version,
+        )
 
     # --- not in spec ---
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
@@ -116,3 +126,58 @@ class ArrowNamespace:
             output_names=None,
             backend_version=self._backend_version,
         )
+
+    def lit(self, value: Any, dtype: dtypes.DType | None) -> ArrowExpr:
+        def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
+            arrow_series = ArrowSeries._from_iterable(
+                data=[value],
+                name="lit",
+                backend_version=self._backend_version,
+            )
+            if dtype:
+                return arrow_series.cast(dtype)
+            return arrow_series
+
+        return ArrowExpr(
+            lambda df: [_lit_arrow_series(df)],
+            depth=0,
+            function_name="lit",
+            root_names=None,
+            output_names=["lit"],
+            backend_version=self._backend_version,
+        )
+
+    def all_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        return reduce(
+            lambda x, y: x & y,
+            parse_into_exprs(*exprs, namespace=self),
+        )
+
+    def sum_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        return reduce(
+            lambda x, y: x + y,
+            parse_into_exprs(
+                *exprs,
+                namespace=self,
+            ),
+        )
+
+    def concat(
+        self,
+        items: Iterable[ArrowDataFrame],
+        *,
+        how: str = "vertical",
+    ) -> ArrowDataFrame:
+        dfs: list[Any] = [item._native_dataframe for item in items]
+
+        if how == "horizontal":
+            return ArrowDataFrame(
+                horizontal_concat(dfs),
+                backend_version=self._backend_version,
+            )
+        if how == "vertical":
+            return ArrowDataFrame(
+                vertical_concat(dfs),
+                backend_version=self._backend_version,
+            )
+        raise NotImplementedError

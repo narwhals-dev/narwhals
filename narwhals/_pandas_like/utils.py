@@ -87,7 +87,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
                 backend_version=other._backend_version,
             )
         return other._native_series
-    raise AssertionError("Please report a bug")
+    msg = "Please report a bug"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def create_native_series(
@@ -111,23 +112,6 @@ def create_native_series(
     return PandasLikeSeries(
         series, implementation=implementation, backend_version=backend_version
     )
-
-
-def is_simple_aggregation(expr: PandasLikeExpr) -> bool:
-    """
-    Check if expr is a very simple one, such as:
-
-    - nw.col('a').mean()  # depth 1
-    - nw.mean('a')  # depth 1
-    - nw.len()  # depth 0
-
-    as opposed to, say
-
-    - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
-
-    because then, we can use a fastpath in pandas.
-    """
-    return expr._depth < 2
 
 
 def horizontal_concat(

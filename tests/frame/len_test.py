@@ -8,6 +8,6 @@ data = {
 }
 
 
-def test_len(constructor_with_pyarrow: Any) -> None:
-    result = len(nw.from_native(constructor_with_pyarrow(data)))
+def test_len(constructor: Any) -> None:
+    result = len(nw.from_native(constructor(data)))
     assert result == 4
