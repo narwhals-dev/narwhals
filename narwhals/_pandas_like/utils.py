@@ -277,22 +277,13 @@ def native_series_from_iterable(
     if implementation is Implementation.ARROW:  # pragma: no cover
         dd = get_dask()
         pd = get_pandas()
-        if not hasattr(data[0], "compute"):
-            return (
-                pd.Series(
-                    data,
-                    name=name,
-                    index=index,
-                    copy=False,
-                )
-                .pipe(dd.from_pandas)
-            )
-        # TODO: This is a current workaround, but needs more logic to avoid
-        # computing everything
+        if hasattr(data[0], "compute"):
+            return dd.concat([i.to_series() for i in data])
         return (
             pd.Series(
-                [i.compute() for i in data],
+                data,
                 name=name,
+                index=index,
                 copy=False,
             )
             .pipe(dd.from_pandas)

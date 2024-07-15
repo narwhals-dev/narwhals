@@ -59,14 +59,16 @@ class PandasLikeGroupBy:
                 raise ValueError(msg)
             output_names.extend(expr._output_names)
 
-        dataframe_is_empty=self._df._dataframe.empty if self._df._implementation != Implementation.DASK else len(self._df) == 0
+        dataframe_is_empty= (
+            self._df._native_dataframe.empty
+            if self._df._implementation != Implementation.DASK
+            else len(self._df._native_dataframe) == 0
+        )
         return agg_pandas(
             self._grouped,
             exprs,
             self._keys,
             output_names,
-            self._from_native_dataframe,
-            dataframe_is_empty=dataframe_is_empty,
             self._from_native_dataframe,
             dataframe_is_empty=dataframe_is_empty,
             implementation=implementation,
