@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  pytest-38:
+  mkdocs:
     strategy:
       matrix:
         python-version: ["3.11"]
