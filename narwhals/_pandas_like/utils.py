@@ -9,6 +9,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import TypeVar
+from typing import Self
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
@@ -270,7 +271,7 @@ def native_series_from_iterable(
     if implementation is Implementation.DASK:  # pragma: no cover
         dd = get_dask()
         pd = get_pandas()
-        if hasattr(next(data), "compute"):
+        if hasattr(data[0], "compute"):  # type: ignore
             return dd.concat([i.to_series() for i in data])
         return pd.Series(
             data,
@@ -579,16 +580,17 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
 
 def not_implemented_in(
     *implementations: Implementation,
-) -> Callable[[Callable[[Any], Any]], Callable[[Any], Any]]:
+) -> Callable[[Callable], Callable]:  # type: ignore
     """
     Produces method decorator to raise not implemented warnings for given implementations
     """
 
-    def check_implementation_wrapper(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
+    def check_implementation_wrapper(func: Callable) -> Callable:  # type: ignore
         """Wraps function to return same function + implementation check"""
 
-        @wraps(func)
+        @wraps(func)  # type: ignore
         def wrapped_func(self, *args, **kwargs):
+            """Checks implementation then carries out wrapped call"""
             if (implementation := self._implementation) in implementations:
                 raise NotImplementedError(f"Not implemented in {implementation}")
             return func(self, *args, **kwargs)

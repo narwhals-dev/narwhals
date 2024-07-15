@@ -111,7 +111,7 @@ class PandasLikeSeries:
             return get_cudf()
         if self._implementation is Implementation.DASK:  # pragma: no cover
             return get_dask()
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
+        msg = f"Expected pandas/modin/cudf/dask, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
     def __narwhals_series__(self) -> Self:

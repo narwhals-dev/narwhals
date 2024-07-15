@@ -28,7 +28,7 @@ class PandasLikeGroupBy:
     def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
-        keywords = {}
+        keywords: dict[str, bool] = {}
         if df._implementation is not Implementation.DASK:
             keywords |= {"as_index": True}
         self._grouped = self._df._native_dataframe.groupby(
