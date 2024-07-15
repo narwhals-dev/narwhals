@@ -51,7 +51,10 @@ def test_invalid_group_by() -> None:
         )
 
 
-def test_group_by_iter(constructor: Any) -> None:
+def test_group_by_iter(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
@@ -73,7 +76,10 @@ def test_group_by_iter(constructor: Any) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
-def test_group_by_len(constructor: Any) -> None:
+def test_group_by_len(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     result = (
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
     )
@@ -90,9 +96,9 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(constructor_with_pyarrow: Any) -> None:
+def test_group_by_simple_named(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     result = (
         df.group_by("a")
         .agg(
@@ -109,9 +115,9 @@ def test_group_by_simple_named(constructor_with_pyarrow: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_simple_unnamed(constructor_with_pyarrow: Any) -> None:
+def test_group_by_simple_unnamed(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     result = (
         df.group_by("a")
         .agg(
@@ -128,9 +134,9 @@ def test_group_by_simple_unnamed(constructor_with_pyarrow: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_multiple_keys(constructor_with_pyarrow: Any) -> None:
+def test_group_by_multiple_keys(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     result = (
         df.group_by("a", "b")
         .agg(

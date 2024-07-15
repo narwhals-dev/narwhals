@@ -11,18 +11,18 @@ from narwhals._pandas_like.utils import Implementation
 from tests.utils import compare_dicts
 
 
-def test_inner_join_two_keys(constructor_with_pyarrow: Any) -> None:
+def test_inner_join_two_keys(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     df_right = df
     result = df.join(df_right, left_on=["a", "b"], right_on=["a", "b"], how="inner")
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
     compare_dicts(result, expected)
 
 
-def test_inner_join_single_key(constructor_with_pyarrow: Any) -> None:
+def test_inner_join_single_key(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_with_pyarrow(data), eager_only=True)
+    df = nw.from_native(constructor(data), eager_only=True)
     df_right = df
     result = df.join(df_right, left_on="a", right_on="a", how="inner")
     expected = {
@@ -35,7 +35,10 @@ def test_inner_join_single_key(constructor_with_pyarrow: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_cross_join(constructor: Any) -> None:
+def test_cross_join(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross")  # type: ignore[arg-type]
@@ -66,11 +69,15 @@ def test_cross_join_non_pandas() -> None:
     ],
 )
 def test_anti_join(
+    request: Any,
     constructor: Any,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
@@ -87,11 +94,15 @@ def test_anti_join(
     ],
 )
 def test_semi_join(
+    request: Any,
     constructor: Any,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
@@ -114,7 +125,10 @@ def test_join_not_implemented(constructor: Any, how: str) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:the default coalesce behavior")
-def test_left_join(constructor: Any) -> None:
+def test_left_join(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data_left = {"a": [1.0, 2, 3], "b": [4.0, 5, 6]}
     data_right = {"a": [1.0, 2, 3], "c": [4.0, 5, 7]}
     df_left = nw.from_native(constructor(data_left), eager_only=True)
@@ -127,7 +141,10 @@ def test_left_join(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore: the default coalesce behavior")
-def test_left_join_multiple_column(constructor: Any) -> None:
+def test_left_join_multiple_column(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data_left = {"a": [1, 2, 3], "b": [4, 5, 6]}
     data_right = {"a": [1, 2, 3], "c": [4, 5, 6]}
     df_left = nw.from_native(constructor(data_left), eager_only=True)
@@ -138,7 +155,10 @@ def test_left_join_multiple_column(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore: the defaultcoalesce behavior")
-def test_left_join_overlapping_column(constructor: Any) -> None:
+def test_left_join_overlapping_column(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data_left = {"a": [1, 2, 3], "b": [4, 5, 6], "d": [1, 4, 2]}
     data_right = {"a": [1, 2, 3], "c": [4, 5, 6], "d": [1, 4, 2]}
     df_left = nw.from_native(constructor(data_left), eager_only=True)

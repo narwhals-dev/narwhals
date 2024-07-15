@@ -22,22 +22,21 @@ def test_lit(
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor_with_lazy(data)
-    df = nw.from_native(df_raw)
+    df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
-    result_native = nw.to_native(result)
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
         "z": [7.0, 8.0, 9.0],
         "lit": expected_lit,
     }
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
 
 def test_lit_error(constructor_with_lazy: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor_with_lazy(data)
-    df = nw.from_native(df_raw)
+    df = nw.from_native(df_raw).lazy()
     with pytest.raises(
         ValueError, match="numpy arrays are not supported as literal values"
     ):

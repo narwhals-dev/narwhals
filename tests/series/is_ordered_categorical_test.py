@@ -39,10 +39,10 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
 
 
 def test_is_definitely_not_ordered_categorical(
-    constructor_series_with_pyarrow: Any,
+    constructor_series: Any,
 ) -> None:
     assert not nw.is_ordered_categorical(
-        nw.from_native(constructor_series_with_pyarrow([1, 2, 3]), series_only=True)
+        nw.from_native(constructor_series([1, 2, 3]), series_only=True)
     )
 
 

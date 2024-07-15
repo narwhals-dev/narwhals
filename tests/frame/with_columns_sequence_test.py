@@ -11,9 +11,9 @@ data = {
 }
 
 
-def test_with_columns(constructor_with_pyarrow: Any) -> None:
+def test_with_columns(constructor: Any) -> None:
     result = (
-        nw.from_native(constructor_with_pyarrow(data))
+        nw.from_native(constructor(data))
         .with_columns(d=np.array([4, 5]))
         .with_columns(e=nw.col("d") + 1)
         .select("d", "e")

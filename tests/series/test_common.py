@@ -6,8 +6,6 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
@@ -15,80 +13,55 @@ from pandas.testing import assert_series_equal
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
-df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-if parse_version(pd.__version__) >= parse_version("1.5.0"):
-    df_pandas_pyarrow = pd.DataFrame(
-        {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    ).astype(
-        {
-            "a": "Int64[pyarrow]",
-            "b": "Int64[pyarrow]",
-            "z": "Float64[pyarrow]",
-        }
-    )
-    df_pandas_nullable = pd.DataFrame(
-        {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    ).astype(
-        {
-            "a": "Int64",
-            "b": "Int64",
-            "z": "Float64",
-        }
-    )
-else:  # pragma: no cover
-    # pyarrow/nullable dtypes not supported so far back
-    df_pandas_pyarrow = df_pandas
-    df_pandas_nullable = df_pandas
-df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_lazy = pl.LazyFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+data = [1, 3, 2]
+data_dups = [4, 4, 6]
+data_sorted = [7.0, 8, 9]
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_polars, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_len(df_raw: Any) -> None:
-    result = len(nw.from_native(df_raw["a"], series_only=True))
+def test_len(constructor_series: Any) -> None:
+    series = nw.from_native(constructor_series(data), series_only=True)
+
+    result = len(series)
     assert result == 3
-    result = nw.from_native(df_raw["a"], series_only=True).len()
-    assert result == 3
-    result = len(nw.from_native(df_raw)["a"])
+
+    result = series.len()
     assert result == 3
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_in(df_raw: Any) -> None:
-    result = nw.from_native(df_raw["a"], series_only=True).is_in([1, 2])
+def test_is_in(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+    series = nw.from_native(constructor_series(data), series_only=True)
+
+    result = series.is_in([1, 2])
     assert result[0]
     assert not result[1]
     assert result[2]
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_in_other(df_raw: Any) -> None:
+def test_is_in_other(constructor: Any) -> None:
+    df_raw = constructor({"a": data})
     with pytest.raises(
         NotImplementedError,
         match=(
             "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
         ),
     ):
-        nw.from_native(df_raw).with_columns(contains=nw.col("c").is_in("sets"))
+        nw.from_native(df_raw).with_columns(contains=nw.col("a").is_in("sets"))
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_dtype(df_raw: Any) -> None:
-    result = nw.from_native(df_raw).lazy().collect()["a"].dtype
+def test_dtype(constructor_series: Any) -> None:
+    series = nw.from_native(constructor_series(data), series_only=True)
+    result = series.dtype
     assert result == nw.Int64
     assert result.is_numeric()
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_reductions(df_raw: Any) -> None:
-    s = nw.from_native(df_raw).lazy().collect()["a"]
+def test_reductions(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    s = nw.from_native(constructor_series(data), series_only=True)
     assert s.mean() == 2.0
     assert s.std() == 1.0
     assert s.min() == 1
@@ -106,23 +79,32 @@ def test_reductions(df_raw: Any) -> None:
     assert s.alias("foo").name == "foo"
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_lazy, df_pandas_nullable, df_pandas_pyarrow]
-)
-def test_boolean_reductions(df_raw: Any) -> None:
+def test_boolean_reductions(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df_raw = constructor({"a": data})
     df = nw.from_native(df_raw).lazy().select(nw.col("a") > 1)
     assert not df.collect()["a"].all()
     assert df.collect()["a"].any()
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_lazy])
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
 )
-def test_convert(df_raw: Any) -> None:
-    result = nw.from_native(df_raw).lazy().collect()["a"].to_numpy()
+def test_convert(request: Any, constructor_series: Any) -> None:
+    if any(
+        cname in str(constructor_series)
+        for cname in ("pyarrow_series", "pandas_series_nullable", "pandas_series_pyarrow")
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    series = nw.from_native(constructor_series(data).rename("a"), series_only=True)
+
+    result = series.to_numpy()
     assert_array_equal(result, np.array([1, 3, 2]))
-    result = nw.from_native(df_raw).lazy().collect()["a"].to_pandas()
+
+    result = series.to_pandas()
     assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
 
 
@@ -134,41 +116,55 @@ def test_to_numpy() -> None:
     assert nw_series.shape == (3,)
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_duplicated(df_raw: Any) -> None:
-    series = nw.from_native(df_raw["b"], series_only=True)
+def test_is_duplicated(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    series = nw.from_native(constructor_series(data_dups), series_only=True)
     result = series.is_duplicated()
     expected = np.array([True, True, False])
     assert (result.to_numpy() == expected).all()
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_unique(df_raw: Any) -> None:
-    series = nw.from_native(df_raw["b"], series_only=True)
+def test_is_unique(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    series = nw.from_native(constructor_series(data_dups), series_only=True)
     result = series.is_unique()
     expected = np.array([False, False, True])
     assert (result.to_numpy() == expected).all()
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_first_distinct(df_raw: Any) -> None:
-    series = nw.from_native(df_raw["b"], series_only=True)
+def test_is_first_distinct(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    series = nw.from_native(constructor_series(data_dups), series_only=True)
     result = series.is_first_distinct()
     expected = np.array([True, False, True])
     assert (result.to_numpy() == expected).all()
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_last_distinct(df_raw: Any) -> None:
-    series = nw.from_native(df_raw["b"], series_only=True)
+def test_is_last_distinct(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    series = nw.from_native(constructor_series(data_dups), series_only=True)
     result = series.is_last_distinct()
     expected = np.array([False, True, True])
     assert (result.to_numpy() == expected).all()
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_value_counts(df_raw: Any) -> None:
-    series = nw.from_native(df_raw["b"], series_only=True)
+def test_value_counts(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    if "pandas_series_nullable" in str(constructor_series):  # fails for py3.8
+        pytest.skip()
+
+    series = nw.from_native(constructor_series(data_dups).rename("b"), series_only=True)
+
     sorted_result = series.value_counts(sort=True)
     assert sorted_result.columns == ["b", "count"]
 
@@ -183,26 +179,35 @@ def test_value_counts(df_raw: Any) -> None:
     assert (a[a[:, 0].argsort()] == expected).all()
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 @pytest.mark.parametrize(
-    ("col", "descending", "expected"),
-    [("a", False, False), ("z", False, True), ("z", True, False)],
+    ("input_data", "descending", "expected"),
+    [(data, False, False), (data_sorted, False, True), (data_sorted, True, False)],
 )
-def test_is_sorted(df_raw: Any, col: str, descending: bool, expected: bool) -> None:  # noqa: FBT001
-    series = nw.from_native(df_raw[col], series_only=True)
+def test_is_sorted(
+    request: Any,
+    constructor_series: Any,
+    input_data: str,
+    descending: bool,  # noqa: FBT001
+    expected: bool,  # noqa: FBT001
+) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    series = nw.from_native(constructor_series(input_data), series_only=True)
     result = series.is_sorted(descending=descending)
     assert result == expected
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
-def test_is_sorted_invalid(df_raw: Any) -> None:
-    series = nw.from_native(df_raw["z"], series_only=True)
+def test_is_sorted_invalid(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    series = nw.from_native(constructor_series(data_sorted), series_only=True)
 
     with pytest.raises(TypeError):
         series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 @pytest.mark.parametrize(
     ("interpolation", "expected"),
     [
@@ -215,31 +220,32 @@ def test_is_sorted_invalid(df_raw: Any) -> None:
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile(
-    df_raw: Any,
+    request: Any,
+    constructor_series: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: float,
 ) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
     q = 0.3
 
-    series = nw.from_native(df_raw["z"], allow_series=True)
+    series = nw.from_native(constructor_series(data_sorted), allow_series=True)
     result = series.quantile(quantile=q, interpolation=interpolation)  # type: ignore[union-attr]
     assert result == expected
 
 
-@pytest.mark.parametrize(
-    ("df_raw", "mask", "expected"),
-    [
-        (df_pandas, pd.Series([True, False, True]), pd.Series([1, 4, 2])),
-        (df_polars, pl.Series([True, False, True]), pl.Series([1, 4, 2])),
-    ],
-)
-def test_zip_with(df_raw: Any, mask: Any, expected: Any) -> None:
-    series1 = nw.from_native(df_raw["a"], series_only=True)
-    series2 = nw.from_native(df_raw["b"], series_only=True)
-    mask = nw.from_native(mask, series_only=True)
+def test_zip_with(request: Any, constructor_series: Any) -> None:
+    if "pyarrow_series" in str(constructor_series):
+        request.applymarker(pytest.mark.xfail)
+
+    series1 = nw.from_native(constructor_series(data), series_only=True)
+    series2 = nw.from_native(constructor_series(data_dups), series_only=True)
+    mask = nw.from_native(constructor_series([True, False, True]), series_only=True)
+
     result = series1.zip_with(mask, series2)
-    expected = nw.from_native(expected, series_only=True)
-    assert result == expected
+    expected = [1, 4, 2]
+    assert result.to_list() == expected
 
 
 @pytest.mark.skipif(
@@ -254,19 +260,15 @@ def test_cast_string() -> None:
     assert str(result.dtype) in ("string", "object", "dtype('O')")
 
 
-df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-
-
-@pytest.mark.parametrize("df_raw", [df_pandas, df_polars, df_pa])
 @pytest.mark.parametrize(("index", "expected"), [(0, 1), (1, 3)])
-def test_item(df_raw: Any, index: int, expected: int) -> None:
-    s = nw.from_native(df_raw["a"], series_only=True)
-    result = s.item(index)
+def test_item(constructor_series: Any, index: int, expected: int) -> None:
+    series = nw.from_native(constructor_series(data), series_only=True)
+    result = series.item(index)
     assert result == expected
-    assert s.head(1).item() == 1
+    assert series.head(1).item() == 1
 
     with pytest.raises(
         ValueError,
         match=re.escape("can only call '.item()' if the Series is of length 1,"),
     ):
-        s.item(None)
+        series.item(None)

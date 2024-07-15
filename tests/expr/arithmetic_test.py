@@ -21,13 +21,13 @@ from tests.utils import compare_dicts
     ],
 )
 def test_arithmetic(
-    attr: str, rhs: Any, expected: list[Any], constructor_with_pyarrow: Any, request: Any
+    attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_with_pyarrow) and attr == "__mod__":
+    if "pandas_pyarrow" in str(constructor) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
     # pyarrow case
-    if "table" in str(constructor_with_pyarrow) and attr in {
+    if "pyarrow_table" in str(constructor) and attr in {
         "__truediv__",
         "__floordiv__",
         "__mod__",
@@ -35,7 +35,7 @@ def test_arithmetic(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor_with_pyarrow(data))
+    df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), attr)(rhs))
     compare_dicts(result, {"a": expected})
 
@@ -53,13 +53,13 @@ def test_arithmetic(
     ],
 )
 def test_right_arithmetic(
-    attr: str, rhs: Any, expected: list[Any], constructor_with_pyarrow: Any, request: Any
+    attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_with_pyarrow) and attr in {"__rmod__"}:
+    if "pandas_pyarrow" in str(constructor) and attr in {"__rmod__"}:
         request.applymarker(pytest.mark.xfail)
 
     # pyarrow case
-    if "table" in str(constructor_with_pyarrow) and attr in {
+    if "table" in str(constructor) and attr in {
         "__rtruediv__",
         "__rfloordiv__",
         "__rmod__",
@@ -67,7 +67,7 @@ def test_right_arithmetic(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor_with_pyarrow(data))
+    df = nw.from_native(constructor(data))
     result = df.select(a=getattr(nw.col("a"), attr)(rhs))
     compare_dicts(result, {"a": expected})
     result = df.select(a=getattr(df["a"], attr)(rhs))

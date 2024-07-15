@@ -5,7 +5,6 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 
-from narwhals._arrow.namespace import ArrowNamespace
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
@@ -15,6 +14,7 @@ from narwhals.dependencies import get_pyarrow_compute
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
 
 
@@ -168,6 +168,8 @@ class ArrowSeries:
         return pc.count(self._native_series)  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
+        from narwhals._arrow.namespace import ArrowNamespace
+
         return ArrowNamespace(backend_version=self._backend_version)
 
     @property
