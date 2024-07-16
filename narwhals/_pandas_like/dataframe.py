@@ -203,6 +203,9 @@ class PandasLikeDataFrame:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
+            if self._implementation is Implementation.DASK:
+                dd = get_dask()
+                return self._from_native_dataframe(dd.from_dict({}, npartitions=1))
             return self._from_native_dataframe(self._native_dataframe.__class__())
         new_series = validate_indices(new_series)
         df = horizontal_concat(

@@ -11,13 +11,14 @@ import pyarrow.parquet as pq
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.dependencies import get_dask
 from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
 @pytest.mark.parametrize(
     "library",
-    ["pandas", "polars", "pyarrow"],
+    ["pandas", "polars", "pyarrow", "dask"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str, request: Any) -> None:
@@ -28,6 +29,8 @@ def test_q1(library: str, request: Any) -> None:
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     elif library == "polars":
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
+    elif library == "dask" and (dd := get_dask()) is not None:
+        df_raw = dd.read_parquet("tests/data/lineitem.parquet")
     else:
         request.applymarker(pytest.mark.xfail)
         df_raw = pq.read_table("tests/data/lineitem.parquet")
@@ -86,7 +89,7 @@ def test_q1(library: str, request: Any) -> None:
 
 @pytest.mark.parametrize(
     "library",
-    ["pandas", "polars"],
+    ["pandas", "polars", "dask"],
 )
 @pytest.mark.filterwarnings(
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
@@ -98,8 +101,15 @@ def test_q1_w_generic_funcs(library: str, request: Any) -> None:
     elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
-    else:
+    elif library == "polars":
         df_raw = pl.read_parquet("tests/data/lineitem.parquet")
+    elif library == "dask" and (dd := get_dask()) is not None:
+        df_raw = dd.read_parquet("tests/data/lineitem.parquet")
+        df_raw["l_shipdate"] = dd.to_datetime(df_raw["l_shipdate"])
+    else:
+        request.applymarker(pytest.mark.xfail)
+        df_raw = pq.read_table("tests/data/lineitem.parquet")
+
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)
     query_result = (

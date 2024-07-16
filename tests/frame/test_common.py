@@ -10,9 +10,11 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.dependencies import get_dask
 from narwhals.functions import _get_deps_info
 from narwhals.functions import _get_sys_info
 from narwhals.functions import show_versions
+from tests.conftest import dask_constructor
 from tests.utils import compare_dicts
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -21,8 +23,10 @@ data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
 
 
 def test_empty_select(constructor: Any) -> None:
-    result = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True).select()
-    assert result.shape == (0, 0)
+    result = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True).select().shape
+    if constructor == dask_constructor and (dd := get_dask()) is not None:
+        result = dd.compute(result)[0]
+    assert result == (0, 0)
 
 
 def test_std(constructor: Any) -> None:

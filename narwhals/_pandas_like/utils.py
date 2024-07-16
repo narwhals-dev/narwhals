@@ -59,7 +59,7 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
             return other.item()
         if (
             other._native_series.index is not index
-            and other._implementation != Implementation.DASK
+            and other._implementation is not Implementation.DASK
         ):
             return set_axis(
                 other._native_series,
@@ -67,6 +67,15 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
                 implementation=other._implementation,
                 backend_version=other._backend_version,
             )
+        elif (
+            other._native_series.index is not index
+            and other._implementation is Implementation.DASK
+        ):
+            msg = (
+                "Index mismatch between columns and reindexing is not "
+                "currently supported within Dask implementation"
+            )
+            raise ValueError(msg)
         return other._native_series
     return other
 
@@ -148,8 +157,9 @@ def horizontal_concat(
         return mpd.concat(dfs, axis=1)
     if implementation is Implementation.DASK:  # pragma: no cover
         dd = get_dask()
-        if hasattr(dfs[0], "_series"):
-            return dd.concat([i._series for i in dfs], axis=1)
+        pd = get_pandas()
+        if isinstance(dfs[0], pd.Series):
+            return dd.concat([i.pipe(dd.from_pandas) for i in dfs], axis=1)
         return dd.concat(dfs, axis=1)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover

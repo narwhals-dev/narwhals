@@ -1,3 +1,4 @@
+import contextlib
 from typing import Any
 from typing import Callable
 
@@ -10,6 +11,10 @@ from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
 from narwhals.typing import IntoDataFrame
 from narwhals.utils import parse_version
+
+with contextlib.suppress(ImportError):
+    import dask.dataframe  # noqa: F401
+    import modin  # noqa: F401
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -49,9 +54,9 @@ def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     return mpd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
-def dask_contructor(obj: Any) -> IntoDataFrame:
+def dask_constructor(obj: Any) -> IntoDataFrame:
     dd = get_dask()
-    return dd.DataFrame(obj)  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).pipe(dd.from_pandas, npartitions=1)  # type: ignore[no-any-return]
 
 
 def polars_eager_constructor(obj: Any) -> IntoDataFrame:
@@ -81,7 +86,7 @@ if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
 
 if get_dask() is not None:
-    eager_constructors.append(dask_contructor)
+    eager_constructors.append(dask_constructor)
 
 
 @pytest.fixture(params=eager_constructors)

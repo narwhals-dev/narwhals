@@ -9,6 +9,8 @@ from typing import Sequence
 
 import pandas as pd
 
+from narwhals._pandas_like.utils import Implementation
+
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     if len(left) != len(right):
@@ -21,9 +23,12 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
     if hasattr(result, "collect"):
         result = result.collect()
     if (
-        hasattr(result, "_dataframe")
-        and hasattr(result._dataframe, "_implementation")
-        and result._dataframe._implementation == "dask"
+        hasattr(result, "_native_dataframe")
+        and hasattr(result._native_dataframe, "_implementation")
+        and result._dataframe._implementation is Implementation.DASK
+    ) or (
+        hasattr(result, "__native_namespace__")
+        and "dask" in str(result.__native_namespace__())
     ):
         result = result.to_pandas()
     if hasattr(result, "columns"):

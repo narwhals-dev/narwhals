@@ -410,7 +410,7 @@ def from_native(  # noqa: PLR0915
                 backend_version=parse_version(dask.__version__),
             ),
             is_polars=False,
-            backend_version=parse_version(pa.__version__),
+            backend_version=parse_version(dask.__version__),
             level="full",
         )
     elif hasattr(native_object, "__dataframe__"):
