@@ -152,10 +152,7 @@ def test_expr_min_max(request: Any, constructor: Any) -> None:
     compare_dicts(result_max, expected_max)
 
 
-def test_expr_na(request: Any, constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        request.applymarker(pytest.mark.xfail)
-
+def test_expr_na(constructor_with_lazy: Any) -> None:
     df = nw.from_native(constructor_with_lazy(data_na)).lazy()
     result_nna = df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
     expected = {"a": [2], "b": [6], "z": [9]}
