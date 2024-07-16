@@ -128,6 +128,9 @@ class ArrowExpr:
     def __invert__(self) -> Self:
         return reuse_series_implementation(self, "__invert__")
 
+    def len(self) -> Self:
+        return reuse_series_implementation(self, "len", returns_scalar=True)
+
     def filter(self, *predicates: Any) -> Self:
         from narwhals._arrow.namespace import ArrowNamespace
 
