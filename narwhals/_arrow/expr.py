@@ -197,6 +197,22 @@ class ArrowExpr:
     def str(self) -> ArrowExprStringNamespace:
         return ArrowExprStringNamespace(self)
 
+    @property
+    def cat(self) -> ArrowExprCatNamespace:
+        return ArrowExprCatNamespace(self)
+
+
+class ArrowExprCatNamespace:
+    def __init__(self, expr: ArrowExpr) -> None:
+        self._expr = expr
+
+    def get_categories(self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "cat",
+            "get_categories",
+        )
+
 
 class ArrowExprDateTimeNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
