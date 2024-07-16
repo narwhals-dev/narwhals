@@ -119,10 +119,13 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # thing that I need to understand category theory for
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
+
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+
     @overload
     def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
+
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series] | dict[str, list[Any]]:
@@ -450,12 +453,20 @@ class Schema(NwSchema):
 
 @overload
 def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
+
+
 @overload
 def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
+
+
 @overload
 def _stableify(obj: NwSeries) -> Series: ...
+
+
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
+
+
 @overload
 def _stableify(obj: Any) -> Any: ...
 

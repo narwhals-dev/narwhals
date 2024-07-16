@@ -209,7 +209,7 @@ def test_is_sorted(
     series = nw.from_native(constructor_series(input_data), series_only=True)
     result = series.is_sorted(descending=descending)
     if constructor_series == dask_series_constructor:
-        result = result.compute()  # type: ignore
+        result = result.compute()  # type: ignore[attr-defined]
     assert result == expected
 
 

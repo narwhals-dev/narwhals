@@ -312,9 +312,7 @@ def is_ordered_categorical(series: Series) -> bool:
         isinstance(series._compliant_series, InterchangeSeries)
         and series.dtype == dtypes.Categorical
     ):
-        return series._compliant_series._native_series.describe_categorical[  # type: ignore[no-any-return]
-            "is_ordered"
-        ]
+        return series._compliant_series._native_series.describe_categorical["is_ordered"]  # type: ignore[no-any-return]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:

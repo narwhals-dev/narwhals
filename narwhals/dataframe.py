@@ -559,10 +559,13 @@ class DataFrame(BaseFrame[FrameT]):
 
     @overload
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
+
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+
     @overload
     def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
+
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series] | dict[str, list[Any]]:

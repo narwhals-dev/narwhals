@@ -33,7 +33,7 @@ def get_modin() -> Any:  # pragma: no cover
 
 
 def get_dask() -> Any:
-    """Get dask.dataframe module (if already improted - else return None)."""
+    """Get dask.dataframe module (if already imported - else return None)."""
     return sys.modules.get("dask.dataframe", None)
 
 

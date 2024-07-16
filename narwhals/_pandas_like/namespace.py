@@ -20,7 +20,6 @@ from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
-    from narwhals._pandas_like.utils import Implementation
 
 
 class PandasLikeNamespace:

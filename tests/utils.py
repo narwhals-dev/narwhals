@@ -58,7 +58,7 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 
 
 def maybe_get_dask_df(df_pandas: pd.DataFrame) -> Any:
-    """Convert a pandas DataFrame to a Dask Dataframe if Dask is availabile."""
+    """Convert a pandas DataFrame to a Dask Dataframe if Dask is available."""
     try:
         import dask.dataframe as dd
 

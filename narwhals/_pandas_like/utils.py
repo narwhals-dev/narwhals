@@ -13,19 +13,14 @@ from typing import TypeVar
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T")
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import IntoArrowExpr
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
@@ -104,52 +99,6 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
         return other._native_series
         return other._series
     raise AssertionError("Please report a bug")
-
-
-def maybe_evaluate_expr(df: PandasLikeDataFrame, expr: Any) -> Any:
-    """Evaluate `expr` if it's an expression, otherwise return it as is."""
-
-    if isinstance(expr, PandasLikeExpr):
-        return expr._call(df)
-    return expr
-
-
-def parse_into_expr(
-    implementation: str, into_expr: IntoPandasLikeExpr | IntoArrowExpr
-) -> PandasLikeExpr:
-    """Parse `into_expr` as an expression.
-
-    For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
-    We do the same in Narwhals:
-
-    - if `into_expr` is already an expression, just return it
-    - if it's a Series, then convert it to an expression
-    - if it's a numpy array, then convert it to a Series and then to an expression
-    - if it's a string, then convert it to an expression
-    - else, raise
-    """
-    from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.series import ArrowSeries
-    from narwhals._pandas_like.expr import PandasLikeExpr
-    from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._pandas_like.series import PandasLikeSeries
-
-    if implementation == "arrow":
-        plx: ArrowNamespace | PandasLikeNamespace = ArrowNamespace()
-    else:
-        PandasLikeNamespace(implementation=implementation)
-    if isinstance(into_expr, (PandasLikeExpr, ArrowExpr)):
-        return into_expr  # type: ignore[return-value]
-    if isinstance(into_expr, (PandasLikeSeries, ArrowSeries)):
-        return plx._create_expr_from_series(into_expr)  # type: ignore[arg-type, return-value]
-    if isinstance(into_expr, str):
-        return plx.col(into_expr)  # type: ignore[return-value]
-    if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
-        series = create_native_series(into_expr, implementation=implementation)
-        return plx._create_expr_from_series(series)  # type: ignore[arg-type, return-value]
-    msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
-    raise AssertionError(msg)
 
 
 def create_native_series(
@@ -264,13 +213,10 @@ def native_series_from_iterable(
         mpd = get_modin()
 
         return mpd.Series(data, name=name, index=index)
-    if implementation == "arrow":
-        pa = get_pyarrow()
-        return pa.chunked_array([data])
     if implementation is Implementation.DASK:  # pragma: no cover
         dd = get_dask()
         pd = get_pandas()
-        if hasattr(data[0], "compute"):  # type: ignore
+        if hasattr(data[0], "compute"):  # type: ignore[index]
             return dd.concat([i.to_series() for i in data])
         return pd.Series(
             data,
@@ -579,19 +525,20 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
 
 def not_implemented_in(
     *implementations: Implementation,
-) -> Callable[[Callable], Callable]:  # type: ignore
+) -> Callable[[Callable], Callable]:  # type: ignore[type-arg]
     """
     Produces method decorator to raise not implemented warnings for given implementations
     """
 
-    def check_implementation_wrapper(func: Callable) -> Callable:  # type: ignore
+    def check_implementation_wrapper(func: Callable) -> Callable:  # type: ignore[type-arg]
         """Wraps function to return same function + implementation check"""
 
-        @wraps(func)  # type: ignore
-        def wrapped_func(self, *args, **kwargs):
+        @wraps(func)
+        def wrapped_func(self, *args, **kwargs):  # type: ignore[no-untyped-def]  # noqa: ANN001, ANN002, ANN003, ANN202
             """Checks implementation then carries out wrapped call"""
             if (implementation := self._implementation) in implementations:
-                raise NotImplementedError(f"Not implemented in {implementation}")
+                msg = f"Not implemented in {implementation}"
+                raise NotImplementedError(msg)
             return func(self, *args, **kwargs)
 
         return wrapped_func
