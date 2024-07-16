@@ -86,4 +86,4 @@ jobs:
       - name: Run pytest
         run: |
             cd scikit-lego
-            pytest tests
+            pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
