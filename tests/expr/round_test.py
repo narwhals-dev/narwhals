@@ -11,7 +11,7 @@ from tests.utils import compare_dicts
 @pytest.mark.parametrize("decimals", [0, 1, 2])
 def test_round(request: Any, constructor: Any, decimals: int) -> None:
     if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+        request.applymarker(pytest)
     data = {"a": [1.12345, 2.56789, 3.901234]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw, eager_only=True)
