@@ -8,6 +8,7 @@ from typing import Callable
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -64,6 +65,7 @@ def agg_arrow(
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
+    pc = get_pyarrow_compute()
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
@@ -105,10 +107,13 @@ def agg_arrow(
                     f"{root_name}_{function_name}",
                 )
 
-        aggs = []
+        aggs: list[Any] = []
         name_mapping = {}
         for output_name, named_agg in simple_aggregations.items():
-            aggs.append((named_agg[0], named_agg[1]))
+            if named_agg[1] == "count":
+                aggs.append((named_agg[0], named_agg[1], pc.CountOptions(mode="all")))
+            else:
+                aggs.append((named_agg[0], named_agg[1]))
             name_mapping[named_agg[2]] = output_name
         result_simple = grouped.aggregate(aggs)
         result_simple = result_simple.rename_columns(

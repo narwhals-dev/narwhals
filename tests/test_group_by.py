@@ -152,3 +152,16 @@ def test_group_by_multiple_keys(constructor: Any) -> None:
         "c_max": [7, 1],
     }
     compare_dicts(result, expected)
+
+
+def test_key_with_nulls(constructor: Any) -> None:
+    data = {"b": [4, 5, None], "a": [1, 2, 3]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("b")
+        .agg(nw.len(), nw.col("a").min())
+        .sort("a")
+        .with_columns(nw.col("b").cast(nw.Float64))
+    )
+    expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
+    compare_dicts(result, expected)
