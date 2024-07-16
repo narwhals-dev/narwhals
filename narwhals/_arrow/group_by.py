@@ -51,6 +51,7 @@ class ArrowGroupBy:
         return agg_arrow(
             self._grouped,
             exprs,
+            self._keys,
             output_names,
             self._df._from_native_dataframe,
         )
@@ -59,6 +60,7 @@ class ArrowGroupBy:
 def agg_arrow(
     grouped: Any,
     exprs: list[ArrowExpr],
+    keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
@@ -81,9 +83,9 @@ def agg_arrow(
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                     raise AssertionError(msg)
                 simple_aggregations[expr._output_names[0]] = (
-                    [],
-                    "count_all",
-                    "count_all",
+                    keys[0],
+                    "count",
+                    f"{keys[0]}_count",
                 )
                 continue
 
