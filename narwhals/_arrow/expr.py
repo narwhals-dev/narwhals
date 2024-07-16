@@ -198,6 +198,9 @@ class ArrowExpr:
     def tail(self, n: int) -> Self:
         return reuse_series_implementation(self, "tail", n)
 
+    def is_in(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "is_in", other)
+
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)

@@ -23,7 +23,6 @@ MISSING = [
     "Series.is_between",
     "Series.is_duplicated",
     "Series.is_first_distinct",
-    "Series.is_in",
     "Series.is_last_distinct",
     "Series.is_sorted",
     "Series.is_unique",
