@@ -143,6 +143,9 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.invert(self._native_series))
 
+    def len(self) -> int:
+        return len(self._native_series)
+
     def filter(self, other: Any) -> Self:
         other = validate_column_comparand(other)
         return self._from_native_series(self._native_series.filter(other))
