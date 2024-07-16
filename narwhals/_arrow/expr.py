@@ -125,6 +125,9 @@ class ArrowExpr:
     def __rpow__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__rpow__", other)
 
+    def __invert__(self) -> Self:
+        return reuse_series_implementation(self, "__invert__")
+
     def filter(self, *predicates: Any) -> Self:
         from narwhals._arrow.namespace import ArrowNamespace
 
@@ -182,6 +185,9 @@ class ArrowExpr:
 
     def null_count(self) -> Self:
         return reuse_series_implementation(self, "null_count", returns_scalar=True)
+
+    def is_null(self) -> Self:
+        return reuse_series_implementation(self, "is_null")
 
     def head(self, n: int) -> Self:
         return reuse_series_implementation(self, "head", n)

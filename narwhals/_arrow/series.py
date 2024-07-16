@@ -139,6 +139,10 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(other, ser))
 
+    def __invert__(self) -> Self:
+        pc = get_pyarrow_compute()
+        return self._from_native_series(pc.invert(self._native_series))
+
     def filter(self, other: Any) -> Self:
         other = validate_column_comparand(other)
         return self._from_native_series(self._native_series.filter(other))
@@ -228,6 +232,10 @@ class ArrowSeries:
 
     def is_empty(self) -> bool:
         return len(self) == 0
+
+    def is_null(self) -> Self:
+        ser = self._native_series
+        return self._from_native_series(ser.is_null())
 
     def cast(self, dtype: DType) -> Self:
         pc = get_pyarrow_compute()
