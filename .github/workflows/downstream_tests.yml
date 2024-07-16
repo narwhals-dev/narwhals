@@ -76,7 +76,7 @@ jobs:
       - name: install-scikit-lego-dev
         run: |
             cd scikit-lego
-            pip install -e ".[dev, test]"
+            pip install -e ".[test]"
       - name: install-narwhals-dev
         run: |
             pip uninstall narwhals -y
