@@ -125,6 +125,18 @@ class ArrowExpr:
     def __rpow__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__rpow__", other)
 
+    def __truediv__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__truediv__", other)
+
+    def __rtruediv__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rtruediv__", other)
+
+    def __floordiv__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__floordiv__", other)
+
+    def __rfloordiv__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rfloordiv__", other)
+
     def __invert__(self) -> Self:
         return reuse_series_implementation(self, "__invert__")
 
