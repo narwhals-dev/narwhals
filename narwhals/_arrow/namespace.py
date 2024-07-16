@@ -107,6 +107,22 @@ class ArrowNamespace:
             *flatten(column_names), backend_version=self._backend_version
         )
 
+    def len(self) -> ArrowExpr:
+        return ArrowExpr(
+            lambda df: [
+                ArrowSeries._from_iterable(
+                    [len(df._native_dataframe)],
+                    name="len",
+                    backend_version=self._backend_version,
+                )
+            ],
+            depth=0,
+            function_name="len",
+            root_names=None,
+            output_names=["len"],
+            backend_version=self._backend_version,
+        )
+
     def all(self) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
         from narwhals._arrow.series import ArrowSeries
