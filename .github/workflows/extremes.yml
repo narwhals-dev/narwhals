@@ -86,14 +86,14 @@ jobs:
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-build-${{ matrix.python-version }}
-      - name: uninstall pandas
-        run: python -m pip uninstall pandas -y
-      - name: install-pandas-nightly
-        run: python -m pip install --pre --extra-index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
       - name: install-polars
         run: pip install polars
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
+      - name: uninstall pandas
+        run: python -m pip uninstall pandas -y
+      - name: install-pandas-nightly
+        run: python -m pip install --pre --extra-index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
       - name: show-deps
         run: pip freeze
       - name: Run pytest
