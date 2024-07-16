@@ -553,27 +553,40 @@ class PandasLikeDataFrame:
         self: Self,
         on: str | list[str] | None,
         *,
-        index: str | list[str] | None = None,
-        values: str | list[str] | None = None,
-        aggregate_function: Any | None = None,
-        sort_columns: bool = False,
+        index: str | list[str] | None,
+        values: str | list[str] | None,
+        aggregate_function: Any | None,
+        maintain_order: bool,  # noqa: ARG002
+        sort_columns: bool,
         separator: str = "_",
     ) -> Self:
         frame = self._native_dataframe
 
-        if aggregate_function == "len":
-            aggregate_function = "size"
-        if not aggregate_function:
-            aggregate_function = "first"
+        if isinstance(on, str):
+            on = [on]
+        if isinstance(index, str):
+            index = [index]
+        if values is None:
+            cols = self.columns
+            values = [c for c in cols if c not in [*on, *index]]  # type: ignore[misc]
 
-        result = frame.pivot_table(
-            values=values,
-            index=index,
-            columns=on,
-            aggfunc=aggregate_function,
-            margins=False,
-            observed=True,
-        )
+        if aggregate_function is None:
+            result = frame.pivot(columns=on, index=index, values=values)  # noqa: PD010
+
+        else:
+            if aggregate_function == "len":
+                aggregate_function = "size"
+
+            result = frame.pivot_table(
+                values=values,
+                index=index,
+                columns=on,
+                aggfunc=aggregate_function,
+                margins=False,
+                observed=True,
+                sort=False,
+            )
+
         columns = result.columns.tolist()
 
         if isinstance(columns[0], tuple):
