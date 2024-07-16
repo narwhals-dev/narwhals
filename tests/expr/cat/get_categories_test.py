@@ -15,7 +15,7 @@ data = {"a": ["one", "two", "two"]}
 def test_get_categories(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor) and parse_version(
         pa.__version__
-    ) <= parse_version("11.0.0"):
+    ) < parse_version("15.0.0"):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data), eager_only=True)
