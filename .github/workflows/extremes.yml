@@ -90,6 +90,10 @@ jobs:
         run: pip install polars
       - name: install-reqs
         run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
+      - name: uninstall pyarrow
+        run: python -m pip uninstall pyarrow -y
+      - name: install pyarrow nightly
+        run: python -m pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --prefer-binary --pre pyarrow
       - name: uninstall pandas
         run: python -m pip uninstall pandas -y
       - name: install-pandas-nightly
