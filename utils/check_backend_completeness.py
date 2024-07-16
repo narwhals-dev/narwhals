@@ -17,6 +17,7 @@ MISSING = [
     "DataFrame.iter_rows",
     "DataFrame.pipe",
     "DataFrame.unique",
+    "DataFrame.pivot",
     "Series.drop_nulls",
     "Series.fill_null",
     "Series.from_iterable",

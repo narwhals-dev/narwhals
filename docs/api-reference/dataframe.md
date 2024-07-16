@@ -23,6 +23,7 @@
         - lazy
         - null_count
         - pipe
+        - pivot
         - rename
         - rows
         - schema

@@ -548,3 +548,41 @@ class PandasLikeDataFrame:
 
     def clone(self: Self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.copy())
+
+    def pivot(
+        self: Self,
+        on: str | list[str] | None,
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: Any | None = None,
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        frame = self._native_dataframe
+
+        if aggregate_function == "len":
+            aggregate_function = "size"
+        if not aggregate_function:
+            aggregate_function = "first"
+
+        result = frame.pivot_table(
+            values=values,
+            index=index,
+            columns=on,
+            aggfunc=aggregate_function,
+            margins=False,
+            observed=True,
+        )
+        columns = result.columns.tolist()
+
+        if isinstance(columns[0], tuple):
+            new_columns = [separator.join(col).strip() for col in columns]
+            result.columns = new_columns
+
+        if sort_columns:
+            sorted_columns = sorted(result.columns.tolist())
+            result = result.loc[:, sorted_columns]
+
+        result.columns.names = [""]
+        return self._from_native_dataframe(result.reset_index())

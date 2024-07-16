@@ -1968,6 +1968,30 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().clone()
 
+    def pivot(
+        self: Self,
+        on: str | list[str] | None,
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: Literal[
+            "min", "max", "first", "last", "sum", "mean", "median", "len"
+        ]
+        | None = None,
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.pivot(  # noqa: PD010
+                on=on,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                sort_columns=sort_columns,
+                separator=separator,
+            )
+        )
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """
