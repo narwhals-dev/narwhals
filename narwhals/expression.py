@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -10,9 +11,6 @@ from narwhals.dependencies import get_polars
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
-
-
-from functools import reduce
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoExpr

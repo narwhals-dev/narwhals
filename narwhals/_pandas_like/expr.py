@@ -3,11 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Literal
 from typing import Iterable
+from typing import Literal
 
 from narwhals._pandas_like.series import PandasSeries
-from narwhals._pandas_like.typing import IntoPandasExpr
 from narwhals._pandas_like.utils import reuse_series_implementation
 from narwhals._pandas_like.utils import reuse_series_namespace_implementation
 
