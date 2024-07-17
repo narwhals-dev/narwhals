@@ -570,7 +570,7 @@ class PandasLikeDataFrame:
         if values is None:
             cols = self.columns
             values_ = [c for c in cols if c not in (*on, *index)]  # type: ignore[misc]
-        elif isinstance(values, str):
+        elif isinstance(values, str):  # pragma: no cover
             values_ = [values]
         else:
             values_ = values
@@ -605,7 +605,17 @@ class PandasLikeDataFrame:
         result.columns = new_columns
 
         if sort_columns:
-            sorted_columns = sorted(new_columns)
+            # The inner sorting creates a list of sorted lists of columns for each value
+            # which then needs to be unpacked into a list.
+            # This probably can be done more performantly as suffixes are always same?!
+            sorted_columns = [
+                col_value
+                for col_values in [
+                    sorted([c for c in new_columns if c.startswith(v)]) for v in values_
+                ]
+                for col_value in col_values
+            ]
+
             result = result.loc[:, sorted_columns]
 
         result.columns.names = [""]
