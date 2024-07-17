@@ -706,3 +706,13 @@ def test_quantile(
         df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
     )
     compare_dicts(result, expected)
+
+@pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
+def test_when(df_raw: Any) -> None:
+    df = nw.DataFrame(df_raw)
+    result = df.with_columns(
+        a=nw.when(nw.col("a") > 2, 1).otherwise(0),
+        b=nw.when(nw.col("a") > 2, 1).when(nw.col("a") < 1, -1).otherwise(0),
+    )
+    expected = {"a": [0, 1, 0], "b": [0, 1, 0], "z": [7.0, 8.0, 9.0]}
+    compare_dicts(result, expected)

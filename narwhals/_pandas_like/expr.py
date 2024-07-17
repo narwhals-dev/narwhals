@@ -4,8 +4,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Iterable
 
 from narwhals._pandas_like.series import PandasSeries
+from narwhals._pandas_like.typing import IntoPandasExpr
 from narwhals._pandas_like.utils import reuse_series_implementation
 from narwhals._pandas_like.utils import reuse_series_namespace_implementation
 
@@ -296,6 +298,14 @@ class PandasExpr:
     def dt(self) -> PandasExprDateTimeNamespace:
         return PandasExprDateTimeNamespace(self)
 
+    def when(self, *predicates: PandasExpr | Iterable[PandasExpr], **conditions: Any) -> PandasWhen:
+        # TODO: Support conditions
+        from narwhals._pandas_like.namespace import PandasNamespace
+
+        plx = PandasNamespace(self._implementation)
+        condition = plx.all_horizontal(*predicates)
+        return PandasWhen(self, condition)
+
 
 class PandasExprStringNamespace:
     def __init__(self, expr: PandasExpr) -> None:
@@ -379,4 +389,56 @@ class PandasExprDateTimeNamespace:
     def total_nanoseconds(self) -> PandasExpr:
         return reuse_series_namespace_implementation(
             self._expr, "dt", "total_nanoseconds"
+        )
+
+class PandasWhen:
+    def __init__(self, condition: PandasExpr) -> None:
+        self._condition = condition
+
+    def then(self, value: Any) -> PandasThen:
+        return PandasThen(self, value=value, implementation=self._condition._implementation)
+
+class PandasThen(PandasExpr):
+    def __init__(self, when: PandasWhen, *, value: Any, implementation: str) -> None:
+        self._when = when
+        self._then_value = value
+        self._implementation = implementation
+
+        def func(df: PandasDataFrame) -> list[PandasSeries]:
+            from narwhals._pandas_like.namespace import PandasNamespace
+
+            plx = PandasNamespace(implementation=self._implementation)
+
+            condition = self._when._condition._call(df)[0]
+
+            value_series = plx._create_series_from_scalar(self._then_value, condition)
+            none_series = plx._create_series_from_scalar(None, condition)
+            return [
+                    value_series.zip_with(condition, none_series)
+            ]
+
+        self._call = func
+        self._depth = 0
+        self._function_name = "whenthen"
+        self._root_names = None
+        self._output_names = None
+
+    def otherwise(self, value: Any) -> PandasExpr:
+        def func(df: PandasDataFrame) -> list[PandasSeries]:
+            from narwhals._pandas_like.namespace import PandasNamespace
+            plx = PandasNamespace(implementation=self._implementation)
+            condition = self._when._condition._call(df)[0]
+            value_series = plx._create_series_from_scalar(self._then_value, condition)
+            otherwise_series = plx._create_series_from_scalar(value, condition)
+            return [
+                value_series.zip_with(condition, otherwise_series)
+            ]
+
+        return PandasExpr(
+            func,
+            depth=0,
+            function_name="whenthenotherwise",
+            root_names=None,
+            output_names=None,
+            implementation=self._implementation,
         )
