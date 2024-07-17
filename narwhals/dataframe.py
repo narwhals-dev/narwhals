@@ -2043,7 +2043,7 @@ class DataFrame(BaseFrame[FrameT]):
             └─────┴───────┴───────┴───────┴───────┘
         """
         return self._from_compliant_dataframe(
-            self._compliant_frame.pivot(  # noqa: PD010
+            self._compliant_frame.pivot(
                 on=on,
                 index=index,
                 values=values,

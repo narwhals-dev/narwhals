@@ -566,22 +566,31 @@ class PandasLikeDataFrame:
             on = [on]
         if isinstance(index, str):
             index = [index]
+
         if values is None:
             cols = self.columns
-            values = [c for c in cols if c not in [*on, *index]]  # type: ignore[misc]
+            values_ = [c for c in cols if c not in (*on, *index)]  # type: ignore[misc]
+        elif isinstance(values, str):
+            values_ = [values]
+        else:
+            values_ = values
 
         if aggregate_function is None:
-            result = frame.pivot(columns=on, index=index, values=values)  # noqa: PD010
+            result = frame.pivot(columns=on, index=index, values=values_)
 
+        elif aggregate_function == "len":
+            result = (
+                frame.groupby([*on, *index])  # type: ignore[misc]
+                .agg({v: "size" for v in values_})
+                .reset_index()
+                .pivot(columns=on, index=index, values=values_)
+            )
         else:
-            if aggregate_function == "len":
-                aggregate_function = "size"
-
             result = frame.pivot_table(
-                values=values,
+                values=values_,
                 index=index,
                 columns=on,
-                aggfunc=aggregate_function,
+                aggfunc="size" if aggregate_function == "len" else aggregate_function,
                 margins=False,
                 observed=True,
                 sort=False,
@@ -589,12 +598,14 @@ class PandasLikeDataFrame:
 
         columns = result.columns.tolist()
 
-        if isinstance(columns[0], tuple):
-            new_columns = [separator.join(col).strip() for col in columns]
-            result.columns = new_columns
+        new_columns = [
+            separator.join(col).strip() if len(values_) > 1 else col[-1]
+            for col in columns
+        ]
+        result.columns = new_columns
 
         if sort_columns:
-            sorted_columns = sorted(result.columns.tolist())
+            sorted_columns = sorted(new_columns)
             result = result.loc[:, sorted_columns]
 
         result.columns.names = [""]
