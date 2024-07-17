@@ -139,17 +139,54 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(other, ser))
 
-    def __floordiv__(self, other: Any) -> Self:
+    @staticmethod
+    def _flordiv_util(left: Any, right: Any) -> Any:
+        # The following lines are adapted from pandas' pyarrow implementation.
+        # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
         pc = get_pyarrow_compute()
+        pa = get_pyarrow()
+
+        if isinstance(left, (int, float)):
+            left = pa.scalar(left)
+
+        if isinstance(right, (int, float)):
+            right = pa.scalar(right)
+
+        if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
+            divided = pc.divide_checked(left, right)
+            if pa.types.is_signed_integer(divided.type):
+                # GH 56676
+                has_remainder = pc.not_equal(pc.multiply(divided, right), left)
+                has_one_negative_operand = pc.less(
+                    pc.bit_wise_xor(left, right),
+                    pa.scalar(0, type=divided.type),
+                )
+                result = pc.if_else(
+                    pc.and_(
+                        has_remainder,
+                        has_one_negative_operand,
+                    ),
+                    # GH: 55561 ruff: ignore
+                    pc.subtract(divided, pa.scalar(1, type=divided.type)),
+                    divided,
+                )
+            else:
+                result = divided
+            result = result.cast(left.type)
+        else:
+            divided = pc.divide(left, right)
+            result = pc.floor(divided)
+        return result
+
+    def __floordiv__(self, other: Any) -> Self:
         ser = self._native_series
         other = validate_column_comparand(other)
-        return self._from_native_series(pc.floor(pc.divide(ser, other)))
+        return self._from_native_series(self._flordiv_util(ser, other))
 
     def __rfloordiv__(self, other: Any) -> Self:
-        pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
-        return self._from_native_series(pc.floor(pc.divide(other, ser)))
+        return self._from_native_series(self._flordiv_util(other, ser))
 
     def __invert__(self) -> Self:
         pc = get_pyarrow_compute()
