@@ -139,6 +139,18 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(other, ser))
 
+    def __floordiv__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.floor(pc.divide(ser, other)))
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.floor(pc.divide(other, ser)))
+
     def __invert__(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.invert(self._native_series))

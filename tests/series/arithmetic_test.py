@@ -34,7 +34,6 @@ def test_arithmetic(
 
     if "pyarrow_series" in str(constructor_series) and attr in {
         "__truediv__",
-        "__floordiv__",
         "__mod__",
     }:
         request.applymarker(pytest.mark.xfail)
