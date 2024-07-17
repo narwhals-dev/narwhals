@@ -3617,18 +3617,12 @@ class Then(Expr):
         self._when = when
         self._then_value = value
 
-        def func(plx):
-            return plx.when(self._when._condition._call(plx)).then(self._then_value)
-
-        self._call = func
+        self._call = lambda plx: plx.when(self._when._condition._call(plx)).then(self._then_value)
 
     def otherwise(self, value: Any) -> Expr:
-        def func(plx):
-            return plx.when(self._when._condition._call(plx)).then(self._then_value).otherwise(value)
+        return Expr(lambda plx: plx.when(self._when._condition._call(plx)).then(self._then_value).otherwise(value))
 
-        return Expr(func)
-
-def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:
+def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When: # noqa: ARG001
     return When(reduce(lambda a, b: a & b, flatten([predicates])))
 
 
