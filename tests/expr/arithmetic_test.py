@@ -16,6 +16,7 @@ from tests.utils import compare_dicts
         ("__mul__", 2, [2, 4, 6]),
         ("__truediv__", 2.0, [0.5, 1.0, 1.5]),
         ("__floordiv__", 2, [0, 1, 1]),
+        ("__floordiv__", -2, [-1, -1, -2]),
         ("__mod__", 2, [1, 0, 1]),
         ("__pow__", 2, [1, 4, 9]),
     ],
