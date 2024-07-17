@@ -265,6 +265,13 @@ class ArrowSeries:
         else:
             return self._from_native_series(ser.slice(abs(n)))
 
+    def is_in(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        pa = get_pyarrow()
+        value_set = pa.array(other)
+        ser = self._native_series
+        return self._from_native_series(pc.is_in(ser, value_set=value_set))
+
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:
             if len(self) != 1:
