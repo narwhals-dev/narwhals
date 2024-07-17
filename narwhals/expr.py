@@ -12,9 +12,6 @@ from narwhals.dtypes import DType
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
 
-
-from functools import reduce
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
