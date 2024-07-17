@@ -12,6 +12,9 @@ from narwhals.dtypes import DType
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
 
+
+from functools import reduce
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -3604,6 +3607,32 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
             *[extract_compliant(plx, v) for v in flatten(exprs)]
         )
     )
+
+class When:
+    def __init__(self, condition: Expr) -> None:
+        self._condition = condition
+
+    def then(self, value: Any) -> Then:
+        return Then(self, value=value)
+
+class Then(Expr):
+    def __init__(self, when: When, *, value: Any) -> None:
+        self._when = when
+        self._then_value = value
+
+        def func(plx):
+            return plx.when(self._when._condition._call(plx)).then(self._then_value)
+
+        self._call = func
+
+    def otherwise(self, value: Any) -> Expr:
+        def func(plx):
+            return plx.when(self._when._condition._call(plx)).then(self._then_value).otherwise(value)
+
+        return Expr(func)
+
+def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:
+    return When(reduce(lambda a, b: a & b, flatten([predicates])))
 
 
 class When:

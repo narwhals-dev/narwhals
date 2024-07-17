@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Iterable
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -342,6 +342,14 @@ class PandasLikeExpr:
     @property
     def name(self: Self) -> PandasLikeExprNameNamespace:
         return PandasLikeExprNameNamespace(self)
+
+    def when(self, *predicates: PandasExpr | Iterable[PandasExpr], **conditions: Any) -> PandasWhen:
+        # TODO: Support conditions
+        from narwhals._pandas_like.namespace import PandasNamespace
+
+        plx = PandasNamespace(self._implementation)
+        condition = plx.all_horizontal(*predicates)
+        return PandasWhen(self, condition)
 
 
 class PandasLikeExprCatNamespace:
