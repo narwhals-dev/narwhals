@@ -1,7 +1,7 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.4.8'
+  rev: 'v0.5.1'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -9,10 +9,10 @@ repos:
     - id: ruff
       args: [--fix]
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: 'v1.10.0'
+  rev: 'v1.10.1'
   hooks:
     - id: mypy
-      additional_dependencies: ['polars==0.20.10', 'pytest==8.0.1']
+      additional_dependencies: ['polars==1.1.0', 'pytest==8.0.1']
       exclude: utils|tpch
 - repo: https://github.com/codespell-project/codespell
   rev: 'v2.3.0'
@@ -33,3 +33,13 @@ repos:
       entry: (?<!>>> )import (pandas|polars|modin|cudf)
       language: pygrep
       files: ^narwhals/
+      exclude: ^narwhals/dependencies\.py
+    - id: check-arrow-backend-completeness
+      name: check-arrow-backend-completeness
+      pass_filenames: false
+      entry: python -m utils.check_backend_completeness
+      language: python
+- repo: https://github.com/kynan/nbstripout
+  rev: 0.7.1
+  hooks:
+    - id: nbstripout

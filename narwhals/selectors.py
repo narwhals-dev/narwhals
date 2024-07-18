@@ -23,7 +23,7 @@ def by_dtype(*dtypes: Any) -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [4.1, 2.3]}
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [4.1, 2.3]}
         >>> df_pd = pd.DataFrame(data)
         >>> df_pl = pl.DataFrame(data)
 
@@ -32,7 +32,7 @@ def by_dtype(*dtypes: Any) -> Expr:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.by_dtype(nw.Int64, nw.Float64)*2)
+        ...     df = df.select(ncs.by_dtype(nw.Int64, nw.Float64) * 2)
         ...     return nw.to_native(df)
 
         We can then pass either pandas or Polars dataframes:
@@ -69,7 +69,7 @@ def numeric() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [4.1, 2.3]}
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [4.1, 2.3]}
         >>> df_pd = pd.DataFrame(data)
         >>> df_pl = pl.DataFrame(data)
 
@@ -78,7 +78,7 @@ def numeric() -> Expr:
 
         >>> def func(df_any):
         ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.numeric()*2)
+        ...     df = df.select(ncs.numeric() * 2)
         ...     return nw.to_native(df)
 
         We can then pass either pandas or Polars dataframes:
@@ -111,7 +111,7 @@ def boolean() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [False, True]}
         >>> df_pd = pd.DataFrame(data)
         >>> df_pl = pl.DataFrame(data)
 
@@ -153,7 +153,7 @@ def string() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [False, True]}
         >>> df_pd = pd.DataFrame(data)
         >>> df_pl = pl.DataFrame(data)
 
@@ -195,9 +195,9 @@ def categorical() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
-        >>> df_pd = pd.DataFrame(data).astype({'b': 'category'})
-        >>> df_pl = pl.DataFrame(data, schema_overrides={'b': pl.Categorical})
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [False, True]}
+        >>> df_pd = pd.DataFrame(data).astype({"b": "category"})
+        >>> df_pl = pl.DataFrame(data, schema_overrides={"b": pl.Categorical})
 
         Let's define a dataframe-agnostic function to select string
         dtypes:
@@ -237,9 +237,9 @@ def all() -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>>
-        >>> data = {'a': [1, 2], 'b': ['x', 'y'], 'c': [False, True]}
-        >>> df_pd = pd.DataFrame(data).astype({'b': 'category'})
-        >>> df_pl = pl.DataFrame(data, schema_overrides={'b': pl.Categorical})
+        >>> data = {"a": [1, 2], "b": ["x", "y"], "c": [False, True]}
+        >>> df_pd = pd.DataFrame(data).astype({"b": "category"})
+        >>> df_pl = pl.DataFrame(data, schema_overrides={"b": pl.Categorical})
 
         Let's define a dataframe-agnostic function to select string
         dtypes:

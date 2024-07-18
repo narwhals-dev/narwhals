@@ -5,20 +5,24 @@ from typing import Any
 from typing import NoReturn
 
 from narwhals import dtypes
-from narwhals._pandas_like.expr import PandasExpr
+from narwhals._pandas_like.expr import PandasLikeExpr
 
 if TYPE_CHECKING:
-    from narwhals._pandas_like.dataframe import PandasDataFrame
-    from narwhals._pandas_like.series import PandasSeries
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._pandas_like.utils import Implementation
     from narwhals.dtypes import DType
 
 
 class PandasSelectorNamespace:
-    def __init__(self, implementation: str) -> None:
+    def __init__(
+        self, *, implementation: Implementation, backend_version: tuple[int, ...]
+    ) -> None:
         self._implementation = implementation
+        self._backend_version = backend_version
 
     def by_dtype(self, dtypes: list[DType | type[DType]]) -> PandasSelector:
-        def func(df: PandasDataFrame) -> list[PandasSeries]:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns if df.schema[col] in dtypes]
 
         return PandasSelector(
@@ -28,6 +32,7 @@ class PandasSelectorNamespace:
             root_names=None,
             output_names=None,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def numeric(self) -> PandasSelector:
@@ -56,7 +61,7 @@ class PandasSelectorNamespace:
         return self.by_dtype([dtypes.Boolean])
 
     def all(self) -> PandasSelector:
-        def func(df: PandasDataFrame) -> list[PandasSeries]:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns]
 
         return PandasSelector(
@@ -66,10 +71,11 @@ class PandasSelectorNamespace:
             root_names=None,
             output_names=None,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
 
-class PandasSelector(PandasExpr):
+class PandasSelector(PandasLikeExpr):
     def __repr__(self) -> str:  # pragma: no cover
         return (
             f"PandasSelector("
@@ -79,20 +85,21 @@ class PandasSelector(PandasExpr):
             f"output_names={self._output_names}"
         )
 
-    def _to_expr(self) -> PandasExpr:
-        return PandasExpr(
+    def _to_expr(self) -> PandasLikeExpr:
+        return PandasLikeExpr(
             self._call,
             depth=self._depth,
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=self._output_names,
             implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
     def __sub__(self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
-            def call(df: PandasDataFrame) -> list[PandasSeries]:
+            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
                 return [x for x in lhs if x.name not in [x.name for x in rhs]]
@@ -104,6 +111,7 @@ class PandasSelector(PandasExpr):
                 root_names=None,
                 output_names=None,
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         else:
             return self._to_expr() - other
@@ -111,7 +119,7 @@ class PandasSelector(PandasExpr):
     def __or__(self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
-            def call(df: PandasDataFrame) -> list[PandasSeries]:
+            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
                 return [x for x in lhs if x.name not in [x.name for x in rhs]] + rhs
@@ -123,6 +131,7 @@ class PandasSelector(PandasExpr):
                 root_names=None,
                 output_names=None,
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         else:
             return self._to_expr() | other
@@ -130,7 +139,7 @@ class PandasSelector(PandasExpr):
     def __and__(self, other: PandasSelector | Any) -> PandasSelector | Any:
         if isinstance(other, PandasSelector):
 
-            def call(df: PandasDataFrame) -> list[PandasSeries]:
+            def call(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
                 return [x for x in lhs if x.name in [x.name for x in rhs]]
@@ -142,12 +151,18 @@ class PandasSelector(PandasExpr):
                 root_names=None,
                 output_names=None,
                 implementation=self._implementation,
+                backend_version=self._backend_version,
             )
         else:
             return self._to_expr() & other
 
     def __invert__(self) -> PandasSelector:
-        return PandasSelectorNamespace(self._implementation).all() - self
+        return (
+            PandasSelectorNamespace(
+                implementation=self._implementation, backend_version=self._backend_version
+            ).all()
+            - self
+        )
 
     def __rsub__(self, other: Any) -> NoReturn:
         raise NotImplementedError

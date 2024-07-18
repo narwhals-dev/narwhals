@@ -2,29 +2,36 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from typing import Any
 from unittest import mock
 
 import pandas as pd
 import polars as pl
+import pyarrow.parquet as pq
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
 @pytest.mark.parametrize(
     "library",
-    ["pandas", "polars"],
+    ["pandas", "polars", "pyarrow"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-def test_q1(library: str) -> None:
-    if library == "pandas":
+def test_q1(library: str, request: Any) -> None:
+    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+        request.applymarker(pytest.mark.xfail)
+    elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
-    else:
+    elif library == "polars":
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
+    else:
+        df_raw = pq.read_table("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
-    df = nw.LazyFrame(df_raw)
+    df = nw.from_native(df_raw).lazy()
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -38,13 +45,13 @@ def test_q1(library: str) -> None:
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
             [
-                nw.sum("l_quantity").alias("sum_qty"),
-                nw.sum("l_extendedprice").alias("sum_base_price"),
-                nw.sum("disc_price").alias("sum_disc_price"),
+                nw.col("l_quantity").sum().alias("sum_qty"),
+                nw.col("l_extendedprice").sum().alias("sum_base_price"),
+                nw.col("disc_price").sum().alias("sum_disc_price"),
                 nw.col("charge").sum().alias("sum_charge"),
-                nw.mean("l_quantity").alias("avg_qty"),
-                nw.mean("l_extendedprice").alias("avg_price"),
-                nw.mean("l_discount").alias("avg_disc"),
+                nw.col("l_quantity").mean().alias("avg_qty"),
+                nw.col("l_extendedprice").mean().alias("avg_price"),
+                nw.col("l_discount").mean().alias("avg_disc"),
                 nw.len().alias("count_order"),
             ],
         )
@@ -84,14 +91,16 @@ def test_q1(library: str) -> None:
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
     "ignore:.*Complex.*:UserWarning",
 )
-def test_q1_w_generic_funcs(library: str) -> None:
-    if library == "pandas":
+def test_q1_w_generic_funcs(library: str, request: Any) -> None:
+    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+        request.applymarker(pytest.mark.xfail)
+    elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     else:
         df_raw = pl.read_parquet("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
-    df = nw.DataFrame(df_raw)
+    df = nw.from_native(df_raw, eager_only=True)
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -144,11 +153,14 @@ def test_q1_w_generic_funcs(library: str) -> None:
 
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
+)
 def test_q1_w_pandas_agg_generic_path() -> None:
     df_raw = pd.read_parquet("tests/data/lineitem.parquet")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)
-    df = nw.LazyFrame(df_raw)
+    df = nw.from_native(df_raw).lazy()
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(

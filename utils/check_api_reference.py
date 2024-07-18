@@ -9,7 +9,7 @@ from narwhals.utils import remove_suffix
 
 ret = 0
 
-# todo: make dtypes reference page as well
+# TODO(Unassigned): make dtypes reference page as well
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions = [
     i
@@ -37,7 +37,9 @@ if extra := set(documented).difference(top_level_functions):
 
 top_level_functions = [
     i
-    for i in nw.DataFrame(pl.DataFrame()).__dir__()
+    for i in nw.DataFrame(
+        pl.DataFrame(), is_polars=True, backend_version=(0,), level="full"
+    ).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/dataframe.md") as fd:
@@ -51,14 +53,16 @@ if missing := set(top_level_functions).difference(documented):
     print("DataFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(top_level_functions).difference({"__getitem__"}):
     print("DataFrame: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
 
 top_level_functions = [
     i
-    for i in nw.LazyFrame(pl.LazyFrame()).__dir__()
+    for i in nw.LazyFrame(
+        pl.LazyFrame(), is_polars=True, backend_version=(0,), level="full"
+    ).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/lazyframe.md") as fd:
@@ -78,7 +82,11 @@ if extra := set(documented).difference(top_level_functions):
     ret = 1
 
 top_level_functions = [
-    i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
+    i
+    for i in nw.Series(
+        pl.Series(), backend_version=(1,), is_polars=True, level="full"
+    ).__dir__()
+    if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/series.md") as fd:
     content = fd.read()
@@ -87,7 +95,11 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if missing := set(top_level_functions).difference(documented).difference({"dt", "str"}):
+if (
+    missing := set(top_level_functions)
+    .difference(documented)
+    .difference({"dt", "str", "cat"})
+):
     print("Series: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
@@ -106,7 +118,11 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if missing := set(top_level_functions).difference(documented).difference({"str", "dt"}):
+if (
+    missing := set(top_level_functions)
+    .difference(documented)
+    .difference({"cat", "str", "dt"})
+):
     print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
@@ -124,7 +140,11 @@ if extra := set(documented).difference(top_level_functions):
 # Check Expr vs Series
 expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
 series = [
-    i for i in nw.Series(pl.Series()).__dir__() if not i[0].isupper() and i[0] != "_"
+    i
+    for i in nw.Series(
+        pl.Series(), backend_version=(1,), is_polars=True, level="full"
+    ).__dir__()
+    if not i[0].isupper() and i[0] != "_"
 ]
 
 if missing := set(expr).difference(series).difference({"over"}):
@@ -137,6 +157,7 @@ if (
     .difference(
         {
             "to_pandas",
+            "to_list",
             "to_numpy",
             "dtype",
             "name",
@@ -146,6 +167,7 @@ if (
             "is_sorted",
             "value_counts",
             "zip_with",
+            "item",
         }
     )
 ):

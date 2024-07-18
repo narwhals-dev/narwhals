@@ -4,16 +4,19 @@
     handler: python
     options:
       members:
+        - abs
         - alias
         - all
         - any
         - cast
+        - count
         - cum_sum
         - diff
         - drop_nulls
         - dtype
         - fill_null
         - filter
+        - head
         - is_between
         - is_duplicated
         - is_empty
@@ -23,6 +26,8 @@
         - is_null
         - is_sorted
         - is_unique
+        - item
+        - len
         - max
         - mean
         - min
@@ -30,13 +35,16 @@
         - null_count
         - n_unique
         - quantile
+        - round
         - sample
         - shape
         - shift
         - sort
         - std
         - sum
+        - tail
         - to_frame
+        - to_list
         - to_numpy
         - to_pandas
         - unique

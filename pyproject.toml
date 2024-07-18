@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "0.9.5"
+version = "1.1.1"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
-description = "Extremely lightweight compatibility layer between pandas, Polars, cuDF, and Modin"
+description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -17,9 +17,18 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[tool.hatch.build]
+exclude = [
+  "/.*",
+  "/docs",
+  "/tests",
+  "/tpch",
+]
+
 [project.optional-dependencies]
-pandas = ["pandas>=1.1.5"]
+pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
+pyarrow = ['pyarrow>=11.0.0']
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"
@@ -34,48 +43,49 @@ lint.select = [
   "ALL",
 ]
 lint.ignore = [
-  'A001',
-  'A003',
-  'ANN101',
-  'ANN401',
-  'ARG002',  # todo: enable
-  'ARG003',  # todo: enable
-  'C901',
-  'COM812',
-  'D',
-  'DTZ',
-  'E501',
-  'EM101',  # todo: enable
-  'ERA001',  # todo: enable
-  'FBT003',  # todo: enable
-  'FIX',
-  'ICN001',
-  'ISC001',
-  'PD',
-  'PLR0911',
-  'PLR0912',
-  'PLR5501',
-  'PLR2004',
-  'PT011',
-  'PTH',
-  'RET505',
-  'S',
-  'SLF001',
-  'TD',
-  'TRY003',  # todo: enable
-  'TRY004'
+  "A001",
+  "ANN101",
+  "ANN401",
+  "C901",
+  "COM812",
+  "D",
+  "DTZ001",
+  "E501",
+  "FIX",
+  "ISC001",
+  "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR2004",
+  "RET505",
+  "SLF001",
+  "TD003",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+"utils/*" = ["S311", "PTH123"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.isort]
 force-single-line = true
 
-[tool.black]
-line-length = 90
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.pytest.ini_options]
 filterwarnings = [
   "error",
   'ignore:distutils Version classes are deprecated:DeprecationWarning',
+  'ignore:In the future `np.bool`',
+  'ignore:The copy keyword is deprecated and will be removed',
+  'ignore:make_block is deprecated and will be removed',
+  'ignore:np.find_common_type is deprecated',
+  'ignore:is_sparse is deprecated and will be removed',
+  'ignore:Passing a BlockManager to DataFrame is deprecated',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -84,11 +94,13 @@ markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
+omit = ['narwhals/typing.py']
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",
-  "if implementation == \"modin\"",
-  "if implementation == \"cudf\"",
+  "if implementation is Implementation.MODIN",
+  "if implementation is Implementation.CUDF",
+  'request.applymarker\(pytest.mark.xfail\)'
 ]
 
 [tool.mypy]

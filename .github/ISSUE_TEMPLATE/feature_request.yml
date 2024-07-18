@@ -38,17 +38,12 @@ body:
     label: If you have tried alternatives, please describe them below.
     description: >
        What you have tried if applicable.
-- type: dropdown
-  id: PR
-  attributes:
-    label: Would you want to open a pull request?
-    options:
-      - 'yes'
-      - 'no'
-  validations:
-      required: false
 - type: textarea
   attributes:
     label: Additional information that may help us understand your needs.
     description: >
        Context or useful information
+- type: markdown
+  attributes:
+    value: > 
+        ### If you'd be interested in opening a pull request to fix this, please let us know!

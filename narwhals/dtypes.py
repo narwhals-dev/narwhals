@@ -21,6 +21,9 @@ class DType:
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         return isinstance_or_issubclass(other, type(self))
 
+    def __hash__(self) -> int:
+        return hash(self.__class__)
+
 
 class NumericType(DType): ...
 
@@ -64,10 +67,22 @@ class String(DType): ...
 class Boolean(DType): ...
 
 
+class Object(DType): ...
+
+
+class Unknown(DType): ...
+
+
 class Datetime(TemporalType): ...
 
 
+class Duration(TemporalType): ...
+
+
 class Categorical(DType): ...
+
+
+class Enum(DType): ...
 
 
 class Date(TemporalType): ...
@@ -108,8 +123,15 @@ def translate_dtype(plx: Any, dtype: DType) -> Any:
         return plx.Boolean
     if dtype == Categorical:
         return plx.Categorical
+    if dtype == Enum:
+        msg = "Converting to Enum is not (yet) supported"
+        raise NotImplementedError(msg)
     if dtype == Datetime:
         return plx.Datetime
+    if dtype == Duration:
+        return plx.Duration
+    if dtype == Date:
+        return plx.Date
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -143,9 +165,16 @@ def to_narwhals_dtype(dtype: Any, *, is_polars: bool) -> DType:
         return String()
     if dtype == pl.Boolean:
         return Boolean()
+    if dtype == pl.Object:
+        return Object()
     if dtype == pl.Categorical:
         return Categorical()
+    if dtype == pl.Enum:
+        return Enum()
     if dtype == pl.Datetime:
         return Datetime()
-    msg = f"Unexpected dtype, got: {type(dtype)}"  # pragma: no cover
-    raise AssertionError(msg)
+    if dtype == pl.Duration:
+        return Duration()
+    if dtype == pl.Date:
+        return Date()
+    return Unknown()

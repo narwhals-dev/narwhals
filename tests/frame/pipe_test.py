@@ -1,10 +1,6 @@
 from typing import Any
 
-import pandas as pd
-import polars as pl
-import pytest
-
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {
@@ -13,17 +9,11 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
-def test_str_head(constructor: Any) -> None:
-    result = nw.from_native(constructor(data)).pipe(
-        lambda _df: _df.select([x for x in _df.columns if len(x) == 2])
-    )
+def test_pipe(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
+    columns = df.lazy().collect().columns
+    result = df.pipe(lambda _df: _df.select([x for x in columns if len(x) == 2]))
     expected = {"ab": ["foo", "bars"]}
     compare_dicts(result, expected)
-    result = (
-        nw.from_native(constructor(data))
-        .lazy()
-        .pipe(lambda _df: _df.select([x for x in _df.columns if len(x) == 2]))
-    )
-    expected = {"ab": ["foo", "bars"]}
+    result = df.lazy().pipe(lambda _df: _df.select([x for x in columns if len(x) == 2]))
     compare_dicts(result, expected)

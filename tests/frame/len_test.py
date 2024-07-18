@@ -1,10 +1,6 @@
 from typing import Any
 
-import pandas as pd
-import polars as pl
-import pytest
-
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 data = {
     "a": [1.0, 2.0, None, 4.0],
@@ -12,7 +8,6 @@ data = {
 }
 
 
-@pytest.mark.parametrize("constructor", [pd.DataFrame, pl.DataFrame])
-def test_drop_nulls(constructor: Any) -> None:
+def test_len(constructor: Any) -> None:
     result = len(nw.from_native(constructor(data)))
     assert result == 4

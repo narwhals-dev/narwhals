@@ -19,5 +19,6 @@
         - total_milliseconds
         - total_microseconds
         - total_nanoseconds
+        - to_string
       show_source: false
       show_bases: false

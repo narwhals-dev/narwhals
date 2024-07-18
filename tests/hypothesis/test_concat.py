@@ -1,39 +1,41 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import pandas as pd
 import polars as pl
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
 @given(
-    st.lists(
+    integers=st.lists(
         st.integers(min_value=-9223372036854775807, max_value=9223372036854775807),
         min_size=3,
         max_size=3,
     ),
-    st.lists(
+    other_integers=st.lists(
         st.integers(min_value=-9223372036854775807, max_value=9223372036854775807),
         min_size=3,
         max_size=3,
     ),
-    st.lists(
+    floats=st.lists(
         st.floats(),
         min_size=3,
         max_size=3,
     ),
-    st.sampled_from(["horizontal", "vertical"]),
+    how=st.sampled_from(["horizontal", "vertical"]),
 )  # type: ignore[misc]
 @pytest.mark.slow()
 def test_concat(  # pragma: no cover
-    integers: st.SearchStrategy[list[int]],
-    other_integers: st.SearchStrategy[list[int]],
-    floats: st.SearchStrategy[list[float]],
-    how: st.SearchStrategy[str],
+    integers: list[int],
+    other_integers: list[int],
+    floats: list[float],
+    how: Literal["horizontal", "vertical"],
 ) -> None:
     data = {"a": integers, "b": other_integers, "c": floats}
 
@@ -43,28 +45,16 @@ def test_concat(  # pragma: no cover
     df_pandas2 = pd.DataFrame(data)
 
     if how == "horizontal":
-        df_pl = (
-            nw.LazyFrame(df_polars)
-            .collect()
-            .rename({"a": "d", "b": "e"})
-            .lazy()
-            .drop("c")
-        )
-        df_pd = (
-            nw.LazyFrame(df_pandas)
-            .collect()
-            .rename({"a": "d", "b": "e"})
-            .lazy()
-            .drop("c")
-        )
+        df_pl = nw.from_native(df_polars).rename({"a": "d", "b": "e"}).drop("c").lazy()
+        df_pd = nw.from_native(df_pandas).rename({"a": "d", "b": "e"}).drop("c").lazy()
     else:
-        df_pl = nw.LazyFrame(df_polars)
-        df_pd = nw.LazyFrame(df_pandas)
+        df_pl = nw.from_native(df_polars, eager_only=True).lazy()
+        df_pd = nw.from_native(df_pandas, eager_only=True).lazy()
 
-    other_pl = nw.LazyFrame(df_polars2)
+    other_pl = nw.from_native(df_polars2, eager_only=True).lazy()
     dframe_pl = nw.concat([df_pl, other_pl], how=how)
 
-    other_pd = nw.LazyFrame(df_pandas2)
+    other_pd = nw.from_native(df_pandas2).lazy()
     dframe_pd = nw.concat([df_pd, other_pd], how=how)
 
     dframe_pd1 = nw.to_native(dframe_pl)

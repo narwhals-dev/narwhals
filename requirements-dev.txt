@@ -1,8 +1,11 @@
 covdefaults
+ibis-framework
 pandas
-polars
+polars[timezones]
 pre-commit
 pyarrow
 pytest
 pytest-cov
 hypothesis
+scikit-learn
+

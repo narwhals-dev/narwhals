@@ -2,7 +2,6 @@ exclude-labels:
   - skip changelog
   - release
 name-template: 'Narwhals v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
 
 change-template: '- $TITLE (#$NUMBER)' 
     
@@ -16,7 +15,7 @@ autolabeler:
       - '/^build/'
   - label: internal
     title:
-      - '/^(chore|ci|refactor|test|template)/'
+      - '/^(chore|ci|refactor|test|template|bench)/'
   - label: deprecation
     title:
       - '/^depr/'

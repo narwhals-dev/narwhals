@@ -9,28 +9,43 @@
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
 
-Extremely lightweight and extensible compatibility layer between Polars, pandas, Modin, and cuDF (and more!).
+Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
-- [Read the documentation](https://narwhals-dev.github.io/narwhals/)
-- [Chat with us on Discord!](https://discord.gg/V3PqtB4VA4)
+- **Full API support**: cuDF, Modin, pandas, Polars
+- **Interchange-level support**: Ibis, PyArrow, Vaex, anything else which implements the DataFrame Interchange Protocol
 
 Seamlessly support all, without depending on any!
 
 - ✅ **Just use** a subset of **the Polars API**, no need to learn anything new
-- ✅ **Zero dependencies**, **zero 3rd-party imports**: Narwhals only uses what
-  the user passes in, so you can keep your library lightweight
+- ✅ **Zero dependencies**, Narwhals only uses what
+  the user passes in so your library can stay lightweight
 - ✅ Separate **lazy** and eager APIs, use **expressions**
 - ✅ Support pandas' complicated type system and index, without
   either getting in the way
 - ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
+- ✅ **Negligible overhead**, see [overhead](https://narwhals-dev.github.io/narwhals/overhead/)
+- ✅ Let your IDE help you thanks to **full static typing**, see [typing](https://narwhals-dev.github.io/narwhals/api-reference/typing/)
+- ✅ **Perfect backwards compatibility policy**,
+  see [stable api](https://narwhals-dev.github.io/narwhals/backcompat/) for how to opt-in
 
-## Used by
+Get started!
+
+- [Read the documentation](https://narwhals-dev.github.io/narwhals/)
+- [Chat with us on Discord!](https://discord.gg/V3PqtB4VA4)
+- [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com&ctz=Europe%2FLondon)
+- [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md)
+
+## Used by / integrates with
 
 Join the party!
 
+- [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+
+Feel free to add your project to the list if it's missing, and/or
+[chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
 
 ## Installation
 
@@ -58,20 +73,6 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
 
-## What about Ibis?
-
-Like Ibis, Narwhals aims to enable dataframe-agnostic code. However, Narwhals comes with **zero** dependencies,
-is about as lightweight as it gets, and is aimed at library developers rather than at end users. It also does
-not aim to support as many backends, instead preferring to focus on dataframes. So, which should you use?
-
-- If you need to run complicated analyses and aren't too bothered about package size: Ibis!
-- If you're a library maintainer and want the thinnest-possible layer to get cross-dataframe library support: Narwhals!
-
-Here is the package size increase which would result from installing each tool in a non-pandas
-environment:
-
-![image](https://github.com/MarcoGorelli/narwhals/assets/33491632/a8dfba78-feb1-48c1-960a-5b9b03585fa5)
-   
 ## Example
 
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
