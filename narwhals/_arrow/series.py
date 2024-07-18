@@ -283,6 +283,17 @@ class ArrowSeries:
             return self._native_series[0].as_py()
         return self._native_series[index].as_py()
 
+    def zip_with(self: Self, mask: Self, other: Self) -> Self:
+        pc = get_pyarrow_compute()
+
+        return self._from_native_series(
+            pc.replace_with_mask(
+                self._native_series.combine_chunks(),
+                pc.invert(mask._native_series.combine_chunks()),
+                other._native_series.combine_chunks(),
+            )
+        )
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)

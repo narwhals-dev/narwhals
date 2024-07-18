@@ -36,7 +36,6 @@ MISSING = [
     "Series.to_pandas",
     "Series.unique",
     "Series.value_counts",
-    "Series.zip_with",
 ]
 
 
