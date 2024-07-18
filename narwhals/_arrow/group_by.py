@@ -74,7 +74,7 @@ def agg_arrow(
 
     if all_simple_aggs:
         # Mapping from output name to
-        # ((group_by_args), pyarrow_output_name)  # noqa: ERA001
+        # (aggregation_args, pyarrow_output_name)  # noqa: ERA001
         simple_aggregations: dict[str, tuple[tuple[Any, ...], str]] = {}
         for expr in exprs:
             if expr._depth == 0:
@@ -107,9 +107,12 @@ def agg_arrow(
 
         aggs: list[Any] = []
         name_mapping = {}
-        for output_name, named_agg in simple_aggregations.items():
-            aggs.append(named_agg[0])
-            name_mapping[named_agg[1]] = output_name
+        for output_name, (
+            aggregation_args,
+            pyarrow_output_name,
+        ) in simple_aggregations.items():
+            aggs.append(aggregation_args)
+            name_mapping[pyarrow_output_name] = output_name
         result_simple = grouped.aggregate(aggs)
         result_simple = result_simple.rename_columns(
             [name_mapping.get(col, col) for col in result_simple.column_names]
