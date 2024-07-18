@@ -233,10 +233,7 @@ def test_quantile(
     assert result == expected
 
 
-def test_zip_with(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
+def test_zip_with(constructor_series: Any) -> None:
     series1 = nw.from_native(constructor_series(data), series_only=True)
     series2 = nw.from_native(constructor_series(data_dups), series_only=True)
     mask = nw.from_native(constructor_series([True, False, True]), series_only=True)
