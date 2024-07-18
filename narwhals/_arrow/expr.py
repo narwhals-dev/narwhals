@@ -201,6 +201,17 @@ class ArrowExpr:
     def is_in(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "is_in", other)
 
+    def sample(
+        self: Self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
+        )
+
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
