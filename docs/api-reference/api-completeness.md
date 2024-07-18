@@ -50,7 +50,7 @@ In the following table it is possible to check which method is implemented for w
 | Expr                    | all                | :white_check_mark: | :white_check_mark: |
 | Expr                    | any                | :white_check_mark: | :white_check_mark: |
 | Expr                    | cast               | :white_check_mark: | :white_check_mark: |
-| Expr                    | cat                | :white_check_mark: | :x:                |
+| Expr                    | cat                | :white_check_mark: | :white_check_mark: |
 | Expr                    | count              | :white_check_mark: | :white_check_mark: |
 | Expr                    | cum_sum            | :white_check_mark: | :white_check_mark: |
 | Expr                    | diff               | :white_check_mark: | :white_check_mark: |
@@ -62,11 +62,11 @@ In the following table it is possible to check which method is implemented for w
 | Expr                    | is_between         | :white_check_mark: | :x:                |
 | Expr                    | is_duplicated      | :white_check_mark: | :x:                |
 | Expr                    | is_first_distinct  | :white_check_mark: | :x:                |
-| Expr                    | is_in              | :white_check_mark: | :x:                |
+| Expr                    | is_in              | :white_check_mark: | :white_check_mark: |
 | Expr                    | is_last_distinct   | :white_check_mark: | :x:                |
-| Expr                    | is_null            | :white_check_mark: | :x:                |
+| Expr                    | is_null            | :white_check_mark: | :white_check_mark: |
 | Expr                    | is_unique          | :white_check_mark: | :x:                |
-| Expr                    | len                | :white_check_mark: | :x:                |
+| Expr                    | len                | :white_check_mark: | :white_check_mark: |
 | Expr                    | max                | :white_check_mark: | :white_check_mark: |
 | Expr                    | mean               | :white_check_mark: | :white_check_mark: |
 | Expr                    | min                | :white_check_mark: | :white_check_mark: |
@@ -75,7 +75,7 @@ In the following table it is possible to check which method is implemented for w
 | Expr                    | over               | :white_check_mark: | :x:                |
 | Expr                    | quantile           | :white_check_mark: | :x:                |
 | Expr                    | round              | :white_check_mark: | :x:                |
-| Expr                    | sample             | :white_check_mark: | :x:                |
+| Expr                    | sample             | :white_check_mark: | :white_check_mark: |
 | Expr                    | shift              | :white_check_mark: | :x:                |
 | Expr                    | sort               | :white_check_mark: | :x:                |
 | Expr                    | std                | :white_check_mark: | :white_check_mark: |
@@ -83,7 +83,7 @@ In the following table it is possible to check which method is implemented for w
 | Expr                    | sum                | :white_check_mark: | :white_check_mark: |
 | Expr                    | tail               | :white_check_mark: | :white_check_mark: |
 | Expr                    | unique             | :white_check_mark: | :x:                |
-| ExprCatNamespace        | get_categories     | :white_check_mark: | :x:                |
+| ExprCatNamespace        | get_categories     | :white_check_mark: | :white_check_mark: |
 | ExprDateTimeNamespace   | day                | :white_check_mark: | :x:                |
 | ExprDateTimeNamespace   | hour               | :white_check_mark: | :x:                |
 | ExprDateTimeNamespace   | microsecond        | :white_check_mark: | :x:                |
@@ -148,13 +148,13 @@ In the following table it is possible to check which method is implemented for w
 | Series                  | is_duplicated      | :white_check_mark: | :x:                |
 | Series                  | is_empty           | :white_check_mark: | :white_check_mark: |
 | Series                  | is_first_distinct  | :white_check_mark: | :x:                |
-| Series                  | is_in              | :white_check_mark: | :x:                |
+| Series                  | is_in              | :white_check_mark: | :white_check_mark: |
 | Series                  | is_last_distinct   | :white_check_mark: | :x:                |
-| Series                  | is_null            | :white_check_mark: | :x:                |
+| Series                  | is_null            | :white_check_mark: | :white_check_mark: |
 | Series                  | is_sorted          | :white_check_mark: | :x:                |
 | Series                  | is_unique          | :white_check_mark: | :x:                |
 | Series                  | item               | :white_check_mark: | :white_check_mark: |
-| Series                  | len                | :white_check_mark: | :x:                |
+| Series                  | len                | :white_check_mark: | :white_check_mark: |
 | Series                  | max                | :white_check_mark: | :white_check_mark: |
 | Series                  | mean               | :white_check_mark: | :white_check_mark: |
 | Series                  | min                | :white_check_mark: | :white_check_mark: |
@@ -163,7 +163,7 @@ In the following table it is possible to check which method is implemented for w
 | Series                  | null_count         | :white_check_mark: | :white_check_mark: |
 | Series                  | quantile           | :white_check_mark: | :x:                |
 | Series                  | round              | :white_check_mark: | :x:                |
-| Series                  | sample             | :white_check_mark: | :x:                |
+| Series                  | sample             | :white_check_mark: | :white_check_mark: |
 | Series                  | shape              | :white_check_mark: | :white_check_mark: |
 | Series                  | shift              | :white_check_mark: | :x:                |
 | Series                  | sort               | :white_check_mark: | :x:                |
@@ -177,7 +177,7 @@ In the following table it is possible to check which method is implemented for w
 | Series                  | to_pandas          | :white_check_mark: | :x:                |
 | Series                  | unique             | :white_check_mark: | :x:                |
 | Series                  | value_counts       | :white_check_mark: | :x:                |
-| Series                  | zip_with           | :white_check_mark: | :x:                |
+| Series                  | zip_with           | :white_check_mark: | :white_check_mark: |
 | SeriesCatNamespace      | get_categories     | :white_check_mark: | :white_check_mark: |
 | SeriesDateTimeNamespace | day                | :white_check_mark: | :x:                |
 | SeriesDateTimeNamespace | hour               | :white_check_mark: | :x:                |
