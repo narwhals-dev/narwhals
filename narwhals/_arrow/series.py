@@ -8,6 +8,7 @@ from typing import Sequence
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 
@@ -293,6 +294,25 @@ class ArrowSeries:
                 other._native_series.combine_chunks(),
             )
         )
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        np = get_numpy()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        num_rows = len(self)
+
+        if n is None and fraction is not None:
+            n = int(num_rows * fraction)
+
+        idx = np.arange(0, num_rows)
+        mask = np.random.choice(idx, size=n, replace=with_replacement)
+        return self._from_native_series(pc.take(ser, mask))
 
     @property
     def shape(self) -> tuple[int]:

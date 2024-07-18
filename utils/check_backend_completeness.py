@@ -29,7 +29,6 @@ MISSING = [
     "Series.n_unique",
     "Series.quantile",
     "Series.round",
-    "Series.sample",
     "Series.shift",
     "Series.sort",
     "Series.to_frame",
