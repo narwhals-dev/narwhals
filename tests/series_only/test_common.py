@@ -28,12 +28,10 @@ def test_len(constructor_series: Any) -> None:
     assert result == 3
 
 
-def test_is_in(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
+def test_is_in(constructor_series: Any) -> None:
     series = nw.from_native(constructor_series(data), series_only=True)
 
-    result = series.is_in([1, 2])
+    result = series.is_in([1, 2]).to_list()
     assert result[0]
     assert not result[1]
     assert result[2]

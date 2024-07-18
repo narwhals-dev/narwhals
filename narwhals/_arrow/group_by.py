@@ -8,6 +8,7 @@ from typing import Callable
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -51,6 +52,7 @@ class ArrowGroupBy:
         return agg_arrow(
             self._grouped,
             exprs,
+            self._keys,
             output_names,
             self._df._from_native_dataframe,
         )
@@ -59,9 +61,11 @@ class ArrowGroupBy:
 def agg_arrow(
     grouped: Any,
     exprs: list[ArrowExpr],
+    keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
+    pc = get_pyarrow_compute()
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
@@ -69,8 +73,24 @@ def agg_arrow(
             break
 
     if all_simple_aggs:
-        simple_aggregations: dict[str, tuple[str, str]] = {}
+        # Mapping from output name to
+        # (input_column_name, function_name, pyarrow_output_name)  # noqa: ERA001
+        simple_aggregations: dict[str, tuple[Any, str, str]] = {}
         for expr in exprs:
+            if expr._depth == 0:
+                # e.g. agg(nw.len()) # noqa: ERA001
+                if (
+                    expr._output_names is None or expr._function_name != "len"
+                ):  # pragma: no cover
+                    msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+                    raise AssertionError(msg)
+                simple_aggregations[expr._output_names[0]] = (
+                    keys[0],
+                    "count",
+                    f"{keys[0]}_count",
+                )
+                continue
+
             # e.g. agg(nw.mean('a')) # noqa: ERA001
             if (
                 expr._depth != 1 or expr._root_names is None or expr._output_names is None
@@ -81,13 +101,20 @@ def agg_arrow(
             function_name = remove_prefix(expr._function_name, "col->")
             function_name = POLARS_TO_ARROW_AGGREGATIONS.get(function_name, function_name)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                simple_aggregations[output_name] = (root_name, function_name)
+                simple_aggregations[output_name] = (
+                    root_name,
+                    function_name,
+                    f"{root_name}_{function_name}",
+                )
 
-        aggs = []
+        aggs: list[Any] = []
         name_mapping = {}
         for output_name, named_agg in simple_aggregations.items():
-            aggs.append((named_agg[0], named_agg[1]))
-            name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
+            if named_agg[1] == "count":
+                aggs.append((named_agg[0], named_agg[1], pc.CountOptions(mode="all")))
+            else:
+                aggs.append((named_agg[0], named_agg[1]))
+            name_mapping[named_agg[2]] = output_name
         result_simple = grouped.aggregate(aggs)
         result_simple = result_simple.rename_columns(
             [name_mapping.get(col, col) for col in result_simple.column_names]
