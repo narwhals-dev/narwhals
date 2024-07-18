@@ -569,7 +569,7 @@ class PandasLikeDataFrame:
 
         if values is None:
             cols = self.columns
-            values_ = [c for c in cols if c not in (*on, *index)]  # type: ignore[misc]
+            values_ = [c for c in cols if c not in {*on, *index}]  # type: ignore[misc]
         elif isinstance(values, str):  # pragma: no cover
             values_ = [values]
         else:

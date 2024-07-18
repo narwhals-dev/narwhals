@@ -1970,7 +1970,7 @@ class DataFrame(BaseFrame[FrameT]):
 
     def pivot(
         self: Self,
-        on: str | list[str] | None,
+        on: str | list[str],
         *,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
@@ -2042,17 +2042,40 @@ class DataFrame(BaseFrame[FrameT]):
             │ 2   ┆ 4     ┆ 1     ┆ 0     ┆ 4     │
             └─────┴───────┴───────┴───────┴───────┘
         """
-        return self._from_compliant_dataframe(
-            self._compliant_frame.pivot(
-                on=on,
-                index=index,
-                values=values,
-                aggregate_function=aggregate_function,
-                maintain_order=maintain_order,
-                sort_columns=sort_columns,
-                separator=separator,
+        kwargs = {
+            "index": index,
+            "values": values,
+            "aggregate_function": aggregate_function,
+            "maintain_order": maintain_order,
+            "sort_columns": sort_columns,
+            "separator": separator,
+        }
+
+        if self._is_polars and self._backend_version < (1, 0, 0):  # pragma: no cover
+            import re
+
+            if self._backend_version < (0, 20, 5) and aggregate_function == "len":
+                kwargs["aggregate_function"] = "count"
+
+            if values is None:
+                cols = self.columns
+                kwargs["values"] = [c for c in cols if c not in {*on, *index}]  # type: ignore[misc]
+
+            result = self._compliant_frame.pivot(columns=on, **kwargs)
+            cols = result.columns
+
+            if isinstance(on, str):
+                on = [on]
+
+            combined_on = r"|".join(on)
+            result = result.rename(
+                {c: re.sub(rf"_{combined_on}_", "_", c, count=1) for c in cols}
             )
-        )
+
+        else:
+            result = self._compliant_frame.pivot(on=on, **kwargs)
+
+        return self._from_compliant_dataframe(result)
 
 
 class LazyFrame(BaseFrame[FrameT]):
