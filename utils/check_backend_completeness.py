@@ -23,23 +23,18 @@ MISSING = [
     "Series.is_between",
     "Series.is_duplicated",
     "Series.is_first_distinct",
-    "Series.is_in",
     "Series.is_last_distinct",
-    "Series.is_null",
     "Series.is_sorted",
     "Series.is_unique",
-    "Series.len",
     "Series.n_unique",
     "Series.quantile",
     "Series.round",
-    "Series.sample",
     "Series.shift",
     "Series.sort",
     "Series.to_frame",
     "Series.to_pandas",
     "Series.unique",
     "Series.value_counts",
-    "Series.zip_with",
 ]
 
 

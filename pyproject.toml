@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.1.0"
+version = "1.1.1"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -43,34 +43,32 @@ lint.select = [
   "ALL",
 ]
 lint.ignore = [
-  'A001',
-  'A003',
-  'ANN101',
-  'ANN401',
-  'C901',
-  'COM812',
-  'D',
-  'DTZ001',
-  'E501',
-  'EM101',
-  'FIX',
-  'ISC001',
-  'PD901',  # This is a auxiliary library so dataframe variables have no concrete business meaning
-  'PLR0911',
-  'PLR0912',
-  'PLR0913',
-  'PLR2004',
-  'PTH',
-  'RET505',
-  'SLF001',
-  'TD003',
-  'TRY003',  # TODO(Unassigned): enable
-  'TRY004'
+  "A001",
+  "ANN101",
+  "ANN401",
+  "C901",
+  "COM812",
+  "D",
+  "DTZ001",
+  "E501",
+  "FIX",
+  "ISC001",
+  "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR2004",
+  "RET505",
+  "SLF001",
+  "TD003",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
-"utils/*" = ["S311"]
+"utils/*" = ["S311", "PTH123"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.isort]
 force-single-line = true

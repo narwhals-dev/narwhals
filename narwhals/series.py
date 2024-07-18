@@ -1729,9 +1729,16 @@ class Series:
             quantile=quantile, interpolation=interpolation
         )
 
-    def zip_with(self, mask: Any, other: Any) -> Self:
+    def zip_with(self: Self, mask: Self, other: Self) -> Self:
         """
-        Take values from self or other based on the given mask. Where mask evaluates true, take values from self. Where mask evaluates false, take values from other.
+        Take values from self or other based on the given mask.
+
+        Where mask evaluates true, take values from self. Where mask evaluates false,
+        take values from other.
+
+        Arguments:
+            mask: Boolean Series
+            other: Series of same type.
 
         Examples:
             >>> import narwhals as nw
