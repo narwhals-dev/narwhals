@@ -34,6 +34,8 @@ class PandasLikeGroupBy:
         self._grouped = self._df._native_dataframe.groupby(
             list(self._keys),
             sort=False,
+            as_index=True,
+            dropna=False,
             **keywords,
         )
 

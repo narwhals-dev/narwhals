@@ -31,6 +31,7 @@ def test_validate_laziness() -> None:
     parse_version(np.__version__) < parse_version("1.26.4"), reason="too old"
 )
 def test_memmap() -> None:
+    pytest.importorskip("sklearn")
     # the headache this caused me...
     from sklearn.utils import check_X_y
     from sklearn.utils._testing import create_memmap_backed_data

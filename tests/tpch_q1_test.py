@@ -32,7 +32,6 @@ def test_q1(library: str, request: Any) -> None:
     elif library == "dask" and (dd := get_dask()) is not None:
         df_raw = dd.read_parquet("tests/data/lineitem.parquet")
     else:
-        request.applymarker(pytest.mark.xfail)
         df_raw = pq.read_table("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
@@ -49,13 +48,13 @@ def test_q1(library: str, request: Any) -> None:
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
             [
-                nw.sum("l_quantity").alias("sum_qty"),
-                nw.sum("l_extendedprice").alias("sum_base_price"),
-                nw.sum("disc_price").alias("sum_disc_price"),
+                nw.col("l_quantity").sum().alias("sum_qty"),
+                nw.col("l_extendedprice").sum().alias("sum_base_price"),
+                nw.col("disc_price").sum().alias("sum_disc_price"),
                 nw.col("charge").sum().alias("sum_charge"),
-                nw.mean("l_quantity").alias("avg_qty"),
-                nw.mean("l_extendedprice").alias("avg_price"),
-                nw.mean("l_discount").alias("avg_disc"),
+                nw.col("l_quantity").mean().alias("avg_qty"),
+                nw.col("l_extendedprice").mean().alias("avg_price"),
+                nw.col("l_discount").mean().alias("avg_disc"),
                 nw.len().alias("count_order"),
             ],
         )

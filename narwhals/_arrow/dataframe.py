@@ -343,7 +343,8 @@ class ArrowDataFrame:
         )
 
     def clone(self) -> Self:
-        raise NotImplementedError("clone is not yet supported on PyArrow tables")
+        msg = "clone is not yet supported on PyArrow tables"
+        raise NotImplementedError(msg)
 
     def is_empty(self: Self) -> bool:
         return self.shape[0] == 0

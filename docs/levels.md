@@ -28,6 +28,8 @@ level of support. If a library implements the
 a call such as
 
 ```python exec="1" source="above"
+from typing import Any
+
 import narwhals as nw
 from narwhals.schema import Schema
 
