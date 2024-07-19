@@ -87,6 +87,18 @@ If you said yes to both, we'd love to hear from you!
 **Note**: You might suspect that this is a secret ploy to infiltrate the Polars API everywhere.
 Indeed, you may suspect that.
 
+## Funding
+
+Narwhals is 100% independent, community-driven, and community-owned.
+We are extremely grateful to the following organisations for having
+provided some funding / development time:
+
+- [Quansight Labs](https://labs.quansight.org/)
+- [OpenTeams](https://www.openteams.com/)
+
+If you contribute to Narwhals on company time, feel free to reach out and we can add your employer
+to the list!
+
 ## Why "Narwhals"?
 
 [Coz they are so awesome](https://youtu.be/ykwqXuMPsoc?si=A-i8LdR38teYsos4).
