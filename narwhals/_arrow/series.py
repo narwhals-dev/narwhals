@@ -315,8 +315,12 @@ class ArrowSeries:
         return self._from_native_series(pc.take(ser, mask))
 
     def fill_null(self: Self, value: Any) -> Self:
+        pa = get_pyarrow()
         pc = get_pyarrow_compute()
-        return self._from_native_series(pc.fill_null(self._native_series, value))
+        ser = self._native_series
+        dtype = ser.type
+
+        return self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
 
     @property
     def shape(self) -> tuple[int]:
