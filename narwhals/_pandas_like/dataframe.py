@@ -13,7 +13,6 @@ from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import create_native_series
-from narwhals._pandas_like.utils import generate_unique_token
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
@@ -23,6 +22,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.utils import flatten
+from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
     from typing_extensions import Self
