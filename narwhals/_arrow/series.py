@@ -177,7 +177,9 @@ class ArrowSeries:
 
     def n_unique(self) -> int:
         pc = get_pyarrow_compute()
-        return pc.count(pc.unique(self._native_series))  # type: ignore[no-any-return]
+        unique_values = pc.unique(self._native_series)
+        count_unique = pc.count(unique_values, mode="all")
+        return count_unique.as_py()  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
