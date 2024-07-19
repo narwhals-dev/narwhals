@@ -144,6 +144,9 @@ class ArrowExpr:
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
+    def n_unique(self) -> Self:
+        return reuse_series_implementation(self, "n_unique", returns_scalar=True)
+
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
