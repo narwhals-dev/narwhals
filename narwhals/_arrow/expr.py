@@ -213,16 +213,20 @@ class ArrowExpr:
         )
 
     @property
-    def dt(self) -> ArrowExprDateTimeNamespace:
+    def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
 
     @property
-    def str(self) -> ArrowExprStringNamespace:
+    def str(self: Self) -> ArrowExprStringNamespace:
         return ArrowExprStringNamespace(self)
 
     @property
-    def cat(self) -> ArrowExprCatNamespace:
+    def cat(self: Self) -> ArrowExprCatNamespace:
         return ArrowExprCatNamespace(self)
+
+    @property
+    def name(self: Self) -> ArrowNameNamespace:
+        return ArrowNameNamespace(self)
 
 
 class ArrowExprCatNamespace:
@@ -263,4 +267,129 @@ class ArrowExprStringNamespace:
             self._expr,
             "str",
             "to_lowercase",
+        )
+
+
+class ArrowNameNamespace:
+    def __init__(self: Self, expr: ArrowExpr) -> None:
+        self._expr = expr
+
+    def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.map`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [function(str(name)) for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def prefix(self: Self, prefix: str) -> ArrowExpr:
+        root_names = self._expr._root_names
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.prefix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [prefix + str(name) for name in root_names]
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def suffix(self: Self, suffix: str) -> ArrowExpr:
+        root_names = self._expr._root_names
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.suffix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [str(name) + suffix for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def to_lowercase(self: Self) -> ArrowExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+        output_names = [str(name).lower() for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def to_uppercase(self: Self) -> ArrowExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+        output_names = [str(name).upper() for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
         )

@@ -98,7 +98,7 @@ documented = [
 if (
     missing := set(top_level_functions)
     .difference(documented)
-    .difference({"dt", "str", "cat"})
+    .difference({"dt", "str", "cat", "name"})
 ):
     print("Series: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -121,7 +121,7 @@ documented = [
 if (
     missing := set(top_level_functions)
     .difference(documented)
-    .difference({"cat", "str", "dt"})
+    .difference({"cat", "str", "dt", "name"})
 ):
     print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
