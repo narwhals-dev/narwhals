@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - keep
         - map
         - prefix
         - suffix
