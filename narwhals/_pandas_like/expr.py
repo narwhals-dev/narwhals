@@ -475,6 +475,30 @@ class PandasExprNameNamespace:
     def __init__(self: Self, expr: PandasLikeExpr) -> None:
         self._expr = expr
 
+    def keep(self: Self) -> PandasLikeExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.keep`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), root_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=root_names,
+            implementation=self._expr._implementation,
+            backend_version=self._expr._backend_version,
+        )
+
     def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
         root_names = self._expr._root_names
 

@@ -3022,12 +3022,50 @@ class ExprNameNamespace:
     def __init__(self: Self, expr: Expr) -> None:
         self._expr = expr
 
+    def keep(self: Self) -> Expr:
+        r"""
+        Keep the original root name of the expression.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2], "BAR": [4, 5]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("foo").alias("alias_for_foo").name.keep())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd).columns
+            Index(['foo'], dtype='object')
+            >>> func(df_pl).columns
+            ['foo']
+        """
+
+        return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
+
     def map(self: Self, function: Callable[[str], str]) -> Expr:
         r"""
         Rename the output of an expression by mapping a function over the root name.
 
         Arguments:
             function: Function that maps a root name to a new name.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
 
         Examples:
             >>> import narwhals as nw
@@ -3061,6 +3099,11 @@ class ExprNameNamespace:
         Arguments:
             prefix: Prefix to add to the root column name.
 
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -3092,6 +3135,11 @@ class ExprNameNamespace:
         Arguments:
             suffix: Suffix to add to the root column name.
 
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -3119,6 +3167,11 @@ class ExprNameNamespace:
         r"""
         Make the root column name lowercase.
 
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -3145,6 +3198,11 @@ class ExprNameNamespace:
     def to_uppercase(self: Self) -> Expr:
         r"""
         Make the root column name uppercase.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
 
         Examples:
             >>> import narwhals as nw
