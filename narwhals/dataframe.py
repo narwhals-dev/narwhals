@@ -13,7 +13,6 @@ from typing import overload
 
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
-from narwhals.dtypes import to_narwhals_dtype
 from narwhals.schema import Schema
 from narwhals.utils import flatten
 
@@ -90,7 +89,7 @@ class BaseFrame(Generic[FrameT]):
     def collect_schema(self) -> Schema:
         native_schema = dict(self._compliant_frame.collect_schema())
 
-        return Schema({k: to_narwhals_dtype(v) for k, v in native_schema.items()})
+        return Schema(native_schema)
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         return function(self, *args, **kwargs)

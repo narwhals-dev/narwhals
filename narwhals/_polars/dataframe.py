@@ -17,6 +17,9 @@ class PolarsDataFrame:
 
     def __narwhals_namespace__(self):
         return PolarsNamespace()
+    
+    def __native_namespace__(self):
+        return get_polars()
 
     def _from_native_frame(self, df):
         return self.__class__(df)

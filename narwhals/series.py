@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 
-from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
 
 if TYPE_CHECKING:
@@ -168,7 +167,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return to_narwhals_dtype(self._compliant_series.dtype)
+        return self._compliant_series.dtype
 
     @property
     def name(self) -> str:
