@@ -29,6 +29,9 @@ class PolarsSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
+    def __native_namespace__(self) -> Any:
+        return get_polars()
+
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace()
 
