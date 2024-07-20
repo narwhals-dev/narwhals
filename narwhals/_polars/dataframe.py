@@ -139,6 +139,9 @@ class PolarsLazyFrame:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace(backend_version=self._backend_version)
 
+    def __native_namespace__(self) -> Any:
+        return get_polars()
+
     def _from_native_dataframe(self, df: Any) -> Self:
         return self.__class__(df, backend_version=self._backend_version)
 
