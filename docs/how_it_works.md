@@ -58,28 +58,8 @@ it to:
 
 Now let's turn our attention to the implementation.
 
-## Polars implementation
-
-For Polars, Narwhals just "passes everything through". For example consider the following:
-```python exec="1"
-import polars as pl
-import narwhals as nw
-
-df_pl = pl.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
-df = nw.from_native(df_pl)
-df.select(nw.col('a')+1)
-```
-
-`nw.col('a')` produces a `narwhals.expression.Expr` object, which has a private `_call` method.
-Inside `DataFrame.select`, we call `nw.col('a')._call(pl)`, which produces `pl.col('a')`.
-
-We then let Polars do its thing. Which is nice, but also not particularly interesting.
-How about translating expressions to pandas? Well, it's
-interesting to us, and you're still reading, so maybe it'll be interesting to you too.
-
 ## pandas implementation
 
-When we called `nw.col('a')._call(pl)`, we got a Narwhals-compliant Polars namespace.
 The pandas namespace (`pd`) isn't Narwhals-compliant, as the pandas API is very different
 from Polars'. So...Narwhals implements a `PandasLikeNamespace`, which includes the top-level
 Polars functions included in the Narwhals API:
@@ -150,6 +130,24 @@ than running pandas directly.
 
 Further attempts at demistifying Narwhals, refactoring code so it's clearer, and explaining
 this section better are 110% welcome.
+
+## Polars and other implementations
+
+Other implementations are similar to the above: their define their own Narwhals-compliant
+objects. So, all-in-all, there are a couple of layers here:
+
+- `nw.DataFrame` is backed by a Narwhals-compliant Dataframe, such as:
+  - `narwhals._pandas_like.dataframe.PandasLikeDataFrame`
+  - `narwhals._arrow.dataframe.ArrowDataFrame`
+  - `narwhals._polars.dataframe.PolarsDataFrame`
+- each Narwhals-compliant DataFrame is backed by a native Dataframe, for example:
+  - `narwhals._pandas_like.dataframe.PandasLikeDataFrame` is backed by a pandas DataFrame
+  - `narwhals._arrow.dataframe.ArrowDataFrame` is backed by a PyArrow Table
+  - `narwhals._polars.dataframe.PolarsDataFrame` is backed by a Polars DataFrame
+
+Each implementation defines its own objects in subfolders such as `narwhals._pandas_like`,
+`narwhals._arrow`, `narwhals._polars`, whereas the top-level modules such as `narwhals.dataframe`
+and `narwhals.series` coordinate how to dispatch the Narwhals API to each backend.
 
 ## Group-by
 
