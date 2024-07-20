@@ -169,7 +169,7 @@ class ArrowSeries:
 
     def drop_nulls(self) -> int:
         pc = get_pyarrow_compute()
-        return pc.drop_null(self._native_series)
+        return self._from_native_series(pc.drop_null(self._native_series))
 
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
