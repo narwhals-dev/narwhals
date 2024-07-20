@@ -28,6 +28,9 @@ class PolarsDataFrame:
     def __native_namespace__(self) -> Any:
         return get_polars()
 
+    def _from_native_dataframe(self, df: Any) -> Self:
+        return self.__class__(df)
+
     def _from_native_object(self, obj: Any) -> Any:
         pl = get_polars()
         if isinstance(obj, pl.Series):
@@ -35,7 +38,7 @@ class PolarsDataFrame:
 
             return PolarsSeries(obj)
         if isinstance(obj, pl.DataFrame):
-            return self.__class__(obj)
+            return self._from_native_dataframe(obj)
         if isinstance(obj, pl.LazyFrame):
             from narwhals._polars.dataframe import PolarsLazyFrame
 
@@ -44,8 +47,9 @@ class PolarsDataFrame:
         return obj
 
     def __getattr__(self, attr: str) -> Any:
-        if attr == 'collect':
+        if attr == "collect":
             raise AttributeError
+
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._from_native_object(
@@ -103,9 +107,11 @@ class PolarsDataFrame:
             }
         else:
             return df.to_dict(as_series=False)
-        
+
     def group_by(self, by: list[str]) -> Any:
-        return self._from_native_object(self._native_dataframe.group_by(by))
+        from narwhals._polars.group_by import PolarsGroupBy
+
+        return PolarsGroupBy(self, by)
 
 
 class PolarsLazyFrame:
@@ -148,3 +154,8 @@ class PolarsLazyFrame:
 
     def collect(self) -> PolarsDataFrame:
         return PolarsDataFrame(self._native_dataframe.collect())
+
+    def group_by(self, by: list[str]) -> Any:
+        from narwhals._polars.group_by import PolarsLazyGroupBy
+
+        return PolarsLazyGroupBy(self, by)
