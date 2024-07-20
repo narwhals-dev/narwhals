@@ -313,7 +313,6 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return DataFrame(
             PolarsDataFrame(native_object),
-            backend_version=parse_version(pl.__version__),
             level="full",
         )
     elif (pl := get_polars()) is not None and isinstance(native_object, pl.LazyFrame):
@@ -325,7 +324,6 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return LazyFrame(
             PolarsLazyFrame(native_object),
-            backend_version=parse_version(pl.__version__),
             level="full",
         )
     elif (pd := get_pandas()) is not None and isinstance(native_object, pd.DataFrame):
@@ -338,7 +336,6 @@ def from_native(  # noqa: PLR0915
                 backend_version=parse_version(pd.__version__),
                 implementation=Implementation.PANDAS,
             ),
-            backend_version=parse_version(pd.__version__),
             level="full",
         )
     elif (mpd := get_modin()) is not None and isinstance(native_object, mpd.DataFrame):
@@ -351,7 +348,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
             ),
-            backend_version=parse_version(mpd.__version__),
             level="full",
         )
     elif (cudf := get_cudf()) is not None and isinstance(  # pragma: no cover
@@ -366,7 +362,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
             ),
-            backend_version=parse_version(cudf.__version__),
             level="full",
         )
     elif (pa := get_pyarrow()) is not None and isinstance(native_object, pa.Table):
@@ -375,7 +370,6 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return DataFrame(
             ArrowDataFrame(native_object, backend_version=parse_version(pa.__version__)),
-            backend_version=parse_version(pa.__version__),
             level="full",
         )
     elif hasattr(native_object, "__dataframe__"):
@@ -388,7 +382,6 @@ def from_native(  # noqa: PLR0915
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(
             InterchangeFrame(native_object.__dataframe__()),
-            backend_version=(0,),
             level="interchange",
         )
     elif hasattr(native_object, "__narwhals_dataframe__"):
@@ -398,7 +391,6 @@ def from_native(  # noqa: PLR0915
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(
             native_object.__narwhals_dataframe__(),
-            backend_version=(0,),
             level="full",
         )
     elif hasattr(native_object, "__narwhals_lazyframe__"):
@@ -411,7 +403,6 @@ def from_native(  # noqa: PLR0915
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return LazyFrame(
             native_object.__narwhals_lazyframe__(),
-            backend_version=(0,),
             level="full",
         )
     elif (pl := get_polars()) is not None and isinstance(native_object, pl.Series):
@@ -420,7 +411,6 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return Series(
             PolarsSeries(native_object),
-            backend_version=parse_version(pl.__version__),
             level="full",
         )
     elif (pd := get_pandas()) is not None and isinstance(native_object, pd.Series):
@@ -433,7 +423,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
             ),
-            backend_version=parse_version(pd.__version__),
             level="full",
         )
     elif (mpd := get_modin()) is not None and isinstance(native_object, mpd.Series):
@@ -446,7 +435,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
             ),
-            backend_version=parse_version(mpd.__version__),
             level="full",
         )
     elif (cudf := get_cudf()) is not None and isinstance(
@@ -461,7 +449,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
             ),
-            backend_version=parse_version(cudf.__version__),
             level="full",
         )
     elif (pa := get_pyarrow()) is not None and isinstance(native_object, pa.ChunkedArray):
@@ -472,7 +459,6 @@ def from_native(  # noqa: PLR0915
             ArrowSeries(
                 native_object, backend_version=parse_version(pa.__version__), name=""
             ),
-            backend_version=parse_version(pa.__version__),
             level="full",
         )
     elif hasattr(native_object, "__narwhals_series__"):
@@ -482,7 +468,6 @@ def from_native(  # noqa: PLR0915
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return Series(
             native_object.__narwhals_series__(),
-            backend_version=(0,),
             level="full",
         )
     elif strict:

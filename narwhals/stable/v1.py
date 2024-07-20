@@ -466,19 +466,16 @@ def _stableify(
     if isinstance(obj, NwDataFrame):
         return DataFrame(
             obj._compliant_frame,
-            backend_version=obj._backend_version,
             level=obj._level,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
             obj._compliant_frame,
-            backend_version=obj._backend_version,
             level=obj._level,
         )
     if isinstance(obj, NwSeries):
         return Series(
             obj._compliant_series,
-            backend_version=obj._backend_version,
             level=obj._level,
         )
     if isinstance(obj, NwExpr):

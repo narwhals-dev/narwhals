@@ -34,7 +34,6 @@ FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
 class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
-    _backend_version: tuple[int, ...]
     _level: Literal["full", "interchange"]
 
     def __len__(self) -> Any:
@@ -50,7 +49,6 @@ class BaseFrame(Generic[FrameT]):
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
             df,
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -109,7 +107,6 @@ class BaseFrame(Generic[FrameT]):
     def lazy(self) -> LazyFrame[Any]:
         return LazyFrame(
             self._compliant_frame.lazy(),
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -207,10 +204,8 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        backend_version: tuple[int, ...],
         level: Literal["full", "interchange"],
     ) -> None:
-        self._backend_version = backend_version
         self._level: Literal["full", "interchange"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
@@ -440,7 +435,6 @@ class DataFrame(BaseFrame[FrameT]):
 
         return Series(
             self._compliant_frame.get_column(name),
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -509,7 +503,6 @@ class DataFrame(BaseFrame[FrameT]):
 
             return Series(
                 self._compliant_frame[item],
-                backend_version=self._backend_version,
                 level=self._level,
             )
 
@@ -574,7 +567,6 @@ class DataFrame(BaseFrame[FrameT]):
             return {
                 key: Series(
                     value,
-                    backend_version=self._backend_version,
                     level=self._level,
                 )
                 for key, value in self._compliant_frame.to_dict(
@@ -1720,7 +1712,6 @@ class DataFrame(BaseFrame[FrameT]):
 
         return Series(
             self._compliant_frame.is_duplicated(),
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -1806,7 +1797,6 @@ class DataFrame(BaseFrame[FrameT]):
 
         return Series(
             self._compliant_frame.is_unique(),
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -1947,10 +1937,8 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        backend_version: tuple[int, ...],
         level: Literal["full", "interchange"],
     ) -> None:
-        self._backend_version = backend_version
         self._level = level
         if hasattr(df, "__narwhals_lazyframe__"):
             self._compliant_frame: Any = df.__narwhals_lazyframe__()
@@ -2014,7 +2002,6 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return DataFrame(
             self._compliant_frame.collect(),
-            backend_version=self._backend_version,
             level=self._level,
         )
 
