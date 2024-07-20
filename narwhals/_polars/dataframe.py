@@ -58,6 +58,11 @@ class PolarsDataFrame:
             return PolarsSeries(result)
         return self._from_native_frame(result)
 
+    def get_column(self, name: str) -> Any:
+        from narwhals._polars.series import PolarsSeries
+
+        return PolarsSeries(self._native_dataframe.get_column(name))
+
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.columns  # type: ignore[no-any-return]

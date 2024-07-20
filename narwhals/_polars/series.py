@@ -68,6 +68,10 @@ class PolarsSeries:
     def shape(self) -> tuple[int]:
         return (len(self),)
 
+    @property
+    def name(self) -> str:
+        return self._native_series.name  # type: ignore[no-any-return]
+
     def __getitem__(self, item: Any) -> Any:
         return self._from_native_object(self._native_series.__getitem__(item))
 
