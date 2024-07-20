@@ -57,7 +57,7 @@ def test_q1(library: str, request: Any) -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = query_result.to_dict(as_series=False)
+    result = query_result
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],
@@ -125,7 +125,7 @@ def test_q1_w_generic_funcs(library: str, request: Any) -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = query_result.to_dict(as_series=False)
+    result = query_result
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],
