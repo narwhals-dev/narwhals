@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import reverse_translate_dtype
+from narwhals._polars.utils import translate_dtype
 
 PL = get_polars()
 
@@ -71,6 +72,10 @@ class PolarsSeries:
     @property
     def name(self) -> str:
         return self._native_series.name  # type: ignore[no-any-return]
+
+    @property
+    def dtype(self) -> DType:
+        return translate_dtype(self._native_series.dtype)
 
     def __getitem__(self, item: Any) -> Any:
         return self._from_native_object(self._native_series.__getitem__(item))

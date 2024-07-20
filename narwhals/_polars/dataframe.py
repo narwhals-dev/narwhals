@@ -57,6 +57,10 @@ class PolarsDataFrame:
         schema = self._native_dataframe.schema
         return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
+    def collect_schema(self) -> dict[str, Any]:
+        schema = dict(self._native_dataframe.collect_schema())
+        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+
     @property
     def shape(self) -> tuple[int, int]:
         return self._native_dataframe.shape  # type: ignore[no-any-return]
@@ -114,6 +118,15 @@ class PolarsLazyFrame:
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.columns  # type: ignore[no-any-return]
+
+    @property
+    def schema(self) -> dict[str, Any]:
+        schema = self._native_dataframe.schema
+        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+
+    def collect_schema(self) -> dict[str, Any]:
+        schema = dict(self._native_dataframe.collect_schema())
+        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
     def collect(self) -> PolarsDataFrame:
         return PolarsDataFrame(self._native_dataframe.collect())
