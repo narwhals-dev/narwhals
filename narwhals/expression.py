@@ -3051,7 +3051,12 @@ def col(*names: str | Iterable[str]) -> Expr:
         │ 8   │
         └─────┘
     """
-    return Expr(lambda plx: plx.col(*names))
+
+    def func(plx: Any) -> Any:
+        breakpoint()
+        return plx.col(*names)
+
+    return Expr(func)
 
 
 def all() -> Expr:
