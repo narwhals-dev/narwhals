@@ -68,3 +68,47 @@ class PolarsNamespace:
 
         pl = get_polars()
         return PolarsExpr(pl.lit(value, dtype=reverse_translate_dtype(dtype)))
+
+    @property
+    def selectors(self) -> PolarsSelectors:
+        return PolarsSelectors()
+
+
+class PolarsSelectors:
+    def by_dtype(self, dtypes: Iterable[dtypes.DType]) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        return PolarsExpr(
+            pl.selectors.by_dtype([reverse_translate_dtype(dtype) for dtype in dtypes])
+        )
+
+    def numeric(self) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        return PolarsExpr(pl.selectors.numeric())
+
+    def boolean(self) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        return PolarsExpr(pl.selectors.boolean())
+
+    def string(self) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        return PolarsExpr(pl.selectors.string())
+
+    def categorical(self) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        return PolarsExpr(pl.selectors.categorical())
+
+    def all(self) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        return PolarsExpr(pl.selectors.all())
