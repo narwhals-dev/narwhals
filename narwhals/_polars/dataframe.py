@@ -44,6 +44,8 @@ class PolarsDataFrame:
         return obj
 
     def __getattr__(self, attr: str) -> Any:
+        if attr == 'collect':
+            raise AttributeError
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._from_native_object(
@@ -101,6 +103,9 @@ class PolarsDataFrame:
             }
         else:
             return df.to_dict(as_series=False)
+        
+    def group_by(self, by: list[str]) -> Any:
+        return self._from_native_object(self._native_dataframe.group_by(by))
 
 
 class PolarsLazyFrame:
