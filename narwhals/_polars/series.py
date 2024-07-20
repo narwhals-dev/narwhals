@@ -25,7 +25,7 @@ class PolarsSeries:
         self._native_series = series
         self._backend_version = backend_version
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return "PolarsSeries"
 
     def __narwhals_series__(self) -> Self:
@@ -48,15 +48,11 @@ class PolarsSeries:
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(series, backend_version=self._backend_version)
-        if isinstance(series, pl.LazyFrame):
-            from narwhals._polars.dataframe import PolarsLazyFrame
-
-            return PolarsLazyFrame(series, backend_version=self._backend_version)
         # scalar
         return series
 
     def __getattr__(self, attr: str) -> Any:
-        if attr == "as_py":
+        if attr == "as_py":  # pragma: no cover
             raise AttributeError
 
         def func(*args: Any, **kwargs: Any) -> Any:

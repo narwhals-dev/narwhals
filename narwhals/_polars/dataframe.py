@@ -17,7 +17,7 @@ class PolarsDataFrame:
         self._native_dataframe = df
         self._backend_version = backend_version
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return "PolarsDataFrame"
 
     def __narwhals_dataframe__(self) -> Self:
@@ -40,15 +40,11 @@ class PolarsDataFrame:
             return PolarsSeries(obj, backend_version=self._backend_version)
         if isinstance(obj, pl.DataFrame):
             return self._from_native_dataframe(obj)
-        if isinstance(obj, pl.LazyFrame):
-            from narwhals._polars.dataframe import PolarsLazyFrame
-
-            return PolarsLazyFrame(obj, backend_version=self._backend_version)
         # scalar
         return obj
 
     def __getattr__(self, attr: str) -> Any:
-        if attr == "collect":
+        if attr == "collect":  # pragma: no cover
             raise AttributeError
 
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -65,7 +61,7 @@ class PolarsDataFrame:
         return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
     def collect_schema(self) -> dict[str, Any]:
-        if self._backend_version < (1,):
+        if self._backend_version < (1,):  # pragma: no cover
             schema = self._native_dataframe.schema
         else:
             schema = dict(self._native_dataframe.collect_schema())
@@ -122,7 +118,7 @@ class PolarsDataFrame:
         return PolarsGroupBy(self, by)
 
     def with_row_index(self, name: str) -> Any:
-        if self._backend_version < (0, 20, 4):
+        if self._backend_version < (0, 20, 4):  # pragma: no cover
             return self._from_native_dataframe(
                 self._native_dataframe.with_row_count(name)
             )
@@ -134,7 +130,7 @@ class PolarsLazyFrame:
         self._native_dataframe = df
         self._backend_version = backend_version
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
 
     def __narwhals_lazyframe__(self) -> Self:
@@ -146,25 +142,10 @@ class PolarsLazyFrame:
     def _from_native_dataframe(self, df: Any) -> Self:
         return self.__class__(df, backend_version=self._backend_version)
 
-    def _from_native_object(self, obj: Any) -> Any:
-        pl = get_polars()
-        if isinstance(obj, pl.Series):
-            from narwhals._polars.series import PolarsSeries
-
-            return PolarsSeries(obj, backend_version=self._backend_version)
-        if isinstance(obj, pl.DataFrame):
-            from narwhals._polars.dataframe import PolarsDataFrame
-
-            return PolarsDataFrame(obj, backend_version=self._backend_version)
-        if isinstance(obj, pl.LazyFrame):
-            return self._from_native_dataframe(obj)
-        # scalar
-        return obj
-
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_object(
+            return self._from_native_dataframe(
                 getattr(self._native_dataframe, attr)(*args, **kwargs)
             )
 
@@ -180,7 +161,7 @@ class PolarsLazyFrame:
         return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
     def collect_schema(self) -> dict[str, Any]:
-        if self._backend_version < (1,):
+        if self._backend_version < (1,):  # pragma: no cover
             schema = self._native_dataframe.schema
         else:
             schema = dict(self._native_dataframe.collect_schema())
@@ -197,7 +178,7 @@ class PolarsLazyFrame:
         return PolarsLazyGroupBy(self, by)
 
     def with_row_index(self, name: str) -> Any:
-        if self._backend_version < (0, 20, 4):
+        if self._backend_version < (0, 20, 4):  # pragma: no cover
             return self._from_native_dataframe(
                 self._native_dataframe.with_row_count(name)
             )

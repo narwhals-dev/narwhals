@@ -96,11 +96,11 @@ def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         return pl.String()
     if dtype == dtypes.Boolean:
         return pl.Boolean()
-    if dtype == dtypes.Object:
+    if dtype == dtypes.Object:  # pragma: no cover
         return pl.Object()
     if dtype == dtypes.Categorical:
         return pl.Categorical()
-    if dtype == dtypes.Enum:
+    if dtype == dtypes.Enum:  # pragma: no cover
         return pl.Enum()
     if dtype == dtypes.Datetime:
         return pl.Datetime()
@@ -108,4 +108,4 @@ def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         return pl.Duration()
     if dtype == dtypes.Date:
         return pl.Date()
-    return pl.Unknown()
+    return pl.Unknown()  # pragma: no cover

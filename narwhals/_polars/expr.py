@@ -17,13 +17,13 @@ class PolarsExpr:
     def __init__(self, expr: Any) -> None:
         self._native_expr = expr
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return "PolarsExpr"
 
-    def __narwhals_expr__(self) -> Self:
+    def __narwhals_expr__(self) -> Self:  # pragma: no cover
         return self
 
-    def __narwhals_namespace__(self) -> PolarsNamespace:
+    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
         return PolarsNamespace(backend_version=self._backend_version)
 
     def _from_native_expr(self, expr: Any) -> Self:

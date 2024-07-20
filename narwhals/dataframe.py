@@ -209,9 +209,9 @@ class DataFrame(BaseFrame[FrameT]):
         self._level: Literal["full", "interchange"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
-        else:
+        else:  # pragma: no cover
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
-            raise TypeError(msg)
+            raise AssertionError(msg)
 
     def __array__(self) -> np.ndarray:
         return self._compliant_frame.to_numpy()
@@ -1942,9 +1942,9 @@ class LazyFrame(BaseFrame[FrameT]):
         self._level = level
         if hasattr(df, "__narwhals_lazyframe__"):
             self._compliant_frame: Any = df.__narwhals_lazyframe__()
-        else:
+        else:  # pragma: no cover
             msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
-            raise TypeError(msg)
+            raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals LazyFrame                            "
