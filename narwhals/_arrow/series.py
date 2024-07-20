@@ -8,6 +8,7 @@ from typing import Sequence
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 
@@ -143,6 +144,9 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.invert(self._native_series))
 
+    def len(self) -> int:
+        return len(self._native_series)
+
     def filter(self, other: Any) -> Self:
         other = validate_column_comparand(other)
         return self._from_native_series(self._native_series.filter(other))
@@ -266,6 +270,13 @@ class ArrowSeries:
         else:
             return self._from_native_series(ser.slice(abs(n)))
 
+    def is_in(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        pa = get_pyarrow()
+        value_set = pa.array(other)
+        ser = self._native_series
+        return self._from_native_series(pc.is_in(ser, value_set=value_set))
+
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:
             if len(self) != 1:
@@ -276,6 +287,36 @@ class ArrowSeries:
                 raise ValueError(msg)
             return self._native_series[0].as_py()
         return self._native_series[index].as_py()
+
+    def zip_with(self: Self, mask: Self, other: Self) -> Self:
+        pc = get_pyarrow_compute()
+
+        return self._from_native_series(
+            pc.replace_with_mask(
+                self._native_series.combine_chunks(),
+                pc.invert(mask._native_series.combine_chunks()),
+                other._native_series.combine_chunks(),
+            )
+        )
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        np = get_numpy()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        num_rows = len(self)
+
+        if n is None and fraction is not None:
+            n = int(num_rows * fraction)
+
+        idx = np.arange(0, num_rows)
+        mask = np.random.choice(idx, size=n, replace=with_replacement)
+        return self._from_native_series(pc.take(ser, mask))
 
     @property
     def shape(self) -> tuple[int]:

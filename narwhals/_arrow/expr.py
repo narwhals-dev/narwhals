@@ -128,6 +128,9 @@ class ArrowExpr:
     def __invert__(self) -> Self:
         return reuse_series_implementation(self, "__invert__")
 
+    def len(self) -> Self:
+        return reuse_series_implementation(self, "len", returns_scalar=True)
+
     def filter(self, *predicates: Any) -> Self:
         from narwhals._arrow.namespace import ArrowNamespace
 
@@ -197,6 +200,20 @@ class ArrowExpr:
 
     def tail(self, n: int) -> Self:
         return reuse_series_implementation(self, "tail", n)
+
+    def is_in(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "is_in", other)
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
+        )
 
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
