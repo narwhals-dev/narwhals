@@ -11,7 +11,7 @@ import polars as pl
 from jinja2 import Template
 
 TEMPLATE_PATH: Final[Path] = Path("utils") / "api-completeness.md.jinja"
-DESTINATION_PATH: Final[Path] = Path("docs") / "api-reference" / "api-completeness.md"
+DESTINATION_PATH: Final[Path] = Path("docs") / "api-completeness.md"
 
 
 MODULES = ["dataframe", "series", "expression"]

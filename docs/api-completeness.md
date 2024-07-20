@@ -70,7 +70,7 @@ In the following table it is possible to check which method is implemented for w
 | Expr                    | max                | :white_check_mark: | :white_check_mark: |
 | Expr                    | mean               | :white_check_mark: | :white_check_mark: |
 | Expr                    | min                | :white_check_mark: | :white_check_mark: |
-| Expr                    | n_unique           | :white_check_mark: | :x:                |
+| Expr                    | n_unique           | :white_check_mark: | :white_check_mark: |
 | Expr                    | null_count         | :white_check_mark: | :white_check_mark: |
 | Expr                    | over               | :white_check_mark: | :x:                |
 | Expr                    | quantile           | :white_check_mark: | :x:                |
@@ -158,7 +158,7 @@ In the following table it is possible to check which method is implemented for w
 | Series                  | max                | :white_check_mark: | :white_check_mark: |
 | Series                  | mean               | :white_check_mark: | :white_check_mark: |
 | Series                  | min                | :white_check_mark: | :white_check_mark: |
-| Series                  | n_unique           | :white_check_mark: | :x:                |
+| Series                  | n_unique           | :white_check_mark: | :white_check_mark: |
 | Series                  | name               | :white_check_mark: | :white_check_mark: |
 | Series                  | null_count         | :white_check_mark: | :white_check_mark: |
 | Series                  | quantile           | :white_check_mark: | :x:                |

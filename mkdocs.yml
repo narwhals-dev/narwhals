@@ -20,6 +20,7 @@ nav:
   - how_it_works.md
   - Roadmap: roadmap.md
   - Related projects: related.md
+  - API Completeness: api-completeness.md
   - API Reference:
     - api-reference/narwhals.md
     - api-reference/dataframe.md
@@ -39,7 +40,6 @@ nav:
     - api-reference/index.md
     - api-reference/selectors.md
     - api-reference/typing.md
-    - api-reference/api-completeness.md
 theme:
   name: material
   font: false
