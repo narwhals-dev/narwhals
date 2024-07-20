@@ -1,34 +1,38 @@
 from __future__ import annotations
-from narwhals.dependencies import get_polars
 
 from typing import TYPE_CHECKING
+from typing import Any
+
+from narwhals.dependencies import get_polars
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.dtypes import DType
 
-from narwhals._polars.utils import reverse_translate_dtype 
 from narwhals._polars.namespace import PolarsNamespace
+from narwhals._polars.utils import reverse_translate_dtype
 
 PL = get_polars()
 
 
 class PolarsSeries:
-    def __init__(self, series):
+    def __init__(self, series: Any) -> None:
         self._native_series = series
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "PolarsSeries"
 
-    def __narwhals_series__(self):
+    def __narwhals_series__(self) -> Self:
         return self
 
-    def __narwhals_namespace__(self):
+    def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace()
 
-    def _from_native_series(self, series):
+    def _from_native_series(self, series: Any) -> Self:
         return self.__class__(series)
 
-    def _from_native_object(self, series):
+    def _from_native_object(self, series: Any) -> Any:
         pl = get_polars()
         if isinstance(series, pl.Series):
             return self._from_native_series(series)
@@ -43,17 +47,17 @@ class PolarsSeries:
         # scalar
         return series
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Any:
         if attr == "as_py":
             raise AttributeError
         return lambda *args, **kwargs: self._from_native_object(
             getattr(self._native_series, attr)(*args, **kwargs)
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._native_series)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> Any:
         return self._from_native_object(self._native_series.__getitem__(item))
 
     def cast(self, dtype: DType) -> Self:

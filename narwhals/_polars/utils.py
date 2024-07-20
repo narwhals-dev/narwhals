@@ -1,12 +1,16 @@
 from __future__ import annotations
-from typing import Any
-from narwhals.dependencies import get_polars
-from narwhals import dtypes
 
-def extract_native(obj):
-    from narwhals._polars.dataframe import PolarsDataFrame, PolarsLazyFrame
-    from narwhals._polars.series import PolarsSeries
+from typing import Any
+
+from narwhals import dtypes
+from narwhals.dependencies import get_polars
+
+
+def extract_native(obj: Any) -> Any:
+    from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.series import PolarsSeries
 
     if isinstance(obj, (PolarsDataFrame, PolarsLazyFrame)):
         return obj._native_dataframe
@@ -16,12 +20,14 @@ def extract_native(obj):
         return obj._native_expr
     return obj
 
-def extract_args_kwargs(args, kwargs):
+
+def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, Any]]:
     args = [extract_native(arg) for arg in args]
     kwargs = {k: extract_native(v) for k, v in kwargs.items()}
     return args, kwargs
 
-def translate_dtype(dtype):
+
+def translate_dtype(dtype: Any) -> dtypes.DType:
     pl = get_polars()
     if dtype == pl.Float64:
         return dtypes.Float64()
@@ -61,9 +67,11 @@ def translate_dtype(dtype):
         return dtypes.Date()
     return dtypes.Unknown()
 
+
 def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     pl = get_polars()
     from narwhals import dtypes
+
     if dtype == dtypes.Float64:
         return pl.Float64()
     if dtype == dtypes.Float32:

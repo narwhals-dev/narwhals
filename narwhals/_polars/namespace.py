@@ -1,7 +1,10 @@
-import polars as pl
-from narwhals import dtypes
+from __future__ import annotations
 
+from typing import Any
+
+from narwhals import dtypes
 from narwhals._polars.utils import extract_args_kwargs
+from narwhals.dependencies import get_polars
 
 
 class PolarsNamespace:
@@ -25,14 +28,13 @@ class PolarsNamespace:
     Duration = dtypes.Duration
     Date = dtypes.Date
 
-    def _from_native_expr(self, expr):
+    def __getattr__(self, attr: str) -> Any:
         from narwhals._polars.expr import PolarsExpr
 
-        return PolarsExpr(expr)
+        pl = get_polars()
 
-    def __getattr__(self, attr):
-        def func(*args, **kwargs):
-            args, kwargs = extract_args_kwargs(args, kwargs)
-            return self._from_native_expr(getattr(pl, attr)(*args, **kwargs))
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return PolarsExpr(getattr(pl, attr)(*args, **kwargs))
 
         return func

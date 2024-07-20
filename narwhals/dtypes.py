@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals.dependencies import get_polars
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:

@@ -82,9 +82,7 @@ class BaseFrame(Generic[FrameT]):
 
     @property
     def schema(self) -> Schema:
-        return Schema(
-            {k: v for k, v in self._compliant_frame.schema.items()}
-        )
+        return Schema(self._compliant_frame.schema.items())
 
     def collect_schema(self) -> Schema:
         native_schema = dict(self._compliant_frame.collect_schema())
