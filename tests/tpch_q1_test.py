@@ -27,11 +27,11 @@ def test_q1(library: str, request: Any) -> None:
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     elif library == "polars":
-        df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
+        df_raw = pl.read_parquet("tests/data/lineitem.parquet")
     else:
         df_raw = pq.read_table("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)
-    df = nw.from_native(df_raw).lazy()
+    df = nw.from_native(df_raw)  # .lazy()
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
@@ -57,7 +57,7 @@ def test_q1(library: str, request: Any) -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = query_result.collect().to_dict(as_series=False)
+    result = query_result.to_dict(as_series=False)
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],

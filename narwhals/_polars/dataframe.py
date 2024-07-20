@@ -69,6 +69,9 @@ class PolarsLazyFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
+    def __narwhals_namespace__(self) -> PolarsNamespace:
+        return PolarsNamespace()
+
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(df)
 
