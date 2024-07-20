@@ -93,3 +93,21 @@ class PolarsExpr:
 
     def __invert__(self) -> Self:
         return self._from_native_expr(self._native_expr.__invert__())
+
+    @property
+    def dt(self) -> PolarsExprDateTimeNamespace:
+        return PolarsExprDateTimeNamespace(self)
+
+
+class PolarsExprDateTimeNamespace:
+    def __init__(self, expr: PolarsExpr) -> None:
+        self._expr = expr
+
+    def __getattr__(self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._expr._from_native_expr(
+                getattr(self._expr._native_expr.dt, attr)(*args, **kwargs)
+            )
+
+        return func
