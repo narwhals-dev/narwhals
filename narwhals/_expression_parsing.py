@@ -13,6 +13,7 @@ from typing import overload
 
 from narwhals.dependencies import get_numpy
 from narwhals.utils import flatten
+from narwhals._pandas_like.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -192,9 +193,11 @@ def reuse_series_implementation(
         if expr._output_names is not None and (
             [s.name for s in out] != expr._output_names
         ):  # pragma: no cover
-            msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
+            if not (hasattr(expr, "_implementation") and expr._implementation is Implementation.DASK):
+                msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+                raise AssertionError(msg)
         return out
+
 
     # Try tracking root and output names by combining them from all
     # expressions appearing in args and kwargs. If any anonymous

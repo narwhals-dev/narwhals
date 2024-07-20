@@ -179,7 +179,6 @@ class PandasLikeSeries:
         dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
         return self._from_native_series(ser.astype(dtype))
 
-    @not_implemented_in(Implementation.DASK)
     def item(self: Self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
         if index is None:
@@ -189,7 +188,11 @@ class PandasLikeSeries:
                     f" or an explicit index is provided (Series is of length {len(self)})"
                 )
                 raise ValueError(msg)
+            if self._implementation is Implementation.DASK:
+                return self._native_series.max()  # hack: taking aggregation of 1 item
             return self._native_series.iloc[0]
+        if self._implementation is Implementation.DASK:
+            raise NotImplementedError("Dask does not support index locating")
         return self._native_series.iloc[index]
 
     def to_frame(self) -> Any:
@@ -202,6 +205,8 @@ class PandasLikeSeries:
         )
 
     def to_list(self) -> Any:
+        if self._implementation is Implementation.DASK:
+            return self._native_series.compute().to_list()
         return self._native_series.to_list()
 
     def is_between(
@@ -614,6 +619,11 @@ class PandasLikeSeriesCatNamespace:
 
     def get_categories(self) -> PandasLikeSeries:
         s = self._pandas_series._native_series
+        if self._pandas_series._implementation is Implementation.DASK:
+            pd = get_pandas()
+            dd = get_dask()
+            native_series = pd.Series(s.cat.as_known().cat.categories, name=s.name).pipe(dd.from_pandas)
+            return self._pandas_series._from_native_series(native_series)
         return self._pandas_series._from_native_series(
             s.__class__(s.cat.categories, name=s.name)
         )

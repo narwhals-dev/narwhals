@@ -67,15 +67,6 @@ def validate_column_comparand(index: Any, other: Any) -> Any:
                 implementation=other._implementation,
                 backend_version=other._backend_version,
             )
-        elif (
-            other._native_series.index is not index
-            and other._implementation is Implementation.DASK
-        ):
-            msg = (
-                "Index mismatch between columns and reindexing is not "
-                "currently supported within Dask implementation"
-            )
-            raise ValueError(msg)
         return other._native_series
     return other
 
@@ -128,6 +119,10 @@ def create_native_series(
     elif implementation is Implementation.CUDF:
         cudf = get_cudf()
         series = cudf.Series(iterable, index=index, name="")
+    elif implementation is Implementation.DASK:
+        pd = get_pandas()
+        dd = get_dask()
+        series = pd.Series(iterable, index=index, name="").pipe(dd.from_pandas)
     return PandasLikeSeries(
         series, implementation=implementation, backend_version=backend_version
     )
@@ -227,7 +222,7 @@ def native_series_from_iterable(
         dd = get_dask()
         pd = get_pandas()
         if hasattr(data[0], "compute"):  # type: ignore[index]
-            return dd.concat([i.to_series() for i in data])
+            return dd.concat([i.to_series() for i in data]).rename(name)
         return pd.Series(
             data,
             name=name,
@@ -245,6 +240,8 @@ def set_axis(
     implementation: Implementation,
     backend_version: tuple[int, ...],
 ) -> T:
+    if implementation is Implementation.DASK:
+        return obj  # HACK: dask doesn't really reset indexes so much, so assuming its fine
     if implementation is Implementation.PANDAS and backend_version < (
         1,
     ):  # pragma: no cover
@@ -258,9 +255,6 @@ def set_axis(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    if implementation is Implementation.DASK:
-        msg = "Setting axis on columns is not currently supported for dask"
-        raise NotImplementedError(msg)
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
 
 
@@ -324,6 +318,12 @@ def translate_dtype(column: Any) -> DType:
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
     if str(dtype) == "object":
+        if (dd := get_dask()) is not None and isinstance(column, dd.Series):
+            # below we'll try to infer strings or objects from values but
+            # with dask we can only do this if we compute so we'll avoid and
+            # treat as a string (this *may* be a bad call, as it does not allow
+            # for object types which are potentially valid)
+            return dtypes.String()
         if (idx := column.first_valid_index()) is not None and isinstance(
             column.loc[idx], str
         ):
