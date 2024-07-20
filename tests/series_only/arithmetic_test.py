@@ -65,15 +65,15 @@ def test_mod(left: int, right: int) -> None:
         nw.col("a") // right
     )
     compare_dicts(result, expected)
-    if parse_version(pd.__version__) >= (2, 2):
+    if parse_version(pd.__version__) < (2, 2):  # pragma: no cover
         # Bug in old version of pandas
+        pass
+    else:
         result = nw.from_native(
             pd.DataFrame({"a": [left]}).convert_dtypes(dtype_backend="pyarrow"),
             eager_only=True,
         ).select(nw.col("a") // right)
         compare_dicts(result, expected)
-    else:  # pragma: no cover
-        pass
     result = nw.from_native(
         pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
     ).select(nw.col("a") // right)
