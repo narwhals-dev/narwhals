@@ -9,7 +9,7 @@ jobs:
   altair:
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
@@ -25,7 +25,7 @@ jobs:
             ~/.cache/pip
             $RUNNER_TOOL_CACHE/Python/*
             ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build--${{ matrix.python-version }}
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}
       - name: clone-altair
         run: |
             git clone https://github.com/vega/altair.git --depth=1
