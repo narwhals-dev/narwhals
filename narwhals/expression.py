@@ -3199,10 +3199,9 @@ def mean(*columns: str) -> Expr:
 
         We define a dataframe agnostic function:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.mean("a"))
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select(nw.mean("a"))
 
         We can then pass either pandas or Polars to `func`:
 
