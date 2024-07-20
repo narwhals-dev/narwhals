@@ -89,6 +89,19 @@ class PolarsDataFrame:
     def lazy(self) -> PolarsLazyFrame:
         return PolarsLazyFrame(self._native_dataframe.lazy())
 
+    def to_dict(self, *, as_series: bool) -> Any:
+        df = self._native_dataframe
+
+        if as_series:
+            from narwhals._polars.series import PolarsSeries
+
+            return {
+                name: PolarsSeries(col)
+                for name, col in df.to_dict(as_series=True).items()
+            }
+        else:
+            return df.to_dict(as_series=False)
+
 
 class PolarsLazyFrame:
     def __init__(self, df: Any) -> None:
