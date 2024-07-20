@@ -68,6 +68,9 @@ class PolarsDataFrame:
 
         return PolarsSeries(self._native_dataframe.is_duplicated())
 
+    def is_empty(self) -> bool:
+        return len(self._native_dataframe) == 0
+
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.columns  # type: ignore[no-any-return]
