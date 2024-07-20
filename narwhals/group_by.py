@@ -116,7 +116,7 @@ class GroupBy(Generic[DataFrameT]):
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
         yield from (  # type: ignore[misc]
-            (tupleify(key), self._df._compliant_frame._from_native_object(df))
+            (tupleify(key), self._df._from_compliant_dataframe(df))
             for (key, df) in self._grouped.__iter__()
         )
 
