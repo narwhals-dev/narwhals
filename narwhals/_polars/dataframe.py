@@ -63,6 +63,11 @@ class PolarsDataFrame:
 
         return PolarsSeries(self._native_dataframe.get_column(name))
 
+    def is_duplicated(self) -> Any:
+        from narwhals._polars.series import PolarsSeries
+
+        return PolarsSeries(self._native_dataframe.is_duplicated())
+
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.columns  # type: ignore[no-any-return]

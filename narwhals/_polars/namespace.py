@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals.dependencies import get_polars
+
+if TYPE_CHECKING:
+    from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.dataframe import PolarsLazyFrame
 
 
 class PolarsNamespace:
@@ -38,3 +44,19 @@ class PolarsNamespace:
             return PolarsExpr(getattr(pl, attr)(*args, **kwargs))
 
         return func
+
+    def concat(
+        self,
+        items: Iterable[PolarsDataFrame | PolarsLazyFrame],
+        *,
+        how: str = "vertical",
+    ) -> PolarsDataFrame | PolarsLazyFrame:
+        from narwhals._polars.dataframe import PolarsDataFrame
+        from narwhals._polars.dataframe import PolarsLazyFrame
+
+        pl = get_polars()
+        dfs: list[Any] = [item._native_dataframe for item in items]
+        result = pl.concat(dfs, how=how)
+        if isinstance(result, pl.DataFrame):
+            return PolarsDataFrame(result)
+        return PolarsLazyFrame(result)
