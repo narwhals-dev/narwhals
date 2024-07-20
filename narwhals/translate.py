@@ -292,6 +292,8 @@ def from_native(  # noqa: PLR0915
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.utils import Implementation
+    from narwhals._polars.dataframe import PolarsDataFrame, PolarsLazyFrame
+    from narwhals._polars.series import PolarsSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -317,7 +319,7 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `series_only` with polars.DataFrame"
             raise TypeError(msg)
         return DataFrame(
-            native_object,
+            PolarsDataFrame(native_object),
             is_polars=True,
             backend_version=parse_version(pl.__version__),
             level="full",
@@ -330,7 +332,7 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with polars.LazyFrame"
             raise TypeError(msg)
         return LazyFrame(
-            native_object,
+            PolarsLazyFrame(native_object),
             is_polars=True,
             backend_version=parse_version(pl.__version__),
             level="full",
@@ -433,7 +435,7 @@ def from_native(  # noqa: PLR0915
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
         return Series(
-            native_object,
+            PolarsSeries(native_object),
             is_polars=True,
             backend_version=parse_version(pl.__version__),
             level="full",
