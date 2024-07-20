@@ -161,6 +161,14 @@ class PolarsSeries:
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
 
+    @property
+    def str(self) -> PolarsSeriesStringNamespace:
+        return PolarsSeriesStringNamespace(self)
+
+    @property
+    def cat(self) -> PolarsSeriesCatNamespace:
+        return PolarsSeriesCatNamespace(self)
+
 
 class PolarsSeriesDateTimeNamespace:
     def __init__(self, series: PolarsSeries) -> None:
@@ -171,6 +179,34 @@ class PolarsSeriesDateTimeNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(
                 getattr(self._series._native_series.dt, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsSeriesStringNamespace:
+    def __init__(self, series: PolarsSeries) -> None:
+        self._series = series
+
+    def __getattr__(self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._series._from_native_series(
+                getattr(self._series._native_series.str, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsSeriesCatNamespace:
+    def __init__(self, series: PolarsSeries) -> None:
+        self._series = series
+
+    def __getattr__(self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._series._from_native_series(
+                getattr(self._series._native_series.cat, attr)(*args, **kwargs)
             )
 
         return func
