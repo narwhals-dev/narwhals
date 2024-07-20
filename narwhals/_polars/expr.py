@@ -1,4 +1,11 @@
-from narwhals._polars.utils import extract_args_kwargs
+from __future__ import annotations
+from narwhals.dependencies import get_polars
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from narwhals.dtypes import DType
+from narwhals._polars.utils import extract_args_kwargs, reverse_translate_dtype
 
 
 class PolarsExpr:
@@ -25,3 +32,8 @@ class PolarsExpr:
             )
 
         return func
+
+    def cast(self, dtype: DType) -> Self:
+        expr = self._native_expr
+        dtype = reverse_translate_dtype(dtype)
+        return self._from_native_expr(expr.cast(dtype))

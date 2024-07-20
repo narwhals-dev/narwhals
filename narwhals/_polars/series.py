@@ -1,4 +1,13 @@
+from __future__ import annotations
 from narwhals.dependencies import get_polars
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from narwhals.dtypes import DType
+
+from narwhals._polars.utils import reverse_translate_dtype 
+from narwhals._polars.namespace import PolarsNamespace
 
 PL = get_polars()
 
@@ -12,6 +21,9 @@ class PolarsSeries:
 
     def __narwhals_series__(self):
         return self
+
+    def __narwhals_namespace__(self):
+        return PolarsNamespace()
 
     def _from_native_series(self, series):
         return self.__class__(series)
@@ -43,3 +55,8 @@ class PolarsSeries:
 
     def __getitem__(self, item):
         return self._from_native_object(self._native_series.__getitem__(item))
+
+    def cast(self, dtype: DType) -> Self:
+        ser = self._native_series
+        dtype = reverse_translate_dtype(dtype)
+        return self._from_native_series(ser.cast(dtype))

@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Any
 from narwhals.dependencies import get_polars
 from narwhals import dtypes
 
@@ -58,3 +60,44 @@ def translate_dtype(dtype):
     if dtype == pl.Date:
         return dtypes.Date()
     return dtypes.Unknown()
+
+def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
+    pl = get_polars()
+    from narwhals import dtypes
+    if dtype == dtypes.Float64:
+        return pl.Float64()
+    if dtype == dtypes.Float32:
+        return pl.Float32()
+    if dtype == dtypes.Int64:
+        return pl.Int64()
+    if dtype == dtypes.Int32:
+        return pl.Int32()
+    if dtype == dtypes.Int16:
+        return pl.Int16()
+    if dtype == dtypes.Int8:
+        return pl.Int8()
+    if dtype == dtypes.UInt64:
+        return pl.UInt64()
+    if dtype == dtypes.UInt32:
+        return pl.UInt32()
+    if dtype == dtypes.UInt16:
+        return pl.UInt16()
+    if dtype == dtypes.UInt8:
+        return pl.UInt8()
+    if dtype == dtypes.String:
+        return pl.String()
+    if dtype == dtypes.Boolean:
+        return pl.Boolean()
+    if dtype == dtypes.Object:
+        return pl.Object()
+    if dtype == dtypes.Categorical:
+        return pl.Categorical()
+    if dtype == dtypes.Enum:
+        return pl.Enum()
+    if dtype == dtypes.Datetime:
+        return pl.Datetime()
+    if dtype == dtypes.Duration:
+        return pl.Duration()
+    if dtype == dtypes.Date:
+        return pl.Date()
+    return pl.Unknown()
