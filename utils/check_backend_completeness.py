@@ -26,7 +26,6 @@ MISSING = [
     "Series.is_last_distinct",
     "Series.is_sorted",
     "Series.is_unique",
-    "Series.n_unique",
     "Series.quantile",
     "Series.round",
     "Series.shift",

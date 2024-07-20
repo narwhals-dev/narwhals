@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
 
 
-def extract_native(expr: Expr, other: Any) -> Any:
+def extract_compliant(expr: Expr, other: Any) -> Any:
     from narwhals.series import Series
 
     if isinstance(other, Expr):
@@ -132,122 +132,122 @@ class Expr:
     # --- binary ---
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._call(plx).__eq__(extract_native(plx, other))
+            lambda plx: self._call(plx).__eq__(extract_compliant(plx, other))
         )
 
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._call(plx).__ne__(extract_native(plx, other))
+            lambda plx: self._call(plx).__ne__(extract_compliant(plx, other))
         )
 
     def __and__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__and__(extract_native(plx, other))
+            lambda plx: self._call(plx).__and__(extract_compliant(plx, other))
         )
 
     def __rand__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rand__(extract_native(plx, other))
+            lambda plx: self._call(plx).__rand__(extract_compliant(plx, other))
         )
 
     def __or__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__or__(extract_native(plx, other))
+            lambda plx: self._call(plx).__or__(extract_compliant(plx, other))
         )
 
     def __ror__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__ror__(extract_native(plx, other))
+            lambda plx: self._call(plx).__ror__(extract_compliant(plx, other))
         )
 
     def __add__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__add__(extract_native(plx, other))
+            lambda plx: self._call(plx).__add__(extract_compliant(plx, other))
         )
 
     def __radd__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__radd__(extract_native(plx, other))
+            lambda plx: self._call(plx).__radd__(extract_compliant(plx, other))
         )
 
     def __sub__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__sub__(extract_native(plx, other))
+            lambda plx: self._call(plx).__sub__(extract_compliant(plx, other))
         )
 
     def __rsub__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rsub__(extract_native(plx, other))
+            lambda plx: self._call(plx).__rsub__(extract_compliant(plx, other))
         )
 
     def __truediv__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__truediv__(extract_native(plx, other))
+            lambda plx: self._call(plx).__truediv__(extract_compliant(plx, other))
         )
 
     def __rtruediv__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rtruediv__(extract_native(plx, other))
+            lambda plx: self._call(plx).__rtruediv__(extract_compliant(plx, other))
         )
 
     def __mul__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__mul__(extract_native(plx, other))
+            lambda plx: self._call(plx).__mul__(extract_compliant(plx, other))
         )
 
     def __rmul__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rmul__(extract_native(plx, other))
+            lambda plx: self._call(plx).__rmul__(extract_compliant(plx, other))
         )
 
     def __le__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__le__(extract_native(plx, other))
+            lambda plx: self._call(plx).__le__(extract_compliant(plx, other))
         )
 
     def __lt__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__lt__(extract_native(plx, other))
+            lambda plx: self._call(plx).__lt__(extract_compliant(plx, other))
         )
 
     def __gt__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__gt__(extract_native(plx, other))
+            lambda plx: self._call(plx).__gt__(extract_compliant(plx, other))
         )
 
     def __ge__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__ge__(extract_native(plx, other))
+            lambda plx: self._call(plx).__ge__(extract_compliant(plx, other))
         )
 
     def __pow__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__pow__(extract_native(plx, other))
+            lambda plx: self._call(plx).__pow__(extract_compliant(plx, other))
         )
 
     def __rpow__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rpow__(extract_native(plx, other))
+            lambda plx: self._call(plx).__rpow__(extract_compliant(plx, other))
         )
 
     def __floordiv__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__floordiv__(extract_native(plx, other))
+            lambda plx: self._call(plx).__floordiv__(extract_compliant(plx, other))
         )
 
     def __rfloordiv__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rfloordiv__(extract_native(plx, other))
+            lambda plx: self._call(plx).__rfloordiv__(extract_compliant(plx, other))
         )
 
     def __mod__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__mod__(extract_native(plx, other))
+            lambda plx: self._call(plx).__mod__(extract_compliant(plx, other))
         )
 
     def __rmod__(self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._call(plx).__rmod__(extract_native(plx, other))
+            lambda plx: self._call(plx).__rmod__(extract_compliant(plx, other))
         )
 
     # --- unary ---
@@ -995,7 +995,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._call(plx).filter(
-                *[extract_native(plx, pred) for pred in flatten(predicates)]
+                *[extract_compliant(plx, pred) for pred in flatten(predicates)]
             )
         )
 
@@ -3345,7 +3345,9 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         └─────┘
     """
     return Expr(
-        lambda plx: plx.sum_horizontal([extract_native(plx, v) for v in flatten(exprs)])
+        lambda plx: plx.sum_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
     )
 
 
@@ -3403,7 +3405,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         └───────┴───────┴───────┘
     """
     return Expr(
-        lambda plx: plx.all_horizontal([extract_native(plx, v) for v in flatten(exprs)])
+        lambda plx: plx.all_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
     )
 
 
