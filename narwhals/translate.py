@@ -312,7 +312,7 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `series_only` with polars.DataFrame"
             raise TypeError(msg)
         return DataFrame(
-            PolarsDataFrame(native_object),
+            PolarsDataFrame(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
         )
     elif (pl := get_polars()) is not None and isinstance(native_object, pl.LazyFrame):
@@ -323,7 +323,7 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with polars.LazyFrame"
             raise TypeError(msg)
         return LazyFrame(
-            PolarsLazyFrame(native_object),
+            PolarsLazyFrame(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
         )
     elif (pd := get_pandas()) is not None and isinstance(native_object, pd.DataFrame):
@@ -410,7 +410,7 @@ def from_native(  # noqa: PLR0915
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
         return Series(
-            PolarsSeries(native_object),
+            PolarsSeries(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
         )
     elif (pd := get_pandas()) is not None and isinstance(native_object, pd.Series):

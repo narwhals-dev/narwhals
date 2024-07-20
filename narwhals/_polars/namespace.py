@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Sequence
 
 from narwhals import dtypes
 from narwhals._polars.utils import extract_args_kwargs
@@ -36,6 +37,9 @@ class PolarsNamespace:
     Duration = dtypes.Duration
     Date = dtypes.Date
 
+    def __init__(self, *, backend_version: tuple[int, ...]) -> None:
+        self._backend_version = backend_version
+
     def __getattr__(self, attr: str) -> Any:
         from narwhals._polars.expr import PolarsExpr
 
@@ -47,9 +51,17 @@ class PolarsNamespace:
 
         return func
 
+    def len(self) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        if self._backend_version < (0, 20, 4):
+            return PolarsExpr(pl.count().alias("len"))
+        return PolarsExpr(pl.len())
+
     def concat(
         self,
-        items: Iterable[PolarsDataFrame | PolarsLazyFrame],
+        items: Sequence[PolarsDataFrame | PolarsLazyFrame],
         *,
         how: str = "vertical",
     ) -> PolarsDataFrame | PolarsLazyFrame:
@@ -60,14 +72,16 @@ class PolarsNamespace:
         dfs: list[Any] = [item._native_dataframe for item in items]
         result = pl.concat(dfs, how=how)
         if isinstance(result, pl.DataFrame):
-            return PolarsDataFrame(result)
-        return PolarsLazyFrame(result)
+            return PolarsDataFrame(result, backend_version=items[0]._backend_version)
+        return PolarsLazyFrame(result, backend_version=items[0]._backend_version)
 
-    def lit(self, value: Any, dtype: dtypes.DType) -> PolarsExpr:
+    def lit(self, value: Any, dtype: dtypes.DType | None = None) -> PolarsExpr:
         from narwhals._polars.expr import PolarsExpr
 
         pl = get_polars()
-        return PolarsExpr(pl.lit(value, dtype=reverse_translate_dtype(dtype)))
+        if dtype is not None:
+            return PolarsExpr(pl.lit(value, dtype=reverse_translate_dtype(dtype)))
+        return PolarsExpr(pl.lit(value))
 
     @property
     def selectors(self) -> PolarsSelectors:

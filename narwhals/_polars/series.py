@@ -8,6 +8,7 @@ from narwhals._polars.utils import extract_native
 from narwhals.dependencies import get_polars
 
 if TYPE_CHECKING:
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -20,8 +21,9 @@ PL = get_polars()
 
 
 class PolarsSeries:
-    def __init__(self, series: Any) -> None:
+    def __init__(self, series: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_series = series
+        self._backend_version = backend_version
 
     def __repr__(self) -> str:
         return "PolarsSeries"
@@ -33,10 +35,10 @@ class PolarsSeries:
         return get_polars()
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace()
+        return PolarsNamespace(backend_version=self._backend_version)
 
     def _from_native_series(self, series: Any) -> Self:
-        return self.__class__(series)
+        return self.__class__(series, backend_version=self._backend_version)
 
     def _from_native_object(self, series: Any) -> Any:
         pl = get_polars()
@@ -45,11 +47,11 @@ class PolarsSeries:
         if isinstance(series, pl.DataFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
-            return PolarsDataFrame(series)
+            return PolarsDataFrame(series, backend_version=self._backend_version)
         if isinstance(series, pl.LazyFrame):
             from narwhals._polars.dataframe import PolarsLazyFrame
 
-            return PolarsLazyFrame(series)
+            return PolarsLazyFrame(series, backend_version=self._backend_version)
         # scalar
         return series
 
@@ -87,6 +89,11 @@ class PolarsSeries:
         ser = self._native_series
         dtype = reverse_translate_dtype(dtype)
         return self._from_native_series(ser.cast(dtype))
+
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        if self._backend_version < (0, 20, 29):  # pragma: no cover
+            return self._native_series.__array__(dtype=dtype)
+        return self._native_series.__array__(dtype=dtype, copy=copy)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._from_native_series(self._native_series.__eq__(extract_native(other)))

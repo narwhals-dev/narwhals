@@ -13,8 +13,9 @@ if TYPE_CHECKING:
 
 
 class PolarsDataFrame:
-    def __init__(self, df: Any) -> None:
+    def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_dataframe = df
+        self._backend_version = backend_version
 
     def __repr__(self) -> str:
         return "PolarsDataFrame"
@@ -23,26 +24,26 @@ class PolarsDataFrame:
         return self
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace()
+        return PolarsNamespace(backend_version=self._backend_version)
 
     def __native_namespace__(self) -> Any:
         return get_polars()
 
     def _from_native_dataframe(self, df: Any) -> Self:
-        return self.__class__(df)
+        return self.__class__(df, backend_version=self._backend_version)
 
     def _from_native_object(self, obj: Any) -> Any:
         pl = get_polars()
         if isinstance(obj, pl.Series):
             from narwhals._polars.series import PolarsSeries
 
-            return PolarsSeries(obj)
+            return PolarsSeries(obj, backend_version=self._backend_version)
         if isinstance(obj, pl.DataFrame):
             return self._from_native_dataframe(obj)
         if isinstance(obj, pl.LazyFrame):
             from narwhals._polars.dataframe import PolarsLazyFrame
 
-            return PolarsLazyFrame(obj)
+            return PolarsLazyFrame(obj, backend_version=self._backend_version)
         # scalar
         return obj
 
@@ -64,7 +65,10 @@ class PolarsDataFrame:
         return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
     def collect_schema(self) -> dict[str, Any]:
-        schema = dict(self._native_dataframe.collect_schema())
+        if self._backend_version < (1,):
+            schema = self._native_dataframe.schema
+        else:
+            schema = dict(self._native_dataframe.collect_schema())
         return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
     @property
@@ -77,13 +81,15 @@ class PolarsDataFrame:
         if isinstance(result, pl.Series):
             from narwhals._polars.series import PolarsSeries
 
-            return PolarsSeries(result)
+            return PolarsSeries(result, backend_version=self._backend_version)
         return self._from_native_object(result)
 
     def get_column(self, name: str) -> Any:
         from narwhals._polars.series import PolarsSeries
 
-        return PolarsSeries(self._native_dataframe.get_column(name))
+        return PolarsSeries(
+            self._native_dataframe.get_column(name), backend_version=self._backend_version
+        )
 
     def is_empty(self) -> bool:
         return len(self._native_dataframe) == 0
@@ -93,7 +99,9 @@ class PolarsDataFrame:
         return self._native_dataframe.columns  # type: ignore[no-any-return]
 
     def lazy(self) -> PolarsLazyFrame:
-        return PolarsLazyFrame(self._native_dataframe.lazy())
+        return PolarsLazyFrame(
+            self._native_dataframe.lazy(), backend_version=self._backend_version
+        )
 
     def to_dict(self, *, as_series: bool) -> Any:
         df = self._native_dataframe
@@ -102,7 +110,7 @@ class PolarsDataFrame:
             from narwhals._polars.series import PolarsSeries
 
             return {
-                name: PolarsSeries(col)
+                name: PolarsSeries(col, backend_version=self._backend_version)
                 for name, col in df.to_dict(as_series=True).items()
             }
         else:
@@ -113,10 +121,18 @@ class PolarsDataFrame:
 
         return PolarsGroupBy(self, by)
 
+    def with_row_index(self, name: str) -> Any:
+        if self._backend_version < (0, 20, 4):
+            return self._from_native_dataframe(
+                self._native_dataframe.with_row_count(name)
+            )
+        return self._from_native_dataframe(self._native_dataframe.with_row_index(name))
+
 
 class PolarsLazyFrame:
-    def __init__(self, df: Any) -> None:
+    def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_dataframe = df
+        self._backend_version = backend_version
 
     def __repr__(self) -> str:
         return "PolarsLazyFrame"
@@ -125,21 +141,21 @@ class PolarsLazyFrame:
         return self
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace()
+        return PolarsNamespace(backend_version=self._backend_version)
 
     def _from_native_dataframe(self, df: Any) -> Self:
-        return self.__class__(df)
+        return self.__class__(df, backend_version=self._backend_version)
 
     def _from_native_object(self, obj: Any) -> Any:
         pl = get_polars()
         if isinstance(obj, pl.Series):
             from narwhals._polars.series import PolarsSeries
 
-            return PolarsSeries(obj)
+            return PolarsSeries(obj, backend_version=self._backend_version)
         if isinstance(obj, pl.DataFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
-            return PolarsDataFrame(obj)
+            return PolarsDataFrame(obj, backend_version=self._backend_version)
         if isinstance(obj, pl.LazyFrame):
             return self._from_native_dataframe(obj)
         # scalar
@@ -164,13 +180,25 @@ class PolarsLazyFrame:
         return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
     def collect_schema(self) -> dict[str, Any]:
-        schema = dict(self._native_dataframe.collect_schema())
+        if self._backend_version < (1,):
+            schema = self._native_dataframe.schema
+        else:
+            schema = dict(self._native_dataframe.collect_schema())
         return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
     def collect(self) -> PolarsDataFrame:
-        return PolarsDataFrame(self._native_dataframe.collect())
+        return PolarsDataFrame(
+            self._native_dataframe.collect(), backend_version=self._backend_version
+        )
 
     def group_by(self, by: list[str]) -> Any:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
         return PolarsLazyGroupBy(self, by)
+
+    def with_row_index(self, name: str) -> Any:
+        if self._backend_version < (0, 20, 4):
+            return self._from_native_dataframe(
+                self._native_dataframe.with_row_count(name)
+            )
+        return self._from_native_dataframe(self._native_dataframe.with_row_index(name))

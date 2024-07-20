@@ -24,7 +24,7 @@ class PolarsExpr:
         return self
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace()
+        return PolarsNamespace(backend_version=self._backend_version)
 
     def _from_native_expr(self, expr: Any) -> Self:
         return self.__class__(expr)
