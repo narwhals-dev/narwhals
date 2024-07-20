@@ -45,6 +45,10 @@ class PolarsDataFrame:
         schema = self._native_dataframe.schema
         return {name: translate_dtype(dtype) for name, dtype in schema.items()}
 
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self._native_dataframe.shape  # type: ignore[no-any-return]
+
     def __getitem__(self, item: Any) -> Any:
         pl = get_polars()
         result = self._native_dataframe.__getitem__(item)
@@ -58,13 +62,16 @@ class PolarsDataFrame:
     def columns(self) -> list[str]:
         return self._native_dataframe.columns  # type: ignore[no-any-return]
 
+    def lazy(self) -> PolarsLazyFrame:
+        return PolarsLazyFrame(self._native_dataframe.lazy())
+
 
 class PolarsLazyFrame:
     def __init__(self, df: Any) -> None:
         self._native_dataframe = df
 
     def __repr__(self) -> str:
-        return "PolarsDataFrame"
+        return "PolarsLazyFrame"
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
@@ -76,10 +83,17 @@ class PolarsLazyFrame:
         return self.__class__(df)
 
     def __getattr__(self, attr: str) -> Any:
-        return lambda *args, **kwargs: self._from_native_frame(
-            getattr(self._native_dataframe, attr)(*args, **kwargs)
-        )
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._from_native_frame(
+                getattr(self._native_dataframe, attr)(*args, **kwargs)
+            )
+
+        return func
 
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.columns  # type: ignore[no-any-return]
+
+    def collect(self) -> PolarsDataFrame:
+        return PolarsDataFrame(self._native_dataframe.collect())

@@ -64,6 +64,10 @@ class PolarsSeries:
     def __len__(self) -> int:
         return len(self._native_series)
 
+    @property
+    def shape(self) -> tuple[int]:
+        return (len(self),)
+
     def __getitem__(self, item: Any) -> Any:
         return self._from_native_object(self._native_series.__getitem__(item))
 
