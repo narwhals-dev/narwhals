@@ -350,7 +350,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
         counter += 1
         if counter > 100:
             msg = (
-                "Internal Error: Narwhals was not able to generate a column name to perform cross "
+                "Internal Error: Narwhals was not able to generate a column name to perform given "
                 "join operation"
             )
             raise AssertionError(msg)
