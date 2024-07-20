@@ -84,7 +84,7 @@ class BaseFrame(Generic[FrameT]):
     @property
     def schema(self) -> Schema:
         return Schema(
-            {k: to_narwhals_dtype(v) for k, v in self._compliant_frame.schema.items()}
+            {k: v for k, v in self._compliant_frame.schema.items()}
         )
 
     def collect_schema(self) -> Schema:

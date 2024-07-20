@@ -1,7 +1,7 @@
 import polars as pl
 
 from narwhals._polars.namespace import PolarsNamespace
-from narwhals._polars.utils import extract_args_kwargs
+from narwhals._polars.utils import extract_args_kwargs, translate_dtype
 from narwhals.dependencies import get_polars
 
 
@@ -30,8 +30,13 @@ class PolarsDataFrame:
 
         return func
 
-    # def __getattr__(self, attr):
-    #     return lambda *args, **kwargs: self._from_native_frame(getattr(self._native_dataframe, attr)(*args, **kwargs))
+    @property
+    def schema(self):
+        schema = self._native_dataframe.schema
+        return {
+            name: translate_dtype(dtype)
+            for name, dtype in schema.items()
+        }
 
     def __getitem__(self, item):
         pl = get_polars()
