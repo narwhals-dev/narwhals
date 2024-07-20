@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import secrets
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -325,3 +326,31 @@ def is_ordered_categorical(series: Series) -> bool:
         return native_series.type.ordered  # type: ignore[no-any-return]
     # If it doesn't match any of the above, let's just play it safe and return False.
     return False  # pragma: no cover
+
+
+def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
+    """Generates a unique token of specified n_bytes that is not present in the given list of columns.
+
+    Arguments:
+        n_bytes : The number of bytes to generate for the token.
+        columns : The list of columns to check for uniqueness.
+
+    Returns:
+        A unique token that is not present in the given list of columns.
+
+    Raises:
+        AssertionError: If a unique token cannot be generated after 100 attempts.
+    """
+    counter = 0
+    while True:
+        token = secrets.token_hex(n_bytes)
+        if token not in columns:
+            return token
+
+        counter += 1
+        if counter > 100:
+            msg = (
+                "Internal Error: Narwhals was not able to generate a column name to perform given "
+                "join operation"
+            )
+            raise AssertionError(msg)

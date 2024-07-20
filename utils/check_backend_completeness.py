@@ -18,7 +18,6 @@ MISSING = [
     "DataFrame.pipe",
     "DataFrame.unique",
     "Series.drop_nulls",
-    "Series.fill_null",
     "Series.from_iterable",
     "Series.is_between",
     "Series.is_duplicated",

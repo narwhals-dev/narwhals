@@ -215,6 +215,9 @@ class ArrowExpr:
             self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
         )
 
+    def fill_null(self: Self, value: Any) -> Self:
+        return reuse_series_implementation(self, "fill_null", value=value)
+
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
