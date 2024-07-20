@@ -6,11 +6,13 @@ from typing import Iterable
 
 from narwhals import dtypes
 from narwhals._polars.utils import extract_args_kwargs
+from narwhals._polars.utils import reverse_translate_dtype
 from narwhals.dependencies import get_polars
 
 if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.expr import PolarsExpr
 
 
 class PolarsNamespace:
@@ -60,3 +62,9 @@ class PolarsNamespace:
         if isinstance(result, pl.DataFrame):
             return PolarsDataFrame(result)
         return PolarsLazyFrame(result)
+
+    def lit(self, value: Any, dtype: dtypes.DType) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        return PolarsExpr(pl.lit(value, dtype=reverse_translate_dtype(dtype)))
