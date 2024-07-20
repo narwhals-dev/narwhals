@@ -9,6 +9,7 @@ from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 
@@ -185,6 +186,12 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.count(self._native_series)  # type: ignore[no-any-return]
 
+    def n_unique(self) -> int:
+        pc = get_pyarrow_compute()
+        unique_values = pc.unique(self._native_series)
+        count_unique = pc.count(unique_values, mode="all")
+        return count_unique.as_py()  # type: ignore[no-any-return]
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
@@ -293,6 +300,36 @@ class ArrowSeries:
                 raise ValueError(msg)
             return self._native_series[0].as_py()
         return self._native_series[index].as_py()
+
+    def zip_with(self: Self, mask: Self, other: Self) -> Self:
+        pc = get_pyarrow_compute()
+
+        return self._from_native_series(
+            pc.replace_with_mask(
+                self._native_series.combine_chunks(),
+                pc.invert(mask._native_series.combine_chunks()),
+                other._native_series.combine_chunks(),
+            )
+        )
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        np = get_numpy()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        num_rows = len(self)
+
+        if n is None and fraction is not None:
+            n = int(num_rows * fraction)
+
+        idx = np.arange(0, num_rows)
+        mask = np.random.choice(idx, size=n, replace=with_replacement)
+        return self._from_native_series(pc.take(ser, mask))
 
     @property
     def shape(self) -> tuple[int]:

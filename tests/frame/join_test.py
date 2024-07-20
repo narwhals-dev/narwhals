@@ -15,7 +15,9 @@ def test_inner_join_two_keys(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data), eager_only=True)
     df_right = df
-    result = df.join(df_right, left_on=["a", "b"], right_on=["a", "b"], how="inner")
+    result = df.lazy().join(
+        df_right.lazy(), left_on=["a", "b"], right_on=["a", "b"], how="inner"
+    )
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
     compare_dicts(result, expected)
 

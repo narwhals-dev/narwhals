@@ -150,6 +150,9 @@ class ArrowExpr:
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
+    def n_unique(self) -> Self:
+        return reuse_series_implementation(self, "n_unique", returns_scalar=True)
+
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
@@ -206,6 +209,17 @@ class ArrowExpr:
 
     def is_in(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "is_in", other)
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
+        )
 
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
