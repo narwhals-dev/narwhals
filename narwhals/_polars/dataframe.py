@@ -127,8 +127,23 @@ class PolarsLazyFrame:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace()
 
-    def _from_native_object(self, df: Any) -> Self:
+    def _from_native_dataframe(self, df: Any) -> Self:
         return self.__class__(df)
+
+    def _from_native_object(self, obj: Any) -> Any:
+        pl = get_polars()
+        if isinstance(obj, pl.Series):
+            from narwhals._polars.series import PolarsSeries
+
+            return PolarsSeries(obj)
+        if isinstance(obj, pl.DataFrame):
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame(obj)
+        if isinstance(obj, pl.LazyFrame):
+            return self._from_native_dataframe(obj)
+        # scalar
+        return obj
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
