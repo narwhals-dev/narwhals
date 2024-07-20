@@ -114,7 +114,8 @@ def test_dtypes() -> None:
         "r": nw.Enum,
     }
 
-    assert df_from_pl.schema == df_from_pl.collect_schema() == expected
+    assert df_from_pl.schema == df_from_pl.collect_schema()
+    assert df_from_pl.schema == expected
     assert {name: df_from_pl[name].dtype for name in df_from_pl.columns} == expected
 
     # pandas/pyarrow only have categorical, not enum

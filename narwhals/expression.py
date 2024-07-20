@@ -7,11 +7,9 @@ from typing import Iterable
 from typing import Literal
 
 from narwhals.dependencies import get_numpy
-from narwhals.dependencies import get_polars
 from narwhals.dtypes import DType
 from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -3051,7 +3049,11 @@ def col(*names: str | Iterable[str]) -> Expr:
         │ 8   │
         └─────┘
     """
-    return Expr(lambda plx: plx.col(*names))
+
+    def func(plx: Any) -> Any:
+        return plx.col(*names)
+
+    return Expr(func)
 
 
 def all() -> Expr:
@@ -3127,12 +3129,6 @@ def len() -> Expr:
     """
 
     def func(plx: Any) -> Any:
-        if (
-            (pl := get_polars()) is not None
-            and plx is pl
-            and parse_version(pl.__version__) <= (0, 20, 4)
-        ):  # pragma: no cover
-            return plx.count().alias("len")
         return plx.len()
 
     return Expr(func)

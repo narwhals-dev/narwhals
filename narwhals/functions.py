@@ -12,7 +12,6 @@ from typing import Union
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.utils import validate_laziness
-from narwhals.utils import validate_same_library
 
 # Missing type parameters for generic type "DataFrame"
 # However, trying to provide one results in mypy still complaining...
@@ -35,7 +34,6 @@ def concat(
         msg = "No items to concatenate"
         raise ValueError(msg)
     items = list(items)
-    validate_same_library(items)
     validate_laziness(items)
     first_item = items[0]
     plx = first_item.__narwhals_namespace__()

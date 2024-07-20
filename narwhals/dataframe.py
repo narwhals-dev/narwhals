@@ -13,10 +13,8 @@ from typing import overload
 
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
-from narwhals.dtypes import to_narwhals_dtype
 from narwhals.schema import Schema
 from narwhals.utils import flatten
-from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -36,29 +34,21 @@ FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
 class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
-    _is_polars: bool
-    _backend_version: tuple[int, ...]
     _level: Literal["full", "interchange"]
 
     def __len__(self) -> Any:
         return self._compliant_frame.__len__()
 
     def __native_namespace__(self) -> Any:
-        if self._is_polars:
-            return get_polars()
         return self._compliant_frame.__native_namespace__()
 
     def __narwhals_namespace__(self) -> Any:
-        if self._is_polars:
-            return get_polars()
         return self._compliant_frame.__narwhals_namespace__()
 
     def _from_compliant_dataframe(self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(  # type: ignore[call-arg]
             df,
-            is_polars=self._is_polars,
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -90,34 +80,17 @@ class BaseFrame(Generic[FrameT]):
 
     @property
     def schema(self) -> Schema:
-        return Schema(
-            {
-                k: to_narwhals_dtype(v, is_polars=self._is_polars)
-                for k, v in self._compliant_frame.schema.items()
-            }
-        )
+        return Schema(self._compliant_frame.schema.items())
 
     def collect_schema(self) -> Schema:
-        if self._is_polars and self._backend_version < (1, 0, 0):  # pragma: no cover
-            native_schema = self._compliant_frame.schema
-        else:
-            native_schema = dict(self._compliant_frame.collect_schema())
+        native_schema = dict(self._compliant_frame.collect_schema())
 
-        return Schema(
-            {
-                k: to_narwhals_dtype(v, is_polars=self._is_polars)
-                for k, v in native_schema.items()
-            }
-        )
+        return Schema(native_schema)
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         return function(self, *args, **kwargs)
 
     def with_row_index(self, name: str = "index") -> Self:
-        if self._is_polars and self._backend_version < (0, 20, 4):  # pragma: no cover
-            return self._from_compliant_dataframe(
-                self._compliant_frame.with_row_count(name),
-            )
         return self._from_compliant_dataframe(
             self._compliant_frame.with_row_index(name),
         )
@@ -134,8 +107,6 @@ class BaseFrame(Generic[FrameT]):
     def lazy(self) -> LazyFrame[Any]:
         return LazyFrame(
             self._compliant_frame.lazy(),
-            is_polars=self._is_polars,
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -206,7 +177,6 @@ class BaseFrame(Generic[FrameT]):
             msg = "Can not pass left_on, right_on for cross join"
             raise ValueError(msg)
 
-        validate_same_library([self, other])
         return self._from_compliant_dataframe(
             self._compliant_frame.join(
                 self._extract_compliant(other),
@@ -234,20 +204,14 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        backend_version: tuple[int, ...],
-        is_polars: bool,
         level: Literal["full", "interchange"],
     ) -> None:
-        self._is_polars = is_polars
-        self._backend_version = backend_version
         self._level: Literal["full", "interchange"] = level
         if hasattr(df, "__narwhals_dataframe__"):
             self._compliant_frame: Any = df.__narwhals_dataframe__()
-        elif is_polars and isinstance(df, get_polars().DataFrame):
-            self._compliant_frame = df
-        else:
-            msg = f"Expected Polars DataFrame or an object which implements `__narwhals_dataframe__`, got: {type(df)}"
-            raise TypeError(msg)
+        else:  # pragma: no cover
+            msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
+            raise AssertionError(msg)
 
     def __array__(self) -> np.ndarray:
         return self._compliant_frame.to_numpy()
@@ -471,8 +435,6 @@ class DataFrame(BaseFrame[FrameT]):
 
         return Series(
             self._compliant_frame.get_column(name),
-            backend_version=self._backend_version,
-            is_polars=self._is_polars,
             level=self._level,
         )
 
@@ -541,8 +503,6 @@ class DataFrame(BaseFrame[FrameT]):
 
             return Series(
                 self._compliant_frame[item],
-                backend_version=self._backend_version,
-                is_polars=self._is_polars,
                 level=self._level,
             )
 
@@ -607,8 +567,6 @@ class DataFrame(BaseFrame[FrameT]):
             return {
                 key: Series(
                     value,
-                    backend_version=self._backend_version,
-                    is_polars=self._is_polars,
                     level=self._level,
                 )
                 for key, value in self._compliant_frame.to_dict(
@@ -1754,8 +1712,6 @@ class DataFrame(BaseFrame[FrameT]):
 
         return Series(
             self._compliant_frame.is_duplicated(),
-            backend_version=self._backend_version,
-            is_polars=self._is_polars,
             level=self._level,
         )
 
@@ -1841,8 +1797,6 @@ class DataFrame(BaseFrame[FrameT]):
 
         return Series(
             self._compliant_frame.is_unique(),
-            backend_version=self._backend_version,
-            is_polars=self._is_polars,
             level=self._level,
         )
 
@@ -1983,22 +1937,14 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         df: Any,
         *,
-        is_polars: bool,
-        backend_version: tuple[int, ...],
         level: Literal["full", "interchange"],
     ) -> None:
-        self._is_polars = is_polars
-        self._backend_version = backend_version
         self._level = level
         if hasattr(df, "__narwhals_lazyframe__"):
             self._compliant_frame: Any = df.__narwhals_lazyframe__()
-        elif is_polars and (
-            (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
-        ):
-            self._compliant_frame = df
-        else:
+        else:  # pragma: no cover
             msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
-            raise TypeError(msg)
+            raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals LazyFrame                            "
@@ -2056,8 +2002,6 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return DataFrame(
             self._compliant_frame.collect(),
-            is_polars=self._is_polars,
-            backend_version=self._backend_version,
             level=self._level,
         )
 
