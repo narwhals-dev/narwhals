@@ -28,13 +28,25 @@ class PolarsDataFrame:
     def __native_namespace__(self) -> Any:
         return get_polars()
 
-    def _from_native_frame(self, df: Any) -> Self:
-        return self.__class__(df)
+    def _from_native_object(self, obj: Any) -> Any:
+        pl = get_polars()
+        if isinstance(obj, pl.Series):
+            from narwhals._polars.series import PolarsSeries
+
+            return PolarsSeries(obj)
+        if isinstance(obj, pl.DataFrame):
+            return self.__class__(obj)
+        if isinstance(obj, pl.LazyFrame):
+            from narwhals._polars.dataframe import PolarsLazyFrame
+
+            return PolarsLazyFrame(obj)
+        # scalar
+        return obj
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_frame(
+            return self._from_native_object(
                 getattr(self._native_dataframe, attr)(*args, **kwargs)
             )
 
@@ -56,17 +68,12 @@ class PolarsDataFrame:
             from narwhals._polars.series import PolarsSeries
 
             return PolarsSeries(result)
-        return self._from_native_frame(result)
+        return self._from_native_object(result)
 
     def get_column(self, name: str) -> Any:
         from narwhals._polars.series import PolarsSeries
 
         return PolarsSeries(self._native_dataframe.get_column(name))
-
-    def is_duplicated(self) -> Any:
-        from narwhals._polars.series import PolarsSeries
-
-        return PolarsSeries(self._native_dataframe.is_duplicated())
 
     def is_empty(self) -> bool:
         return len(self._native_dataframe) == 0
@@ -92,13 +99,13 @@ class PolarsLazyFrame:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace()
 
-    def _from_native_frame(self, df: Any) -> Self:
+    def _from_native_object(self, df: Any) -> Self:
         return self.__class__(df)
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_frame(
+            return self._from_native_object(
                 getattr(self._native_dataframe, attr)(*args, **kwargs)
             )
 
