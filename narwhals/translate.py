@@ -57,17 +57,9 @@ def to_native(
     from narwhals.series import Series
 
     if isinstance(narwhals_object, BaseFrame):
-        return (
-            narwhals_object._compliant_frame
-            if narwhals_object._is_polars
-            else narwhals_object._compliant_frame._native_dataframe
-        )
+        return narwhals_object._compliant_frame._native_dataframe
     if isinstance(narwhals_object, Series):
-        return (
-            narwhals_object._compliant_series
-            if narwhals_object._is_polars
-            else narwhals_object._compliant_series._native_series
-        )
+        return narwhals_object._compliant_series._native_series
 
     if strict:
         msg = f"Expected Narwhals object, got {type(narwhals_object)}."
@@ -292,7 +284,8 @@ def from_native(  # noqa: PLR0915
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.utils import Implementation
-    from narwhals._polars.dataframe import PolarsDataFrame, PolarsLazyFrame
+    from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.series import PolarsSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
@@ -320,7 +313,6 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return DataFrame(
             PolarsDataFrame(native_object),
-            is_polars=True,
             backend_version=parse_version(pl.__version__),
             level="full",
         )
@@ -333,7 +325,6 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return LazyFrame(
             PolarsLazyFrame(native_object),
-            is_polars=True,
             backend_version=parse_version(pl.__version__),
             level="full",
         )
@@ -347,7 +338,6 @@ def from_native(  # noqa: PLR0915
                 backend_version=parse_version(pd.__version__),
                 implementation=Implementation.PANDAS,
             ),
-            is_polars=False,
             backend_version=parse_version(pd.__version__),
             level="full",
         )
@@ -361,7 +351,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
             ),
-            is_polars=False,
             backend_version=parse_version(mpd.__version__),
             level="full",
         )
@@ -377,7 +366,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
             ),
-            is_polars=False,
             backend_version=parse_version(cudf.__version__),
             level="full",
         )
@@ -387,7 +375,6 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return DataFrame(
             ArrowDataFrame(native_object, backend_version=parse_version(pa.__version__)),
-            is_polars=False,
             backend_version=parse_version(pa.__version__),
             level="full",
         )
@@ -401,7 +388,6 @@ def from_native(  # noqa: PLR0915
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(
             InterchangeFrame(native_object.__dataframe__()),
-            is_polars=False,
             backend_version=(0,),
             level="interchange",
         )
@@ -412,7 +398,6 @@ def from_native(  # noqa: PLR0915
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(
             native_object.__narwhals_dataframe__(),
-            is_polars=False,
             backend_version=(0,),
             level="full",
         )
@@ -426,7 +411,6 @@ def from_native(  # noqa: PLR0915
         # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return LazyFrame(
             native_object.__narwhals_lazyframe__(),
-            is_polars=False,
             backend_version=(0,),
             level="full",
         )
@@ -436,7 +420,6 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return Series(
             PolarsSeries(native_object),
-            is_polars=True,
             backend_version=parse_version(pl.__version__),
             level="full",
         )
@@ -450,7 +433,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
             ),
-            is_polars=False,
             backend_version=parse_version(pd.__version__),
             level="full",
         )
@@ -464,7 +446,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
             ),
-            is_polars=False,
             backend_version=parse_version(mpd.__version__),
             level="full",
         )
@@ -480,7 +461,6 @@ def from_native(  # noqa: PLR0915
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
             ),
-            is_polars=False,
             backend_version=parse_version(cudf.__version__),
             level="full",
         )
@@ -492,7 +472,6 @@ def from_native(  # noqa: PLR0915
             ArrowSeries(
                 native_object, backend_version=parse_version(pa.__version__), name=""
             ),
-            is_polars=False,
             backend_version=parse_version(pa.__version__),
             level="full",
         )
@@ -504,7 +483,6 @@ def from_native(  # noqa: PLR0915
         return Series(
             native_object.__narwhals_series__(),
             backend_version=(0,),
-            is_polars=False,
             level="full",
         )
     elif strict:

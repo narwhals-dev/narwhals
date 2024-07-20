@@ -179,9 +179,7 @@ def test_pandas_like_validate() -> None:
 )
 def test_init_series(series: Any, is_polars: Any, context: Any) -> None:
     with context:
-        result = nw.Series(
-            series, is_polars=is_polars, backend_version=(1, 2, 3), level="full"
-        )
+        result = nw.Series(series, backend_version=(1, 2, 3), level="full")
         assert isinstance(result, nw.Series)
 
 
@@ -219,9 +217,7 @@ def test_init_series(series: Any, is_polars: Any, context: Any) -> None:
 )
 def test_init_eager(dframe: Any, is_polars: Any, context: Any) -> None:
     with context:
-        result = nw.DataFrame(
-            dframe, is_polars=is_polars, backend_version=(1, 2, 3), level="full"
-        )  # type: ignore[var-annotated]
+        result = nw.DataFrame(dframe, backend_version=(1, 2, 3), level="full")  # type: ignore[var-annotated]
         assert isinstance(result, nw.DataFrame)
 
 
@@ -259,9 +255,7 @@ def test_init_eager(dframe: Any, is_polars: Any, context: Any) -> None:
 )
 def test_init_lazy(dframe: Any, is_polars: Any, context: Any) -> None:
     with context:
-        result = nw.LazyFrame(
-            dframe, is_polars=is_polars, backend_version=(1, 2, 3), level="full"
-        )  # type: ignore[var-annotated]
+        result = nw.LazyFrame(dframe, backend_version=(1, 2, 3), level="full")  # type: ignore[var-annotated]
         assert isinstance(result, nw.LazyFrame)
 
 

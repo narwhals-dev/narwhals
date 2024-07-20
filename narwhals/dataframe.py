@@ -16,7 +16,6 @@ from narwhals.dependencies import get_polars
 from narwhals.dtypes import to_narwhals_dtype
 from narwhals.schema import Schema
 from narwhals.utils import flatten
-from narwhals.utils import validate_same_library
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -85,21 +84,13 @@ class BaseFrame(Generic[FrameT]):
     @property
     def schema(self) -> Schema:
         return Schema(
-            {
-                k: to_narwhals_dtype(v)
-                for k, v in self._compliant_frame.schema.items()
-            }
+            {k: to_narwhals_dtype(v) for k, v in self._compliant_frame.schema.items()}
         )
 
     def collect_schema(self) -> Schema:
         native_schema = dict(self._compliant_frame.collect_schema())
 
-        return Schema(
-            {
-                k: to_narwhals_dtype(v)
-                for k, v in native_schema.items()
-            }
-        )
+        return Schema({k: to_narwhals_dtype(v) for k, v in native_schema.items()})
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         return function(self, *args, **kwargs)
@@ -192,7 +183,6 @@ class BaseFrame(Generic[FrameT]):
             msg = "Can not pass left_on, right_on for cross join"
             raise ValueError(msg)
 
-        validate_same_library([self, other])
         return self._from_compliant_dataframe(
             self._compliant_frame.join(
                 self._extract_compliant(other),
