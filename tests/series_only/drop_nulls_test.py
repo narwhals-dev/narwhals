@@ -26,5 +26,4 @@ def test_drop_nulls(constructor: Any) -> None:
         "D": [9, 10, 12],
     }
 
- 
     compare_dicts(result, expected)
