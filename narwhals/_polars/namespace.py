@@ -13,7 +13,6 @@ class PolarsNamespace:
         def func(*args, **kwargs):
             breakpoint()
             args, kwargs = extract_args_kwargs(args, kwargs)
-            breakpoint()
             return self._from_native_expr(getattr(pl, attr)(*args, **kwargs))
 
         return func

@@ -3053,7 +3053,6 @@ def col(*names: str | Iterable[str]) -> Expr:
     """
 
     def func(plx: Any) -> Any:
-        breakpoint()
         return plx.col(*names)
 
     return Expr(func)

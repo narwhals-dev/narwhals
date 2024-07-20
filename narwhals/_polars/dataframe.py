@@ -23,7 +23,6 @@ class PolarsDataFrame:
 
     def __getattr__(self, attr):
         def func(*args, **kwargs):
-            breakpoint()
             args, kwargs = extract_args_kwargs(args, kwargs)
             return self._from_native_frame(
                 getattr(self._native_dataframe, attr)(*args, **kwargs)
