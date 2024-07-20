@@ -72,6 +72,8 @@ def test_mod(left: int, right: int) -> None:
             eager_only=True,
         ).select(nw.col("a") // right)
         compare_dicts(result, expected)
+    else:  # pragma: no cover
+        pass
     result = nw.from_native(
         pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
     ).select(nw.col("a") // right)
