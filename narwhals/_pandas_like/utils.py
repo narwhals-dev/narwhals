@@ -241,7 +241,9 @@ def set_axis(
     backend_version: tuple[int, ...],
 ) -> T:
     if implementation is Implementation.DASK:
-        return obj  # HACK: dask doesn't really reset indexes so much, so assuming its fine
+        return (
+            obj  # HACK: dask doesn't really reset indexes so much, so assuming its fine
+        )
     if implementation is Implementation.PANDAS and backend_version < (
         1,
     ):  # pragma: no cover

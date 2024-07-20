@@ -622,7 +622,9 @@ class PandasLikeSeriesCatNamespace:
         if self._pandas_series._implementation is Implementation.DASK:
             pd = get_pandas()
             dd = get_dask()
-            native_series = pd.Series(s.cat.as_known().cat.categories, name=s.name).pipe(dd.from_pandas)
+            native_series = pd.Series(s.cat.as_known().cat.categories, name=s.name).pipe(
+                dd.from_pandas
+            )
             return self._pandas_series._from_native_series(native_series)
         return self._pandas_series._from_native_series(
             s.__class__(s.cat.categories, name=s.name)
