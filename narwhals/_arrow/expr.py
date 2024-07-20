@@ -173,7 +173,7 @@ class ArrowExpr:
 
     def sum(self) -> Self:
         return reuse_series_implementation(self, "sum", returns_scalar=True)
-    
+
     def drop_nulls(self) -> Self:
         return reuse_series_implementation(self, "drop_nulls", returns_scalar=True)
 
