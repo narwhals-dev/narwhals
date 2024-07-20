@@ -395,7 +395,7 @@ class ArrowSeriesStringNamespace:
     def to_datetime(self: Self, format: str | None = None) -> ArrowSeries:  # noqa: A002
         pc = get_pyarrow_compute()
         return self._arrow_series._from_native_series(
-            pc.strptime(self._arrow_series._native_series, format=format, unit="ns")
+            pc.strptime(self._arrow_series._native_series, format=format, unit="us")
         )
 
     def to_uppercase(self: Self) -> ArrowSeries:
