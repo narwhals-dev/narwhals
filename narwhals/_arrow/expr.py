@@ -257,6 +257,40 @@ class ArrowExprStringNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
         self._expr = expr
 
+    def starts_with(self, prefix: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "starts_with",
+            prefix,
+        )
+
+    def ends_with(self, suffix: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "ends_with",
+            suffix,
+        )
+
+    def contains(self, pattern: str, *, literal: bool) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "contains", pattern, literal=literal
+        )
+
+    def slice(self, offset: int, length: int | None = None) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "slice", offset, length
+        )
+
+    def to_datetime(self, format: str | None = None) -> ArrowExpr:  # noqa: A002
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_datetime",
+            format,
+        )
+
     def to_uppercase(self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._expr,
