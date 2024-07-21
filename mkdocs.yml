@@ -80,6 +80,10 @@ plugins:
         rendering:
           show_signature_annotations: true
 
+hooks:
+- utils/generate_backend_completeness.py
+
+
 markdown_extensions:
 - admonition
 - md_in_html
