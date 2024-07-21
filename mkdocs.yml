@@ -24,10 +24,10 @@ nav:
   - API Reference:
     - api-reference/narwhals.md
     - api-reference/dataframe.md
-    - api-reference/expressions.md
-    - api-reference/expressions_cat.md
-    - api-reference/expressions_dt.md
-    - api-reference/expressions_str.md
+    - api-reference/expr.md
+    - api-reference/expr_cat.md
+    - api-reference/expr_dt.md
+    - api-reference/expr_str.md
     - api-reference/group_by.md
     - api-reference/lazyframe.md
     - api-reference/schema.md
