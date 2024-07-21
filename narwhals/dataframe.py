@@ -525,6 +525,9 @@ class DataFrame(BaseFrame[FrameT]):
             msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
+    def __contains__(self, key: str) -> bool:
+        return key in self.columns
+
     @overload
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
     @overload
