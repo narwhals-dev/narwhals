@@ -38,7 +38,6 @@ def get_backend_completeness_table() -> str:
         for nw_class_name, nw_class in classes_:
             if nw_class_name in EXCLUDE_CLASSES:
                 continue
-
             if nw_class_name == "LazyFrame":
                 backend_class_name = "DataFrame"
             else:
