@@ -30,10 +30,9 @@ def by_dtype(*dtypes: Any) -> Expr:
         Let's define a dataframe-agnostic function to select int64 and float64
         dtypes and multiplies each value by 2:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.by_dtype(nw.Int64, nw.Float64) * 2)
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select(ncs.by_dtype(nw.Int64, nw.Float64) * 2)
 
         We can then pass either pandas or Polars dataframes:
 
@@ -76,10 +75,9 @@ def numeric() -> Expr:
         Let's define a dataframe-agnostic function to select numeric
         dtypes and multiplies each value by 2:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.numeric() * 2)
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select(ncs.numeric() * 2)
 
         We can then pass either pandas or Polars dataframes:
 
@@ -118,10 +116,9 @@ def boolean() -> Expr:
         Let's define a dataframe-agnostic function to select boolean
         dtypes:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.boolean())
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select(ncs.boolean())
 
         We can then pass either pandas or Polars dataframes:
 
@@ -160,10 +157,9 @@ def string() -> Expr:
         Let's define a dataframe-agnostic function to select string
         dtypes:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.string())
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select(ncs.string())
 
         We can then pass either pandas or Polars dataframes:
 
@@ -202,10 +198,9 @@ def categorical() -> Expr:
         Let's define a dataframe-agnostic function to select string
         dtypes:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.categorical())
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select(ncs.categorical())
 
         We can then pass either pandas or Polars dataframes:
 
@@ -244,10 +239,9 @@ def all() -> Expr:
         Let's define a dataframe-agnostic function to select string
         dtypes:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(ncs.all())
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select(ncs.all())
 
         We can then pass either pandas or Polars dataframes:
 

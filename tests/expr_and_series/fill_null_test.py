@@ -1,7 +1,5 @@
 from typing import Any
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -12,10 +10,7 @@ data = {
 }
 
 
-def test_fill_null(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_fill_null(constructor: Any) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
 
     result = df.with_columns(nw.col("a", "b", "c").fill_null(99))

@@ -62,15 +62,13 @@ class GroupBy(Generic[DataFrameT]):
 
             We define library agnostic functions:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.group_by("a").agg(nw.col("b").sum()).sort("a")
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.group_by("a").agg(nw.col("b").sum()).sort("a")
 
-            >>> def func_mult_col(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.group_by("a", "b").agg(nw.sum("c")).sort("a", "b")
-            ...     return nw.to_native(df)
+            >>> @nw.narwhalify
+            ... def func_mult_col(df_any):
+            ...     return df_any.group_by("a", "b").agg(nw.sum("c")).sort("a", "b")
 
             We can then pass either pandas or Polars to `func` and `func_mult_col`:
 

@@ -14,6 +14,7 @@ from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_parquet
 from narwhals.utils import flatten
+from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -208,7 +209,7 @@ class ArrowDataFrame:
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
+        how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
     ) -> Self:
@@ -217,24 +218,35 @@ class ArrowDataFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
 
-        if how == "cross":  # type: ignore[comparison-overlap]
-            raise NotImplementedError
+        how_to_join_map = {
+            "anti": "left anti",
+            "semi": "left semi",
+            "inner": "inner",
+            "left": "left outer",
+        }
 
-        if how == "anti":  # type: ignore[comparison-overlap]
-            raise NotImplementedError
+        if how == "cross":
+            plx = self.__narwhals_namespace__()
+            key_token = generate_unique_token(
+                n_bytes=8, columns=[*self.columns, *other.columns]
+            )
 
-        if how == "semi":  # type: ignore[comparison-overlap]
-            raise NotImplementedError
-
-        if how == "left":  # type: ignore[comparison-overlap]
-            raise NotImplementedError
+            return self._from_native_dataframe(
+                self.with_columns(**{key_token: plx.lit(0, None)})._native_dataframe.join(
+                    other.with_columns(**{key_token: plx.lit(0, None)})._native_dataframe,
+                    keys=key_token,
+                    right_keys=key_token,
+                    join_type="inner",
+                    right_suffix="_right",
+                ),
+            ).drop(key_token)
 
         return self._from_native_dataframe(
             self._native_dataframe.join(
                 other._native_dataframe,
                 keys=left_on,
                 right_keys=right_on,
-                join_type=how,
+                join_type=how_to_join_map[how],
                 right_suffix="_right",
             ),
         )
