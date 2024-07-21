@@ -110,6 +110,10 @@ if __name__ == "__main__":
     if original_content != new_content:
         with DESTINATION_PATH.open(mode="w") as destination:
             destination.write(new_content)
-        print('Updated "api-completeness.md"')  # noqa: T201
+        msg = (
+            'Updated "api-completeness.md". If you are seeing this in CI, then please '
+            "run `python utils/generate_backend_completeness.py`"
+        )
+        print(msg)  # noqa: T201
         sys.exit(1)
     sys.exit(0)

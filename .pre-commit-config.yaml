@@ -40,12 +40,6 @@ repos:
       pass_filenames: false
       entry: python -m utils.check_backend_completeness
       language: python
-    - id: generate-backend-completeness
-      name: generate-backend-completeness
-      pass_filenames: false
-      entry: python -m utils.generate_backend_completeness
-      language: python
-      additional_dependencies: [polars, jinja2]
 - repo: https://github.com/kynan/nbstripout
   rev: 0.7.1
   hooks:
