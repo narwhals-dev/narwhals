@@ -14,7 +14,7 @@ TEMPLATE_PATH: Final[Path] = Path("utils") / "api-completeness.md.jinja"
 DESTINATION_PATH: Final[Path] = Path("docs") / "api-completeness.md"
 
 
-MODULES = ["dataframe", "series", "expression"]
+MODULES = ["dataframe", "series", "expr"]
 EXCLUDE_CLASSES = {"BaseFrame"}
 
 
@@ -27,7 +27,7 @@ def get_backend_completeness_table() -> str:
 
     for module_name in MODULES:
         nw_namespace = f"narwhals.{module_name}"
-        sub_module_name = module_name if module_name != "expression" else "expr"
+        sub_module_name = module_name
 
         narwhals_module_ = importlib.import_module(nw_namespace)
         classes_ = inspect.getmembers(
