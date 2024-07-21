@@ -11,12 +11,15 @@ from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.dependencies import get_numpy
+from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
+from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
 
@@ -367,6 +370,68 @@ class ArrowSeries:
         dtype = ser.type
 
         return self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+
+    def to_frame(self: Self) -> ArrowDataFrame:
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        pa = get_pyarrow()
+        df = pa.Table.from_arrays([self._native_series], names=[self.name])
+        return ArrowDataFrame(df, backend_version=self._backend_version)
+
+    def to_pandas(self: Self) -> Any:
+        pd = get_pandas()
+        return pd.Series(self._native_series, name=self.name)
+
+    def is_duplicated(self: Self) -> ArrowSeries:
+        return self.to_frame().is_duplicated().alias(self.name)
+
+    def is_unique(self: Self) -> ArrowSeries:
+        return self.to_frame().is_unique().alias(self.name)
+
+    def is_first_distinct(self: Self) -> Self:
+        np = get_numpy()
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+
+        row_number = pa.array(np.arange(len(self)))
+        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        first_distinct_index = (
+            pa.Table.from_arrays([self._native_series], names=[self.name])
+            .append_column(col_token, row_number)
+            .group_by(self.name)
+            .aggregate([(col_token, "min")])
+            .column(f"{col_token}_min")
+        )
+
+        return self._from_native_series(pc.is_in(row_number, first_distinct_index))
+
+    def is_last_distinct(self: Self) -> Self:
+        np = get_numpy()
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+
+        row_number = pa.array(np.arange(len(self)))
+        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        last_distinct_index = (
+            pa.Table.from_arrays([self._native_series], names=[self.name])
+            .append_column(col_token, row_number)
+            .group_by(self.name)
+            .aggregate([(col_token, "max")])
+            .column(f"{col_token}_max")
+        )
+
+        return self._from_native_series(pc.is_in(row_number, last_distinct_index))
+
+    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+        if not isinstance(descending, bool):
+            msg = f"argument 'descending' should be boolean, found {type(descending)}"
+            raise TypeError(msg)
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        if descending:
+            return pc.all(pc.greater_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
+        else:
+            return pc.all(pc.less_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
 
     @property
     def shape(self) -> tuple[int]:
