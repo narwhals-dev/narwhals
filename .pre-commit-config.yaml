@@ -20,6 +20,7 @@ repos:
     - id: codespell
       files: \.(py|rst|md)$
       args: [--ignore-words-list=ser]
+      exclude: ^docs/api-completeness.md$
 - repo: local
   hooks:
     - id: check-api-reference
