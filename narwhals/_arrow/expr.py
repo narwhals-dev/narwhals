@@ -216,6 +216,9 @@ class ArrowExpr:
     def is_in(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "is_in", other)
 
+    def arg_true(self) -> Self:
+        return reuse_series_implementation(self, "arg_true")
+
     def sample(
         self: Self,
         n: int | None = None,

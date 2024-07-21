@@ -216,6 +216,9 @@ class PandasLikeExpr:
     def is_in(self, other: Any) -> Self:
         return reuse_series_implementation(self, "is_in", other=other)
 
+    def arg_true(self) -> Self:
+        return reuse_series_implementation(self, "arg_true")
+
     def filter(self, *predicates: Any) -> Self:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 

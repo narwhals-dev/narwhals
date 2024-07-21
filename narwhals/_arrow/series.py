@@ -311,6 +311,14 @@ class ArrowSeries:
         ser = self._native_series
         return self._from_native_series(pc.is_in(ser, value_set=value_set))
 
+    def arg_true(self) -> Self:
+        np = get_numpy()
+        ser = self._native_series
+        res = np.flatnonzero(ser)
+        return self._from_iterable(
+            res, name=self.name, backend_version=self._backend_version
+        )
+
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:
             if len(self) != 1:
