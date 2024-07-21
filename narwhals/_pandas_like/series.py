@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import overload
 
 from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import int_dtype_mapper
@@ -15,6 +16,7 @@ from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow_compute
 
@@ -113,7 +115,13 @@ class PandasLikeSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any:
+    @overload
+    def __getitem__(self, idx: int) -> Any: ...
+
+    @overload
+    def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
+
+    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._native_series.iloc[idx]
         return self._from_native_series(self._native_series.iloc[idx])
@@ -218,6 +226,19 @@ class PandasLikeSeries:
         ser = self._native_series
         res = ser.isin(other)
         return self._from_native_series(res)
+
+    def arg_true(self) -> PandasLikeSeries:
+        np = get_numpy()
+        ser = self._native_series
+        res = np.flatnonzero(ser)
+        return self._from_native_series(
+            native_series_from_iterable(
+                res,
+                name=self.name,
+                index=range(len(res)),
+                implementation=self._implementation,
+            )
+        )
 
     # Binary comparisons
 

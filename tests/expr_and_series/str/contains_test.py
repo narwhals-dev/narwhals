@@ -2,7 +2,6 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
-import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
@@ -13,9 +12,8 @@ df_pandas = pd.DataFrame(data)
 df_polars = pl.DataFrame(data)
 
 
-@pytest.mark.parametrize("df_any", [df_pandas, df_polars])
-def test_contains(df_any: Any) -> None:
-    df = nw.from_native(df_any, eager_only=True)
+def test_contains(constructor: Any) -> None:
+    df = nw.from_native(constructor(data), eager_only=True)
     result = df.with_columns(
         case_insensitive_match=nw.col("pets").str.contains("(?i)parrot|Dove")
     )

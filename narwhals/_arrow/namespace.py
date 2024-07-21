@@ -8,6 +8,7 @@ from typing import Iterable
 from narwhals import dtypes
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
+from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
@@ -107,6 +108,23 @@ class ArrowNamespace:
             *flatten(column_names), backend_version=self._backend_version
         )
 
+    def len(self) -> ArrowExpr:
+        # coverage bug? this is definitely hit
+        return ArrowExpr(  # pragma: no cover
+            lambda df: [
+                ArrowSeries._from_iterable(
+                    [len(df._native_dataframe)],
+                    name="len",
+                    backend_version=self._backend_version,
+                )
+            ],
+            depth=0,
+            function_name="len",
+            root_names=None,
+            output_names=["len"],
+            backend_version=self._backend_version,
+        )
+
     def all(self) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
         from narwhals._arrow.series import ArrowSeries
@@ -181,3 +199,7 @@ class ArrowNamespace:
                 backend_version=self._backend_version,
             )
         raise NotImplementedError
+
+    @property
+    def selectors(self) -> ArrowSelectorNamespace:
+        return ArrowSelectorNamespace(backend_version=self._backend_version)

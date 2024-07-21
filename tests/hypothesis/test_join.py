@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from hypothesis import assume
 from hypothesis import given
@@ -163,3 +164,18 @@ def test_left_join(  # pragma: no cover
         )
     ).select(pl.all().fill_null(float("nan")))
     compare_dicts(result_pd.to_dict(as_series=False), result_pl.to_dict(as_series=False))
+    # For PyArrow, insert an extra sort, as the order of rows isn't guaranteed
+    result_pa = (
+        nw.from_native(pa.table(data_left), eager_only=True)
+        .join(
+            nw.from_native(pa.table(data_right), eager_only=True),
+            how="left",
+            left_on=left_key,
+            right_on=right_key,
+        )
+        .select(nw.all().cast(nw.Float64).fill_null(float("nan")))
+        .pipe(lambda df: df.sort(df.columns))
+    )
+    compare_dicts(
+        result_pa, result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False)
+    )

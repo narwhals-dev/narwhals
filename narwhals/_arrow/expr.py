@@ -125,8 +125,23 @@ class ArrowExpr:
     def __rpow__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__rpow__", other)
 
+    def __floordiv__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__floordiv__", other)
+
+    def __rfloordiv__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rfloordiv__", other)
+
+    def __truediv__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__truediv__", other)
+
+    def __rtruediv__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__rtruediv__", other)
+
     def __invert__(self) -> Self:
         return reuse_series_implementation(self, "__invert__")
+
+    def len(self) -> Self:
+        return reuse_series_implementation(self, "len", returns_scalar=True)
 
     def filter(self, *predicates: Any) -> Self:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -140,6 +155,9 @@ class ArrowExpr:
 
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
+
+    def n_unique(self) -> Self:
+        return reuse_series_implementation(self, "n_unique", returns_scalar=True)
 
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
@@ -195,17 +213,53 @@ class ArrowExpr:
     def tail(self, n: int) -> Self:
         return reuse_series_implementation(self, "tail", n)
 
+    def is_in(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "is_in", other)
+
+    def arg_true(self) -> Self:
+        return reuse_series_implementation(self, "arg_true")
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
+        )
+
+    def fill_null(self: Self, value: Any) -> Self:
+        return reuse_series_implementation(self, "fill_null", value=value)
+
+    def is_duplicated(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_duplicated")
+
+    def is_unique(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_unique")
+
+    def is_first_distinct(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_first_distinct")
+
+    def is_last_distinct(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_last_distinct")
+
     @property
-    def dt(self) -> ArrowExprDateTimeNamespace:
+    def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
 
     @property
-    def str(self) -> ArrowExprStringNamespace:
+    def str(self: Self) -> ArrowExprStringNamespace:
         return ArrowExprStringNamespace(self)
 
     @property
-    def cat(self) -> ArrowExprCatNamespace:
+    def cat(self: Self) -> ArrowExprCatNamespace:
         return ArrowExprCatNamespace(self)
+
+    @property
+    def name(self: Self) -> ArrowNameNamespace:
+        return ArrowNameNamespace(self)
 
 
 class ArrowExprCatNamespace:
@@ -234,6 +288,40 @@ class ArrowExprStringNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
         self._expr = expr
 
+    def starts_with(self, prefix: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "starts_with",
+            prefix,
+        )
+
+    def ends_with(self, suffix: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "ends_with",
+            suffix,
+        )
+
+    def contains(self, pattern: str, *, literal: bool) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "contains", pattern, literal=literal
+        )
+
+    def slice(self, offset: int, length: int | None = None) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "slice", offset, length
+        )
+
+    def to_datetime(self, format: str | None = None) -> ArrowExpr:  # noqa: A002
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_datetime",
+            format,
+        )
+
     def to_uppercase(self) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._expr,
@@ -246,4 +334,152 @@ class ArrowExprStringNamespace:
             self._expr,
             "str",
             "to_lowercase",
+        )
+
+
+class ArrowNameNamespace:
+    def __init__(self: Self, expr: ArrowExpr) -> None:
+        self._expr = expr
+
+    def keep(self: Self) -> ArrowExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.keep`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), root_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=root_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.map`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [function(str(name)) for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def prefix(self: Self, prefix: str) -> ArrowExpr:
+        root_names = self._expr._root_names
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.prefix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [prefix + str(name) for name in root_names]
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def suffix(self: Self, suffix: str) -> ArrowExpr:
+        root_names = self._expr._root_names
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.suffix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [str(name) + suffix for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def to_lowercase(self: Self) -> ArrowExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+        output_names = [str(name).lower() for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
+        )
+
+    def to_uppercase(self: Self) -> ArrowExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+        output_names = [str(name).upper() for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            backend_version=self._expr._backend_version,
         )

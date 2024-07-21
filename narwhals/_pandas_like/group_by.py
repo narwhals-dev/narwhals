@@ -32,6 +32,7 @@ class PandasLikeGroupBy:
             list(self._keys),
             sort=False,
             as_index=True,
+            dropna=False,
         )
 
     def agg(

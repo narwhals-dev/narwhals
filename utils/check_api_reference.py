@@ -37,9 +37,7 @@ if extra := set(documented).difference(top_level_functions):
 
 top_level_functions = [
     i
-    for i in nw.DataFrame(
-        pl.DataFrame(), is_polars=True, backend_version=(0,), level="full"
-    ).__dir__()
+    for i in nw.from_native(pl.DataFrame()).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/dataframe.md") as fd:
@@ -60,9 +58,7 @@ if extra := set(documented).difference(top_level_functions).difference({"__getit
 
 top_level_functions = [
     i
-    for i in nw.LazyFrame(
-        pl.LazyFrame(), is_polars=True, backend_version=(0,), level="full"
-    ).__dir__()
+    for i in nw.from_native(pl.LazyFrame()).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/lazyframe.md") as fd:
@@ -83,9 +79,7 @@ if extra := set(documented).difference(top_level_functions):
 
 top_level_functions = [
     i
-    for i in nw.Series(
-        pl.Series(), backend_version=(1,), is_polars=True, level="full"
-    ).__dir__()
+    for i in nw.from_native(pl.Series(), series_only=True).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/series.md") as fd:
@@ -98,7 +92,7 @@ documented = [
 if (
     missing := set(top_level_functions)
     .difference(documented)
-    .difference({"dt", "str", "cat"})
+    .difference({"dt", "str", "cat", "name"})
 ):
     print("Series: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -121,7 +115,7 @@ documented = [
 if (
     missing := set(top_level_functions)
     .difference(documented)
-    .difference({"cat", "str", "dt"})
+    .difference({"cat", "str", "dt", "name"})
 ):
     print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -141,9 +135,7 @@ if extra := set(documented).difference(top_level_functions):
 expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
 series = [
     i
-    for i in nw.Series(
-        pl.Series(), backend_version=(1,), is_polars=True, level="full"
-    ).__dir__()
+    for i in nw.from_native(pl.Series(), series_only=True).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 

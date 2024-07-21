@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import secrets
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -83,17 +84,6 @@ def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
     if isinstance(obj, DType):
         return isinstance(obj, cls)
     return isinstance(obj, cls) or issubclass(obj, cls)
-
-
-def validate_same_library(items: Iterable[Any]) -> None:
-    if all(item._is_polars for item in items):
-        return
-    if all(hasattr(item._compliant_frame, "_implementation") for item in items) and (
-        len({item._compliant_frame._implementation for item in items}) == 1
-    ):
-        return
-    msg = "Cross-library comparisons aren't supported"
-    raise NotImplementedError(msg)
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
@@ -296,8 +286,8 @@ def is_ordered_categorical(series: Series) -> bool:
         Let's define a library-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
+        ... def func(s_any):
+        ...     return nw.is_ordered_categorical(s_any)
 
         Then, we can pass any supported library to `func`:
 
@@ -336,3 +326,31 @@ def is_ordered_categorical(series: Series) -> bool:
         return native_series.type.ordered  # type: ignore[no-any-return]
     # If it doesn't match any of the above, let's just play it safe and return False.
     return False  # pragma: no cover
+
+
+def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
+    """Generates a unique token of specified n_bytes that is not present in the given list of columns.
+
+    Arguments:
+        n_bytes : The number of bytes to generate for the token.
+        columns : The list of columns to check for uniqueness.
+
+    Returns:
+        A unique token that is not present in the given list of columns.
+
+    Raises:
+        AssertionError: If a unique token cannot be generated after 100 attempts.
+    """
+    counter = 0
+    while True:
+        token = secrets.token_hex(n_bytes)
+        if token not in columns:
+            return token
+
+        counter += 1
+        if counter > 100:
+            msg = (
+                "Internal Error: Narwhals was not able to generate a column name to perform given "
+                "join operation"
+            )
+            raise AssertionError(msg)

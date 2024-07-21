@@ -4,16 +4,23 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Sequence
+from typing import overload
 
+from narwhals._arrow.utils import cast_for_truediv
+from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
+from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
 
@@ -139,9 +146,42 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(other, ser))
 
+    def __floordiv__(self, other: Any) -> Self:
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(floordiv_compat(ser, other))
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(floordiv_compat(other, ser))
+
+    def __truediv__(self, other: Any) -> Self:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        if not isinstance(other, (pa.Array, pa.ChunkedArray)):
+            # scalar
+            other = pa.scalar(other)
+        return self._from_native_series(pc.divide(*cast_for_truediv(ser, other)))
+
+    def __rtruediv__(self, other: Any) -> Self:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        if not isinstance(other, (pa.Array, pa.ChunkedArray)):
+            # scalar
+            other = pa.scalar(other)
+        return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))
+
     def __invert__(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.invert(self._native_series))
+
+    def len(self) -> int:
+        return len(self._native_series)
 
     def filter(self, other: Any) -> Self:
         other = validate_column_comparand(other)
@@ -171,6 +211,12 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.count(self._native_series)  # type: ignore[no-any-return]
 
+    def n_unique(self) -> int:
+        pc = get_pyarrow_compute()
+        unique_values = pc.unique(self._native_series)
+        count_unique = pc.count(unique_values, mode="all")
+        return count_unique.as_py()  # type: ignore[no-any-return]
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
@@ -183,7 +229,13 @@ class ArrowSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any:
+    @overload
+    def __getitem__(self, idx: int) -> Any: ...
+
+    @overload
+    def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
+
+    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._native_series[idx]
         return self._from_native_series(self._native_series[idx])
@@ -262,6 +314,21 @@ class ArrowSeries:
         else:
             return self._from_native_series(ser.slice(abs(n)))
 
+    def is_in(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        pa = get_pyarrow()
+        value_set = pa.array(other)
+        ser = self._native_series
+        return self._from_native_series(pc.is_in(ser, value_set=value_set))
+
+    def arg_true(self) -> Self:
+        np = get_numpy()
+        ser = self._native_series
+        res = np.flatnonzero(ser)
+        return self._from_iterable(
+            res, name=self.name, backend_version=self._backend_version
+        )
+
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:
             if len(self) != 1:
@@ -272,6 +339,106 @@ class ArrowSeries:
                 raise ValueError(msg)
             return self._native_series[0].as_py()
         return self._native_series[index].as_py()
+
+    def zip_with(self: Self, mask: Self, other: Self) -> Self:
+        pc = get_pyarrow_compute()
+
+        return self._from_native_series(
+            pc.replace_with_mask(
+                self._native_series.combine_chunks(),
+                pc.invert(mask._native_series.combine_chunks()),
+                other._native_series.combine_chunks(),
+            )
+        )
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        fraction: float | None = None,
+        *,
+        with_replacement: bool = False,
+    ) -> Self:
+        np = get_numpy()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        num_rows = len(self)
+
+        if n is None and fraction is not None:
+            n = int(num_rows * fraction)
+
+        idx = np.arange(0, num_rows)
+        mask = np.random.choice(idx, size=n, replace=with_replacement)
+        return self._from_native_series(pc.take(ser, mask))
+
+    def fill_null(self: Self, value: Any) -> Self:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        dtype = ser.type
+
+        return self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+
+    def to_frame(self: Self) -> ArrowDataFrame:
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        pa = get_pyarrow()
+        df = pa.Table.from_arrays([self._native_series], names=[self.name])
+        return ArrowDataFrame(df, backend_version=self._backend_version)
+
+    def to_pandas(self: Self) -> Any:
+        pd = get_pandas()
+        return pd.Series(self._native_series, name=self.name)
+
+    def is_duplicated(self: Self) -> ArrowSeries:
+        return self.to_frame().is_duplicated().alias(self.name)
+
+    def is_unique(self: Self) -> ArrowSeries:
+        return self.to_frame().is_unique().alias(self.name)
+
+    def is_first_distinct(self: Self) -> Self:
+        np = get_numpy()
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+
+        row_number = pa.array(np.arange(len(self)))
+        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        first_distinct_index = (
+            pa.Table.from_arrays([self._native_series], names=[self.name])
+            .append_column(col_token, row_number)
+            .group_by(self.name)
+            .aggregate([(col_token, "min")])
+            .column(f"{col_token}_min")
+        )
+
+        return self._from_native_series(pc.is_in(row_number, first_distinct_index))
+
+    def is_last_distinct(self: Self) -> Self:
+        np = get_numpy()
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+
+        row_number = pa.array(np.arange(len(self)))
+        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        last_distinct_index = (
+            pa.Table.from_arrays([self._native_series], names=[self.name])
+            .append_column(col_token, row_number)
+            .group_by(self.name)
+            .aggregate([(col_token, "max")])
+            .column(f"{col_token}_max")
+        )
+
+        return self._from_native_series(pc.is_in(row_number, last_distinct_index))
+
+    def is_sorted(self: Self, *, descending: bool = False) -> bool:
+        if not isinstance(descending, bool):
+            msg = f"argument 'descending' should be boolean, found {type(descending)}"
+            raise TypeError(msg)
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        if descending:
+            return pc.all(pc.greater_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
+        else:
+            return pc.all(pc.less_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
 
     @property
     def shape(self) -> tuple[int]:
@@ -320,16 +487,50 @@ class ArrowSeriesCatNamespace:
 
 
 class ArrowSeriesStringNamespace:
-    def __init__(self, series: ArrowSeries) -> None:
+    def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
-    def to_uppercase(self) -> ArrowSeries:
+    def starts_with(self: Self, prefix: str) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.equal(self.slice(0, len(prefix))._native_series, prefix)
+        )
+
+    def ends_with(self: Self, suffix: str) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.equal(self.slice(-len(suffix))._native_series, suffix)
+        )
+
+    def contains(self: Self, pattern: str, *, literal: bool = False) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        check_func = pc.match_substring if literal else pc.match_substring_regex
+        return self._arrow_series._from_native_series(
+            check_func(self._arrow_series._native_series, pattern)
+        )
+
+    def slice(self: Self, offset: int, length: int | None = None) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        stop = offset + length if length else None
+        return self._arrow_series._from_native_series(
+            pc.utf8_slice_codeunits(
+                self._arrow_series._native_series, start=offset, stop=stop
+            ),
+        )
+
+    def to_datetime(self: Self, format: str | None = None) -> ArrowSeries:  # noqa: A002
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.strptime(self._arrow_series._native_series, format=format, unit="us")
+        )
+
+    def to_uppercase(self: Self) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._arrow_series._from_native_series(
             pc.utf8_upper(self._arrow_series._native_series),
         )
 
-    def to_lowercase(self) -> ArrowSeries:
+    def to_lowercase(self: Self) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._arrow_series._from_native_series(
             pc.utf8_lower(self._arrow_series._native_series),

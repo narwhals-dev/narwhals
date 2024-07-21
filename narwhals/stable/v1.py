@@ -149,10 +149,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
             We define a library agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     df = df.to_dict(as_series=False)
-            ...     return df
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.to_dict(as_series=False)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -188,10 +187,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     duplicated = df.is_duplicated()
-            ...     return nw.to_native(duplicated)
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.is_duplicated()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -237,10 +235,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
             Let's define a dataframe-agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
-            ...     unique = df.is_unique()
-            ...     return nw.to_native(unique)
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.is_unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -466,22 +463,16 @@ def _stableify(
     if isinstance(obj, NwDataFrame):
         return DataFrame(
             obj._compliant_frame,
-            is_polars=obj._is_polars,
-            backend_version=obj._backend_version,
             level=obj._level,
         )
     if isinstance(obj, NwLazyFrame):
         return LazyFrame(
             obj._compliant_frame,
-            is_polars=obj._is_polars,
-            backend_version=obj._backend_version,
             level=obj._level,
         )
     if isinstance(obj, NwSeries):
         return Series(
             obj._compliant_series,
-            is_polars=obj._is_polars,
-            backend_version=obj._backend_version,
             level=obj._level,
         )
     if isinstance(obj, NwExpr):
@@ -756,8 +747,8 @@ def narwhalify(
 
 
     @nw.narwhalify
-    def func(df):
-        return df.group_by("a").agg(nw.col("b").sum())
+    def func(df_any):
+        return df_any.group_by("a").agg(nw.col("b").sum())
     ```
 
     You can also pass in extra arguments, e.g.
@@ -842,8 +833,8 @@ def all() -> Expr:
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.all() * 2)
+        ... def func(df_any):
+        ...     return df_any.select(nw.all() * 2)
 
         We can then pass either pandas or Polars to `func`:
 
@@ -884,8 +875,8 @@ def col(*names: str | Iterable[str]) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.col("a") * nw.col("b"))
+        ... def func(df_any):
+        ...     return df_any.select(nw.col("a") * nw.col("b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -921,8 +912,8 @@ def len() -> Expr:
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.len())
+        ... def func(df_any):
+        ...     return df_any.select(nw.len())
 
         We can then pass either pandas or Polars to `func`:
 
@@ -960,8 +951,8 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.with_columns(nw.lit(3).alias("b"))
+        ... def func(df_any):
+        ...     return df_any.with_columns(nw.lit(3).alias("b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -1004,8 +995,8 @@ def min(*columns: str) -> Expr:
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.min("b"))
+        ... def func(df_any):
+        ...     return df_any.select(nw.min("b"))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -1045,8 +1036,8 @@ def max(*columns: str) -> Expr:
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.max("a"))
+        ... def func(df_any):
+        ...     return df_any.select(nw.max("a"))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -1085,10 +1076,9 @@ def mean(*columns: str) -> Expr:
 
         We define a dataframe agnostic function:
 
-        >>> def func(df_any):
-        ...     df = nw.from_native(df_any)
-        ...     df = df.select(nw.mean("a"))
-        ...     return nw.to_native(df)
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select(nw.mean("a"))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -1128,8 +1118,8 @@ def sum(*columns: str) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.sum("a"))
+        ... def func(df_any):
+        ...     return df_any.select(nw.sum("a"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -1166,8 +1156,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.sum_horizontal("a", "b"))
+        ... def func(df_any):
+        ...     return df_any.select(nw.sum_horizontal("a", "b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -1215,8 +1205,8 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select("a", "b", all=nw.all_horizontal("a", "b"))
+        ... def func(df_any):
+        ...     return df_any.select("a", "b", all=nw.all_horizontal("a", "b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -1274,8 +1264,8 @@ def is_ordered_categorical(series: Series) -> bool:
         Let's define a library-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
+        ... def func(s_any):
+        ...     return nw.is_ordered_categorical(s_any)
 
         Then, we can pass any supported library to `func`:
 

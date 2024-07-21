@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Narwhals! Any kind of improvement
 
 Here's how you can set up your local development environment to contribute:
 
-1. Make sure you have Python3.9+ installed
+1. Make sure you have Python3.8+ installed (for example, Python 3.11)
 2. Create a new virtual environment with `python3.11 -m venv .venv` (or whichever version of Python3.9+ you prefer)
 3. Activate it: `. .venv/bin/activate`
 4. Install Narwhals: `pip install -e .`
@@ -71,5 +71,4 @@ Please remember to abide by the code of conduct, else you'll be conducted away f
 
 We have a community call every 2 weeks, all welcome to attend.
 
-[Subscribe to our calendar](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com&ctz=Europe%2FLondon).
-
+[Subscribe to our calendar](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com).
