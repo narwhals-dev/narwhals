@@ -2000,8 +2000,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(series):
-            ...     return series.str.starts_with("app")
+            ... def func(s_any):
+            ...     return s_any.str.starts_with("app")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2042,8 +2042,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(series):
-            ...     return series.str.ends_with("ngo")
+            ... def func(s_any):
+            ...     return s_any.str.ends_with("ngo")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2301,8 +2301,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.with_columns(upper_col=nw.col("fruits").str.to_uppercase())
+            ... def func(df_any):
+            ...     return df_any.with_columns(upper_col=nw.col("fruits").str.to_uppercase())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2344,8 +2344,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.with_columns(lower_col=nw.col("fruits").str.to_lowercase())
+            ... def func(df_any):
+            ...     return df_any.with_columns(lower_col=nw.col("fruits").str.to_lowercase())
 
             We can then pass either pandas or Polars to `func`:
 
