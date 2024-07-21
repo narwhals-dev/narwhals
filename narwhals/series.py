@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 
-from narwhals.dependencies import get_polars
-from narwhals.dtypes import to_narwhals_dtype
 from narwhals.dtypes import translate_dtype
 
 if TYPE_CHECKING:
@@ -30,26 +28,16 @@ class Series:
         self,
         series: Any,
         *,
-        backend_version: tuple[int, ...],
-        is_polars: bool,
         level: Literal["full", "interchange"],
     ) -> None:
-        self._is_polars = is_polars
-        self._backend_version = backend_version
         self._level = level
         if hasattr(series, "__narwhals_series__"):
             self._compliant_series = series.__narwhals_series__()
-        elif is_polars and (
-            (pl := get_polars()) is not None and isinstance(series, pl.Series)
-        ):
-            self._compliant_series = series
-        else:
+        else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
-            raise TypeError(msg)
+            raise AssertionError(msg)
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
-        if self._is_polars and self._backend_version < (0, 20, 29):  # pragma: no cover
-            return self._compliant_series.__array__(dtype=dtype)
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
     def __getitem__(self, idx: int | slice) -> Any:
@@ -58,13 +46,9 @@ class Series:
         return self._from_compliant_series(self._compliant_series[idx])
 
     def __native_namespace__(self) -> Any:
-        if self._is_polars:
-            return get_polars()
         return self._compliant_series.__native_namespace__()
 
     def __narwhals_namespace__(self) -> Any:
-        if self._is_polars:
-            return get_polars()
         return self._compliant_series.__narwhals_namespace__()
 
     @property
@@ -105,8 +89,6 @@ class Series:
     def _from_compliant_series(self, series: Any) -> Self:
         return self.__class__(
             series,
-            is_polars=self._is_polars,
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -182,7 +164,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return to_narwhals_dtype(self._compliant_series.dtype, is_polars=self._is_polars)
+        return self._compliant_series.dtype
 
     @property
     def name(self) -> str:
@@ -299,8 +281,6 @@ class Series:
 
         return DataFrame(
             self._compliant_series.to_frame(),
-            is_polars=self._is_polars,
-            backend_version=self._backend_version,
             level=self._level,
         )
 
@@ -1678,8 +1658,6 @@ class Series:
 
         return DataFrame(
             self._compliant_series.value_counts(sort=sort, parallel=parallel),
-            is_polars=self._is_polars,
-            backend_version=self._backend_version,
             level=self._level,
         )
 

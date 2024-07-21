@@ -1,17 +1,12 @@
 from typing import Any
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {"a": ["foo", "bars"]}
 
 
-def test_str_tail(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_str_tail(constructor: Any) -> None:
     df = nw.from_native(constructor(data), eager_only=True)
     expected = {"a": ["foo", "ars"]}
 
