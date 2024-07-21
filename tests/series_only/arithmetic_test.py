@@ -40,15 +40,24 @@ def test_arithmetic(
     if "pandas_series_pyarrow" in str(constructor_series) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_series" in str(constructor_series) and attr in {
-        "__truediv__",
-        "__mod__",
-    }:
+    if "pyarrow_series" in str(constructor_series) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
     s = nw.from_native(constructor_series(data), series_only=True)
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected
+
+
+def test_truediv_same_dims(constructor_series: Any, request: Any) -> None:
+    if "polars" in str(constructor_series):
+        # https://github.com/pola-rs/polars/issues/17760
+        request.applymarker(pytest.mark.xfail)
+    s_left = nw.from_native(constructor_series([1, 2, 3]), series_only=True)
+    s_right = nw.from_native(constructor_series([2, 2, 1]), series_only=True)
+    result = (s_left / s_right).to_list()
+    assert result == [0.5, 1.0, 3.0]
+    result = (s_left.__rtruediv__(s_right)).to_list()
+    assert result == [2, 1, 1 / 3]
 
 
 @pytest.mark.slow()

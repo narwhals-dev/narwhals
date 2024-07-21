@@ -27,10 +27,7 @@ def test_arithmetic(
         request.applymarker(pytest.mark.xfail)
 
     # pyarrow case
-    if "pyarrow_table" in str(constructor) and attr in {
-        "__truediv__",
-        "__mod__",
-    }:
+    if "pyarrow_table" in str(constructor) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
@@ -58,10 +55,7 @@ def test_right_arithmetic(
         request.applymarker(pytest.mark.xfail)
 
     # pyarrow case
-    if "table" in str(constructor) and attr in {
-        "__rtruediv__",
-        "__rmod__",
-    }:
+    if "table" in str(constructor) and attr in {"__rmod__"}:
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
