@@ -446,10 +446,23 @@ class PandasLikeDataFrame:
     def tail(self, n: int) -> Self:
         return self._from_native_dataframe(self._native_dataframe.tail(n))
 
-    def unique(self, subset: str | list[str]) -> Self:
+    def unique(
+        self: Self,
+        subset: str | list[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"] = "any",
+        maintain_order: bool = False,  # noqa: ARG002
+    ) -> Self:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
+
+        mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         subset = flatten(subset)
         return self._from_native_dataframe(
-            self._native_dataframe.drop_duplicates(subset=subset)
+            self._native_dataframe.drop_duplicates(subset=subset, keep=mapped_keep)
         )
 
     # --- lazy-only ---

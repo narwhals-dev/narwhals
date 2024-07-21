@@ -140,8 +140,18 @@ class BaseFrame(Generic[FrameT]):
     def drop(self, *columns: str | Iterable[str]) -> Self:
         return self._from_compliant_dataframe(self._compliant_frame.drop(*columns))
 
-    def unique(self, subset: str | list[str]) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.unique(subset=subset))
+    def unique(
+        self,
+        subset: str | list[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"] = "any",
+        maintain_order: bool = False,
+    ) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.unique(
+                subset=subset, keep=keep, maintain_order=maintain_order
+            )
+        )
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         predicates, _ = self._flatten_and_extract(*predicates)
@@ -1298,12 +1308,29 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().drop(*columns)
 
-    def unique(self, subset: str | list[str]) -> Self:
+    def unique(
+        self,
+        subset: str | list[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"] = "any",
+        maintain_order: bool = False,
+    ) -> Self:
         """
         Drop duplicate rows from this dataframe.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
+            keep: {'first', 'last', 'any', 'none'}
+                Which of the duplicate rows to keep.
+
+                * 'any': Does not give any guarantee of which row is kept.
+                        This allows more optimizations.
+                * 'none': Don't keep duplicate rows.
+                * 'first': Keep first unique row.
+                * 'last': Keep last unique row.
+            maintain_order: Keep the same order as the original DataFrame. This is more
+                expensive to compute. Settings this to `True` blocks the possibility
+                to run on the streaming engine for polars.
 
         Examples:
             >>> import pandas as pd
@@ -1338,7 +1365,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 1   ┆ a   ┆ b   │
             └─────┴─────┴─────┘
         """
-        return super().unique(subset)
+        return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         r"""
@@ -2658,13 +2685,30 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().drop(*columns)
 
-    def unique(self, subset: str | list[str]) -> Self:
+    def unique(
+        self,
+        subset: str | list[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"] = "any",
+        maintain_order: bool = False,
+    ) -> Self:
         """
         Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
+            keep: {'first', 'last', 'any', 'none'}
+                Which of the duplicate rows to keep.
+
+                * 'any': Does not give any guarantee of which row is kept.
+                        This allows more optimizations.
+                * 'none': Don't keep duplicate rows.
+                * 'first': Keep first unique row.
+                * 'last': Keep last unique row.
+            maintain_order: Keep the same order as the original DataFrame. This is more
+                expensive to compute. Settings this to `True` blocks the possibility
+                to run on the streaming engine for polars.
 
         Returns:
             LazyFrame: LazyFrame with unique rows.
@@ -2702,7 +2746,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 1   ┆ a   ┆ b   │
             └─────┴─────┴─────┘
         """
-        return super().unique(subset)
+        return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
         r"""
