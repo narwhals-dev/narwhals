@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Sequence
+from typing import overload
 
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
@@ -225,7 +226,13 @@ class ArrowSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any:
+    @overload
+    def __getitem__(self, idx: int) -> Any: ...
+
+    @overload
+    def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
+
+    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._native_series[idx]
         return self._from_native_series(self._native_series[idx])
