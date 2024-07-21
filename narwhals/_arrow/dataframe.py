@@ -427,8 +427,14 @@ class ArrowDataFrame:
         subset: str | list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,
+        maintain_order: bool = False,  # noqa: ARG002
     ) -> Self:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
+
         np = get_numpy()
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
@@ -450,8 +456,6 @@ class ArrowDataFrame:
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
             )
-            if maintain_order:
-                keep_idx = pc.sort_indices(keep_idx)
 
             return self._from_native_dataframe(pc.take(df, keep_idx))
 

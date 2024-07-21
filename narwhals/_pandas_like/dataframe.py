@@ -460,7 +460,7 @@ class PandasLikeDataFrame:
         """
 
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
-        subset = flatten(subset)
+        subset = flatten(subset) if subset else None
         return self._from_native_dataframe(
             self._native_dataframe.drop_duplicates(subset=subset, keep=mapped_keep)
         )

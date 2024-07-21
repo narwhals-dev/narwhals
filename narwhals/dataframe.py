@@ -142,7 +142,7 @@ class BaseFrame(Generic[FrameT]):
 
     def unique(
         self,
-        subset: str | list[str] | None,
+        subset: str | list[str] | None = None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
@@ -1310,7 +1310,7 @@ class DataFrame(BaseFrame[FrameT]):
 
     def unique(
         self,
-        subset: str | list[str] | None,
+        subset: str | list[str] | None = None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
@@ -2687,7 +2687,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def unique(
         self,
-        subset: str | list[str] | None,
+        subset: str | list[str] | None = None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
         maintain_order: bool = False,
