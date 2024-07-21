@@ -1687,16 +1687,20 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).len())
 
     @property
-    def str(self) -> ExprStringNamespace:
+    def str(self: Self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
 
     @property
-    def dt(self) -> ExprDateTimeNamespace:
+    def dt(self: Self) -> ExprDateTimeNamespace:
         return ExprDateTimeNamespace(self)
 
     @property
-    def cat(self) -> ExprCatNamespace:
+    def cat(self: Self) -> ExprCatNamespace:
         return ExprCatNamespace(self)
+
+    @property
+    def name(self: Self) -> ExprNameNamespace:
+        return ExprNameNamespace(self)
 
 
 class ExprCatNamespace:
@@ -3019,6 +3023,215 @@ class ExprDateTimeNamespace:
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).dt.to_string(format)
         )
+
+
+class ExprNameNamespace:
+    def __init__(self: Self, expr: Expr) -> None:
+        self._expr = expr
+
+    def keep(self: Self) -> Expr:
+        r"""
+        Keep the original root name of the expression.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2], "BAR": [4, 5]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("foo").alias("alias_for_foo").name.keep())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd).columns
+            Index(['foo'], dtype='object')
+            >>> func(df_pl).columns
+            ['foo']
+        """
+
+        return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
+
+    def map(self: Self, function: Callable[[str], str]) -> Expr:
+        r"""
+        Rename the output of an expression by mapping a function over the root name.
+
+        Arguments:
+            function: Function that maps a root name to a new name.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2], "BAR": [4, 5]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> renaming_func = lambda s: s[::-1]  # reverse column name
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("foo", "BAR").name.map(renaming_func))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd).columns
+            Index(['oof', 'RAB'], dtype='object')
+            >>> func(df_pl).columns
+            ['oof', 'RAB']
+        """
+
+        return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
+
+    def prefix(self: Self, prefix: str) -> Expr:
+        r"""
+        Add a prefix to the root column name of the expression.
+
+        Arguments:
+            prefix: Prefix to add to the root column name.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2], "BAR": [4, 5]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def add_colname_prefix(df, prefix):
+            ...     return df.select(nw.col("foo", "BAR").name.prefix(prefix))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> add_colname_prefix(df_pd, "with_prefix_").columns
+            Index(['with_prefix_foo', 'with_prefix_BAR'], dtype='object')
+
+            >>> add_colname_prefix(df_pl, "with_prefix_").columns
+            ['with_prefix_foo', 'with_prefix_BAR']
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).name.prefix(prefix))
+
+    def suffix(self: Self, suffix: str) -> Expr:
+        r"""
+        Add a suffix to the root column name of the expression.
+
+        Arguments:
+            suffix: Suffix to add to the root column name.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2], "BAR": [4, 5]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def add_colname_suffix(df, suffix):
+            ...     return df.select(nw.col("foo", "BAR").name.suffix(suffix))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> add_colname_suffix(df_pd, "_with_suffix").columns
+            Index(['foo_with_suffix', 'BAR_with_suffix'], dtype='object')
+            >>> add_colname_suffix(df_pl, "_with_suffix").columns
+            ['foo_with_suffix', 'BAR_with_suffix']
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).name.suffix(suffix))
+
+    def to_lowercase(self: Self) -> Expr:
+        r"""
+        Make the root column name lowercase.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2], "BAR": [4, 5]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def to_lower(df):
+            ...     return df.select(nw.col("foo", "BAR").name.to_lowercase())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> to_lower(df_pd).columns
+            Index(['foo', 'bar'], dtype='object')
+            >>> to_lower(df_pl).columns
+            ['foo', 'bar']
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).name.to_lowercase())
+
+    def to_uppercase(self: Self) -> Expr:
+        r"""
+        Make the root column name uppercase.
+
+        Notes:
+            This will undo any previous renaming operations on the expression.
+            Due to implementation constraints, this method can only be called as the last
+            expression in a chain. Only one name operation per expression will work.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2], "BAR": [4, 5]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def to_upper(df):
+            ...     return df.select(nw.col("foo", "BAR").name.to_uppercase())
+
+            We can then pass either pandas or Polars to `func`:
+            >>> to_upper(df_pd).columns
+            Index(['FOO', 'BAR'], dtype='object')
+            >>> to_upper(df_pl).columns
+            ['FOO', 'BAR']
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).name.to_uppercase())
 
 
 def col(*names: str | Iterable[str]) -> Expr:

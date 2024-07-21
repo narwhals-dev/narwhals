@@ -27,6 +27,7 @@ nav:
     - api-reference/expr.md
     - api-reference/expr_cat.md
     - api-reference/expr_dt.md
+    - api-reference/expr_name.md
     - api-reference/expr_str.md
     - api-reference/group_by.md
     - api-reference/lazyframe.md

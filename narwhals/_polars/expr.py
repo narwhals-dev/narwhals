@@ -106,6 +106,10 @@ class PolarsExpr:
     def cat(self) -> PolarsExprCatNamespace:
         return PolarsExprCatNamespace(self)
 
+    @property
+    def name(self: Self) -> PolarsExprNameNamespace:
+        return PolarsExprNameNamespace(self)
+
 
 class PolarsExprDateTimeNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
@@ -144,6 +148,20 @@ class PolarsExprCatNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.cat, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsExprNameNamespace:
+    def __init__(self, expr: PolarsExpr) -> None:
+        self._expr = expr
+
+    def __getattr__(self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._expr._from_native_expr(
+                getattr(self._expr._native_expr.name, attr)(*args, **kwargs)
             )
 
         return func
