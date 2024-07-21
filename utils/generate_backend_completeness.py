@@ -103,10 +103,13 @@ def get_backend_completeness_table() -> str:
 if __name__ == "__main__":
     backend_table = get_backend_completeness_table()
 
+    with DESTINATION_PATH.open() as stream:
+        original_content = stream.read()
     with TEMPLATE_PATH.open(mode="r") as stream:
-        template = Template(stream.read()).render({"backend_table": backend_table})
-
-    with DESTINATION_PATH.open(mode="w") as destination:
-        destination.write(template)
-
+        new_content = Template(stream.read()).render({"backend_table": backend_table})
+    if original_content != new_content:
+        with DESTINATION_PATH.open(mode="w") as destination:
+            destination.write(new_content)
+        print('Updated "api-completeness.md"')  # noqa: T201
+        sys.exit(1)
     sys.exit(0)
