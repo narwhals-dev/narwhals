@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
+from typing import Sequence
+from typing import overload
 
 from narwhals.dtypes import translate_dtype
 
@@ -40,7 +42,13 @@ class Series:
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
-    def __getitem__(self, idx: int | slice) -> Any:
+    @overload
+    def __getitem__(self, idx: int) -> Any: ...
+
+    @overload
+    def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
+
+    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
