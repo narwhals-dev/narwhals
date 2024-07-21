@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -51,14 +51,10 @@ def test_string(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_categorical() -> None:
+def test_categorical(constructor: Any) -> None:
     expected = {"b": ["a", "b", "c"]}
 
-    df = nw.from_native(pd.DataFrame(data).astype({"b": "category"}))
-    result = df.select(categorical())
-    compare_dicts(result, expected)
-
-    df = nw.from_native(pl.DataFrame(data, schema_overrides={"b": pl.Categorical}))
+    df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
     result = df.select(categorical())
     compare_dicts(result, expected)
 
@@ -85,8 +81,9 @@ def test_set_ops(
     assert sorted(result) == expected
 
 
-def test_set_ops_invalid() -> None:
-    df = nw.from_native(pd.DataFrame(data))
+@pytest.mark.parametrize("invalid_constructor", [pd.DataFrame, pa.table])
+def test_set_ops_invalid(invalid_constructor: Any) -> None:
+    df = nw.from_native(invalid_constructor(data))
     with pytest.raises(NotImplementedError):
         df.select(1 - numeric())
     with pytest.raises(NotImplementedError):
