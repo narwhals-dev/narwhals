@@ -13,6 +13,7 @@ from narwhals.selectors import by_dtype
 from narwhals.selectors import categorical
 from narwhals.selectors import numeric
 from narwhals.selectors import string
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 data = {
@@ -51,7 +52,11 @@ def test_string(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_categorical(constructor: Any) -> None:
+def test_categorical(request: Any, constructor: Any) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and parse_version(
+        pa.__version__
+    ) <= (15,):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
     df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
