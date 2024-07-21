@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 
+from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
@@ -139,6 +140,16 @@ class ArrowSeries:
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.power(other, ser))
+
+    def __floordiv__(self, other: Any) -> Self:
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(floordiv_compat(ser, other))
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(floordiv_compat(other, ser))
 
     def __invert__(self) -> Self:
         pc = get_pyarrow_compute()
