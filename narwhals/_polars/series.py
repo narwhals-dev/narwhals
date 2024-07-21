@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
+from typing import overload
 
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
@@ -78,7 +80,13 @@ class PolarsSeries:
     def dtype(self) -> DType:
         return translate_dtype(self._native_series.dtype)
 
-    def __getitem__(self, item: Any) -> Any:
+    @overload
+    def __getitem__(self, item: int) -> Any: ...
+
+    @overload
+    def __getitem__(self, item: slice | Sequence[int]) -> Self: ...
+
+    def __getitem__(self, item: int | slice | Sequence[int]) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
 
     def cast(self, dtype: DType) -> Self:

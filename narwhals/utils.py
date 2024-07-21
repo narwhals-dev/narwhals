@@ -286,8 +286,8 @@ def is_ordered_categorical(series: Series) -> bool:
         Let's define a library-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
+        ... def func(s_any):
+        ...     return nw.is_ordered_categorical(s_any)
 
         Then, we can pass any supported library to `func`:
 

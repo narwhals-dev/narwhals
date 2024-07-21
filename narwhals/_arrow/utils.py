@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import isinstance_or_issubclass
+
+if TYPE_CHECKING:
+    import pyarrow as pa
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
@@ -183,3 +188,62 @@ def vertical_concat(dfs: list[Any]) -> Any:
 
     pa = get_pyarrow()
     return pa.concat_tables(dfs).combine_chunks()
+
+
+def floordiv_compat(left: Any, right: Any) -> Any:
+    # The following lines are adapted from pandas' pyarrow implementation.
+    # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
+    pc = get_pyarrow_compute()
+    pa = get_pyarrow()
+
+    if isinstance(left, (int, float)):
+        left = pa.scalar(left)
+
+    if isinstance(right, (int, float)):
+        right = pa.scalar(right)
+
+    if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
+        divided = pc.divide_checked(left, right)
+        if pa.types.is_signed_integer(divided.type):
+            # GH 56676
+            has_remainder = pc.not_equal(pc.multiply(divided, right), left)
+            has_one_negative_operand = pc.less(
+                pc.bit_wise_xor(left, right),
+                pa.scalar(0, type=divided.type),
+            )
+            result = pc.if_else(
+                pc.and_(
+                    has_remainder,
+                    has_one_negative_operand,
+                ),
+                # GH: 55561 ruff: ignore
+                pc.subtract(divided, pa.scalar(1, type=divided.type)),
+                divided,
+            )
+        else:
+            result = divided  # pragma: no cover
+        result = result.cast(left.type)
+    else:
+        divided = pc.divide(left, right)
+        result = pc.floor(divided)
+    return result
+
+
+def cast_for_truediv(
+    arrow_array: pa.ChunkedArray, pa_object: pa.Array | pa.Scalar
+) -> tuple[pa.ChunkedArray, pa.Array | pa.Scalar]:
+    # Lifted from:
+    # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
+    pc = get_pyarrow_compute()
+    pa = get_pyarrow()
+
+    # Ensure int / int -> float mirroring Python/Numpy behavior
+    # as pc.divide_checked(int, int) -> int
+    if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
+        # GH: 56645.  # noqa: ERA001
+        # https://github.com/apache/arrow/issues/35563
+        return pc.cast(arrow_array, pa.float64(), safe=False), pc.cast(
+            pa_object, pa.float64(), safe=False
+        )
+
+    return arrow_array, pa_object

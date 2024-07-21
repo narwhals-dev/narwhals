@@ -12,25 +12,15 @@ import narwhals as nw
 from narwhals._arrow.dataframe import ArrowDataFrame
 
 MISSING = [
-    "DataFrame.is_duplicated",
-    "DataFrame.is_unique",
     "DataFrame.iter_rows",
     "DataFrame.pipe",
-    "DataFrame.unique",
     "Series.drop_nulls",
     "Series.from_iterable",
     "Series.is_between",
-    "Series.is_duplicated",
-    "Series.is_first_distinct",
-    "Series.is_last_distinct",
-    "Series.is_sorted",
-    "Series.is_unique",
     "Series.quantile",
     "Series.round",
     "Series.shift",
     "Series.sort",
-    "Series.to_frame",
-    "Series.to_pandas",
     "Series.unique",
     "Series.value_counts",
 ]
