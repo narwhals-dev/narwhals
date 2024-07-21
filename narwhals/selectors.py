@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from narwhals.dtypes import translate_dtype
-from narwhals.expression import Expr
+from narwhals.expr import Expr
 from narwhals.utils import flatten
 
 
