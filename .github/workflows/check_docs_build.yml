@@ -38,3 +38,5 @@ jobs:
         run: python utils/check_for_no_build_errors.py
       - name: strict-docs-build
         run: mkdocs build --strict
+      - name: generate-api-completeness-doc
+        run: python utils/generate_backend_completeness.py

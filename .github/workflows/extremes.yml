@@ -104,8 +104,6 @@ jobs:
         run: python -m pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy
       - name: show-deps
         run: pip freeze
-      - name: generate-api-completeness-doc
-        run: python utils/generate_backend_completeness.py
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
       - name: Run doctests

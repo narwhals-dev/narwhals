@@ -1,3 +1,4 @@
+jinja2
 markdown-exec[ansi]
 mkdocs
 mkdocs-material
