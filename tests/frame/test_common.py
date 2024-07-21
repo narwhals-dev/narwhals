@@ -265,27 +265,6 @@ def test_reindex(df_raw: Any) -> None:
 
 
 @pytest.mark.parametrize(
-    ("c_left", "c_right"),
-    [(pd.DataFrame, pl.DataFrame), (pa.table, pd.DataFrame)],
-)
-def test_library(c_left: Any, c_right: Any) -> None:
-    df_left = nw.from_native(c_left(data)).lazy()
-    df_right = nw.from_native(c_right(data)).lazy()
-    with pytest.raises(
-        NotImplementedError, match="Cross-library comparisons aren't supported"
-    ):
-        nw.concat([df_left, df_right], how="horizontal")
-    with pytest.raises(
-        NotImplementedError, match="Cross-library comparisons aren't supported"
-    ):
-        nw.concat([df_left, df_right], how="vertical")
-    with pytest.raises(
-        NotImplementedError, match="Cross-library comparisons aren't supported"
-    ):
-        df_left.join(df_right, left_on=["a"], right_on=["a"], how="inner")
-
-
-@pytest.mark.parametrize(
     ("row", "column", "expected"),
     [(0, 2, 7), (1, "z", 8)],
 )

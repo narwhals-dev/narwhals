@@ -144,6 +144,9 @@ class ArrowExpr:
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
+    def n_unique(self) -> Self:
+        return reuse_series_implementation(self, "n_unique", returns_scalar=True)
+
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
@@ -215,6 +218,9 @@ class ArrowExpr:
             self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
         )
 
+    def fill_null(self: Self, value: Any) -> Self:
+        return reuse_series_implementation(self, "fill_null", value=value)
+
     @property
     def dt(self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
@@ -253,6 +259,40 @@ class ArrowExprDateTimeNamespace:
 class ArrowExprStringNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
         self._expr = expr
+
+    def starts_with(self, prefix: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "starts_with",
+            prefix,
+        )
+
+    def ends_with(self, suffix: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "ends_with",
+            suffix,
+        )
+
+    def contains(self, pattern: str, *, literal: bool) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "contains", pattern, literal=literal
+        )
+
+    def slice(self, offset: int, length: int | None = None) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "slice", offset, length
+        )
+
+    def to_datetime(self, format: str | None = None) -> ArrowExpr:  # noqa: A002
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "to_datetime",
+            format,
+        )
 
     def to_uppercase(self) -> ArrowExpr:
         return reuse_series_namespace_implementation(

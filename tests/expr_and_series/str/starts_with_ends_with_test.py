@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 import narwhals.stable.v1 as nw
 
 # Don't move this into typechecking block, for coverage
@@ -13,10 +11,7 @@ from tests.utils import compare_dicts
 data = {"a": ["fdas", "edfas"]}
 
 
-def test_ends_with(request: Any, constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        request.applymarker(pytest.mark.xfail)
-
+def test_ends_with(constructor_with_lazy: Any) -> None:
     df = nw.from_native(constructor_with_lazy(data)).lazy()
     result = df.select(nw.col("a").str.ends_with("das"))
     expected = {
@@ -31,10 +26,7 @@ def test_ends_with(request: Any, constructor_with_lazy: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_starts_with(request: Any, constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        request.applymarker(pytest.mark.xfail)
-
+def test_starts_with(constructor_with_lazy: Any) -> None:
     df = nw.from_native(constructor_with_lazy(data)).lazy()
     result = df.select(nw.col("a").str.starts_with("fda"))
     expected = {

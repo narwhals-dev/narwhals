@@ -179,6 +179,12 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.count(self._native_series)  # type: ignore[no-any-return]
 
+    def n_unique(self) -> int:
+        pc = get_pyarrow_compute()
+        unique_values = pc.unique(self._native_series)
+        count_unique = pc.count(unique_values, mode="all")
+        return count_unique.as_py()  # type: ignore[no-any-return]
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
@@ -318,6 +324,14 @@ class ArrowSeries:
         mask = np.random.choice(idx, size=n, replace=with_replacement)
         return self._from_native_series(pc.take(ser, mask))
 
+    def fill_null(self: Self, value: Any) -> Self:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        dtype = ser.type
+
+        return self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)
@@ -365,16 +379,50 @@ class ArrowSeriesCatNamespace:
 
 
 class ArrowSeriesStringNamespace:
-    def __init__(self, series: ArrowSeries) -> None:
+    def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
-    def to_uppercase(self) -> ArrowSeries:
+    def starts_with(self: Self, prefix: str) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.equal(self.slice(0, len(prefix))._native_series, prefix)
+        )
+
+    def ends_with(self: Self, suffix: str) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.equal(self.slice(-len(suffix))._native_series, suffix)
+        )
+
+    def contains(self: Self, pattern: str, *, literal: bool = False) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        check_func = pc.match_substring if literal else pc.match_substring_regex
+        return self._arrow_series._from_native_series(
+            check_func(self._arrow_series._native_series, pattern)
+        )
+
+    def slice(self: Self, offset: int, length: int | None = None) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        stop = offset + length if length else None
+        return self._arrow_series._from_native_series(
+            pc.utf8_slice_codeunits(
+                self._arrow_series._native_series, start=offset, stop=stop
+            ),
+        )
+
+    def to_datetime(self: Self, format: str | None = None) -> ArrowSeries:  # noqa: A002
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.strptime(self._arrow_series._native_series, format=format, unit="us")
+        )
+
+    def to_uppercase(self: Self) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._arrow_series._from_native_series(
             pc.utf8_upper(self._arrow_series._native_series),
         )
 
-    def to_lowercase(self) -> ArrowSeries:
+    def to_lowercase(self: Self) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._arrow_series._from_native_series(
             pc.utf8_lower(self._arrow_series._native_series),

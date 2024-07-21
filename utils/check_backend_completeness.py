@@ -18,7 +18,6 @@ MISSING = [
     "DataFrame.pipe",
     "DataFrame.unique",
     "Series.drop_nulls",
-    "Series.fill_null",
     "Series.from_iterable",
     "Series.is_between",
     "Series.is_duplicated",
@@ -26,7 +25,6 @@ MISSING = [
     "Series.is_last_distinct",
     "Series.is_sorted",
     "Series.is_unique",
-    "Series.n_unique",
     "Series.quantile",
     "Series.round",
     "Series.shift",
@@ -79,8 +77,6 @@ if __name__ == "__main__":
     df_pa = ArrowDataFrame(MockDataFrame({"a": [1, 2, 3]}), backend_version=(13, 0))
     df_nw = nw.DataFrame(
         MockDataFrame({"a": [1, 2, 3]}),
-        is_polars=True,
-        backend_version=(1,),
         level="full",
     )
     pa_methods = [f"DataFrame.{x}" for x in df_pa.__dir__() if not x.startswith("_")]
