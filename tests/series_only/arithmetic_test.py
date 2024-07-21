@@ -48,7 +48,10 @@ def test_arithmetic(
     assert result.to_numpy().tolist() == expected
 
 
-def test_truediv_same_dims(constructor_series: Any) -> None:
+def test_truediv_same_dims(constructor_series: Any, request: Any) -> None:
+    if "polars" in str(constructor_series):
+        # https://github.com/pola-rs/polars/issues/17760
+        request.applymarker(pytest.mark.xfail)
     s_left = nw.from_native(constructor_series([1, 2, 3]), series_only=True)
     s_right = nw.from_native(constructor_series([2, 2, 1]), series_only=True)
     result = (s_left / s_right).to_list()
