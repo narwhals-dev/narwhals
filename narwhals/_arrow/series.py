@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 
+from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import reverse_translate_dtype
 from narwhals._arrow.utils import translate_dtype
@@ -150,6 +151,26 @@ class ArrowSeries:
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(floordiv_compat(other, ser))
+
+    def __truediv__(self, other: Any) -> Self:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        if not isinstance(other, (pa.Array, pa.ChunkedArray)):
+            # scalar
+            other = pa.scalar(other)
+        return self._from_native_series(pc.divide(*cast_for_truediv(ser, other)))
+
+    def __rtruediv__(self, other: Any) -> Self:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        if not isinstance(other, (pa.Array, pa.ChunkedArray)):
+            # scalar
+            other = pa.scalar(other)
+        return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))
 
     def __invert__(self) -> Self:
         pc = get_pyarrow_compute()
