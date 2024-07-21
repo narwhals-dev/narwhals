@@ -22,9 +22,9 @@ In the following table it is possible to check which method is implemented for w
 | DataFrame               | get_column         | :white_check_mark: | :white_check_mark: |
 | DataFrame               | group_by           | :white_check_mark: | :white_check_mark: |
 | DataFrame               | head               | :white_check_mark: | :white_check_mark: |
-| DataFrame               | is_duplicated      | :white_check_mark: | :x:                |
+| DataFrame               | is_duplicated      | :white_check_mark: | :white_check_mark: |
 | DataFrame               | is_empty           | :white_check_mark: | :white_check_mark: |
-| DataFrame               | is_unique          | :white_check_mark: | :x:                |
+| DataFrame               | is_unique          | :white_check_mark: | :white_check_mark: |
 | DataFrame               | item               | :white_check_mark: | :white_check_mark: |
 | DataFrame               | iter_rows          | :white_check_mark: | :x:                |
 | DataFrame               | join               | :white_check_mark: | :white_check_mark: |
@@ -41,7 +41,7 @@ In the following table it is possible to check which method is implemented for w
 | DataFrame               | to_dict            | :white_check_mark: | :white_check_mark: |
 | DataFrame               | to_numpy           | :white_check_mark: | :white_check_mark: |
 | DataFrame               | to_pandas          | :white_check_mark: | :white_check_mark: |
-| DataFrame               | unique             | :white_check_mark: | :x:                |
+| DataFrame               | unique             | :white_check_mark: | :white_check_mark: |
 | DataFrame               | with_columns       | :white_check_mark: | :white_check_mark: |
 | DataFrame               | with_row_index     | :white_check_mark: | :white_check_mark: |
 | DataFrame               | write_parquet      | :white_check_mark: | :white_check_mark: |
@@ -71,6 +71,7 @@ In the following table it is possible to check which method is implemented for w
 | Expr                    | mean               | :white_check_mark: | :white_check_mark: |
 | Expr                    | min                | :white_check_mark: | :white_check_mark: |
 | Expr                    | n_unique           | :white_check_mark: | :white_check_mark: |
+| Expr                    | name               | :white_check_mark: | :white_check_mark: |
 | Expr                    | null_count         | :white_check_mark: | :white_check_mark: |
 | Expr                    | over               | :white_check_mark: | :x:                |
 | Expr                    | quantile           | :white_check_mark: | :x:                |
@@ -100,6 +101,12 @@ In the following table it is possible to check which method is implemented for w
 | ExprDateTimeNamespace   | total_nanoseconds  | :white_check_mark: | :x:                |
 | ExprDateTimeNamespace   | total_seconds      | :white_check_mark: | :x:                |
 | ExprDateTimeNamespace   | year               | :white_check_mark: | :x:                |
+| ExprNameNamespace       | keep               | :x:                | :x:                |
+| ExprNameNamespace       | map                | :x:                | :x:                |
+| ExprNameNamespace       | prefix             | :x:                | :x:                |
+| ExprNameNamespace       | suffix             | :x:                | :x:                |
+| ExprNameNamespace       | to_lowercase       | :x:                | :x:                |
+| ExprNameNamespace       | to_uppercase       | :x:                | :x:                |
 | ExprStringNamespace     | contains           | :white_check_mark: | :white_check_mark: |
 | ExprStringNamespace     | ends_with          | :white_check_mark: | :white_check_mark: |
 | ExprStringNamespace     | head               | :x:                | :x:                |
@@ -126,7 +133,7 @@ In the following table it is possible to check which method is implemented for w
 | LazyFrame               | select             | :white_check_mark: | :white_check_mark: |
 | LazyFrame               | sort               | :white_check_mark: | :white_check_mark: |
 | LazyFrame               | tail               | :white_check_mark: | :white_check_mark: |
-| LazyFrame               | unique             | :white_check_mark: | :x:                |
+| LazyFrame               | unique             | :white_check_mark: | :white_check_mark: |
 | LazyFrame               | with_columns       | :white_check_mark: | :white_check_mark: |
 | LazyFrame               | with_row_index     | :white_check_mark: | :white_check_mark: |
 | Series                  | abs                | :white_check_mark: | :white_check_mark: |
