@@ -340,6 +340,28 @@ class ArrowSeries:
             return self._native_series[0].as_py()
         return self._native_series[index].as_py()
 
+    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
+        """Parallel is unused, exists for compatibility"""
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        pc = get_pyarrow_compute()
+        pa = get_pyarrow()
+
+        name_ = (
+            "index" if self._native_series._name is None else self._native_series._name
+        )
+
+        val_count = pc.value_counts(self._native_series)
+        val_count = pa.Table.from_struct_array(val_count).rename_columns([name_, "count"])
+
+        if sort:
+            val_count = val_count.sort_by([("count", "descending")])
+
+        return ArrowDataFrame(
+            val_count,
+            backend_version=self._backend_version,
+        )
+
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
         pc = get_pyarrow_compute()
 
