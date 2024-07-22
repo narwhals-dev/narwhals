@@ -344,24 +344,36 @@ class ArrowSeries:
             return self._native_series[0].as_py()
         return self._native_series[index].as_py()
 
-    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
+    def value_counts(
+        self: Self,
+        *,
+        sort: bool = False,
+        parallel: bool = False,
+        name: str | None = None,
+        normalize: bool = False,
+    ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility"""
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         pc = get_pyarrow_compute()
         pa = get_pyarrow()
 
-        name_ = (
-            "index" if self._native_series._name is None else self._native_series._name
-        )
+        index_name_ = "index" if self._name is None else self._name
+        value_name_ = name or ("proportion" if normalize else "count")
 
         val_count = pc.value_counts(self._native_series)
+        values = val_count.field("values")
+        counts = val_count.field("counts")
+
+        if normalize:
+            counts = pc.divide(*cast_for_truediv(counts, pc.sum(counts)))
+
         val_count = pa.Table.from_arrays(
-            [val_count.field("values"), val_count.field("counts")], names=[name_, "count"]
+            [values, counts], names=[index_name_, value_name_]
         )
 
         if sort:
-            val_count = val_count.sort_by([("count", "descending")])
+            val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
             val_count,
