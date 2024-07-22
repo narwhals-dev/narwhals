@@ -14,10 +14,10 @@ def test_drop_nulls(constructor: Any) -> None:
         "D": [9, 10, 11, 12],
     }
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data), eager_only=True)
 
     result_a = df.select(nw.col("A").drop_nulls())
-    result_b = df.select(nw.col("B").drop_nulls())
+    result_b = df.select(df["B"].drop_nulls())
     result_c = df.select(nw.col("C").drop_nulls())
     result_d = df.select(nw.col("D").drop_nulls())
     expected_a = {"A": [1.0, 2.0, 4.0]}
