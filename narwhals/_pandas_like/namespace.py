@@ -258,17 +258,17 @@ class PandasLikeNamespace:
             )
         raise NotImplementedError
 
-    def when(self, *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr], **conditions: Any) -> PandasWhen: # noqa: ARG002
+    def when(self, *predicates: IntoPandasLikeExpr, **conditions: Any) -> PandasWhen: # noqa: ARG002
         plx = self.__class__(self._implementation, self._backend_version)
         condition = plx.all_horizontal(*predicates)
-        return PandasWhen(condition)
+        return PandasWhen(condition, self._implementation, self._backend_version)
 
-class InnerPandasWhen:
-    def __init__(self, implementation: Implementation, backend_version: tuple[int, ...], condition: PandasLikeExpr, value: Any, otherise_value: Any = None) -> None:
+class PandasWhen:
+    def __init__(self, condition: PandasLikeExpr, implementation: Implementation, backend_version: tuple[int, ...], then_value: Any = None, otherise_value: Any = None) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
         self._condition = condition
-        self._value = value
+        self._then_value = then_value
         self._otherwise_value = otherise_value
 
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -278,20 +278,18 @@ class InnerPandasWhen:
 
         condition = self._condition._call(df)[0]
 
-        value_series = plx._create_broadcast_series_from_scalar(self._value, condition)
-        none_series = plx._create_broadcast_series_from_scalar(self._otherwise_value, condition)
+        value_series = plx._create_broadcast_series_from_scalar(self._then_value, condition)
+        otherwise_series = plx._create_broadcast_series_from_scalar(self._otherwise_value, condition)
         return [
-            value_series.zip_with(condition, none_series)
+            value_series.zip_with(condition, otherwise_series)
         ]
-
-class PandasWhen:
-    def __init__(self, condition: PandasLikeExpr) -> None:
-        self._condition = condition
 
     def then(self, value: Any) -> PandasThen:
 
+        self._then_value = value
+
         return PandasThen(
-            InnerPandasWhen(self._condition._implementation, self._condition._backend_version, self._condition, value),
+            self,
             depth=0,
             function_name="whenthen",
             root_names=None,
@@ -304,7 +302,7 @@ class PandasThen(PandasLikeExpr):
 
     def __init__(
         self,
-        call: InnerPandasWhen,
+        call: PandasWhen,
         *,
         depth: int,
         function_name: str,
