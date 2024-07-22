@@ -189,6 +189,9 @@ class ArrowExpr:
     def sum(self) -> Self:
         return reuse_series_implementation(self, "sum", returns_scalar=True)
 
+    def drop_nulls(self) -> Self:
+        return reuse_series_implementation(self, "drop_nulls")
+
     def alias(self, name: str) -> Self:
         # Define this one manually, so that we can
         # override `output_names` and not increase depth

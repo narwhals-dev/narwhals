@@ -203,6 +203,10 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.sum(self._native_series)  # type: ignore[no-any-return]
 
+    def drop_nulls(self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._from_native_series(pc.drop_null(self._native_series))
+
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
