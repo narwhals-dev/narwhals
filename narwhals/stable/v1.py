@@ -33,7 +33,7 @@ from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
-from narwhals.expression import Expr as NwExpr
+from narwhals.expr import Expr as NwExpr
 from narwhals.functions import concat
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema

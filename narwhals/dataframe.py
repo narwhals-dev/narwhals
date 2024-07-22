@@ -59,7 +59,7 @@ class BaseFrame(Generic[FrameT]):
         return args, kwargs
 
     def _extract_compliant(self, arg: Any) -> Any:
-        from narwhals.expression import Expr
+        from narwhals.expr import Expr
         from narwhals.series import Series
 
         if isinstance(arg, BaseFrame):
