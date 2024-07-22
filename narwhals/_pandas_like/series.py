@@ -568,7 +568,7 @@ class PandasLikeSeries:
         ).reset_index()
         val_count.columns = [name_, "count"]
         if sort:
-            val_count = val_count.sort_values(name_)
+            val_count = val_count.sort_values("count", ascending=False)
 
         return PandasLikeDataFrame(
             val_count,

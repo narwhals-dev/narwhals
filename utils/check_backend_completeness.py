@@ -19,7 +19,6 @@ MISSING = [
     "Series.quantile",
     "Series.round",
     "Series.shift",
-    "Series.value_counts",
 ]
 
 
