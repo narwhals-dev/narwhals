@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Iterable
 from typing import Literal
 
 from narwhals._pandas_like.series import PandasSeries
@@ -352,7 +351,6 @@ class PandasLikeExpr:
         condition = plx.all_horizontal(*predicates)
         return PandasWhen(self, condition)
 
-
 class PandasLikeExprCatNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
         self._expr = expr
@@ -479,6 +477,7 @@ class PandasLikeExprDateTimeNamespace:
 
     def to_string(self, format: str) -> PandasLikeExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
+<<<<<<< HEAD
             self._expr, "dt", "to_string", format
         )
 
@@ -635,3 +634,64 @@ class PandasLikeExprNameNamespace:
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
         )
+||||||| parent of f3770b7 (Fix errors from the migration)
+                self._expr, "dt", "to_string", format
+                )
+
+class PandasWhen:
+    def __init__(self, condition: PandasLikeExpr) -> None:
+        self._condition = condition
+
+    def then(self, value: Any) -> PandasThen:
+        return PandasThen(self, value=value, implementation=self._condition._implementation)
+
+class PandasThen(PandasLikeExpr):
+    def __init__(self, when: PandasWhen, *, value: Any, implementation: Implementation, backend_version: tuple[int, ...]) -> None:
+        self._when = when
+        self._then_value = value
+        self._implementation = implementation
+        self.backend_version = backend_version
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+            plx = PandasLikeNamespace(implementation=self._implementation, backend_version=self.backend_version)
+
+            condition = self._when._condition._call(df)[0]
+
+            value_series = plx._create_series_from_scalar(self._then_value, condition)
+            none_series = plx._create_series_from_scalar(None, condition)
+            return [
+                    value_series.zip_with(condition, none_series)
+            ]
+
+        self._call = func
+        self._depth = 0
+        self._function_name = "whenthen"
+        self._root_names = None
+        self._output_names = None
+
+    def otherwise(self, value: Any) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            from narwhals._pandas_like.namespace import PandasLikeNamespace
+            plx = PandasLikeNamespace(implementation=self._implementation, backend_version=self.backend_version)
+            condition = self._when._condition._call(df)[0]
+            value_series = plx._create_series_from_scalar(self._then_value, condition)
+            otherwise_series = plx._create_series_from_scalar(value, condition)
+            return [
+                value_series.zip_with(condition, otherwise_series)
+            ]
+
+        return PandasLikeExpr(
+            func,
+            depth=0,
+            function_name="whenthenotherwise",
+            root_names=None,
+            output_names=None,
+            implementation=self._implementation,
+            backend_version=self.backend_version,
+        )
+=======
+                self._expr, "dt", "to_string", format
+                )
+>>>>>>> f3770b7 (Fix errors from the migration)
