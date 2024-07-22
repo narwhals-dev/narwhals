@@ -480,6 +480,7 @@ class PandasLikeExprDateTimeNamespace:
             self._expr, "dt", "to_string", format
         )
 
+
 class PandasLikeExprNameNamespace:
     def __init__(self: Self, expr: PandasLikeExpr) -> None:
         self._expr = expr
