@@ -10,7 +10,7 @@ data = {"a": [4, 4, 6, 4, 1, 1]}
 
 
 def test_value_counts(request: Any, constructor: Any) -> None:
-    if "pandas_series_nullable" in str(constructor) or sys.version_info < (
+    if "pandas_series_nullable" in str(constructor) and sys.version_info < (
         3,
         9,
     ):  # fails for py3.8
