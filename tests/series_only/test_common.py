@@ -93,11 +93,11 @@ def test_boolean_reductions(request: Any, constructor: Any) -> None:
 def test_convert(request: Any, constructor_series: Any) -> None:
     if any(
         cname in str(constructor_series)
-        for cname in ("pyarrow_series", "pandas_series_nullable", "pandas_series_pyarrow")
+        for cname in ("pandas_series_nullable", "pandas_series_pyarrow")
     ):
         request.applymarker(pytest.mark.xfail)
 
-    series = nw.from_native(constructor_series(data).rename("a"), series_only=True)
+    series = nw.from_native(constructor_series(data), series_only=True).alias("a")
 
     result = series.to_numpy()
     assert_array_equal(result, np.array([1, 3, 2]))
@@ -112,46 +112,6 @@ def test_to_numpy() -> None:
     assert nw_series.to_numpy().dtype == "float64"
     assert nw_series.__array__().dtype == "float64"
     assert nw_series.shape == (3,)
-
-
-def test_is_duplicated(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    series = nw.from_native(constructor_series(data_dups), series_only=True)
-    result = series.is_duplicated()
-    expected = np.array([True, True, False])
-    assert (result.to_numpy() == expected).all()
-
-
-def test_is_unique(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    series = nw.from_native(constructor_series(data_dups), series_only=True)
-    result = series.is_unique()
-    expected = np.array([False, False, True])
-    assert (result.to_numpy() == expected).all()
-
-
-def test_is_first_distinct(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    series = nw.from_native(constructor_series(data_dups), series_only=True)
-    result = series.is_first_distinct()
-    expected = np.array([True, False, True])
-    assert (result.to_numpy() == expected).all()
-
-
-def test_is_last_distinct(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    series = nw.from_native(constructor_series(data_dups), series_only=True)
-    result = series.is_last_distinct()
-    expected = np.array([False, True, True])
-    assert (result.to_numpy() == expected).all()
 
 
 def test_value_counts(request: Any, constructor_series: Any) -> None:
@@ -175,35 +135,6 @@ def test_value_counts(request: Any, constructor_series: Any) -> None:
     a = unsorted_result.to_numpy()
 
     assert (a[a[:, 0].argsort()] == expected).all()
-
-
-@pytest.mark.parametrize(
-    ("input_data", "descending", "expected"),
-    [(data, False, False), (data_sorted, False, True), (data_sorted, True, False)],
-)
-def test_is_sorted(
-    request: Any,
-    constructor_series: Any,
-    input_data: str,
-    descending: bool,  # noqa: FBT001
-    expected: bool,  # noqa: FBT001
-) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    series = nw.from_native(constructor_series(input_data), series_only=True)
-    result = series.is_sorted(descending=descending)
-    assert result == expected
-
-
-def test_is_sorted_invalid(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    series = nw.from_native(constructor_series(data_sorted), series_only=True)
-
-    with pytest.raises(TypeError):
-        series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -233,10 +164,7 @@ def test_quantile(
     assert result == expected
 
 
-def test_zip_with(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
+def test_zip_with(constructor_series: Any) -> None:
     series1 = nw.from_native(constructor_series(data), series_only=True)
     series2 = nw.from_native(constructor_series(data_dups), series_only=True)
     mask = nw.from_native(constructor_series([True, False, True]), series_only=True)

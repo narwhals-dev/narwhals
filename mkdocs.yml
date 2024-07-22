@@ -20,13 +20,15 @@ nav:
   - how_it_works.md
   - Roadmap: roadmap.md
   - Related projects: related.md
+  - API Completeness: api-completeness.md
   - API Reference:
     - api-reference/narwhals.md
     - api-reference/dataframe.md
-    - api-reference/expressions.md
-    - api-reference/expressions_cat.md
-    - api-reference/expressions_dt.md
-    - api-reference/expressions_str.md
+    - api-reference/expr.md
+    - api-reference/expr_cat.md
+    - api-reference/expr_dt.md
+    - api-reference/expr_name.md
+    - api-reference/expr_str.md
     - api-reference/group_by.md
     - api-reference/lazyframe.md
     - api-reference/schema.md
@@ -67,6 +69,7 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
+
 plugins:
 - search
 - mkdocstrings:
@@ -76,8 +79,15 @@ plugins:
         - https://installer.readthedocs.io/en/stable/objects.inv
         rendering:
           show_signature_annotations: true
+
+hooks:
+- utils/generate_backend_completeness.py
+
+
 markdown_extensions:
+- admonition
 - md_in_html
+- pymdownx.details
 - pymdownx.tabbed:
     alternate_style: true
 - pymdownx.superfences:
@@ -86,3 +96,6 @@ markdown_extensions:
       class: python
       validator: !!python/name:markdown_exec.validator
       format: !!python/name:markdown_exec.formatter
+- pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

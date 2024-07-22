@@ -8,6 +8,7 @@
         - alias
         - all
         - any
+        - arg_true
         - cast
         - count
         - cum_sum

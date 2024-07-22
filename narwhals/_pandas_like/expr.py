@@ -216,6 +216,9 @@ class PandasLikeExpr:
     def is_in(self, other: Any) -> Self:
         return reuse_series_implementation(self, "is_in", other=other)
 
+    def arg_true(self) -> Self:
+        return reuse_series_implementation(self, "arg_true")
+
     def filter(self, *predicates: Any) -> Self:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
@@ -325,16 +328,20 @@ class PandasLikeExpr:
         return reuse_series_implementation(self, "len", returns_scalar=True)
 
     @property
-    def str(self) -> PandasLikeExprStringNamespace:
+    def str(self: Self) -> PandasLikeExprStringNamespace:
         return PandasLikeExprStringNamespace(self)
 
     @property
-    def dt(self) -> PandasLikeExprDateTimeNamespace:
+    def dt(self: Self) -> PandasLikeExprDateTimeNamespace:
         return PandasLikeExprDateTimeNamespace(self)
 
     @property
-    def cat(self) -> PandasLikeExprCatNamespace:
+    def cat(self: Self) -> PandasLikeExprCatNamespace:
         return PandasLikeExprCatNamespace(self)
+
+    @property
+    def name(self: Self) -> PandasLikeExprNameNamespace:
+        return PandasLikeExprNameNamespace(self)
 
 
 class PandasLikeExprCatNamespace:
@@ -465,3 +472,157 @@ class PandasLikeExprDateTimeNamespace:
         return reuse_series_namespace_implementation(
                 self._expr, "dt", "to_string", format
                 )
+
+class PandasLikeExprNameNamespace:
+    def __init__(self: Self, expr: PandasLikeExpr) -> None:
+        self._expr = expr
+
+    def keep(self: Self) -> PandasLikeExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.keep`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), root_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=root_names,
+            implementation=self._expr._implementation,
+            backend_version=self._expr._backend_version,
+        )
+
+    def map(self: Self, function: Callable[[str], str]) -> PandasLikeExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.map`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [function(str(name)) for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            implementation=self._expr._implementation,
+            backend_version=self._expr._backend_version,
+        )
+
+    def prefix(self: Self, prefix: str) -> PandasLikeExpr:
+        root_names = self._expr._root_names
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.prefix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [prefix + str(name) for name in root_names]
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            implementation=self._expr._implementation,
+            backend_version=self._expr._backend_version,
+        )
+
+    def suffix(self: Self, suffix: str) -> PandasLikeExpr:
+        root_names = self._expr._root_names
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.suffix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [str(name) + suffix for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            implementation=self._expr._implementation,
+            backend_version=self._expr._backend_version,
+        )
+
+    def to_lowercase(self: Self) -> PandasLikeExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+        output_names = [str(name).lower() for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            implementation=self._expr._implementation,
+            backend_version=self._expr._backend_version,
+        )
+
+    def to_uppercase(self: Self) -> PandasLikeExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+        output_names = [str(name).upper() for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.alias(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            implementation=self._expr._implementation,
+            backend_version=self._expr._backend_version,
+        )
+>>>>>>> main

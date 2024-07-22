@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -13,6 +13,7 @@ from narwhals.selectors import by_dtype
 from narwhals.selectors import categorical
 from narwhals.selectors import numeric
 from narwhals.selectors import string
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 data = {
@@ -23,54 +24,43 @@ data = {
 }
 
 
-def test_selectors(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_selectors(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = nw.to_native(df.select(by_dtype([nw.Int64, nw.Float64]) + 1))
+    result = df.select(by_dtype([nw.Int64, nw.Float64]) + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
     compare_dicts(result, expected)
 
 
-def test_numeric(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_numeric(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = nw.to_native(df.select(numeric() + 1))
+    result = df.select(numeric() + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
     compare_dicts(result, expected)
 
 
-def test_boolean(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_boolean(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = nw.to_native(df.select(boolean()))
+    result = df.select(boolean())
     expected = {"d": [True, False, True]}
     compare_dicts(result, expected)
 
 
-def test_string(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_string(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = nw.to_native(df.select(string()))
+    result = df.select(string())
     expected = {"b": ["a", "b", "c"]}
     compare_dicts(result, expected)
 
 
-def test_categorical() -> None:
-    df = nw.from_native(pd.DataFrame(data).astype({"b": "category"}))
-    result = nw.to_native(df.select(categorical()))
+def test_categorical(request: Any, constructor: Any) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and parse_version(
+        pa.__version__
+    ) <= (15,):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
-    compare_dicts(result, expected)
-    df = nw.from_native(pl.DataFrame(data, schema_overrides={"b": pl.Categorical}))
-    result = nw.to_native(df.select(categorical()))
-    expected = {"b": ["a", "b", "c"]}
+
+    df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
+    result = df.select(categorical())
     compare_dicts(result, expected)
 
 
@@ -89,18 +79,16 @@ def test_categorical() -> None:
     ],
 )
 def test_set_ops(
-    request: Any, constructor: Any, selector: nw.selectors.Selector, expected: list[str]
+    constructor: Any, selector: nw.selectors.Selector, expected: list[str]
 ) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor(data))
     result = df.select(selector).columns
     assert sorted(result) == expected
 
 
-def test_set_ops_invalid() -> None:
-    df = nw.from_native(pd.DataFrame(data))
+@pytest.mark.parametrize("invalid_constructor", [pd.DataFrame, pa.table])
+def test_set_ops_invalid(invalid_constructor: Any) -> None:
+    df = nw.from_native(invalid_constructor(data))
     with pytest.raises(NotImplementedError):
         df.select(1 - numeric())
     with pytest.raises(NotImplementedError):

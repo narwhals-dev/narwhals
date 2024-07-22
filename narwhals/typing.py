@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
-    from narwhals.expression import Expr
+    from narwhals.expr import Expr
     from narwhals.series import Series
 
     # All dataframes supported by Narwhals have a

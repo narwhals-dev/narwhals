@@ -20,6 +20,7 @@ repos:
     - id: codespell
       files: \.(py|rst|md)$
       args: [--ignore-words-list=ser]
+      exclude: ^docs/api-completeness.md$
 - repo: local
   hooks:
     - id: check-api-reference
@@ -30,15 +31,10 @@ repos:
       additional_dependencies: [polars]
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
-      entry: (?<!>>> )import (pandas|polars|modin|cudf)
+      entry: (?<!>>> )import (pandas|polars|modin|cudf|pyarrow)
       language: pygrep
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
-    - id: check-arrow-backend-completeness
-      name: check-arrow-backend-completeness
-      pass_filenames: false
-      entry: python -m utils.check_backend_completeness
-      language: python
 - repo: https://github.com/kynan/nbstripout
   rev: 0.7.1
   hooks:

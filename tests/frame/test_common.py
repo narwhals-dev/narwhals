@@ -159,21 +159,6 @@ def test_expr_na(constructor_with_lazy: Any) -> None:
     compare_dicts(result_nna, expected)
 
 
-def test_drop_nulls(request: Any, constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor_with_lazy(data_na)).lazy()
-
-    result = df.select(nw.col("a").drop_nulls())
-    expected = {"a": [3, 2]}
-    compare_dicts(result, expected)
-
-    result = df.select(df.collect()["a"].drop_nulls())
-    expected = {"a": [3, 2]}
-    compare_dicts(result, expected)
-
-
 @pytest.mark.parametrize(
     ("drop", "left"),
     [
@@ -262,27 +247,6 @@ def test_reindex(df_raw: Any) -> None:
     compare_dicts(result, expected)
     with pytest.raises(ValueError, match="Multi-output expressions are not supported"):
         nw.to_native(df.with_columns(nw.all() + nw.all()))
-
-
-@pytest.mark.parametrize(
-    ("c_left", "c_right"),
-    [(pd.DataFrame, pl.DataFrame), (pa.table, pd.DataFrame)],
-)
-def test_library(c_left: Any, c_right: Any) -> None:
-    df_left = nw.from_native(c_left(data)).lazy()
-    df_right = nw.from_native(c_right(data)).lazy()
-    with pytest.raises(
-        NotImplementedError, match="Cross-library comparisons aren't supported"
-    ):
-        nw.concat([df_left, df_right], how="horizontal")
-    with pytest.raises(
-        NotImplementedError, match="Cross-library comparisons aren't supported"
-    ):
-        nw.concat([df_left, df_right], how="vertical")
-    with pytest.raises(
-        NotImplementedError, match="Cross-library comparisons aren't supported"
-    ):
-        df_left.join(df_right, left_on=["a"], right_on=["a"], how="inner")
 
 
 @pytest.mark.parametrize(

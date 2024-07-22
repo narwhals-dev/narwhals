@@ -139,6 +139,7 @@ def test_duration_micro_nano(
     parse_version(pd.__version__) < parse_version("2.0.0"),
     reason="pyarrow dtype not available",
 )
+@pytest.mark.slow()
 def test_ordinal_day(dates: datetime) -> None:
     result_pd = nw.from_native(pd.Series([dates]), series_only=True).dt.ordinal_day()[0]
     result_pdms = nw.from_native(
@@ -168,6 +169,7 @@ def test_ordinal_day(dates: datetime) -> None:
     parse_version(pd.__version__) < parse_version("2.2.0"),
     reason="pyarrow dtype not available",
 )
+@pytest.mark.slow()
 def test_total_minutes(timedeltas: timedelta) -> None:
     result_pd = nw.from_native(
         pd.Series([timedeltas]), series_only=True

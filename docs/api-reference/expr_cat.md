@@ -1,6 +1,6 @@
 # `narwhals.Expr.cat`
 
-::: narwhals.expression.ExprCatNamespace
+::: narwhals.expr.ExprCatNamespace
     handler: python
     options:
       members:

@@ -8,6 +8,7 @@ from typing import Iterable
 from narwhals import dtypes
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
+from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
@@ -198,3 +199,7 @@ class ArrowNamespace:
                 backend_version=self._backend_version,
             )
         raise NotImplementedError
+
+    @property
+    def selectors(self) -> ArrowSelectorNamespace:
+        return ArrowSelectorNamespace(backend_version=self._backend_version)

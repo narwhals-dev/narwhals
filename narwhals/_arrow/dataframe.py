@@ -12,8 +12,10 @@ from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyarrow_compute
 from narwhals.dependencies import get_pyarrow_parquet
 from narwhals.utils import flatten
+from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -208,7 +210,7 @@ class ArrowDataFrame:
         self,
         other: Self,
         *,
-        how: Literal["inner"] = "inner",
+        how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
     ) -> Self:
@@ -217,24 +219,35 @@ class ArrowDataFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
 
-        if how == "cross":  # type: ignore[comparison-overlap]
-            raise NotImplementedError
+        how_to_join_map = {
+            "anti": "left anti",
+            "semi": "left semi",
+            "inner": "inner",
+            "left": "left outer",
+        }
 
-        if how == "anti":  # type: ignore[comparison-overlap]
-            raise NotImplementedError
+        if how == "cross":
+            plx = self.__narwhals_namespace__()
+            key_token = generate_unique_token(
+                n_bytes=8, columns=[*self.columns, *other.columns]
+            )
 
-        if how == "semi":  # type: ignore[comparison-overlap]
-            raise NotImplementedError
-
-        if how == "left":  # type: ignore[comparison-overlap]
-            raise NotImplementedError
+            return self._from_native_dataframe(
+                self.with_columns(**{key_token: plx.lit(0, None)})._native_dataframe.join(
+                    other.with_columns(**{key_token: plx.lit(0, None)})._native_dataframe,
+                    keys=key_token,
+                    right_keys=key_token,
+                    join_type="inner",
+                    right_suffix="_right",
+                ),
+            ).drop(key_token)
 
         return self._from_native_dataframe(
             self._native_dataframe.join(
                 other._native_dataframe,
                 keys=left_on,
                 right_keys=right_on,
-                join_type=how,
+                join_type=how_to_join_map[how],
                 right_suffix="_right",
             ),
         )
@@ -375,3 +388,76 @@ class ArrowDataFrame:
     def write_parquet(self, file: Any) -> Any:
         pp = get_pyarrow_parquet()
         pp.write_table(self._native_dataframe, file)
+
+    def is_duplicated(self: Self) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
+        np = get_numpy()
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        df = self._native_dataframe
+
+        columns = self.columns
+        col_token = generate_unique_token(n_bytes=8, columns=columns)
+        row_count = (
+            df.append_column(col_token, pa.array(np.arange(len(self))))
+            .group_by(columns)
+            .aggregate([(col_token, "count")])
+        )
+        is_duplicated = pc.greater(
+            df.join(
+                row_count, keys=columns, right_keys=columns, join_type="inner"
+            ).column(f"{col_token}_count"),
+            1,
+        )
+        return ArrowSeries(is_duplicated, name="", backend_version=self._backend_version)
+
+    def is_unique(self: Self) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
+        pc = get_pyarrow_compute()
+        is_duplicated = self.is_duplicated()._native_series
+
+        return ArrowSeries(
+            pc.invert(is_duplicated), name="", backend_version=self._backend_version
+        )
+
+    def unique(
+        self: Self,
+        subset: str | list[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"] = "any",
+        maintain_order: bool = False,  # noqa: ARG002
+    ) -> Self:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
+
+        np = get_numpy()
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+
+        df = self._native_dataframe
+
+        if isinstance(subset, str):
+            subset = [subset]
+        subset = subset or self.columns
+
+        if keep in {"any", "first", "last"}:
+            agg_func_map = {"any": "min", "first": "min", "last": "max"}
+
+            agg_func = agg_func_map[keep]
+            col_token = generate_unique_token(n_bytes=8, columns=self.columns)
+            keep_idx = (
+                df.append_column(col_token, pa.array(np.arange(len(self))))
+                .group_by(subset)
+                .aggregate([(col_token, agg_func)])
+                .column(f"{col_token}_{agg_func}")
+            )
+
+            return self._from_native_dataframe(pc.take(df, keep_idx))
+
+        keep_idx = self.select(*subset).is_unique()
+        return self.filter(keep_idx)

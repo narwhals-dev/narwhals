@@ -21,17 +21,17 @@ from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
-from narwhals.expression import Expr
-from narwhals.expression import all
-from narwhals.expression import all_horizontal
-from narwhals.expression import col
-from narwhals.expression import len
-from narwhals.expression import lit
-from narwhals.expression import max
-from narwhals.expression import mean
-from narwhals.expression import min
-from narwhals.expression import sum
-from narwhals.expression import sum_horizontal
+from narwhals.expr import Expr
+from narwhals.expr import all
+from narwhals.expr import all_horizontal
+from narwhals.expr import col
+from narwhals.expr import len
+from narwhals.expr import lit
+from narwhals.expr import max
+from narwhals.expr import mean
+from narwhals.expr import min
+from narwhals.expr import sum
+from narwhals.expr import sum_horizontal
 from narwhals.functions import concat
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
@@ -46,7 +46,7 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.1.1"
+__version__ = "1.1.3"
 
 __all__ = [
     "selectors",

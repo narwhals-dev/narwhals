@@ -5,3 +5,4 @@ todo.md
 site/
 .coverage.*
 .nox
+docs/api-completeness.md
