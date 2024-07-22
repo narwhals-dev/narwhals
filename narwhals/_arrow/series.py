@@ -163,9 +163,9 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.sum(self._native_series)  # type: ignore[no-any-return]
 
-    def round(self, decimals: int) -> int:
+    def round(self, decimals: int = 0) -> Self:
         pc = get_pyarrow_compute()
-        return pc.round(self._native_series, n_digits=decimals)  # type: ignore[no-any-return]
+        return pc.round(self._native_series, ndigits=decimals)  # type: ignore[no-any-return]
 
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()

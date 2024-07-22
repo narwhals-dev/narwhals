@@ -141,8 +141,10 @@ class ArrowExpr:
     def count(self) -> Self:
         return reuse_series_implementation(self, "count", returns_scalar=True)
 
-    def round(self) -> Self:
-        return reuse_series_implementation(self, "round", returns_scalar=True)
+    def round(self, decimals: int) -> Self:
+        return reuse_series_implementation(
+            self, "round", decimals=decimals, returns_scalar=True
+        )
 
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
