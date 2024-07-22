@@ -444,6 +444,39 @@ class ArrowSeries:
         else:
             return pc.all(pc.less_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
 
+    def unique(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._from_native_series(pc.unique(self._native_series))
+
+    def sort(self: Self, *, descending: bool = False) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        series = self._native_series
+        order = "descending" if descending else "ascending"
+        sorted_indices = pc.array_sort_indices(
+            series, order=order, null_placement="at_start"
+        )
+
+        return self._from_native_series(pc.take(series, sorted_indices))
+
+    def to_dummies(
+        self: Self, *, separator: str = "_", drop_first: bool = False
+    ) -> ArrowDataFrame:
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        series = self._native_series
+        unique_values = self.unique().sort()._native_series
+        columns = [pc.cast(pc.equal(series, v), pa.uint8()) for v in unique_values][
+            int(drop_first) :
+        ]
+        names = [f"{self._name}{separator}{v}" for v in unique_values][int(drop_first) :]
+
+        return ArrowDataFrame(
+            pa.Table.from_arrays(columns, names=names),
+            backend_version=self._backend_version,
+        )
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)
