@@ -206,6 +206,10 @@ class ArrowSeries:
     def drop_nulls(self) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.drop_null(self._native_series))
+    
+    def series_shift(self, n: int) -> self:
+        pc = get_pyarrow_compute()
+        return self._from_native_series(pc.shift(self._native_series, n))
 
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
