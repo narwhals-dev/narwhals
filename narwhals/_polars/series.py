@@ -174,7 +174,7 @@ class PolarsSeries:
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 
-        if self._backend_version < (0, 20, 15):
+        if self._backend_version < (0, 20, 15):  # pragma: no cover
             result = self._native_series.to_dummies(separator=separator)
             result = result.select(result.columns[int(drop_first) :])
         else:
