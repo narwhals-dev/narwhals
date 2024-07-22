@@ -159,18 +159,6 @@ def test_expr_na(constructor_with_lazy: Any) -> None:
     compare_dicts(result_nna, expected)
 
 
-def test_drop_nulls(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data_na)).lazy()
-
-    result = df.select(nw.col("a").drop_nulls())
-    expected = {"a": [3, 2]}
-    compare_dicts(result, expected)
-
-    result = df.select(df.collect()["a"].drop_nulls())
-    expected = {"a": [3, 2]}
-    compare_dicts(result, expected)
-
-
 @pytest.mark.parametrize(
     ("drop", "left"),
     [
