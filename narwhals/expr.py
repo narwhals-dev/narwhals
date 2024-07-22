@@ -1051,6 +1051,43 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).is_null())
 
+    def arg_true(self) -> Self:
+        """
+        Find elements where boolean expression is True.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"a": [1, None, None, 2]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select(nw.col("a").is_null().arg_true())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a
+            0  1
+            1  2
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ u32 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            └─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).arg_true())
+
     def fill_null(self, value: Any) -> Self:
         """
         Fill null values with given value.

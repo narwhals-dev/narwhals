@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
+from typing import Sequence
+from typing import overload
 
 from narwhals.dtypes import translate_dtype
 
@@ -40,7 +42,13 @@ class Series:
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
-    def __getitem__(self, idx: int | slice) -> Any:
+    @overload
+    def __getitem__(self, idx: int) -> Any: ...
+
+    @overload
+    def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
+
+    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
@@ -575,6 +583,40 @@ class Series:
         return self._from_compliant_series(
             self._compliant_series.is_in(self._extract_native(other))
         )
+
+    def arg_true(self) -> Self:
+        """
+        Find elements where boolean Series is True.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = [1, None, None, 2]
+            >>> s_pd = pd.Series(data, name="a")
+            >>> s_pl = pl.Series("a", data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s_any):
+            ...     return s_any.is_null().arg_true()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            Name: a, dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [u32]
+            [
+               1
+               2
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.arg_true())
 
     def drop_nulls(self) -> Self:
         """

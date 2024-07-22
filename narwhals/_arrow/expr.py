@@ -216,6 +216,9 @@ class ArrowExpr:
     def is_in(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "is_in", other)
 
+    def arg_true(self) -> Self:
+        return reuse_series_implementation(self, "arg_true")
+
     def sample(
         self: Self,
         n: int | None = None,
@@ -229,6 +232,18 @@ class ArrowExpr:
 
     def fill_null(self: Self, value: Any) -> Self:
         return reuse_series_implementation(self, "fill_null", value=value)
+
+    def is_duplicated(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_duplicated")
+
+    def is_unique(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_unique")
+
+    def is_first_distinct(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_first_distinct")
+
+    def is_last_distinct(self: Self) -> Self:
+        return reuse_series_implementation(self, "is_last_distinct")
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
