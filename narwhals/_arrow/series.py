@@ -352,7 +352,9 @@ class ArrowSeries:
         )
 
         val_count = pc.value_counts(self._native_series)
-        val_count = pa.Table.from_struct_array(val_count).rename_columns([name_, "count"])
+        val_count = pa.Table.from_arrays(
+            [val_count.field("values"), val_count.field("counts")], names=[name_, "count"]
+        )
 
         if sort:
             val_count = val_count.sort_by([("count", "descending")])
