@@ -21,7 +21,6 @@ MISSING = [
     "Series.shift",
     "Series.sort",
     "Series.unique",
-    "Series.value_counts",
 ]
 
 
