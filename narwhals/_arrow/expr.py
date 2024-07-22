@@ -261,8 +261,8 @@ class ArrowExpr:
         return ArrowExprCatNamespace(self)
 
     @property
-    def name(self: Self) -> ArrowNameNamespace:
-        return ArrowNameNamespace(self)
+    def name(self: Self) -> ArrowExprNameNamespace:
+        return ArrowExprNameNamespace(self)
 
 
 class ArrowExprCatNamespace:
@@ -340,7 +340,7 @@ class ArrowExprStringNamespace:
         )
 
 
-class ArrowNameNamespace:
+class ArrowExprNameNamespace:
     def __init__(self: Self, expr: ArrowExpr) -> None:
         self._expr = expr
 

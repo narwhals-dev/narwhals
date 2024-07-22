@@ -1,4 +1,6 @@
+jinja2
 markdown-exec[ansi]
 mkdocs
 mkdocs-material
 mkdocstrings[python]
+polars>=1.0.0

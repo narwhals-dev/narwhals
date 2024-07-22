@@ -340,8 +340,8 @@ class PandasLikeExpr:
         return PandasLikeExprCatNamespace(self)
 
     @property
-    def name(self: Self) -> PandasExprNameNamespace:
-        return PandasExprNameNamespace(self)
+    def name(self: Self) -> PandasLikeExprNameNamespace:
+        return PandasLikeExprNameNamespace(self)
 
 
 class PandasLikeExprCatNamespace:
@@ -474,7 +474,7 @@ class PandasLikeExprDateTimeNamespace:
         )
 
 
-class PandasExprNameNamespace:
+class PandasLikeExprNameNamespace:
     def __init__(self: Self, expr: PandasLikeExpr) -> None:
         self._expr = expr
 
