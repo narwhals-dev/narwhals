@@ -139,9 +139,21 @@ class PolarsDataFrame:
         sort_columns: bool = False,
         separator: str = "_",
     ) -> Self:
+        if isinstance(on, str):
+            on = [on]
+        if isinstance(index, str):
+            index = [index]
+
+        if values is None:
+            values_ = [c for c in self.columns if c not in {*on, *index}]  # type: ignore[misc]
+        elif isinstance(values, str):  # pragma: no cover
+            values_ = [values]
+        else:
+            values_ = values
+
         kwargs = {
             "index": index,
-            "values": values,
+            "values": values_,
             "aggregate_function": aggregate_function,
             "maintain_order": maintain_order,
             "sort_columns": sort_columns,
@@ -154,16 +166,8 @@ class PolarsDataFrame:
             if self._backend_version < (0, 20, 5) and aggregate_function == "len":
                 kwargs["aggregate_function"] = "count"
 
-            if values is None:
-                cols = self.columns
-                kwargs["values"] = [c for c in cols if c not in {*on, *index}]  # type: ignore[misc]
-
             result = self._native_dataframe.pivot(columns=on, **kwargs)
             cols = result.columns
-
-            if isinstance(on, str):
-                on = [on]
-
             combined_on = r"|".join(on)
             result = result.rename(
                 {

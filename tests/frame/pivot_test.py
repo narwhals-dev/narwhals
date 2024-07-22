@@ -172,3 +172,45 @@ def test_pivot_sort_columns(
         sort_columns=sort_columns,
     )
     assert result.columns == expected
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        ({"on": ["col"], "values": ["foo"]}, ["ix", "b", "a"]),
+        (
+            {"on": ["col"], "values": ["foo", "bar"]},
+            ["ix", "foo_b", "foo_a", "bar_b", "bar_a"],
+        ),
+        (
+            {"on": ["col", "col_b"], "values": ["foo"]},
+            ["ix", '{"b","x"}', '{"b","y"}', '{"a","x"}', '{"a","y"}'],
+        ),
+        (
+            {"on": ["col", "col_b"], "values": ["foo", "bar"]},
+            [
+                "ix",
+                'foo_{"b","x"}',
+                'foo_{"b","y"}',
+                'foo_{"a","x"}',
+                'foo_{"a","y"}',
+                'bar_{"b","x"}',
+                'bar_{"b","y"}',
+                'bar_{"a","x"}',
+                'bar_{"a","y"}',
+            ],
+        ),
+    ],
+)
+def test_pivot_names_out(
+    request: Any, constructor: Any, kwargs: Any, expected: list[str]
+) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data), eager_only=True)
+
+    result = (
+        df.pivot(aggregate_function="min", index="ix", **kwargs).collect_schema().names()
+    )
+    assert result == expected

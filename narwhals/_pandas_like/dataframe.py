@@ -581,8 +581,7 @@ class PandasLikeDataFrame:
             index = [index]
 
         if values is None:
-            cols = self.columns
-            values_ = [c for c in cols if c not in {*on, *index}]  # type: ignore[misc]
+            values_ = [c for c in self.columns if c not in {*on, *index}]  # type: ignore[misc]
         elif isinstance(values, str):  # pragma: no cover
             values_ = [values]
         else:
@@ -622,7 +621,7 @@ class PandasLikeDataFrame:
             new_columns = [
                 separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
                 if len(values_) > 1
-                else '{"' + '","'.join(col) + '"}'
+                else '{"' + '","'.join(col[-n_on:]) + '"}'
                 for col in columns
             ]
         result.columns = new_columns
