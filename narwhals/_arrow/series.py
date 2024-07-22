@@ -221,6 +221,10 @@ class ArrowSeries:
         count_unique = pc.count(unique_values, mode="all")
         return count_unique.as_py()  # type: ignore[no-any-return]
 
+    def round(self, decimals: int = 0) -> Self:
+        pc = get_pyarrow_compute()
+        return pc.round(self._native_series, ndigits=decimals)  # type: ignore[no-any-return]
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 

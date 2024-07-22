@@ -165,6 +165,11 @@ class ArrowExpr:
     def cast(self, dtype: DType) -> Self:
         return reuse_series_implementation(self, "cast", dtype)
 
+    def round(self, decimals: int) -> Self:
+        return reuse_series_implementation(
+            self, "round", decimals=decimals, returns_scalar=True
+        )
+
     def abs(self) -> Self:
         return reuse_series_implementation(self, "abs")
 
