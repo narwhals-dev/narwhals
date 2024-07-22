@@ -159,10 +159,7 @@ def test_expr_na(constructor_with_lazy: Any) -> None:
     compare_dicts(result_nna, expected)
 
 
-def test_drop_nulls(request: Any, constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        request.applymarker(pytest.mark.xfail)
-
+def test_drop_nulls(constructor_with_lazy: Any) -> None:
     df = nw.from_native(constructor_with_lazy(data_na)).lazy()
 
     result = df.select(nw.col("a").drop_nulls())
