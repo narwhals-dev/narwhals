@@ -477,10 +477,8 @@ class PandasLikeExprDateTimeNamespace:
 
     def to_string(self, format: str) -> PandasLikeExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-<<<<<<< HEAD
             self._expr, "dt", "to_string", format
         )
-
 
 class PandasLikeExprNameNamespace:
     def __init__(self: Self, expr: PandasLikeExpr) -> None:
@@ -634,9 +632,6 @@ class PandasLikeExprNameNamespace:
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
         )
-||||||| parent of f3770b7 (Fix errors from the migration)
-                self._expr, "dt", "to_string", format
-                )
 
 class PandasWhen:
     def __init__(self, condition: PandasLikeExpr) -> None:
@@ -695,3 +690,7 @@ class PandasThen(PandasLikeExpr):
                 self._expr, "dt", "to_string", format
                 )
 >>>>>>> f3770b7 (Fix errors from the migration)
+||||||| parent of a7f442a (remove unnecessary changes)
+>>>>>>> main
+=======
+>>>>>>> a7f442a (remove unnecessary changes)
