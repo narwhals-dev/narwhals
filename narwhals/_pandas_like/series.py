@@ -23,6 +23,7 @@ from narwhals.dependencies import get_pyarrow_compute
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
 
@@ -595,6 +596,25 @@ class PandasLikeSeries:
 
     def round(self: Self, decimals: int) -> Self:
         return self._from_native_series(self._native_series.round(decimals=decimals))
+
+    def to_dummies(
+        self: Self, *, separator: str = "_", drop_first: bool = False
+    ) -> PandasLikeDataFrame:
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        plx = self.__native_namespace__()
+        series = self._native_series
+        name = str(self._name) if self._name else ""
+        return PandasLikeDataFrame(
+            plx.get_dummies(
+                series,
+                prefix=name,
+                prefix_sep=separator,
+                drop_first=drop_first,
+            ).astype(int),
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

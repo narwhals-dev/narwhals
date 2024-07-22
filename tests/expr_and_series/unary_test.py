@@ -1,14 +1,10 @@
 from typing import Any
 
-import pytest
-
 import narwhals as nw
 from tests.utils import compare_dicts
 
 
-def test_unary(request: Any, constructor_with_lazy: Any) -> None:
-    if "pyarrow_table" in str(constructor_with_lazy):
-        request.applymarker(pytest.mark.xfail)
+def test_unary(constructor_with_lazy: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     result = (
         nw.from_native(constructor_with_lazy(data))
