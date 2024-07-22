@@ -258,7 +258,7 @@ class PandasLikeNamespace:
             )
         raise NotImplementedError
 
-    def when(self, *predicates: IntoPandasLikeExpr, **conditions: Any) -> PandasWhen: # noqa: ARG002
+    def when(self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> PandasWhen: # noqa: ARG002
         plx = self.__class__(self._implementation, self._backend_version)
         condition = plx.all_horizontal(*predicates)
         return PandasWhen(condition, self._implementation, self._backend_version)
