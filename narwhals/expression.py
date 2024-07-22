@@ -2968,7 +2968,7 @@ class ExprDateTimeNamespace:
             of trailing zeros. Nonetheless, this is probably consistent enough for
             most applications.
 
-            If you have an application where this is not enough, please open an issue
+            If you have an application here this is not enough, please open an issue
             and let us know.
 
         Examples:
@@ -3352,19 +3352,18 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 class When:
     def __init__(self, condition: Expr) -> None:
         self._condition = condition
+        self._then_value = None
+        self._otehrwise_value = None
 
     def then(self, value: Any) -> Then:
-        return Then(self, value=value)
+        return Then(lambda plx: plx.when(self._condition._call(plx)).then(value))
 
 class Then(Expr):
-    def __init__(self, when: When, *, value: Any) -> None:
-        self._when = when
-        self._then_value = value
-
-        self._call = lambda plx: plx.when(self._when._condition._call(plx)).then(self._then_value)
+    def __init__(self, call) -> None: # noqa: ANN001
+        self._call = call
 
     def otherwise(self, value: Any) -> Expr:
-        return Expr(lambda plx: plx.when(self._when._condition._call(plx)).then(self._then_value).otherwise(value))
+        return Expr(lambda plx: self._call(plx).otherwise(value))
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When: # noqa: ARG001
     return When(reduce(lambda a, b: a & b, flatten([predicates])))

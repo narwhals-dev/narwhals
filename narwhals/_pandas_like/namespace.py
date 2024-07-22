@@ -86,6 +86,17 @@ class PandasLikeNamespace:
             backend_version=self._backend_version,
         )
 
+    def _create_broadcast_series_from_scalar(
+        self, value: Any, series: PandasLikeSeries
+    ) -> PandasLikeSeries:
+        return PandasLikeSeries._from_iterable(
+            [value] * len(series._native_series),
+            name=series._native_series.name,
+            index=series._native_series.index,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+
     def _create_expr_from_series(self, series: PandasLikeSeries) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda _df: [series],
@@ -246,3 +257,72 @@ class PandasLikeNamespace:
                 backend_version=self._backend_version,
             )
         raise NotImplementedError
+
+    def when(self, *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr], **conditions: Any) -> PandasWhen: # noqa: ARG002
+        plx = self.__class__(self._implementation, self._backend_version)
+        condition = plx.all_horizontal(*predicates)
+        return PandasWhen(condition)
+
+class InnerPandasWhen:
+    def __init__(self, implementation: Implementation, backend_version: tuple[int, ...], condition: PandasLikeExpr, value: Any, otherise_value: Any = None) -> None:
+        self._implementation = implementation
+        self._backend_version = backend_version
+        self._condition = condition
+        self._value = value
+        self._otherwise_value = otherise_value
+
+    def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        plx = PandasLikeNamespace(implementation=self._implementation, backend_version=self._backend_version)
+
+        condition = self._condition._call(df)[0]
+
+        value_series = plx._create_broadcast_series_from_scalar(self._value, condition)
+        none_series = plx._create_broadcast_series_from_scalar(self._otherwise_value, condition)
+        return [
+            value_series.zip_with(condition, none_series)
+        ]
+
+class PandasWhen:
+    def __init__(self, condition: PandasLikeExpr) -> None:
+        self._condition = condition
+
+    def then(self, value: Any) -> PandasThen:
+
+        return PandasThen(
+            InnerPandasWhen(self._condition._implementation, self._condition._backend_version, self._condition, value),
+            depth=0,
+            function_name="whenthen",
+            root_names=None,
+            output_names=None,
+            implementation=self._condition._implementation,
+            backend_version=self._condition._backend_version,
+        )
+
+class PandasThen(PandasLikeExpr):
+
+    def __init__(
+        self,
+        call: InnerPandasWhen,
+        *,
+        depth: int,
+        function_name: str,
+        root_names: list[str] | None,
+        output_names: list[str] | None,
+        implementation: Implementation,
+        backend_version: tuple[int, ...],
+    ) -> None:
+        self._implementation = implementation
+        self._backend_version = backend_version
+
+        self._call = call
+        self._depth = depth
+        self._function_name = function_name
+        self._root_names = root_names
+        self._output_names = output_names
+
+    def otherwise(self, value: Any) -> PandasLikeExpr:
+        self._call._otherwise_value = value
+        self._function_name = "whenotherwise"
+        return self
