@@ -96,7 +96,7 @@ provided some funding / development time:
 - [Quansight Labs](https://labs.quansight.org)
 - [Quansight Futures](https://www.qi.ventures)
 - [OpenTeams](https://www.openteams.com)
-- [POSSEE iniative](https://possee.org)
+- [POSSEE initative](https://possee.org)
 - [BYU-Idaho](https://www.byui.edu)
 
 If you contribute to Narwhals on your organization's time, please let us know. We'd be happy to add your employer
