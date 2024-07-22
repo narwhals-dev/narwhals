@@ -1973,6 +1973,10 @@ class Series:
             separator: Separator/delimiter used when generating column names.
             drop_first: Remove the first category from the variable being encoded.
 
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd

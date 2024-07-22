@@ -604,7 +604,7 @@ class PandasLikeSeries:
 
         plx = self.__native_namespace__()
         series = self._native_series
-        name = self._name or ""
+        name = str(self._name) if self._name else ""
         return PandasLikeDataFrame(
             plx.get_dummies(
                 series,
