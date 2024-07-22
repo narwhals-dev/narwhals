@@ -3016,7 +3016,7 @@ class ExprDateTimeNamespace:
             of trailing zeros. Nonetheless, this is probably consistent enough for
             most applications.
 
-            If you have an application here this is not enough, please open an issue
+            If you have an application where this is not enough, please open an issue
             and let us know.
 
         Examples:

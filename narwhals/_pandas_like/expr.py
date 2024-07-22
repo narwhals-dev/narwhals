@@ -470,8 +470,8 @@ class PandasLikeExprDateTimeNamespace:
 
     def to_string(self, format: str) -> PandasLikeExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
-                self._expr, "dt", "to_string", format
-                )
+            self._expr, "dt", "to_string", format
+        )
 
 class PandasLikeExprNameNamespace:
     def __init__(self: Self, expr: PandasLikeExpr) -> None:
@@ -625,4 +625,3 @@ class PandasLikeExprNameNamespace:
             implementation=self._expr._implementation,
             backend_version=self._expr._backend_version,
         )
->>>>>>> main
