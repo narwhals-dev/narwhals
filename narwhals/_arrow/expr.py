@@ -251,8 +251,10 @@ class ArrowExpr:
     def unique(self: Self) -> Self:
         return reuse_series_implementation(self, "unique")
 
-    def sort(self: Self, *, descending: bool = False) -> Self:
-        return reuse_series_implementation(self, "sort", descending=descending)
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        return reuse_series_implementation(
+            self, "sort", descending=descending, nulls_last=nulls_last
+        )
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:

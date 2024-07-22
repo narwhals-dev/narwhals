@@ -465,13 +465,12 @@ class PandasLikeSeries:
         return self._from_native_series(self._native_series.shift(n))
 
     def sort(
-        self,
-        *,
-        descending: bool | Sequence[bool] = False,
+        self, *, descending: bool = False, nulls_last: bool = False
     ) -> PandasLikeSeries:
         ser = self._native_series
+        na_position = "last" if nulls_last else "first"
         return self._from_native_series(
-            ser.sort_values(ascending=not descending, na_position="first").rename(
+            ser.sort_values(ascending=not descending, na_position=na_position).rename(
                 self.name
             )
         )

@@ -472,12 +472,15 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.unique(self._native_series))
 
-    def sort(self: Self, *, descending: bool = False) -> ArrowSeries:
+    def sort(
+        self: Self, *, descending: bool = False, nulls_last: bool = False
+    ) -> ArrowSeries:
         pc = get_pyarrow_compute()
         series = self._native_series
         order = "descending" if descending else "ascending"
+        null_placement = "at_end" if nulls_last else "at_start"
         sorted_indices = pc.array_sort_indices(
-            series, order=order, null_placement="at_start"
+            series, order=order, null_placement=null_placement
         )
 
         return self._from_native_series(pc.take(series, sorted_indices))
