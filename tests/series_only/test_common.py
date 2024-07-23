@@ -12,6 +12,7 @@ from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import compare_dicts
 
 data = [1, 3, 2]
 data_dups = [4, 4, 6]
@@ -167,8 +168,8 @@ def test_cast_string() -> None:
 def test_item(constructor_series: Any, index: int, expected: int) -> None:
     series = nw.from_native(constructor_series(data), series_only=True)
     result = series.item(index)
-    assert result == expected
-    assert series.head(1).item() == 1
+    compare_dicts({"a": [result]}, {"a": [expected]})
+    compare_dicts({"a": [series.head(1).item()]}, {"a": [1]})
 
     with pytest.raises(
         ValueError,
