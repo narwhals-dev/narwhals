@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
+    from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
 
 from narwhals._polars.namespace import PolarsNamespace
@@ -167,6 +168,21 @@ class PolarsSeries:
 
     def __invert__(self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
+
+    def to_dummies(
+        self: Self, *, separator: str = "_", drop_first: bool = False
+    ) -> PolarsDataFrame:
+        from narwhals._polars.dataframe import PolarsDataFrame
+
+        if self._backend_version < (0, 20, 15):  # pragma: no cover
+            result = self._native_series.to_dummies(separator=separator)
+            result = result.select(result.columns[int(drop_first) :])
+        else:
+            result = self._native_series.to_dummies(
+                separator=separator, drop_first=drop_first
+            )
+
+        return PolarsDataFrame(result, backend_version=self._backend_version)
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:

@@ -348,6 +348,30 @@ class ArrowSeries:
             return self._native_series[0].as_py()
         return self._native_series[index].as_py()
 
+    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
+        """Parallel is unused, exists for compatibility"""
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        pc = get_pyarrow_compute()
+        pa = get_pyarrow()
+
+        name_ = (
+            "index" if self._native_series._name is None else self._native_series._name
+        )
+
+        val_count = pc.value_counts(self._native_series)
+        val_count = pa.Table.from_arrays(
+            [val_count.field("values"), val_count.field("counts")], names=[name_, "count"]
+        )
+
+        if sort:
+            val_count = val_count.sort_by([("count", "descending")])
+
+        return ArrowDataFrame(
+            val_count,
+            backend_version=self._backend_version,
+        )
+
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
         pc = get_pyarrow_compute()
 
@@ -447,6 +471,39 @@ class ArrowSeries:
             return pc.all(pc.greater_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
         else:
             return pc.all(pc.less_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
+
+    def unique(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._from_native_series(pc.unique(self._native_series))
+
+    def sort(self: Self, *, descending: bool = False) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        series = self._native_series
+        order = "descending" if descending else "ascending"
+        sorted_indices = pc.array_sort_indices(
+            series, order=order, null_placement="at_start"
+        )
+
+        return self._from_native_series(pc.take(series, sorted_indices))
+
+    def to_dummies(
+        self: Self, *, separator: str = "_", drop_first: bool = False
+    ) -> ArrowDataFrame:
+        from narwhals._arrow.dataframe import ArrowDataFrame
+
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        series = self._native_series
+        unique_values = self.unique().sort()._native_series
+        columns = [pc.cast(pc.equal(series, v), pa.uint8()) for v in unique_values][
+            int(drop_first) :
+        ]
+        names = [f"{self._name}{separator}{v}" for v in unique_values][int(drop_first) :]
+
+        return ArrowDataFrame(
+            pa.Table.from_arrays(columns, names=names),
+            backend_version=self._backend_version,
+        )
 
     @property
     def shape(self) -> tuple[int]:
