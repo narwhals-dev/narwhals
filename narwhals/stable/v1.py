@@ -361,7 +361,12 @@ class Series(NwSeries):
         return _stableify(super().to_frame())  # type: ignore[no-any-return]
 
     def value_counts(
-        self: Self, *, sort: bool = False, parallel: bool = False
+        self: Self,
+        *,
+        sort: bool = False,
+        parallel: bool = False,
+        name: str | None = None,
+        normalize: bool = False,
     ) -> DataFrame[Any]:
         r"""
         Count the occurrences of unique values.
@@ -369,7 +374,10 @@ class Series(NwSeries):
         Arguments:
             sort: Sort the output by count in descending order. If set to False (default),
                 the order of the output is random.
-            parallel: Execute the computation in parallel. Unused for pandas-like APIs.
+            parallel: Execute the computation in parallel. Used for Polars only.
+            name: Give the resulting count column a specific name; if `normalize` is True
+                defaults to "proportion", otherwise defaults to "count".
+            normalize: If true gives relative frequencies of the unique values
 
         Examples:
             >>> import narwhals.stable.v1 as nw
@@ -404,7 +412,11 @@ class Series(NwSeries):
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        return _stableify(super().value_counts(sort=sort, parallel=parallel))  # type: ignore[no-any-return]
+        return _stableify(  # type: ignore[no-any-return]
+            super().value_counts(
+                sort=sort, parallel=parallel, name=name, normalize=normalize
+            )
+        )
 
 
 class Expr(NwExpr):

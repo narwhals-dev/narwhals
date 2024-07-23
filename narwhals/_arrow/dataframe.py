@@ -427,7 +427,7 @@ class ArrowDataFrame:
         subset: str | list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,  # noqa: ARG002
+        maintain_order: bool = False,
     ) -> Self:
         """
         NOTE:

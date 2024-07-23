@@ -167,7 +167,7 @@ class PandasLikeDataFrame:
         self,
         *,
         named: bool = False,
-        buffer_size: int = 512,  # noqa: ARG002
+        buffer_size: int = 512,
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         """
         NOTE:
@@ -454,7 +454,7 @@ class PandasLikeDataFrame:
         subset: str | list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,  # noqa: ARG002
+        maintain_order: bool = False,
     ) -> Self:
         """
         NOTE:
