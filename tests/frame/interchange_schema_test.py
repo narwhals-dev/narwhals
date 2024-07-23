@@ -55,7 +55,7 @@ def test_interchange_schema() -> None:
         "i": nw.Float64,
         "j": nw.Float32,
         "k": nw.String,
-        "l": nw.String,  # https://github.com/ibis-project/ibis/issues/9570
+        "l": nw.Categorical,
         "m": nw.Datetime,
         "n": nw.Boolean,
     }
@@ -76,8 +76,9 @@ def test_invalid() -> None:
 
 
 def test_get_level() -> None:
-    df = pl.DataFrame({"a": [1, 2, 3]}).__dataframe__()
-    assert (
-        nw.get_level(nw.from_native(df, eager_or_interchange_only=True)) == "interchange"
-    )
+    df = pl.DataFrame({"a": [1, 2, 3]})
     assert nw.get_level(nw.from_native(df)) == "full"
+    assert (
+        nw.get_level(nw.from_native(df.__dataframe__(), eager_or_interchange_only=True))
+        == "interchange"
+    )
