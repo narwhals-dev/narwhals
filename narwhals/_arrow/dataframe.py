@@ -75,6 +75,11 @@ class ArrowDataFrame:
         named: bool = False,
         buffer_size: int = 512,  # noqa: ARG002
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
+        """
+        NOTE:
+            The param ``buffer_size`` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
         _list_of_dicts = self._native_dataframe.to_pylist()
 
         if not named:
