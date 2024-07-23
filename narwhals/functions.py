@@ -88,8 +88,8 @@ def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
         └─────┴─────┘
     """
     if native_namespace is get_polars():
-        return from_native(native_namespace.from_dict(data), eager_only=True)
-    if (
+        native_frame = native_namespace.from_dict(data)
+    elif (
         native_namespace is get_cudf()
         or native_namespace is get_modin()
         or native_namespace is get_pandas()
@@ -97,6 +97,9 @@ def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
         native_frame = native_namespace.DataFrame.from_dict(data)
     elif native_namespace is get_pyarrow():
         native_frame = native_namespace.table(data)
+    else:
+        msg = f"Expected library supported by Narwhals, got: {native_namespace}"
+        raise ValueError(msg)
     return from_native(native_frame, eager_only=True)
 
 
