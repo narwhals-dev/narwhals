@@ -312,7 +312,6 @@ def from_native(  # noqa: PLR0915
         if series_only:
             msg = "Cannot only use `series_only` with dataframe"
             raise TypeError(msg)
-        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(
             native_object.__narwhals_dataframe__(),
             level="full",
@@ -324,7 +323,6 @@ def from_native(  # noqa: PLR0915
         if eager_only or eager_or_interchange_only:
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
             raise TypeError(msg)
-        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return LazyFrame(
             native_object.__narwhals_lazyframe__(),
             level="full",
@@ -333,7 +331,6 @@ def from_native(  # noqa: PLR0915
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
-        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return Series(
             native_object.__narwhals_series__(),
             level="full",
@@ -425,7 +422,7 @@ def from_native(  # noqa: PLR0915
         native_object, cudf.DataFrame
     ):
         if series_only:
-            msg = "Cannot only use `series_only` with modin.DataFrame"
+            msg = "Cannot only use `series_only` with cudf.DataFrame"
             raise TypeError(msg)
         return DataFrame(
             PandasLikeDataFrame(
@@ -478,7 +475,6 @@ def from_native(  # noqa: PLR0915
                 "with object which only implements __dataframe__"
             )
             raise TypeError(msg)
-        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
         return DataFrame(
             InterchangeFrame(native_object.__dataframe__()),
             level="interchange",
