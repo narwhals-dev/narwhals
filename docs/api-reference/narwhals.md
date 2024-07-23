@@ -8,6 +8,7 @@ Here are the top-level functions available in Narwhals.
       members:
         - all
         - all_horizontal
+        - any_horizontal
         - col
         - concat
         - from_dict

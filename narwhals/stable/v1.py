@@ -1249,6 +1249,62 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.all_horizontal(*exprs))
 
 
+def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    r"""
+    Compute the bitwise OR horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+
+    Notes:
+        pandas and Polars handle null values differently.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {
+        ...     "a": [False, False, True, True, False, None],
+        ...     "b": [False, True, True, None, None, None],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select("a", "b", any=nw.any_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+               a      b    any
+        0  False  False  False
+        1  False   True   True
+        2   True   True   True
+        3   True   None   True
+        4  False   None  False
+        5   None   None  False
+
+        >>> func(df_pl)
+        shape: (6, 3)
+        ┌───────┬───────┬───────┐
+        │ a     ┆ b     ┆ any   │
+        │ ---   ┆ ---   ┆ ---   │
+        │ bool  ┆ bool  ┆ bool  │
+        ╞═══════╪═══════╪═══════╡
+        │ false ┆ false ┆ false │
+        │ false ┆ true  ┆ true  │
+        │ true  ┆ true  ┆ true  │
+        │ true  ┆ null  ┆ true  │
+        │ false ┆ null  ┆ null  │
+        │ null  ┆ null  ┆ null  │
+        └───────┴───────┴───────┘
+    """
+    return _stableify(nw.any_horizontal(*exprs))
+
+
 def is_ordered_categorical(series: Series) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
@@ -1458,6 +1514,7 @@ __all__ = [
     "get_level",
     "all",
     "all_horizontal",
+    "any_horizontal",
     "col",
     "len",
     "lit",

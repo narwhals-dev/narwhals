@@ -24,6 +24,7 @@ from narwhals.dtypes import Unknown
 from narwhals.expr import Expr
 from narwhals.expr import all
 from narwhals.expr import all_horizontal
+from narwhals.expr import any_horizontal
 from narwhals.expr import col
 from narwhals.expr import len
 from narwhals.expr import lit
@@ -63,6 +64,7 @@ __all__ = [
     "get_native_namespace",
     "all",
     "all_horizontal",
+    "any_horizontal",
     "col",
     "len",
     "lit",
