@@ -707,6 +707,7 @@ def test_quantile(
     )
     compare_dicts(result, expected)
 
+
 @pytest.mark.parametrize("df_raw", [df_pandas, df_polars])
 def test_when(df_raw: Any) -> None:
     df = nw.DataFrame(df_raw)

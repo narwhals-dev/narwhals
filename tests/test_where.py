@@ -31,6 +31,7 @@ def test_when(request: Any, constructor: Any) -> None:
     }
     compare_dicts(result, expected)
 
+
 def test_when_otherwise(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)

@@ -3605,6 +3605,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         )
     )
 
+
 class When:
     def __init__(self, condition: Expr) -> None:
         self._condition = condition
@@ -3614,14 +3615,16 @@ class When:
     def then(self, value: Any) -> Then:
         return Then(lambda plx: plx.when(self._condition._call(plx)).then(value))
 
+
 class Then(Expr):
-    def __init__(self, call) -> None: # noqa: ANN001
+    def __init__(self, call) -> None:  # noqa: ANN001
         self._call = call
 
     def otherwise(self, value: Any) -> Expr:
         return Expr(lambda plx: self._call(plx).otherwise(value))
 
-def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When: # noqa: ARG001
+
+def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:  # noqa: ARG001
     return When(reduce(lambda a, b: a & b, flatten([predicates])))
 
 
