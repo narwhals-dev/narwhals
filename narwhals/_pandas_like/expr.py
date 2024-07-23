@@ -5,9 +5,9 @@ from typing import Any
 from typing import Callable
 from typing import Literal
 
-from narwhals._pandas_like.series import PandasSeries
-from narwhals._pandas_like.utils import reuse_series_implementation
-from narwhals._pandas_like.utils import reuse_series_namespace_implementation
+from narwhals._expression_parsing import reuse_series_implementation
+from narwhals._expression_parsing import reuse_series_namespace_implementation
+from narwhals._pandas_like.series import PandasLikeSeries
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -687,11 +687,3 @@ class PandasThen(PandasLikeExpr):
             implementation=self._implementation,
             backend_version=self.backend_version,
         )
-=======
-                self._expr, "dt", "to_string", format
-                )
->>>>>>> f3770b7 (Fix errors from the migration)
-||||||| parent of a7f442a (remove unnecessary changes)
->>>>>>> main
-=======
->>>>>>> a7f442a (remove unnecessary changes)
