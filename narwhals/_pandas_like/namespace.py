@@ -332,6 +332,9 @@ class PandasThen(PandasLikeExpr):
         self._output_names = output_names
 
     def otherwise(self, value: Any) -> PandasLikeExpr:
-        self._call._otherwise_value = value
+        # type ignore because we are setting the `_call` attribute to a
+        # callable object of type `PandasWhen`, base class has the attribute as
+        # only a `Callable`
+        self._call._otherwise_value = value # type: ignore
         self._function_name = "whenotherwise"
         return self

@@ -3617,7 +3617,7 @@ class When:
 
 
 class Then(Expr):
-    def __init__(self, call) -> None:  # noqa: ANN001
+    def __init__(self, call: Callable[[Any], Any]) -> None:
         self._call = call
 
     def otherwise(self, value: Any) -> Expr:
