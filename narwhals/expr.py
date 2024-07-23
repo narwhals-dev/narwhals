@@ -3605,6 +3605,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         )
     )
 
+
 class When:
     def __init__(self, condition: Expr) -> None:
         self._condition = condition
@@ -3614,14 +3615,16 @@ class When:
     def then(self, value: Any) -> Then:
         return Then(lambda plx: plx.when(self._condition._call(plx)).then(value))
 
+
 class Then(Expr):
-    def __init__(self, call) -> None: # noqa: ANN001
+    def __init__(self, call) -> None:  # noqa: ANN001
         self._call = call
 
     def otherwise(self, value: Any) -> Expr:
         return Expr(lambda plx: self._call(plx).otherwise(value))
 
-def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When: # noqa: ARG001
+
+def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:  # noqa: ARG001
     """
     Start a `when-then-otherwise` expression.
     Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
@@ -3646,7 +3649,10 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
         >>> @nw.narwhalify
         ... def func(df_any):
         ...     from narwhals.expr import when
-        ...     return df_any.with_columns(when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when"))
+        ...
+        ...     return df_any.with_columns(
+        ...         when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
+        ...     )
 
         We can then pass either pandas or polars to `func`:
 

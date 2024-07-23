@@ -258,13 +258,21 @@ class PandasLikeNamespace:
             )
         raise NotImplementedError
 
-    def when(self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> PandasWhen: # noqa: ARG002
+    def when(self, *predicates: IntoPandasLikeExpr, **constraints: Any) -> PandasWhen:  # noqa: ARG002
         plx = self.__class__(self._implementation, self._backend_version)
         condition = plx.all_horizontal(*predicates)
         return PandasWhen(condition, self._implementation, self._backend_version)
 
+
 class PandasWhen:
-    def __init__(self, condition: PandasLikeExpr, implementation: Implementation, backend_version: tuple[int, ...], then_value: Any = None, otherise_value: Any = None) -> None:
+    def __init__(
+        self,
+        condition: PandasLikeExpr,
+        implementation: Implementation,
+        backend_version: tuple[int, ...],
+        then_value: Any = None,
+        otherise_value: Any = None,
+    ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
         self._condition = condition
@@ -274,18 +282,21 @@ class PandasWhen:
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        plx = PandasLikeNamespace(implementation=self._implementation, backend_version=self._backend_version)
+        plx = PandasLikeNamespace(
+            implementation=self._implementation, backend_version=self._backend_version
+        )
 
         condition = self._condition._call(df)[0]
 
-        value_series = plx._create_broadcast_series_from_scalar(self._then_value, condition)
-        otherwise_series = plx._create_broadcast_series_from_scalar(self._otherwise_value, condition)
-        return [
-            value_series.zip_with(condition, otherwise_series)
-        ]
+        value_series = plx._create_broadcast_series_from_scalar(
+            self._then_value, condition
+        )
+        otherwise_series = plx._create_broadcast_series_from_scalar(
+            self._otherwise_value, condition
+        )
+        return [value_series.zip_with(condition, otherwise_series)]
 
     def then(self, value: Any) -> PandasThen:
-
         self._then_value = value
 
         return PandasThen(
@@ -298,8 +309,8 @@ class PandasWhen:
             backend_version=self._condition._backend_version,
         )
 
-class PandasThen(PandasLikeExpr):
 
+class PandasThen(PandasLikeExpr):
     def __init__(
         self,
         call: PandasWhen,
