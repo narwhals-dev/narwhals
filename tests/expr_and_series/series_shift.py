@@ -16,9 +16,9 @@ def test_shift(constructor: Any) -> None:
 
     df = nw.from_native(constructor(data), eager_only=True)
 
-    result_a = df.select(nw.col("A").shift(1))  # Shift forward by 1
-    result_b = df.select(nw.col("B").shift(-1))  # Shift backward by 1
-    result_c = df.select(nw.col("C").shift(1))  # Shift forward by 2
+    result_a = df.select(nw.col("A").shift(1))
+    result_b = df.select(nw.col("B").shift(-1))
+    result_c = df.select(nw.col("C").shift(1)) 
     result_d = df.select(nw.col("D").shift(2))
 
     expected_a =  {"A": [None, 1.0, 2.0, None]}
