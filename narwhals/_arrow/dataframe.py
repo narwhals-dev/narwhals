@@ -182,7 +182,9 @@ class ArrowDataFrame:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     validate_dataframe_comparand(
-                        length=length, other=new_column_name_to_new_column_map.pop(name)
+                        length=length,
+                        other=new_column_name_to_new_column_map.pop(name),
+                        backend_version=self._backend_version,
                     )
                 )
             else:
@@ -191,7 +193,9 @@ class ArrowDataFrame:
         for s in new_column_name_to_new_column_map:
             to_concat.append(
                 validate_dataframe_comparand(
-                    length=length, other=new_column_name_to_new_column_map[s]
+                    length=length,
+                    other=new_column_name_to_new_column_map[s],
+                    backend_version=self._backend_version,
                 )
             )
             output_names.append(s)
