@@ -1403,6 +1403,48 @@ def get_level(
     return nw.get_level(obj)
 
 
+def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
+    """
+    Instantiate DataFrame from dictionary.
+
+    Arguments:
+        data: Dictionary to create DataFrame from.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_dict(data, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+           c  d
+        0  5  1
+        1  2  4
+        >>> func(pl.DataFrame(data))
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ c   ┆ d   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 5   ┆ 1   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+    """
+    return _stableify(nw.from_dict(data, native_namespace=native_namespace))  # type: ignore[no-any-return]
+
+
 __all__ = [
     "selectors",
     "concat",
@@ -1450,4 +1492,5 @@ __all__ = [
     "narwhalify",
     "show_versions",
     "Schema",
+    "from_dict",
 ]

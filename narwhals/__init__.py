@@ -98,4 +98,5 @@ __all__ = [
     "show_versions",
     "stable",
     "Schema",
+    "from_dict",
 ]
