@@ -211,11 +211,16 @@ class PandasLikeNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        # Why is this showing up as uncovered? It defo is?
         return reduce(
             lambda x, y: x & y,
             parse_into_exprs(*exprs, namespace=self),
-        )  # pragma: no cover
+        )
+
+    def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        return reduce(
+            lambda x, y: x | y,
+            parse_into_exprs(*exprs, namespace=self),
+        )
 
     def concat(
         self,
