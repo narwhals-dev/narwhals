@@ -27,7 +27,7 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
 class PandasLikeGroupBy:
     def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
         self._df = df
-        self._keys = list(keys)
+        self._keys = keys
         if (
             self._df._implementation is Implementation.PANDAS
             and self._df._backend_version < (1, 0)

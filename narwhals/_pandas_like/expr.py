@@ -282,7 +282,7 @@ class PandasLikeExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
-            tmp = df.group_by(keys).agg(self)
+            tmp = df.group_by(*keys).agg(self)
             tmp = df.select(*keys).join(tmp, how="left", left_on=keys, right_on=keys)
             return [tmp[name] for name in self._output_names]
 

@@ -10,7 +10,6 @@ from typing import cast
 
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
-from narwhals.utils import flatten
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
@@ -21,10 +20,10 @@ LazyFrameT = TypeVar("LazyFrameT")
 
 
 class GroupBy(Generic[DataFrameT]):
-    def __init__(self, df: DataFrameT, *keys: str | Iterable[str]) -> None:
+    def __init__(self, df: DataFrameT, *keys: str) -> None:
         self._df = cast(DataFrame[Any], df)
-        self._keys = flatten(keys)
-        self._grouped = self._df._compliant_frame.group_by(self._keys)
+        self._keys = keys
+        self._grouped = self._df._compliant_frame.group_by(*self._keys)
 
     def agg(
         self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
@@ -120,7 +119,7 @@ class GroupBy(Generic[DataFrameT]):
 
 
 class LazyGroupBy(Generic[LazyFrameT]):
-    def __init__(self, df: LazyFrameT, *keys: str | Iterable[str]) -> None:
+    def __init__(self, df: LazyFrameT, *keys: str) -> None:
         self._df = cast(LazyFrame[Any], df)
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(*self._keys)
