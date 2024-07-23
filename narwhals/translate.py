@@ -308,19 +308,7 @@ def from_native(  # noqa: PLR0915
         raise ValueError(msg)
 
     # Extensions
-    if hasattr(native_object, "__dataframe__"):
-        if eager_only or series_only:
-            msg = (
-                "Cannot only use `series_only=True` or `eager_only=False` "
-                "with object which only implements __dataframe__"
-            )
-            raise TypeError(msg)
-        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
-        return DataFrame(
-            InterchangeFrame(native_object.__dataframe__()),
-            level="interchange",
-        )
-    elif hasattr(native_object, "__narwhals_dataframe__"):
+    if hasattr(native_object, "__narwhals_dataframe__"):
         if series_only:
             msg = "Cannot only use `series_only` with dataframe"
             raise TypeError(msg)
@@ -480,6 +468,20 @@ def from_native(  # noqa: PLR0915
                 native_object, backend_version=parse_version(pa.__version__), name=""
             ),
             level="full",
+        )
+
+    # Interchange protocol
+    elif hasattr(native_object, "__dataframe__"):
+        if eager_only or series_only:
+            msg = (
+                "Cannot only use `series_only=True` or `eager_only=False` "
+                "with object which only implements __dataframe__"
+            )
+            raise TypeError(msg)
+        # placeholder (0,) version here, as we wouldn't use it in this case anyway.
+        return DataFrame(
+            InterchangeFrame(native_object.__dataframe__()),
+            level="interchange",
         )
 
     elif strict:
