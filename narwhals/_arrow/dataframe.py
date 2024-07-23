@@ -75,12 +75,6 @@ class ArrowDataFrame:
         named: bool = False,
         buffer_size: int = 512,
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
-        """
-        NOTE:
-            The param ``buffer_size`` is only here for compatibility with the polars API
-            and has no effect on the output.
-        """
-
         df = self._native_dataframe
         num_rows = df.num_rows
 
