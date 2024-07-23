@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -67,6 +68,23 @@ class ArrowDataFrame:
             msg = "Unnamed rows are not yet supported on PyArrow tables"
             raise NotImplementedError(msg)
         return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
+
+    def iter_rows(
+        self,
+        *,
+        named: bool = False,
+        buffer_size: int = 512,
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
+        df = self._native_dataframe
+        num_rows = df.num_rows
+
+        if not named:
+            for i in range(0, num_rows, buffer_size):
+                rows = df[i : i + buffer_size].to_pydict().values()
+                yield from zip(*rows)
+        else:
+            for i in range(0, num_rows, buffer_size):
+                yield from df[i : i + buffer_size].to_pylist()
 
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
