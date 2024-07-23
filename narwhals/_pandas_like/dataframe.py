@@ -197,6 +197,9 @@ class PandasLikeDataFrame:
         *exprs: IntoPandasLikeExpr,
         **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
+        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
+            # This is a simple slice => fastpath!
+            return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
