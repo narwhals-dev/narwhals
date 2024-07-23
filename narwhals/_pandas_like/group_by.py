@@ -28,12 +28,19 @@ class PandasLikeGroupBy:
     def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
-        self._grouped = self._df._native_dataframe.groupby(
-            list(self._keys),
-            sort=False,
-            as_index=True,
-            dropna=False,
-        )
+        if self._df._backend_version < (1, 0):  # pragma: no cover
+            self._grouped = self._df._native_dataframe.groupby(
+                list(self._keys),
+                sort=False,
+                as_index=True,
+            )
+        else:
+            self._grouped = self._df._native_dataframe.groupby(
+                list(self._keys),
+                sort=False,
+                as_index=True,
+                dropna=False,
+            )
 
     def agg(
         self,
