@@ -191,7 +191,7 @@ class ArrowExpr:
 
     def drop_nulls(self) -> Self:
         return reuse_series_implementation(self, "drop_nulls")
-    
+
     def series_shift(self, n: int) -> Self:
         return reuse_series_implementation(self, "series_shift", n, returns_scalar=True)
 
