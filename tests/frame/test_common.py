@@ -156,19 +156,6 @@ def test_expr_na(constructor_with_lazy: Any) -> None:
     compare_dicts(result_nna, expected)
 
 
-@pytest.mark.parametrize(
-    ("drop", "left"),
-    [
-        (["a"], ["b", "z"]),
-        (["a", "b"], ["z"]),
-    ],
-)
-def test_drop(constructor: Any, drop: list[str], left: list[str]) -> None:
-    df = nw.from_native(constructor(data))
-    assert df.drop(drop).columns == left
-    assert df.drop(*drop).columns == left
-
-
 def test_lazy(constructor: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True)
     result = df.lazy()
