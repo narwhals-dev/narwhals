@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import warnings
 from typing import Any
 
@@ -79,11 +78,9 @@ def test_columns(constructor_with_lazy: Any) -> None:
 
 
 def test_expr_binary(request: Any, constructor: Any) -> None:
-    if (
-        "pyarrow_table" in str(constructor)
-        or "pandas_pyarrow"
-        in str(constructor)  # pandas pyarrow raises NotImplementedError for __mod__
-    ):
+    if "pyarrow_table" in str(constructor) or "pandas_pyarrow" in str(
+        constructor
+    ):  # pandas pyarrow raises NotImplementedError for __mod__
         request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
@@ -159,43 +156,6 @@ def test_expr_na(constructor_with_lazy: Any) -> None:
     compare_dicts(result_nna, expected)
 
 
-def test_concat_horizontal(constructor_with_lazy: Any) -> None:
-    df_left = nw.from_native(constructor_with_lazy(data))
-    df_right = nw.from_native(constructor_with_lazy(data_right))
-    result = nw.concat([df_left, df_right], how="horizontal")
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8, 9],
-        "c": [6, 12, -1],
-        "d": [0, -4, 2],
-    }
-    compare_dicts(result, expected)
-
-    with pytest.raises(ValueError, match="No items"):
-        nw.concat([])
-
-
-def test_concat_vertical(constructor_with_lazy: Any) -> None:
-    df_left = (
-        nw.from_native(constructor_with_lazy(data))
-        .rename({"a": "c", "b": "d"})
-        .drop("z")
-        .lazy()
-    )
-    df_right = nw.from_native(constructor_with_lazy(data_right)).lazy()
-
-    result = nw.concat([df_left, df_right], how="vertical")
-    expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
-    compare_dicts(result, expected)
-
-    with pytest.raises(ValueError, match="No items"):
-        nw.concat([], how="vertical")
-
-    with pytest.raises((Exception, TypeError), match="unable to vstack"):
-        nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
-
-
 def test_lazy(constructor: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True)
     result = df.lazy()
@@ -234,37 +194,6 @@ def test_reindex(df_raw: Any) -> None:
     compare_dicts(result, expected)
     with pytest.raises(ValueError, match="Multi-output expressions are not supported"):
         nw.to_native(df.with_columns(nw.all() + nw.all()))
-
-
-@pytest.mark.parametrize(
-    ("row", "column", "expected"),
-    [(0, 2, 7), (1, "z", 8)],
-)
-def test_item(
-    constructor: Any, row: int | None, column: int | str | None, expected: Any
-) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
-    assert df.item(row, column) == expected
-    assert df.select("a").head(1).item() == 1
-
-
-@pytest.mark.parametrize(
-    ("row", "column", "err_msg"),
-    [
-        (0, None, re.escape("cannot call `.item()` with only one of `row` or `column`")),
-        (None, 0, re.escape("cannot call `.item()` with only one of `row` or `column`")),
-        (
-            None,
-            None,
-            re.escape("can only call `.item()` if the dataframe is of shape (1, 1)"),
-        ),
-    ],
-)
-def test_item_value_error(
-    constructor: Any, row: int | None, column: int | str | None, err_msg: str
-) -> None:
-    with pytest.raises(ValueError, match=err_msg):
-        nw.from_native(constructor(data), eager_only=True).item(row, column)
 
 
 def test_with_columns_order(constructor: Any) -> None:

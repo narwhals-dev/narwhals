@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any
 
 import pandas as pd
@@ -8,6 +9,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
@@ -155,13 +157,22 @@ def test_group_by_multiple_keys(constructor: Any) -> None:
 
 
 def test_key_with_nulls(constructor: Any) -> None:
-    data = {"b": [4, 5, None], "a": [1, 2, 3]}
-    result = (
-        nw.from_native(constructor(data))
-        .group_by("b")
-        .agg(nw.len(), nw.col("a").min())
-        .sort("a")
-        .with_columns(nw.col("b").cast(nw.Float64))
+    context = (
+        pytest.raises(NotImplementedError, match="null values")
+        if (
+            "pandas_constructor" in str(constructor)
+            and parse_version(pd.__version__) < parse_version("1.0.0")
+        )
+        else nullcontext()
     )
-    expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
-    compare_dicts(result, expected)
+    data = {"b": [4, 5, None], "a": [1, 2, 3]}
+    with context:
+        result = (
+            nw.from_native(constructor(data))
+            .group_by("b")
+            .agg(nw.len(), nw.col("a").min())
+            .sort("a")
+            .with_columns(nw.col("b").cast(nw.Float64))
+        )
+        expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
+        compare_dicts(result, expected)
