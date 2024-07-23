@@ -3623,6 +3623,30 @@ class Then(Expr):
     def otherwise(self, value: Any) -> Expr:
         return Expr(lambda plx: self._call(plx).otherwise(value))
 
+    def when(
+        *predicates: IntoExpr | Iterable[IntoExpr],
+        **constraints: Any,  # noqa: ARG002
+    ) -> ChainedWhen:
+        return ChainedWhen(reduce(lambda a, b: a & b, flatten([predicates])))
+
+
+class ChainedWhen:
+    def __init__(self, condition: Expr) -> None:
+        self._condition = condition
+        self._then_value = None
+        self._otehrwise_value = None
+
+    def then(self, value: Any) -> ChainedThen:
+        return ChainedThen(lambda plx: plx.when(self._condition._call(plx)).then(value))
+
+
+class ChainedThen(Expr):
+    def __init__(self, call: Callable[[Any], Any]) -> None:
+        self._call = call
+
+    def otherwise(self, value: Any) -> Expr:
+        return Expr(lambda plx: self._call(plx).otherwise(value))
+
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:  # noqa: ARG001
     """
