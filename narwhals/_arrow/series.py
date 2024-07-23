@@ -218,8 +218,7 @@ class ArrowSeries:
     def n_unique(self) -> int:
         pc = get_pyarrow_compute()
         unique_values = pc.unique(self._native_series)
-        count_unique = pc.count(unique_values, mode="all")
-        return count_unique.as_py()  # type: ignore[no-any-return]
+        return pc.count(unique_values, mode="all")  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -341,8 +340,8 @@ class ArrowSeries:
                     f" or an explicit index is provided (Series is of length {len(self)})"
                 )
                 raise ValueError(msg)
-            return self._native_series[0].as_py()
-        return self._native_series[index].as_py()
+            return self._native_series[0]
+        return self._native_series[index]
 
     def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
         """Parallel is unused, exists for compatibility"""
@@ -464,9 +463,9 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         ser = self._native_series
         if descending:
-            return pc.all(pc.greater_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
+            return pc.all(pc.greater_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
         else:
-            return pc.all(pc.less_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
+            return pc.all(pc.less_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
 
     def unique(self: Self) -> ArrowSeries:
         pc = get_pyarrow_compute()
