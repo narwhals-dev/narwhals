@@ -73,15 +73,28 @@ def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
         Let's see what happens when passing pandas / Polars input:
 
         >>> func(pd.DataFrame(data))
+           c  d
+        0  5  1
+        1  2  4
         >>> func(pl.DataFrame(data))
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ c   ┆ d   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 5   ┆ 1   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
     """
+    if native_namespace is get_polars():
+        return from_native(native_namespace.from_dict(data), eager_only=True)
     if (
-        native_namespace is get_polars()
-        or native_namespace is get_cudf()
+        native_namespace is get_cudf()
         or native_namespace is get_modin()
         or native_namespace is get_pandas()
     ):
-        native_frame = native_namespace.from_dict(data)
+        native_frame = native_namespace.DataFrame.from_dict(data)
     elif native_namespace is get_pyarrow():
         native_frame = native_namespace.table(data)
     return from_native(native_frame, eager_only=True)
