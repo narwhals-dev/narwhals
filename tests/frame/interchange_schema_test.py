@@ -1,17 +1,11 @@
 from datetime import date
 
-import ibis
 import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 
-@pytest.mark.skipif(
-    parse_version(ibis.__version__) < (6, 0),
-    reason="too old, requires interchange protocol",
-)
 def test_interchange_schema() -> None:
     df_pl = pl.DataFrame(
         {
@@ -47,8 +41,7 @@ def test_interchange_schema() -> None:
             "n": pl.Boolean,
         },
     )
-    tbl = ibis.memtable(df_pl)
-    df = nw.from_native(tbl, eager_or_interchange_only=True)
+    df = nw.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
     result = df.schema
     expected = {
         "a": nw.Int64,
@@ -70,31 +63,21 @@ def test_interchange_schema() -> None:
     assert df["a"].dtype == nw.Int64
 
 
-@pytest.mark.skipif(
-    parse_version(ibis.__version__) < (6, 0),
-    reason="too old, requires interchange protocol",
-)
 def test_invalid() -> None:
-    df = pl.DataFrame({"a": [1, 2, 3]})
-    tbl = ibis.memtable(df)
+    df = pl.DataFrame({"a": [1, 2, 3]}).__dataframe__()
     with pytest.raises(
         NotImplementedError, match="is not supported for metadata-only dataframes"
     ):
-        nw.from_native(tbl, eager_or_interchange_only=True).select("a")
+        nw.from_native(df, eager_or_interchange_only=True).select("a")
     with pytest.raises(TypeError, match="Cannot only use `series_only=True`"):
-        nw.from_native(tbl, eager_only=True)
+        nw.from_native(df, eager_only=True)
     with pytest.raises(ValueError, match="Invalid parameter combination"):
-        nw.from_native(tbl, eager_only=True, eager_or_interchange_only=True)  # type: ignore[call-overload]
+        nw.from_native(df, eager_only=True, eager_or_interchange_only=True)  # type: ignore[call-overload]
 
 
-@pytest.mark.skipif(
-    parse_version(ibis.__version__) < (6, 0),
-    reason="too old, requires interchange protocol",
-)
 def test_get_level() -> None:
-    df = pl.DataFrame({"a": [1, 2, 3]})
-    tbl = ibis.memtable(df)
+    df = pl.DataFrame({"a": [1, 2, 3]}).__dataframe__()
     assert (
-        nw.get_level(nw.from_native(tbl, eager_or_interchange_only=True)) == "interchange"
+        nw.get_level(nw.from_native(df, eager_or_interchange_only=True)) == "interchange"
     )
     assert nw.get_level(nw.from_native(df)) == "full"
