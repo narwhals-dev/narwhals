@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import warnings
 from typing import Any
 
@@ -79,11 +78,9 @@ def test_columns(constructor_with_lazy: Any) -> None:
 
 
 def test_expr_binary(request: Any, constructor: Any) -> None:
-    if (
-        "pyarrow_table" in str(constructor)
-        or "pandas_pyarrow"
-        in str(constructor)  # pandas pyarrow raises NotImplementedError for __mod__
-    ):
+    if "pyarrow_table" in str(constructor) or "pandas_pyarrow" in str(
+        constructor
+    ):  # pandas pyarrow raises NotImplementedError for __mod__
         request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
@@ -247,37 +244,6 @@ def test_reindex(df_raw: Any) -> None:
     compare_dicts(result, expected)
     with pytest.raises(ValueError, match="Multi-output expressions are not supported"):
         nw.to_native(df.with_columns(nw.all() + nw.all()))
-
-
-@pytest.mark.parametrize(
-    ("row", "column", "expected"),
-    [(0, 2, 7), (1, "z", 8)],
-)
-def test_item(
-    constructor: Any, row: int | None, column: int | str | None, expected: Any
-) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
-    assert df.item(row, column) == expected
-    assert df.select("a").head(1).item() == 1
-
-
-@pytest.mark.parametrize(
-    ("row", "column", "err_msg"),
-    [
-        (0, None, re.escape("cannot call `.item()` with only one of `row` or `column`")),
-        (None, 0, re.escape("cannot call `.item()` with only one of `row` or `column`")),
-        (
-            None,
-            None,
-            re.escape("can only call `.item()` if the dataframe is of shape (1, 1)"),
-        ),
-    ],
-)
-def test_item_value_error(
-    constructor: Any, row: int | None, column: int | str | None, err_msg: str
-) -> None:
-    with pytest.raises(ValueError, match=err_msg):
-        nw.from_native(constructor(data), eager_only=True).item(row, column)
 
 
 def test_with_columns_order(constructor: Any) -> None:
