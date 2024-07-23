@@ -343,13 +343,16 @@ class PandasLikeExpr:
     def name(self: Self) -> PandasLikeExprNameNamespace:
         return PandasLikeExprNameNamespace(self)
 
-    def when(self, *predicates: PandasExpr | Iterable[PandasExpr], **conditions: Any) -> PandasWhen:
+    def when(
+        self, *predicates: PandasExpr | Iterable[PandasExpr], **conditions: Any
+    ) -> PandasWhen:
         # TODO: Support conditions
         from narwhals._pandas_like.namespace import PandasNamespace
 
         plx = PandasNamespace(self._implementation)
         condition = plx.all_horizontal(*predicates)
         return PandasWhen(self, condition)
+
 
 class PandasLikeExprCatNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
@@ -634,15 +637,26 @@ class PandasLikeExprNameNamespace:
             backend_version=self._expr._backend_version,
         )
 
+
 class PandasWhen:
     def __init__(self, condition: PandasLikeExpr) -> None:
         self._condition = condition
 
     def then(self, value: Any) -> PandasThen:
-        return PandasThen(self, value=value, implementation=self._condition._implementation)
+        return PandasThen(
+            self, value=value, implementation=self._condition._implementation
+        )
+
 
 class PandasThen(PandasLikeExpr):
-    def __init__(self, when: PandasWhen, *, value: Any, implementation: Implementation, backend_version: tuple[int, ...]) -> None:
+    def __init__(
+        self,
+        when: PandasWhen,
+        *,
+        value: Any,
+        implementation: Implementation,
+        backend_version: tuple[int, ...],
+    ) -> None:
         self._when = when
         self._then_value = value
         self._implementation = implementation
@@ -651,15 +665,15 @@ class PandasThen(PandasLikeExpr):
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-            plx = PandasLikeNamespace(implementation=self._implementation, backend_version=self.backend_version)
+            plx = PandasLikeNamespace(
+                implementation=self._implementation, backend_version=self.backend_version
+            )
 
             condition = self._when._condition._call(df)[0]
 
             value_series = plx._create_series_from_scalar(self._then_value, condition)
             none_series = plx._create_series_from_scalar(None, condition)
-            return [
-                    value_series.zip_with(condition, none_series)
-            ]
+            return [value_series.zip_with(condition, none_series)]
 
         self._call = func
         self._depth = 0
@@ -670,13 +684,14 @@ class PandasThen(PandasLikeExpr):
     def otherwise(self, value: Any) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             from narwhals._pandas_like.namespace import PandasLikeNamespace
-            plx = PandasLikeNamespace(implementation=self._implementation, backend_version=self.backend_version)
+
+            plx = PandasLikeNamespace(
+                implementation=self._implementation, backend_version=self.backend_version
+            )
             condition = self._when._condition._call(df)[0]
             value_series = plx._create_series_from_scalar(self._then_value, condition)
             otherwise_series = plx._create_series_from_scalar(value, condition)
-            return [
-                value_series.zip_with(condition, otherwise_series)
-            ]
+            return [value_series.zip_with(condition, otherwise_series)]
 
         return PandasLikeExpr(
             func,
