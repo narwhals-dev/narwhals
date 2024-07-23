@@ -964,12 +964,13 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.alias(name=name))
 
-    def sort(self, *, descending: bool = False) -> Self:
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
         Sort this Series. Place null values first.
 
         Arguments:
             descending: Sort in descending order.
+            nulls_last: Place null values last instead of first.
 
         Examples:
             >>> import pandas as pd
@@ -1023,7 +1024,7 @@ class Series:
             ]
         """
         return self._from_compliant_series(
-            self._compliant_series.sort(descending=descending)
+            self._compliant_series.sort(descending=descending, nulls_last=nulls_last)
         )
 
     def is_null(self) -> Self:

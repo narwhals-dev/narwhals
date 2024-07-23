@@ -412,11 +412,11 @@ class Series(NwSeries):
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        return _stableify(
+        return _stableify(  # type: ignore[no-any-return]
             super().value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             )
-        )  # type: ignore[no-any-return]
+        )
 
 
 class Expr(NwExpr):

@@ -184,6 +184,21 @@ class PolarsSeries:
 
         return PolarsDataFrame(result, backend_version=self._backend_version)
 
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        if self._backend_version < (0, 20, 6):  # pragma: no cover
+            result = self._native_series.sort(descending=descending)
+
+            if nulls_last:
+                pl = get_polars()
+                is_null = result.is_null()
+                result = pl.concat([result.filter(~is_null), result.filter(is_null)])
+        else:
+            result = self._native_series.sort(
+                descending=descending, nulls_last=nulls_last
+            )
+
+        return self._from_native_series(result)
+
     def value_counts(
         self: Self,
         *,
