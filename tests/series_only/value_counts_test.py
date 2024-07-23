@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import sys
 from typing import Any
 
+import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
@@ -16,12 +17,10 @@ data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
 def test_value_counts(
     request: Any, constructor_series: Any, normalize: Any, name: str | None
 ) -> None:
-    if "pandas_series_nullable_constructor" in str(
-        constructor_series
-    ) and sys.version_info < (
-        3,
-        9,
-    ):  # fails for py3.8
+    if "pandas_nullable_constructor" in str(constructor) and parse_version(
+        pd.__version__
+    ) < (2, 2):
+        # bug in old pandas
         request.applymarker(pytest.mark.xfail)
 
     expected_count = [5, 3, 2]
