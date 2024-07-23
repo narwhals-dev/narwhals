@@ -199,6 +199,30 @@ class ArrowNamespace:
             )
         raise NotImplementedError
 
+    def sum(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).sum()
+
+    def mean(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).mean()
+
+    def max(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).max()
+
+    def min(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).min()
+
     @property
     def selectors(self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace(backend_version=self._backend_version)

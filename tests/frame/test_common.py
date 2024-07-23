@@ -136,10 +136,7 @@ def test_expr_transform(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_expr_min_max(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_expr_min_max(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result_min = df.select(nw.min("a", "b", "z"))
     result_max = df.select(nw.max("a", "b", "z"))
