@@ -7,7 +7,6 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import reverse_translate_dtype
@@ -19,6 +18,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow_compute
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self

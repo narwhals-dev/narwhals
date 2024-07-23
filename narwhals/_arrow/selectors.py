@@ -6,6 +6,7 @@ from typing import NoReturn
 
 from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 class ArrowSelectorNamespace:
     def __init__(self: Self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
+        self._implementation = Implementation.PYARROW
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> ArrowSelector:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:

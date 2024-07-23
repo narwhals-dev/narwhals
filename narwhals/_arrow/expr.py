@@ -7,6 +7,7 @@ from typing import Literal
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -34,7 +35,7 @@ class ArrowExpr:
         self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
-        self._implementation = "arrow"
+        self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover

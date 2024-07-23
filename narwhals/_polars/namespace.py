@@ -9,6 +9,7 @@ from narwhals import dtypes
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import reverse_translate_dtype
 from narwhals.dependencies import get_polars
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -39,6 +40,7 @@ class PolarsNamespace:
 
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
+        self._implementation = Implementation.POLARS
 
     def __getattr__(self, attr: str) -> Any:
         from narwhals._polars.expr import PolarsExpr

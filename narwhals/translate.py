@@ -283,13 +283,13 @@ def from_native(  # noqa: PLR0915
     from narwhals._interchange.dataframe import InterchangeFrame
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._pandas_like.utils import Implementation
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.series import PolarsSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.utils import Implementation
     from narwhals.utils import parse_version
 
     # Early returns
