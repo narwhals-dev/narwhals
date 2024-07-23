@@ -65,6 +65,9 @@ def test_truediv_same_dims(constructor_series: Any, request: Any) -> None:
     left=st.integers(-100, 100),
     right=st.integers(-100, 100),
 )
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < (2, 0), reason="convert_dtypes not available"
+)
 def test_mod(left: int, right: int) -> None:
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
