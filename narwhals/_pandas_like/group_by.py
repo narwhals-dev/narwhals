@@ -28,7 +28,13 @@ class PandasLikeGroupBy:
     def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = list(keys)
-        if self._df._backend_version < (1, 0):  # pragma: no cover
+        if (
+            self._df._implementation is Implementation.PANDAS
+            and self._df._backend_version < (1, 0)
+        ):  # pragma: no cover
+            if self._df._native_dataframe.loc[:, self._keys].isna().any().any():
+                msg = "Grouping by null values is not supported in pandas < 1.0.0"
+                raise NotImplementedError(msg)
             self._grouped = self._df._native_dataframe.groupby(
                 list(self._keys),
                 sort=False,
