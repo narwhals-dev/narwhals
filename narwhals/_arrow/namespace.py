@@ -14,7 +14,6 @@ from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
-from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -101,11 +100,11 @@ class ArrowNamespace:
         self._backend_version = backend_version
 
     # --- selection ---
-    def col(self, *column_names: str | Iterable[str]) -> ArrowExpr:
+    def col(self, *column_names: str) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
         return ArrowExpr.from_column_names(
-            *flatten(column_names), backend_version=self._backend_version
+            *column_names, backend_version=self._backend_version
         )
 
     def len(self) -> ArrowExpr:

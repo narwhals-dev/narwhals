@@ -3313,7 +3313,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     """
 
     def func(plx: Any) -> Any:
-        return plx.col(*names)
+        return plx.col(*flatten(names))
 
     return Expr(func)
 

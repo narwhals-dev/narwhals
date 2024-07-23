@@ -293,9 +293,9 @@ class PandasLikeDataFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: str) -> Self:
         return self._from_native_dataframe(
-            self._native_dataframe.drop(columns=list(flatten(columns)))
+            self._native_dataframe.drop(columns=list(columns))
         )
 
     # --- transform ---
@@ -322,12 +322,12 @@ class PandasLikeDataFrame:
         )
 
     # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> PandasLikeGroupBy:
+    def group_by(self, *keys: str) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         return PandasLikeGroupBy(
             self,
-            flatten(keys),
+            list(keys),
         )
 
     def join(

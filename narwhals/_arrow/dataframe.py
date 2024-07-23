@@ -202,13 +202,10 @@ class ArrowDataFrame:
         df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)
         return self._from_native_dataframe(df)
 
-    def group_by(self, *keys: str | Iterable[str]) -> ArrowGroupBy:
+    def group_by(self, *keys: str) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
-        return ArrowGroupBy(
-            self,
-            flatten(keys),
-        )
+        return ArrowGroupBy(self, list(keys))
 
     def join(
         self,
@@ -256,10 +253,8 @@ class ArrowDataFrame:
             ),
         )
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
-        return self._from_native_dataframe(
-            self._native_dataframe.drop(list(flatten(columns)))
-        )
+    def drop(self, *columns: str) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.drop(list(columns)))
 
     def drop_nulls(self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.drop_null())
