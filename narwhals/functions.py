@@ -59,7 +59,7 @@ def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import narwhals.stable.v1 as nw
+        >>> import narwhals as nw
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
         Let's define a dataframe-agnostic function:
