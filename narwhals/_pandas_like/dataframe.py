@@ -287,7 +287,7 @@ class PandasLikeDataFrame:
         else:
             df = self._native_dataframe.copy(deep=False)
             for s in new_columns:
-                df[s.name] = validate_dataframe_comparand(index, s)
+                df.loc[:, s.name] = validate_dataframe_comparand(index, s)
         return self._from_native_dataframe(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:
