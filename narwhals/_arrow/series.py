@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 from typing import overload
 
@@ -514,6 +515,16 @@ class ArrowSeries:
             pa.Table.from_arrays(columns, names=names),
             backend_version=self._backend_version,
         )
+
+    def quantile(
+        self: Self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Any:
+        pc = get_pyarrow_compute()
+        return pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[
+            0
+        ]
 
     @property
     def shape(self) -> tuple[int]:
