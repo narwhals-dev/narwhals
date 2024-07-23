@@ -783,12 +783,13 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
-    def sort(self, *, descending: bool = False) -> Self:
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
         Sort this column. Place null values first.
 
         Arguments:
             descending: Sort in descending order.
+            nulls_last: Place null values last instead of first.
 
         Examples:
             >>> import narwhals as nw
@@ -849,7 +850,9 @@ class Expr:
             │ 1    │
             └──────┘
         """
-        return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
+        return self.__class__(
+            lambda plx: self._call(plx).sort(descending=descending, nulls_last=nulls_last)
+        )
 
     # --- transform ---
     def is_between(
