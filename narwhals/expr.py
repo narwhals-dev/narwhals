@@ -3609,8 +3609,6 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 class When:
     def __init__(self, condition: Expr) -> None:
         self._condition = condition
-        self._then_value = None
-        self._otehrwise_value = None
 
     def then(self, value: Any) -> Then:
         return Then(lambda plx: plx.when(self._condition._call(plx)).then(value))
@@ -3633,8 +3631,6 @@ class Then(Expr):
 class ChainedWhen:
     def __init__(self, condition: Expr) -> None:
         self._condition = condition
-        self._then_value = None
-        self._otehrwise_value = None
 
     def then(self, value: Any) -> ChainedThen:
         return ChainedThen(lambda plx: plx.when(self._condition._call(plx)).then(value))
