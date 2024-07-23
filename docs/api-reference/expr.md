@@ -31,6 +31,7 @@
         - null_count
         - n_unique
         - over
+        - pipe
         - quantile
         - round
         - sample

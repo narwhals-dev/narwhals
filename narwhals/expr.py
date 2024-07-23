@@ -77,6 +77,43 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        """
+        Pipe function call.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> spd = pd.Series([1, 2, 3, 4])
+            >>> spl = pl.Series([1, 1, 2, 3])
+
+            Lets define a function to pipe into
+            >>> @nw.narwhalify
+            ... def func(s_any):
+            ...     return s_any.pipe(lambda x: x**2)
+
+            Now apply it to the series
+            >>> func(spl)
+            shape: (4,)
+            Series: '' [i64]
+            [
+                    1
+                    1
+                    4
+                    9
+            ]
+            >>> func(spd)
+            0     1
+            1     4
+            2     9
+            3    16
+            dtype: int64
+
+
+        """
+        return function(self, *args, **kwargs)
+
     def cast(
         self,
         dtype: Any,
