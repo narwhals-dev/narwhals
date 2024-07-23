@@ -73,19 +73,24 @@ class ArrowDataFrame:
         self,
         *,
         named: bool = False,
-        buffer_size: int = 512,  # noqa: ARG002
+        buffer_size: int = 512,
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         """
         NOTE:
             The param ``buffer_size`` is only here for compatibility with the polars API
             and has no effect on the output.
         """
-        _list_of_dicts = self._native_dataframe.to_pylist()
+
+        df = self._native_dataframe
+        num_rows = df.num_rows
 
         if not named:
-            yield from [tuple(x.values()) for x in _list_of_dicts]
+            for i in range(0, num_rows, buffer_size):
+                rows = df[i : i + buffer_size].to_pydict().values()
+                yield from zip(*rows)
         else:
-            yield from _list_of_dicts
+            for i in range(0, num_rows, buffer_size):
+                yield from df[i : i + buffer_size].to_pylist()
 
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
