@@ -114,29 +114,6 @@ def test_to_numpy() -> None:
     assert nw_series.shape == (3,)
 
 
-def test_value_counts(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pandas_series_nullable" in str(constructor_series):  # fails for py3.8
-        pytest.skip()
-
-    series = nw.from_native(constructor_series(data_dups).rename("b"), series_only=True)
-
-    sorted_result = series.value_counts(sort=True)
-    assert sorted_result.columns == ["b", "count"]
-
-    expected = np.array([[4, 2], [6, 1]])
-    assert (sorted_result.to_numpy() == expected).all()
-
-    unsorted_result = series.value_counts(sort=False)
-    assert unsorted_result.columns == ["b", "count"]
-
-    a = unsorted_result.to_numpy()
-
-    assert (a[a[:, 0].argsort()] == expected).all()
-
-
 @pytest.mark.parametrize(
     ("interpolation", "expected"),
     [

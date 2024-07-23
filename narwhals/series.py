@@ -1963,6 +1963,79 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.round(decimals))
 
+    def to_dummies(
+        self: Self, *, separator: str = "_", drop_first: bool = False
+    ) -> DataFrame[Any]:
+        r"""
+        Get dummy/indicator variables.
+
+        Arguments
+            separator: Separator/delimiter used when generating column names.
+            drop_first: Remove the first category from the variable being encoded.
+
+        Notes:
+            pandas and Polars handle null values differently. Polars distinguishes
+            between NaN and Null, whereas pandas doesn't.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1, 2, 3]
+            >>> s_pd = pd.Series(data, name="a")
+            >>> s_pl = pl.Series("a", data)
+
+            Let's define a dataframe-agnostic function that rounds to the first decimal:
+
+            >>> @nw.narwhalify
+            ... def func(s_any, drop_first: bool = False):
+            ...     return s_any.to_dummies(drop_first=drop_first)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+               a_1  a_2  a_3
+            0    1    0    0
+            1    0    1    0
+            2    0    0    1
+
+            >>> func(s_pd, drop_first=True)
+               a_2  a_3
+            0    0    0
+            1    1    0
+            2    0    1
+
+            >>> func(s_pl)
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ a_1 ┆ a_2 ┆ a_3 │
+            │ --- ┆ --- ┆ --- │
+            │ u8  ┆ u8  ┆ u8  │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 0   ┆ 0   │
+            │ 0   ┆ 1   ┆ 0   │
+            │ 0   ┆ 0   ┆ 1   │
+            └─────┴─────┴─────┘
+            >>> func(s_pl, drop_first=True)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a_2 ┆ a_3 │
+            │ --- ┆ --- │
+            │ u8  ┆ u8  │
+            ╞═════╪═════╡
+            │ 0   ┆ 0   │
+            │ 1   ┆ 0   │
+            │ 0   ┆ 1   │
+            └─────┴─────┘
+        """
+
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame(
+            self._compliant_series.to_dummies(separator=separator, drop_first=drop_first),
+            level=self._level,
+        )
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
