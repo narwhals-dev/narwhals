@@ -7,6 +7,7 @@ from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import translate_dtype
 from narwhals.dependencies import get_polars
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
 class PolarsDataFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_dataframe = df
+        self._implementation = Implementation.POLARS
         self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -112,10 +114,10 @@ class PolarsDataFrame:
         else:
             return df.to_dict(as_series=False)
 
-    def group_by(self, by: list[str]) -> Any:
+    def group_by(self, *by: str) -> Any:
         from narwhals._polars.group_by import PolarsGroupBy
 
-        return PolarsGroupBy(self, by)
+        return PolarsGroupBy(self, list(by))
 
     def with_row_index(self, name: str) -> Any:
         if self._backend_version < (0, 20, 4):  # pragma: no cover
@@ -175,10 +177,10 @@ class PolarsLazyFrame:
             self._native_dataframe.collect(), backend_version=self._backend_version
         )
 
-    def group_by(self, by: list[str]) -> Any:
+    def group_by(self, *by: str) -> Any:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
-        return PolarsLazyGroupBy(self, by)
+        return PolarsLazyGroupBy(self, list(by))
 
     def with_row_index(self, name: str) -> Any:
         if self._backend_version < (0, 20, 4):  # pragma: no cover

@@ -10,3 +10,8 @@ def test_select(constructor: Any) -> None:
     result = df.select("a")
     expected = {"a": [1, 3, 2]}
     compare_dicts(result, expected)
+
+
+def test_empty_select(constructor: Any) -> None:
+    result = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True).select()
+    assert result.shape == (0, 0)

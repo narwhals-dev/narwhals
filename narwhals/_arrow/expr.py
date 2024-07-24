@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -33,7 +35,7 @@ class ArrowExpr:
         self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
-        self._implementation = "arrow"
+        self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -254,8 +256,19 @@ class ArrowExpr:
     def unique(self: Self) -> Self:
         return reuse_series_implementation(self, "unique")
 
-    def sort(self: Self, *, descending: bool = False) -> Self:
-        return reuse_series_implementation(self, "sort", descending=descending)
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        return reuse_series_implementation(
+            self, "sort", descending=descending, nulls_last=nulls_last
+        )
+
+    def quantile(
+        self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "quantile", quantile, interpolation, returns_scalar=True
+        )
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:

@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any
 
 import narwhals.stable.v1 as nw
@@ -12,4 +11,4 @@ def test_to_datetime(constructor: Any) -> None:
         .select(b=nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S"))
         .item(row=0, column="b")
     )
-    assert result == datetime(2020, 1, 1, 12, 34, 56)
+    assert str(result) == "2020-01-01 12:34:56"

@@ -138,7 +138,9 @@ class BaseFrame(Generic[FrameT]):
         return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.drop(*columns))
+        return self._from_compliant_dataframe(
+            self._compliant_frame.drop(*flatten(columns))
+        )
 
     def unique(
         self,
@@ -1549,7 +1551,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import GroupBy
 
-        return GroupBy(self, *keys)
+        return GroupBy(self, *flatten(keys))
 
     def sort(
         self,
@@ -2686,7 +2688,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*columns)
+        return super().drop(*flatten(columns))
 
     def unique(
         self,
@@ -2997,7 +2999,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import LazyGroupBy
 
-        return LazyGroupBy(self, *keys)
+        return LazyGroupBy(self, *flatten(keys))
 
     def sort(
         self,

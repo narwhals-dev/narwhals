@@ -964,12 +964,13 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.alias(name=name))
 
-    def sort(self, *, descending: bool = False) -> Self:
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
         Sort this Series. Place null values first.
 
         Arguments:
             descending: Sort in descending order.
+            nulls_last: Place null values last instead of first.
 
         Examples:
             >>> import pandas as pd
@@ -1023,7 +1024,7 @@ class Series:
             ]
         """
         return self._from_compliant_series(
-            self._compliant_series.sort(descending=descending)
+            self._compliant_series.sort(descending=descending, nulls_last=nulls_last)
         )
 
     def is_null(self) -> Self:
@@ -1653,7 +1654,12 @@ class Series:
         return self._compliant_series.is_sorted(descending=descending)  # type: ignore[no-any-return]
 
     def value_counts(
-        self: Self, *, sort: bool = False, parallel: bool = False
+        self: Self,
+        *,
+        sort: bool = False,
+        parallel: bool = False,
+        name: str | None = None,
+        normalize: bool = False,
     ) -> DataFrame[Any]:
         r"""
         Count the occurrences of unique values.
@@ -1661,7 +1667,10 @@ class Series:
         Arguments:
             sort: Sort the output by count in descending order. If set to False (default),
                 the order of the output is random.
-            parallel: Execute the computation in parallel. Unused for pandas-like APIs.
+            parallel: Execute the computation in parallel. Used for Polars only.
+            name: Give the resulting count column a specific name; if `normalize` is True
+                defaults to "proportion", otherwise defaults to "count".
+            normalize: If true gives relative frequencies of the unique values
 
         Examples:
             >>> import narwhals as nw
@@ -1699,7 +1708,9 @@ class Series:
         from narwhals.dataframe import DataFrame
 
         return DataFrame(
-            self._compliant_series.value_counts(sort=sort, parallel=parallel),
+            self._compliant_series.value_counts(
+                sort=sort, parallel=parallel, name=name, normalize=normalize
+            ),
             level=self._level,
         )
 
