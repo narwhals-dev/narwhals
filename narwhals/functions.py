@@ -11,12 +11,8 @@ from typing import Union
 
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
 from narwhals.translate import from_native
+from narwhals.utils import Implementation
 from narwhals.utils import validate_laziness
 
 # Missing type parameters for generic type "DataFrame"
@@ -99,7 +95,8 @@ def from_dict(
         │ 2   ┆ 4   │
         └─────┴─────┘
     """
-    if native_namespace is get_polars():
+    implementation = Implementation.from_native_namespace(native_namespace)
+    if implementation is Implementation.POLARS:
         if schema:
             from narwhals._polars.utils import (
                 reverse_translate_dtype as polars_reverse_translate_dtype,
@@ -111,26 +108,18 @@ def from_dict(
             }
 
         native_frame = native_namespace.from_dict(data, schema=schema)
-    elif (
-        native_namespace is get_cudf()
-        or native_namespace is get_modin()
-        or native_namespace is get_pandas()
-    ):
+    elif implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    }:
         native_frame = native_namespace.DataFrame.from_dict(data)
 
         if schema:
-            from narwhals._pandas_like.utils import Implementation
             from narwhals._pandas_like.utils import (
                 reverse_translate_dtype as pandas_like_reverse_translate_dtype,
             )
 
-            implementation = (
-                Implementation.PANDAS
-                if native_namespace is get_pandas()
-                else Implementation.MODIN
-                if native_namespace is get_modin()
-                else Implementation.CUDF
-            )
             schema = {
                 name: pandas_like_reverse_translate_dtype(
                     schema[name], native_type, implementation
@@ -139,7 +128,7 @@ def from_dict(
             }
             native_frame = native_frame.astype(schema)
 
-    elif native_namespace is get_pyarrow():
+    elif implementation is Implementation.PYARROW:
         if schema:
             from narwhals._arrow.utils import (
                 reverse_translate_dtype as arrow_reverse_translate_dtype,
