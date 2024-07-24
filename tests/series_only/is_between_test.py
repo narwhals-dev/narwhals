@@ -19,12 +19,7 @@ data = [1, 4, 2, 5]
         ("none", [False, True, True, False]),
     ],
 )
-def test_is_between(
-    request: Any, constructor_series: Any, closed: str, expected: list[bool]
-) -> None:
-    if "pandas_series_nullable_constructor" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
+def test_is_between(constructor_series: Any, closed: str, expected: list[bool]) -> None:
     ser = nw.from_native(constructor_series(data), series_only=True)
     result = ser.is_between(1, 5, closed=closed)
     compare_dicts({"a": result}, {"a": expected})
