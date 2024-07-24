@@ -290,6 +290,29 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return pc.all(self._native_series)  # type: ignore[no-any-return]
 
+    def is_between(self, lower_bound: Any, upper_bound: Any, closed: str = "both") -> Any:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        if closed == "left":
+            ge = pc.greater_equal(ser, lower_bound)
+            lt = pc.less(ser, upper_bound)
+            res = pc.and_kleene(ge, lt)
+        elif closed == "right":
+            gt = pc.greater(ser, lower_bound)
+            le = pc.less_equal(ser, upper_bound)
+            res = pc.and_kleene(gt, le)
+        elif closed == "none":
+            gt = pc.greater(ser, lower_bound)
+            lt = pc.less(ser, upper_bound)
+            res = pc.and_kleene(gt, lt)
+        elif closed == "both":
+            ge = pc.greater_equal(ser, lower_bound)
+            le = pc.less_equal(ser, upper_bound)
+            res = pc.and_kleene(ge, le)
+        else:  # pragma: no cover
+            raise AssertionError
+        return self._from_native_series(res)
+
     def is_empty(self) -> bool:
         return len(self) == 0
 
