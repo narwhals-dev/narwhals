@@ -1459,12 +1459,22 @@ def get_level(
     return nw.get_level(obj)
 
 
-def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
+def from_dict(
+    data: dict[str, Any],
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: Any,
+) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
 
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
     Arguments:
         data: Dictionary to create DataFrame from.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
         native_namespace: The native library to use for DataFrame creation.
 
     Examples:
@@ -1498,7 +1508,9 @@ def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
         │ 2   ┆ 4   │
         └─────┴─────┘
     """
-    return _stableify(nw.from_dict(data, native_namespace=native_namespace))  # type: ignore[no-any-return]
+    return _stableify(  # type: ignore[no-any-return]
+        nw.from_dict(data, schema=schema, native_namespace=native_namespace)
+    )
 
 
 __all__ = [

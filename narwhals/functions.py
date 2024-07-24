@@ -25,6 +25,8 @@ from narwhals.utils import validate_laziness
 FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
 
 if TYPE_CHECKING:
+    from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.series import Series
 
 
@@ -48,12 +50,22 @@ def concat(
     )
 
 
-def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
+def from_dict(
+    data: dict[str, Any],
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: Any,
+) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
 
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
     Arguments:
         data: Dictionary to create DataFrame from.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
         native_namespace: The native library to use for DataFrame creation.
 
     Examples:
@@ -88,15 +100,58 @@ def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
         └─────┴─────┘
     """
     if native_namespace is get_polars():
-        native_frame = native_namespace.from_dict(data)
+        if schema:
+            from narwhals._polars.utils import (
+                reverse_translate_dtype as polars_reverse_translate_dtype,
+            )
+
+            schema = {
+                name: polars_reverse_translate_dtype(dtype)
+                for name, dtype in schema.items()
+            }
+
+        native_frame = native_namespace.from_dict(data, schema=schema)
     elif (
         native_namespace is get_cudf()
         or native_namespace is get_modin()
         or native_namespace is get_pandas()
     ):
         native_frame = native_namespace.DataFrame.from_dict(data)
+
+        if schema:
+            from narwhals._pandas_like.utils import Implementation
+            from narwhals._pandas_like.utils import (
+                reverse_translate_dtype as pandas_like_reverse_translate_dtype,
+            )
+
+            implementation = (
+                Implementation.PANDAS
+                if native_namespace is get_pandas()
+                else Implementation.MODIN
+                if native_namespace is get_modin()
+                else Implementation.CUDF
+            )
+            schema = {
+                name: pandas_like_reverse_translate_dtype(
+                    schema[name], native_type, implementation
+                )
+                for name, native_type in native_frame.dtypes.items()
+            }
+            native_frame = native_frame.astype(schema)
+
     elif native_namespace is get_pyarrow():
-        native_frame = native_namespace.table(data)
+        if schema:
+            from narwhals._arrow.utils import (
+                reverse_translate_dtype as arrow_reverse_translate_dtype,
+            )
+
+            schema = native_namespace.schema(
+                [
+                    (name, arrow_reverse_translate_dtype(dtype))
+                    for name, dtype in schema.items()
+                ]
+            )
+        native_frame = native_namespace.table(data, schema=schema)
     else:  # pragma: no cover
         msg = f"Expected library supported by Narwhals, got: {native_namespace}"
         raise ValueError(msg)
