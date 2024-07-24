@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals._pandas_like.utils import Implementation
+from narwhals.utils import Implementation
 from tests.utils import compare_dicts
 
 
