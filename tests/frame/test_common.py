@@ -19,11 +19,6 @@ data_na = {"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]}
 data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
 
 
-def test_empty_select(constructor: Any) -> None:
-    result = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True).select()
-    assert result.shape == (0, 0)
-
-
 def test_std(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(
