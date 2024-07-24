@@ -57,7 +57,7 @@ class PolarsNamespace:
         from narwhals._polars.expr import PolarsExpr
 
         pl = get_polars()
-        if self._backend_version < (0, 20, 4):  # pragma: no cover
+        if self._backend_version < (0, 20, 5):  # pragma: no cover
             return PolarsExpr(pl.count().alias("len"))
         return PolarsExpr(pl.len())
 
