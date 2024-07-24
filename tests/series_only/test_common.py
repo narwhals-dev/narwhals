@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from typing import Any
-from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -12,6 +11,7 @@ from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import compare_dicts
 
 data = [1, 3, 2]
 data_dups = [4, 4, 6]
@@ -114,56 +114,6 @@ def test_to_numpy() -> None:
     assert nw_series.shape == (3,)
 
 
-def test_value_counts(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pandas_series_nullable" in str(constructor_series):  # fails for py3.8
-        pytest.skip()
-
-    series = nw.from_native(constructor_series(data_dups).rename("b"), series_only=True)
-
-    sorted_result = series.value_counts(sort=True)
-    assert sorted_result.columns == ["b", "count"]
-
-    expected = np.array([[4, 2], [6, 1]])
-    assert (sorted_result.to_numpy() == expected).all()
-
-    unsorted_result = series.value_counts(sort=False)
-    assert unsorted_result.columns == ["b", "count"]
-
-    a = unsorted_result.to_numpy()
-
-    assert (a[a[:, 0].argsort()] == expected).all()
-
-
-@pytest.mark.parametrize(
-    ("interpolation", "expected"),
-    [
-        ("lower", 7.0),
-        ("higher", 8.0),
-        ("midpoint", 7.5),
-        ("linear", 7.6),
-        ("nearest", 8.0),
-    ],
-)
-@pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
-def test_quantile(
-    request: Any,
-    constructor_series: Any,
-    interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
-    expected: float,
-) -> None:
-    if "pyarrow_series" in str(constructor_series):
-        request.applymarker(pytest.mark.xfail)
-
-    q = 0.3
-
-    series = nw.from_native(constructor_series(data_sorted), allow_series=True)
-    result = series.quantile(quantile=q, interpolation=interpolation)  # type: ignore[union-attr]
-    assert result == expected
-
-
 def test_zip_with(constructor_series: Any) -> None:
     series1 = nw.from_native(constructor_series(data), series_only=True)
     series2 = nw.from_native(constructor_series(data_dups), series_only=True)
@@ -190,8 +140,8 @@ def test_cast_string() -> None:
 def test_item(constructor_series: Any, index: int, expected: int) -> None:
     series = nw.from_native(constructor_series(data), series_only=True)
     result = series.item(index)
-    assert result == expected
-    assert series.head(1).item() == 1
+    compare_dicts({"a": [result]}, {"a": [expected]})
+    compare_dicts({"a": [series.head(1).item()]}, {"a": [1]})
 
     with pytest.raises(
         ValueError,

@@ -3,19 +3,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-if TYPE_CHECKING:
-    from typing_extensions import Self
-
-    from narwhals.dtypes import DType
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import reverse_translate_dtype
+from narwhals.utils import Implementation
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+    from narwhals.dtypes import DType
 
 
 class PolarsExpr:
     def __init__(self, expr: Any) -> None:
         self._native_expr = expr
+        self._implementation = Implementation.POLARS
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsExpr"

@@ -1,8 +1,8 @@
 # Roadmap
 
-Priorities, as of June 2024, are:
+Priorities, as of July 2024, are:
 
-- add support for PyArrow
-- works towards supporting projects which have shown interest in Narwhals: Altair, scikit-learn, shiny.
-- make sure Narwhals' API coverage is enough to able to compute all (or at least, most of) the TPC-H
-  queries
+- Works towards supporting projects which have shown interest in Narwhals: scikit-learn, shiny, tubular
+- Implement when/then/otherwise so that Narwhals is API-complete enough to complete all the TPC-H queries
+- Add support for extra backends such as Dask
+- Add extra docs and tutorials to make the project more accessible and easy to get started with

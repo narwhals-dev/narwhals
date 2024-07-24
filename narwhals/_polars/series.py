@@ -8,11 +8,13 @@ from typing import overload
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals.dependencies import get_polars
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
+    from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
 
 from narwhals._polars.namespace import PolarsNamespace
@@ -25,6 +27,7 @@ PL = get_polars()
 class PolarsSeries:
     def __init__(self, series: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_series = series
+        self._implementation = Implementation.POLARS
         self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -167,6 +170,67 @@ class PolarsSeries:
 
     def __invert__(self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
+
+    def to_dummies(
+        self: Self, *, separator: str = "_", drop_first: bool = False
+    ) -> PolarsDataFrame:
+        from narwhals._polars.dataframe import PolarsDataFrame
+
+        if self._backend_version < (0, 20, 15):  # pragma: no cover
+            result = self._native_series.to_dummies(separator=separator)
+            result = result.select(result.columns[int(drop_first) :])
+        else:
+            result = self._native_series.to_dummies(
+                separator=separator, drop_first=drop_first
+            )
+
+        return PolarsDataFrame(result, backend_version=self._backend_version)
+
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        if self._backend_version < (0, 20, 6):  # pragma: no cover
+            result = self._native_series.sort(descending=descending)
+
+            if nulls_last:
+                pl = get_polars()
+                is_null = result.is_null()
+                result = pl.concat([result.filter(~is_null), result.filter(is_null)])
+        else:
+            result = self._native_series.sort(
+                descending=descending, nulls_last=nulls_last
+            )
+
+        return self._from_native_series(result)
+
+    def value_counts(
+        self: Self,
+        *,
+        sort: bool = False,
+        parallel: bool = False,
+        name: str | None = None,
+        normalize: bool = False,
+    ) -> PolarsDataFrame:
+        from narwhals._polars.dataframe import PolarsDataFrame
+
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            pl = get_polars()
+            value_name_ = name or ("proportion" if normalize else "count")
+
+            result = self._native_series.value_counts(sort=sort, parallel=parallel)
+            result = result.select(
+                **{
+                    (self._native_series.name): pl.col(self._native_series.name),
+                    value_name_: pl.col("count") / pl.sum("count")
+                    if normalize
+                    else pl.col("count"),
+                }
+            )
+
+        else:
+            result = self._native_series.value_counts(
+                sort=sort, parallel=parallel, name=name, normalize=normalize
+            )
+
+        return PolarsDataFrame(result, backend_version=self._backend_version)
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:

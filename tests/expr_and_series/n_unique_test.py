@@ -17,6 +17,5 @@ def test_n_unique(constructor: Any) -> None:
         "b": [4],
     }
     compare_dicts(result, expected)
-    assert df["a"].n_unique() == 3
-    assert df["b"].n_unique() == 4
-    compare_dicts(result, expected)
+    result_series = {"a": [df["a"].n_unique()], "b": [df["b"].n_unique()]}
+    compare_dicts(result_series, expected)

@@ -124,7 +124,9 @@ def validate_column_comparand(other: Any) -> Any:
     return other
 
 
-def validate_dataframe_comparand(length: int, other: Any) -> Any:
+def validate_dataframe_comparand(
+    length: int, other: Any, backend_version: tuple[int, ...]
+) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -138,7 +140,10 @@ def validate_dataframe_comparand(length: int, other: Any) -> Any:
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
             pa = get_pyarrow()
-            return pa.chunked_array([[other.item()] * length])
+            value = other.item()
+            if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+                value = value.as_py()
+            return pa.chunked_array([[value] * length])
         return other._native_series
     msg = "Please report a bug"  # pragma: no cover
     raise AssertionError(msg)

@@ -14,7 +14,7 @@ from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
-from narwhals.utils import flatten
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -99,13 +99,14 @@ class ArrowNamespace:
     # --- not in spec ---
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
+        self._implementation = Implementation.PYARROW
 
     # --- selection ---
-    def col(self, *column_names: str | Iterable[str]) -> ArrowExpr:
+    def col(self, *column_names: str) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
         return ArrowExpr.from_column_names(
-            *flatten(column_names), backend_version=self._backend_version
+            *column_names, backend_version=self._backend_version
         )
 
     def len(self) -> ArrowExpr:
@@ -171,6 +172,12 @@ class ArrowNamespace:
             parse_into_exprs(*exprs, namespace=self),
         )
 
+    def any_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        return reduce(
+            lambda x, y: x | y,
+            parse_into_exprs(*exprs, namespace=self),
+        )
+
     def sum_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
         return reduce(
             lambda x, y: x + y,
@@ -199,6 +206,30 @@ class ArrowNamespace:
                 backend_version=self._backend_version,
             )
         raise NotImplementedError
+
+    def sum(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).sum()
+
+    def mean(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).mean()
+
+    def max(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).max()
+
+    def min(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).min()
 
     @property
     def selectors(self) -> ArrowSelectorNamespace:

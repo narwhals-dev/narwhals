@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from enum import Enum
-from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -10,6 +8,7 @@ from typing import TypeVar
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
+from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T")
@@ -20,12 +19,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
-
-
-class Implementation(Enum):
-    PANDAS = auto()
-    MODIN = auto()
-    CUDF = auto()
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:

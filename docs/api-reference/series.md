@@ -45,6 +45,7 @@
         - std
         - sum
         - tail
+        - to_dummies
         - to_frame
         - to_list
         - to_numpy

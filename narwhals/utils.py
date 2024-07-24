@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 import secrets
+from enum import Enum
+from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -18,10 +20,43 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
 
 T = TypeVar("T")
+
+
+class Implementation(Enum):
+    PANDAS = auto()
+    MODIN = auto()
+    CUDF = auto()
+    PYARROW = auto()
+    POLARS = auto()
+
+    @classmethod
+    def from_native_namespace(
+        cls: type[Self], native_namespace: Any
+    ) -> Implementation:  # pragma: no cover
+        mapping = {
+            get_pandas(): Implementation.PANDAS,
+            get_modin(): Implementation.MODIN,
+            get_cudf(): Implementation.CUDF,
+            get_pyarrow(): Implementation.PYARROW,
+            get_polars(): Implementation.POLARS,
+        }
+        return mapping[native_namespace]
+
+    def to_native_namespace(self: Self) -> Any:  # pragma: no cover
+        mapping = {
+            Implementation.PANDAS: get_pandas(),
+            Implementation.MODIN: get_modin(),
+            Implementation.CUDF: get_cudf(),
+            Implementation.PYARROW: get_pyarrow(),
+            Implementation.POLARS: get_polars(),
+        }
+        return mapping[self]
 
 
 def remove_prefix(text: str, prefix: str) -> str:
