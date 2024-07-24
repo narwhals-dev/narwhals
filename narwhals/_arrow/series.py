@@ -209,7 +209,7 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.drop_null(self._native_series))
 
-    def series_shift(self, n: int) -> Self:
+    def shift(self, n: int) -> Self:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.shift(self._native_series, n))
 
