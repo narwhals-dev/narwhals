@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
 from datetime import timedelta
 
 import hypothesis.strategies as st
-import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
@@ -12,24 +10,6 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-
-data = {
-    "a": [
-        datetime(2021, 3, 1, 12, 34, 56, 49000),
-        datetime(2020, 1, 2, 2, 4, 14, 715000),
-    ],
-}
-data_timedelta = {
-    "a": [
-        None,
-        timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1),
-    ],
-    "b": [
-        timedelta(milliseconds=2),
-        timedelta(milliseconds=1, microseconds=300),
-    ],
-    "c": np.array([None, 20], dtype="timedelta64[ns]"),
-}
 
 
 @given(
