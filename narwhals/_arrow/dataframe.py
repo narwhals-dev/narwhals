@@ -15,6 +15,7 @@ from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.dependencies import get_pyarrow_parquet
+from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
 
@@ -34,7 +35,7 @@ class ArrowDataFrame:
         self, native_dataframe: Any, *, backend_version: tuple[int, ...]
     ) -> None:
         self._native_dataframe = native_dataframe
-        self._implementation = "arrow"  # for compatibility with PandasLikeDataFrame
+        self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
 
     def __narwhals_namespace__(self) -> ArrowNamespace:

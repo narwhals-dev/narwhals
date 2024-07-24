@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._pandas_like.utils import Implementation
+    from narwhals.utils import Implementation
 
 
 class PandasLikeExpr:

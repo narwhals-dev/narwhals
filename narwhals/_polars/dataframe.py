@@ -7,6 +7,7 @@ from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import translate_dtype
 from narwhals.dependencies import get_polars
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
 class PolarsDataFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_dataframe = df
+        self._implementation = Implementation.POLARS
         self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
