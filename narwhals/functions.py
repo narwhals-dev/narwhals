@@ -59,9 +59,13 @@ def from_dict(
     """
     Instantiate DataFrame from dictionary.
 
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
     Arguments:
         data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as dict of {name: type}, unused for pandas-like DataFrame's.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
         native_namespace: The native library to use for DataFrame creation.
 
     Examples:
@@ -129,11 +133,9 @@ def from_dict(
             )
             schema = {
                 name: pandas_like_reverse_translate_dtype(
-                    nw_dtype, native_type, implementation
+                    schema[name], native_type, implementation
                 )
-                for (name, nw_dtype), native_type in zip(
-                    schema.items(), native_frame.dtypes
-                )
+                for name, native_type in native_frame.dtypes.items()
             }
             native_frame = native_frame.astype(schema)
 

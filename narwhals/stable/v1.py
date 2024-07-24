@@ -1468,9 +1468,13 @@ def from_dict(
     """
     Instantiate DataFrame from dictionary.
 
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
     Arguments:
         data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as dict of {name: type}, unused for pandas-like DataFrame's.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
         native_namespace: The native library to use for DataFrame creation.
 
     Examples:
