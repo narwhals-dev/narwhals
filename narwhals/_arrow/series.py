@@ -655,6 +655,7 @@ class ArrowSeriesDateTimeNamespace:
         unit = arr.type.unit
 
         unit_to_minutes_factor = {
+            "s": 60,  # seconds
             "ms": 60 * 1e3,  # milli
             "us": 60 * 1e6,  # micro
             "ns": 60 * 1e9,  # nano
@@ -672,6 +673,7 @@ class ArrowSeriesDateTimeNamespace:
         unit = arr.type.unit
 
         unit_to_seconds_factor = {
+            "s": 1,  # seconds
             "ms": 1e3,  # milli
             "us": 1e6,  # micro
             "ns": 1e9,  # nano
@@ -689,12 +691,18 @@ class ArrowSeriesDateTimeNamespace:
         unit = arr.type.unit
 
         unit_to_milli_factor = {
+            "s": 1e3,  # seconds
             "ms": 1,  # milli
             "us": 1e3,  # micro
             "ns": 1e6,  # nano
         }
 
         factor = pa.scalar(unit_to_milli_factor[unit], type=pa.int64())
+
+        if unit == "s":
+            return self._arrow_series._from_native_series(
+                pc.cast(pc.multiply(arr, factor), pa.int64())
+            )
 
         return self._arrow_series._from_native_series(
             pc.cast(pc.divide(arr, factor), pa.int64())
@@ -707,6 +715,7 @@ class ArrowSeriesDateTimeNamespace:
         unit = arr.type.unit
 
         unit_to_micro_factor = {
+            "s": 1e6,  # seconds
             "ms": 1e3,  # milli
             "us": 1,  # micro
             "ns": 1e3,  # nano
@@ -714,7 +723,7 @@ class ArrowSeriesDateTimeNamespace:
 
         factor = pa.scalar(unit_to_micro_factor[unit], type=pa.int64())
 
-        if unit == "ms":  # pragma: no cover
+        if unit in {"s", "ms"}:
             return self._arrow_series._from_native_series(
                 pc.cast(pc.multiply(arr, factor), pa.int64())
             )
@@ -729,6 +738,7 @@ class ArrowSeriesDateTimeNamespace:
         unit = arr.type.unit
 
         unit_to_nano_factor = {
+            "s": 1e9,  # seconds
             "ms": 1e6,  # milli
             "us": 1e3,  # micro
             "ns": 1,  # nano

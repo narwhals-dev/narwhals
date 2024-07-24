@@ -5,6 +5,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -90,3 +92,26 @@ def test_duration_micro_nano(
 
     result_c = df.select(getattr(df["c"].dt, attribute)().fill_null(0))
     compare_dicts(result_c, {"c": expected_c})
+
+
+@pytest.mark.parametrize("unit", ["s", "ms", "us", "ns"])
+@pytest.mark.parametrize(
+    ("attribute", "expected"),
+    [
+        ("total_minutes", 1),
+        ("total_seconds", 70),
+        ("total_milliseconds", 70e3),
+        ("total_microseconds", 70e6),
+        ("total_nanoseconds", 70e9),
+    ],
+)
+def test_pyarrow_units(unit: str, attribute: str, expected: int) -> None:
+    data = [None, timedelta(minutes=1, seconds=10)]
+    arr = pc.cast(pa.array(data), pa.duration(unit))
+    df = nw.from_native(pa.table({"a": arr}), eager_only=True)
+
+    result_expr = df.select(getattr(nw.col("a").dt, attribute)().fill_null(0))
+    compare_dicts(result_expr, {"a": [0, expected]})
+
+    result_series = df.select(getattr(df["a"].dt, attribute)().fill_null(0))
+    compare_dicts(result_series, {"a": [0, expected]})
