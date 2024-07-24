@@ -139,6 +139,9 @@ class ArrowExpr:
     def __rtruediv__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__rtruediv__", other)
 
+    def __mod__(self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self, "__mod__", other)
+
     def __invert__(self) -> Self:
         return reuse_series_implementation(self, "__invert__")
 

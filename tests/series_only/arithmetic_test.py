@@ -40,9 +40,6 @@ def test_arithmetic(
     if "pandas_series_pyarrow" in str(constructor_series) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_series" in str(constructor_series) and attr == "__mod__":
-        request.applymarker(pytest.mark.xfail)
-
     s = nw.from_native(constructor_series(data), series_only=True)
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected

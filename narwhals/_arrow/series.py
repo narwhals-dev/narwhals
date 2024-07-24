@@ -178,6 +178,14 @@ class ArrowSeries:
             other = pa.scalar(other)
         return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))
 
+    def __mod__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        floor_div = (self // other)._native_series
+        res = pc.subtract(ser, pc.multiply(floor_div, other))
+        return self._from_native_series(res)
+
     def __invert__(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.invert(self._native_series))

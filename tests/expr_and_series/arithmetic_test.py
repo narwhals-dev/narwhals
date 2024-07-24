@@ -11,12 +11,14 @@ from tests.utils import compare_dicts
 @pytest.mark.parametrize(
     ("attr", "rhs", "expected"),
     [
-        ("__add__", 1, [2, 3, 4]),
-        ("__sub__", 1, [0, 1, 2]),
-        ("__mul__", 2, [2, 4, 6]),
-        ("__truediv__", 2.0, [0.5, 1.0, 1.5]),
-        ("__floordiv__", 2, [0, 1, 1]),
+        ("__add__", 1, [2, 3, -2]),
+        ("__sub__", 1, [0, 1, -4]),
+        ("__mul__", 2, [2, 4, -6]),
+        ("__truediv__", 2.0, [0.5, 1.0, -1.5]),
+        ("__floordiv__", 2, [0, 1, -2]),
         ("__mod__", 2, [1, 0, 1]),
+        ("__mod__", 4, [1, 2, 1]),
+        ("__mod__", -4, [-3, -2, -3]),
         ("__pow__", 2, [1, 4, 9]),
     ],
 )
@@ -26,11 +28,7 @@ def test_arithmetic(
     if "pandas_pyarrow" in str(constructor) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
-    # pyarrow case
-    if "pyarrow_table" in str(constructor) and attr == "__mod__":
-        request.applymarker(pytest.mark.xfail)
-
-    data = {"a": [1, 2, 3]}
+    data = {"a": [1, 2, -3]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), attr)(rhs))
     compare_dicts(result, {"a": expected})
