@@ -12,11 +12,8 @@ import narwhals as nw
 from narwhals._arrow.dataframe import ArrowDataFrame
 
 MISSING = [
-    "DataFrame.iter_rows",
     "DataFrame.pipe",
-    "Series.from_iterable",
     "Series.is_between",
-    "Series.quantile",
     "Series.round",
     "Series.shift",
 ]

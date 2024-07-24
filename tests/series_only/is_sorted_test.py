@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import compare_dicts
 
 data = [1, 3, 2]
 data_dups = [4, 4, 6]
@@ -23,7 +24,7 @@ def test_is_sorted(
 ) -> None:
     series = nw.from_native(constructor_series(input_data), series_only=True)
     result = series.is_sorted(descending=descending)
-    assert result == expected
+    compare_dicts({"a": [result]}, {"a": [expected]})
 
 
 def test_is_sorted_invalid(constructor_series: Any) -> None:

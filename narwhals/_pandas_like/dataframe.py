@@ -167,7 +167,7 @@ class PandasLikeDataFrame:
         self,
         *,
         named: bool = False,
-        buffer_size: int = 512,  # noqa: ARG002
+        buffer_size: int = 512,
     ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
         """
         NOTE:
@@ -197,6 +197,9 @@ class PandasLikeDataFrame:
         *exprs: IntoPandasLikeExpr,
         **named_exprs: IntoPandasLikeExpr,
     ) -> Self:
+        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
+            # This is a simple slice => fastpath!
+            return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -282,17 +285,17 @@ class PandasLikeDataFrame:
                 backend_version=self._backend_version,
             )
         else:
-            df = self._native_dataframe.assign(
-                **{s.name: validate_dataframe_comparand(index, s) for s in new_columns}
-            )
+            df = self._native_dataframe.copy(deep=False)
+            for s in new_columns:
+                df[s.name] = validate_dataframe_comparand(index, s)
         return self._from_native_dataframe(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: str) -> Self:
         return self._from_native_dataframe(
-            self._native_dataframe.drop(columns=list(flatten(columns)))
+            self._native_dataframe.drop(columns=list(columns))
         )
 
     # --- transform ---
@@ -319,12 +322,12 @@ class PandasLikeDataFrame:
         )
 
     # --- actions ---
-    def group_by(self, *keys: str | Iterable[str]) -> PandasLikeGroupBy:
+    def group_by(self, *keys: str) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         return PandasLikeGroupBy(
             self,
-            flatten(keys),
+            list(keys),
         )
 
     def join(
@@ -451,7 +454,7 @@ class PandasLikeDataFrame:
         subset: str | list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,  # noqa: ARG002
+        maintain_order: bool = False,
     ) -> Self:
         """
         NOTE:

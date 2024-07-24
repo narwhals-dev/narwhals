@@ -783,12 +783,13 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
-    def sort(self, *, descending: bool = False) -> Self:
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
         Sort this column. Place null values first.
 
         Arguments:
             descending: Sort in descending order.
+            nulls_last: Place null values last instead of first.
 
         Examples:
             >>> import narwhals as nw
@@ -849,7 +850,9 @@ class Expr:
             │ 1    │
             └──────┘
         """
-        return self.__class__(lambda plx: self._call(plx).sort(descending=descending))
+        return self.__class__(
+            lambda plx: self._call(plx).sort(descending=descending, nulls_last=nulls_last)
+        )
 
     # --- transform ---
     def is_between(
@@ -3310,7 +3313,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     """
 
     def func(plx: Any) -> Any:
-        return plx.col(*names)
+        return plx.col(*flatten(names))
 
     return Expr(func)
 
@@ -3718,6 +3721,66 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
     if dtype is None:
         return Expr(lambda plx: plx.lit(value, dtype))
     return Expr(lambda plx: plx.lit(value, translate_dtype(plx, dtype)))
+
+
+def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    r"""
+    Compute the bitwise OR horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+
+    Notes:
+        pandas and Polars handle null values differently.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {
+        ...     "a": [False, False, True, True, False, None],
+        ...     "b": [False, True, True, None, None, None],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select("a", "b", any=nw.any_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+               a      b    any
+        0  False  False  False
+        1  False   True   True
+        2   True   True   True
+        3   True   None   True
+        4  False   None  False
+        5   None   None  False
+
+        >>> func(df_pl)
+        shape: (6, 3)
+        ┌───────┬───────┬───────┐
+        │ a     ┆ b     ┆ any   │
+        │ ---   ┆ ---   ┆ ---   │
+        │ bool  ┆ bool  ┆ bool  │
+        ╞═══════╪═══════╪═══════╡
+        │ false ┆ false ┆ false │
+        │ false ┆ true  ┆ true  │
+        │ true  ┆ true  ┆ true  │
+        │ true  ┆ null  ┆ true  │
+        │ false ┆ null  ┆ null  │
+        │ null  ┆ null  ┆ null  │
+        └───────┴───────┴───────┘
+    """
+    return Expr(
+        lambda plx: plx.any_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
 
 
 __all__ = [

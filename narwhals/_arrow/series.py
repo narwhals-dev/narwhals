@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 from typing import overload
 
@@ -222,8 +223,10 @@ class ArrowSeries:
     def n_unique(self) -> int:
         pc = get_pyarrow_compute()
         unique_values = pc.unique(self._native_series)
-        count_unique = pc.count(unique_values, mode="all")
-        return count_unique.as_py()  # type: ignore[no-any-return]
+        return pc.count(unique_values, mode="all")  # type: ignore[no-any-return]
+
+    def __native_namespace__(self) -> Any:  # pragma: no cover
+        return get_pyarrow()
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -345,27 +348,39 @@ class ArrowSeries:
                     f" or an explicit index is provided (Series is of length {len(self)})"
                 )
                 raise ValueError(msg)
-            return self._native_series[0].as_py()
-        return self._native_series[index].as_py()
+            return self._native_series[0]
+        return self._native_series[index]
 
-    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
+    def value_counts(
+        self: Self,
+        *,
+        sort: bool = False,
+        parallel: bool = False,
+        name: str | None = None,
+        normalize: bool = False,
+    ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility"""
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         pc = get_pyarrow_compute()
         pa = get_pyarrow()
 
-        name_ = (
-            "index" if self._native_series._name is None else self._native_series._name
-        )
+        index_name_ = "index" if self._name is None else self._name
+        value_name_ = name or ("proportion" if normalize else "count")
 
         val_count = pc.value_counts(self._native_series)
+        values = val_count.field("values")
+        counts = val_count.field("counts")
+
+        if normalize:
+            counts = pc.divide(*cast_for_truediv(counts, pc.sum(counts)))
+
         val_count = pa.Table.from_arrays(
-            [val_count.field("values"), val_count.field("counts")], names=[name_, "count"]
+            [values, counts], names=[index_name_, value_name_]
         )
 
         if sort:
-            val_count = val_count.sort_by([("count", "descending")])
+            val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
             val_count,
@@ -468,20 +483,23 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         ser = self._native_series
         if descending:
-            return pc.all(pc.greater_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
+            return pc.all(pc.greater_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
         else:
-            return pc.all(pc.less_equal(ser[:-1], ser[1:])).as_py()  # type: ignore[no-any-return]
+            return pc.all(pc.less_equal(ser[:-1], ser[1:]))  # type: ignore[no-any-return]
 
     def unique(self: Self) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.unique(self._native_series))
 
-    def sort(self: Self, *, descending: bool = False) -> ArrowSeries:
+    def sort(
+        self: Self, *, descending: bool = False, nulls_last: bool = False
+    ) -> ArrowSeries:
         pc = get_pyarrow_compute()
         series = self._native_series
         order = "descending" if descending else "ascending"
+        null_placement = "at_end" if nulls_last else "at_start"
         sorted_indices = pc.array_sort_indices(
-            series, order=order, null_placement="at_start"
+            series, order=order, null_placement=null_placement
         )
 
         return self._from_native_series(pc.take(series, sorted_indices))
@@ -504,6 +522,16 @@ class ArrowSeries:
             pa.Table.from_arrays(columns, names=names),
             backend_version=self._backend_version,
         )
+
+    def quantile(
+        self: Self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Any:
+        pc = get_pyarrow_compute()
+        return pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[
+            0
+        ]
 
     @property
     def shape(self) -> tuple[int]:

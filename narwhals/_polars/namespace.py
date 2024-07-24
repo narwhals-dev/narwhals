@@ -83,6 +83,12 @@ class PolarsNamespace:
             return PolarsExpr(pl.lit(value, dtype=reverse_translate_dtype(dtype)))
         return PolarsExpr(pl.lit(value))
 
+    def mean(self, *column_names: str) -> Any:
+        pl = get_polars()
+        if self._backend_version < (0, 20, 4):  # pragma: no cover
+            return pl.mean([*column_names])
+        return pl.mean(*column_names)
+
     @property
     def selectors(self) -> PolarsSelectors:
         return PolarsSelectors()

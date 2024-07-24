@@ -229,8 +229,10 @@ class PandasLikeExpr:
     def drop_nulls(self) -> Self:
         return reuse_series_implementation(self, "drop_nulls")
 
-    def sort(self, *, descending: bool = False) -> Self:
-        return reuse_series_implementation(self, "sort", descending=descending)
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        return reuse_series_implementation(
+            self, "sort", descending=descending, nulls_last=nulls_last
+        )
 
     def abs(self) -> Self:
         return reuse_series_implementation(self, "abs")
@@ -280,7 +282,7 @@ class PandasLikeExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
-            tmp = df.group_by(keys).agg(self)
+            tmp = df.group_by(*keys).agg(self)
             tmp = df.select(*keys).join(tmp, how="left", left_on=keys, right_on=keys)
             return [tmp[name] for name in self._output_names]
 

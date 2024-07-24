@@ -112,10 +112,10 @@ class PolarsDataFrame:
         else:
             return df.to_dict(as_series=False)
 
-    def group_by(self, by: list[str]) -> Any:
+    def group_by(self, *by: str) -> Any:
         from narwhals._polars.group_by import PolarsGroupBy
 
-        return PolarsGroupBy(self, by)
+        return PolarsGroupBy(self, list(by))
 
     def with_row_index(self, name: str) -> Any:
         if self._backend_version < (0, 20, 4):  # pragma: no cover
@@ -175,10 +175,10 @@ class PolarsLazyFrame:
             self._native_dataframe.collect(), backend_version=self._backend_version
         )
 
-    def group_by(self, by: list[str]) -> Any:
+    def group_by(self, *by: str) -> Any:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
-        return PolarsLazyGroupBy(self, by)
+        return PolarsLazyGroupBy(self, list(by))
 
     def with_row_index(self, name: str) -> Any:
         if self._backend_version < (0, 20, 4):  # pragma: no cover

@@ -361,7 +361,12 @@ class Series(NwSeries):
         return _stableify(super().to_frame())  # type: ignore[no-any-return]
 
     def value_counts(
-        self: Self, *, sort: bool = False, parallel: bool = False
+        self: Self,
+        *,
+        sort: bool = False,
+        parallel: bool = False,
+        name: str | None = None,
+        normalize: bool = False,
     ) -> DataFrame[Any]:
         r"""
         Count the occurrences of unique values.
@@ -369,7 +374,10 @@ class Series(NwSeries):
         Arguments:
             sort: Sort the output by count in descending order. If set to False (default),
                 the order of the output is random.
-            parallel: Execute the computation in parallel. Unused for pandas-like APIs.
+            parallel: Execute the computation in parallel. Used for Polars only.
+            name: Give the resulting count column a specific name; if `normalize` is True
+                defaults to "proportion", otherwise defaults to "count".
+            normalize: If true gives relative frequencies of the unique values
 
         Examples:
             >>> import narwhals.stable.v1 as nw
@@ -404,7 +412,11 @@ class Series(NwSeries):
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        return _stableify(super().value_counts(sort=sort, parallel=parallel))  # type: ignore[no-any-return]
+        return _stableify(  # type: ignore[no-any-return]
+            super().value_counts(
+                sort=sort, parallel=parallel, name=name, normalize=normalize
+            )
+        )
 
 
 class Expr(NwExpr):
@@ -1237,6 +1249,62 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.all_horizontal(*exprs))
 
 
+def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    r"""
+    Compute the bitwise OR horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+
+    Notes:
+        pandas and Polars handle null values differently.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {
+        ...     "a": [False, False, True, True, False, None],
+        ...     "b": [False, True, True, None, None, None],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.select("a", "b", any=nw.any_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+               a      b    any
+        0  False  False  False
+        1  False   True   True
+        2   True   True   True
+        3   True   None   True
+        4  False   None  False
+        5   None   None  False
+
+        >>> func(df_pl)
+        shape: (6, 3)
+        ┌───────┬───────┬───────┐
+        │ a     ┆ b     ┆ any   │
+        │ ---   ┆ ---   ┆ ---   │
+        │ bool  ┆ bool  ┆ bool  │
+        ╞═══════╪═══════╪═══════╡
+        │ false ┆ false ┆ false │
+        │ false ┆ true  ┆ true  │
+        │ true  ┆ true  ┆ true  │
+        │ true  ┆ null  ┆ true  │
+        │ false ┆ null  ┆ null  │
+        │ null  ┆ null  ┆ null  │
+        └───────┴───────┴───────┘
+    """
+    return _stableify(nw.any_horizontal(*exprs))
+
+
 def is_ordered_categorical(series: Series) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
@@ -1391,6 +1459,48 @@ def get_level(
     return nw.get_level(obj)
 
 
+def from_dict(data: dict[str, Any], *, native_namespace: Any) -> DataFrame[Any]:
+    """
+    Instantiate DataFrame from dictionary.
+
+    Arguments:
+        data: Dictionary to create DataFrame from.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_dict(data, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+           c  d
+        0  5  1
+        1  2  4
+        >>> func(pl.DataFrame(data))
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ c   ┆ d   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 5   ┆ 1   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+    """
+    return _stableify(nw.from_dict(data, native_namespace=native_namespace))  # type: ignore[no-any-return]
+
+
 __all__ = [
     "selectors",
     "concat",
@@ -1404,6 +1514,7 @@ __all__ = [
     "get_level",
     "all",
     "all_horizontal",
+    "any_horizontal",
     "col",
     "len",
     "lit",
@@ -1438,4 +1549,5 @@ __all__ = [
     "narwhalify",
     "show_versions",
     "Schema",
+    "from_dict",
 ]
