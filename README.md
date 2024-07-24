@@ -72,7 +72,7 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Polars, you'll get Polars back
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
-   - if you started with PyArrow, you'll get PyArrow back (and compute will happen on GPU)
+   - if you started with PyArrow, you'll get PyArrow back
 
 ## Example
 
