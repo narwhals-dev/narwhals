@@ -18,7 +18,7 @@ from narwhals._pandas_like.utils import vertical_concat
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
-    from narwhals._pandas_like.utils import Implementation
+    from narwhals.utils import Implementation
 
 
 class PandasLikeNamespace:

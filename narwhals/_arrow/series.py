@@ -16,6 +16,7 @@ from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
+from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -32,7 +33,7 @@ class ArrowSeries:
     ) -> None:
         self._name = name
         self._native_series = native_series
-        self._implementation = "arrow"  # for compatibility with PandasLikeSeries
+        self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
 
     def _from_native_series(self, series: Any) -> Self:

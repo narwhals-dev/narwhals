@@ -8,6 +8,7 @@ from typing import overload
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals.dependencies import get_polars
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     import numpy as np
@@ -26,6 +27,7 @@ PL = get_polars()
 class PolarsSeries:
     def __init__(self, series: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_series = series
+        self._implementation = Implementation.POLARS
         self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover

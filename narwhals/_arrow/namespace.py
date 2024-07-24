@@ -14,6 +14,7 @@ from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -98,6 +99,7 @@ class ArrowNamespace:
     # --- not in spec ---
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
+        self._implementation = Implementation.PYARROW
 
     # --- selection ---
     def col(self, *column_names: str) -> ArrowExpr:
