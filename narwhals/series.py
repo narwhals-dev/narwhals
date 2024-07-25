@@ -2067,8 +2067,8 @@ class Series:
             starting from a offset of 1:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.gather_every(n=2, offset=1)
+            ... def func(s):
+            ...     return s.gather_every(n=2, offset=1)
 
             >>> func(s_pd)
             1    2
