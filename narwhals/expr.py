@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -3607,13 +3606,21 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 class When:
-    def __init__(self, condition: Expr) -> None:
-        self._condition = condition
-        self._then_value = None
-        self._otehrwise_value = None
+    def __init__(
+        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
+    ) -> None:
+        self._predicates = flatten([predicates])
+        self._constraints = constraints
+
+    def _extract_predicates(self, plx: Any) -> Any:
+        return [extract_compliant(plx, v) for v in self._predicates]
 
     def then(self, value: Any) -> Then:
-        return Then(lambda plx: plx.when(self._condition._call(plx)).then(value))
+        return Then(
+            lambda plx: plx.when(
+                *self._extract_predicates(plx), **self._constraints
+            ).then(value)
+        )
 
 
 class Then(Expr):
@@ -3624,7 +3631,7 @@ class Then(Expr):
         return Expr(lambda plx: self._call(plx).otherwise(value))
 
 
-def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:  # noqa: ARG001
+def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:
     """
     Start a `when-then-otherwise` expression.
     Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
@@ -3673,7 +3680,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
     """
-    return When(reduce(lambda a, b: a & b, flatten([predicates])))
+    return When(*predicates, **constraints)
 
 
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

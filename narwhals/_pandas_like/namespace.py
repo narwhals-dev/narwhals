@@ -264,7 +264,18 @@ class PandasLikeNamespace:
         **constraints: Any,
     ) -> PandasWhen:
         plx = self.__class__(self._implementation, self._backend_version)
-        condition = plx.all_horizontal(*flatten(predicates))
+        if predicates:
+            condition = plx.all_horizontal(*flatten(predicates))
+        elif constraints:
+            import narwhals as nw
+
+            condition = plx.all_horizontal(
+                *flatten((nw.col(key) == value) for key, value in constraints.items())
+            )
+        else:
+            msg = "Must provide either predicates or constraints"
+            raise ValueError(msg)
+
         return PandasWhen(condition, self._implementation, self._backend_version)
 
 
