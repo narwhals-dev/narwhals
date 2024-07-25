@@ -336,8 +336,8 @@ class Series(NwSeries):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.to_frame()
+            ... def func(s):
+            ...     return s.to_frame()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -389,8 +389,8 @@ class Series(NwSeries):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.value_counts(sort=True)
+            ... def func(s):
+            ...     return s.value_counts(sort=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1332,8 +1332,8 @@ def is_ordered_categorical(series: Series) -> bool:
         Let's define a library-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(s_any):
-        ...     return nw.is_ordered_categorical(s_any)
+        ... def func(s):
+        ...     return nw.is_ordered_categorical(s)
 
         Then, we can pass any supported library to `func`:
 
