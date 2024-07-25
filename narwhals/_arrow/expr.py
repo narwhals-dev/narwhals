@@ -300,12 +300,63 @@ class ArrowExprCatNamespace:
 
 
 class ArrowExprDateTimeNamespace:
-    def __init__(self, expr: ArrowExpr) -> None:
+    def __init__(self: Self, expr: ArrowExpr) -> None:
         self._expr = expr
 
-    def to_string(self, format: str) -> ArrowExpr:  # noqa: A002
+    def to_string(self: Self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
+        )
+
+    def year(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "year")
+
+    def month(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "month")
+
+    def day(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "day")
+
+    def hour(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "hour")
+
+    def minute(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "minute")
+
+    def second(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "second")
+
+    def millisecond(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "millisecond")
+
+    def microsecond(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "microsecond")
+
+    def nanosecond(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "nanosecond")
+
+    def ordinal_day(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "ordinal_day")
+
+    def total_minutes(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "total_minutes")
+
+    def total_seconds(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "total_seconds")
+
+    def total_milliseconds(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_milliseconds"
+        )
+
+    def total_microseconds(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_microseconds"
+        )
+
+    def total_nanoseconds(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_nanoseconds"
         )
 
 
