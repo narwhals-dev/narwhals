@@ -123,6 +123,15 @@ class ArrowDataFrame:
                 name=item,
                 backend_version=self._backend_version,
             )
+        elif (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and isinstance(item[1], (list, tuple))
+        ):
+            return self._from_native_dataframe(
+                self._native_dataframe.take(item[0]).select(item[1])
+            )
+
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._arrow.series import ArrowSeries
 
