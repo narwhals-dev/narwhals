@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
+import hypothesis.strategies as st
+import pandas as pd
+import polars as pl
+import pyarrow as pa
 import pytest
+from hypothesis import assume
+from hypothesis import given
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
@@ -28,10 +35,14 @@ def test_arithmetic(
     if "pandas_pyarrow" in str(constructor) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1, 2, -3]}
+    data = {"a": [1.0, 2, -3]}
     df = nw.from_native(constructor(data))
-    result = df.select(getattr(nw.col("a"), attr)(rhs))
-    compare_dicts(result, {"a": expected})
+    result_expr = df.select(getattr(nw.col("a"), attr)(rhs))
+    compare_dicts(result_expr, {"a": expected})
+
+    series = df["a"]
+    result_series = getattr(series, attr)(rhs)
+    assert result_series.to_numpy().tolist() == expected
 
 
 @pytest.mark.parametrize(
@@ -58,7 +69,61 @@ def test_right_arithmetic(
 
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
-    result = df.select(a=getattr(nw.col("a"), attr)(rhs))
-    compare_dicts(result, {"a": expected})
-    result = df.select(a=getattr(df["a"], attr)(rhs))
-    compare_dicts(result, {"a": expected})
+    result_expr = df.select(a=getattr(nw.col("a"), attr)(rhs))
+    compare_dicts(result_expr, {"a": expected})
+
+    series = df["a"]
+    result_series = getattr(series, attr)(rhs)
+    assert result_series.to_numpy().tolist() == expected
+
+
+def test_truediv_same_dims(constructor_series: Any, request: Any) -> None:
+    if "polars" in str(constructor_series):
+        # https://github.com/pola-rs/polars/issues/17760
+        request.applymarker(pytest.mark.xfail)
+    s_left = nw.from_native(constructor_series([1, 2, 3]), series_only=True)
+    s_right = nw.from_native(constructor_series([2, 2, 1]), series_only=True)
+    result = (s_left / s_right).to_list()
+    assert result == [0.5, 1.0, 3.0]
+    result = (s_left.__rtruediv__(s_right)).to_list()
+    assert result == [2, 1, 1 / 3]
+
+
+@pytest.mark.slow()
+@given(  # type: ignore[misc]
+    left=st.integers(-100, 100),
+    right=st.integers(-100, 100),
+)
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < (2, 0), reason="convert_dtypes not available"
+)
+def test_mod(left: int, right: int) -> None:
+    # hypothesis complains if we add `constructor` as an argument, so this
+    # test is a bit manual unfortunately
+    assume(right != 0)
+    expected = {"a": [left // right]}
+    result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
+        nw.col("a") // right
+    )
+    compare_dicts(result, expected)
+    if parse_version(pd.__version__) < (2, 2):  # pragma: no cover
+        # Bug in old version of pandas
+        pass
+    else:
+        result = nw.from_native(
+            pd.DataFrame({"a": [left]}).convert_dtypes(dtype_backend="pyarrow"),
+            eager_only=True,
+        ).select(nw.col("a") // right)
+        compare_dicts(result, expected)
+    result = nw.from_native(
+        pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
+    ).select(nw.col("a") // right)
+    compare_dicts(result, expected)
+    result = nw.from_native(pl.DataFrame({"a": [left]}), eager_only=True).select(
+        nw.col("a") // right
+    )
+    compare_dicts(result, expected)
+    result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
+        nw.col("a") // right
+    )
+    compare_dicts(result, expected)
