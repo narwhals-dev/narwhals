@@ -21,8 +21,8 @@ Let's learn about what Narwhals promises.
 ```python exec="1" source="above" session="ex1"
 import narwhals as nw
 
-def my_func(df_any):
-    df = nw.from_native(df_any)
+def my_func(df):
+    df = nw.from_native(df)
     df = df.with_columns(a_plus_one=nw.col('a')+1)
     return nw.to_native(df)
 ```
