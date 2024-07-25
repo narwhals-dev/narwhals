@@ -132,7 +132,7 @@ class PandasLikeDataFrame:
             if all(isinstance(x, str) for x in item[1]):
                 item = (
                     item[0],
-                    [self._native_dataframe.columns.get_loc(x) for x in item[1]],
+                    self._native_dataframe.columns.get_indexer(item[1]),
                 )
                 return self._from_native_dataframe(self._native_dataframe.iloc[item])
             msg = (
