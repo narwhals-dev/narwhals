@@ -74,6 +74,10 @@ def test_gather_pandas_index() -> None:
     expected = {"a": [1, 2], "b": [4, 2]}
     compare_dicts(result, expected)
 
+    result = nw.from_native(df, eager_only=True)[[1, 2], "a"].to_frame()
+    expected = {"a": [1, 2]}
+    compare_dicts(result, expected)
+
 
 def test_gather_rows_cols(constructor: Any) -> None:
     native_df = constructor(data)
