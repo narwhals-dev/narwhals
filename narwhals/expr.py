@@ -3624,7 +3624,7 @@ class Then(Expr):
     def when(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-        **constraints: Any,  # noqa: ARG002
+        **constraints: Any,
     ) -> ChainedWhen:
         return ChainedWhen(self, reduce(lambda a, b: a & b, flatten([predicates])))
 

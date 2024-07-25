@@ -261,7 +261,7 @@ class PandasLikeNamespace:
     def when(
         self,
         *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-        **constraints: Any,  # noqa: ARG002
+        **constraints: Any,
     ) -> PandasWhen:
         plx = self.__class__(self._implementation, self._backend_version)
         condition = plx.all_horizontal(*flatten(predicates))
