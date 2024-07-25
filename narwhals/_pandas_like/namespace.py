@@ -282,6 +282,7 @@ class PandasWhen:
         self._condition = condition
         self._then_value = then_value
         self._otherwise_value = otherise_value
+        self._already_set = self._condition
 
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -335,10 +336,117 @@ class PandasThen(PandasLikeExpr):
         self._root_names = root_names
         self._output_names = output_names
 
+    def when(self, condition: PandasLikeExpr) -> PandasChainedWhen:
+        return PandasChainedWhen(
+            self._call,  # type: ignore[arg-type]
+            condition,
+            depth=self._depth + 1,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+
     def otherwise(self, value: Any) -> PandasLikeExpr:
         # type ignore because we are setting the `_call` attribute to a
         # callable object of type `PandasWhen`, base class has the attribute as
         # only a `Callable`
         self._call._otherwise_value = value  # type: ignore[attr-defined]
         self._function_name = "whenotherwise"
+        return self
+
+
+class PandasChainedWhen:
+    def __init__(
+        self,
+        above_when: PandasWhen | PandasChainedWhen,
+        condition: PandasLikeExpr,
+        depth: int,
+        implementation: Implementation,
+        backend_version: tuple[int, ...],
+        then_value: Any = None,
+        otherise_value: Any = None,
+    ) -> None:
+        self._implementation = implementation
+        self._depth = depth
+        self._backend_version = backend_version
+        self._condition = condition
+        self._above_when = above_when
+        self._then_value = then_value
+        self._otherwise_value = otherise_value
+
+        # TODO @aivanoved: this is way slow as during computation time this takes
+        # quadratic time need to improve this to linear time
+        self._condition = self._condition & (~self._above_when._already_set)  # type: ignore[has-type]
+        self._already_set = self._above_when._already_set | self._condition  # type: ignore[has-type]
+
+    def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        plx = PandasLikeNamespace(
+            implementation=self._implementation, backend_version=self._backend_version
+        )
+
+        set_then = self._condition._call(df)[0]
+        already_set = self._already_set._call(df)[0]
+
+        value_series = plx._create_broadcast_series_from_scalar(
+            self._then_value, set_then
+        )
+        otherwise_series = plx._create_broadcast_series_from_scalar(
+            self._otherwise_value, set_then
+        )
+
+        above_result = self._above_when(df)[0]
+
+        result = value_series.zip_with(set_then, above_result).zip_with(
+            already_set, otherwise_series
+        )
+
+        return [result]
+
+    def then(self, value: Any) -> PandasChainedThen:
+        self._then_value = value
+        return PandasChainedThen(
+            self,
+            depth=self._depth,
+            implementation=self._implementation,
+            function_name="chainedwhen",
+            root_names=None,
+            output_names=None,
+            backend_version=self._backend_version,
+        )
+
+
+class PandasChainedThen(PandasLikeExpr):
+    def __init__(
+        self,
+        call: PandasChainedWhen,
+        *,
+        depth: int,
+        function_name: str,
+        root_names: list[str] | None,
+        output_names: list[str] | None,
+        implementation: Implementation,
+        backend_version: tuple[int, ...],
+    ) -> None:
+        self._implementation = implementation
+        self._backend_version = backend_version
+
+        self._call = call
+        self._depth = depth
+        self._function_name = function_name
+        self._root_names = root_names
+        self._output_names = output_names
+
+    def when(self, condition: PandasLikeExpr) -> PandasChainedWhen:
+        return PandasChainedWhen(
+            self._call,  # type: ignore[arg-type]
+            condition,
+            depth=self._depth + 1,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+
+    def otherwise(self, value: Any) -> PandasLikeExpr:
+        self._call._otherwise_value = value  # type: ignore[attr-defined]
+        self._function_name = "chainedwhenotherwise"
         return self

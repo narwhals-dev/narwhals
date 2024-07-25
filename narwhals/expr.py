@@ -3622,18 +3622,24 @@ class Then(Expr):
         return Expr(lambda plx: self._call(plx).otherwise(value))
 
     def when(
+        self,
         *predicates: IntoExpr | Iterable[IntoExpr],
         **constraints: Any,  # noqa: ARG002
     ) -> ChainedWhen:
-        return ChainedWhen(reduce(lambda a, b: a & b, flatten([predicates])))
+        return ChainedWhen(self, reduce(lambda a, b: a & b, flatten([predicates])))
 
 
 class ChainedWhen:
-    def __init__(self, condition: Expr) -> None:
+    def __init__(self, above_then: Then, condition: Expr) -> None:
+        self._above_then = above_then
         self._condition = condition
 
     def then(self, value: Any) -> ChainedThen:
-        return ChainedThen(lambda plx: plx.when(self._condition._call(plx)).then(value))
+        return ChainedThen(
+            lambda plx: self._above_then._call(plx)
+            .when(self._condition._call(plx))
+            .then(value)
+        )
 
 
 class ChainedThen(Expr):
