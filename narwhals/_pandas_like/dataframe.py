@@ -125,9 +125,20 @@ class PandasLikeDataFrame:
         elif (
             isinstance(item, tuple)
             and len(item) == 2
-            and all(isinstance(x, (tuple, list)) for x in item)
+            and isinstance(item[1], (tuple, list))
         ):
-            return self._from_native_dataframe(self._native_dataframe.iloc[item])
+            if all(isinstance(x, int) for x in item[1]):
+                return self._from_native_dataframe(self._native_dataframe.iloc[item])
+            if all(isinstance(x, str) for x in item[1]):
+                item = (
+                    item[0],
+                    [self._native_dataframe.columns.get_loc(x) for x in item[1]],
+                )
+                return self._from_native_dataframe(self._native_dataframe.iloc[item])
+            msg = (
+                f"Expected sequence str or int, got: {type(item[1])}"  # pragma: no cover
+            )
+            raise TypeError(msg)  # pragma: no cover
 
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._pandas_like.series import PandasLikeSeries

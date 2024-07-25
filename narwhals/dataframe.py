@@ -451,7 +451,11 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
@@ -468,7 +472,7 @@ class DataFrame(BaseFrame[FrameT]):
         | slice
         | Sequence[int]
         | tuple[Sequence[int], str | int]
-        | tuple[Sequence[int], Sequence[int]],
+        | tuple[Sequence[int], Sequence[int] | Sequence[str]],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -519,7 +523,6 @@ class DataFrame(BaseFrame[FrameT]):
         if (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[0], (list, tuple))
             and isinstance(item[1], (list, tuple))
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
