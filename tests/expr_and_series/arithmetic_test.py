@@ -29,14 +29,19 @@ from tests.utils import compare_dicts
         ("__pow__", 2, [1, 4, 9]),
     ],
 )
+@pytest.mark.parametrize("data", [[1, 2, -3], [1.0, 2, -3]])
 def test_arithmetic(
-    attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
+    request: Any,
+    constructor: Any,
+    attr: str,
+    rhs: Any,
+    expected: list[Any],
+    data: list[float],
 ) -> None:
     if "pandas_pyarrow" in str(constructor) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1.0, 2, -3]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor({"a": data}))
     result_expr = df.select(getattr(nw.col("a"), attr)(rhs))
     compare_dicts(result_expr, {"a": expected})
 
