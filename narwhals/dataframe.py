@@ -523,6 +523,17 @@ class DataFrame(BaseFrame[FrameT]):
         if (
             isinstance(item, tuple)
             and len(item) == 2
+            and (isinstance(item[0], (str, int)))
+        ):
+            msg = (
+                f"Expected str or slice, got: {type(item)}.\n\n"
+                "Hint: if you were trying to get a single element out of a "
+                "dataframe, use `DataFrame.item`."
+            )
+            raise TypeError(msg)
+        if (
+            isinstance(item, tuple)
+            and len(item) == 2
             and isinstance(item[1], (list, tuple))
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])

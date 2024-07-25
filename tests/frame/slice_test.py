@@ -113,3 +113,10 @@ def test_slice_int_rows_str_columns(constructor: Any) -> None:
     result = df[[0, 1], ["a", "c"]]
     expected = {"a": [1, 2], "c": [7, 8]}
     compare_dicts(result, expected)
+
+
+def test_slice_invalid(constructor: Any) -> None:
+    data = {"a": [1, 2], "b": [4, 5]}
+    df = nw.from_native(constructor(data), eager_only=True)
+    with pytest.raises(TypeError, match="Hint:"):
+        df[0, 0]
