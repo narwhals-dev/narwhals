@@ -1746,8 +1746,8 @@ class Expr:
             starting from a offset of 1:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select(nw.col("a").gather_every(n=2, offset=1))
+            ... def func(df):
+            ...     return df.select(nw.col("a").gather_every(n=2, offset=1))
 
             >>> func(df_pd)
                a
