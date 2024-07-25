@@ -94,6 +94,7 @@ class Expr:
             ...     return s_any.pipe(lambda x: x**2)
 
             Now apply it to the series
+
             >>> func(spl)
             shape: (4,)
             Series: '' [i64]
