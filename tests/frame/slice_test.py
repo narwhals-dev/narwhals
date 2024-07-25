@@ -93,3 +93,11 @@ def test_gather_rows_cols(constructor: Any) -> None:
         assert_series_equal(result, expected, check_dtype=False)
         result = df[np.array([0, 3, 1]), "b"].to_pandas()
         assert_series_equal(result, expected, check_dtype=False)
+
+
+def test_slice_both_tuples_of_ints(constructor: Any) -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
+    df = nw.from_native(constructor(data), eager_only=True)
+    result = df[[0, 1], [0, 2]]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)

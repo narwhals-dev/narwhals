@@ -122,11 +122,19 @@ class PandasLikeDataFrame:
                 backend_version=self._backend_version,
             )
 
+        elif (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and all(isinstance(x, (tuple, list)) for x in item)
+        ):
+            return self._from_native_dataframe(self._native_dataframe.iloc[item])
+
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._pandas_like.series import PandasLikeSeries
 
             if isinstance(item[1], str):
-                native_series = self._native_dataframe.loc[item]
+                item = (item[0], self._native_dataframe.columns.get_loc(item[1]))
+                native_series = self._native_dataframe.iloc[item]
             elif isinstance(item[1], int):
                 native_series = self._native_dataframe.iloc[item]
             else:  # pragma: no cover

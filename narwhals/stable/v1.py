@@ -67,6 +67,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     """
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
+
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload

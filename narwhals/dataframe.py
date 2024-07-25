@@ -449,6 +449,8 @@ class DataFrame(BaseFrame[FrameT]):
         )
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
@@ -461,7 +463,12 @@ class DataFrame(BaseFrame[FrameT]):
     def __getitem__(self, item: slice) -> Self: ...
 
     def __getitem__(
-        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+        self,
+        item: str
+        | slice
+        | Sequence[int]
+        | tuple[Sequence[int], str | int]
+        | tuple[Sequence[int], Sequence[int]],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -472,9 +479,10 @@ class DataFrame(BaseFrame[FrameT]):
                 - str: extract column
                 - slice or Sequence of integers: slice rows from dataframe.
                 - tuple of Sequence of integers and str or int: slice rows and extract column at the same time.
-                  If the second element of the tuple is an integer, it is interpreted as the column index. Otherwise,
-                  it is interpreted as the column name.
+                - tuple of Sequence of integers and Sequence of integers: slice rows and extract columns at the same time.
         Notes:
+            Integers are always interpreted as positions, and strings always as column names.
+
             In contrast with Polars, pandas allows non-string column names.
             If you don't know whether the column name you're trying to extract
             is definitely a string (e.g. `df[df.columns[0]]`) then you should
@@ -508,6 +516,13 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
+        if (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and isinstance(item[0], (list, tuple))
+            and isinstance(item[1], (list, tuple))
+        ):
+            return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             from narwhals.series import Series
 
