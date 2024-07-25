@@ -329,6 +329,9 @@ class PandasLikeExpr:
     def len(self: Self) -> Self:
         return reuse_series_implementation(self, "len", returns_scalar=True)
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
+
     @property
     def str(self: Self) -> PandasLikeExprStringNamespace:
         return PandasLikeExprStringNamespace(self)

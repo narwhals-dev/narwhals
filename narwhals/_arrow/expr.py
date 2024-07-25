@@ -267,6 +267,9 @@ class ArrowExpr:
             self, "quantile", quantile, interpolation, returns_scalar=True
         )
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
+
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)

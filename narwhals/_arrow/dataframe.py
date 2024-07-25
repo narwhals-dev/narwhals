@@ -488,3 +488,6 @@ class ArrowDataFrame:
 
         keep_idx = self.select(*subset).is_unique()
         return self.filter(keep_idx)
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_dataframe(self._native_dataframe[offset::n])

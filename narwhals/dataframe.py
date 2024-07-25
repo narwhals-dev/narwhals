@@ -201,6 +201,11 @@ class BaseFrame(Generic[FrameT]):
     def clone(self) -> Self:
         return self._from_compliant_dataframe(self._compliant_frame.clone())
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.gather_every(n=n, offset=offset)
+        )
+
 
 class DataFrame(BaseFrame[FrameT]):
     """
@@ -1974,6 +1979,47 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().clone()
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""
+        Take every nth row in the DataFrame and return as a new DataFrame.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function in which gather every 2 rows,
+            starting from a offset of 1:
+
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.gather_every(n=2, offset=1)
+
+            >>> func(df_pd)
+               a  b
+            1  2  6
+            3  4  8
+
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 2   ┆ 6   │
+            │ 4   ┆ 8   │
+            └─────┴─────┘
+        """
+        return super().gather_every(n=n, offset=offset)
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """
@@ -3232,3 +3278,44 @@ class LazyFrame(BaseFrame[FrameT]):
             <LazyFrame ...>
         """
         return super().lazy()  # type: ignore[return-value]
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""
+        Take every nth row in the DataFrame and return as a new DataFrame.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function in which gather every 2 rows,
+            starting from a offset of 1:
+
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.gather_every(n=2, offset=1)
+
+            >>> func(df_pd)
+               a  b
+            1  2  6
+            3  4  8
+
+            >>> func(lf_pl).collect()
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 2   ┆ 6   │
+            │ 4   ┆ 8   │
+            └─────┴─────┘
+        """
+        return super().gather_every(n=n, offset=offset)

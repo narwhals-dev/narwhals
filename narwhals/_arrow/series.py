@@ -553,6 +553,9 @@ class ArrowSeries:
             0
         ]
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_series(self._native_series[offset::n])
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)

@@ -2047,6 +2047,46 @@ class Series:
             level=self._level,
         )
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""
+        Take every nth value in the Series and return as new Series.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1, 2, 3, 4]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            Let's define a dataframe-agnostic function in which gather every 2 rows,
+            starting from a offset of 1:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.gather_every(n=2, offset=1)
+
+            >>> func(s_pd)
+            1    2
+            3    4
+            Name: a, dtype: int64
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [i64]
+            [
+               2
+               4
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.gather_every(n=n, offset=offset)
+        )
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
