@@ -273,7 +273,7 @@ class PandasLikeNamespace:
                 *(nw.col(name) == value for name, value in constraints.items())
             )
         else:
-            msg = "Must provide at least one predicate or constraint"
+            msg = "Must provide at least one predicates or constraints"
             raise ValueError(msg)
         return PandasWhen(condition, self._implementation, self._backend_version)
 
@@ -466,7 +466,7 @@ class PandasChainedThen(PandasLikeExpr):
                 *(nw.col(name) == value for name, value in constraints.items())
             )
         else:
-            msg = "Must provide at least one predicate or constraint"
+            msg = "Must provide at least one predicates or constraints"
             raise ValueError(msg)
         return PandasChainedWhen(
             self._call,  # type: ignore[arg-type]
