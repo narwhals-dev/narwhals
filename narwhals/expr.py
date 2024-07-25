@@ -3624,13 +3624,13 @@ class Then(Expr):
     def when(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-        **constraints: Any,
+        **constraints: Any,  # noqa: ARG002
     ) -> ChainedWhen:
         return ChainedWhen(self, reduce(lambda a, b: a & b, flatten([predicates])))
 
 
 class ChainedWhen:
-    def __init__(self, above_then: Then, condition: Expr) -> None:
+    def __init__(self, above_then: Then | ChainedThen, condition: Expr) -> None:
         self._above_then = above_then
         self._condition = condition
 
@@ -3645,6 +3645,13 @@ class ChainedWhen:
 class ChainedThen(Expr):
     def __init__(self, call: Callable[[Any], Any]) -> None:
         self._call = call
+
+    def when(
+        self,
+        *predicates: IntoExpr | Iterable[IntoExpr],
+        **constraints: Any,  # noqa: ARG002
+    ) -> ChainedWhen:
+        return ChainedWhen(self, reduce(lambda a, b: a & b, flatten([predicates])))
 
     def otherwise(self, value: Any) -> Expr:
         return Expr(lambda plx: self._call(plx).otherwise(value))
