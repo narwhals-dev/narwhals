@@ -126,7 +126,7 @@ class ArrowDataFrame:
         elif (
             isinstance(item, tuple)
             and len(item) == 2
-            and all(isinstance(x, (list, tuple)) for x in item)
+            and isinstance(item[1], (list, tuple))
         ):
             return self._from_native_dataframe(
                 self._native_dataframe.take(item[0]).select(item[1])
