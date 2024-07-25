@@ -40,40 +40,40 @@ class Expr:
     # --- convert ---
     def alias(self, name: str) -> Self:
         """
-        Rename the expression.
+                Rename the expression.
 
-        Arguments:
-            name: The new name.
+                Arguments:
+                    name: The new name.
 
-        Examples:
-            >>> import pandas as pd
-            >>> import polars as pl
-            >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
-            >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 5]})
+                Examples:
+                    >>> import pandas as pd
+                    >>> import polars as pl
+                    >>> import narwhals as nw
+                    >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+                    >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 5]})
 
-            Let's define a dataframe-agnostic function:
+                    Let's define a dataframe-agnostic function:
 
-            >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select((nw.col("b") + 10).alias("c"))
+                    >>> @nw.narwhalify
+                    ... def func(df_any):
+                    ...     return df_any.select((nw.col("b") + 10).alias("c"))
 
-            We can then pass either pandas or Polars to `func`:
-
-            >>> func(df_pd)
-                c
-            0  14
-            1  15
-            >>> func(df_pl)
-            shape: (2, 1)
-            ┌─────┐
-            │ c   │
-            │ --- │
-            │ i64 │
-            ╞═════╡
-            │ 14  │
-            │ 15  │
-            └─────┘
+                    We can then pass either pandas or Polars to `func`:
+        fu
+                    >>> func(df_pd)
+                        c
+                    0  14
+                    1  15
+                    >>> func(df_pl)
+                    shape: (2, 1)
+                    ┌─────┐
+                    │ c   │
+                    │ --- │
+                    │ i64 │
+                    ╞═════╡
+                    │ 14  │
+                    │ 15  │
+                    └─────┘
         """
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
@@ -85,15 +85,18 @@ class Expr:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> spd = pd.Series([1, 2, 3, 4])
-            >>> spl = pl.Series([1, 1, 2, 3])
+            >>> data = {"a": [1, 2, 3, 4]}
+            >>> pdf = pd.DataFrame(data)
+            >>> pldf = pl.DataFrame(data)
+
 
             Lets define a function to pipe into
-            >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.pipe(lambda x: x**2)
 
-            Now apply it to the series
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select(nw.col("a").pipe(lambda x: x**2))
+
+            Now apply it to the df
 
             >>> func(spl)
             shape: (4,)
@@ -104,14 +107,24 @@ class Expr:
                     4
                     9
             ]
-            >>> func(spd)
-            0     1
-            1     4
-            2     9
-            3    16
-            dtype: int64
-
-
+            >>> func(pdf)
+                a
+            0   1
+            1   4
+            2   9
+            3  16
+            >>> func(pldf)
+            shape: (4, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 4   │
+            │ 9   │
+            │ 16  │
+            └─────┘
         """
         return function(self, *args, **kwargs)
 
