@@ -814,7 +814,11 @@ class DataFrame(BaseFrame[FrameT]):
     ) -> list[tuple[Any, ...]]: ...
 
     @overload
-    def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
+    def rows(
+        self,
+        *,
+        named: Literal[True],
+    ) -> list[dict[str, Any]]: ...
 
     @overload
     def rows(
