@@ -34,7 +34,7 @@ import narwhals as nw
 from narwhals.schema import Schema
 
 
-def func(df_any: Any) -> Schema:
+def func(df: Any) -> Schema:
     df = nw.from_native(df, eager_or_interchange_only=True)
     return df.schema
 ```

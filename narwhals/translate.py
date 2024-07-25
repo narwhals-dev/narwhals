@@ -532,8 +532,8 @@ def narwhalify(
     import narwhals as nw
 
 
-    def func(df_any):
-        df = nw.from_native(df_any, strict=False)
+    def func(df):
+        df = nw.from_native(df, strict=False)
         df = df.group_by("a").agg(nw.col("b").sum())
         return nw.to_native(df)
     ```
@@ -545,8 +545,8 @@ def narwhalify(
 
 
     @nw.narwhalify
-    def func(df_any):
-        return df_any.group_by("a").agg(nw.col("b").sum())
+    def func(df):
+        return df.group_by("a").agg(nw.col("b").sum())
     ```
 
     You can also pass in extra arguments, e.g.
