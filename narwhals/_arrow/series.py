@@ -529,19 +529,20 @@ class ArrowSeries:
     ) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
+        np = get_numpy()
         pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+
         series = self._native_series
-        unique_values = self.unique().sort()._native_series
-        columns = [pc.cast(pc.equal(series, v), pa.uint8()) for v in unique_values][
-            int(drop_first) :
-        ]
-        names = [f"{self._name}{separator}{v}" for v in unique_values][int(drop_first) :]
+        da = series.dictionary_encode().combine_chunks()
+
+        columns = np.zeros((len(da.dictionary), len(da)), np.uint8)
+        columns[da.indices, np.arange(len(da))] = 1
+        names = [f"{self._name}{separator}{v}" for v in da.dictionary]
 
         return ArrowDataFrame(
             pa.Table.from_arrays(columns, names=names),
             backend_version=self._backend_version,
-        )
+        ).select(*sorted(names)[int(drop_first) :])
 
     def quantile(
         self: Self,
