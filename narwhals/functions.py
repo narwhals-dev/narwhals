@@ -65,7 +65,6 @@ def from_dict(
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
         native_namespace: The native library to use for DataFrame creation.
-        implementation: The type of implementation to use.
 
     Examples:
         >>> import pandas as pd
