@@ -20,6 +20,8 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals.dataframe import BaseFrame
@@ -35,10 +37,13 @@ class Implementation(Enum):
     PYARROW = auto()
     POLARS = auto()
 
+    UNKNOWN = auto()
+
     @classmethod
     def from_native_namespace(
-        cls: type[Self], native_namespace: Any
+        cls: type[Self], native_namespace: ModuleType
     ) -> Implementation:  # pragma: no cover
+        """Instantiate Implementation object from a native namespace module."""
         mapping = {
             get_pandas(): Implementation.PANDAS,
             get_modin(): Implementation.MODIN,
@@ -46,9 +51,10 @@ class Implementation(Enum):
             get_pyarrow(): Implementation.PYARROW,
             get_polars(): Implementation.POLARS,
         }
-        return mapping[native_namespace]
+        return mapping.get(native_namespace, Implementation.UNKNOWN)
 
-    def to_native_namespace(self: Self) -> Any:  # pragma: no cover
+    def to_native_namespace(self: Self) -> ModuleType:  # pragma: no cover
+        """Return the native namespace module corresponding to Implementation."""
         mapping = {
             Implementation.PANDAS: get_pandas(),
             Implementation.MODIN: get_modin(),
@@ -56,7 +62,7 @@ class Implementation(Enum):
             Implementation.PYARROW: get_pyarrow(),
             Implementation.POLARS: get_polars(),
         }
-        return mapping[self]
+        return mapping[self]  # type: ignore[no-any-return]
 
 
 def remove_prefix(text: str, prefix: str) -> str:

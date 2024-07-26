@@ -21,6 +21,8 @@ from narwhals.utils import validate_laziness
 FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
@@ -50,7 +52,8 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: Any,
+    native_namespace: ModuleType | None = None,
+    implementation: Implementation | None = None,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
@@ -63,6 +66,7 @@ def from_dict(
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
         native_namespace: The native library to use for DataFrame creation.
+        implementation: The type of implementation to use.
 
     Examples:
         >>> import pandas as pd
@@ -94,8 +98,24 @@ def from_dict(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
+
+        We can write the function above using the `implementation` argument as well,
+        dynamically extracted from the Narhwals DataFrame implementation:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     implementation = df._implementation
+        ...     return nw.from_dict(data, implementation=implementation)
     """
-    implementation = Implementation.from_native_namespace(native_namespace)
+    if implementation is not None and native_namespace is None:
+        native_namespace = implementation.to_native_namespace()
+    elif implementation is None and native_namespace is not None:
+        implementation = Implementation.from_native_namespace(native_namespace)
+    else:  # pragma: no cover
+        msg = "Exactly one of `native_namespace` and `implementation` should be provided."
+        raise ValueError(msg)
+
     if implementation is Implementation.POLARS:
         if schema:
             from narwhals._polars.utils import (
@@ -142,8 +162,13 @@ def from_dict(
             )
         native_frame = native_namespace.table(data, schema=schema)
     else:  # pragma: no cover
-        msg = f"Expected library supported by Narwhals, got: {native_namespace}"
-        raise ValueError(msg)
+        try:
+            # implementation is UNKNOWN, Narhwals extension using this feature should
+            # implement `from_dict` function in the top-level namespace.
+            native_frame = native_namespace.from_dict(data)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `from_dict` function"
+            raise AttributeError(msg) from e
     return from_native(native_frame, eager_only=True)
 
 

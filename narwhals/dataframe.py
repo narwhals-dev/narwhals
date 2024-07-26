@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
+    from narwhals.utils import Implementation
 
 FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
@@ -44,6 +45,10 @@ class BaseFrame(Generic[FrameT]):
 
     def __narwhals_namespace__(self) -> Any:
         return self._compliant_frame.__narwhals_namespace__()
+
+    @property
+    def _implementation(self) -> Implementation:
+        return self._compliant_frame._implementation  # type: ignore[no-any-return]
 
     def _from_compliant_dataframe(self, df: Any) -> Self:
         # construct, preserving properties

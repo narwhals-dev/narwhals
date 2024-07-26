@@ -43,6 +43,7 @@ from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
 from narwhals.translate import to_native
+from narwhals.utils import Implementation
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
@@ -101,4 +102,5 @@ __all__ = [
     "stable",
     "Schema",
     "from_dict",
+    "Implementation",
 ]
