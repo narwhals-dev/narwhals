@@ -35,6 +35,9 @@ if TYPE_CHECKING:
 IntoExpr: TypeAlias = Union["Expr", str, "Series"]
 """Anything which can be converted to an expression."""
 
+IntoSeries: TypeAlias = Union[str, "Series"]
+"""Anything which can be converted to a series."""
+
 IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame."""
 
