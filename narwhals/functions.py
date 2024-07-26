@@ -52,8 +52,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType | None = None,
-    implementation: Implementation | None = None,
+    native_namespace: ModuleType,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
@@ -98,23 +97,8 @@ def from_dict(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
-
-        We can write the function above using the `implementation` argument as well,
-        dynamically extracted from the Narhwals DataFrame implementation:
-
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     data = {"c": [5, 2], "d": [1, 4]}
-        ...     implementation = df._implementation
-        ...     return nw.from_dict(data, implementation=implementation)
     """
-    if implementation is not None and native_namespace is None:
-        native_namespace = implementation.to_native_namespace()
-    elif implementation is None and native_namespace is not None:
-        implementation = Implementation.from_native_namespace(native_namespace)
-    else:  # pragma: no cover
-        msg = "Exactly one of `native_namespace` and `implementation` should be provided."
-        raise ValueError(msg)
+    implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
         if schema:
@@ -167,7 +151,7 @@ def from_dict(
             # implement `from_dict` function in the top-level namespace.
             native_frame = native_namespace.from_dict(data)
         except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `from_dict` function"
+            msg = "Unknown namespace is expected to implement `from_dict` function."
             raise AttributeError(msg) from e
     return from_native(native_frame, eager_only=True)
 

@@ -42,7 +42,6 @@ from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
-from narwhals.utils import Implementation
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
@@ -1474,8 +1473,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType | None = None,
-    implementation: Implementation | None = None,
+    native_namespace: ModuleType,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
@@ -1520,22 +1518,12 @@ def from_dict(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
-
-        We can write the function above using the `implementation` argument as well,
-        dynamically extracted from the Narhwals DataFrame implementation:
-
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     data = {"c": [5, 2], "d": [1, 4]}
-        ...     implementation = df._implementation
-        ...     return nw.from_dict(data, implementation=implementation)
     """
     return _stableify(  # type: ignore[no-any-return]
         nw.from_dict(
             data,
             schema=schema,
             native_namespace=native_namespace,
-            implementation=implementation,
         )
     )
 
