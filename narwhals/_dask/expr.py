@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._dask.namespace import DaskNamespace
 
 from narwhals._dask.utils import maybe_evaluate
 
@@ -34,11 +33,6 @@ class DaskExpr:
         self._root_names = root_names
         self._output_names = output_names
         self._backend_version = backend_version
-
-    def __narwhals_namespace__(self) -> DaskNamespace:
-        from narwhals._dask.namespace import DaskNamespace
-
-        return DaskNamespace(backend_version=self._backend_version)
 
     @classmethod
     def from_column_names(

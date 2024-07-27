@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Callable
-
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
-
-if TYPE_CHECKING:
-    from narwhals._dask.dataframe import DaskLazyFrame
 
 
 class DaskNamespace:
@@ -33,24 +27,6 @@ class DaskNamespace:
 
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
-
-    def _create_expr_from_callable(
-        self,
-        func: Callable[[DaskLazyFrame], DaskLazyFrame],
-        *,
-        depth: int,
-        function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
-    ) -> DaskExpr:
-        return DaskExpr(
-            func,
-            depth=depth,
-            function_name=function_name,
-            root_names=root_names,
-            output_names=output_names,
-            backend_version=self._backend_version,
-        )
 
     def col(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
