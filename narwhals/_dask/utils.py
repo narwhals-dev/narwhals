@@ -14,13 +14,13 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 
     if isinstance(obj, DaskExpr):
         results = obj._call(df)
-        if len(results) != 1:
+        if len(results) != 1:  # pragma: no cover
             msg = "Multi-output expressions not supported in this context"
             raise NotImplementedError(msg)
         result = results[0]
         if not get_dask_expr()._expr.are_co_aligned(
             df._native_dataframe._expr, result._expr
-        ):
+        ):  # pragma: no cover
             # are_co_aligned is a method which cheaply checks if two Dask expressions
             # have the same index, and therefore don't require index alignment.
             # If someone only operates on a Dask DataFrame via expressions, then this
@@ -47,7 +47,7 @@ def parse_exprs_and_named_exprs(
             results[_result.name] = _result
     for name, value in named_exprs.items():
         _results = value._call(df)
-        if len(_results) != 1:
+        if len(_results) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
         results[name] = _results[0]

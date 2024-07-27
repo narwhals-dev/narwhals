@@ -20,7 +20,7 @@ def test_with_columns() -> None:
     df = nw.from_native(dfdd)
     df = df.with_columns(
         nw.col("a") + 1,
-        c=nw.col("a") + nw.col("b").mean(),
+        (nw.col("a") + nw.col("b").mean()).alias("c"),
         d=nw.col("a"),
         e=nw.col("a") + nw.col("b"),
     )
