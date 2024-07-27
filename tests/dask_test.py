@@ -7,6 +7,8 @@ TPC-H Q1 with Dask), then we can integrate dask tests into
 the main test suite.
 """
 
+from __future__ import annotations
+
 import sys
 
 import pandas as pd
@@ -73,3 +75,27 @@ def test_cum_sum() -> None:
     result = nw.to_native(df).compute()
     expected = {"a": [1, 3, 6], "b": [4, 9, 15]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("closed", "expected"),
+    [
+        ("left", [True, True, True, False]),
+        ("right", [False, True, True, True]),
+        ("both", [True, True, True, True]),
+        ("neither", [False, True, True, False]),
+    ],
+)
+def test_is_between(closed: str, expected: list[bool]) -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [1, 4, 2, 5],
+    }
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+
+    df = nw.from_native(dfdd)
+    df = df.with_columns(nw.col("a").is_between(1, 5, closed=closed))
+    result = nw.to_native(df).compute()
+    expected_dict = {"a": expected}
+    compare_dicts(result, expected_dict)
