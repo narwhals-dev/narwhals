@@ -19,7 +19,7 @@ def test_expr_sum_expr(constructor: Any, expr: nw.Expr) -> None:
 
 
 @pytest.mark.parametrize(("col", "expected"), [("a", 6), ("b", 14), ("z", 24.0)])
-def test_expr_sum_series(constructor_series: Any, col: str, expected: float) -> None:
-    series = nw.from_native(constructor_series(data[col]), series_only=True)
+def test_expr_sum_series(constructor: Any, col: str, expected: float) -> None:
+    series = nw.from_native(constructor(data), eager_only=True)[col]
     result = series.sum()
     compare_dicts({col: [result]}, {col: [expected]})

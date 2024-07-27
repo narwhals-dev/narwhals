@@ -21,8 +21,8 @@ def test_is_last_distinct_expr(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_is_last_distinct_series(constructor_series: Any) -> None:
-    series = nw.from_native(constructor_series(data["a"]), series_only=True)
+def test_is_last_distinct_series(constructor: Any) -> None:
+    series = nw.from_native(constructor(data), eager_only=True)["a"]
     result = series.is_last_distinct()
     expected = np.array([False, True, False, True, True])
     assert (result.to_numpy() == expected).all()

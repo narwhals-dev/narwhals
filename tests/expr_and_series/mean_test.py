@@ -19,7 +19,7 @@ def test_expr_mean_expr(constructor: Any, expr: nw.Expr) -> None:
 
 
 @pytest.mark.parametrize(("col", "expected"), [("a", 2.0), ("b", 5.0), ("z", 8.0)])
-def test_expr_mean_series(constructor_series: Any, col: str, expected: float) -> None:
-    series = nw.from_native(constructor_series(data[col]), series_only=True)
+def test_expr_mean_series(constructor: Any, col: str, expected: float) -> None:
+    series = nw.from_native(constructor(data), eager_only=True)[col]
     result = series.mean()
     compare_dicts({col: [result]}, {col: [expected]})

@@ -19,7 +19,7 @@ def test_expr_max_expr(constructor: Any, expr: nw.Expr) -> None:
 
 
 @pytest.mark.parametrize(("col", "expected"), [("a", 3), ("b", 6), ("z", 9.0)])
-def test_expr_max_series(constructor_series: Any, col: str, expected: float) -> None:
-    series = nw.from_native(constructor_series(data[col]), series_only=True)
+def test_expr_max_series(constructor: Any, col: str, expected: float) -> None:
+    series = nw.from_native(constructor(data), eager_only=True)[col]
     result = series.max()
     compare_dicts({col: [result]}, {col: [expected]})

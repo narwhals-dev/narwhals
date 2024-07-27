@@ -15,8 +15,8 @@ def test_unique_expr(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_unique_series(constructor_series: Any) -> None:
-    series = nw.from_native(constructor_series(data["a"]), series_only=True)
+def test_unique_series(constructor: Any) -> None:
+    series = nw.from_native(constructor(data), eager_only=True)["a"]
     result = series.unique()
     expected = np.array([1, 2])
     assert (result.to_numpy() == expected).all()
