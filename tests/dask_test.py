@@ -15,7 +15,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
-pytest.importorskip("dask")
+pytest.importorskip("dask_expr")
 
 
 if sys.version_info < (3, 9):
