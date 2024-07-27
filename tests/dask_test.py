@@ -10,6 +10,7 @@ the main test suite.
 from __future__ import annotations
 
 import sys
+import warnings
 
 import pandas as pd
 import pytest
@@ -18,7 +19,12 @@ import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 pytest.importorskip("dask")
-pytest.importorskip("dask_expr")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        category=pytest.PytestDeprecationWarning,
+    )
+    pytest.importorskip("dask_expr")
 
 
 if sys.version_info < (3, 9):
