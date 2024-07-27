@@ -46,3 +46,14 @@ def test_with_columns() -> None:
             "e": [5, 7, 9],
         },
     )
+
+
+def test_shift() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    df = df.with_columns(nw.col("a").shift(1), nw.col("b").shift(-1))
+    result = nw.to_native(df).compute()
+    expected = {"a": [float("nan"), 1, 2], "b": [5, 6, float("nan")]}
+    compare_dicts(result, expected)
