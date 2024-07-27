@@ -66,6 +66,11 @@ def get_numpy() -> Any:
     return sys.modules.get("numpy", None)
 
 
+def get_dask() -> Any:
+    """Get dask (if already imported - else return None)."""
+    return sys.modules.get("dask", None)
+
+
 def get_dask_dataframe() -> Any:
     """Get dask.dataframe module (if already imported - else return None)."""
     if "dask" in sys.modules:

@@ -9,6 +9,7 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_modin
@@ -486,7 +487,9 @@ def from_native(  # noqa: PLR0915
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return LazyFrame(
-            DaskLazyFrame(native_object, backend_version=parse_version(dd.__version__)),
+            DaskLazyFrame(
+                native_object, backend_version=parse_version(get_dask().__version__)
+            ),
             level="full",
         )
 
