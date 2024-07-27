@@ -146,7 +146,7 @@ class DaskExpr:
     def shift(self, n: int) -> Self:
         return self._from_call(
             lambda _input, n: _input.shift(n),
-            "mean",
+            "shift",
             n,
         )
 
