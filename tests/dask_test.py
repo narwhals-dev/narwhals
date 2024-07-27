@@ -15,6 +15,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
+pytest.importorskip("dask")
 pytest.importorskip("dask_expr")
 
 
@@ -56,4 +57,15 @@ def test_shift() -> None:
     df = df.with_columns(nw.col("a").shift(1), nw.col("b").shift(-1))
     result = nw.to_native(df).compute()
     expected = {"a": [float("nan"), 1, 2], "b": [5, 6, float("nan")]}
+    compare_dicts(result, expected)
+
+
+def test_cum_sum() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    df = df.with_columns(nw.col("a", "b").cum_sum())
+    result = nw.to_native(df).compute()
+    expected = {"a": [1, 3, 6], "b": [4, 9, 15]}
     compare_dicts(result, expected)
