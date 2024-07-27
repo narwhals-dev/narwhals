@@ -72,7 +72,7 @@ def get_dask_dataframe() -> Any:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
-                message=".*Dask dataframe query planning",
+                message="\nDask dataframe query planning.*",
                 category=FutureWarning,
             )
             import dask.dataframe as dd
