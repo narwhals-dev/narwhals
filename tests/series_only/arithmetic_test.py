@@ -35,15 +35,15 @@ def test_arithmetic(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor_series: Any,
+    constructor: Any,
 ) -> None:
-    if "pandas_series_pyarrow" in str(constructor_series) and attr == "__mod__":
+    if "pandas_pyarrow" in str(constructor) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_series" in str(constructor_series) and attr == "__mod__":
+    if "table" in str(constructor) and attr == "__mod__":
         request.applymarker(pytest.mark.xfail)
 
-    s = nw.from_native(constructor_series(data), series_only=True)
+    s = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
     result = getattr(s, attr)(rhs)
     assert result.to_numpy().tolist() == expected
 

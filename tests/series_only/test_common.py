@@ -18,8 +18,8 @@ data_dups = [4, 4, 6]
 data_sorted = [7.0, 8, 9]
 
 
-def test_len(constructor_series: Any) -> None:
-    series = nw.from_native(constructor_series(data), series_only=True)
+def test_len(constructor: Any) -> None:
+    series = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
 
     result = len(series)
     assert result == 3
@@ -28,8 +28,8 @@ def test_len(constructor_series: Any) -> None:
     assert result == 3
 
 
-def test_is_in(constructor_series: Any) -> None:
-    series = nw.from_native(constructor_series(data), series_only=True)
+def test_is_in(constructor: Any) -> None:
+    series = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
 
     result = series.is_in([1, 2]).to_list()
     assert result[0]
@@ -48,18 +48,18 @@ def test_is_in_other(constructor: Any) -> None:
         nw.from_native(df_raw).with_columns(contains=nw.col("a").is_in("sets"))
 
 
-def test_dtype(constructor_series: Any) -> None:
-    series = nw.from_native(constructor_series(data), series_only=True)
+def test_dtype(constructor: Any) -> None:
+    series = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
     result = series.dtype
     assert result == nw.Int64
     assert result.is_numeric()
 
 
-def test_reductions(request: Any, constructor_series: Any) -> None:
-    if "pyarrow_series" in str(constructor_series):
+def test_reductions(request: Any, constructor: Any) -> None:
+    if "pyarrow_series" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    s = nw.from_native(constructor_series(data), series_only=True)
+    s = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
     assert s.mean() == 2.0
     assert s.std() == 1.0
     assert s.min() == 1
@@ -90,14 +90,11 @@ def test_boolean_reductions(request: Any, constructor: Any) -> None:
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
 )
-def test_convert(request: Any, constructor_series: Any) -> None:
-    if any(
-        cname in str(constructor_series)
-        for cname in ("pandas_series_nullable", "pandas_series_pyarrow")
-    ):
+def test_convert(request: Any, constructor: Any) -> None:
+    if any(cname in str(constructor) for cname in ("pandas_nullable", "pandas_pyarrow")):
         request.applymarker(pytest.mark.xfail)
 
-    series = nw.from_native(constructor_series(data), series_only=True).alias("a")
+    series = nw.from_native(constructor({"a": data}), eager_only=True)["a"].alias("a")
 
     result = series.to_numpy()
     assert_array_equal(result, np.array([1, 3, 2]))
@@ -114,10 +111,10 @@ def test_to_numpy() -> None:
     assert nw_series.shape == (3,)
 
 
-def test_zip_with(constructor_series: Any) -> None:
-    series1 = nw.from_native(constructor_series(data), series_only=True)
-    series2 = nw.from_native(constructor_series(data_dups), series_only=True)
-    mask = nw.from_native(constructor_series([True, False, True]), series_only=True)
+def test_zip_with(constructor: Any) -> None:
+    series1 = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
+    series2 = nw.from_native(constructor({"a": data_dups}), eager_only=True)["a"]
+    mask = nw.from_native(constructor({"a": [True, False, True]}), eager_only=True)["a"]
 
     result = series1.zip_with(mask, series2)
     expected = [1, 4, 2]
@@ -137,8 +134,8 @@ def test_cast_string() -> None:
 
 
 @pytest.mark.parametrize(("index", "expected"), [(0, 1), (1, 3)])
-def test_item(constructor_series: Any, index: int, expected: int) -> None:
-    series = nw.from_native(constructor_series(data), series_only=True)
+def test_item(constructor: Any, index: int, expected: int) -> None:
+    series = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
     result = series.item(index)
     compare_dicts({"a": [result]}, {"a": [expected]})
     compare_dicts({"a": [series.head(1).item()]}, {"a": [1]})
