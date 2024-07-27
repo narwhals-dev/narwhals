@@ -34,7 +34,7 @@ def test_with_columns() -> None:
         d=nw.col("a"),
         e=nw.col("a") + nw.col("b"),
         f=nw.col("b") - 1,
-        g=nw.col("a") - nw.col("b"),
+        g=nw.col("b") - nw.col("a"),
     )
 
     result = nw.to_native(df).compute()
@@ -47,7 +47,7 @@ def test_with_columns() -> None:
             "d": [1, 2, 3],
             "e": [5, 7, 9],
             "f": [3, 4, 5],
-            "g": [-3, -3, -3],
+            "g": [3, 3, 3],
         },
     )
 
