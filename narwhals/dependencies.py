@@ -71,7 +71,7 @@ def get_dask_dataframe() -> Any:
         import dask.dataframe as dd
 
         return dd
-    return None
+    return None  # pragma: no cover
 
 
 def get_dask_expr() -> Any:
