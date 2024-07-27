@@ -149,3 +149,9 @@ class DaskExpr:
             "mean",
             n,
         )
+
+    def cum_sum(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.cumsum(),
+            "cum_sum",
+        )
