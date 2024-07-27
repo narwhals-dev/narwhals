@@ -180,3 +180,17 @@ class DaskExpr:
             upper_bound,
             closed,
         )
+
+    @property
+    def str(self: Self) -> DaskExprStringNamespace:
+        return DaskExprStringNamespace(self)
+
+
+class DaskExprStringNamespace:
+    def __init__(self, expr: DaskExpr) -> None:
+        self._expr = expr
+
+    def starts_with(self, prefix: str) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, prefix: _input.str.startswith(prefix), "starts_with", prefix
+        )

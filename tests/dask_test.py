@@ -105,3 +105,24 @@ def test_is_between(closed: str, expected: list[bool]) -> None:
     result = nw.to_native(df).compute()
     expected_dict = {"a": expected}
     compare_dicts(result, expected_dict)
+
+
+@pytest.mark.parametrize(
+    ("prefix", "expected"),
+    [
+        ("fda", {"a": [True, False]}),
+        ("edf", {"a": [False, True]}),
+        ("asd", {"a": [False, False]}),
+    ],
+)
+def test_starts_with(prefix: str, expected: dict[str, list[bool]]) -> None:
+    import dask.dataframe as dd
+
+    data = {"a": ["fdas", "edfas"]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+
+    df = nw.from_native(dfdd)
+    df = df.with_columns(nw.col("a").str.starts_with(prefix))
+    result = nw.to_native(df).compute()
+
+    compare_dicts(result, expected)
