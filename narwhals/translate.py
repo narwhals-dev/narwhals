@@ -10,6 +10,7 @@ from typing import overload
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -481,6 +482,9 @@ def from_native(  # noqa: PLR0915
             # TODO(unassigned): increase coverage
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
             raise TypeError(msg)
+        if get_dask_expr() is None:  # pragma: no cover
+            msg = "Please install dask-expr"
+            raise ImportError(msg)
         return LazyFrame(
             DaskLazyFrame(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
