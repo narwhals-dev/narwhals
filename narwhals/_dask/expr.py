@@ -144,6 +144,13 @@ class DaskExpr:
             other,
         )
 
+    def __mul__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__mul__(other),
+            "__mul__",
+            other,
+        )
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
@@ -153,6 +160,30 @@ class DaskExpr:
     def shift(self, n: int) -> Self:
         return self._from_call(
             lambda _input, n: _input.shift(n),
-            "mean",
+            "shift",
             n,
+        )
+
+    def cum_sum(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.cumsum(),
+            "cum_sum",
+        )
+
+    def is_between(
+        self,
+        lower_bound: Any,
+        upper_bound: Any,
+        closed: str = "both",
+    ) -> Self:
+        return self._from_call(
+            lambda _input, lower_bound, upper_bound, closed: _input.between(
+                lower_bound,
+                upper_bound,
+                closed,
+            ),
+            "is_between",
+            lower_bound,
+            upper_bound,
+            closed,
         )
