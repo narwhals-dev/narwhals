@@ -69,3 +69,14 @@ def test_cum_sum() -> None:
     result = nw.to_native(df).compute()
     expected = {"a": [1, 3, 6], "b": [4, 9, 15]}
     compare_dicts(result, expected)
+
+
+def test_is_between() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    df = df.with_columns(nw.col("a").is_between(1, 2), nw.col("b").is_between(1, 2))
+    result = nw.to_native(df).compute()
+    expected = {"a": [True, True, False], "b": [False, False, False]}
+    compare_dicts(result, expected)
