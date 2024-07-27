@@ -486,7 +486,7 @@ def from_native(  # noqa: PLR0915
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return LazyFrame(
-            DaskLazyFrame(native_object, backend_version=parse_version(pl.__version__)),
+            DaskLazyFrame(native_object, backend_version=parse_version(dd.__version__)),
             level="full",
         )
 
