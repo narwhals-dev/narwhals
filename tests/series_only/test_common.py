@@ -56,7 +56,7 @@ def test_dtype(constructor: Any) -> None:
 
 
 def test_reductions(request: Any, constructor: Any) -> None:
-    if "pyarrow_series" in str(constructor):
+    if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     s = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
