@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.namespace import DaskNamespace
 
 from narwhals._dask.utils import maybe_evaluate
 
@@ -33,6 +34,11 @@ class DaskExpr:
         self._root_names = root_names
         self._output_names = output_names
         self._backend_version = backend_version
+
+    def __narwhals_namespace__(self) -> DaskNamespace:
+        from narwhals._dask.namespace import DaskNamespace
+
+        return DaskNamespace(backend_version=self._backend_version)
 
     @classmethod
     def from_column_names(
@@ -179,4 +185,18 @@ class DaskExpr:
             lower_bound,
             upper_bound,
             closed,
+        )
+
+    @property
+    def str(self: Self) -> DaskExprStringNamespace:
+        return DaskExprStringNamespace(self)
+
+
+class DaskExprStringNamespace:
+    def __init__(self, expr: DaskExpr) -> None:
+        self._expr = expr
+
+    def starts_with(self, prefix: str) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, prefix: _input.str.startswith(prefix), "starts_with", prefix
         )
