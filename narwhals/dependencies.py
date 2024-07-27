@@ -65,6 +65,20 @@ def get_numpy() -> Any:
     return sys.modules.get("numpy", None)
 
 
+def get_dask_dataframe() -> Any:
+    """Get dask.dataframe module (if already imported - else return None)."""
+    if "dask" in sys.modules:
+        import dask.dataframe as dd
+
+        return dd
+    return None
+
+
+def get_dask_expr() -> Any:
+    """Get dask_expr module (if already imported - else return None)."""
+    return sys.modules.get("dask_expr", None)
+
+
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return bool((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame))
