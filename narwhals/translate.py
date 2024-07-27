@@ -9,6 +9,8 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -280,6 +282,7 @@ def from_native(  # noqa: PLR0915
     """
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._interchange.dataframe import InterchangeFrame
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -464,6 +467,26 @@ def from_native(  # noqa: PLR0915
             ArrowSeries(
                 native_object, backend_version=parse_version(pa.__version__), name=""
             ),
+            level="full",
+        )
+
+    # Dask
+    elif (dd := get_dask_dataframe()) is not None and isinstance(
+        native_object, dd.DataFrame
+    ):
+        if series_only:  # pragma: no cover
+            # TODO(unassigned): increase coverage
+            msg = "Cannot only use `series_only` with dask DataFrame"
+            raise TypeError(msg)
+        if eager_only or eager_or_interchange_only:  # pragma: no cover
+            # TODO(unassigned): increase coverage
+            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
+            raise TypeError(msg)
+        if get_dask_expr() is None:  # pragma: no cover
+            msg = "Please install dask-expr"
+            raise ImportError(msg)
+        return LazyFrame(
+            DaskLazyFrame(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
         )
 
