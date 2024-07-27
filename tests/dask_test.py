@@ -34,6 +34,8 @@ def test_with_columns() -> None:
         (nw.col("a") + nw.col("b").mean()).alias("c"),
         d=nw.col("a"),
         e=nw.col("a") + nw.col("b"),
+        h=nw.col("a") * 3,
+        i=nw.col("a") * nw.col("b"),
     )
 
     result = nw.to_native(df).compute()
@@ -45,6 +47,8 @@ def test_with_columns() -> None:
             "c": [6.0, 7.0, 8.0],
             "d": [1, 2, 3],
             "e": [5, 7, 9],
+            "h": [3, 6, 9],
+            "i": [4, 10, 18],
         },
     )
 

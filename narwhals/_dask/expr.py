@@ -137,6 +137,13 @@ class DaskExpr:
             other,
         )
 
+    def __mul__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__mul__(other),
+            "__mul__",
+            other,
+        )
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
