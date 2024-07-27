@@ -7,14 +7,24 @@ TPC-H Q1 with Dask), then we can integrate dask tests into
 the main test suite.
 """
 
-import dask.dataframe as dd
+import sys
+
 import pandas as pd
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
+pytest.importorskip("dask")
+
+
+if sys.version_info < (3, 9):
+    pytest.skip("Dask tests require Python 3.9+", allow_module_level=True)
+
 
 def test_with_columns() -> None:
+    import dask.dataframe as dd
+
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
 
     df = nw.from_native(dfdd)
