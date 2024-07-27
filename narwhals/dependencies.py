@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import sys
-import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -73,17 +72,7 @@ def get_dask() -> Any:
 
 def get_dask_dataframe() -> Any:
     """Get dask.dataframe module (if already imported - else return None)."""
-    if "dask" in sys.modules:
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="\nDask dataframe query planning.*",
-                category=FutureWarning,
-            )
-            import dask.dataframe as dd
-
-        return dd
-    return None  # pragma: no cover
+    return sys.modules.get("dask.dataframe", None)
 
 
 def get_dask_expr() -> Any:

@@ -137,13 +137,6 @@ class DaskExpr:
             other,
         )
 
-    def __sub__(self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__sub__(other),
-            "__sub__",
-            other,
-        )
-
     def __mul__(self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mul__(other),
