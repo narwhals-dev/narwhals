@@ -12,11 +12,11 @@ data = {
 }
 
 
-def test_is_last_distinct_expr(constructor: Any, request: Any) -> None:
-    if "modin" in str(constructor):
+def test_is_last_distinct_expr(constructor_lazy: Any, request: Any) -> None:
+    if "modin" in str(constructor_lazy):
         # TODO(unassigned): why is Modin failing here?
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_lazy(data))
     result = df.select(nw.all().is_last_distinct())
     expected = {
         "a": [False, True, False, True, True],

@@ -21,13 +21,13 @@ from tests.utils import compare_dicts
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile_expr(
-    constructor: Any,
+    constructor_lazy: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
 ) -> None:
     q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df_raw = constructor(data)
+    df_raw = constructor_lazy(data)
     df = nw.from_native(df_raw)
     result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
     compare_dicts(result, expected)

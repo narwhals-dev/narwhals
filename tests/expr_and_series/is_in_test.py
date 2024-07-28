@@ -9,8 +9,8 @@ data = {
 }
 
 
-def test_expr_is_in(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_expr_is_in(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select(nw.col("a").is_in([4, 5]))
     expected = {"a": [False, True, False, True]}
 
