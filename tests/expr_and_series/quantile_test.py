@@ -45,12 +45,14 @@ def test_quantile_expr(
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile_series(
-    constructor_series: Any,
+    constructor: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: float,
 ) -> None:
     q = 0.3
 
-    series = nw.from_native(constructor_series([7.0, 8, 9]), series_only=True).alias("a")
+    series = nw.from_native(constructor({"a": [7.0, 8, 9]}), eager_only=True)["a"].alias(
+        "a"
+    )
     result = series.quantile(quantile=q, interpolation=interpolation)
     compare_dicts({"a": [result]}, {"a": [expected]})

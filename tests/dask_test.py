@@ -37,7 +37,7 @@ def test_with_columns() -> None:
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
 
     df = nw.from_native(dfdd)
-    df = df.with_columns(
+    result = df.with_columns(
         nw.col("a") + 1,
         (nw.col("a") + nw.col("b").mean()).alias("c"),
         d=nw.col("a"),
@@ -47,8 +47,6 @@ def test_with_columns() -> None:
         h=nw.col("a") * 3,
         i=nw.col("a") * nw.col("b"),
     )
-
-    result = nw.to_native(df).compute()
     compare_dicts(
         result,
         {
@@ -70,8 +68,7 @@ def test_shift() -> None:
 
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     df = nw.from_native(dfdd)
-    df = df.with_columns(nw.col("a").shift(1), nw.col("b").shift(-1))
-    result = nw.to_native(df).compute()
+    result = df.with_columns(nw.col("a").shift(1), nw.col("b").shift(-1))
     expected = {"a": [float("nan"), 1, 2], "b": [5, 6, float("nan")]}
     compare_dicts(result, expected)
 
@@ -81,8 +78,7 @@ def test_cum_sum() -> None:
 
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     df = nw.from_native(dfdd)
-    df = df.with_columns(nw.col("a", "b").cum_sum())
-    result = nw.to_native(df).compute()
+    result = df.with_columns(nw.col("a", "b").cum_sum())
     expected = {"a": [1, 3, 6], "b": [4, 9, 15]}
     compare_dicts(result, expected)
 
@@ -105,8 +101,7 @@ def test_is_between(closed: str, expected: list[bool]) -> None:
     dfdd = dd.from_pandas(pd.DataFrame(data))
 
     df = nw.from_native(dfdd)
-    df = df.with_columns(nw.col("a").is_between(1, 5, closed=closed))
-    result = nw.to_native(df).compute()
+    result = df.with_columns(nw.col("a").is_between(1, 5, closed=closed))
     expected_dict = {"a": expected}
     compare_dicts(result, expected_dict)
 
@@ -124,9 +119,7 @@ def test_starts_with(prefix: str, expected: dict[str, list[bool]]) -> None:
 
     data = {"a": ["fdas", "edfas"]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
-
     df = nw.from_native(dfdd)
-    df = df.with_columns(nw.col("a").str.starts_with(prefix))
-    result = nw.to_native(df).compute()
+    result = df.with_columns(nw.col("a").str.starts_with(prefix))
 
     compare_dicts(result, expected)

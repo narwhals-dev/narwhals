@@ -5,6 +5,9 @@ from typing import Any
 
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_pandas
+from narwhals.utils import Implementation
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -39,3 +42,13 @@ class DaskLazyFrame:
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         df = df.assign(**new_series)
         return self._from_native_dataframe(df)
+
+    def collect(self) -> Any:
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        result = self._native_dataframe.compute()
+        return PandasLikeDataFrame(
+            result,
+            implementation=Implementation.PANDAS,
+            backend_version=parse_version(get_pandas().__version__),
+        )
