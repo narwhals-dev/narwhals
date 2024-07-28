@@ -18,10 +18,8 @@ data = {
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(constructor_lazy: Any) -> None:
-    df = nw.from_native(
-        constructor_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
-    )
+def test_schema(constructor: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
@@ -31,10 +29,8 @@ def test_schema(constructor_lazy: Any) -> None:
     assert result == expected
 
 
-def test_collect_schema(constructor_lazy: Any) -> None:
-    df = nw.from_native(
-        constructor_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
-    )
+def test_collect_schema(constructor: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
     result = df.collect_schema()
