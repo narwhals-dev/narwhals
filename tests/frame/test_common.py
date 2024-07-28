@@ -112,10 +112,7 @@ def test_expr_binary(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_expr_transform(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_expr_transform(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5]))
     expected = {"a": [True, False, False], "b": [True, True, False], "z": [7, 8, 9]}
