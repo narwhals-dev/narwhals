@@ -83,6 +83,16 @@ def test_cum_sum() -> None:
     compare_dicts(result, expected)
 
 
+def test_sum() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    result = df.with_columns((nw.col("a") + nw.col("b").sum()).alias("c"))
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [16, 17, 18]}
+    compare_dicts(result, expected)
+
+
 @pytest.mark.parametrize(
     ("closed", "expected"),
     [
