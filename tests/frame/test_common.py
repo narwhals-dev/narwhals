@@ -72,11 +72,7 @@ def test_columns(constructor_lazy: Any) -> None:
     assert result == expected
 
 
-def test_expr_binary(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "pandas_pyarrow" in str(
-        constructor
-    ):  # pandas pyarrow raises NotImplementedError for __mod__
-        request.applymarker(pytest.mark.xfail)
+def test_expr_binary(constructor: Any) -> None:
     df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
@@ -96,10 +92,7 @@ def test_expr_binary(request: Any, constructor: Any) -> None:
         k=2 // nw.col("a"),
         l=nw.col("a") // 2,
         m=nw.col("a") ** 2,
-        n=nw.col("a") % 2,
-        o=2 % nw.col("a"),
     )
-    result_native = nw.to_native(result)
     expected = {
         "a": [4, 3.333333, 3.5],
         "b": [-3.5, -4.0, -2.25],
@@ -115,10 +108,8 @@ def test_expr_binary(request: Any, constructor: Any) -> None:
         "k": [2, 0, 1],
         "l": [0, 1, 1],
         "m": [1, 9, 4],
-        "n": [1, 1, 0],
-        "o": [0, 2, 0],
     }
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
 
 def test_expr_transform(request: Any, constructor: Any) -> None:

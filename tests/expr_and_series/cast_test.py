@@ -50,6 +50,9 @@ def test_cast(constructor_lazy: Any, request: Any) -> None:
         pa.__version__
     ) <= (15,):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor_lazy):
+        # TODO(unassigned): in modin, we end up with `'<U0'` dtype
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_lazy(data)).select(
         nw.col(key).cast(value) for key, value in schema.items()
     )
@@ -96,6 +99,9 @@ def test_cast_series(constructor: Any, request: Any) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # TODO(unassigned): in modin, we end up with `'<U0'` dtype
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data), eager_only=True).select(
         nw.col(key).cast(value) for key, value in schema.items()
