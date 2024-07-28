@@ -95,9 +95,9 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(constructor_eager: Any) -> None:
+def test_group_by_simple_named(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor(data))
     result = (
         df.group_by("a")
         .agg(
@@ -114,9 +114,9 @@ def test_group_by_simple_named(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_simple_unnamed(constructor_eager: Any) -> None:
+def test_group_by_simple_unnamed(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor(data))
     result = (
         df.group_by("a")
         .agg(
@@ -133,9 +133,9 @@ def test_group_by_simple_unnamed(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_multiple_keys(constructor_eager: Any) -> None:
+def test_group_by_multiple_keys(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor(data))
     result = (
         df.group_by("a", "b")
         .agg(
@@ -153,14 +153,14 @@ def test_group_by_multiple_keys(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_key_with_nulls(constructor_eager: Any, request: Any) -> None:
-    if "modin" in str(constructor_eager):
+def test_key_with_nulls(constructor: Any, request: Any) -> None:
+    if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
     context = (
         pytest.raises(NotImplementedError, match="null values")
         if (
-            "pandas_constructor" in str(constructor_eager)
+            "pandas_constructor" in str(constructor)
             and parse_version(pd.__version__) < parse_version("1.0.0")
         )
         else nullcontext()
@@ -168,7 +168,7 @@ def test_key_with_nulls(constructor_eager: Any, request: Any) -> None:
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     with context:
         result = (
-            nw.from_native(constructor_eager(data))
+            nw.from_native(constructor(data))
             .group_by("b")
             .agg(nw.len(), nw.col("a").min())
             .sort("a")
