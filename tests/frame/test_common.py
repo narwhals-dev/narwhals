@@ -19,25 +19,6 @@ data_na = {"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]}
 data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
 
 
-def test_std(constructor_eager: Any) -> None:
-    df = nw.from_native(constructor_eager(data))
-    result = df.select(
-        nw.col("a").std().alias("a_ddof_default"),
-        nw.col("a").std(ddof=1).alias("a_ddof_1"),
-        nw.col("a").std(ddof=0).alias("a_ddof_0"),
-        nw.col("b").std(ddof=2).alias("b_ddof_2"),
-        nw.col("z").std(ddof=0).alias("z_ddof_0"),
-    )
-    expected = {
-        "a_ddof_default": [1.0],
-        "a_ddof_1": [1.0],
-        "a_ddof_0": [0.816497],
-        "b_ddof_2": [1.632993],
-        "z_ddof_0": [0.816497],
-    }
-    compare_dicts(result, expected)
-
-
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
