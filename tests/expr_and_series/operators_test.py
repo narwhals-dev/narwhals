@@ -35,9 +35,11 @@ def test_comparand_operators(
         ("__or__", [True, True, True, False]),
     ],
 )
-def test_logic_operators(constructor: Any, operator: str, expected: list[bool]) -> None:
+def test_logic_operators(
+    constructor_lazy: Any, operator: str, expected: list[bool]
+) -> None:
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_lazy(data))
 
     result = df.select(getattr(nw.col("a"), operator)(nw.col("b")))
     compare_dicts(result, {"a": expected})
