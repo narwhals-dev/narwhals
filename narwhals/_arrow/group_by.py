@@ -16,10 +16,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import IntoArrowExpr
 
-POLARS_TO_ARROW_AGGREGATIONS = {
-    "len": "size",
-}
-
 
 class ArrowGroupBy:
     def __init__(self, df: ArrowDataFrame, keys: list[str]) -> None:
