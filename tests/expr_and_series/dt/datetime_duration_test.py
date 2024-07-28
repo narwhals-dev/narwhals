@@ -40,15 +40,17 @@ data = {
 )
 def test_duration_attributes(
     request: Any,
-    constructor: Any,
+    constructor_eager: Any,
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],
 ) -> None:
-    if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(
+        constructor_eager
+    ):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result_a = df.select(getattr(nw.col("a").dt, attribute)().fill_null(0))
     compare_dicts(result_a, {"a": expected_a})
 
@@ -71,15 +73,17 @@ def test_duration_attributes(
 )
 def test_duration_micro_nano(
     request: Any,
-    constructor: Any,
+    constructor_eager: Any,
     attribute: str,
     expected_b: list[int],
     expected_c: list[int],
 ) -> None:
-    if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(
+        constructor_eager
+    ):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_b = df.select(getattr(nw.col("b").dt, attribute)().fill_null(0))
     compare_dicts(result_b, {"b": expected_b})

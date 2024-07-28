@@ -34,14 +34,14 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-def test_actual_object(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+def test_actual_object(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
 
     data = {"a": [Foo()]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.schema
     assert result == {"a": nw.Object}
 

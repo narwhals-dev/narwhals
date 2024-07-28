@@ -4,9 +4,9 @@ import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_any_all(constructor_lazy: Any) -> None:
+def test_any_all(constructor: Any) -> None:
     df = nw.from_native(
-        constructor_lazy(
+        constructor(
             {
                 "a": [True, False, True],
                 "b": [True, True, True],

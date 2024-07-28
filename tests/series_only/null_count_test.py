@@ -5,8 +5,8 @@ from typing import Any
 import narwhals as nw
 
 
-def test_null_count(constructor: Any) -> None:
+def test_null_count(constructor_eager: Any) -> None:
     data = [1, 2, None]
-    series = nw.from_native(constructor({"a": data}), eager_only=True)["a"]
+    series = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
     result = series.null_count()
     assert result == 1

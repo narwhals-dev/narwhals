@@ -14,13 +14,13 @@ data = {
 }
 
 
-def test_diff(constructor_lazy: Any, request: Any) -> None:
-    if "pyarrow_table_constructor" in str(constructor_lazy) and parse_version(
+def test_diff(constructor: Any, request: Any) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_lazy(data))
+    df = nw.from_native(constructor(data))
     result = df.with_columns(c_diff=nw.col("c").diff()).filter(nw.col("i") > 0)
     expected = {
         "i": [1, 2, 3, 4],
@@ -31,13 +31,13 @@ def test_diff(constructor_lazy: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_diff_series(constructor: Any, request: Any) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and parse_version(
+def test_diff_series(constructor_eager: Any, request: Any) -> None:
+    if "pyarrow_table_constructor" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = {
         "i": [1, 2, 3, 4],
         "b": [2, 3, 5, 3],

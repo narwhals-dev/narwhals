@@ -6,8 +6,8 @@ import pytest
 import narwhals as nw
 
 
-def test_get_column(constructor: Any) -> None:
-    df = nw.from_native(constructor({"a": [1, 2], "b": [3, 4]}), eager_only=True)
+def test_get_column(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2], "b": [3, 4]}), eager_only=True)
     result = df.get_column("a")
     assert result.to_list() == [1, 2]
     assert result.name == "a"

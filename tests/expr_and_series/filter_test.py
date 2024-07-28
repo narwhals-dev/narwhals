@@ -11,15 +11,15 @@ data = {
 }
 
 
-def test_filter(constructor_lazy: Any) -> None:
-    df = nw.from_native(constructor_lazy(data))
+def test_filter(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").filter(nw.col("i") < 2, nw.col("c") == 5))
     expected = {"a": [0]}
     compare_dicts(result, expected)
 
 
-def test_filter_series(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_filter_series(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].filter((df["i"] < 2) & (df["c"] == 5)))
     expected = {"a": [0]}
     compare_dicts(result, expected)

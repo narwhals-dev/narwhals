@@ -39,10 +39,10 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
 
 
 def test_is_definitely_not_ordered_categorical(
-    constructor: Any,
+    constructor_eager: Any,
 ) -> None:
     assert not nw.is_ordered_categorical(
-        nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True)["a"]
+        nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     )
 
 
