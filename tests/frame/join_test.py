@@ -11,14 +11,19 @@ from narwhals.utils import Implementation
 from tests.utils import compare_dicts
 
 
-def test_inner_join_two_keys(constructor_eager: Any) -> None:
+def test_inner_join_two_keys(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor(data))
     df_right = df
     result = df.lazy().join(
         df_right.lazy(), left_on=["a", "b"], right_on=["a", "b"], how="inner"
     )
-    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "z_right": [7.0, 8, 9]}
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8, 9],
+        "z_right": [7.0, 8, 9],
+    }
     compare_dicts(result, expected)
 
 
@@ -37,11 +42,14 @@ def test_inner_join_single_key(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_cross_join(constructor_eager: Any) -> None:
+def test_cross_join(constructor: Any) -> None:
     data = {"a": [1, 3, 2]}
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(constructor(data))
     result = df.join(df, how="cross").sort("a", "a_right")  # type: ignore[arg-type]
-    expected = {"a": [1, 1, 1, 2, 2, 2, 3, 3, 3], "a_right": [1, 2, 3, 1, 2, 3, 1, 2, 3]}
+    expected = {
+        "a": [1, 1, 1, 2, 2, 2, 3, 3, 3],
+        "a_right": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+    }
     compare_dicts(result, expected)
 
     with pytest.raises(ValueError, match="Can not pass left_on, right_on for cross join"):
@@ -54,7 +62,10 @@ def test_cross_join_non_pandas() -> None:
     # HACK to force testing for a non-pandas codepath
     df._compliant_frame._implementation = Implementation.MODIN
     result = df.join(df, how="cross")  # type: ignore[arg-type]
-    expected = {"a": [1, 1, 1, 3, 3, 3, 2, 2, 2], "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2]}
+    expected = {
+        "a": [1, 1, 1, 3, 3, 3, 2, 2, 2],
+        "a_right": [1, 3, 2, 1, 3, 2, 1, 3, 2],
+    }
     compare_dicts(result, expected)
 
 
@@ -101,9 +112,9 @@ def test_semi_join(
 
 
 @pytest.mark.parametrize("how", ["right", "full"])
-def test_join_not_implemented(constructor_eager: Any, how: str) -> None:
+def test_join_not_implemented(constructor: Any, how: str) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(constructor(data))
 
     with pytest.raises(
         NotImplementedError,
