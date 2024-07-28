@@ -188,6 +188,12 @@ class DaskExpr:
             closed,
         )
 
+    def sum(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.sum(),
+            "sum",
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
