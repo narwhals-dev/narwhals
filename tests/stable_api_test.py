@@ -8,7 +8,7 @@ import narwhals.stable.v1 as nw_v1
 from tests.utils import compare_dicts
 
 
-def test_renamed_taxicab_norm(constructor_eager: Any) -> None:
+def test_renamed_taxicab_norm(constructor: Any) -> None:
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method
@@ -17,7 +17,7 @@ def test_renamed_taxicab_norm(constructor_eager: Any) -> None:
     # API will still be able to use it, without the main namespace
     # getting cluttered by the new name.
 
-    df = nw.from_native(constructor_eager({"a": [1, 2, 3, -4, 5]}))
+    df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.with_columns(b=nw.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
     compare_dicts(result, expected)
@@ -25,7 +25,7 @@ def test_renamed_taxicab_norm(constructor_eager: Any) -> None:
     with pytest.raises(AttributeError):
         result = df.with_columns(b=nw.col("a")._l1_norm())  # type: ignore[attr-defined]
 
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3, -4, 5]}))
+    df = nw_v1.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     # The newer `_taxicab_norm` can still work in the old API, no issue.
     # It's new, so it couldn't be backwards-incompatible.
     result = df.with_columns(b=nw_v1.col("a")._taxicab_norm())
