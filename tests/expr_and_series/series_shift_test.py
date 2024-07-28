@@ -16,7 +16,7 @@ def test_shift(constructor: Any) -> None:
         "D": [9, 10, 11, 12],
     }
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor(data))
 
     result_a = df.select(nw.col("A").shift(1))
     result_b = df.select(nw.col("B").shift(-1))
