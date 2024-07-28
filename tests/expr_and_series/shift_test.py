@@ -13,11 +13,11 @@ data = {
 }
 
 
-def test_shift(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+def test_shift(request: Any, constructor_lazy: Any) -> None:
+    if "pyarrow_table" in str(constructor_lazy):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_lazy(data), eager_only=True)
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {
         "i": [2, 3, 4],

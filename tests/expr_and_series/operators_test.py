@@ -20,10 +20,10 @@ from tests.utils import compare_dicts
     ],
 )
 def test_comparand_operators(
-    constructor: Any, operator: str, expected: list[bool]
+    constructor_lazy: Any, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 2]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_lazy(data))
     result = df.select(getattr(nw.col("a"), operator)(1))
     compare_dicts(result, {"a": expected})
 

@@ -3,8 +3,8 @@ from typing import Any
 import narwhals.stable.v1 as nw
 
 
-def test_expr_sample(constructor: Any) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy()
+def test_expr_sample(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy()
 
     result_expr = df.select(nw.col("a").sample(n=2)).collect().shape
     expected_expr = (2, 1)

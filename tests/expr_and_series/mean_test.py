@@ -11,8 +11,8 @@ data = {"a": [1, 3, 2], "b": [4, 4, 7], "z": [7.0, 8, 9]}
 
 
 @pytest.mark.parametrize("expr", [nw.col("a", "b", "z").mean(), nw.mean("a", "b", "z")])
-def test_expr_mean_expr(constructor: Any, expr: nw.Expr) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_expr_mean_expr(constructor_lazy: Any, expr: nw.Expr) -> None:
+    df = nw.from_native(constructor_lazy(data), eager_only=True)
     result = df.select(expr)
     expected = {"a": [2.0], "b": [5.0], "z": [8.0]}
     compare_dicts(result, expected)

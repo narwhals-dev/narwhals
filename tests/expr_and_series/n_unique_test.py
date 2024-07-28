@@ -9,8 +9,8 @@ data = {
 }
 
 
-def test_n_unique(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_n_unique(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data), eager_only=True)
     result = df.select(nw.all().n_unique())
     expected = {
         "a": [3],
