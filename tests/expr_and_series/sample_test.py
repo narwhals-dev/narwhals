@@ -15,10 +15,8 @@ def test_expr_sample(constructor: Any) -> None:
     assert result_series == expected_series
 
 
-def test_expr_sample_fraction(constructor_eager: Any) -> None:
-    df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3] * 10, "b": [4, 5, 6] * 10})
-    ).lazy()
+def test_expr_sample_fraction(constructor: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3] * 10, "b": [4, 5, 6] * 10})).lazy()
 
     result_expr = df.select(nw.col("a").sample(fraction=0.1)).collect().shape
     expected_expr = (3, 1)

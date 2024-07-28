@@ -27,8 +27,8 @@ def test_columns(constructor: Any) -> None:
     assert result == expected
 
 
-def test_expr_binary(constructor_eager: Any) -> None:
-    df_raw = constructor_eager(data)
+def test_expr_binary(constructor: Any) -> None:
+    df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
         b=nw.col("z") / (2 - nw.col("b")),
@@ -67,8 +67,8 @@ def test_expr_binary(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_expr_transform(constructor_eager: Any) -> None:
-    df = nw.from_native(constructor_eager(data))
+def test_expr_transform(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
     result = df.with_columns(a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5]))
     expected = {"a": [True, False, False], "b": [True, True, False], "z": [7, 8, 9]}
     compare_dicts(result, expected)

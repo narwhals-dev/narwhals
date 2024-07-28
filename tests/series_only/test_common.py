@@ -37,8 +37,8 @@ def test_is_in(constructor_eager: Any) -> None:
     assert result[2]
 
 
-def test_is_in_other(constructor_eager: Any) -> None:
-    df_raw = constructor_eager({"a": data})
+def test_is_in_other(constructor: Any) -> None:
+    df_raw = constructor({"a": data})
     with pytest.raises(
         NotImplementedError,
         match=(
