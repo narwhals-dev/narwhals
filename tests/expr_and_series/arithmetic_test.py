@@ -24,10 +24,9 @@ from tests.utils import compare_dicts
 def test_arithmetic(
     attr: str, rhs: Any, expected: list[Any], constructor_lazy: Any, request: Any
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_lazy) and attr == "__mod__":
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyarrow_table" in str(constructor_lazy) and attr == "__mod__":
+    if attr == "__mod__" and any(
+        x in str(constructor_lazy) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+    ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2, 3]}
@@ -51,11 +50,9 @@ def test_arithmetic(
 def test_right_arithmetic(
     attr: str, rhs: Any, expected: list[Any], constructor_lazy: Any, request: Any
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_lazy) and attr in {"__rmod__"}:
-        request.applymarker(pytest.mark.xfail)
-
-    # pyarrow case
-    if "table" in str(constructor_lazy) and attr in {"__rmod__"}:
+    if attr == "__rmod__" and any(
+        x in str(constructor_lazy) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+    ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
@@ -80,10 +77,9 @@ def test_right_arithmetic(
 def test_arithmetic_series(
     attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and attr == "__mod__":
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyarrow_table" in str(constructor) and attr == "__mod__":
+    if attr == "__mod__" and any(
+        x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+    ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
@@ -107,11 +103,9 @@ def test_arithmetic_series(
 def test_right_arithmetic_series(
     attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and attr in {"__rmod__"}:
-        request.applymarker(pytest.mark.xfail)
-
-    # pyarrow case
-    if "table" in str(constructor) and attr in {"__rmod__"}:
+    if attr == "__rmod__" and any(
+        x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+    ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
