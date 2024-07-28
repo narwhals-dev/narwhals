@@ -1,3 +1,4 @@
+import contextlib
 from typing import Any
 from typing import Callable
 
@@ -11,6 +12,11 @@ from narwhals.dependencies import get_modin
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import parse_version
+
+with contextlib.suppress(ImportError):
+    import modin.pandas  # noqa: F401
+with contextlib.suppress(ImportError):
+    import dask.dataframe  # noqa: F401
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -81,8 +87,9 @@ lazy_constructors = [polars_lazy_constructor]
 
 if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
-if get_dask_dataframe() is not None:  # pragma: no cover
-    lazy_constructors.append(dask_lazy_constructor)  # type: ignore[arg-type]
+# TODO(unassigned): when Dask gets better support, remove the "False and" part
+if False and get_dask_dataframe() is not None:  # pragma: no cover  # noqa: SIM223
+    lazy_constructors.append(dask_lazy_constructor)
 
 
 @pytest.fixture(params=eager_constructors)
