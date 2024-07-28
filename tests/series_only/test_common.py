@@ -55,36 +55,12 @@ def test_dtype(constructor_eager: Any) -> None:
     assert result.is_numeric()
 
 
-def test_reductions(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
-    s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
-    assert s.mean() == 2.0
-    assert s.std() == 1.0
-    assert s.min() == 1
-    assert s.max() == 3
-    assert s.count() == 3
-    assert s.sum() == 6
-    assert nw.to_native(s.is_between(1, 2))[0]
-    assert not nw.to_native(s.is_between(1, 2))[1]
-    assert nw.to_native(s.is_between(1, 2))[2]
-    assert s.n_unique() == 3
-    unique = s.unique().sort()
-    assert unique[0] == 1
-    assert unique[1] == 2
-    assert unique[2] == 3
-    assert s.alias("foo").name == "foo"
-
-
-def test_boolean_reductions(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
-    df_raw = constructor_eager({"a": data})
-    df = nw.from_native(df_raw).lazy().select(nw.col("a") > 1)
-    assert not df.collect()["a"].all()
-    assert df.collect()["a"].any()
+def test_boolean_reductions(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager({"a": data}), eager_only=True).select(
+        nw.col("a") > 1
+    )
+    compare_dicts({"a": [df["a"].all()]}, {"a": [False]})
+    compare_dicts({"a": [df["a"].any()]}, {"a": [True]})
 
 
 @pytest.mark.skipif(

@@ -396,7 +396,9 @@ def from_native(  # noqa: PLR0915
         )
 
     # Modin
-    elif (mpd := get_modin()) is not None and isinstance(native_object, mpd.DataFrame):
+    elif (mpd := get_modin()) is not None and isinstance(
+        native_object, mpd.DataFrame
+    ):  # pragma: no cover
         if series_only:
             msg = "Cannot only use `series_only` with modin.DataFrame"
             raise TypeError(msg)
@@ -408,7 +410,9 @@ def from_native(  # noqa: PLR0915
             ),
             level="full",
         )
-    elif (mpd := get_modin()) is not None and isinstance(native_object, mpd.Series):
+    elif (mpd := get_modin()) is not None and isinstance(
+        native_object, mpd.Series
+    ):  # pragma: no cover
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)

@@ -23,3 +23,22 @@ def test_std(constructor: Any) -> None:
         "z_ddof_0": [0.816497],
     }
     compare_dicts(result, expected)
+
+
+def test_std_series(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = {
+        "a_ddof_default": [df["a"].std()],
+        "a_ddof_1": [df["a"].std(ddof=1)],
+        "a_ddof_0": [df["a"].std(ddof=0)],
+        "b_ddof_2": [df["b"].std(ddof=2)],
+        "z_ddof_0": [df["z"].std(ddof=0)],
+    }
+    expected = {
+        "a_ddof_default": [1.0],
+        "a_ddof_1": [1.0],
+        "a_ddof_0": [0.816497],
+        "b_ddof_2": [1.632993],
+        "z_ddof_0": [0.816497],
+    }
+    compare_dicts(result, expected)
