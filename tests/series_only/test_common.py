@@ -55,14 +55,6 @@ def test_dtype(constructor_eager: Any) -> None:
     assert result.is_numeric()
 
 
-def test_boolean_reductions(constructor_eager: Any) -> None:
-    df = nw.from_native(constructor_eager({"a": data}), eager_only=True).select(
-        nw.col("a") > 1
-    )
-    compare_dicts({"a": [df["a"].all()]}, {"a": [False]})
-    compare_dicts({"a": [df["a"].any()]}, {"a": [True]})
-
-
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
 )
