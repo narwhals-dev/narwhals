@@ -93,10 +93,10 @@ if False and get_dask_dataframe() is not None:  # pragma: no cover  # noqa: SIM2
 
 
 @pytest.fixture(params=eager_constructors)
-def constructor(request: Any) -> Callable[[Any], IntoDataFrame]:
+def constructor_eager(request: Any) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor_lazy(request: Any) -> Callable[[Any], Any]:
+def constructor(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]

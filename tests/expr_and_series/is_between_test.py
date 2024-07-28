@@ -21,8 +21,8 @@ data = {
         ("none", [False, True, True, False]),
     ],
 )
-def test_is_between(constructor_lazy: Any, closed: str, expected: list[bool]) -> None:
-    df = nw.from_native(constructor_lazy(data))
+def test_is_between(constructor: Any, closed: str, expected: list[bool]) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_between(1, 5, closed=closed))
     expected_dict = {"a": expected}
     compare_dicts(result, expected_dict)
@@ -37,8 +37,10 @@ def test_is_between(constructor_lazy: Any, closed: str, expected: list[bool]) ->
         ("none", [False, True, True, False]),
     ],
 )
-def test_is_between_series(constructor: Any, closed: str, expected: list[bool]) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_is_between_series(
+    constructor_eager: Any, closed: str, expected: list[bool]
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.with_columns(a=df["a"].is_between(1, 5, closed=closed))
     expected_dict = {"a": expected}
     compare_dicts(result, expected_dict)

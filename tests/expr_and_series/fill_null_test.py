@@ -10,8 +10,8 @@ data = {
 }
 
 
-def test_fill_null(constructor_lazy: Any) -> None:
-    df = nw.from_native(constructor_lazy(data))
+def test_fill_null(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
 
     result = df.with_columns(nw.col("a", "b", "c").fill_null(99))
     expected = {
@@ -22,8 +22,8 @@ def test_fill_null(constructor_lazy: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_fill_null_series(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_fill_null_series(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     expected = {
         "a": [0.0, 99, 2, 3, 4],

@@ -24,16 +24,16 @@ from tests.utils import compare_dicts
     ],
 )
 def test_str_to_uppercase(
-    constructor: Any,
+    constructor_eager: Any,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
     request: Any,
 ) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result_frame = df.select(nw.col("a").str.to_uppercase())
 
     if any("ß" in s for value in data.values() for s in value) & (
-        constructor.__name__
+        constructor_eager.__name__
         not in (
             "pandas_constructor",
             "pandas_nullable_constructor",
@@ -67,11 +67,11 @@ def test_str_to_uppercase(
     ],
 )
 def test_str_to_lowercase(
-    constructor: Any,
+    constructor_eager: Any,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result_frame = df.select(nw.col("a").str.to_lowercase())
     compare_dicts(result_frame, expected)
 

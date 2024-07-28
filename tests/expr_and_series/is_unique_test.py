@@ -12,11 +12,11 @@ data = {
 }
 
 
-def test_is_unique_expr(constructor_lazy: Any, request: Any) -> None:
-    if "modin" in str(constructor_lazy):
+def test_is_unique_expr(constructor: Any, request: Any) -> None:
+    if "modin" in str(constructor):
         # TODO(unassigned): why is Modin failing here?
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_lazy(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.all().is_unique())
     expected = {
         "a": [False, False, True],
@@ -25,8 +25,8 @@ def test_is_unique_expr(constructor_lazy: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_is_unique_series(constructor: Any) -> None:
-    series = nw.from_native(constructor(data), eager_only=True)["a"]
+def test_is_unique_series(constructor_eager: Any) -> None:
+    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_unique()
     expected = np.array([False, False, True])
     assert (result.to_numpy() == expected).all()

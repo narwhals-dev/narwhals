@@ -4,10 +4,10 @@ import narwhals as nw
 from tests.utils import compare_dicts
 
 
-def test_unary(constructor_lazy: Any) -> None:
+def test_unary(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     result = (
-        nw.from_native(constructor_lazy(data))
+        nw.from_native(constructor(data))
         .with_columns(
             a_mean=nw.col("a").mean(),
             a_sum=nw.col("a").sum(),
@@ -21,9 +21,9 @@ def test_unary(constructor_lazy: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_unary_series(constructor: Any) -> None:
+def test_unary_series(constructor_eager: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {
         "a_mean": [df["a"].mean()],
         "a_sum": [df["a"].sum()],

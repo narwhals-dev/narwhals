@@ -6,7 +6,7 @@ import narwhals as nw
 from tests.utils import compare_dicts
 
 
-def test_drop_nulls(constructor_lazy: Any) -> None:
+def test_drop_nulls(constructor: Any) -> None:
     data = {
         "A": [1, 2, None, 4],
         "B": [5, 6, 7, 8],
@@ -14,7 +14,7 @@ def test_drop_nulls(constructor_lazy: Any) -> None:
         "D": [9, 10, 11, 12],
     }
 
-    df = nw.from_native(constructor_lazy(data))
+    df = nw.from_native(constructor(data))
 
     result_a = df.select(nw.col("A").drop_nulls())
     result_b = df.select(nw.col("B").drop_nulls())
@@ -31,7 +31,7 @@ def test_drop_nulls(constructor_lazy: Any) -> None:
     compare_dicts(result_d, expected_d)
 
 
-def test_drop_nulls_series(constructor: Any) -> None:
+def test_drop_nulls_series(constructor_eager: Any) -> None:
     data = {
         "A": [1, 2, None, 4],
         "B": [5, 6, 7, 8],
@@ -39,7 +39,7 @@ def test_drop_nulls_series(constructor: Any) -> None:
         "D": [9, 10, 11, 12],
     }
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_a = df.select(df["A"].drop_nulls())
     result_b = df.select(df["B"].drop_nulls())
