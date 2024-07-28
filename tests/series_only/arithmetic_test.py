@@ -53,7 +53,7 @@ def test_truediv_same_dims(constructor: Any, request: Any) -> None:
         # https://github.com/pola-rs/polars/issues/17760
         request.applymarker(pytest.mark.xfail)
     s_left = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True)["a"]
-    s_right = nw.from_native(constructor([2, 2, 1]), series_only=True)
+    s_right = nw.from_native(constructor({"a": [2, 2, 1]}), eager_only=True)["a"]
     result = (s_left / s_right).to_list()
     assert result == [0.5, 1.0, 3.0]
     result = (s_left.__rtruediv__(s_right)).to_list()
