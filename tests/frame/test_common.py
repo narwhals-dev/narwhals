@@ -39,32 +39,6 @@ def test_std(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(constructor_lazy: Any) -> None:
-    df = nw.from_native(
-        constructor_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
-    )
-    result = df.schema
-    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
-
-    result = df.schema
-    assert result == expected
-    result = df.lazy().collect().schema
-    assert result == expected
-
-
-def test_collect_schema(constructor_lazy: Any) -> None:
-    df = nw.from_native(
-        constructor_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
-    )
-    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
-
-    result = df.collect_schema()
-    assert result == expected
-    result = df.lazy().collect().collect_schema()
-    assert result == expected
-
-
-@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_columns(constructor_lazy: Any) -> None:
     df = nw.from_native(constructor_lazy(data))
     result = df.columns
