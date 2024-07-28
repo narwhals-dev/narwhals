@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+
 import pyarrow as pa
 
 import narwhals as nw
