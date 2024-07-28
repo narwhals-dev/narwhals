@@ -17,18 +17,18 @@ data_sorted = [7.0, 8, 9]
     [(data, False, False), (data_sorted, False, True), (data_sorted, True, False)],
 )
 def test_is_sorted(
-    constructor: Any,
+    constructor_eager: Any,
     input_data: str,
     descending: bool,  # noqa: FBT001
     expected: bool,  # noqa: FBT001
 ) -> None:
-    series = nw.from_native(constructor({"a": input_data}), eager_only=True)["a"]
+    series = nw.from_native(constructor_eager({"a": input_data}), eager_only=True)["a"]
     result = series.is_sorted(descending=descending)
     compare_dicts({"a": [result]}, {"a": [expected]})
 
 
-def test_is_sorted_invalid(constructor: Any) -> None:
-    series = nw.from_native(constructor({"a": data_sorted}), eager_only=True)["a"]
+def test_is_sorted_invalid(constructor_eager: Any) -> None:
+    series = nw.from_native(constructor_eager({"a": data_sorted}), eager_only=True)["a"]
 
     with pytest.raises(TypeError):
         series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]

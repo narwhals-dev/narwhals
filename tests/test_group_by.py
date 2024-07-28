@@ -53,11 +53,11 @@ def test_invalid_group_by() -> None:
         )
 
 
-def test_group_by_iter(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+def test_group_by_iter(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
     for key, sub_df in df.group_by("a"):
@@ -78,12 +78,15 @@ def test_group_by_iter(request: Any, constructor: Any) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
-def test_group_by_len(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+def test_group_by_len(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     result = (
-        nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
+        nw.from_native(constructor_eager(data))
+        .group_by("a")
+        .agg(nw.col("b").len())
+        .sort("a")
     )
     expected = {"a": [1, 3], "b": [2, 1]}
     compare_dicts(result, expected)
@@ -98,9 +101,9 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(constructor: Any) -> None:
+def test_group_by_simple_named(constructor_eager: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = (
         df.group_by("a")
         .agg(
@@ -117,9 +120,9 @@ def test_group_by_simple_named(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_simple_unnamed(constructor: Any) -> None:
+def test_group_by_simple_unnamed(constructor_eager: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = (
         df.group_by("a")
         .agg(
@@ -136,9 +139,9 @@ def test_group_by_simple_unnamed(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_multiple_keys(constructor: Any) -> None:
+def test_group_by_multiple_keys(constructor_eager: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = (
         df.group_by("a", "b")
         .agg(
@@ -156,14 +159,14 @@ def test_group_by_multiple_keys(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_key_with_nulls(constructor: Any, request: Any) -> None:
-    if "modin" in str(constructor):
+def test_key_with_nulls(constructor_eager: Any, request: Any) -> None:
+    if "modin" in str(constructor_eager):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
     context = (
         pytest.raises(NotImplementedError, match="null values")
         if (
-            "pandas_constructor" in str(constructor)
+            "pandas_constructor" in str(constructor_eager)
             and parse_version(pd.__version__) < parse_version("1.0.0")
         )
         else nullcontext()
@@ -171,7 +174,7 @@ def test_key_with_nulls(constructor: Any, request: Any) -> None:
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     with context:
         result = (
-            nw.from_native(constructor(data))
+            nw.from_native(constructor_eager(data))
             .group_by("b")
             .agg(nw.len(), nw.col("a").min())
             .sort("a")

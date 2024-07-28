@@ -22,15 +22,15 @@ from tests.utils import compare_dicts
     ],
 )
 def test_arithmetic(
-    attr: str, rhs: Any, expected: list[Any], constructor_lazy: Any, request: Any
+    attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor_lazy) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2, 3]}
-    df = nw.from_native(constructor_lazy(data))
+    df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), attr)(rhs))
     compare_dicts(result, {"a": expected})
 
@@ -48,15 +48,15 @@ def test_arithmetic(
     ],
 )
 def test_right_arithmetic(
-    attr: str, rhs: Any, expected: list[Any], constructor_lazy: Any, request: Any
+    attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
 ) -> None:
     if attr == "__rmod__" and any(
-        x in str(constructor_lazy) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor_lazy(data))
+    df = nw.from_native(constructor(data))
     result = df.select(a=getattr(nw.col("a"), attr)(rhs))
     compare_dicts(result, {"a": expected})
 
@@ -75,15 +75,15 @@ def test_right_arithmetic(
     ],
 )
 def test_arithmetic_series(
-    attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
+    attr: str, rhs: Any, expected: list[Any], constructor_eager: Any, request: Any
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(getattr(df["a"], attr)(rhs))
     compare_dicts(result, {"a": expected})
 
@@ -101,14 +101,14 @@ def test_arithmetic_series(
     ],
 )
 def test_right_arithmetic_series(
-    attr: str, rhs: Any, expected: list[Any], constructor: Any, request: Any
+    attr: str, rhs: Any, expected: list[Any], constructor_eager: Any, request: Any
 ) -> None:
     if attr == "__rmod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(a=getattr(df["a"], attr)(rhs))
     compare_dicts(result, {"a": expected})

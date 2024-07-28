@@ -9,8 +9,8 @@ data = {
 }
 
 
-def test_pipe(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_pipe(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data))
     columns = df.lazy().collect().columns
     result = df.pipe(lambda _df: _df.select([x for x in columns if len(x) == 2]))
     expected = {"ab": ["foo", "bars"]}

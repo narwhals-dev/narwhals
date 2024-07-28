@@ -16,22 +16,22 @@ def map_func(s: str | None) -> str:
     return str(s)[::-1].lower()
 
 
-def test_map(constructor_lazy: Any) -> None:
-    df = nw.from_native(constructor_lazy(data))
+def test_map(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.map(function=map_func))
     expected = {map_func(k): [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_map_after_alias(constructor_lazy: Any) -> None:
-    df = nw.from_native(constructor_lazy(data))
+def test_map_after_alias(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.map(function=map_func))
     expected = {map_func("foo"): data["foo"]}
     compare_dicts(result, expected)
 
 
-def test_map_raise_anonymous(constructor: Any) -> None:
-    df_raw = constructor(data)
+def test_map_raise_anonymous(constructor_eager: Any) -> None:
+    df_raw = constructor_eager(data)
     df = nw.from_native(df_raw)
 
     context = (

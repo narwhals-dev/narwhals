@@ -24,42 +24,44 @@ data = {
 }
 
 
-def test_selectors(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_selectors(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.select(by_dtype([nw.Int64, nw.Float64]) + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
     compare_dicts(result, expected)
 
 
-def test_numeric(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_numeric(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.select(numeric() + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
     compare_dicts(result, expected)
 
 
-def test_boolean(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_boolean(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.select(boolean())
     expected = {"d": [True, False, True]}
     compare_dicts(result, expected)
 
 
-def test_string(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_string(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.select(string())
     expected = {"b": ["a", "b", "c"]}
     compare_dicts(result, expected)
 
 
-def test_categorical(request: Any, constructor: Any) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and parse_version(
+def test_categorical(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table_constructor" in str(constructor_eager) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
-    df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
+    df = nw.from_native(constructor_eager(data)).with_columns(
+        nw.col("b").cast(nw.Categorical)
+    )
     result = df.select(categorical())
     compare_dicts(result, expected)
 
@@ -79,9 +81,9 @@ def test_categorical(request: Any, constructor: Any) -> None:
     ],
 )
 def test_set_ops(
-    constructor: Any, selector: nw.selectors.Selector, expected: list[str]
+    constructor_eager: Any, selector: nw.selectors.Selector, expected: list[str]
 ) -> None:
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.select(selector).columns
     assert sorted(result) == expected
 

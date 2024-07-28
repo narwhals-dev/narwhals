@@ -9,12 +9,12 @@ data = {
 }
 
 
-def test_drop_nulls(constructor: Any) -> None:
-    result = nw.from_native(constructor(data)).drop_nulls()
+def test_drop_nulls(constructor_eager: Any) -> None:
+    result = nw.from_native(constructor_eager(data)).drop_nulls()
     expected = {
         "a": [2.0, 4.0],
         "b": [3.0, 5.0],
     }
     compare_dicts(result, expected)
-    result = nw.from_native(constructor(data)).lazy().drop_nulls()
+    result = nw.from_native(constructor_eager(data)).lazy().drop_nulls()
     compare_dicts(result, expected)

@@ -32,9 +32,9 @@ data = {
     ],
 )
 def test_datetime_attributes(
-    constructor: Any, attribute: str, expected: list[int]
+    constructor_eager: Any, attribute: str, expected: list[int]
 ) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(getattr(nw.col("a").dt, attribute)())
     compare_dicts(result, {"a": expected})
 

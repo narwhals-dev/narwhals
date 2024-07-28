@@ -14,8 +14,8 @@ import narwhals.stable.v1 as nw
         (["a", "b"], ["z"]),
     ],
 )
-def test_drop(constructor: Any, drop: list[str], left: list[str]) -> None:
+def test_drop(constructor_eager: Any, drop: list[str], left: list[str]) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     assert df.drop(drop).columns == left
     assert df.drop(*drop).columns == left
