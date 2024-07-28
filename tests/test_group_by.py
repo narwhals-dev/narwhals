@@ -78,15 +78,9 @@ def test_group_by_iter(request: Any, constructor_eager: Any) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
-def test_group_by_len(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
+def test_group_by_len(constructor: Any) -> None:
     result = (
-        nw.from_native(constructor_eager(data))
-        .group_by("a")
-        .agg(nw.col("b").len())
-        .sort("a")
+        nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
     )
     expected = {"a": [1, 3], "b": [2, 1]}
     compare_dicts(result, expected)
