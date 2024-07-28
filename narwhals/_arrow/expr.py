@@ -100,8 +100,14 @@ class ArrowExpr:
     def __and__(self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__and__", other=other)
 
+    def __rand__(self, other: ArrowExpr | bool | Any) -> Self:
+        return reuse_series_implementation(self, "__rand__", other=other)
+
     def __or__(self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
+
+    def __ror__(self, other: ArrowExpr | bool | Any) -> Self:
+        return reuse_series_implementation(self, "__ror__", other=other)
 
     def __add__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other)

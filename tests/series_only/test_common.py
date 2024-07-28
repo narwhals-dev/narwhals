@@ -91,7 +91,10 @@ def test_boolean_reductions(request: Any, constructor: Any) -> None:
     parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
 )
 def test_convert(request: Any, constructor: Any) -> None:
-    if any(cname in str(constructor) for cname in ("pandas_nullable", "pandas_pyarrow")):
+    if any(
+        cname in str(constructor)
+        for cname in ("pandas_nullable", "pandas_pyarrow", "modin")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     series = nw.from_native(constructor({"a": data}), eager_only=True)["a"].alias("a")

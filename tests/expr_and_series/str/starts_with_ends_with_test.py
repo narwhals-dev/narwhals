@@ -11,8 +11,8 @@ from tests.utils import compare_dicts
 data = {"a": ["fdas", "edfas"]}
 
 
-def test_ends_with(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data)).lazy()
+def test_ends_with(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data)).lazy()
     result = df.select(nw.col("a").str.ends_with("das"))
     expected = {
         "a": [True, False],
@@ -26,8 +26,8 @@ def test_ends_with(constructor_with_lazy: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_starts_with(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data)).lazy()
+def test_starts_with(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data)).lazy()
     result = df.select(nw.col("a").str.starts_with("fda"))
     expected = {
         "a": [True, False],

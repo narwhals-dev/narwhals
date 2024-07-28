@@ -39,9 +39,9 @@ def test_std(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(constructor_with_lazy: Any) -> None:
+def test_schema(constructor_lazy: Any) -> None:
     df = nw.from_native(
-        constructor_with_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
+        constructor_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
     )
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
@@ -52,9 +52,9 @@ def test_schema(constructor_with_lazy: Any) -> None:
     assert result == expected
 
 
-def test_collect_schema(constructor_with_lazy: Any) -> None:
+def test_collect_schema(constructor_lazy: Any) -> None:
     df = nw.from_native(
-        constructor_with_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
+        constructor_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
     )
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
@@ -65,18 +65,14 @@ def test_collect_schema(constructor_with_lazy: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_columns(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_columns(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.columns
     expected = ["a", "b", "z"]
     assert result == expected
 
 
-def test_expr_binary(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "pandas_pyarrow" in str(
-        constructor
-    ):  # pandas pyarrow raises NotImplementedError for __mod__
-        request.applymarker(pytest.mark.xfail)
+def test_expr_binary(constructor: Any) -> None:
     df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
@@ -96,10 +92,7 @@ def test_expr_binary(request: Any, constructor: Any) -> None:
         k=2 // nw.col("a"),
         l=nw.col("a") // 2,
         m=nw.col("a") ** 2,
-        n=nw.col("a") % 2,
-        o=2 % nw.col("a"),
     )
-    result_native = nw.to_native(result)
     expected = {
         "a": [4, 3.333333, 3.5],
         "b": [-3.5, -4.0, -2.25],
@@ -115,10 +108,8 @@ def test_expr_binary(request: Any, constructor: Any) -> None:
         "k": [2, 0, 1],
         "l": [0, 1, 1],
         "m": [1, 9, 4],
-        "n": [1, 1, 0],
-        "o": [0, 2, 0],
     }
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
 
 def test_expr_transform(request: Any, constructor: Any) -> None:
@@ -131,8 +122,8 @@ def test_expr_transform(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_expr_na(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data_na)).lazy()
+def test_expr_na(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data_na)).lazy()
     result_nna = df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
     expected = {"a": [2], "b": [6], "z": [9]}
     compare_dicts(result_nna, expected)

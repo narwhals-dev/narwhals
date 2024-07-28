@@ -106,11 +106,23 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.and_kleene(ser, other))
 
+    def __rand__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.and_kleene(other, ser))
+
     def __or__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.or_kleene(ser, other))
+
+    def __ror__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.or_kleene(other, ser))
 
     def __add__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()

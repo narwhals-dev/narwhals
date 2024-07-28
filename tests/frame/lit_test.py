@@ -17,11 +17,9 @@ if TYPE_CHECKING:
     ("dtype", "expected_lit"),
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
-def test_lit(
-    constructor_with_lazy: Any, dtype: DType | None, expected_lit: list[Any]
-) -> None:
+def test_lit(constructor_lazy: Any, dtype: DType | None, expected_lit: list[Any]) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df_raw = constructor_with_lazy(data)
+    df_raw = constructor_lazy(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
     expected = {
@@ -33,9 +31,9 @@ def test_lit(
     compare_dicts(result, expected)
 
 
-def test_lit_error(constructor_with_lazy: Any) -> None:
+def test_lit_error(constructor_lazy: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df_raw = constructor_with_lazy(data)
+    df_raw = constructor_lazy(data)
     df = nw.from_native(df_raw).lazy()
     with pytest.raises(
         ValueError, match="numpy arrays are not supported as literal values"

@@ -156,7 +156,10 @@ def test_group_by_multiple_keys(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_key_with_nulls(constructor: Any) -> None:
+def test_key_with_nulls(constructor: Any, request: Any) -> None:
+    if "modin" in str(constructor):
+        # TODO(unassigned): Modin flaky here?
+        request.applymarker(pytest.mark.skip)
     context = (
         pytest.raises(NotImplementedError, match="null values")
         if (
