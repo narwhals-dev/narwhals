@@ -16,15 +16,15 @@ def map_func(s: str | None) -> str:
     return str(s)[::-1].lower()
 
 
-def test_map(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_map(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.map(function=map_func))
     expected = {map_func(k): [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_map_after_alias(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_map_after_alias(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.map(function=map_func))
     expected = {map_func("foo"): data["foo"]}
     compare_dicts(result, expected)

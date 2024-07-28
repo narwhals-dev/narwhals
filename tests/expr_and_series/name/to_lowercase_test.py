@@ -12,15 +12,15 @@ from tests.utils import compare_dicts
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 
 
-def test_to_lowercase(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_to_lowercase(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.to_lowercase())
     expected = {k.lower(): [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_to_lowercase_after_alias(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_to_lowercase_after_alias(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select((nw.col("BAR")).alias("ALIAS_FOR_BAR").name.to_lowercase())
     expected = {"bar": data["BAR"]}
     compare_dicts(result, expected)

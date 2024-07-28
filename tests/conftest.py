@@ -6,8 +6,10 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
+from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from narwhals.typing import IntoDataFrame
+from narwhals.typing import IntoFrame
 from narwhals.utils import parse_version
 
 
@@ -56,6 +58,11 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
+def dask_lazy_constructor(obj: Any) -> IntoFrame:
+    dd = get_dask_dataframe()
+    return dd.from_pandas(pd.DataFrame(obj))  # type: ignore[no-any-return]
+
+
 def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
@@ -70,9 +77,12 @@ else:  # pragma: no cover
     eager_constructors = [pandas_constructor]
 
 eager_constructors.extend([polars_eager_constructor, pyarrow_table_constructor])
+lazy_constructors = [polars_lazy_constructor]
 
 if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
+if get_dask_dataframe() is not None:  # pragma: no cover
+    lazy_constructors.append(dask_lazy_constructor)  # type: ignore[arg-type]
 
 
 @pytest.fixture(params=eager_constructors)
@@ -80,6 +90,6 @@ def constructor(request: Any) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture(params=[*eager_constructors, polars_lazy_constructor])
-def constructor_with_lazy(request: Any) -> Callable[[Any], Any]:
+@pytest.fixture(params=[*eager_constructors, *lazy_constructors])
+def constructor_lazy(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]
