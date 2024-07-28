@@ -64,7 +64,7 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
-def dask_lazy_constructor(obj: Any) -> IntoFrame:
+def dask_lazy_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
     dd = get_dask_dataframe()
     return dd.from_pandas(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
