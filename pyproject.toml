@@ -90,6 +90,7 @@ filterwarnings = [
   'ignore:.*defaulting to pandas implementation',
   'ignore:.*implementation has mismatches with pandas',
   'ignore:.*Do not use the `random` module inside strategies',
+  'ignore:.*You are using pyarrow version 12.0.0',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
