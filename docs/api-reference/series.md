@@ -17,6 +17,7 @@
         - dtype
         - fill_null
         - filter
+        - gather_every
         - head
         - is_between
         - is_duplicated

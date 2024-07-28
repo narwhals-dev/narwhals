@@ -21,20 +21,20 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     ],
 )
 def test_unique(
-    constructor_with_lazy: Any,
+    constructor_lazy: Any,
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
 ) -> None:
-    df_raw = constructor_with_lazy(data)
+    df_raw = constructor_lazy(data)
     df = nw.from_native(df_raw)
 
     result = df.unique(subset, keep=keep, maintain_order=True)  # type: ignore[arg-type]
     compare_dicts(result, expected)
 
 
-def test_unique_none(constructor_with_lazy: Any) -> None:
-    df_raw = constructor_with_lazy(data)
+def test_unique_none(constructor_lazy: Any) -> None:
+    df_raw = constructor_lazy(data)
     df = nw.from_native(df_raw)
 
     result = df.unique(maintain_order=True)

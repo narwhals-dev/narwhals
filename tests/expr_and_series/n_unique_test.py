@@ -9,13 +9,15 @@ data = {
 }
 
 
-def test_n_unique(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_n_unique(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select(nw.all().n_unique())
-    expected = {
-        "a": [3],
-        "b": [4],
-    }
+    expected = {"a": [3], "b": [4]}
     compare_dicts(result, expected)
+
+
+def test_n_unique_series(constructor: Any) -> None:
+    df = nw.from_native(constructor(data), eager_only=True)
+    expected = {"a": [3], "b": [4]}
     result_series = {"a": [df["a"].n_unique()], "b": [df["b"].n_unique()]}
     compare_dicts(result_series, expected)

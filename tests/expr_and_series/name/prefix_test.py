@@ -13,15 +13,15 @@ data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 prefix = "with_prefix_"
 
 
-def test_prefix(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_prefix(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.prefix(prefix))
     expected = {prefix + str(k): [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_suffix_after_alias(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_suffix_after_alias(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.prefix(prefix))
     expected = {prefix + "foo": data["foo"]}
     compare_dicts(result, expected)

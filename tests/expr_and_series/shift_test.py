@@ -21,6 +21,16 @@ def test_shift(constructor: Any) -> None:
         "c": [5, 4, 3],
     }
     compare_dicts(result, expected)
+
+
+def test_shift_series(constructor: Any) -> None:
+    df = nw.from_native(constructor(data), eager_only=True)
+    expected = {
+        "i": [2, 3, 4],
+        "a": [0, 1, 2],
+        "b": [1, 2, 3],
+        "c": [5, 4, 3],
+    }
     result = df.select(
         df["i"],
         df["a"].shift(2),

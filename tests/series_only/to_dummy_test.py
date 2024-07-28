@@ -9,8 +9,8 @@ data = [1, 2, 3]
 
 
 @pytest.mark.parametrize("sep", ["_", "-"])
-def test_to_dummies(constructor_series: Any, sep: str) -> None:
-    s = nw.from_native(constructor_series(data), series_only=True).alias("a")
+def test_to_dummies(constructor: Any, sep: str) -> None:
+    s = nw.from_native(constructor({"a": data}), eager_only=True)["a"].alias("a")
     result = s.to_dummies(separator=sep)
     expected = {f"a{sep}1": [1, 0, 0], f"a{sep}2": [0, 1, 0], f"a{sep}3": [0, 0, 1]}
 
@@ -18,8 +18,8 @@ def test_to_dummies(constructor_series: Any, sep: str) -> None:
 
 
 @pytest.mark.parametrize("sep", ["_", "-"])
-def test_to_dummies_drop_first(constructor_series: Any, sep: str) -> None:
-    s = nw.from_native(constructor_series(data), series_only=True).alias("a")
+def test_to_dummies_drop_first(constructor: Any, sep: str) -> None:
+    s = nw.from_native(constructor({"a": data}), eager_only=True)["a"].alias("a")
     result = s.to_dummies(drop_first=True, separator=sep)
     expected = {f"a{sep}2": [0, 1, 0], f"a{sep}3": [0, 0, 1]}
 

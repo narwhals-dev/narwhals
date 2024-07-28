@@ -39,8 +39,8 @@ def test_sort_expr(
     ],
 )
 def test_sort_series(
-    constructor_series: Any, descending: Any, nulls_last: Any, expected: Any
+    constructor: Any, descending: Any, nulls_last: Any, expected: Any
 ) -> None:
-    series = nw.from_native(constructor_series(data["b"]), series_only=True)
+    series = nw.from_native(constructor(data), eager_only=True)["b"]
     result = series.sort(descending=descending, nulls_last=nulls_last)
-    assert result == nw.from_native(constructor_series(expected), series_only=True)
+    assert result == nw.from_native(constructor({"a": expected}), eager_only=True)["a"]

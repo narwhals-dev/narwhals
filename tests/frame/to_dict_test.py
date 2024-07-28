@@ -1,8 +1,13 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
+)
 def test_to_dict(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8, 9]}
     df = nw.from_native(constructor(data), eager_only=True)

@@ -7,4 +7,4 @@ pytest
 pytest-cov
 hypothesis
 scikit-learn
-
+dask[dataframe]; python_version >= '3.9'

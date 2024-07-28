@@ -9,16 +9,16 @@ data = {
 }
 
 
-def test_expr_is_in(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_expr_is_in(constructor_lazy: Any) -> None:
+    df = nw.from_native(constructor_lazy(data))
     result = df.select(nw.col("a").is_in([4, 5]))
     expected = {"a": [False, True, False, True]}
 
     compare_dicts(result, expected)
 
 
-def test_ser_is_in(constructor_series: Any) -> None:
-    ser = nw.from_native(constructor_series(series), series_only=True)
+def test_ser_is_in(constructor: Any) -> None:
+    ser = nw.from_native(constructor({"a": series}), eager_only=True)["a"]
     result = ser.is_in([4, 5]).to_list()
     assert not result[0]
     assert result[1]

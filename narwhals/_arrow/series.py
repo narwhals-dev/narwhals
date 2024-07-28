@@ -106,11 +106,23 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.and_kleene(ser, other))
 
+    def __rand__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.and_kleene(other, ser))
+
     def __or__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.or_kleene(ser, other))
+
+    def __ror__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.or_kleene(other, ser))
 
     def __add__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
@@ -553,19 +565,20 @@ class ArrowSeries:
     ) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
+        np = get_numpy()
         pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+
         series = self._native_series
-        unique_values = self.unique().sort()._native_series
-        columns = [pc.cast(pc.equal(series, v), pa.uint8()) for v in unique_values][
-            int(drop_first) :
-        ]
-        names = [f"{self._name}{separator}{v}" for v in unique_values][int(drop_first) :]
+        da = series.dictionary_encode().combine_chunks()
+
+        columns = np.zeros((len(da.dictionary), len(da)), np.uint8)
+        columns[da.indices, np.arange(len(da))] = 1
+        names = [f"{self._name}{separator}{v}" for v in da.dictionary]
 
         return ArrowDataFrame(
             pa.Table.from_arrays(columns, names=names),
             backend_version=self._backend_version,
-        )
+        ).select(*sorted(names)[int(drop_first) :])
 
     def quantile(
         self: Self,
@@ -576,6 +589,9 @@ class ArrowSeries:
         return pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[
             0
         ]
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_series(self._native_series[offset::n])
 
     @property
     def shape(self) -> tuple[int]:

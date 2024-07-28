@@ -1,3 +1,4 @@
+import contextlib
 from typing import Any
 from typing import Callable
 
@@ -6,9 +7,16 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
+from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from narwhals.typing import IntoDataFrame
+from narwhals.typing import IntoFrame
 from narwhals.utils import parse_version
+
+with contextlib.suppress(ImportError):
+    import modin.pandas  # noqa: F401
+with contextlib.suppress(ImportError):
+    import dask.dataframe  # noqa: F401
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -45,7 +53,7 @@ def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
 
 def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     mpd = get_modin()
-    return mpd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
+    return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
 def polars_eager_constructor(obj: Any) -> IntoDataFrame:
@@ -54,6 +62,11 @@ def polars_eager_constructor(obj: Any) -> IntoDataFrame:
 
 def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
+
+
+def dask_lazy_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
+    dd = get_dask_dataframe()
+    return dd.from_pandas(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
 
 def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
@@ -70,9 +83,13 @@ else:  # pragma: no cover
     eager_constructors = [pandas_constructor]
 
 eager_constructors.extend([polars_eager_constructor, pyarrow_table_constructor])
+lazy_constructors = [polars_lazy_constructor]
 
 if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
+# TODO(unassigned): when Dask gets better support, remove the "False and" part
+if False and get_dask_dataframe() is not None:  # pragma: no cover  # noqa: SIM223
+    lazy_constructors.append(dask_lazy_constructor)
 
 
 @pytest.fixture(params=eager_constructors)
@@ -80,51 +97,6 @@ def constructor(request: Any) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture(params=[*eager_constructors, polars_lazy_constructor])
-def constructor_with_lazy(request: Any) -> Callable[[Any], Any]:
-    return request.param  # type: ignore[no-any-return]
-
-
-def pandas_series_constructor(obj: Any) -> Any:
-    return pd.Series(obj)
-
-
-def pandas_series_nullable_constructor(obj: Any) -> Any:
-    return pd.Series(obj).convert_dtypes()
-
-
-def pandas_series_pyarrow_constructor(obj: Any) -> Any:
-    return pd.Series(obj).convert_dtypes(dtype_backend="pyarrow")
-
-
-def modin_series_constructor(obj: Any) -> Any:  # pragma: no cover
-    mpd = get_modin()
-    return mpd.Series(obj).convert_dtypes(dtype_backend="pyarrow")
-
-
-def polars_series_constructor(obj: Any) -> Any:
-    return pl.Series(obj)
-
-
-def pyarrow_series_constructor(obj: Any) -> Any:
-    return pa.chunked_array([obj])
-
-
-if parse_version(pd.__version__) >= parse_version("2.0.0"):
-    params_series = [
-        pandas_series_constructor,
-        pandas_series_nullable_constructor,
-        pandas_series_pyarrow_constructor,
-    ]
-else:  # pragma: no cover
-    params_series = [pandas_series_constructor]
-if get_modin() is not None:  # pragma: no cover
-    params_series.append(modin_series_constructor)
-
-
-params_series.extend([polars_series_constructor, pyarrow_series_constructor])
-
-
-@pytest.fixture(params=params_series)
-def constructor_series(request: Any) -> Callable[[Any], Any]:
+@pytest.fixture(params=[*eager_constructors, *lazy_constructors])
+def constructor_lazy(request: Any) -> Callable[[Any], Any]:
     return request.param  # type: ignore[no-any-return]

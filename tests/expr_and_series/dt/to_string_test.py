@@ -27,13 +27,13 @@ def test_dt_to_string(constructor: Any, fmt: str) -> None:
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
     result = input_series.dt.to_string(fmt).to_list()
-    if "pandas_pyarrow" in str(constructor) or "pyarrow_table" in str(constructor):
+    if any(x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = [x[: x.find(".")] if "." in x else x for x in result]
     assert result == expected_col
     result = input_frame.select(nw.col("a").dt.to_string(fmt))["a"].to_list()
-    if "pandas_pyarrow" in str(constructor) or "pyarrow_table" in str(constructor):
+    if any(x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = [x[: x.find(".")] if "." in x else x for x in result]
