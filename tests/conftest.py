@@ -53,7 +53,7 @@ def pandas_pyarrow_constructor(obj: Any) -> IntoDataFrame:
 
 def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     mpd = get_modin()
-    return mpd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
+    return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
 def polars_eager_constructor(obj: Any) -> IntoDataFrame:
