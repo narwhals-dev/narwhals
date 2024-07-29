@@ -20,21 +20,27 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
+    from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.expr import DaskExpr
+    from narwhals._dask.namespace import DaskNamespace
+    from narwhals._dask.typing import IntoDaskExpr
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
 
-    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr]
-    IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr]
+    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace, DaskNamespace]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr]
+    IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
     CompliantSeries = Union[PandasLikeSeries, ArrowSeries]
-    ListOfCompliantSeries = Union[list[PandasLikeSeries], list[ArrowSeries]]
-    ListOfCompliantExpr = Union[list[PandasLikeExpr], list[ArrowExpr]]
-    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame]
+    ListOfCompliantSeries = Union[
+        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr]
+    ]
+    ListOfCompliantExpr = Union[list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr]]
+    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
 
     T = TypeVar("T")
 
@@ -61,6 +67,14 @@ def evaluate_into_exprs(
     *exprs: IntoArrowExpr,
     **named_exprs: IntoArrowExpr,
 ) -> list[ArrowSeries]: ...
+
+
+@overload
+def evaluate_into_exprs(
+    df: DaskLazyFrame,
+    *exprs: IntoDaskExpr,
+    **named_exprs: IntoDaskExpr,
+) -> list[DaskExpr]: ...
 
 
 def evaluate_into_exprs(
