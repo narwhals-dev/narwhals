@@ -55,6 +55,9 @@ class DaskLazyFrame:
             backend_version=parse_version(get_pandas().__version__),
         )
 
+    def lazy(self) -> Self:
+        return self
+
     def select(
         self: Self,
         *exprs: IntoDaskExpr,

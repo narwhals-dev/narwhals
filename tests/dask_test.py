@@ -286,6 +286,9 @@ def test_empty_select() -> None:
     import dask.dataframe as dd
 
     result = (
-        nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]}))).select().collect()  # type: ignore[union-attr]
+        nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
+        .lazy()
+        .select()
+        .collect()
     )
     assert result.shape == (0, 0)
