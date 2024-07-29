@@ -43,13 +43,13 @@ df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
 @pytest.mark.parametrize(
     ("named", "expected"),
     [
-        (False, [(1, 4, 7.0), (3, 4, 8.0), (2, 6, 9.0)]),
+        (False, [(1, 4, 7.0, 5), (3, 4, 8.0, 6), (2, 6, 9.0, 7)]),
         (
             True,
             [
-                {"a": 1, "b": 4, "z": 7.0},
-                {"a": 3, "b": 4, "z": 8.0},
-                {"a": 2, "b": 6, "z": 9.0},
+                {"a": 1, "_b": 4, "z": 7.0, "1": 5},
+                {"a": 3, "_b": 4, "z": 8.0, "1": 6},
+                {"a": 2, "_b": 6, "z": 9.0, "1": 7},
             ],
         ),
     ],
@@ -59,7 +59,7 @@ def test_iter_rows(
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"a": [1, 3, 2], "_b": [4, 4, 6], "z": [7.0, 8, 9], "1": [5, 6, 7]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = list(df.iter_rows(named=named))
     assert result == expected

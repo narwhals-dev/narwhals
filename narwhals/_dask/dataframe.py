@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals._dask.utils import parse_exprs_and_named_exprs
+from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._dask.typing import IntoDaskExpr
 
 
 class DaskLazyFrame:
@@ -68,3 +70,26 @@ class DaskLazyFrame:
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
         return self._from_native_dataframe(self._native_dataframe.loc[mask])
+
+    def lazy(self) -> Self:
+        return self
+
+    def select(
+        self: Self,
+        *exprs: IntoDaskExpr,
+        **named_exprs: IntoDaskExpr,
+    ) -> Self:
+        dd = get_dask_dataframe()
+
+        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
+            # This is a simple slice => fastpath!
+            return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
+
+        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        if not new_series:
+            # return empty dataframe, like Polars does
+            pd = get_pandas()
+            return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
+        df = dd.concat(new_series, axis=1)
+        return self._from_native_dataframe(df)
+

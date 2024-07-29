@@ -196,9 +196,11 @@ class PandasLikeDataFrame:
         if not named:
             yield from self._native_dataframe.itertuples(index=False, name=None)
         else:
+            col_names = self._native_dataframe.columns
             yield from (
-                row._asdict() for row in self._native_dataframe.itertuples(index=False)
-            )
+                dict(zip(col_names, row))
+                for row in self._native_dataframe.itertuples(index=False)
+            )  # type: ignore[misc]
 
     @property
     def schema(self) -> dict[str, DType]:
