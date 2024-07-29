@@ -267,10 +267,8 @@ class PandasLikeNamespace:
         if predicates:
             condition = plx.all_horizontal(*flatten(predicates))
         elif constraints:
-            import narwhals as nw
-
             condition = plx.all_horizontal(
-                *flatten((nw.col(key) == value) for key, value in constraints.items())
+                *flatten([plx.col(key) == value for key, value in constraints.items()])
             )
         else:
             msg = "Must provide either predicates or constraints"
