@@ -11,8 +11,8 @@ data = {
 }
 
 
-def test_shift(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_shift(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {
         "i": [2, 3, 4],
@@ -23,8 +23,8 @@ def test_shift(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_shift_series(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_shift_series(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = {
         "i": [2, 3, 4],
         "a": [0, 1, 2],

@@ -8,7 +8,7 @@ import narwhals as nw
 from tests.utils import compare_dicts
 
 
-def test_shift(constructor: Any) -> None:
+def test_shift(constructor_eager: Any) -> None:
     data = {
         "A": [1, 2, None, 4],
         "B": [5, 6, 7, 8],
@@ -16,7 +16,7 @@ def test_shift(constructor: Any) -> None:
         "D": [9, 10, 11, 12],
     }
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_a = df.select(nw.col("A").shift(1))
     result_b = df.select(nw.col("B").shift(-1))
