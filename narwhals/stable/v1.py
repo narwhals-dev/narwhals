@@ -1407,7 +1407,7 @@ class When(NwWhen):
         )
 
 
-class Then(NwThen):
+class Then(NwThen, Expr):
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
 
@@ -1428,7 +1428,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import narwhals as nw
+        >>> import narwhals.stable.v1 as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
 
