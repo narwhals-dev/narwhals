@@ -34,6 +34,9 @@ from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr as NwExpr
+from narwhals.expr import Then as NwThen
+from narwhals.expr import When as NwWhen
+from narwhals.expr import when as nw_when
 from narwhals.functions import concat
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
@@ -1391,6 +1394,76 @@ def get_level(
     return nw.get_level(obj)
 
 
+class When(NwWhen):
+    @classmethod
+    def from_when(cls, when: NwWhen) -> Self:
+        return cls(*when._predicates, **when._constraints)
+
+    def then(self, value: Any) -> Then:
+        return Then(
+            lambda plx: plx.when(
+                *self._extract_predicates(plx), **self._constraints
+            ).then(value)
+        )
+
+
+class Then(NwThen):
+    def otherwise(self, value: Any) -> Expr:
+        return _stableify(super().otherwise(value))
+
+
+def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:
+    """
+    Start a `when-then-otherwise` expression.
+    Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
+    Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
+    If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
+
+    Parameters:
+        predicates
+            Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+        constraints
+            Apply conditions as `col_name = value` keyword arguments that are treated as equality matches, such as `x = 123`. As with the predicates parameter, multiple conditions are implicitly combined using `&`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     from narwhals.expr import when
+        ...
+        ...     return df_any.with_columns(
+        ...         when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
+        ...     )
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a   b  a_when
+        0  1   5       5
+        1  2  10       5
+        2  3  15       6
+        >>> func(df_pl)
+        shape: (3, 3)
+        ┌─────┬─────┬────────┐
+        │ a   ┆ b   ┆ a_when │
+        │ --- ┆ --- ┆ ---    │
+        │ i64 ┆ i64 ┆ i32    │
+        ╞═════╪═════╪════════╡
+        │ 1   ┆ 5   ┆ 5      │
+        │ 2   ┆ 10  ┆ 5      │
+        │ 3   ┆ 15  ┆ 6      │
+        └─────┴─────┴────────┘
+    """
+    return When.from_when(nw_when(*predicates, **constraints))
+
+
 __all__ = [
     "selectors",
     "concat",
@@ -1412,6 +1485,7 @@ __all__ = [
     "mean",
     "sum",
     "sum_horizontal",
+    "when",
     "DataFrame",
     "LazyFrame",
     "Series",

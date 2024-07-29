@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.expr import when
+from narwhals.stable.v1 import when
 from tests.utils import compare_dicts
 
 data = {
