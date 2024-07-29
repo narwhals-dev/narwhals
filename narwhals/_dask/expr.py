@@ -36,7 +36,7 @@ class DaskExpr:
         self._output_names = output_names
         self._backend_version = backend_version
 
-    def __narwhals_namespace__(self) -> DaskNamespace:
+    def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version)

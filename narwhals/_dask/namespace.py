@@ -57,7 +57,7 @@ class DaskNamespace:
         )
         raise NotImplementedError(msg)
 
-    def _create_expr_from_callable(
+    def _create_expr_from_callable(  # pragma: no cover
         self,
         func: Callable[[DaskLazyFrame], list[DaskExpr]],
         *,

@@ -56,7 +56,7 @@ class DaskLazyFrame:
         )
 
     def select(
-        self,
+        self: Self,
         *exprs: IntoDaskExpr,
         **named_exprs: IntoDaskExpr,
     ) -> Self:
@@ -69,6 +69,7 @@ class DaskLazyFrame:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
-            return self._from_native_dataframe(self._native_dataframe.__class__())
+            pd = get_pandas()
+            return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
         df = dd.concat(new_series, axis=1)
         return self._from_native_dataframe(df)

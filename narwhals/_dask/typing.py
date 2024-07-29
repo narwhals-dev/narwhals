@@ -13,4 +13,4 @@ if TYPE_CHECKING:
 
     from narwhals._dask.expr import DaskExpr
 
-    IntoDaskExpr: TypeAlias = Union[DaskExpr, str, int, float]
+    IntoDaskExpr: TypeAlias = Union[DaskExpr, str]
