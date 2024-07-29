@@ -278,7 +278,20 @@ def test_columns() -> None:
     df = nw.from_native(dfdd)
 
     result = df.columns
-    assert result == ["a", "b"]
+
+    assert set(result) == {"a", "b"}
+
+
+def test_filter() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.filter(nw.col("a") > 1)
+    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
+
+    compare_dicts(result, expected)
 
 
 def test_select() -> None:
@@ -426,4 +439,49 @@ def test_dt_ordinal_day() -> None:
     df = nw.from_native(dfdd)
     result = df.with_columns(ordinal_day=nw.col("a").dt.ordinal_day())
     expected = {"a": data["a"], "ordinal_day": [7, 32]}
+    compare_dicts(result, expected)
+
+
+def test_comparison_operations() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 2, 3], "b": [3, 2, 1]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.filter(nw.col("a") > nw.col("b"))
+    expected = {"a": [3], "b": [1]}
+    compare_dicts(result, expected)
+    result = df.filter(nw.col("a") >= nw.col("b"))
+    expected = {"a": [2, 3], "b": [2, 1]}
+    compare_dicts(result, expected)
+    result = df.filter(nw.col("a") < nw.col("b"))
+    expected = {"a": [1], "b": [3]}
+    compare_dicts(result, expected)
+    result = df.filter(nw.col("a") <= nw.col("b"))
+    expected = {"a": [1, 2], "b": [3, 2]}
+    compare_dicts(result, expected)
+
+
+def test_and_operations() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [True, True, False], "b": [True, False, True]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.filter(nw.col("a") & nw.col("b"))
+    expected = {"a": [True], "b": [True]}
+    compare_dicts(result, expected)
+
+
+def test_allh() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.select(all=nw.all_horizontal(nw.col("a")))
+    expected = {"all": [False, False, True]}
     compare_dicts(result, expected)

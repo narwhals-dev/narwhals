@@ -93,7 +93,11 @@ def evaluate_into_exprs(
         if len(evaluated_expr) > 1:
             msg = "Named expressions must return a single column"  # pragma: no cover
             raise AssertionError(msg)
-        series.append(evaluated_expr[0].alias(name))  # type: ignore[arg-type]
+        try:
+            to_append = evaluated_expr[0].alias(name)
+        except AttributeError:
+            to_append = evaluated_expr[0].rename(name)  # type: ignore[union-attr]
+        series.append(to_append)  # type: ignore[arg-type]
     return series
 
 
@@ -192,6 +196,7 @@ def reuse_series_implementation(
     def func(df: CompliantDataFrame) -> list[CompliantSeries]:
         out: list[CompliantSeries] = []
         for column in expr._call(df):  # type: ignore[arg-type]
+            # ok, so "other" is a list for some reason
             _out = getattr(column, attr)(
                 *[maybe_evaluate_expr(df, arg) for arg in args],
                 **{

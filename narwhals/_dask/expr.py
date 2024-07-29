@@ -36,12 +36,12 @@ class DaskExpr:
         self._output_names = output_names
         self._backend_version = backend_version
 
+    def __narwhals_expr__(self) -> None: ...
+
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version)
-
-    def __narwhals_expr__(self) -> None: ...
 
     @classmethod
     def from_column_names(
@@ -157,6 +157,41 @@ class DaskExpr:
         return self._from_call(
             lambda _input, other: _input.__mul__(other),
             "__mul__",
+            other,
+        )
+
+    def __ge__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__ge__(other),
+            "__ge__",
+            other,
+        )
+
+    def __gt__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__gt__(other),
+            "__gt__",
+            other,
+        )
+
+    def __le__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__le__(other),
+            "__le__",
+            other,
+        )
+
+    def __lt__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__lt__(other),
+            "__lt__",
+            other,
+        )
+
+    def __and__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__and__(other),
+            "__and__",
             other,
         )
 
