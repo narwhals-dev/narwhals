@@ -1,7 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import NoReturn
+
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
+
+if TYPE_CHECKING:
+    from typing import Callable
+
+    from narwhals._dask.dataframe import DaskLazyFrame
 
 
 class DaskNamespace:
@@ -31,5 +40,37 @@ class DaskNamespace:
     def col(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names,
+            backend_version=self._backend_version,
+        )
+
+    def _create_expr_from_series(self, _: Any) -> NoReturn:
+        msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
+        raise NotImplementedError(msg)
+
+    def _create_compliant_series(self, _: Any) -> NoReturn:
+        msg = "`_create_compliant_series` for DaskNamespace exists only for compatibility"
+        raise NotImplementedError(msg)
+
+    def _create_series_from_scalar(self, *_: Any) -> NoReturn:
+        msg = (
+            "`_create_series_from_scalar` for DaskNamespace exists only for compatibility"
+        )
+        raise NotImplementedError(msg)
+
+    def _create_expr_from_callable(  # pragma: no cover
+        self,
+        func: Callable[[DaskLazyFrame], list[DaskExpr]],
+        *,
+        depth: int,
+        function_name: str,
+        root_names: list[str] | None,
+        output_names: list[str] | None,
+    ) -> DaskExpr:
+        return DaskExpr(
+            call=func,
+            depth=depth,
+            function_name=function_name,
+            root_names=root_names,
+            output_names=output_names,
             backend_version=self._backend_version,
         )

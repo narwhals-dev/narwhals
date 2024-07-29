@@ -5,12 +5,14 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.namespace import DaskNamespace
 
 from narwhals._dask.utils import maybe_evaluate
 
@@ -33,6 +35,13 @@ class DaskExpr:
         self._root_names = root_names
         self._output_names = output_names
         self._backend_version = backend_version
+
+    def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
+        from narwhals._dask.namespace import DaskNamespace
+
+        return DaskNamespace(backend_version=self._backend_version)
+
+    def __narwhals_expr__(self) -> None: ...
 
     @classmethod
     def from_column_names(
@@ -198,6 +207,10 @@ class DaskExpr:
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
 
+    @property
+    def dt(self: Self) -> DaskExprDateTimeNamespace:
+        return DaskExprDateTimeNamespace(self)
+
 
 class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:
@@ -228,4 +241,88 @@ class DaskExprStringNamespace:
             "slice",
             offset,
             stop,
+        )
+
+    def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
+        return self._expr._from_call(
+            lambda _input, fmt: get_dask().dataframe.to_datetime(_input, format=fmt),
+            "to_datetime",
+            format,
+        )
+
+    def to_uppercase(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.str.upper(),
+            "to_uppercase",
+        )
+
+    def to_lowercase(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.str.lower(),
+            "to_lowercase",
+        )
+
+
+class DaskExprDateTimeNamespace:
+    def __init__(self, expr: DaskExpr) -> None:
+        self._expr = expr
+
+    def year(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.year,
+            "year",
+        )
+
+    def month(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.month,
+            "month",
+        )
+
+    def day(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.day,
+            "day",
+        )
+
+    def hour(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.hour,
+            "hour",
+        )
+
+    def minute(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.minute,
+            "minute",
+        )
+
+    def second(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.second,
+            "second",
+        )
+
+    def millisecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond // 1000,
+            "millisecond",
+        )
+
+    def microsecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond,
+            "microsecond",
+        )
+
+    def nanosecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond * 1000,
+            "nanosecond",
+        )
+
+    def ordinal_day(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.dayofyear,
+            "ordinal_day",
         )

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 import warnings
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -185,3 +186,225 @@ def test_str_slice(offset: int, length: int | None, expected: Any) -> None:
 
     result_frame = df.with_columns(nw.col("a").str.slice(offset, length))
     compare_dicts(result_frame, expected)
+
+
+def test_to_datetime() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": ["2020-01-01T12:34:56"]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+
+    format = "%Y-%m-%dT%H:%M:%S"
+    result = df.with_columns(b=nw.col("a").str.to_datetime(format=format))
+
+    expected = {
+        "a": ["2020-01-01T12:34:56"],
+        "b": [datetime.strptime("2020-01-01T12:34:56", format)],  # noqa: DTZ007
+    }
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ({"a": ["foo", "bar"]}, {"a": ["FOO", "BAR"]}),
+        (
+            {
+                "a": [
+                    "special case ß",
+                    "ςpecial caσe",  # noqa: RUF001
+                ]
+            },
+            {"a": ["SPECIAL CASE ẞ", "ΣPECIAL CAΣE"]},
+        ),
+    ],
+)
+def test_str_to_uppercase(
+    data: dict[str, list[str]],
+    expected: dict[str, list[str]],
+) -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+
+    result_frame = df.with_columns(nw.col("a").str.to_uppercase())
+
+    compare_dicts(result_frame, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ({"a": ["FOO", "BAR"]}, {"a": ["foo", "bar"]}),
+        (
+            {"a": ["SPECIAL CASE ß", "ΣPECIAL CAΣE"]},
+            {
+                "a": [
+                    "special case ß",
+                    "σpecial caσe",  # noqa: RUF001
+                ]
+            },
+        ),
+    ],
+)
+def test_str_to_lowercase(
+    data: dict[str, list[str]],
+    expected: dict[str, list[str]],
+) -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+
+    result_frame = df.with_columns(nw.col("a").str.to_lowercase())
+    compare_dicts(result_frame, expected)
+
+
+def test_select() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
+    result = df.select("a", nw.col("b") + 1, (nw.col("z") * 2).alias("z*2"))
+    expected = {"a": [1, 3, 2], "b": [5, 5, 7], "z*2": [14.0, 16.0, 18.0]}
+    compare_dicts(result, expected)
+
+
+def test_str_only_select() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
+    result = df.select("a", "b")
+    expected = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    compare_dicts(result, expected)
+
+
+def test_empty_select() -> None:
+    import dask.dataframe as dd
+
+    result = (
+        nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
+        .lazy()
+        .select()
+        .collect()
+    )
+    assert result.shape == (0, 0)
+
+
+def test_dt_year() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [datetime(2020, 1, 1), datetime(2021, 1, 1)]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(year=nw.col("a").dt.year())
+    expected = {"a": data["a"], "year": [2020, 2021]}
+    compare_dicts(result, expected)
+
+
+def test_dt_month() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [datetime(2020, 1, 1), datetime(2021, 1, 1)]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(month=nw.col("a").dt.month())
+    expected = {"a": data["a"], "month": [1, 1]}
+    compare_dicts(result, expected)
+
+
+def test_dt_day() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [datetime(2020, 1, 1), datetime(2021, 1, 1)]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(day=nw.col("a").dt.day())
+    expected = {"a": data["a"], "day": [1, 1]}
+    compare_dicts(result, expected)
+
+
+def test_dt_hour() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [datetime(2020, 1, 1, 1), datetime(2021, 1, 1, 2)]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(hour=nw.col("a").dt.hour())
+    expected = {"a": data["a"], "hour": [1, 2]}
+    compare_dicts(result, expected)
+
+
+def test_dt_minute() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [datetime(2020, 1, 1, 1, 1), datetime(2021, 1, 1, 2, 2)]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(minute=nw.col("a").dt.minute())
+    expected = {"a": data["a"], "minute": [1, 2]}
+    compare_dicts(result, expected)
+
+
+def test_dt_second() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [datetime(2020, 1, 1, 1, 1, 1), datetime(2021, 1, 1, 2, 2, 2)]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(second=nw.col("a").dt.second())
+    expected = {"a": data["a"], "second": [1, 2]}
+    compare_dicts(result, expected)
+
+
+def test_dt_millisecond() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [datetime(2020, 1, 1, 1, 1, 1, 1000), datetime(2021, 1, 1, 2, 2, 2, 2000)]
+    }
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(millisecond=nw.col("a").dt.millisecond())
+    expected = {"a": data["a"], "millisecond": [1, 2]}
+    compare_dicts(result, expected)
+
+
+def test_dt_microsecond() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [datetime(2020, 1, 1, 1, 1, 1, 1000), datetime(2021, 1, 1, 2, 2, 2, 2000)]
+    }
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(microsecond=nw.col("a").dt.microsecond())
+    expected = {"a": data["a"], "microsecond": [1000, 2000]}
+    compare_dicts(result, expected)
+
+
+def test_dt_nanosecond() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [datetime(2020, 1, 1, 1, 1, 1, 1000), datetime(2021, 1, 1, 2, 2, 2, 2000)]
+    }
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(nanosecond=nw.col("a").dt.nanosecond())
+    expected = {"a": data["a"], "nanosecond": [1000000, 2000000]}
+    compare_dicts(result, expected)
+
+
+def test_dt_ordinal_day() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [datetime(2020, 1, 7), datetime(2021, 2, 1)]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(ordinal_day=nw.col("a").dt.ordinal_day())
+    expected = {"a": data["a"], "ordinal_day": [7, 32]}
+    compare_dicts(result, expected)
