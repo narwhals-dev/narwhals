@@ -18,6 +18,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 pytest.importorskip("dask")
@@ -221,10 +222,18 @@ def test_to_datetime() -> None:
     ],
 )
 def test_str_to_uppercase(
+    request: pytest.FixtureRequest,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:
     import dask.dataframe as dd
+    import pyarrow as pa
+
+    if (parse_version(pa.__version__) < (12, 0, 0)) and ("ß" in data["a"][0]):
+        # We are marking it xfail for these conditions above
+        # since the pyarrow backend will convert
+        # smaller cap 'ß' to upper cap 'ẞ' instead of 'SS'
+        request.applymarker(pytest.mark.xfail)
 
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
