@@ -188,6 +188,12 @@ class DaskExpr:
             closed,
         )
 
+    def sum(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.sum(),
+            "sum",
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -200,4 +206,26 @@ class DaskExprStringNamespace:
     def starts_with(self, prefix: str) -> DaskExpr:
         return self._expr._from_call(
             lambda _input, prefix: _input.str.startswith(prefix), "starts_with", prefix
+        )
+
+    def ends_with(self, suffix: str) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, suffix: _input.str.endswith(suffix), "ends_with", suffix
+        )
+
+    def contains(self, pattern: str, *, literal: bool = False) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, pat, regex: _input.str.contains(pat=pat, regex=regex),
+            "contains",
+            pattern,
+            not literal,
+        )
+
+    def slice(self, offset: int, length: int | None = None) -> DaskExpr:
+        stop = offset + length if length else None
+        return self._expr._from_call(
+            lambda _input, start, stop: _input.str.slice(start=start, stop=stop),
+            "slice",
+            offset,
+            stop,
         )

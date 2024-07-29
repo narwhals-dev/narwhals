@@ -26,8 +26,8 @@ def test_to_uppercase_after_alias(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_to_uppercase_raise_anonymous(constructor_eager: Any) -> None:
-    df_raw = constructor_eager(data)
+def test_to_uppercase_raise_anonymous(constructor: Any) -> None:
+    df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
     context = (

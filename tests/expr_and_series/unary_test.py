@@ -17,7 +17,13 @@ def test_unary(constructor: Any) -> None:
         )
         .select(nw.col("a_mean", "a_sum", "b_nunique", "z_min", "z_max").unique())
     )
-    expected = {"a_mean": [2], "a_sum": [6], "b_nunique": [2], "z_min": [7], "z_max": [9]}
+    expected = {
+        "a_mean": [2],
+        "a_sum": [6],
+        "b_nunique": [2],
+        "z_min": [7],
+        "z_max": [9],
+    }
     compare_dicts(result, expected)
 
 
@@ -31,5 +37,11 @@ def test_unary_series(constructor_eager: Any) -> None:
         "z_min": [df["z"].min()],
         "z_max": [df["z"].max()],
     }
-    expected = {"a_mean": [2], "a_sum": [6], "b_nunique": [2], "z_min": [7], "z_max": [9]}
+    expected = {
+        "a_mean": [2],
+        "a_sum": [6],
+        "b_nunique": [2],
+        "z_min": [7],
+        "z_max": [9],
+    }
     compare_dicts(result, expected)

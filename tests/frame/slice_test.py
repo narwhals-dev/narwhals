@@ -40,7 +40,8 @@ def test_slice_rows_with_step(request: Any, constructor_eager: Any) -> None:
 
 def test_slice_rows_with_step_pyarrow() -> None:
     with pytest.raises(
-        NotImplementedError, match="Slicing with step is not supported on PyArrow tables"
+        NotImplementedError,
+        match="Slicing with step is not supported on PyArrow tables",
     ):
         nw.from_native(pa.table(data))[1::2]
 

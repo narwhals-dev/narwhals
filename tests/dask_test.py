@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 import warnings
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -83,6 +84,16 @@ def test_cum_sum() -> None:
     compare_dicts(result, expected)
 
 
+def test_sum() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    result = df.with_columns((nw.col("a") + nw.col("b").sum()).alias("c"))
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [16, 17, 18]}
+    compare_dicts(result, expected)
+
+
 @pytest.mark.parametrize(
     ("closed", "expected"),
     [
@@ -123,3 +134,54 @@ def test_starts_with(prefix: str, expected: dict[str, list[bool]]) -> None:
     result = df.with_columns(nw.col("a").str.starts_with(prefix))
 
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("suffix", "expected"),
+    [
+        ("das", {"a": [True, False]}),
+        ("fas", {"a": [False, True]}),
+        ("asd", {"a": [False, False]}),
+    ],
+)
+def test_ends_with(suffix: str, expected: dict[str, list[bool]]) -> None:
+    import dask.dataframe as dd
+
+    data = {"a": ["fdas", "edfas"]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.with_columns(nw.col("a").str.ends_with(suffix))
+
+    compare_dicts(result, expected)
+
+
+def test_contains() -> None:
+    import dask.dataframe as dd
+
+    data = {"pets": ["cat", "dog", "rabbit and parrot", "dove"]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+
+    result = df.with_columns(
+        case_insensitive_match=nw.col("pets").str.contains("(?i)parrot|Dove")
+    )
+    expected = {
+        "pets": ["cat", "dog", "rabbit and parrot", "dove"],
+        "case_insensitive_match": [False, False, True, True],
+    }
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("offset", "length", "expected"),
+    [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
+)
+def test_str_slice(offset: int, length: int | None, expected: Any) -> None:
+    import dask.dataframe as dd
+
+    data = {"a": ["fdas", "edfas"]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+
+    result_frame = df.with_columns(nw.col("a").str.slice(offset, length))
+    compare_dicts(result_frame, expected)
