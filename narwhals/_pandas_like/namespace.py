@@ -276,8 +276,8 @@ class PandasLikeNamespace:
                 *flatten([plx.col(key) == value for key, value in constraints.items()])
             )
         else:
-            msg = "Must provide either predicates or constraints"
-            raise ValueError(msg)
+            msg = "at least one predicate or constraint must be provided"
+            raise TypeError(msg)
 
         return PandasWhen(condition, self._implementation, self._backend_version)
 

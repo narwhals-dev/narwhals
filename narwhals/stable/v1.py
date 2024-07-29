@@ -1478,14 +1478,14 @@ class When(NwWhen):
         return cls(*when._predicates, **when._constraints)
 
     def then(self, value: Any) -> Then:
-        return Then(
-            lambda plx: plx.when(
-                *self._extract_predicates(plx), **self._constraints
-            ).then(value)
-        )
+        return Then.from_then(super().then(value))
 
 
 class Then(NwThen, Expr):
+    @classmethod
+    def from_then(cls, then: NwThen) -> Self:
+        return cls(then._call)
+
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
 

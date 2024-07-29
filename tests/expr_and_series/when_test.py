@@ -80,3 +80,12 @@ def test_when_constraint(request: Any, constructor: Any) -> None:
         "a_when": [3, None, None],
     }
     compare_dicts(result, expected)
+
+
+def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+    with pytest.raises(TypeError):
+        df.with_columns(when().then(value=3).alias("a_when"))
