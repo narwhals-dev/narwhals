@@ -21,6 +21,8 @@ from narwhals.utils import validate_laziness
 FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
@@ -50,7 +52,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: Any,
+    native_namespace: ModuleType,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
@@ -96,6 +98,7 @@ def from_dict(
         └─────┴─────┘
     """
     implementation = Implementation.from_native_namespace(native_namespace)
+
     if implementation is Implementation.POLARS:
         if schema:
             from narwhals._polars.utils import (
@@ -142,8 +145,13 @@ def from_dict(
             )
         native_frame = native_namespace.table(data, schema=schema)
     else:  # pragma: no cover
-        msg = f"Expected library supported by Narwhals, got: {native_namespace}"
-        raise ValueError(msg)
+        try:
+            # implementation is UNKNOWN, Narhwals extension using this feature should
+            # implement `from_dict` function in the top-level namespace.
+            native_frame = native_namespace.from_dict(data)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `from_dict` function."
+            raise AttributeError(msg) from e
     return from_native(native_frame, eager_only=True)
 
 

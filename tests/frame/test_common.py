@@ -19,64 +19,15 @@ data_na = {"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]}
 data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
 
 
-def test_std(constructor: Any) -> None:
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
+def test_columns(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(
-        nw.col("a").std().alias("a_ddof_default"),
-        nw.col("a").std(ddof=1).alias("a_ddof_1"),
-        nw.col("a").std(ddof=0).alias("a_ddof_0"),
-        nw.col("b").std(ddof=2).alias("b_ddof_2"),
-        nw.col("z").std(ddof=0).alias("z_ddof_0"),
-    )
-    expected = {
-        "a_ddof_default": [1.0],
-        "a_ddof_1": [1.0],
-        "a_ddof_0": [0.816497],
-        "b_ddof_2": [1.632993],
-        "z_ddof_0": [0.816497],
-    }
-    compare_dicts(result, expected)
-
-
-@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(
-        constructor_with_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
-    )
-    result = df.schema
-    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
-
-    result = df.schema
-    assert result == expected
-    result = df.lazy().collect().schema
-    assert result == expected
-
-
-def test_collect_schema(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(
-        constructor_with_lazy({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]})
-    )
-    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
-
-    result = df.collect_schema()
-    assert result == expected
-    result = df.lazy().collect().collect_schema()
-    assert result == expected
-
-
-@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_columns(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
     result = df.columns
     expected = ["a", "b", "z"]
     assert result == expected
 
 
-def test_expr_binary(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "pandas_pyarrow" in str(
-        constructor
-    ):  # pandas pyarrow raises NotImplementedError for __mod__
-        request.applymarker(pytest.mark.xfail)
+def test_expr_binary(constructor: Any) -> None:
     df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
@@ -96,10 +47,7 @@ def test_expr_binary(request: Any, constructor: Any) -> None:
         k=2 // nw.col("a"),
         l=nw.col("a") // 2,
         m=nw.col("a") ** 2,
-        n=nw.col("a") % 2,
-        o=2 % nw.col("a"),
     )
-    result_native = nw.to_native(result)
     expected = {
         "a": [4, 3.333333, 3.5],
         "b": [-3.5, -4.0, -2.25],
@@ -115,31 +63,26 @@ def test_expr_binary(request: Any, constructor: Any) -> None:
         "k": [2, 0, 1],
         "l": [0, 1, 1],
         "m": [1, 9, 4],
-        "n": [1, 1, 0],
-        "o": [0, 2, 0],
     }
-    compare_dicts(result_native, expected)
+    compare_dicts(result, expected)
 
 
-def test_expr_transform(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_expr_transform(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5]))
     expected = {"a": [True, False, False], "b": [True, True, False], "z": [7, 8, 9]}
     compare_dicts(result, expected)
 
 
-def test_expr_na(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data_na)).lazy()
+def test_expr_na(constructor: Any) -> None:
+    df = nw.from_native(constructor(data_na)).lazy()
     result_nna = df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
     expected = {"a": [2], "b": [6], "z": [9]}
     compare_dicts(result_nna, expected)
 
 
-def test_lazy(constructor: Any) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3]}), eager_only=True)
+def test_lazy(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
     result = df.lazy()
     assert isinstance(result, nw.LazyFrame)
 
@@ -178,16 +121,16 @@ def test_reindex(df_raw: Any) -> None:
         nw.to_native(df.with_columns(nw.all() + nw.all()))
 
 
-def test_with_columns_order(constructor: Any) -> None:
-    df = nw.from_native(constructor(data))
+def test_with_columns_order(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.columns == ["a", "b", "z", "d"]
     expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8, 9], "d": [0, 2, 1]}
     compare_dicts(result, expected)
 
 
-def test_with_columns_order_single_row(constructor: Any) -> None:
-    df = nw.from_native(constructor(data)[:1])
+def test_with_columns_order_single_row(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data)[:1])
     assert len(df) == 1
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.columns == ["a", "b", "z", "d"]

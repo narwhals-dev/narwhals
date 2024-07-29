@@ -10,7 +10,7 @@ data = {
 
 
 def test_null_count(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor(data))
     result = df.select(nw.all().null_count())
     expected = {
         "a": [2],

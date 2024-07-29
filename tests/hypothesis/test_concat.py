@@ -10,6 +10,7 @@ from hypothesis import strategies as st
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
+from tests.utils import is_windows
 
 
 @given(
@@ -31,6 +32,7 @@ from tests.utils import compare_dicts
     how=st.sampled_from(["horizontal", "vertical"]),
 )  # type: ignore[misc]
 @pytest.mark.slow()
+@pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_concat(  # pragma: no cover
     integers: list[int],
     other_integers: list[int],

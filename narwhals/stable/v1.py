@@ -48,6 +48,8 @@ from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
 from narwhals.utils import maybe_set_index as nw_maybe_set_index
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -1471,7 +1473,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: Any,
+    native_namespace: ModuleType,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
