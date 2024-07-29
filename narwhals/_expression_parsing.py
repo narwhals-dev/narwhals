@@ -20,14 +20,16 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
+    from narwhals._dask.expr import DaskExpr
+    from narwhals._dask.namespace import DaskNamespace
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
 
-    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr]
+    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace, DaskNamespace]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr]
     IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)

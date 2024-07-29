@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
+from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_expr
 
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.namespace import DaskNamespace
 
 from narwhals._dask.utils import maybe_evaluate
 
@@ -34,6 +36,13 @@ class DaskExpr:
         self._root_names = root_names
         self._output_names = output_names
         self._backend_version = backend_version
+
+    def __narwhals_expr__(self) -> None: ...
+
+    def __narwhals_namespace__(self) -> DaskNamespace:
+        from narwhals._dask.namespace import DaskNamespace
+
+        return DaskNamespace(backend_version=self._backend_version)
 
     @classmethod
     def from_column_names(
@@ -151,6 +160,18 @@ class DaskExpr:
             "__mul__",
             other,
         )
+
+    def __ge__(self, other: DaskExpr) -> Self:
+        return reuse_series_implementation(self, "__ge__", other=other)
+
+    def __gt__(self, other: DaskExpr) -> Self:
+        return reuse_series_implementation(self, "__gt__", other=other)
+
+    def __le__(self, other: DaskExpr) -> Self:
+        return reuse_series_implementation(self, "__le__", other=other)
+
+    def __lt__(self, other: DaskExpr) -> Self:
+        return reuse_series_implementation(self, "__lt__", other=other)
 
     def mean(self) -> Self:
         return self._from_call(

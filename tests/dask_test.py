@@ -270,3 +270,15 @@ def test_columns() -> None:
 
     result = df.columns
     assert set(result) == {"a", "b"}
+
+
+def test_filter() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.filter(nw.col("a") > 1)
+    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
+
+    compare_dicts(result, expected)

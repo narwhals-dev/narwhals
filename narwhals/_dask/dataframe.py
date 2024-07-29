@@ -56,3 +56,15 @@ class DaskLazyFrame:
     @property
     def columns(self) -> list[str]:
         return self._native_dataframe.columns.tolist()  # type: ignore[no-any-return]
+
+    def filter(
+        self,
+        *predicates: DaskExpr,
+    ) -> Self:
+        from narwhals._dask.namespace import DaskNamespace
+
+        plx = DaskNamespace(backend_version=self._backend_version)
+        expr = plx.all_horizontal(*predicates)
+        # Safety: all_horizontal's expression only returns a single column.
+        mask = expr._call(self)[0]
+        return self._from_native_dataframe(self._native_dataframe.loc[mask])
