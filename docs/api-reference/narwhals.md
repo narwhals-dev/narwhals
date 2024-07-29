@@ -27,6 +27,7 @@ Here are the top-level functions available in Narwhals.
         - narwhalify
         - sum
         - sum_horizontal
+        - when
         - show_versions
         - to_native
       show_source: false
