@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_expr
 
 if TYPE_CHECKING:
@@ -236,4 +237,23 @@ class DaskExprStringNamespace:
             "slice",
             offset,
             stop,
+        )
+
+    def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
+        return self._expr._from_call(
+            lambda _input, fmt: get_dask().dataframe.to_datetime(_input, format=fmt),
+            "to_datetime",
+            format,
+        )
+
+    def to_uppercase(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.str.upper(),
+            "to_uppercase",
+        )
+
+    def to_lowercase(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.str.lower(),
+            "to_lowercase",
         )
