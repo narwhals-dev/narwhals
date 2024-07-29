@@ -268,18 +268,29 @@ class PandasLikeNamespace:
         *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
         **constraints: Any,
     ) -> PandasWhen:
-        plx = self.__class__(self._implementation, self._backend_version)
-        if predicates:
-            condition = plx.all_horizontal(*flatten(predicates))
-        elif constraints:
-            condition = plx.all_horizontal(
-                *flatten([plx.col(key) == value for key, value in constraints.items()])
-            )
-        else:
-            msg = "at least one predicate or constraint must be provided"
-            raise TypeError(msg)
+        return PandasWhen(
+            when_processing(self, *predicates, **constraints),
+            self._implementation,
+            self._backend_version,
+        )
 
-        return PandasWhen(condition, self._implementation, self._backend_version)
+
+def when_processing(
+    plx: PandasLikeNamespace,
+    *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
+    **constraints: Any,
+) -> PandasLikeExpr:
+    if predicates:
+        condition = plx.all_horizontal(*flatten(predicates))
+    elif constraints:
+        condition = plx.all_horizontal(
+            *flatten([plx.col(key) == value for key, value in constraints.items()])
+        )
+    else:
+        msg = "at least one predicate or constraint must be provided"
+        raise TypeError(msg)
+
+    return condition
 
 
 class PandasWhen:
@@ -350,10 +361,18 @@ class PandasThen(PandasLikeExpr):
         self._root_names = root_names
         self._output_names = output_names
 
-    def when(self, condition: PandasLikeExpr) -> PandasChainedWhen:
+    def when(
+        self,
+        *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
+        **constraints: Any,
+    ) -> PandasChainedWhen:
         return PandasChainedWhen(
             self._call,  # type: ignore[arg-type]
-            condition,
+            when_processing(
+                PandasLikeNamespace(self._implementation, self._backend_version),
+                *predicates,
+                **constraints,
+            ),
             depth=self._depth + 1,
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -456,25 +475,13 @@ class PandasChainedThen(PandasLikeExpr):
         *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
         **constraints: Any,
     ) -> PandasChainedWhen:
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-        plx = PandasLikeNamespace(
-            implementation=self._implementation, backend_version=self._backend_version
-        )
-        if predicates:
-            condition = plx.all_horizontal(*flatten(predicates))
-        elif constraints:
-            import narwhals as nw
-
-            condition = plx.all_horizontal(
-                *(nw.col(name) == value for name, value in constraints.items())
-            )
-        else:
-            msg = "Must provide at least one predicates or constraints"
-            raise ValueError(msg)
         return PandasChainedWhen(
             self._call,  # type: ignore[arg-type]
-            condition,
+            when_processing(
+                PandasLikeNamespace(self._implementation, self._backend_version),
+                *predicates,
+                **constraints,
+            ),
             depth=self._depth + 1,
             implementation=self._implementation,
             backend_version=self._backend_version,

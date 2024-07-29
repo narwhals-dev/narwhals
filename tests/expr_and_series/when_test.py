@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from narwhals.stable.v1 import when
+import narwhals as nw
+from narwhals import when
 from tests.utils import compare_dicts
 
 data = {

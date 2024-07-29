@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -3644,22 +3643,22 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
+def _extract_predicates(plx: Any, predicates: Iterable[IntoExpr]) -> Any:
+    return [extract_compliant(plx, v) for v in predicates]
+
+
 class When:
     def __init__(
         self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
     ) -> None:
-        self._predicates = flatten([predicates])
+        self._predicates = predicates
         self._constraints = constraints
-        self._then_value = None
-        self._otehrwise_value = None
-
-    def _extract_predicates(self, plx: Any) -> Any:
-        return [extract_compliant(plx, v) for v in self._predicates]
 
     def then(self, value: Any) -> Then:
         return Then(
             lambda plx: plx.when(
-                *self._extract_predicates(plx), **self._constraints
+                *_extract_predicates(plx, flatten([self._predicates])),
+                **self._constraints,
             ).then(value)
         )
 
@@ -3676,18 +3675,26 @@ class Then(Expr):
         *predicates: IntoExpr | Iterable[IntoExpr],
         **constraints: Any,
     ) -> ChainedWhen:
-        return ChainedWhen(self, reduce(lambda a, b: a & b, flatten([predicates])))
+        return ChainedWhen(self, *predicates, **constraints)
 
 
 class ChainedWhen:
-    def __init__(self, above_then: Then | ChainedThen, condition: Expr) -> None:
+    def __init__(
+        self,
+        above_then: Then | ChainedThen,
+        *predicates: IntoExpr | Iterable[IntoExpr],
+        **conditions: Any,
+    ) -> None:
         self._above_then = above_then
-        self._condition = condition
+        self._predicates = predicates
+        self._conditions = conditions
 
     def then(self, value: Any) -> ChainedThen:
         return ChainedThen(
             lambda plx: self._above_then._call(plx)
-            .when(self._condition._call(plx))
+            .when(
+                *_extract_predicates(plx, flatten([self._predicates])), **self._conditions
+            )
             .then(value)
         )
 
@@ -3701,7 +3708,7 @@ class ChainedThen(Expr):
         *predicates: IntoExpr | Iterable[IntoExpr],
         **constraints: Any,
     ) -> ChainedWhen:
-        return ChainedWhen(self, reduce(lambda a, b: a & b, flatten([predicates])))
+        return ChainedWhen(self, *predicates, **constraints)
 
     def otherwise(self, value: Any) -> Expr:
         return Expr(lambda plx: self._call(plx).otherwise(value))
