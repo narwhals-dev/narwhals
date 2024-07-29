@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 import warnings
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -184,4 +185,78 @@ def test_str_slice(offset: int, length: int | None, expected: Any) -> None:
     df = nw.from_native(dfdd)
 
     result_frame = df.with_columns(nw.col("a").str.slice(offset, length))
+    compare_dicts(result_frame, expected)
+
+
+def test_to_datetime() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": ["2020-01-01T12:34:56"]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+
+    format = "%Y-%m-%dT%H:%M:%S"
+    result = df.with_columns(b=nw.col("a").str.to_datetime(format=format))
+
+    expected = {
+        "a": ["2020-01-01T12:34:56"],
+        "b": [datetime.strptime("2020-01-01T12:34:56", format)],  # noqa: DTZ007
+    }
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ({"a": ["foo", "bar"]}, {"a": ["FOO", "BAR"]}),
+        (
+            {
+                "a": [
+                    "special case ß",
+                    "ςpecial caσe",  # noqa: RUF001
+                ]
+            },
+            {"a": ["SPECIAL CASE ẞ", "ΣPECIAL CAΣE"]},
+        ),
+    ],
+)
+def test_str_to_uppercase(
+    data: dict[str, list[str]],
+    expected: dict[str, list[str]],
+) -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+
+    result_frame = df.with_columns(nw.col("a").str.to_uppercase())
+
+    compare_dicts(result_frame, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ({"a": ["FOO", "BAR"]}, {"a": ["foo", "bar"]}),
+        (
+            {"a": ["SPECIAL CASE ß", "ΣPECIAL CAΣE"]},
+            {
+                "a": [
+                    "special case ß",
+                    "σpecial caσe",  # noqa: RUF001
+                ]
+            },
+        ),
+    ],
+)
+def test_str_to_lowercase(
+    data: dict[str, list[str]],
+    expected: dict[str, list[str]],
+) -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+
+    result_frame = df.with_columns(nw.col("a").str.to_lowercase())
     compare_dicts(result_frame, expected)
