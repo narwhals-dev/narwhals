@@ -52,3 +52,7 @@ class DaskLazyFrame:
             implementation=Implementation.PANDAS,
             backend_version=parse_version(get_pandas().__version__),
         )
+
+    @property
+    def columns(self) -> list[str]:
+        return self._native_dataframe.columns.tolist()  # type: ignore[no-any-return]
