@@ -138,7 +138,9 @@ class BaseFrame(Generic[FrameT]):
         return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
     def drop(self, *columns: str | Iterable[str]) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.drop(*columns))
+        return self._from_compliant_dataframe(
+            self._compliant_frame.drop(*flatten(columns))
+        )
 
     def unique(
         self,
@@ -198,6 +200,11 @@ class BaseFrame(Generic[FrameT]):
 
     def clone(self) -> Self:
         return self._from_compliant_dataframe(self._compliant_frame.clone())
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.gather_every(n=n, offset=offset)
+        )
 
 
 class DataFrame(BaseFrame[FrameT]):
@@ -259,8 +266,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.lazy()
+            ... def func(df):
+            ...     return df.lazy()
 
             Note that then, pandas dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
@@ -291,8 +298,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.to_pandas()
+            ... def func(df):
+            ...     return df.to_pandas()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -325,8 +332,8 @@ class DataFrame(BaseFrame[FrameT]):
 
             We define a library agnostic function:
 
-            >>> def func(df_any):
-            ...     df = nw.from_native(df_any)
+            >>> def func(df):
+            ...     df = nw.from_native(df)
             ...     df.write_parquet("foo.parquet")
 
             We can then pass either pandas or Polars to `func`:
@@ -353,8 +360,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.to_numpy()
+            ... def func(df):
+            ...     return df.to_numpy()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -387,8 +394,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.shape
+            ... def func(df):
+            ...     return df.shape
 
             We can then pass either pandas or Polars to `func`:
 
@@ -421,9 +428,9 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify(eager_only=True)
-            ... def func(df_any):
-            ...     name = df_any.columns[0]
-            ...     return df_any.get_column(name)
+            ... def func(df):
+            ...     name = df.columns[0]
+            ...     return df.get_column(name)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -447,7 +454,13 @@ class DataFrame(BaseFrame[FrameT]):
         )
 
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
@@ -459,7 +472,12 @@ class DataFrame(BaseFrame[FrameT]):
     def __getitem__(self, item: slice) -> Self: ...
 
     def __getitem__(
-        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+        self,
+        item: str
+        | slice
+        | Sequence[int]
+        | tuple[Sequence[int], str | int]
+        | tuple[Sequence[int], Sequence[int] | Sequence[str]],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -470,9 +488,10 @@ class DataFrame(BaseFrame[FrameT]):
                 - str: extract column
                 - slice or Sequence of integers: slice rows from dataframe.
                 - tuple of Sequence of integers and str or int: slice rows and extract column at the same time.
-                  If the second element of the tuple is an integer, it is interpreted as the column index. Otherwise,
-                  it is interpreted as the column name.
+                - tuple of Sequence of integers and Sequence of integers: slice rows and extract columns at the same time.
         Notes:
+            Integers are always interpreted as positions, and strings always as column names.
+
             In contrast with Polars, pandas allows non-string column names.
             If you don't know whether the column name you're trying to extract
             is definitely a string (e.g. `df[df.columns[0]]`) then you should
@@ -489,8 +508,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify(eager_only=True)
-            ... def func(df_any):
-            ...     return df_any["a"]
+            ... def func(df):
+            ...     return df["a"]
 
             We can then pass either pandas or Polars to `func`:
 
@@ -506,6 +525,23 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
+        if (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and (isinstance(item[0], (str, int)))
+        ):
+            msg = (
+                f"Expected str or slice, got: {type(item)}.\n\n"
+                "Hint: if you were trying to get a single element out of a "
+                "dataframe, use `DataFrame.item`."
+            )
+            raise TypeError(msg)
+        if (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and isinstance(item[1], (list, tuple))
+        ):
+            return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             from narwhals.series import Series
 
@@ -561,8 +597,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.to_dict(as_series=False)
+            ... def func(df):
+            ...     return df.to_dict(as_series=False)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -601,8 +637,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.pipe(
+            ... def func(df):
+            ...     return df.pipe(
             ...         lambda _df: _df.select([x for x in _df.columns if len(x) == 1])
             ...     )
 
@@ -646,8 +682,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.drop_nulls()
+            ... def func(df):
+            ...     return df.drop_nulls()
 
             We can then pass either pandas or Polars:
 
@@ -683,8 +719,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.with_row_index()
+            ... def func(df):
+            ...     return df.with_row_index()
 
             We can then pass either pandas or Polars:
 
@@ -727,8 +763,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.schema
+            ... def func(df):
+            ...     return df.schema
 
             You can pass either pandas or Polars to `func`:
 
@@ -761,8 +797,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.collect_schema()
+            ... def func(df):
+            ...     return df.collect_schema()
 
             You can pass either pandas or Polars to `func`:
 
@@ -792,8 +828,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.columns
+            ... def func(df):
+            ...     return df.columns
 
             We can then pass either pandas or Polars to `func`:
 
@@ -849,8 +885,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any, *, named):
-            ...     return df_any.rows(named=named)
+            ... def func(df, *, named):
+            ...     return df.rows(named=named)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -905,8 +941,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any, *, named):
-            ...     return df_any.iter_rows(named=named)
+            ... def func(df, *, named):
+            ...     return df.iter_rows(named=named)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -960,8 +996,8 @@ class DataFrame(BaseFrame[FrameT]):
             to add it as a new column:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.with_columns((nw.col("a") * 2).alias("a*2"))
+            ... def func(df):
+            ...     return df.with_columns((nw.col("a") * 2).alias("a*2"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1018,8 +1054,8 @@ class DataFrame(BaseFrame[FrameT]):
             column to select that column.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select("foo")
+            ... def func(df):
+            ...     return df.select("foo")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1043,8 +1079,8 @@ class DataFrame(BaseFrame[FrameT]):
             Multiple columns can be selected by passing a list of column names.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select(["foo", "bar"])
+            ... def func(df):
+            ...     return df.select(["foo", "bar"])
             >>> func(df_pd)
                foo  bar
             0    1    6
@@ -1066,8 +1102,8 @@ class DataFrame(BaseFrame[FrameT]):
             list. Expressions are also accepted.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select(nw.col("foo"), nw.col("bar") + 1)
+            ... def func(df):
+            ...     return df.select(nw.col("foo"), nw.col("bar") + 1)
             >>> func(df_pd)
                foo  bar
             0    1    7
@@ -1088,8 +1124,8 @@ class DataFrame(BaseFrame[FrameT]):
             Use keyword arguments to easily name your expression inputs.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select(threshold=nw.col("foo") * 2)
+            ... def func(df):
+            ...     return df.select(threshold=nw.col("foo") * 2)
             >>> func(df_pd)
                threshold
             0          2
@@ -1127,8 +1163,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.rename({"foo": "apple"})
+            ... def func(df):
+            ...     return df.rename({"foo": "apple"})
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1174,8 +1210,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function that gets the first 3 rows.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.head(3)
+            ... def func(df):
+            ...     return df.head(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1222,8 +1258,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function that gets the last 3 rows.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.tail(3)
+            ... def func(df):
+            ...     return df.tail(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1264,8 +1300,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.drop("ham")
+            ... def func(df):
+            ...     return df.drop("ham")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1289,8 +1325,8 @@ class DataFrame(BaseFrame[FrameT]):
             Use positional arguments to drop multiple columns.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.drop("foo", "ham")
+            ... def func(df):
+            ...     return df.drop("foo", "ham")
 
             >>> func(df_pd)
                bar
@@ -1350,8 +1386,8 @@ class DataFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.unique(["bar", "ham"])
+            ... def func(df):
+            ...     return df.unique(["bar", "ham"])
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1395,8 +1431,8 @@ class DataFrame(BaseFrame[FrameT]):
             one condition.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.filter(nw.col("foo") > 1)
+            ... def func(df):
+            ...     return df.filter(nw.col("foo") > 1)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1418,8 +1454,8 @@ class DataFrame(BaseFrame[FrameT]):
             Filter on multiple conditions, combined with and/or operators:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
             >>> func(df_pd)
                foo  bar ham
             0    1    6   a
@@ -1434,8 +1470,8 @@ class DataFrame(BaseFrame[FrameT]):
             └─────┴─────┴─────┘
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
             >>> func(df_pd)
                foo  bar ham
             0    1    6   a
@@ -1454,8 +1490,8 @@ class DataFrame(BaseFrame[FrameT]):
             Provide multiple filters using `*args` syntax:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     dframe = df_any.filter(
+            ... def func(df):
+            ...     dframe = df.filter(
             ...         nw.col("foo") <= 2,
             ...         ~nw.col("ham").is_in(["b", "c"]),
             ...     )
@@ -1501,8 +1537,8 @@ class DataFrame(BaseFrame[FrameT]):
             and call `agg` to compute the grouped sum of another column.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.group_by("a").agg(nw.col("b").sum()).sort("a")
+            ... def func(df):
+            ...     return df.group_by("a").agg(nw.col("b").sum()).sort("a")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1526,8 +1562,8 @@ class DataFrame(BaseFrame[FrameT]):
             Group by multiple columns by passing a list of column names.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
+            ... def func(df):
+            ...     return df.group_by(["a", "b"]).agg(nw.max("c")).sort("a", "b")
             >>> func(df_pd)
                a  b  c
             0  a  1  5
@@ -1549,7 +1585,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import GroupBy
 
-        return GroupBy(self, *keys)
+        return GroupBy(self, *flatten(keys))
 
     def sort(
         self,
@@ -1586,8 +1622,8 @@ class DataFrame(BaseFrame[FrameT]):
             columns in different orders
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.sort("c", "a", descending=[False, True])
+            ... def func(df):
+            ...     return df.sort("c", "a", descending=[False, True])
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1661,8 +1697,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function in which we join over "ham" column:
 
             >>> @nw.narwhalify
-            ... def join_on_ham(df_any, other_any):
-            ...     return df_any.join(other_any, left_on="ham", right_on="ham")
+            ... def join_on_ham(df, other_any):
+            ...     return df.join(other_any, left_on="ham", right_on="ham")
 
             We can now pass either pandas or Polars to the function:
 
@@ -1709,8 +1745,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.is_duplicated()
+            ... def func(df):
+            ...     return df.is_duplicated()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1751,8 +1787,8 @@ class DataFrame(BaseFrame[FrameT]):
             values are greater than 10, and then checks if the result is empty or not:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.filter(nw.col("foo") > 10).is_empty()
+            ... def func(df):
+            ...     return df.filter(nw.col("foo") > 10).is_empty()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1793,8 +1829,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.is_unique()
+            ... def func(df):
+            ...     return df.is_unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1853,8 +1889,8 @@ class DataFrame(BaseFrame[FrameT]):
             each columns:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.null_count()
+            ... def func(df):
+            ...     return df.null_count()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1894,8 +1930,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function that returns item at given row/column
 
             >>> @nw.narwhalify
-            ... def func(df_any, row, column):
-            ...     return df_any.item(row, column)
+            ... def func(df, row, column):
+            ...     return df.item(row, column)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1922,8 +1958,8 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function in which we clone the DataFrame:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.clone()
+            ... def func(df):
+            ...     return df.clone()
 
             >>> func(df_pd)
                a  b
@@ -1942,6 +1978,47 @@ class DataFrame(BaseFrame[FrameT]):
             └─────┴─────┘
         """
         return super().clone()
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""
+        Take every nth row in the DataFrame and return as a new DataFrame.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function in which gather every 2 rows,
+            starting from a offset of 1:
+
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.gather_every(n=2, offset=1)
+
+            >>> func(df_pd)
+               a  b
+            1  2  6
+            3  4  8
+
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 2   ┆ 6   │
+            │ 4   ┆ 8   │
+            └─────┴─────┘
+        """
+        return super().gather_every(n=n, offset=offset)
 
 
 class LazyFrame(BaseFrame[FrameT]):
@@ -2042,8 +2119,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.pipe(lambda _df: _df.select("a"))
+            ... def func(df):
+            ...     return df.pipe(lambda _df: _df.select("a"))
 
             We can then pass either pandas or Polars:
 
@@ -2085,8 +2162,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.drop_nulls()
+            ... def func(df):
+            ...     return df.drop_nulls()
 
             We can then pass either pandas or Polars:
 
@@ -2120,8 +2197,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.with_row_index()
+            ... def func(df):
+            ...     return df.with_row_index()
 
             We can then pass either pandas or Polars:
 
@@ -2201,8 +2278,8 @@ class LazyFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.columns
+            ... def func(df):
+            ...     return df.columns
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2253,8 +2330,8 @@ class LazyFrame(BaseFrame[FrameT]):
             to add it as a new column:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.with_columns((nw.col("a") * 2).alias("2a"))
+            ... def func(df):
+            ...     return df.with_columns((nw.col("a") * 2).alias("2a"))
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2324,8 +2401,8 @@ class LazyFrame(BaseFrame[FrameT]):
             column to select that column.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select("foo")
+            ... def func(df):
+            ...     return df.select("foo")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2360,8 +2437,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Multiple columns can be selected by passing a list of column names.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select(["foo", "bar"])
+            ... def func(df):
+            ...     return df.select(["foo", "bar"])
             >>> func(df_pd)
                foo  bar
             0    1    6
@@ -2394,8 +2471,8 @@ class LazyFrame(BaseFrame[FrameT]):
             list. Expressions are also accepted.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select(nw.col("foo"), nw.col("bar") + 1)
+            ... def func(df):
+            ...     return df.select(nw.col("foo"), nw.col("bar") + 1)
             >>> func(df_pd)
                foo  bar
             0    1    7
@@ -2427,8 +2504,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Use keyword arguments to easily name your expression inputs.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select(threshold=nw.col("foo") * 2)
+            ... def func(df):
+            ...     return df.select(threshold=nw.col("foo") * 2)
             >>> func(df_pd)
                threshold
             0          2
@@ -2484,8 +2561,8 @@ class LazyFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.rename({"foo": "apple"})
+            ... def func(df):
+            ...     return df.rename({"foo": "apple"})
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2530,8 +2607,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function that gets the first 3 rows.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.head(3)
+            ... def func(df):
+            ...     return df.head(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2587,8 +2664,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function that gets the last 3 rows.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.tail(3)
+            ... def func(df):
+            ...     return df.tail(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2641,8 +2718,8 @@ class LazyFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.drop("ham")
+            ... def func(df):
+            ...     return df.drop("ham")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2666,8 +2743,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Use positional arguments to drop multiple columns.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.drop("foo", "ham")
+            ... def func(df):
+            ...     return df.drop("foo", "ham")
 
             >>> func(df_pd)
                bar
@@ -2686,7 +2763,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*columns)
+        return super().drop(*flatten(columns))
 
     def unique(
         self,
@@ -2731,8 +2808,8 @@ class LazyFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.unique(["bar", "ham"])
+            ... def func(df):
+            ...     return df.unique(["bar", "ham"])
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2777,8 +2854,8 @@ class LazyFrame(BaseFrame[FrameT]):
             one condition.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.filter(nw.col("foo") > 1)
+            ... def func(df):
+            ...     return df.filter(nw.col("foo") > 1)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2810,8 +2887,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Filter on multiple conditions:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") < 3) & (nw.col("ham") == "a"))
             >>> func(df_pd)
                foo  bar ham
             0    1    6   a
@@ -2837,8 +2914,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Provide multiple filters using `*args` syntax:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     dframe = df_any.filter(
+            ... def func(df):
+            ...     dframe = df.filter(
             ...         nw.col("foo") == 1,
             ...         nw.col("ham") == "a",
             ...     )
@@ -2868,8 +2945,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Filter on an OR condition:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
+            ... def func(df):
+            ...     return df.filter((nw.col("foo") == 1) | (nw.col("ham") == "c"))
             >>> func(df_pd)
                foo  bar ham
             0    1    6   a
@@ -2926,8 +3003,8 @@ class LazyFrame(BaseFrame[FrameT]):
             and call `agg` to compute the grouped sum of another column.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.group_by("a").agg(nw.col("b").sum()).sort("a")
+            ... def func(df):
+            ...     return df.group_by("a").agg(nw.col("b").sum()).sort("a")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2962,8 +3039,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Group by multiple columns by passing a list of column names.
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.group_by(["a", "b"]).agg(nw.max("c")).sort(["a", "b"])
+            ... def func(df):
+            ...     return df.group_by(["a", "b"]).agg(nw.max("c")).sort(["a", "b"])
             >>> func(df_pd)
                a  b  c
             0  a  1  5
@@ -2997,7 +3074,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import LazyGroupBy
 
-        return LazyGroupBy(self, *keys)
+        return LazyGroupBy(self, *flatten(keys))
 
     def sort(
         self,
@@ -3035,8 +3112,8 @@ class LazyFrame(BaseFrame[FrameT]):
             columns in different orders
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.sort("c", "a", descending=[False, True])
+            ... def func(df):
+            ...     return df.sort("c", "a", descending=[False, True])
 
             We can then pass either pandas or Polars to `func`:
 
@@ -3110,8 +3187,8 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function in which we join over "ham" column:
 
             >>> @nw.narwhalify
-            ... def join_on_ham(df_any, other_any):
-            ...     return df_any.join(other_any, left_on="ham", right_on="ham")
+            ... def join_on_ham(df, other_any):
+            ...     return df.join(other_any, left_on="ham", right_on="ham")
 
             We can now pass either pandas or Polars to the function:
 
@@ -3147,8 +3224,8 @@ class LazyFrame(BaseFrame[FrameT]):
         Let's define a dataframe-agnostic function in which we copy the DataFrame:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.clone()
+        ... def func(df):
+        ...     return df.clone()
 
         >>> func(df_pd)
            a  b
@@ -3187,8 +3264,8 @@ class LazyFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.lazy()
+            ... def func(df):
+            ...     return df.lazy()
 
             Note that then, pandas dataframe stay eager, and the Polars LazyFrame stays lazy:
 
@@ -3201,3 +3278,44 @@ class LazyFrame(BaseFrame[FrameT]):
             <LazyFrame ...>
         """
         return super().lazy()  # type: ignore[return-value]
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""
+        Take every nth row in the DataFrame and return as a new DataFrame.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> lf_pl = pl.LazyFrame(data)
+
+            Let's define a dataframe-agnostic function in which gather every 2 rows,
+            starting from a offset of 1:
+
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.gather_every(n=2, offset=1)
+
+            >>> func(df_pd)
+               a  b
+            1  2  6
+            3  4  8
+
+            >>> func(lf_pl).collect()
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 2   ┆ 6   │
+            │ 4   ┆ 8   │
+            └─────┴─────┘
+        """
+        return super().gather_every(n=n, offset=offset)

@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -33,7 +35,7 @@ class ArrowExpr:
         self._root_names = root_names
         self._depth = depth
         self._output_names = output_names
-        self._implementation = "arrow"
+        self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -98,8 +100,14 @@ class ArrowExpr:
     def __and__(self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__and__", other=other)
 
+    def __rand__(self, other: ArrowExpr | bool | Any) -> Self:
+        return reuse_series_implementation(self, "__rand__", other=other)
+
     def __or__(self, other: ArrowExpr | bool | Any) -> Self:
         return reuse_series_implementation(self, "__or__", other=other)
+
+    def __ror__(self, other: ArrowExpr | bool | Any) -> Self:
+        return reuse_series_implementation(self, "__ror__", other=other)
 
     def __add__(self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other)
@@ -210,6 +218,11 @@ class ArrowExpr:
     def is_null(self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
+    def is_between(self, lower_bound: Any, upper_bound: Any, closed: str) -> Any:
+        return reuse_series_implementation(
+            self, "is_between", lower_bound, upper_bound, closed
+        )
+
     def head(self, n: int) -> Self:
         return reuse_series_implementation(self, "head", n)
 
@@ -251,8 +264,22 @@ class ArrowExpr:
     def unique(self: Self) -> Self:
         return reuse_series_implementation(self, "unique")
 
-    def sort(self: Self, *, descending: bool = False) -> Self:
-        return reuse_series_implementation(self, "sort", descending=descending)
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        return reuse_series_implementation(
+            self, "sort", descending=descending, nulls_last=nulls_last
+        )
+
+    def quantile(
+        self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "quantile", quantile, interpolation, returns_scalar=True
+        )
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
@@ -284,12 +311,63 @@ class ArrowExprCatNamespace:
 
 
 class ArrowExprDateTimeNamespace:
-    def __init__(self, expr: ArrowExpr) -> None:
+    def __init__(self: Self, expr: ArrowExpr) -> None:
         self._expr = expr
 
-    def to_string(self, format: str) -> ArrowExpr:  # noqa: A002
+    def to_string(self: Self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
+        )
+
+    def year(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "year")
+
+    def month(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "month")
+
+    def day(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "day")
+
+    def hour(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "hour")
+
+    def minute(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "minute")
+
+    def second(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "second")
+
+    def millisecond(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "millisecond")
+
+    def microsecond(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "microsecond")
+
+    def nanosecond(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "nanosecond")
+
+    def ordinal_day(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "ordinal_day")
+
+    def total_minutes(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "total_minutes")
+
+    def total_seconds(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "total_seconds")
+
+    def total_milliseconds(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_milliseconds"
+        )
+
+    def total_microseconds(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_microseconds"
+        )
+
+    def total_nanoseconds(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "total_nanoseconds"
         )
 
 

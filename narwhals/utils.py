@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 import secrets
+from enum import Enum
+from enum import auto
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -18,10 +20,49 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
+    from typing_extensions import Self
+
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
 
 T = TypeVar("T")
+
+
+class Implementation(Enum):
+    PANDAS = auto()
+    MODIN = auto()
+    CUDF = auto()
+    PYARROW = auto()
+    POLARS = auto()
+
+    UNKNOWN = auto()
+
+    @classmethod
+    def from_native_namespace(
+        cls: type[Self], native_namespace: ModuleType
+    ) -> Implementation:  # pragma: no cover
+        """Instantiate Implementation object from a native namespace module."""
+        mapping = {
+            get_pandas(): Implementation.PANDAS,
+            get_modin(): Implementation.MODIN,
+            get_cudf(): Implementation.CUDF,
+            get_pyarrow(): Implementation.PYARROW,
+            get_polars(): Implementation.POLARS,
+        }
+        return mapping.get(native_namespace, Implementation.UNKNOWN)
+
+    def to_native_namespace(self: Self) -> ModuleType:  # pragma: no cover
+        """Return the native namespace module corresponding to Implementation."""
+        mapping = {
+            Implementation.PANDAS: get_pandas(),
+            Implementation.MODIN: get_modin(),
+            Implementation.CUDF: get_cudf(),
+            Implementation.PYARROW: get_pyarrow(),
+            Implementation.POLARS: get_polars(),
+        }
+        return mapping[self]  # type: ignore[no-any-return]
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -286,8 +327,8 @@ def is_ordered_categorical(series: Series) -> bool:
         Let's define a library-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(s_any):
-        ...     return nw.is_ordered_categorical(s_any)
+        ... def func(s):
+        ...     return nw.is_ordered_categorical(s)
 
         Then, we can pass any supported library to `func`:
 

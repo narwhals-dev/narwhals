@@ -10,8 +10,8 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._pandas_like.utils import Implementation
     from narwhals.dtypes import DType
+    from narwhals.utils import Implementation
 
 
 class PandasSelectorNamespace:

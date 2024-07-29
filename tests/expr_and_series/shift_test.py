@@ -17,7 +17,7 @@ def test_shift(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {
         "i": [2, 3, 4],
@@ -26,6 +26,19 @@ def test_shift(request: Any, constructor: Any) -> None:
         "c": [5, 4, 3],
     }
     compare_dicts(result, expected)
+
+
+def test_shift_series(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    expected = {
+        "i": [2, 3, 4],
+        "a": [0, 1, 2],
+        "b": [1, 2, 3],
+        "c": [5, 4, 3],
+    }
     result = df.select(
         df["i"],
         df["a"].shift(2),

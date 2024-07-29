@@ -34,6 +34,9 @@ from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr as NwExpr
+from narwhals.expr import Then as NwThen
+from narwhals.expr import When as NwWhen
+from narwhals.expr import when as nw_when
 from narwhals.functions import concat
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
@@ -48,6 +51,8 @@ from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
 from narwhals.utils import maybe_set_index as nw_maybe_set_index
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -67,7 +72,15 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     """
 
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
+
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
+
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
@@ -100,8 +113,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.lazy()
+            ... def func(df):
+            ...     return df.lazy()
 
             Note that then, pandas dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
@@ -150,8 +163,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.to_dict(as_series=False)
+            ... def func(df):
+            ...     return df.to_dict(as_series=False)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -188,8 +201,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.is_duplicated()
+            ... def func(df):
+            ...     return df.is_duplicated()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -236,8 +249,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.is_unique()
+            ... def func(df):
+            ...     return df.is_unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -336,8 +349,8 @@ class Series(NwSeries):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.to_frame()
+            ... def func(s):
+            ...     return s.to_frame()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -361,7 +374,12 @@ class Series(NwSeries):
         return _stableify(super().to_frame())  # type: ignore[no-any-return]
 
     def value_counts(
-        self: Self, *, sort: bool = False, parallel: bool = False
+        self: Self,
+        *,
+        sort: bool = False,
+        parallel: bool = False,
+        name: str | None = None,
+        normalize: bool = False,
     ) -> DataFrame[Any]:
         r"""
         Count the occurrences of unique values.
@@ -369,7 +387,10 @@ class Series(NwSeries):
         Arguments:
             sort: Sort the output by count in descending order. If set to False (default),
                 the order of the output is random.
-            parallel: Execute the computation in parallel. Unused for pandas-like APIs.
+            parallel: Execute the computation in parallel. Used for Polars only.
+            name: Give the resulting count column a specific name; if `normalize` is True
+                defaults to "proportion", otherwise defaults to "count".
+            normalize: If true gives relative frequencies of the unique values
 
         Examples:
             >>> import narwhals.stable.v1 as nw
@@ -381,8 +402,8 @@ class Series(NwSeries):
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.value_counts(sort=True)
+            ... def func(s):
+            ...     return s.value_counts(sort=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -404,7 +425,11 @@ class Series(NwSeries):
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        return _stableify(super().value_counts(sort=sort, parallel=parallel))  # type: ignore[no-any-return]
+        return _stableify(  # type: ignore[no-any-return]
+            super().value_counts(
+                sort=sort, parallel=parallel, name=name, normalize=normalize
+            )
+        )
 
 
 class Expr(NwExpr):
@@ -734,8 +759,8 @@ def narwhalify(
     import narwhals.stable.v1 as nw
 
 
-    def func(df_any):
-        df = nw.from_native(df_any, strict=False)
+    def func(df):
+        df = nw.from_native(df, strict=False)
         df = df.group_by("a").agg(nw.col("b").sum())
         return nw.to_native(df)
     ```
@@ -747,8 +772,8 @@ def narwhalify(
 
 
     @nw.narwhalify
-    def func(df_any):
-        return df_any.group_by("a").agg(nw.col("b").sum())
+    def func(df):
+        return df.group_by("a").agg(nw.col("b").sum())
     ```
 
     You can also pass in extra arguments, e.g.
@@ -833,8 +858,8 @@ def all() -> Expr:
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(nw.all() * 2)
+        ... def func(df):
+        ...     return df.select(nw.all() * 2)
 
         We can then pass either pandas or Polars to `func`:
 
@@ -875,8 +900,8 @@ def col(*names: str | Iterable[str]) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(nw.col("a") * nw.col("b"))
+        ... def func(df):
+        ...     return df.select(nw.col("a") * nw.col("b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -912,8 +937,8 @@ def len() -> Expr:
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(nw.len())
+        ... def func(df):
+        ...     return df.select(nw.len())
 
         We can then pass either pandas or Polars to `func`:
 
@@ -951,8 +976,8 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.with_columns(nw.lit(3).alias("b"))
+        ... def func(df):
+        ...     return df.with_columns(nw.lit(3).alias("b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -995,8 +1020,8 @@ def min(*columns: str) -> Expr:
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(nw.min("b"))
+        ... def func(df):
+        ...     return df.select(nw.min("b"))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -1036,8 +1061,8 @@ def max(*columns: str) -> Expr:
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(nw.max("a"))
+        ... def func(df):
+        ...     return df.select(nw.max("a"))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -1077,8 +1102,8 @@ def mean(*columns: str) -> Expr:
         We define a dataframe agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(nw.mean("a"))
+        ... def func(df):
+        ...     return df.select(nw.mean("a"))
 
         We can then pass either pandas or Polars to `func`:
 
@@ -1118,8 +1143,8 @@ def sum(*columns: str) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(nw.sum("a"))
+        ... def func(df):
+        ...     return df.select(nw.sum("a"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -1156,8 +1181,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(nw.sum_horizontal("a", "b"))
+        ... def func(df):
+        ...     return df.select(nw.sum_horizontal("a", "b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -1205,8 +1230,8 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select("a", "b", all=nw.all_horizontal("a", "b"))
+        ... def func(df):
+        ...     return df.select("a", "b", all=nw.all_horizontal("a", "b"))
 
         We can then pass either pandas or polars to `func`:
 
@@ -1237,6 +1262,62 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.all_horizontal(*exprs))
 
 
+def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    r"""
+    Compute the bitwise OR horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+
+    Notes:
+        pandas and Polars handle null values differently.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {
+        ...     "a": [False, False, True, True, False, None],
+        ...     "b": [False, True, True, None, None, None],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select("a", "b", any=nw.any_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+               a      b    any
+        0  False  False  False
+        1  False   True   True
+        2   True   True   True
+        3   True   None   True
+        4  False   None  False
+        5   None   None  False
+
+        >>> func(df_pl)
+        shape: (6, 3)
+        ┌───────┬───────┬───────┐
+        │ a     ┆ b     ┆ any   │
+        │ ---   ┆ ---   ┆ ---   │
+        │ bool  ┆ bool  ┆ bool  │
+        ╞═══════╪═══════╪═══════╡
+        │ false ┆ false ┆ false │
+        │ false ┆ true  ┆ true  │
+        │ true  ┆ true  ┆ true  │
+        │ true  ┆ null  ┆ true  │
+        │ false ┆ null  ┆ null  │
+        │ null  ┆ null  ┆ null  │
+        └───────┴───────┴───────┘
+    """
+    return _stableify(nw.any_horizontal(*exprs))
+
+
 def is_ordered_categorical(series: Series) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
@@ -1264,8 +1345,8 @@ def is_ordered_categorical(series: Series) -> bool:
         Let's define a library-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(s_any):
-        ...     return nw.is_ordered_categorical(s_any)
+        ... def func(s):
+        ...     return nw.is_ordered_categorical(s)
 
         Then, we can pass any supported library to `func`:
 
@@ -1391,6 +1472,130 @@ def get_level(
     return nw.get_level(obj)
 
 
+class When(NwWhen):
+    @classmethod
+    def from_when(cls, when: NwWhen) -> Self:
+        return cls(*when._predicates, **when._constraints)
+
+    def then(self, value: Any) -> Then:
+        return Then.from_then(super().then(value))
+
+
+class Then(NwThen, Expr):
+    @classmethod
+    def from_then(cls, then: NwThen) -> Self:
+        return cls(then._call)
+
+    def otherwise(self, value: Any) -> Expr:
+        return _stableify(super().otherwise(value))
+
+
+def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:
+    """
+    Start a `when-then-otherwise` expression.
+    Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
+    Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
+    If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
+
+    Parameters:
+        predicates
+            Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+        constraints
+            Apply conditions as `col_name = value` keyword arguments that are treated as equality matches, such as `x = 123`. As with the predicates parameter, multiple conditions are implicitly combined using `&`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     from narwhals.expr import when
+        ...
+        ...     return df_any.with_columns(
+        ...         when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
+        ...     )
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a   b  a_when
+        0  1   5       5
+        1  2  10       5
+        2  3  15       6
+        >>> func(df_pl)
+        shape: (3, 3)
+        ┌─────┬─────┬────────┐
+        │ a   ┆ b   ┆ a_when │
+        │ --- ┆ --- ┆ ---    │
+        │ i64 ┆ i64 ┆ i32    │
+        ╞═════╪═════╪════════╡
+        │ 1   ┆ 5   ┆ 5      │
+        │ 2   ┆ 10  ┆ 5      │
+        │ 3   ┆ 15  ┆ 6      │
+        └─────┴─────┴────────┘
+    """
+    return When.from_when(nw_when(*predicates, **constraints))
+
+
+def from_dict(
+    data: dict[str, Any],
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: ModuleType,
+) -> DataFrame[Any]:
+    """
+    Instantiate DataFrame from dictionary.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Dictionary to create DataFrame from.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_dict(data, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+           c  d
+        0  5  1
+        1  2  4
+        >>> func(pl.DataFrame(data))
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ c   ┆ d   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 5   ┆ 1   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        nw.from_dict(data, schema=schema, native_namespace=native_namespace)
+    )
+
+
 __all__ = [
     "selectors",
     "concat",
@@ -1404,6 +1609,7 @@ __all__ = [
     "get_level",
     "all",
     "all_horizontal",
+    "any_horizontal",
     "col",
     "len",
     "lit",
@@ -1412,6 +1618,7 @@ __all__ = [
     "mean",
     "sum",
     "sum_horizontal",
+    "when",
     "DataFrame",
     "LazyFrame",
     "Series",
@@ -1438,4 +1645,5 @@ __all__ = [
     "narwhalify",
     "show_versions",
     "Schema",
+    "from_dict",
 ]

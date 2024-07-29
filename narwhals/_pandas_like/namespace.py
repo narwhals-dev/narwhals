@@ -19,7 +19,7 @@ from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
-    from narwhals._pandas_like.utils import Implementation
+    from narwhals.utils import Implementation
 
 
 class PandasLikeNamespace:
@@ -116,9 +116,9 @@ class PandasLikeNamespace:
         )
 
     # --- selection ---
-    def col(self, *column_names: str | Iterable[str]) -> PandasLikeExpr:
+    def col(self, *column_names: str) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_names(
-            *flatten(column_names),
+            *column_names,
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
@@ -223,11 +223,16 @@ class PandasLikeNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        # Why is this showing up as uncovered? It defo is?
         return reduce(
             lambda x, y: x & y,
             parse_into_exprs(*exprs, namespace=self),
-        )  # pragma: no cover
+        )
+
+    def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        return reduce(
+            lambda x, y: x | y,
+            parse_into_exprs(*exprs, namespace=self),
+        )
 
     def concat(
         self,
@@ -264,17 +269,16 @@ class PandasLikeNamespace:
         **constraints: Any,
     ) -> PandasWhen:
         plx = self.__class__(self._implementation, self._backend_version)
-        import narwhals as nw
-
         if predicates:
             condition = plx.all_horizontal(*flatten(predicates))
         elif constraints:
             condition = plx.all_horizontal(
-                *(nw.col(name) == value for name, value in constraints.items())
+                *flatten([plx.col(key) == value for key, value in constraints.items()])
             )
         else:
-            msg = "Must provide at least one predicates or constraints"
-            raise ValueError(msg)
+            msg = "at least one predicate or constraint must be provided"
+            raise TypeError(msg)
+
         return PandasWhen(condition, self._implementation, self._backend_version)
 
 

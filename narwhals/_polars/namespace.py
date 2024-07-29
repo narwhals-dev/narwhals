@@ -9,6 +9,7 @@ from narwhals import dtypes
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import reverse_translate_dtype
 from narwhals.dependencies import get_polars
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -39,6 +40,7 @@ class PolarsNamespace:
 
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
+        self._implementation = Implementation.POLARS
 
     def __getattr__(self, attr: str) -> Any:
         from narwhals._polars.expr import PolarsExpr
@@ -55,7 +57,7 @@ class PolarsNamespace:
         from narwhals._polars.expr import PolarsExpr
 
         pl = get_polars()
-        if self._backend_version < (0, 20, 4):  # pragma: no cover
+        if self._backend_version < (0, 20, 5):  # pragma: no cover
             return PolarsExpr(pl.count().alias("len"))
         return PolarsExpr(pl.len())
 
@@ -82,6 +84,12 @@ class PolarsNamespace:
         if dtype is not None:
             return PolarsExpr(pl.lit(value, dtype=reverse_translate_dtype(dtype)))
         return PolarsExpr(pl.lit(value))
+
+    def mean(self, *column_names: str) -> Any:
+        pl = get_polars()
+        if self._backend_version < (0, 20, 4):  # pragma: no cover
+            return pl.mean([*column_names])
+        return pl.mean(*column_names)
 
     @property
     def selectors(self) -> PolarsSelectors:

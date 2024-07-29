@@ -18,7 +18,7 @@ def func(df: FrameT) -> FrameT:
         b_std=nw.col('b').std(),
     )
 ```
-will work for any of pandas, Polars, cuDF, and Modin.
+will work for any of pandas, Polars, cuDF, Modin, and PyArrow.
 
 However, sometimes you don't need to do complex operations on dataframes - all you need
 is to inspect the schema a bit before making other decisions, such as which columns to
@@ -34,7 +34,7 @@ import narwhals as nw
 from narwhals.schema import Schema
 
 
-def func(df_any: Any) -> Schema:
+def func(df: Any) -> Schema:
     df = nw.from_native(df, eager_or_interchange_only=True)
     return df.schema
 ```

@@ -7,7 +7,6 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import reverse_translate_dtype
@@ -19,6 +18,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow_compute
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -195,7 +195,7 @@ class PandasLikeSeries:
             return self._native_series.iloc[0]
         return self._native_series.iloc[index]
 
-    def to_frame(self) -> Any:
+    def to_frame(self) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         return PandasLikeDataFrame(
@@ -465,13 +465,12 @@ class PandasLikeSeries:
         return self._from_native_series(self._native_series.shift(n))
 
     def sort(
-        self,
-        *,
-        descending: bool | Sequence[bool] = False,
+        self, *, descending: bool = False, nulls_last: bool = False
     ) -> PandasLikeSeries:
         ser = self._native_series
+        na_position = "last" if nulls_last else "first"
         return self._from_native_series(
-            ser.sort_values(ascending=not descending, na_position="first").rename(
+            ser.sort_values(ascending=not descending, na_position=na_position).rename(
                 self.name
             )
         )
@@ -558,17 +557,30 @@ class PandasLikeSeries:
         else:
             return self._native_series.is_monotonic_increasing  # type: ignore[no-any-return]
 
-    def value_counts(self: Self, *, sort: bool = False, parallel: bool = False) -> Any:  # noqa: ARG002
+    def value_counts(
+        self: Self,
+        *,
+        sort: bool = False,
+        parallel: bool = False,
+        name: str | None = None,
+        normalize: bool = False,
+    ) -> PandasLikeDataFrame:
         """Parallel is unused, exists for compatibility"""
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        name_ = "index" if self._native_series.name is None else self._native_series.name
+        index_name_ = "index" if self._name is None else self._name
+        value_name_ = name or ("proportion" if normalize else "count")
+
         val_count = self._native_series.value_counts(
-            dropna=False, sort=False
+            dropna=False,
+            sort=False,
+            normalize=normalize,
         ).reset_index()
-        val_count.columns = [name_, "count"]
+
+        val_count.columns = [index_name_, value_name_]
+
         if sort:
-            val_count = val_count.sort_values("count", ascending=False)
+            val_count = val_count.sort_values(value_name_, ascending=False)
 
         return PandasLikeDataFrame(
             val_count,
@@ -615,6 +627,9 @@ class PandasLikeSeries:
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_series(self._native_series.iloc[offset::n])
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

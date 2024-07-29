@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -14,6 +15,7 @@ from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.dependencies import get_pyarrow_parquet
+from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
 
@@ -33,7 +35,7 @@ class ArrowDataFrame:
         self, native_dataframe: Any, *, backend_version: tuple[int, ...]
     ) -> None:
         self._native_dataframe = native_dataframe
-        self._implementation = "arrow"  # for compatibility with PandasLikeDataFrame
+        self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
@@ -67,6 +69,23 @@ class ArrowDataFrame:
             msg = "Unnamed rows are not yet supported on PyArrow tables"
             raise NotImplementedError(msg)
         return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
+
+    def iter_rows(
+        self,
+        *,
+        named: bool = False,
+        buffer_size: int = 512,
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
+        df = self._native_dataframe
+        num_rows = df.num_rows
+
+        if not named:
+            for i in range(0, num_rows, buffer_size):
+                rows = df[i : i + buffer_size].to_pydict().values()
+                yield from zip(*rows)
+        else:
+            for i in range(0, num_rows, buffer_size):
+                yield from df[i : i + buffer_size].to_pylist()
 
     def get_column(self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
@@ -104,6 +123,15 @@ class ArrowDataFrame:
                 name=item,
                 backend_version=self._backend_version,
             )
+        elif (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and isinstance(item[1], (list, tuple))
+        ):
+            return self._from_native_dataframe(
+                self._native_dataframe.take(item[0]).select(item[1])
+            )
+
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._arrow.series import ArrowSeries
 
@@ -182,7 +210,9 @@ class ArrowDataFrame:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     validate_dataframe_comparand(
-                        length=length, other=new_column_name_to_new_column_map.pop(name)
+                        length=length,
+                        other=new_column_name_to_new_column_map.pop(name),
+                        backend_version=self._backend_version,
                     )
                 )
             else:
@@ -191,20 +221,19 @@ class ArrowDataFrame:
         for s in new_column_name_to_new_column_map:
             to_concat.append(
                 validate_dataframe_comparand(
-                    length=length, other=new_column_name_to_new_column_map[s]
+                    length=length,
+                    other=new_column_name_to_new_column_map[s],
+                    backend_version=self._backend_version,
                 )
             )
             output_names.append(s)
         df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)
         return self._from_native_dataframe(df)
 
-    def group_by(self, *keys: str | Iterable[str]) -> ArrowGroupBy:
+    def group_by(self, *keys: str) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
-        return ArrowGroupBy(
-            self,
-            flatten(keys),
-        )
+        return ArrowGroupBy(self, list(keys))
 
     def join(
         self,
@@ -252,10 +281,8 @@ class ArrowDataFrame:
             ),
         )
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
-        return self._from_native_dataframe(
-            self._native_dataframe.drop(list(flatten(columns)))
-        )
+    def drop(self, *columns: str) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.drop(list(columns)))
 
     def drop_nulls(self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.drop_null())
@@ -371,14 +398,14 @@ class ArrowDataFrame:
                     f" frame has shape {self.shape!r}"
                 )
                 raise ValueError(msg)
-            return self._native_dataframe[0][0].as_py()
+            return self._native_dataframe[0][0]
 
         elif row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
-        return self._native_dataframe[_col][row].as_py()
+        return self._native_dataframe[_col][row]
 
     def rename(self, mapping: dict[str, str]) -> Self:
         df = self._native_dataframe
@@ -427,7 +454,7 @@ class ArrowDataFrame:
         subset: str | list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"] = "any",
-        maintain_order: bool = False,  # noqa: ARG002
+        maintain_order: bool = False,
     ) -> Self:
         """
         NOTE:
@@ -461,3 +488,6 @@ class ArrowDataFrame:
 
         keep_idx = self.select(*subset).is_unique()
         return self.filter(keep_idx)
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_dataframe(self._native_dataframe[offset::n])

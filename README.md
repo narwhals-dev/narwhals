@@ -11,8 +11,8 @@
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
-- **Full API support**: cuDF, Modin, pandas, Polars
-- **Interchange-level support**: Ibis, PyArrow, Vaex, anything else which implements the DataFrame Interchange Protocol
+- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
+- **Interchange-level support**: Ibis, Vaex, anything else which implements the DataFrame Interchange Protocol
 
 Seamlessly support all, without depending on any!
 
@@ -62,7 +62,7 @@ Feel free to add your project to the list if it's missing, and/or
 
 There are three steps to writing dataframe-agnostic code using Narwhals:
 
-1. use `narwhals.from_native` to wrap a pandas/Polars/Modin/cuDF
+1. use `narwhals.from_native` to wrap a pandas/Polars/Modin/cuDF/PyArrow
    DataFrame/LazyFrame in a Narwhals class
 2. use the [subset of the Polars API supported by Narwhals](https://narwhals-dev.github.io/narwhals/api-reference/)
 3. use `narwhals.to_native` to return an object to the user in its original
@@ -72,6 +72,7 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Polars, you'll get Polars back
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
+   - if you started with PyArrow, you'll get PyArrow back
 
 ## Example
 

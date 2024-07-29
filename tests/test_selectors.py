@@ -82,7 +82,7 @@ def test_set_ops(
     constructor: Any, selector: nw.selectors.Selector, expected: list[str]
 ) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(selector).columns
+    result = df.select(selector).collect_schema().names()
     assert sorted(result) == expected
 
 

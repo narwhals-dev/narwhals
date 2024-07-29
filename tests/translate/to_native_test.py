@@ -19,8 +19,10 @@ import narwhals.stable.v1 as nw
         ),
     ],
 )
-def test_to_native(constructor: Any, method: str, strict: Any, context: Any) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+def test_to_native(
+    constructor_eager: Any, method: str, strict: Any, context: Any
+) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
 
     with context:
         nw.to_native(getattr(df, method)(), strict=strict)

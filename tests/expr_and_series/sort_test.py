@@ -1,31 +1,48 @@
 from typing import Any
 
-import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
 
-data = {"a": [1, 3, 2], "b": [0, 2, -1]}
+data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
 
 
 @pytest.mark.parametrize(
-    ("descending", "expected"),
+    ("descending", "nulls_last", "expected"),
     [
-        (True, {"a": [3, 2, 1], "b": [0, 2, -1]}),
-        (False, {"a": [1, 2, 3], "b": [0, 2, -1]}),
+        (True, True, {"a": [0, 0, 2, -1], "b": [3, 2, 1, None]}),
+        (True, False, {"a": [0, 0, 2, -1], "b": [None, 3, 2, 1]}),
+        (False, True, {"a": [0, 0, 2, -1], "b": [1, 2, 3, None]}),
+        (False, False, {"a": [0, 0, 2, -1], "b": [None, 1, 2, 3]}),
     ],
 )
-def test_sort_expr(constructor: Any, descending: Any, expected: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
-    result = df.select(nw.col("a").sort(descending=descending), "b")
-    compare_dicts(result, expected)
+def test_sort_expr(
+    constructor_eager: Any, descending: Any, nulls_last: Any, expected: Any
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = nw.to_native(
+        df.select(
+            "a",
+            nw.col("b").sort(descending=descending, nulls_last=nulls_last),
+        )
+    )
+    assert result.equals(constructor_eager(expected))
 
 
 @pytest.mark.parametrize(
-    ("descending", "expected"), [(True, [3, 2, 1]), (False, [1, 2, 3])]
+    ("descending", "nulls_last", "expected"),
+    [
+        (True, True, [3, 2, 1, None]),
+        (True, False, [None, 3, 2, 1]),
+        (False, True, [1, 2, 3, None]),
+        (False, False, [None, 1, 2, 3]),
+    ],
 )
-def test_sort_series(constructor_series: Any, descending: Any, expected: Any) -> None:
-    series = nw.from_native(constructor_series(data["a"]), series_only=True)
-    result = series.sort(descending=descending)
-    assert (result.to_numpy() == np.array(expected)).all()
+def test_sort_series(
+    constructor_eager: Any, descending: Any, nulls_last: Any, expected: Any
+) -> None:
+    series = nw.from_native(constructor_eager(data), eager_only=True)["b"]
+    result = series.sort(descending=descending, nulls_last=nulls_last)
+    assert (
+        result == nw.from_native(constructor_eager({"a": expected}), eager_only=True)["a"]
+    )

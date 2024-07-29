@@ -12,15 +12,15 @@ from tests.utils import compare_dicts
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 
 
-def test_keep(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_keep(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.keep())
     expected = {k: [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_keep_after_alias(constructor_with_lazy: Any) -> None:
-    df = nw.from_native(constructor_with_lazy(data))
+def test_keep_after_alias(constructor: Any) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.keep())
     expected = {"foo": data["foo"]}
     compare_dicts(result, expected)

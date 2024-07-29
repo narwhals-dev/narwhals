@@ -12,8 +12,8 @@ df_pandas = pd.DataFrame(data)
 df_polars = pl.DataFrame(data)
 
 
-def test_contains(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_contains(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.with_columns(
         case_insensitive_match=nw.col("pets").str.contains("(?i)parrot|Dove")
     )
