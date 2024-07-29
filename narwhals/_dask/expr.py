@@ -199,6 +199,10 @@ class DaskExpr:
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
 
+    @property
+    def dt(self: Self) -> DaskExprDateTimeNamespace:
+        return DaskExprDateTimeNamespace(self)
+
 
 class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:
@@ -248,4 +252,69 @@ class DaskExprStringNamespace:
         return self._expr._from_call(
             lambda _input: _input.str.lower(),
             "to_lowercase",
+        )
+
+
+class DaskExprDateTimeNamespace:
+    def __init__(self, expr: DaskExpr) -> None:
+        self._expr = expr
+
+    def year(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.year,
+            "year",
+        )
+
+    def month(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.month,
+            "month",
+        )
+
+    def day(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.day,
+            "day",
+        )
+
+    def hour(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.hour,
+            "hour",
+        )
+
+    def minute(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.minute,
+            "minute",
+        )
+
+    def second(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.second,
+            "second",
+        )
+
+    def millisecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond // 1000,
+            "millisecond",
+        )
+
+    def microsecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond,
+            "microsecond",
+        )
+
+    def nanosecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond * 1000,
+            "nanosecond",
+        )
+
+    def ordinal_day(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.dayofyear,
+            "ordinal_day",
         )
