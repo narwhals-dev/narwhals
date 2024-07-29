@@ -271,6 +271,16 @@ def test_str_to_lowercase(
     compare_dicts(result_frame, expected)
 
 
+def test_columns() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": ["cat", "bat", "mat"]}))
+    df = nw.from_native(dfdd)
+
+    result = df.columns
+    assert result == ["a", "b"]
+
+
 def test_select() -> None:
     import dask.dataframe as dd
 
