@@ -17,6 +17,28 @@ data = {
 }
 
 
+@pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
+def test_schema(constructor: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
+    result = df.schema
+    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+
+    result = df.schema
+    assert result == expected
+    result = df.lazy().collect().schema
+    assert result == expected
+
+
+def test_collect_schema(constructor: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
+    expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
+
+    result = df.collect_schema()
+    assert result == expected
+    result = df.lazy().collect().collect_schema()
+    assert result == expected
+
+
 def test_schema_comparison() -> None:
     assert {"a": nw.String()} != {"a": nw.Int32()}
     assert {"a": nw.Int32()} == {"a": nw.Int32()}
@@ -34,14 +56,14 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-def test_actual_object(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+def test_actual_object(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
 
     data = {"a": [Foo()]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.schema
     assert result == {"a": nw.Object}
 

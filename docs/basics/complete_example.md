@@ -32,7 +32,7 @@ from typing import Any
 
 class StandardScaler:
     @nw.narwhalify(eager_only=True)
-    def fit(self, df_any: nw.DataFrame[Any]) -> None:
+    def fit(self, df: nw.DataFrame[Any]) -> None:
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
 ```

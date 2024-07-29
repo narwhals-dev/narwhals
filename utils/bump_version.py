@@ -41,6 +41,6 @@ content = content.replace(
 with open("docs/installation.md", "w", encoding="utf-8") as f:
     f.write(content)
 
-subprocess.run(["git", "commit", "-a", "-m", f"Bump version to {version}"])
+subprocess.run(["git", "commit", "-a", "-m", f"release: Bump version to {version}"])
 subprocess.run(["git", "tag", "-a", f"v{version}", "-m", f"v{version}"])
 subprocess.run(["git", "push", "upstream", "HEAD", "--follow-tags"])

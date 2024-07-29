@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.1.4"
+version = "1.1.8"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -44,6 +44,7 @@ lint.select = [
 ]
 lint.ignore = [
   "A001",
+  "ARG002",
   "ANN101",
   "ANN401",
   "C901",
@@ -86,6 +87,10 @@ filterwarnings = [
   'ignore:np.find_common_type is deprecated',
   'ignore:is_sparse is deprecated and will be removed',
   'ignore:Passing a BlockManager to DataFrame is deprecated',
+  'ignore:.*defaulting to pandas implementation',
+  'ignore:.*implementation has mismatches with pandas',
+  'ignore:.*Do not use the `random` module inside strategies',
+  'ignore:.*You are using pyarrow version',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
