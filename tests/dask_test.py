@@ -185,3 +185,13 @@ def test_str_slice(offset: int, length: int | None, expected: Any) -> None:
 
     result_frame = df.with_columns(nw.col("a").str.slice(offset, length))
     compare_dicts(result_frame, expected)
+
+
+def test_select() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
+    result = df.select("a", nw.col("b") + 1, (nw.col("z") * 2).alias("z*2"))
+    expected = {"a": [1, 3, 2], "b": [5, 5, 7], "z*2": [14.0, 16.0, 18.0]}
+    compare_dicts(result, expected)
