@@ -25,7 +25,7 @@ jobs:
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools --system && uv pip install -r requirements-dev.txt --system
       - name: uninstall scipy/sklearn
-        run: uv pip uninstall -y scipy scikit-learn --system
+        run: uv pip uninstall scipy scikit-learn --system
       - name: install-random-verions
         run: uv pip install -r random-requirements.txt --system
       - name: show versions

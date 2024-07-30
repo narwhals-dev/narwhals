@@ -33,7 +33,7 @@ jobs:
             uv pip install -e ".[dev, all]" --system
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals -y --system
+            uv pip uninstall narwhals --system
             uv pip install -e . --system
       - name: show-deps
         run: uv pip freeze
@@ -70,7 +70,7 @@ jobs:
             uv pip install -e ".[test]" --system
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals -y --system
+            uv pip uninstall narwhals --system
             uv pip install -e . --system
       - name: show-deps
         run: uv pip freeze

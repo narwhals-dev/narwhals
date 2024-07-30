@@ -73,15 +73,15 @@ jobs:
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
       - name: uninstall pyarrow
-        run: uv pip uninstall pyarrow -y --system
+        run: uv pip uninstall pyarrow --system
       - name: install pyarrow nightly
         run: uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --prefer-binary --pre pyarrow --system
       - name: uninstall pandas
-        run: uv pip uninstall pandas -y --system
+        run: uv pip uninstall pandas --system
       - name: install-pandas-nightly
         run: uv pip install --pre --extra-index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas --system
       - name: uninstall numpy
-        run: uv pip uninstall numpy -y --system
+        run: uv pip uninstall numpy --system
       - name: install numpy nightly
         run: uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy --system
       - name: install dask
