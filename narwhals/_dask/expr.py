@@ -232,6 +232,24 @@ class DaskExpr:
             "sum",
         )
 
+    def max(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.max(),
+            "max",
+        )
+
+    def min(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.min(),
+            "min",
+        )
+
+    def round(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.round(),
+            "round",
+        )
+
     def fill_null(self, value: Any) -> DaskExpr:
         return self._from_call(lambda _input, _val: _input.fillna(_val), "fillna", value)
 
