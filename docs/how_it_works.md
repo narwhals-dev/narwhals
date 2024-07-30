@@ -156,7 +156,7 @@ End user works with narwhals apis, it won't use directly the native dataframe AP
 so narwhals will take care itself of translating
 the calls done to the narwhals api to calls to the dataframe wrapper
 ( `PandasLikeNamespace`, `PandasLikeDataFrame` or `PandasLikeExpr`) which then
-fowards the calls to the native implementation. Translation of native narwhals
+forwards the calls to the native implementation. Translation of native narwhals
 apis to the dataframe wrapper will usually happen via the namespace.
 Usually you will find the namespace referred as
 as `plx` which stands for *Polars compliant namespace for Library X*
