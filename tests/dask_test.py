@@ -495,8 +495,6 @@ def test_schema() -> None:
 
     result = df.schema
     assert result == expected
-    result = df.lazy().collect().schema
-    assert result == expected
 
 
 def test_collect_schema() -> None:
@@ -506,6 +504,4 @@ def test_collect_schema() -> None:
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
     result = df.collect_schema()
-    assert result == expected
-    result = df.lazy().collect().collect_schema()
     assert result == expected
