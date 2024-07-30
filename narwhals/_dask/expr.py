@@ -232,6 +232,9 @@ class DaskExpr:
             "sum",
         )
 
+    def fill_null(self, value: Any) -> DaskExpr:
+        return self._from_call(lambda _input, _val: _input.fillna(_val), "fillna", value)
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
