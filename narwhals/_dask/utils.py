@@ -40,11 +40,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 def parse_exprs_and_named_exprs(
     df: DaskLazyFrame, *exprs: Any, **named_exprs: Any
 ) -> dict[str, Any]:
-    results = {}
-    for expr in exprs:
-        _results = expr._call(df)
-        for _result in _results:
-            results[_result.name] = _result
+    results = {_result.name: _result for expr in exprs for _result in expr._call(df)}
     for name, value in named_exprs.items():
         _results = value._call(df)
         if len(_results) != 1:  # pragma: no cover
