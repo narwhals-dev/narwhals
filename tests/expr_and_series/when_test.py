@@ -94,12 +94,12 @@ def test_value_numpy_array(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_value_series(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+def test_value_series(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     s_data = {"s": [3, 4, 5]}
-    s = nw.from_native(constructor(s_data))["s"]
+    s = nw.from_native(constructor_eager(s_data))["s"]
     assert isinstance(s, nw.Series)
     result = df.with_columns(when(nw.col("a") == 1).then(s).alias("a_when"))
     expected = {
