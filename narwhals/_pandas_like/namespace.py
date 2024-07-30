@@ -298,9 +298,7 @@ def _when_then_value_arg_process(
         return plx._create_expr_from_series(plx._create_compliant_series(value))
     elif series_with_shape is not None:
         return plx._create_expr_from_series(
-            plx._create_compliant_series(
-                [value] * len(series_with_shape._native_series)
-            )
+            plx._create_compliant_series([value] * len(series_with_shape._native_series))
         )
     elif shape is not None:
         if len(shape) != 1:
