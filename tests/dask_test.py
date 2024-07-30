@@ -14,7 +14,6 @@ import warnings
 from datetime import datetime
 from typing import Any
 
-import dask.dataframe as dd
 import pandas as pd
 import pytest
 
@@ -36,6 +35,8 @@ if sys.version_info < (3, 9):
 
 
 def test_with_columns() -> None:
+    import dask.dataframe as dd
+
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
 
     df = nw.from_native(dfdd)
@@ -66,6 +67,8 @@ def test_with_columns() -> None:
 
 
 def test_shift() -> None:
+    import dask.dataframe as dd
+
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     df = nw.from_native(dfdd)
     result = df.with_columns(nw.col("a").shift(1), nw.col("b").shift(-1))
@@ -74,6 +77,8 @@ def test_shift() -> None:
 
 
 def test_cum_sum() -> None:
+    import dask.dataframe as dd
+
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     df = nw.from_native(dfdd)
     result = df.with_columns(nw.col("a", "b").cum_sum())
@@ -82,6 +87,8 @@ def test_cum_sum() -> None:
 
 
 def test_sum() -> None:
+    import dask.dataframe as dd
+
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     df = nw.from_native(dfdd)
     result = df.with_columns((nw.col("a") + nw.col("b").sum()).alias("c"))
@@ -99,6 +106,8 @@ def test_sum() -> None:
     ],
 )
 def test_is_between(closed: str, expected: list[bool]) -> None:
+    import dask.dataframe as dd
+
     data = {
         "a": [1, 4, 2, 5],
     }
@@ -119,6 +128,8 @@ def test_is_between(closed: str, expected: list[bool]) -> None:
     ],
 )
 def test_starts_with(prefix: str, expected: dict[str, list[bool]]) -> None:
+    import dask.dataframe as dd
+
     data = {"a": ["fdas", "edfas"]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -136,6 +147,8 @@ def test_starts_with(prefix: str, expected: dict[str, list[bool]]) -> None:
     ],
 )
 def test_ends_with(suffix: str, expected: dict[str, list[bool]]) -> None:
+    import dask.dataframe as dd
+
     data = {"a": ["fdas", "edfas"]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -145,6 +158,8 @@ def test_ends_with(suffix: str, expected: dict[str, list[bool]]) -> None:
 
 
 def test_contains() -> None:
+    import dask.dataframe as dd
+
     data = {"pets": ["cat", "dog", "rabbit and parrot", "dove"]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -164,6 +179,8 @@ def test_contains() -> None:
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
 )
 def test_str_slice(offset: int, length: int | None, expected: Any) -> None:
+    import dask.dataframe as dd
+
     data = {"a": ["fdas", "edfas"]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -173,6 +190,8 @@ def test_str_slice(offset: int, length: int | None, expected: Any) -> None:
 
 
 def test_to_datetime() -> None:
+    import dask.dataframe as dd
+
     data = {"a": ["2020-01-01T12:34:56"]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -207,6 +226,7 @@ def test_str_to_uppercase(
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:
+    import dask.dataframe as dd
     import pyarrow as pa
 
     if (parse_version(pa.__version__) < (12, 0, 0)) and ("ß" in data["a"][0]):
@@ -242,6 +262,8 @@ def test_str_to_lowercase(
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:
+    import dask.dataframe as dd
+
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
 
@@ -250,6 +272,8 @@ def test_str_to_lowercase(
 
 
 def test_columns() -> None:
+    import dask.dataframe as dd
+
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": ["cat", "bat", "mat"]}))
     df = nw.from_native(dfdd)
 
@@ -259,6 +283,8 @@ def test_columns() -> None:
 
 
 def test_filter() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -269,6 +295,8 @@ def test_filter() -> None:
 
 
 def test_select() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
     result = df.select("a", nw.col("b") + 1, (nw.col("z") * 2).alias("z*2"))
@@ -277,6 +305,8 @@ def test_select() -> None:
 
 
 def test_str_only_select() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
     result = df.select("a", "b")
@@ -285,6 +315,8 @@ def test_str_only_select() -> None:
 
 
 def test_empty_select() -> None:
+    import dask.dataframe as dd
+
     result = (
         nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
         .lazy()
@@ -295,6 +327,8 @@ def test_empty_select() -> None:
 
 
 def test_dt_year() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [datetime(2020, 1, 1), datetime(2021, 1, 1)]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -304,6 +338,8 @@ def test_dt_year() -> None:
 
 
 def test_dt_month() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [datetime(2020, 1, 1), datetime(2021, 1, 1)]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -313,6 +349,8 @@ def test_dt_month() -> None:
 
 
 def test_dt_day() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [datetime(2020, 1, 1), datetime(2021, 1, 1)]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -322,6 +360,8 @@ def test_dt_day() -> None:
 
 
 def test_dt_hour() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [datetime(2020, 1, 1, 1), datetime(2021, 1, 1, 2)]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -331,6 +371,8 @@ def test_dt_hour() -> None:
 
 
 def test_dt_minute() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [datetime(2020, 1, 1, 1, 1), datetime(2021, 1, 1, 2, 2)]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -340,6 +382,8 @@ def test_dt_minute() -> None:
 
 
 def test_dt_second() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [datetime(2020, 1, 1, 1, 1, 1), datetime(2021, 1, 1, 2, 2, 2)]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -349,6 +393,8 @@ def test_dt_second() -> None:
 
 
 def test_dt_millisecond() -> None:
+    import dask.dataframe as dd
+
     data = {
         "a": [datetime(2020, 1, 1, 1, 1, 1, 1000), datetime(2021, 1, 1, 2, 2, 2, 2000)]
     }
@@ -360,6 +406,8 @@ def test_dt_millisecond() -> None:
 
 
 def test_dt_microsecond() -> None:
+    import dask.dataframe as dd
+
     data = {
         "a": [datetime(2020, 1, 1, 1, 1, 1, 1000), datetime(2021, 1, 1, 2, 2, 2, 2000)]
     }
@@ -371,6 +419,8 @@ def test_dt_microsecond() -> None:
 
 
 def test_dt_nanosecond() -> None:
+    import dask.dataframe as dd
+
     val1 = (
         pd.Timestamp("2014-07-04 15:00")
         + pd.tseries.offsets.Micro(654)
@@ -391,6 +441,8 @@ def test_dt_nanosecond() -> None:
 
 
 def test_dt_ordinal_day() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [datetime(2020, 1, 7), datetime(2021, 2, 1)]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -400,6 +452,8 @@ def test_dt_ordinal_day() -> None:
 
 
 def test_drop_nulls() -> None:
+    import dask.dataframe as dd
+
     data = {
         "A": [1, 2, None, 4],
         "B": [5, 6, 7, 8],
@@ -426,6 +480,8 @@ def test_drop_nulls() -> None:
 
 
 def test_fill_null_series() -> None:
+    import dask.dataframe as dd
+
     data = {
         "a": [0.0, None, 2, 3, 4],
         "b": [1.0, None, None, 5, 3],
@@ -447,6 +503,8 @@ def test_fill_null_series() -> None:
 
 
 def test_comparison_operations() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [1, 2, 3], "b": [3, 2, 1]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -465,6 +523,8 @@ def test_comparison_operations() -> None:
 
 
 def test_and_operations() -> None:
+    import dask.dataframe as dd
+
     data = {"a": [True, True, False], "b": [True, False, True]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
@@ -474,6 +534,8 @@ def test_and_operations() -> None:
 
 
 def test_allh() -> None:
+    import dask.dataframe as dd
+
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
@@ -487,6 +549,8 @@ def test_allh() -> None:
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema() -> None:
+    import dask.dataframe as dd
+
     df = nw.from_native(
         dd.from_pandas(pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
     )
@@ -498,6 +562,8 @@ def test_schema() -> None:
 
 
 def test_collect_schema() -> None:
+    import dask.dataframe as dd
+
     df = nw.from_native(
         dd.from_pandas(pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
     )
