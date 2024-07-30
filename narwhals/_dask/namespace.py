@@ -51,7 +51,8 @@ class DaskNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        return reduce(lambda x, y: x & y, flatten(exprs))  # type: ignore[no-any-return]
+        # coverage shows 55->exit as uncovered?
+        return reduce(lambda x, y: x & y, flatten(exprs))  # type: ignore[no-any-return]  # pragma: no cover
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
