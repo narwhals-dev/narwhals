@@ -131,12 +131,12 @@ def parse_into_exprs(
 ) -> ListOfCompliantExpr:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    out = [
+    return [  # type: ignore[return-value]
         parse_into_expr(into_expr, namespace=namespace) for into_expr in flatten(exprs)
+    ] + [
+        parse_into_expr(expr, namespace=namespace).alias(name)
+        for name, expr in named_exprs.items()
     ]
-    for name, expr in named_exprs.items():
-        out.append(parse_into_expr(expr, namespace=namespace).alias(name))
-    return out  # type: ignore[return-value]
 
 
 def parse_into_expr(

@@ -74,11 +74,9 @@ class DaskExpr:
         def func(df: DaskLazyFrame) -> list[Any]:
             results = []
             inputs = self._call(df)
+            _args = [maybe_evaluate(df, x) for x in args]
+            _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
-                _args = [maybe_evaluate(df, x) for x in args]
-                _kwargs = {
-                    key: maybe_evaluate(df, value) for key, value in kwargs.items()
-                }
                 result = call(_input, *_args, **_kwargs)
                 if isinstance(result, get_dask_expr()._collection.Series):
                     result = result.rename(_input.name)
@@ -123,12 +121,8 @@ class DaskExpr:
 
     def alias(self, name: str) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
-            results = []
             inputs = self._call(df)
-            for _input in inputs:
-                result = _input.rename(name)
-                results.append(result)
-            return results
+            return [_input.rename(name) for _input in inputs]
 
         return self.__class__(
             func,
@@ -352,7 +346,7 @@ class DaskExprDateTimeNamespace:
 
     def nanosecond(self) -> DaskExpr:
         return self._expr._from_call(
-            lambda _input: _input.dt.microsecond * 1000,
+            lambda _input: _input.dt.microsecond * 1000 + _input.dt.nanosecond,
             "nanosecond",
         )
 
