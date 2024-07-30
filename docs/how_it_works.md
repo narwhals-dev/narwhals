@@ -166,7 +166,7 @@ That usually happens in a few different ways:
 - `narwhals.DataFrame` -> `PandasLikeDataFrame` is available via the
   `narwhals.DataFrame._compliant_frame` attribute of the Dataframe.
   For example in case of a `pyarrow` we would have:
-  ```python
+  ```python-console
   >>> nwdf = nw.from_native(table)
   >>> type(nwdf)
   <class 'narwhals.stable.v1.DataFrame'>
@@ -175,7 +175,7 @@ That usually happens in a few different ways:
   ```
 - `narwhals.Expr` -> `PandasLikeExpr` happens via calling `Expr._call` on the
   target namespace. For example in case of `pyarrow` we would have:
-  ```python
+  ```python-console
   >>> type(nwdf)
   <class 'narwhals.stable.v1.DataFrame'>
   >>> nw.col("b").len()._call(nwdf.__narwhals_namespace__())
@@ -184,7 +184,7 @@ That usually happens in a few different ways:
 - `narwhals.Series` -> `PandasLikeSeries` happens via the
   `narwhals.Series._compliant_series` attribute of the Series.
   For example, in case of `pyarrow` we would have:
-  ```python
+  ```python-console
   >>> nwdf = nw.from_native(table)
   >>> type(nwdf)
   <class 'narwhals.stable.v1.DataFrame'>
@@ -203,14 +203,14 @@ as an argument by all narwhals functions.
 For example `nw.col("b")._call(nwdf.__narwhals_namespace__())` on a
 `pyarrow.Table` will return an `ArrowExpr`:
 
-```python
-  ArrowExpr(depth=0, function_name=col, root_names=['b'], output_names=['b']
+```python-console
+ArrowExpr(depth=0, function_name=col, root_names=['b'], output_names=['b']
 ```
 
 but invoking `narwhals.Dataframe.select` on it will work and return
 a new `narwhals.Dataframe` as if we passed a `narwhals.Expr` itself:
 
-```python
+```python-console
 >>> nwexpr = nw.col("b")
 >>> type(nwexpr)
 <class 'narwhals.stable.v1.Expr'>
