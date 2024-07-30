@@ -150,6 +150,81 @@ Each implementation defines its own objects in subfolders such as `narwhals._pan
 `narwhals._arrow`, `narwhals._polars`, whereas the top-level modules such as `narwhals.dataframe`
 and `narwhals.series` coordinate how to dispatch the Narwhals API to each backend.
 
+## Mapping from API to implementations
+
+End user works with narwhals apis, it won't use directly the native dataframe APIS,
+so narwhals will take care itself of translating
+the calls done to the narwhals api to calls to the dataframe wrapper
+( `PandasLikeNamespace`, `PandasLikeDataFrame` or `PandasLikeExpr`) which then
+fowards the calls to the native implementation. Translation of native narwhals
+apis to the dataframe wrapper will usually happen via the namespace.
+Usually you will find the namespace referred as
+as `plx` which stands for *Polars compliant namespace for Library X*
+
+That usually happens in a few different ways:
+
+- `narwhals.DataFrame` -> `PandasLikeDataFrame` is available via the
+  `narwhals.DataFrame._compliant_frame` attribute of the Dataframe.
+  For example in case of a `pyarrow` we would have:
+  ```python
+  >>> nwdf = nw.from_native(table)
+  >>> type(nwdf)
+  <class 'narwhals.stable.v1.DataFrame'>
+  >>> nwdf._compliant_frame
+  <narwhals._arrow.dataframe.ArrowDataFrame object at 0xe9a1e3f3b050>
+  ```
+- `narwhals.Expr` -> `PandasLikeExpr` happens via calling `Expr._call` on the
+  target namespace. For example in case of `pyarrow` we would have:
+  ```python
+  >>> type(nwdf)
+  <class 'narwhals.stable.v1.DataFrame'>
+  >>> nw.col("b").len()._call(nwdf.__narwhals_namespace__())
+  ArrowExpr(depth=1, function_name=col->len, root_names=['b'], output_names=['b']
+  ```
+- `narwhals.Series` -> `PandasLikeSeries` happens via the
+  `narwhals.Series._compliant_series` attribute of the Series.
+  For example, in case of `pyarrow` we would have:
+  ```python
+  >>> nwdf = nw.from_native(table)
+  >>> type(nwdf)
+  <class 'narwhals.stable.v1.DataFrame'>
+  >>> nwseries = nwdf["b"]
+  >>> type(colseries)
+  <class 'narwhals.stable.v1.Series'>
+  >>> colseries._compliant_series
+  <narwhals._arrow.series.ArrowSeries object at 0xe913f911d550>
+  ```
+
+After a compliant object is returned, the user will keep using and perform
+additional operations on the compliant object itself, as the compliant
+object implements the same API as the narwhals objects and is accepted
+as an argument by all narwhals functions.
+
+For example `nw.col("b")._call(nwdf.__narwhals_namespace__())` on a
+`pyarrow.Table` will return an `ArrowExpr`:
+
+```python
+  ArrowExpr(depth=0, function_name=col, root_names=['b'], output_names=['b']
+```
+
+but invoking `narwhals.Dataframe.select` on it will work and return
+a new `narwhals.Dataframe` as if we passed a `narwhals.Expr` itself:
+
+```python
+>>> nwexpr = nw.col("b")
+>>> type(nwexpr)
+<class 'narwhals.stable.v1.Expr'>
+>>> nwr = nwdf.select(nw.col("b"))
+>>> type(nwr)
+<class 'narwhals.stable.v1.DataFrame'>
+>>> arrowexpr = nw.col("b")._call(nwdf.__narwhals_namespace__())
+>>> type(arrowexpr)
+<class 'narwhals._arrow.expr.ArrowExpr'>
+>>> nwr = nwdf.select(arrowexpr)
+>>> type(nwr)
+<class 'narwhals.stable.v1.DataFrame'>
+```
+
 ## Group-by
 
 Group-by is probably one of Polars' most significant innovations (on the syntax side) with respect
