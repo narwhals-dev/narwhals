@@ -408,13 +408,22 @@ def test_dt_microsecond() -> None:
 def test_dt_nanosecond() -> None:
     import dask.dataframe as dd
 
-    data = {
-        "a": [datetime(2020, 1, 1, 1, 1, 1, 1000), datetime(2021, 1, 1, 2, 2, 2, 2000)]
-    }
+    val1 = (
+        pd.Timestamp("2014-07-04 15:00")
+        + pd.tseries.offsets.Micro(654)
+        + pd.tseries.offsets.Nano(321)
+    )
+    val2 = (
+        pd.Timestamp("2014-07-04 15:00")
+        + pd.tseries.offsets.Micro(123)
+        + pd.tseries.offsets.Nano(456)
+    )
+
+    data = {"a": [val1, val2]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
     result = df.with_columns(nanosecond=nw.col("a").dt.nanosecond())
-    expected = {"a": data["a"], "nanosecond": [1000000, 2000000]}
+    expected = {"a": data["a"], "nanosecond": [654321, 123456]}
     compare_dicts(result, expected)
 
 

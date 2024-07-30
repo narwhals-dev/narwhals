@@ -317,7 +317,7 @@ class DaskExprDateTimeNamespace:
 
     def nanosecond(self) -> DaskExpr:
         return self._expr._from_call(
-            lambda _input: _input.dt.microsecond * 1000,
+            lambda _input: _input.dt.microsecond * 1000 + _input.dt.nanosecond,
             "nanosecond",
         )
 
