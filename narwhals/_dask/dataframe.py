@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals._dask.utils import parse_exprs_and_named_exprs
-from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
@@ -59,6 +58,18 @@ class DaskLazyFrame:
     def columns(self) -> list[str]:
         return self._native_dataframe.columns.tolist()  # type: ignore[no-any-return]
 
+    def filter(
+        self,
+        *predicates: DaskExpr,
+    ) -> Self:
+        from narwhals._dask.namespace import DaskNamespace
+
+        plx = DaskNamespace(backend_version=self._backend_version)
+        expr = plx.all_horizontal(*predicates)
+        # Safety: all_horizontal's expression only returns a single column.
+        mask = expr._call(self)[0]
+        return self._from_native_dataframe(self._native_dataframe.loc[mask])
+
     def lazy(self) -> Self:
         return self
 
@@ -73,10 +84,10 @@ class DaskLazyFrame:
             # This is a simple slice => fastpath!
             return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
 
-        new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             pd = get_pandas()
             return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
-        df = dd.concat(new_series, axis=1)
+        df = dd.concat([val.rename(name) for name, val in new_series.items()], axis=1)
         return self._from_native_dataframe(df)

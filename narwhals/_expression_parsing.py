@@ -93,7 +93,8 @@ def evaluate_into_exprs(
         if len(evaluated_expr) > 1:
             msg = "Named expressions must return a single column"  # pragma: no cover
             raise AssertionError(msg)
-        series.append(evaluated_expr[0].alias(name))  # type: ignore[arg-type]
+        to_append = evaluated_expr[0].alias(name)
+        series.append(to_append)  # type: ignore[arg-type]
     return series
 
 
