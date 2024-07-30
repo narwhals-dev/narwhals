@@ -266,17 +266,12 @@ class PandasLikeNamespace:
     def when(
         self,
         *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-        **constraints: Any,
     ) -> PandasWhen:
         plx = self.__class__(self._implementation, self._backend_version)
         if predicates:
             condition = plx.all_horizontal(*flatten(predicates))
-        elif constraints:
-            condition = plx.all_horizontal(
-                *flatten([plx.col(key) == value for key, value in constraints.items()])
-            )
         else:
-            msg = "at least one predicate or constraint must be provided"
+            msg = "at least one predicate needs to be provided"
             raise TypeError(msg)
 
         return PandasWhen(condition, self._implementation, self._backend_version)

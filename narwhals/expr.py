@@ -3644,21 +3644,14 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 class When:
-    def __init__(
-        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
-    ) -> None:
+    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicates = flatten([predicates])
-        self._constraints = constraints
 
     def _extract_predicates(self, plx: Any) -> Any:
         return [extract_compliant(plx, v) for v in self._predicates]
 
     def then(self, value: Any) -> Then:
-        return Then(
-            lambda plx: plx.when(
-                *self._extract_predicates(plx), **self._constraints
-            ).then(value)
-        )
+        return Then(lambda plx: plx.when(*self._extract_predicates(plx)).then(value))
 
 
 class Then(Expr):
@@ -3669,7 +3662,7 @@ class Then(Expr):
         return Expr(lambda plx: self._call(plx).otherwise(value))
 
 
-def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:
+def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """
     Start a `when-then-otherwise` expression.
     Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
@@ -3679,8 +3672,6 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
     Parameters:
         predicates
             Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
-        constraints
-            Apply conditions as `col_name = value` keyword arguments that are treated as equality matches, such as `x = 123`. As with the predicates parameter, multiple conditions are implicitly combined using `&`.
 
     Examples:
         >>> import pandas as pd
@@ -3718,7 +3709,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
     """
-    return When(*predicates, **constraints)
+    return When(*predicates)
 
 
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

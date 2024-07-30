@@ -66,22 +66,6 @@ def test_multiple_conditions(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_when_constraint(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
-    df = nw.from_native(constructor(data))
-    result = df.with_columns(when(a=1).then(value=3).alias("a_when"))
-    expected = {
-        "a": [1, 2, 3],
-        "b": ["a", "b", "c"],
-        "c": [4.1, 5.0, 6.0],
-        "d": [True, False, True],
-        "a_when": [3, None, None],
-    }
-    compare_dicts(result, expected)
-
-
 def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
