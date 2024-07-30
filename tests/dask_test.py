@@ -479,6 +479,29 @@ def test_drop_nulls() -> None:
     compare_dicts(result_d, expected_d)
 
 
+def test_fill_null_series() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [0.0, None, 2, 3, 4],
+        "b": [1.0, None, None, 5, 3],
+        "c": [5.0, None, 3, 2, 1],
+    }
+    df = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
+
+    expected = {
+        "a": [0.0, 99, 2, 3, 4],
+        "b": [1.0, 99, 99, 5, 3],
+        "c": [5.0, 99, 3, 2, 1],
+    }
+    result = df.with_columns(
+        a=nw.col("a").fill_null(99),
+        b=nw.col("b").fill_null(99),
+        c=nw.col("c").fill_null(99),
+    )
+    compare_dicts(result, expected)
+
+
 def test_comparison_operations() -> None:
     import dask.dataframe as dd
 
