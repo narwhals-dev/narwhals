@@ -294,7 +294,7 @@ def _when_then_value_arg_process(
         return value
     elif isinstance(value, PandasLikeSeries):
         return plx._create_expr_from_series(value)
-    elif isinstance(value, np.ndarray) and not isinstance(value, str):
+    elif isinstance(value, np.ndarray):
         return plx._create_expr_from_series(plx._create_compliant_series(value))
     elif series_with_shape is not None:
         return plx._create_expr_from_series(
