@@ -22,12 +22,12 @@ Ever upgraded a package, only to find that it breaks all your tests because of a
 API change? Did you end up having to litter your code with statements such as the following?
 
 ```python
-if parse_version(pdx.__version__) < parse_version('1.3.0'):
+if parse_version(pdx.__version__) < parse_version("1.3.0"):
     df = df.brewbeer()
-elif parse_version('1.3.0') <= parse_version(pdx.__version__) < parse_version('1.5.0'):
+elif parse_version("1.3.0") <= parse_version(pdx.__version__) < parse_version("1.5.0"):
     df = df.brew_beer()
 else:
-    df = df.brew_drink('beer')
+    df = df.brew_drink("beer")
 ```
 
 Now imagine multiplying that complexity over all the dataframe libraries you want to support...
@@ -51,9 +51,10 @@ it. That is to say, if you write your code like this:
 import narwhals.stable.v1 as nw
 from narwhals.typing import FrameT
 
+
 @nw.narwhalify
 def func(df: FrameT) -> FrameT:
-    return df.with_columns(nw.col('a').cum_sum())
+    return df.with_columns(nw.col("a").cum_sum())
 ```
 
 then we, in Narwhals, promise that your code will keep working, even in newer versions of Polars
