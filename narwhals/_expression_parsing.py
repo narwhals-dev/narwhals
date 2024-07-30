@@ -193,7 +193,6 @@ def reuse_series_implementation(
     def func(df: CompliantDataFrame) -> list[CompliantSeries]:
         out: list[CompliantSeries] = []
         for column in expr._call(df):  # type: ignore[arg-type]
-            # ok, so "other" is a list for some reason
             _out = getattr(column, attr)(
                 *[maybe_evaluate_expr(df, arg) for arg in args],
                 **{
