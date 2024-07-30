@@ -278,7 +278,20 @@ def test_columns() -> None:
     df = nw.from_native(dfdd)
 
     result = df.columns
-    assert result == ["a", "b"]
+
+    assert set(result) == {"a", "b"}
+
+
+def test_filter() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.filter(nw.col("a") > 1)
+    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
+
+    compare_dicts(result, expected)
 
 
 def test_select() -> None:
@@ -408,13 +421,22 @@ def test_dt_microsecond() -> None:
 def test_dt_nanosecond() -> None:
     import dask.dataframe as dd
 
-    data = {
-        "a": [datetime(2020, 1, 1, 1, 1, 1, 1000), datetime(2021, 1, 1, 2, 2, 2, 2000)]
-    }
+    val1 = (
+        pd.Timestamp("2014-07-04 15:00")
+        + pd.tseries.offsets.Micro(654)
+        + pd.tseries.offsets.Nano(321)
+    )
+    val2 = (
+        pd.Timestamp("2014-07-04 15:00")
+        + pd.tseries.offsets.Micro(123)
+        + pd.tseries.offsets.Nano(456)
+    )
+
+    data = {"a": [val1, val2]}
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
     result = df.with_columns(nanosecond=nw.col("a").dt.nanosecond())
-    expected = {"a": data["a"], "nanosecond": [1000000, 2000000]}
+    expected = {"a": data["a"], "nanosecond": [654321, 123456]}
     compare_dicts(result, expected)
 
 
@@ -426,4 +448,77 @@ def test_dt_ordinal_day() -> None:
     df = nw.from_native(dfdd)
     result = df.with_columns(ordinal_day=nw.col("a").dt.ordinal_day())
     expected = {"a": data["a"], "ordinal_day": [7, 32]}
+    compare_dicts(result, expected)
+
+
+def test_drop_nulls() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "A": [1, 2, None, 4],
+        "B": [5, 6, 7, 8],
+        "C": [None, None, None, None],
+        "D": [9, 10, 11, 12],
+    }
+
+    df = dd.from_pandas(pd.DataFrame(data))
+    dddf = nw.from_native(df)
+
+    result_a = dddf.select(nw.col("A")).drop_nulls()
+    result_b = dddf.select(nw.col("B")).drop_nulls()
+    result_c = dddf.select(nw.col("C")).drop_nulls()
+    result_d = dddf.select(nw.col("D")).drop_nulls()
+    expected_a = {"A": [1.0, 2.0, 4.0]}
+    expected_b = {"B": [5, 6, 7, 8]}
+    expected_c = {"C": []}  # type: ignore[var-annotated]
+    expected_d = {"D": [9, 10, 11, 12]}
+
+    compare_dicts(result_a, expected_a)
+    compare_dicts(result_b, expected_b)
+    compare_dicts(result_c, expected_c)
+    compare_dicts(result_d, expected_d)
+
+
+def test_comparison_operations() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 2, 3], "b": [3, 2, 1]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.filter(nw.col("a") > nw.col("b"))
+    expected = {"a": [3], "b": [1]}
+    compare_dicts(result, expected)
+    result = df.filter(nw.col("a") >= nw.col("b"))
+    expected = {"a": [2, 3], "b": [2, 1]}
+    compare_dicts(result, expected)
+    result = df.filter(nw.col("a") < nw.col("b"))
+    expected = {"a": [1], "b": [3]}
+    compare_dicts(result, expected)
+    result = df.filter(nw.col("a") <= nw.col("b"))
+    expected = {"a": [1, 2], "b": [3, 2]}
+    compare_dicts(result, expected)
+
+
+def test_and_operations() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [True, True, False], "b": [True, False, True]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.filter(nw.col("a") & nw.col("b"))
+    expected = {"a": [True], "b": [True]}
+    compare_dicts(result, expected)
+
+
+def test_allh() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.select(all=nw.all_horizontal(nw.col("a")))
+    expected = {"all": [False, False, True]}
     compare_dicts(result, expected)

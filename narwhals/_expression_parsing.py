@@ -93,7 +93,8 @@ def evaluate_into_exprs(
         if len(evaluated_expr) > 1:
             msg = "Named expressions must return a single column"  # pragma: no cover
             raise AssertionError(msg)
-        series.append(evaluated_expr[0].alias(name))  # type: ignore[arg-type]
+        to_append = evaluated_expr[0].alias(name)
+        series.append(to_append)  # type: ignore[arg-type]
     return series
 
 
@@ -130,12 +131,12 @@ def parse_into_exprs(
 ) -> ListOfCompliantExpr:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    out = [
+    return [  # type: ignore[return-value]
         parse_into_expr(into_expr, namespace=namespace) for into_expr in flatten(exprs)
+    ] + [
+        parse_into_expr(expr, namespace=namespace).alias(name)
+        for name, expr in named_exprs.items()
     ]
-    for name, expr in named_exprs.items():
-        out.append(parse_into_expr(expr, namespace=namespace).alias(name))
-    return out  # type: ignore[return-value]
 
 
 def parse_into_expr(
