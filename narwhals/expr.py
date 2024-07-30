@@ -3648,18 +3648,12 @@ def _extract_predicates(plx: Any, predicates: Iterable[IntoExpr]) -> Any:
 
 
 class When:
-    def __init__(
-        self, *predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any
-    ) -> None:
-        self._predicates = predicates
-        self._constraints = constraints
+    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+        self._predicates = flatten([predicates])
 
     def then(self, value: Any) -> Then:
         return Then(
-            lambda plx: plx.when(
-                *_extract_predicates(plx, flatten([self._predicates])),
-                **self._constraints,
-            ).then(value)
+            lambda plx: plx.when(*_extract_predicates(plx, self._predicates)).then(value)
         )
 
 
@@ -3673,9 +3667,8 @@ class Then(Expr):
     def when(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-        **constraints: Any,
     ) -> ChainedWhen:
-        return ChainedWhen(self, *predicates, **constraints)
+        return ChainedWhen(self, *predicates)
 
 
 class ChainedWhen:
@@ -3683,18 +3676,14 @@ class ChainedWhen:
         self,
         above_then: Then | ChainedThen,
         *predicates: IntoExpr | Iterable[IntoExpr],
-        **conditions: Any,
     ) -> None:
         self._above_then = above_then
         self._predicates = predicates
-        self._conditions = conditions
 
     def then(self, value: Any) -> ChainedThen:
         return ChainedThen(
             lambda plx: self._above_then._call(plx)
-            .when(
-                *_extract_predicates(plx, flatten([self._predicates])), **self._conditions
-            )
+            .when(*_extract_predicates(plx, flatten([self._predicates])))
             .then(value)
         )
 
@@ -3706,15 +3695,14 @@ class ChainedThen(Expr):
     def when(
         self,
         *predicates: IntoExpr | Iterable[IntoExpr],
-        **constraints: Any,
     ) -> ChainedWhen:
-        return ChainedWhen(self, *predicates, **constraints)
+        return ChainedWhen(self, *predicates)
 
     def otherwise(self, value: Any) -> Expr:
         return Expr(lambda plx: self._call(plx).otherwise(value))
 
 
-def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:
+def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """
     Start a `when-then-otherwise` expression.
     Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
@@ -3724,8 +3712,6 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
     Parameters:
         predicates
             Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
-        constraints
-            Apply conditions as `col_name = value` keyword arguments that are treated as equality matches, such as `x = 123`. As with the predicates parameter, multiple conditions are implicitly combined using `&`.
 
     Examples:
         >>> import pandas as pd
@@ -3761,7 +3747,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
     """
-    return When(*predicates, **constraints)
+    return When(*predicates)
 
 
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

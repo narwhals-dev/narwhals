@@ -266,10 +266,9 @@ class PandasLikeNamespace:
     def when(
         self,
         *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-        **constraints: Any,
     ) -> PandasWhen:
         return PandasWhen(
-            when_processing(self, *predicates, **constraints),
+            when_processing(self, *predicates),
             self._implementation,
             self._backend_version,
         )
@@ -278,16 +277,11 @@ class PandasLikeNamespace:
 def when_processing(
     plx: PandasLikeNamespace,
     *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-    **constraints: Any,
 ) -> PandasLikeExpr:
     if predicates:
         condition = plx.all_horizontal(*flatten(predicates))
-    elif constraints:
-        condition = plx.all_horizontal(
-            *flatten([plx.col(key) == value for key, value in constraints.items()])
-        )
     else:
-        msg = "at least one predicate or constraint must be provided"
+        msg = "at least one predicate needs to be provided"
         raise TypeError(msg)
 
     return condition
@@ -364,14 +358,12 @@ class PandasThen(PandasLikeExpr):
     def when(
         self,
         *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-        **constraints: Any,
     ) -> PandasChainedWhen:
         return PandasChainedWhen(
             self._call,  # type: ignore[arg-type]
             when_processing(
                 PandasLikeNamespace(self._implementation, self._backend_version),
                 *predicates,
-                **constraints,
             ),
             depth=self._depth + 1,
             implementation=self._implementation,
@@ -473,14 +465,12 @@ class PandasChainedThen(PandasLikeExpr):
     def when(
         self,
         *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-        **constraints: Any,
     ) -> PandasChainedWhen:
         return PandasChainedWhen(
             self._call,  # type: ignore[arg-type]
             when_processing(
                 PandasLikeNamespace(self._implementation, self._backend_version),
                 *predicates,
-                **constraints,
             ),
             depth=self._depth + 1,
             implementation=self._implementation,

@@ -1475,7 +1475,7 @@ def get_level(
 class When(NwWhen):
     @classmethod
     def from_when(cls, when: NwWhen) -> Self:
-        return cls(*when._predicates, **when._constraints)
+        return cls(*when._predicates)
 
     def then(self, value: Any) -> Then:
         return Then.from_then(super().then(value))
@@ -1490,7 +1490,7 @@ class Then(NwThen, Expr):
         return _stableify(super().otherwise(value))
 
 
-def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When:
+def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """
     Start a `when-then-otherwise` expression.
     Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
@@ -1500,8 +1500,6 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
     Parameters:
         predicates
             Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
-        constraints
-            Apply conditions as `col_name = value` keyword arguments that are treated as equality matches, such as `x = 123`. As with the predicates parameter, multiple conditions are implicitly combined using `&`.
 
     Examples:
         >>> import pandas as pd
@@ -1539,7 +1537,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr], **constraints: Any) -> When
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
     """
-    return When.from_when(nw_when(*predicates, **constraints))
+    return When.from_when(nw_when(*predicates))
 
 
 def from_dict(
