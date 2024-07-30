@@ -39,3 +39,10 @@ repos:
   rev: 0.7.1
   hooks:
     - id: nbstripout
+- repo: https://github.com/adamchainz/blacken-docs
+  rev: "1.18.0"  # replace with latest tag on GitHub
+  hooks:
+  -   id: blacken-docs
+      args: [--skip-errors]
+      additional_dependencies:
+      - black==22.12.0
