@@ -3651,7 +3651,11 @@ class When:
         return [extract_compliant(plx, v) for v in self._predicates]
 
     def then(self, value: Any) -> Then:
-        return Then(lambda plx: plx.when(*self._extract_predicates(plx)).then(value))
+        return Then(
+            lambda plx: plx.when(*self._extract_predicates(plx)).then(
+                extract_compliant(plx, value)
+            )
+        )
 
 
 class Then(Expr):
@@ -3659,7 +3663,7 @@ class Then(Expr):
         self._call = call
 
     def otherwise(self, value: Any) -> Expr:
-        return Expr(lambda plx: self._call(plx).otherwise(value))
+        return Expr(lambda plx: self._call(plx).otherwise(extract_compliant(plx, value)))
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:

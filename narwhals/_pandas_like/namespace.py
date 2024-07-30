@@ -277,6 +277,42 @@ class PandasLikeNamespace:
         return PandasWhen(condition, self._implementation, self._backend_version)
 
 
+def _when_then_value_arg_process(
+    plx: PandasLikeNamespace,
+    value: PandasLikeExpr | PandasLikeSeries | Any,
+    *,
+    shape: tuple[int] | None = None,
+    series_with_shape: PandasLikeSeries | None = None,
+) -> PandasLikeExpr:
+    from narwhals.dependencies import get_numpy
+
+    np = get_numpy()
+
+    if not np:
+        raise ImportError("numpy is required for this function")
+    if isinstance(value, PandasLikeExpr):
+        return value
+    elif isinstance(value, PandasLikeSeries):
+        return plx._create_expr_from_series(value)
+    elif isinstance(value, np.ndarray) and not isinstance(value, str):
+        return plx._create_expr_from_series(plx._create_compliant_series(value))
+    elif series_with_shape is not None:
+        return plx._create_expr_from_series(
+            plx._create_compliant_series(
+                [value] * len(series_with_shape._native_series)
+            )
+        )
+    elif shape is not None:
+        if len(shape) != 1:
+            raise ValueError("shape must be a tuple of a single integer")
+
+        return plx._create_expr_from_series(
+            plx._create_compliant_series([value] * shape[0])
+        )
+    else:
+        raise TypeError("shape or series_with_shape must be provided")
+
+
 class PandasWhen:
     def __init__(
         self,
@@ -301,15 +337,16 @@ class PandasWhen:
 
         condition = self._condition._call(df)[0]
 
-        value_series = plx._create_broadcast_series_from_scalar(
-            self._then_value, condition
-        )
-        otherwise_series = plx._create_broadcast_series_from_scalar(
-            self._otherwise_value, condition
-        )
+        value_series = _when_then_value_arg_process(
+            plx, self._then_value, shape=condition.shape
+        )._call(df)[0]
+        otherwise_series = _when_then_value_arg_process(
+            plx, self._otherwise_value, shape=condition.shape
+        )._call(df)[0]
+
         return [value_series.zip_with(condition, otherwise_series)]
 
-    def then(self, value: Any) -> PandasThen:
+    def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value
 
         return PandasThen(
@@ -344,7 +381,7 @@ class PandasThen(PandasLikeExpr):
         self._root_names = root_names
         self._output_names = output_names
 
-    def otherwise(self, value: Any) -> PandasLikeExpr:
+    def otherwise(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasLikeExpr:
         # type ignore because we are setting the `_call` attribute to a
         # callable object of type `PandasWhen`, base class has the attribute as
         # only a `Callable`
