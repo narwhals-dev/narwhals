@@ -86,7 +86,7 @@ jobs:
         run: uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy --system
       - name: install dask
         run: |
-          python -m pip install git+https://github.com/dask/distributed git+https://github.com/dask/dask git+https://github.com/dask/dask-expr --system
+          python -m pip install git+https://github.com/dask/distributed git+https://github.com/dask/dask git+https://github.com/dask/dask-expr
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
