@@ -33,6 +33,8 @@ from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
+from narwhals.expr import ChainedThen as NwChainedThen
+from narwhals.expr import ChainedWhen as NwChainedWhen
 from narwhals.expr import Expr as NwExpr
 from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
@@ -479,12 +481,38 @@ def _stableify(obj: NwSeries) -> Series: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
 @overload
+def _stableify(when_then: NwWhen) -> When: ...
+@overload
+def _stableify(when_then: NwChainedWhen) -> ChainedWhen: ...
+@overload
+def _stableify(when_then: NwThen) -> Then: ...
+@overload
+def _stableify(when_then: NwChainedThen) -> ChainedThen: ...
+@overload
 def _stableify(obj: Any) -> Any: ...
 
 
 def _stableify(
-    obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries | NwExpr | Any,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
+    obj: NwDataFrame[IntoFrameT]
+    | NwLazyFrame[IntoFrameT]
+    | NwSeries
+    | NwExpr
+    | NwWhen
+    | NwChainedWhen
+    | NwThen
+    | NwChainedThen
+    | Any,
+) -> (
+    DataFrame[IntoFrameT]
+    | LazyFrame[IntoFrameT]
+    | Series
+    | Expr
+    | When
+    | ChainedWhen
+    | Then
+    | ChainedThen
+    | Any
+):
     if isinstance(obj, NwDataFrame):
         return DataFrame(
             obj._compliant_frame,
@@ -500,6 +528,14 @@ def _stableify(
             obj._compliant_series,
             level=obj._level,
         )
+    elif isinstance(obj, NwChainedWhen):
+        return ChainedWhen.from_base(obj)
+    if isinstance(obj, NwWhen):
+        return When.from_base(obj)
+    elif isinstance(obj, NwChainedThen):
+        return ChainedThen.from_base(obj)
+    elif isinstance(obj, NwThen):
+        return Then.from_base(obj)
     if isinstance(obj, NwExpr):
         return Expr(obj._call)
     return obj
@@ -1474,17 +1510,41 @@ def get_level(
 
 class When(NwWhen):
     @classmethod
-    def from_when(cls, when: NwWhen) -> Self:
+    def from_base(cls, when: NwWhen) -> Self:
         return cls(*when._predicates)
 
     def then(self, value: Any) -> Then:
-        return Then.from_then(super().then(value))
+        return _stableify(super().then(value))
 
 
 class Then(NwThen, Expr):
     @classmethod
-    def from_then(cls, then: NwThen) -> Self:
+    def from_base(cls, then: NwThen) -> Self:
         return cls(then._call)
+
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
+        return _stableify(super().when(*predicates))
+
+    def otherwise(self, value: Any) -> Expr:
+        return _stableify(super().otherwise(value))
+
+
+class ChainedWhen(NwChainedWhen):
+    @classmethod
+    def from_base(cls, chained_when: NwChainedWhen) -> Self:
+        return cls(_stableify(chained_when._above_then), *chained_when._predicates)
+
+    def then(self, value: Any) -> ChainedThen:
+        return _stableify(super().then(value))
+
+
+class ChainedThen(NwChainedThen, Expr):
+    @classmethod
+    def from_base(cls, chained_then: NwChainedThen) -> Self:
+        return cls(chained_then._call)
+
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
+        return _stableify(super().when(*predicates))
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
@@ -1535,7 +1595,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
     """
-    return When.from_when(nw_when(*predicates))
+    return _stableify(nw_when(*predicates))
 
 
 def from_dict(

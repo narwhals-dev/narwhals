@@ -4,8 +4,7 @@ from typing import Any
 
 import pytest
 
-import narwhals as nw
-from narwhals import when
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {
@@ -21,7 +20,7 @@ def test_when(request: Any, constructor: Any) -> None:
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    result = df.with_columns(when(nw.col("a") == 1).then(value=3).alias("a_when"))
+    result = df.with_columns(nw.when(nw.col("a") == 1).then(value=3).alias("a_when"))
     expected = {
         "a": [1, 2, 3, 4, 5],
         "b": ["a", "b", "c", "d", "e"],
@@ -37,7 +36,9 @@ def test_when_otherwise(request: Any, constructor: Any) -> None:
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    result = df.with_columns(when(nw.col("a") == 1).then(3).otherwise(6).alias("a_when"))
+    result = df.with_columns(
+        nw.when(nw.col("a") == 1).then(3).otherwise(6).alias("a_when")
+    )
     expected = {
         "a": [1, 2, 3, 4, 5],
         "b": ["a", "b", "c", "d", "e"],
@@ -54,7 +55,7 @@ def test_chained_when(request: Any, constructor: Any) -> None:
 
     df = nw.from_native(constructor(data))
     result = df.with_columns(
-        when(nw.col("a") == 1)
+        nw.when(nw.col("a") == 1)
         .then(3)
         .when(nw.col("a") == 2)
         .then(5)
@@ -76,7 +77,7 @@ def test_when_with_multiple_conditions(request: Any, constructor: Any) -> None:
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(
-        when(nw.col("a") == 1)
+        nw.when(nw.col("a") == 1)
         .then(3)
         .when(nw.col("a") == 2)
         .then(5)
@@ -101,7 +102,7 @@ def test_multiple_conditions(request: Any, constructor: Any) -> None:
 
     df = nw.from_native(constructor(data))
     result = df.with_columns(
-        when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when")
+        nw.when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when")
     )
     expected = {
         "a": [1, 2, 3, 4, 5],
@@ -119,4 +120,4 @@ def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
 
     df = nw.from_native(constructor(data))
     with pytest.raises(TypeError):
-        df.with_columns(when().then(value=3).alias("a_when"))
+        df.with_columns(nw.when().then(value=3).alias("a_when"))
