@@ -91,3 +91,6 @@ class DaskLazyFrame:
             return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
         df = dd.concat([val.rename(name) for name, val in new_series.items()], axis=1)
         return self._from_native_dataframe(df)
+
+    def drop_nulls(self) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.dropna())

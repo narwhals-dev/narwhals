@@ -451,6 +451,34 @@ def test_dt_ordinal_day() -> None:
     compare_dicts(result, expected)
 
 
+def test_drop_nulls() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "A": [1, 2, None, 4],
+        "B": [5, 6, 7, 8],
+        "C": [None, None, None, None],
+        "D": [9, 10, 11, 12],
+    }
+
+    df = dd.from_pandas(pd.DataFrame(data))
+    dddf = nw.from_native(df)
+
+    result_a = dddf.select(nw.col("A")).drop_nulls()
+    result_b = dddf.select(nw.col("B")).drop_nulls()
+    result_c = dddf.select(nw.col("C")).drop_nulls()
+    result_d = dddf.select(nw.col("D")).drop_nulls()
+    expected_a = {"A": [1.0, 2.0, 4.0]}
+    expected_b = {"B": [5, 6, 7, 8]}
+    expected_c = {"C": []}  # type: ignore[var-annotated]
+    expected_d = {"D": [9, 10, 11, 12]}
+
+    compare_dicts(result_a, expected_a)
+    compare_dicts(result_b, expected_b)
+    compare_dicts(result_c, expected_c)
+    compare_dicts(result_d, expected_d)
+
+
 def test_comparison_operations() -> None:
     import dask.dataframe as dd
 
