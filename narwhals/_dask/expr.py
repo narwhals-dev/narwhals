@@ -203,12 +203,6 @@ class DaskExpr:
             "sum",
         )
 
-    def drop_nulls(self) -> Self:
-        return self._from_call(
-            lambda _input: _input.dropna(),
-            "dropna",
-        )
-
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)

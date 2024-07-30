@@ -442,10 +442,10 @@ def test_drop_nulls() -> None:
     df = dd.from_pandas(pd.DataFrame(data))
     dddf = nw.from_native(df)
 
-    result_a = dddf.select(nw.col("A").drop_nulls())
-    result_b = dddf.select(nw.col("B").drop_nulls())
-    result_c = dddf.select(nw.col("C").drop_nulls())
-    result_d = dddf.select(nw.col("D").drop_nulls())
+    result_a = dddf.select(nw.col("A")).drop_nulls()
+    result_b = dddf.select(nw.col("B")).drop_nulls()
+    result_c = dddf.select(nw.col("C")).drop_nulls()
+    result_d = dddf.select(nw.col("D")).drop_nulls()
     expected_a = {"A": [1.0, 2.0, 4.0]}
     expected_b = {"B": [5, 6, 7, 8]}
     expected_c = {"C": []}  # type: ignore[var-annotated]
