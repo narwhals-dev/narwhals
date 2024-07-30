@@ -289,7 +289,8 @@ def _when_then_value_arg_process(
     np = get_numpy()
 
     if not np:
-        raise ImportError("numpy is required for this function")
+        msg = "numpy is required for this function"
+        raise ImportError(msg)
     if isinstance(value, PandasLikeExpr):
         return value
     elif isinstance(value, PandasLikeSeries):
@@ -302,13 +303,15 @@ def _when_then_value_arg_process(
         )
     elif shape is not None:
         if len(shape) != 1:
-            raise ValueError("shape must be a tuple of a single integer")
+            msg = "shape must be a tuple of a single integer"
+            raise ValueError(msg)
 
         return plx._create_expr_from_series(
             plx._create_compliant_series([value] * shape[0])
         )
     else:
-        raise TypeError("shape or series_with_shape must be provided")
+        msg = "shape or series_with_shape must be provided"
+        raise TypeError(msg)
 
 
 class PandasWhen:
