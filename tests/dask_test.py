@@ -451,7 +451,6 @@ def test_dt_ordinal_day() -> None:
     compare_dicts(result, expected)
 
 
-
 def test_drop_nulls() -> None:
     import dask.dataframe as dd
 
@@ -478,6 +477,7 @@ def test_drop_nulls() -> None:
     compare_dicts(result_b, expected_b)
     compare_dicts(result_c, expected_c)
     compare_dicts(result_d, expected_d)
+
 
 def test_comparison_operations() -> None:
     import dask.dataframe as dd
@@ -522,4 +522,3 @@ def test_allh() -> None:
     result = df.select(all=nw.all_horizontal(nw.col("a")))
     expected = {"all": [False, False, True]}
     compare_dicts(result, expected)
-
