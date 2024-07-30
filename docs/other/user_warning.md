@@ -91,7 +91,7 @@ return df.with_columns(d=nw.col("b") + nw.col("c")).group_by("a").agg(nw.sum("d"
 
 This gets roughly translated to:
 ```python
-df.assign(d=lambda df: df["b"] + df["c"]).groupby("a")["b"].sum()
+df.assign(d=lambda df: df["b"] + df["c"]).groupby("a")["d"].sum()
 ```
 Because we're using pandas' own API, as opposed to `apply` and a custom `lambda` function, then this is going to be efficient.
 
