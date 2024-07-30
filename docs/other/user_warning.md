@@ -6,7 +6,7 @@ If you have ever experienced the
 
 > UserWarning: Found complex group-by expression, which can't be expressed efficiently with the pandas API. If you can, please rewrite your query such that group-by aggregations are simple (e.g. mean, std, min, max, ...)
 
-message while using the narwhals `group_by()` method this is for you. If you haven't, this is also for you as you might experience it and you need to know how to avoid it.
+message while using the narwhals `group_by()` method, this is for you. If you haven't, this is also for you as you might experience it and you need to know how to avoid it.
 
 The pandas API most likely cannot efficiently handle the complexity of the aggregation operations you are trying to run. Take the following two codes as an example.
 
