@@ -3684,10 +3684,8 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
         >>> @nw.narwhalify
         ... def func(df_any):
-        ...     from narwhals.expr import when
-        ...
         ...     return df_any.with_columns(
-        ...         when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
+        ...         nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
         ...     )
 
         We can then pass either pandas or polars to `func`:
