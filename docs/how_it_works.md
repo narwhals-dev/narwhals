@@ -13,7 +13,7 @@ Translating this to pandas syntax, we get:
 
 ```python exec="1" source="above"
 def col_a(df):
-    return [df.loc[:, 'a']]
+    return [df.loc[:, "a"]]
 ```
 
 Let's step up the complexity. How about `nw.col('a')+1`? We already know what the
@@ -21,17 +21,18 @@ Let's step up the complexity. How about `nw.col('a')+1`? We already know what th
 
 ```python exec="1"
 def col_a(df):
-    return [df.loc[:, 'a']]
+    return [df.loc[:, "a"]]
+
 
 def col_a_plus_1(df):
-    return [x+1 for x in col_a(df)]
+    return [x + 1 for x in col_a(df)]
 ```
 
 Expressions can return multiple Series - for example, `nw.col('a', 'b')` translates to:
 
 ```python exec="1"
 def col_a_b(df):
-    return [df.loc[:, 'a'], df.loc[:, 'b']]
+    return [df.loc[:, "a"], df.loc[:, "b"]]
 ```
 
 Expressions can also take multiple columns as input - for example, `nw.sum_horizontal('a', 'b')`
@@ -39,7 +40,7 @@ translates to:
 
 ```python exec="1"
 def sum_horizontal_a_b(df):
-    return [df.loc[:, 'a'] + df.loc[:, 'b']]
+    return [df.loc[:, "a"] + df.loc[:, "b"]]
 ```
 
 Note that although an expression may have multiple columns as input,
@@ -75,7 +76,7 @@ pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
 )
-print(nw.col('a')._call(pn))
+print(nw.col("a")._call(pn))
 ```
 The result from the last line above is the same as we'd get from `pn.col('a')`, and it's
 a `narwhals._pandas_like.expr.PandasLikeExpr` object, which we'll call `PandasLikeExpr` for
@@ -102,16 +103,16 @@ pn = PandasLikeNamespace(
     backend_version=parse_version(pd.__version__),
 )
 
-df_pd = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
+df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 df = PandasLikeDataFrame(
     df_pd,
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
 )
-expression = pn.col('a') + 1
+expression = pn.col("a") + 1
 result = expression._call(df)
-print(f'length of result: {len(result)}\n')
-print('native series of first value of result: ')
+print(f"length of result: {len(result)}\n")
+print("native series of first value of result: ")
 print([x._native_series for x in result][0])
 ```
 
@@ -155,7 +156,7 @@ Group-by is probably one of Polars' most significant innovations (on the syntax 
 to pandas. We can write something like
 ```python
 df: pl.DataFrame
-df.group_by('a').agg((pl.col('c') > pl.col('b').mean()).max())
+df.group_by("a").agg((pl.col("c") > pl.col("b").mean()).max())
 ```
 To do this in pandas, we need to either use `GroupBy.apply` (sloooow), or do some crazy manual
 optimisations to get it to work.
@@ -165,9 +166,8 @@ In Narwhals, here's what we do:
 - if somebody uses a simple group-by aggregation (e.g. `df.group_by('a').agg(nw.col('b').mean())`),
   then on the pandas side we translate it to
   ```python
-
   df: pd.DataFrame
-  df.groupby('a').agg({'b': ['mean']})
+  df.groupby("a").agg({"b": ["mean"]})
   ```
 - if somebody passes a complex group-by aggregation, then we use `apply` and raise a `UserWarning`, warning
   users of the performance penalty and advising them to refactor their code so that the aggregation they perform
@@ -176,9 +176,9 @@ In Narwhals, here's what we do:
 In order to tell whether an aggregation is simple, Narwhals uses the private `_depth` attribute of `PandasLikeExpr`:
 
 ```python exec="1" result="python" session="pandas_impl" source="above"
-print(pn.col('a').mean())
-print((pn.col('a')+1).mean())
-print(pn.mean('a'))
+print(pn.col("a").mean())
+print((pn.col("a") + 1).mean())
+print(pn.mean("a"))
 ```
 
 For simple aggregations, Narwhals can just look at `_depth` and `function_name` and figure out
