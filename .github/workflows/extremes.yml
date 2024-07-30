@@ -1,4 +1,4 @@
-name: ci
+name: Min, old, and nightly versions
 
 on:
   pull_request:

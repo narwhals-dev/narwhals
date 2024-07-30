@@ -1,4 +1,4 @@
-name: random-versions
+name: Random Versions
 
 on:
   pull_request:

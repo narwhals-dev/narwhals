@@ -1,4 +1,4 @@
-name: ci
+name: Check Docs Build
 
 on:
   pull_request:

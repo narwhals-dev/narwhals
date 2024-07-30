@@ -1,4 +1,4 @@
-name: ci
+name: Test Downstream Libraries
 
 on:
   pull_request:
