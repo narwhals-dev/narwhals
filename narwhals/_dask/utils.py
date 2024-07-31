@@ -42,7 +42,13 @@ def parse_exprs_and_named_exprs(
 ) -> dict[str, Any]:
     results = {}
     for expr in exprs:
-        _results = expr._call(df)
+        if hasattr(expr, "__narwhals_expr__"):
+            _results = expr._call(df)
+        elif isinstance(expr, str):
+            _results = [df._native_dataframe.loc[:, expr]]
+        else:  # pragma: no cover
+            msg = f"Expected expression or column name, got: {expr}"
+            raise TypeError(msg)
         for _result in _results:
             results[_result.name] = _result
     for name, value in named_exprs.items():

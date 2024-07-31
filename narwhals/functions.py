@@ -165,11 +165,11 @@ def _get_sys_info() -> dict[str, str]:
     """
     python = sys.version.replace("\n", " ")
 
-    blob = [
+    blob = (
         ("python", python),
         ("executable", sys.executable),
         ("machine", platform.platform()),
-    ]
+    )
 
     return dict(blob)
 
@@ -185,14 +185,14 @@ def _get_deps_info() -> dict[str, str]:
     This function and show_versions were copied from sklearn and adapted
 
     """
-    deps = [
+    deps = (
         "pandas",
         "polars",
         "cudf",
         "modin",
         "pyarrow",
         "numpy",
-    ]
+    )
 
     from . import __version__
 

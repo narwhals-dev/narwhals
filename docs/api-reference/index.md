@@ -8,8 +8,8 @@ For example:
 import narwhals as nw
 
 df.with_columns(
-    a_mean = nw.col('a').mean(),
-    a_std = nw.col('a').std(),
+    a_mean=nw.col("a").mean(),
+    a_std=nw.col("a").std(),
 )
 ```
 is supported, as `DataFrame.with_columns`, `narwhals.col`, `Expr.mean`, and `Expr.std` are
@@ -20,7 +20,7 @@ However,
 import narwhals as nw
 
 df.with_columns(
-    a_ewm_mean = nw.col('a').ewm_mean(alpha=.7),
+    a_ewm_mean=nw.col("a").ewm_mean(alpha=0.7),
 )
 ```
 is not - `Expr.ewm_mean` only appears in the Polars API reference, but not in the Narwhals

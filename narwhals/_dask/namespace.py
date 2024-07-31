@@ -1,16 +1,23 @@
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import NoReturn
 
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
+from narwhals.utils import flatten
+
+if TYPE_CHECKING:
+    from narwhals._dask.dataframe import DaskLazyFrame
 
 if TYPE_CHECKING:
     from typing import Callable
 
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.typing import IntoDaskExpr
 
 
 class DaskNamespace:
@@ -42,6 +49,10 @@ class DaskNamespace:
             *column_names,
             backend_version=self._backend_version,
         )
+
+    def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+        # coverage shows 55->exit as uncovered?
+        return reduce(lambda x, y: x & y, flatten(exprs))  # type: ignore[no-any-return]  # pragma: no cover
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
