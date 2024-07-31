@@ -76,6 +76,26 @@ def test_shift() -> None:
     compare_dicts(result, expected)
 
 
+def test_min() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    result = df.with_columns((nw.col("a") + nw.col("b").min()).alias("c"))
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [5, 6, 7]}
+    compare_dicts(result, expected)
+
+
+def test_max() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    result = df.with_columns((nw.col("a") + nw.col("b").max()).alias("c"))
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
+    compare_dicts(result, expected)
+
+
 def test_cum_sum() -> None:
     import dask.dataframe as dd
 
