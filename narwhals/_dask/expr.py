@@ -189,6 +189,13 @@ class DaskExpr:
             other,
         )
 
+    def __or__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__or__(other),
+            "__and__",
+            other,
+        )
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),

@@ -553,7 +553,20 @@ def test_and_operations() -> None:
     compare_dicts(result, expected)
 
 
-def test_allh() -> None:
+def test_or_operations() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [True, True, False, False], "b": [True, False, True, False]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.select(c=nw.col("a") | nw.col("b"))
+    expected = {"c": [True, True, True, False]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("expr1", ["a", nw.col("a")])
+@pytest.mark.parametrize("expr2", ["b", nw.col("b")])
+def test_allh(expr1: Any, expr2: Any) -> None:
     import dask.dataframe as dd
 
     data = {
@@ -562,6 +575,22 @@ def test_allh() -> None:
     }
     dfdd = dd.from_pandas(pd.DataFrame(data))
     df = nw.from_native(dfdd)
-    result = df.select(all=nw.all_horizontal(nw.col("a")))
+    result = df.select(all=nw.all_horizontal(expr1, expr2))
     expected = {"all": [False, False, True]}
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("expr1", ["a", nw.col("a")])
+@pytest.mark.parametrize("expr2", ["b", nw.col("b")])
+def test_anyh(expr1: Any, expr2: Any) -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    df = nw.from_native(dfdd)
+    result = df.select(any=nw.any_horizontal(expr1, expr2))
+    expected = {"any": [False, True, True]}
     compare_dicts(result, expected)
