@@ -555,3 +555,26 @@ def test_allh() -> None:
     result = df.select(all=nw.all_horizontal(nw.col("a")))
     expected = {"all": [False, False, True]}
     compare_dicts(result, expected)
+
+
+def test_with_row_index() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": ["foo", "bars"],
+        "ab": ["foo", "bars"],
+    }
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    result = nw.from_native(dfdd).with_row_index()
+    expected = {"a": ["foo", "bars"], "ab": ["foo", "bars"], "index": [0, 1]}
+    compare_dicts(result, expected)
+
+
+def test_rename() -> None:
+    import dask.dataframe as dd
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    dfdd = dd.from_pandas(pd.DataFrame(data))
+    result = nw.from_native(dfdd).rename({"a": "x", "b": "y"})
+    expected = {"x": [1, 3, 2], "y": [4, 4, 6], "z": [7.0, 8, 9]}
+    compare_dicts(result, expected)

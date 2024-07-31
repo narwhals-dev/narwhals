@@ -94,3 +94,13 @@ class DaskLazyFrame:
 
     def drop_nulls(self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.dropna())
+
+    def with_row_index(self: Self, name: str) -> Self:
+        return self._from_native_dataframe(
+            self._native_dataframe.assign(**{name: 1}).assign(
+                **{name: lambda t: t[name].cumsum() - 1}
+            )
+        )
+
+    def rename(self: Self, mapping: dict[str, str]) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
