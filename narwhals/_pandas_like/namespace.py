@@ -333,8 +333,8 @@ class PandasWhen:
             function_name="whenthen",
             root_names=None,
             output_names=None,
-            implementation=self._condition._implementation,
-            backend_version=self._condition._backend_version,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
 
