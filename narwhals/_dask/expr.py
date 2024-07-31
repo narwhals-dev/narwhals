@@ -195,6 +195,12 @@ class DaskExpr:
             "mean",
         )
 
+    def min(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.min(),
+            "min",
+        )
+
     def shift(self, n: int) -> Self:
         return self._from_call(
             lambda _input, n: _input.shift(n),
