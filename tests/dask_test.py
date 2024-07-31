@@ -76,6 +76,26 @@ def test_shift() -> None:
     compare_dicts(result, expected)
 
 
+def test_min() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    result = df.with_columns((nw.col("a") + nw.col("b").min()).alias("c"))
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [5, 6, 7]}
+    compare_dicts(result, expected)
+
+
+def test_max() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    result = df.with_columns((nw.col("a") + nw.col("b").max()).alias("c"))
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
+    compare_dicts(result, expected)
+
+
 def test_cum_sum() -> None:
     import dask.dataframe as dd
 
@@ -477,6 +497,29 @@ def test_drop_nulls() -> None:
     compare_dicts(result_b, expected_b)
     compare_dicts(result_c, expected_c)
     compare_dicts(result_d, expected_d)
+
+
+def test_fill_null_series() -> None:
+    import dask.dataframe as dd
+
+    data = {
+        "a": [0.0, None, 2, 3, 4],
+        "b": [1.0, None, None, 5, 3],
+        "c": [5.0, None, 3, 2, 1],
+    }
+    df = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
+
+    expected = {
+        "a": [0.0, 99, 2, 3, 4],
+        "b": [1.0, 99, 99, 5, 3],
+        "c": [5.0, 99, 3, 2, 1],
+    }
+    result = df.with_columns(
+        a=nw.col("a").fill_null(99),
+        b=nw.col("b").fill_null(99),
+        c=nw.col("c").fill_null(99),
+    )
+    compare_dicts(result, expected)
 
 
 def test_comparison_operations() -> None:

@@ -195,6 +195,18 @@ class DaskExpr:
             "mean",
         )
 
+    def min(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.min(),
+            "min",
+        )
+
+    def max(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.max(),
+            "max",
+        )
+
     def shift(self, n: int) -> Self:
         return self._from_call(
             lambda _input, n: _input.shift(n),
@@ -231,6 +243,9 @@ class DaskExpr:
             lambda _input: _input.sum(),
             "sum",
         )
+
+    def fill_null(self, value: Any) -> DaskExpr:
+        return self._from_call(lambda _input, _val: _input.fillna(_val), "fillna", value)
 
     @property
     def str(self: Self) -> DaskExprStringNamespace:
