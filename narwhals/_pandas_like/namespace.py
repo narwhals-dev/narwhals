@@ -270,8 +270,7 @@ def _when_then_value_arg_process(
     plx: PandasLikeNamespace,
     value: PandasLikeExpr | PandasLikeSeries | Any,
     *,
-    shape: tuple[int] | None = None,
-    series_with_shape: PandasLikeSeries | None = None,
+    shape: tuple[int],
 ) -> PandasLikeExpr:
     from narwhals.dependencies import get_numpy
 
@@ -286,21 +285,10 @@ def _when_then_value_arg_process(
         return plx._create_expr_from_series(value)
     elif isinstance(value, np.ndarray):
         return plx._create_expr_from_series(plx._create_compliant_series(value))
-    elif series_with_shape is not None:
-        return plx._create_expr_from_series(
-            plx._create_compliant_series([value] * len(series_with_shape._native_series))
-        )
-    elif shape is not None:
-        if len(shape) != 1:
-            msg = "shape must be a tuple of a single integer"
-            raise ValueError(msg)
-
+    else:
         return plx._create_expr_from_series(
             plx._create_compliant_series([value] * shape[0])
         )
-    else:
-        msg = "shape or series_with_shape must be provided"
-        raise TypeError(msg)
 
 
 class PandasWhen:
