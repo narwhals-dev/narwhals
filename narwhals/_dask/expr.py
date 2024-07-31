@@ -5,12 +5,14 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.namespace import DaskNamespace
 
 from narwhals._dask.utils import maybe_evaluate
 
@@ -33,6 +35,13 @@ class DaskExpr:
         self._root_names = root_names
         self._output_names = output_names
         self._backend_version = backend_version
+
+    def __narwhals_expr__(self) -> None: ...
+
+    def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
+        from narwhals._dask.namespace import DaskNamespace
+
+        return DaskNamespace(backend_version=self._backend_version)
 
     @classmethod
     def from_column_names(
@@ -65,11 +74,9 @@ class DaskExpr:
         def func(df: DaskLazyFrame) -> list[Any]:
             results = []
             inputs = self._call(df)
+            _args = [maybe_evaluate(df, x) for x in args]
+            _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
-                _args = [maybe_evaluate(df, x) for x in args]
-                _kwargs = {
-                    key: maybe_evaluate(df, value) for key, value in kwargs.items()
-                }
                 result = call(_input, *_args, **_kwargs)
                 if isinstance(result, get_dask_expr()._collection.Series):
                     result = result.rename(_input.name)
@@ -114,12 +121,8 @@ class DaskExpr:
 
     def alias(self, name: str) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
-            results = []
             inputs = self._call(df)
-            for _input in inputs:
-                result = _input.rename(name)
-                results.append(result)
-            return results
+            return [_input.rename(name) for _input in inputs]
 
         return self.__class__(
             func,
@@ -151,10 +154,57 @@ class DaskExpr:
             other,
         )
 
+    def __ge__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__ge__(other),
+            "__ge__",
+            other,
+        )
+
+    def __gt__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__gt__(other),
+            "__gt__",
+            other,
+        )
+
+    def __le__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__le__(other),
+            "__le__",
+            other,
+        )
+
+    def __lt__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__lt__(other),
+            "__lt__",
+            other,
+        )
+
+    def __and__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__and__(other),
+            "__and__",
+            other,
+        )
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
             "mean",
+        )
+
+    def min(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.min(),
+            "min",
+        )
+
+    def max(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.max(),
+            "max",
         )
 
     def shift(self, n: int) -> Self:
@@ -194,9 +244,16 @@ class DaskExpr:
             "sum",
         )
 
+    def fill_null(self, value: Any) -> DaskExpr:
+        return self._from_call(lambda _input, _val: _input.fillna(_val), "fillna", value)
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
+
+    @property
+    def dt(self: Self) -> DaskExprDateTimeNamespace:
+        return DaskExprDateTimeNamespace(self)
 
 
 class DaskExprStringNamespace:
@@ -228,4 +285,88 @@ class DaskExprStringNamespace:
             "slice",
             offset,
             stop,
+        )
+
+    def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
+        return self._expr._from_call(
+            lambda _input, fmt: get_dask().dataframe.to_datetime(_input, format=fmt),
+            "to_datetime",
+            format,
+        )
+
+    def to_uppercase(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.str.upper(),
+            "to_uppercase",
+        )
+
+    def to_lowercase(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.str.lower(),
+            "to_lowercase",
+        )
+
+
+class DaskExprDateTimeNamespace:
+    def __init__(self, expr: DaskExpr) -> None:
+        self._expr = expr
+
+    def year(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.year,
+            "year",
+        )
+
+    def month(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.month,
+            "month",
+        )
+
+    def day(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.day,
+            "day",
+        )
+
+    def hour(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.hour,
+            "hour",
+        )
+
+    def minute(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.minute,
+            "minute",
+        )
+
+    def second(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.second,
+            "second",
+        )
+
+    def millisecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond // 1000,
+            "millisecond",
+        )
+
+    def microsecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond,
+            "microsecond",
+        )
+
+    def nanosecond(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.microsecond * 1000 + _input.dt.nanosecond,
+            "nanosecond",
+        )
+
+    def ordinal_day(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.dayofyear,
+            "ordinal_day",
         )

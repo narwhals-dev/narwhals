@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._dask.typing import IntoDaskExpr
 
 
 class DaskLazyFrame:
@@ -52,3 +53,44 @@ class DaskLazyFrame:
             implementation=Implementation.PANDAS,
             backend_version=parse_version(get_pandas().__version__),
         )
+
+    @property
+    def columns(self) -> list[str]:
+        return self._native_dataframe.columns.tolist()  # type: ignore[no-any-return]
+
+    def filter(
+        self,
+        *predicates: DaskExpr,
+    ) -> Self:
+        from narwhals._dask.namespace import DaskNamespace
+
+        plx = DaskNamespace(backend_version=self._backend_version)
+        expr = plx.all_horizontal(*predicates)
+        # Safety: all_horizontal's expression only returns a single column.
+        mask = expr._call(self)[0]
+        return self._from_native_dataframe(self._native_dataframe.loc[mask])
+
+    def lazy(self) -> Self:
+        return self
+
+    def select(
+        self: Self,
+        *exprs: IntoDaskExpr,
+        **named_exprs: IntoDaskExpr,
+    ) -> Self:
+        dd = get_dask_dataframe()
+
+        if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
+            # This is a simple slice => fastpath!
+            return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
+
+        new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        if not new_series:
+            # return empty dataframe, like Polars does
+            pd = get_pandas()
+            return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
+        df = dd.concat([val.rename(name) for name, val in new_series.items()], axis=1)
+        return self._from_native_dataframe(df)
+
+    def drop_nulls(self) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.dropna())
