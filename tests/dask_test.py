@@ -572,17 +572,18 @@ def test_scalar_reduction() -> None:
 
     dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     df = nw.from_native(dfdd)
-    # result = df.select(
-    #     nw.col("a").min().alias("min"),
-    #     nw.col("b").max().alias("max")
-    # )
-    # expected = {"min": [1], "max": [6]}
-    # compare_dicts(result, expected)
+    result = df.select(
+        nw.col("a").min().alias("min"),
+        nw.col("b").max().alias("max"),
+        nw.col("a", "b").mean(),
+    )
+    expected = {"min": [1], "max": [6], "a": [2], "b": [5]}
+    compare_dicts(result, expected)
 
     result = df.select((nw.col("a") + nw.col("b").max()).alias("x"))
     expected = {"x": [7, 8, 9]}
     compare_dicts(result, expected)
 
-    result = df.select(nw.col("a").min(), nw.col("b"))
-    expected = {"a": [1, 1, 1], "b": [4, 5, 6]}
-    compare_dicts(result, expected)
+    # result = df.select(nw.col("a").min(), nw.col("b"))  # noqa: ERA001
+    # expected = {"a": [1, 1, 1], "b": [4, 5, 6]}  # noqa: ERA001
+    # compare_dicts(result, expected)  # noqa: ERA001

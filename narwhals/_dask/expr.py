@@ -82,8 +82,6 @@ class DaskExpr:
                 result = call(_input, *_args, **_kwargs)
                 if isinstance(result, de._collection.Series):
                     result = result.rename(_input.name)
-                elif isinstance(result, de._collection.Scalar):
-                    result = result.to_series().rename(_input.name)
                 results.append(result)
             return results
 
@@ -126,7 +124,14 @@ class DaskExpr:
     def alias(self, name: str) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
             inputs = self._call(df)
-            return [_input.rename(name) for _input in inputs]
+            de = get_dask_expr()
+
+            return [
+                _input.to_series().rename(name)
+                if isinstance(_input, de._collection.Scalar)
+                else _input.rename(name)
+                for _input in inputs
+            ]
 
         return self.__class__(
             func,
