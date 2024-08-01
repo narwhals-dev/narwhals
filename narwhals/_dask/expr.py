@@ -71,6 +71,8 @@ class DaskExpr:
         *args: Any,
         **kwargs: Any,
     ) -> Self:
+        de = get_dask_expr()
+
         def func(df: DaskLazyFrame) -> list[Any]:
             results = []
             inputs = self._call(df)
@@ -78,8 +80,10 @@ class DaskExpr:
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
                 result = call(_input, *_args, **_kwargs)
-                if isinstance(result, get_dask_expr()._collection.Series):
+                if isinstance(result, de._collection.Series):
                     result = result.rename(_input.name)
+                elif isinstance(result, de._collection.Scalar):
+                    result = result.to_series().rename(_input.name)
                 results.append(result)
             return results
 

@@ -565,3 +565,24 @@ def test_allh() -> None:
     result = df.select(all=nw.all_horizontal(nw.col("a")))
     expected = {"all": [False, False, True]}
     compare_dicts(result, expected)
+
+
+def test_scalar_reduction() -> None:
+    import dask.dataframe as dd
+
+    dfdd = dd.from_pandas(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(dfdd)
+    # result = df.select(
+    #     nw.col("a").min().alias("min"),
+    #     nw.col("b").max().alias("max")
+    # )
+    # expected = {"min": [1], "max": [6]}
+    # compare_dicts(result, expected)
+
+    result = df.select((nw.col("a") + nw.col("b").max()).alias("x"))
+    expected = {"x": [7, 8, 9]}
+    compare_dicts(result, expected)
+
+    result = df.select(nw.col("a").min(), nw.col("b"))
+    expected = {"a": [1, 1, 1], "b": [4, 5, 6]}
+    compare_dicts(result, expected)
