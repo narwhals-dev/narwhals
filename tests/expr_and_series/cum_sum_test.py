@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -10,7 +12,9 @@ data = {
 }
 
 
-def test_cum_sum_simple(constructor: Any) -> None:
+def test_cum_sum_simple(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().cum_sum())
     expected = {

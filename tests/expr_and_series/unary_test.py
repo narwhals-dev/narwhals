@@ -1,10 +1,14 @@
 from typing import Any
 
+import pytest
+
 import narwhals as nw
 from tests.utils import compare_dicts
 
 
-def test_unary(constructor: Any) -> None:
+def test_unary(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     result = (
         nw.from_native(constructor(data))
