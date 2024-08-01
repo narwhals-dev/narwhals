@@ -36,6 +36,7 @@ class StandardScaler:
     def fit(self, df: nw.DataFrame[Any]) -> None:
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
+        self._columns = df.columns
 ```
 
 ## Transform method
@@ -47,7 +48,7 @@ Therefore, we use `@nw.narwhalify`:
 @nw.narwhalify
 def transform(self, df: FrameT) -> FrameT:
     return df.with_columns(
-        (nw.col(col) - self._means[col]) / self._std_devs[col] for col in df.columns
+        (nw.col(col) - self._means[col]) / self._std_devs[col] for col in self._columns
     )
 ```
 
@@ -70,11 +71,13 @@ class StandardScaler:
     def fit(self, df: nw.DataFrame[Any]) -> None:
         self._means = {col: df[col].mean() for col in df.columns}
         self._std_devs = {col: df[col].std() for col in df.columns}
+        self._columns = df.columns
 
     @nw.narwhalify
     def transform(self, df: FrameT) -> FrameT:
         return df.with_columns(
-            (nw.col(col) - self._means[col]) / self._std_devs[col] for col in df.columns
+            (nw.col(col) - self._means[col]) / self._std_devs[col]
+            for col in self._columns
         )
 ```
 
