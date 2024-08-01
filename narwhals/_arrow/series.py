@@ -290,7 +290,9 @@ class ArrowSeries:
 
     def round(self, decimals: int) -> Self:
         pc = get_pyarrow_compute()
-        return self._from_native_series(pc.round(self._native_series, decimals))
+        return self._from_native_series(
+            pc.round(self._native_series, decimals, round_mode="half_towards_infinity")
+        )
 
     def diff(self) -> Self:
         pc = get_pyarrow_compute()
