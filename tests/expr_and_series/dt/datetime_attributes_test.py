@@ -32,11 +32,31 @@ data = {
     ],
 )
 def test_datetime_attributes(
-    constructor_eager: Any, attribute: str, expected: list[int]
+    constructor: Any, attribute: str, expected: list[int]
 ) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a").dt, attribute)())
     compare_dicts(result, {"a": expected})
 
+
+@pytest.mark.parametrize(
+    ("attribute", "expected"),
+    [
+        ("year", [2021, 2020]),
+        ("month", [3, 1]),
+        ("day", [1, 2]),
+        ("hour", [12, 2]),
+        ("minute", [34, 4]),
+        ("second", [56, 14]),
+        ("millisecond", [49, 715]),
+        ("microsecond", [49000, 715000]),
+        ("nanosecond", [49000000, 715000000]),
+        ("ordinal_day", [60, 2]),
+    ],
+)
+def test_datetime_attributes_series(
+    constructor_eager: Any, attribute: str, expected: list[int]
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(getattr(df["a"].dt, attribute)())
     compare_dicts(result, {"a": expected})
