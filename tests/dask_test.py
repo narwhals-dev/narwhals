@@ -591,3 +591,20 @@ def test_collect_schema() -> None:
 
     result = df.collect_schema()
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("drop", "left"),
+    [
+        (["a"], ["b", "z"]),
+        (["a", "b"], ["z"]),
+    ],
+)
+def test_drop(drop: list[str], left: list[str]) -> None:
+    import dask.dataframe as dd
+
+    df = nw.from_native(
+        dd.from_pandas(pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}))
+    )
+    assert df.drop(drop).collect_schema().names() == left
+    assert df.drop(*drop).collect_schema().names() == left
