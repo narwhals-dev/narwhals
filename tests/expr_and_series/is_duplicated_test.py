@@ -13,6 +13,8 @@ data = {
 
 
 def test_is_duplicated_expr(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # TODO(unassigned): why is Modin failing here?
         request.applymarker(pytest.mark.xfail)

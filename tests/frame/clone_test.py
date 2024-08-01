@@ -7,6 +7,8 @@ from tests.utils import compare_dicts
 
 
 def test_clone(request: Any, constructor: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

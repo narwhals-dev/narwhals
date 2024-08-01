@@ -21,7 +21,11 @@ data = {
         ("none", [False, True, True, False]),
     ],
 )
-def test_is_between(constructor: Any, closed: str, expected: list[bool]) -> None:
+def test_is_between(
+    constructor: Any, closed: str, expected: list[bool], request: Any
+) -> None:
+    if "dask" in str(constructor) and closed == "none":
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_between(1, 5, closed=closed))
     expected_dict = {"a": expected}
