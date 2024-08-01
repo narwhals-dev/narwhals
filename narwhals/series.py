@@ -544,6 +544,37 @@ class Series:
         """
         return self._compliant_series.std(ddof=ddof)
 
+    def clip(
+        self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        """
+        Clip values in the Series.
+        Arguments:
+            lower_bound: Lower bound value.
+            upper_bound: Upper bound value.
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+            We define a library agnostic function:
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.clip(2, 2)
+            We can then pass either pandas or Polars to `func`:
+            >>> func(s_pd)
+            0    2
+            1    2
+            2    2
+            dtype: int64
+            >>> func(s_pl)
+        """
+        return self._from_compliant_series(
+            self._compliant_series.clip(lower_bound=lower_bound, upper_bound=upper_bound)
+        )
+
     def is_in(self, other: Any) -> Self:
         """
         Check if the elements of this Series are in the other sequence.
@@ -2063,9 +2094,7 @@ class Series:
             >>> s_pd = pd.Series(name="a", data=data)
             >>> s_pl = pl.Series(name="a", values=data)
 
-            Let's define a dataframe-agnostic function in which gather every 2 rows,
-            starting from a offset of 1:
-
+            Let's define a dataframe-agnostic function in which gather every 2 rowreturn self._compliant_series.clip(lower_bound=lower_bound,
             >>> @nw.narwhalify
             ... def func(s):
             ...     return s.gather_every(n=2, offset=1)

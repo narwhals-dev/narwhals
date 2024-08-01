@@ -631,6 +631,13 @@ class PandasLikeSeries:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_series(self._native_series.iloc[offset::n])
 
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        return self._from_native_series(
+            self._native_series.clip(lower_bound, upper_bound)
+        )
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
