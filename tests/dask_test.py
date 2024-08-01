@@ -584,6 +584,10 @@ def test_scalar_reduction() -> None:
     expected = {"x": [7, 8, 9]}
     compare_dicts(result, expected)
 
-    # result = df.select(nw.col("a").min(), nw.col("b"))  # noqa: ERA001
-    # expected = {"a": [1, 1, 1], "b": [4, 5, 6]}  # noqa: ERA001
+    result = df.select(nw.col("a"), nw.col("b").min())
+    expected = {"a": [1, 2, 3], "b": [4, 4, 4]}
+    compare_dicts(result, expected)
+
+    # result = df.select(nw.col("a").max(), nw.col("b"))  #noqa: ERA001
+    # expected = {"a": [3, 3, 3], "b": [4, 5, 6]}  # noqa: ERA001
     # compare_dicts(result, expected)  # noqa: ERA001

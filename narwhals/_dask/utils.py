@@ -41,7 +41,6 @@ def parse_exprs_and_named_exprs(
     df: DaskLazyFrame, *exprs: Any, **named_exprs: Any
 ) -> dict[str, Any]:
     results = {}
-    de = get_dask_expr()
     for expr in exprs:
         if hasattr(expr, "__narwhals_expr__"):
             _results = expr._call(df)
@@ -52,10 +51,9 @@ def parse_exprs_and_named_exprs(
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
-        for _name, _result in zip(_names, _results):
-            if isinstance(_result, de._collection.Scalar):
-                _result = _result.to_series().rename(_name)
-            results[_result.name] = _result
+
+        results.update(dict(zip(_names, _results)))
+
     for name, value in named_exprs.items():
         _results = value._call(df)
         if len(_results) != 1:  # pragma: no cover
