@@ -12,6 +12,6 @@ def test_select(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_empty_select(constructor_eager: Any) -> None:
-    result = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).select()
-    assert result.shape == (0, 0)
+def test_empty_select(constructor: Any) -> None:
+    result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
+    assert result.collect().shape == (0, 0)
