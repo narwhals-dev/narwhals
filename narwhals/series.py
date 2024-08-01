@@ -2094,7 +2094,9 @@ class Series:
             >>> s_pd = pd.Series(name="a", data=data)
             >>> s_pl = pl.Series(name="a", values=data)
 
-            Let's define a dataframe-agnostic function in which gather every 2 rowreturn self._compliant_series.clip(lower_bound=lower_bound,
+            Let's define a dataframe-agnostic function in which gather every 2 rows,
+            starting from a offset of 1:
+
             >>> @nw.narwhalify
             ... def func(s):
             ...     return s.gather_every(n=2, offset=1)
