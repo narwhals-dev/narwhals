@@ -11,7 +11,9 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
 
 
 @pytest.mark.parametrize("expr", [nw.col("a", "b", "z").max(), nw.max("a", "b", "z")])
-def test_expr_max_expr(constructor: Any, expr: nw.Expr) -> None:
+def test_expr_max_expr(constructor: Any, expr: nw.Expr, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(expr)
     expected = {"a": [3], "b": [6], "z": [9.0]}

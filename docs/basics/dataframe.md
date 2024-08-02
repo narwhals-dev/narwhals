@@ -76,7 +76,7 @@ def func(df_native: IntoFrameT) -> IntoFrameT:
     return nw.to_native(df)
 ```
 Despite being more verbose, it has the advantage of preserving the type annotation of the native
-object - see [typing](# todo) for more details.
+object - see [typing](../api-reference/typing.md) for more details.
 
 In general, in this tutorial, we'll use the former.
 
