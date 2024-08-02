@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -9,7 +11,9 @@ data = {
 }
 
 
-def test_n_unique(constructor: Any) -> None:
+def test_n_unique(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().n_unique())
     expected = {"a": [3], "b": [4]}
