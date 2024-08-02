@@ -22,12 +22,7 @@ from tests.utils import compare_dicts
 def test_comparand_operators(
     constructor: Any, operator: str, expected: list[bool], request: Any
 ) -> None:
-    if "dask" in str(constructor) and operator not in [
-        "__gt__",
-        "__le__",
-        "__lt__",
-        "__ge__",
-    ]:
+    if "dask" in str(constructor) and operator in {"__eq__", "__ne__"}:
         request.applymarker(pytest.mark.xfail)
     data = {"a": [0, 1, 2]}
     df = nw.from_native(constructor(data))
@@ -42,13 +37,7 @@ def test_comparand_operators(
         ("__or__", [True, True, True, False]),
     ],
 )
-def test_logic_operators(
-    constructor: Any, operator: str, expected: list[bool], request: Any
-) -> None:
-    if "dask" in str(constructor) and operator not in [
-        "__and__",
-    ]:
-        request.applymarker(pytest.mark.xfail)
+def test_logic_operators(constructor: Any, operator: str, expected: list[bool]) -> None:
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
     df = nw.from_native(constructor(data))
 
