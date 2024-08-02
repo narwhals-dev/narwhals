@@ -24,7 +24,6 @@ def round_per_backend(backend: Any, n: float, decimals: int) -> float:
         return round(n, decimals)
 
 
-
 def test_round(request: Any, constructor: Any, decimals: int) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
