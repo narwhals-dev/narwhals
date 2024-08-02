@@ -13,21 +13,27 @@ data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 prefix = "with_prefix_"
 
 
-def test_prefix(constructor: Any) -> None:
+def test_prefix(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.prefix(prefix))
     expected = {prefix + str(k): [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_suffix_after_alias(constructor: Any) -> None:
+def test_suffix_after_alias(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.prefix(prefix))
     expected = {prefix + "foo": data["foo"]}
     compare_dicts(result, expected)
 
 
-def test_prefix_raise_anonymous(constructor: Any) -> None:
+def test_prefix_raise_anonymous(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 

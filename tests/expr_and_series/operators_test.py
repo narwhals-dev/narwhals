@@ -20,8 +20,10 @@ from tests.utils import compare_dicts
     ],
 )
 def test_comparand_operators(
-    constructor: Any, operator: str, expected: list[bool]
+    constructor: Any, operator: str, expected: list[bool], request: Any
 ) -> None:
+    if "dask" in str(constructor) and operator in {"__eq__", "__ne__"}:
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [0, 1, 2]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), operator)(1))

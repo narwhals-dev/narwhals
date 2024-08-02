@@ -150,6 +150,89 @@ Each implementation defines its own objects in subfolders such as `narwhals._pan
 `narwhals._arrow`, `narwhals._polars`, whereas the top-level modules such as `narwhals.dataframe`
 and `narwhals.series` coordinate how to dispatch the Narwhals API to each backend.
 
+## Mapping from API to implementations
+
+If an end user executes some Narwhals code, such as
+
+```python
+df.select(nw.col("a") + 1)
+```
+then how does that get mapped to the underlying dataframe's native API? Let's walk through
+this example to see.
+
+Things generally go through a couple of layers:
+
+- The user calls some top-level Narwhals API.
+- The Narwhals API forwards the call to a Narwhals-compliant dataframe wrapper, such as
+    - `PandasLikeDataFrame` / `ArrowDataFrame` / `PolarsDataFrame` / ...
+    - `PandasLikeSeries` / `ArrowSeries` / `PolarsSeries` / ...
+    - `PandasLikeExpr` / `ArrowExpr` / `ArrowSeries` / ...
+- The dataframe wrapper forwards the call to the underlying library, e.g.:
+    - `PandasLikeDataFrame` forwards the call to the underlying pandas/Modin/cuDF dataframe.
+    - `ArrowDataFrame` forwards the call to the underlying PyArrow table.
+    - `PolarsDataFrame` forwards the call to the underlying Polars DataFrame.
+
+The way you access the Narwhals-compliant wrapper depends on the object:
+
+- `narwhals.DataFrame` and `narwhals.LazyFrame`: use the `._compliant_frame` attribute.
+- `narwhals.Series`: use the `._compliant_series` attribute.
+- `narwhals.Expr`: call the `._call` method, and pass to it the Narwhals-compliant namespace associated with
+  the given backend.
+
+🛑 BUT WAIT! What's a Narwhals-compliant namespace?
+
+Each backend is expected to implement a Narwhals-compliant
+namespace (`PandasLikeNamespace`, `ArrowNamespace`, `PolarsNamespace`). These can be used to interact with the Narwhals-compliant
+Dataframe and Series objects described above - let's work through the motivating example to see how.
+
+```python exec="1" session="pandas_api_mapping" source="above"
+import narwhals as nw
+from narwhals._pandas_like.namespace import PandasLikeNamespace
+from narwhals._pandas_like.utils import Implementation
+from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+from narwhals.utils import parse_version
+import pandas as pd
+
+pn = PandasLikeNamespace(
+    implementation=Implementation.PANDAS,
+    backend_version=parse_version(pd.__version__),
+)
+
+df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+df = nw.from_native(df_pd)
+df.select(nw.col("a") + 1)
+```
+
+The first thing `narwhals.DataFrame.select` does is to parse each input expression to end up with a compliant expression for the given
+backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._call`:
+
+```python exec="1" result="python" session="pandas_api_mapping" source="above"
+pn = PandasLikeNamespace(
+    implementation=Implementation.PANDAS,
+    backend_version=parse_version(pd.__version__),
+)
+expr = (nw.col("a") + 1)._call(pn)
+print(expr)
+```
+If we then extract a Narwhals-compliant dataframe from `df` by
+calling `._compliant_frame`, we get a `PandasLikeDataFrame` - and that's an object which we can pass `expr` to!
+
+```python exec="1" session="pandas_api_mapping" source="above"
+df_compliant = df._compliant_frame
+result = df_compliant.select(expr)
+```
+
+We can then view the underlying pandas Dataframe which was produced by calling `._native_dataframe`:
+
+```python exec="1" result="python" session="pandas_api_mapping" source="above"
+print(result._native_dataframe)
+```
+which is the same as we'd have obtained by just using the Narwhals API directly:
+
+```python exec="1" result="python" session="pandas_api_mapping" source="above"
+print(nw.to_native(df.select(nw.col("a") + 1)))
+```
+
 ## Group-by
 
 Group-by is probably one of Polars' most significant innovations (on the syntax side) with respect

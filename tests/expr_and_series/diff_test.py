@@ -15,6 +15,8 @@ data = {
 
 
 def test_diff(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) < (13,):
