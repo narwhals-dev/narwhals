@@ -106,3 +106,8 @@ class DaskLazyFrame:
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
+
+    def drop(self: Self, *columns: str) -> Self:
+        return self._from_native_dataframe(
+            self._native_dataframe.drop(columns=list(columns))
+        )
