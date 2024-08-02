@@ -88,8 +88,8 @@ lazy_constructors = [polars_lazy_constructor]
 if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
 # TODO(unassigned): when Dask gets better support, remove the "False and" part
-if False and get_dask_dataframe() is not None:  # pragma: no cover  # noqa: SIM223
-    lazy_constructors.append(dask_lazy_constructor)
+if get_dask_dataframe() is not None:  # pragma: no cover
+    lazy_constructors.append(dask_lazy_constructor)  # type: ignore  # noqa: PGH003
 
 
 @pytest.fixture(params=eager_constructors)

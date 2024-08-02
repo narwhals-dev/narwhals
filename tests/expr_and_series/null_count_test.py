@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -9,7 +11,9 @@ data = {
 }
 
 
-def test_null_count(constructor: Any) -> None:
+def test_null_count(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().null_count())
     expected = {

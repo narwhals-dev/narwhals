@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 import narwhals as nw
 from tests.utils import compare_dicts
 
 
-def test_drop_nulls(constructor: Any) -> None:
+def test_drop_nulls(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {
         "A": [1, 2, None, 4],
         "B": [5, 6, 7, 8],

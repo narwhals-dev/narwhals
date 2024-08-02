@@ -178,5 +178,6 @@ def test_left_join(  # pragma: no cover
         .pipe(lambda df: df.sort(df.columns))
     )
     compare_dicts(
-        result_pa, result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False)
+        result_pa,
+        result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False),
     )

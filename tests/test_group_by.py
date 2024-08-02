@@ -78,7 +78,9 @@ def test_group_by_iter(request: Any, constructor_eager: Any) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
-def test_group_by_len(constructor: Any) -> None:
+def test_group_by_len(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     result = (
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
     )
@@ -95,7 +97,9 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(constructor: Any) -> None:
+def test_group_by_simple_named(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data))
     result = (
@@ -114,7 +118,9 @@ def test_group_by_simple_named(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_simple_unnamed(constructor: Any) -> None:
+def test_group_by_simple_unnamed(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data))
     result = (
@@ -133,7 +139,9 @@ def test_group_by_simple_unnamed(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_multiple_keys(constructor: Any) -> None:
+def test_group_by_multiple_keys(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data))
     result = (
@@ -154,6 +162,9 @@ def test_group_by_multiple_keys(constructor: Any) -> None:
 
 
 def test_key_with_nulls(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
