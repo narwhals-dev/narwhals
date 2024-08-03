@@ -19,7 +19,7 @@ def col_a(df):
 Let's step up the complexity. How about `nw.col('a')+1`? We already know what the
 `nw.col('a')` part looks like, so we just need to add `1` to each of its outputs:
 
-```python exec="1"
+```python exec="1" source="above"
 def col_a(df):
     return [df.loc[:, "a"]]
 
@@ -30,7 +30,7 @@ def col_a_plus_1(df):
 
 Expressions can return multiple Series - for example, `nw.col('a', 'b')` translates to:
 
-```python exec="1"
+```python exec="1" source="above"
 def col_a_b(df):
     return [df.loc[:, "a"], df.loc[:, "b"]]
 ```
@@ -38,7 +38,7 @@ def col_a_b(df):
 Expressions can also take multiple columns as input - for example, `nw.sum_horizontal('a', 'b')`
 translates to:
 
-```python exec="1"
+```python exec="1" source="above"
 def sum_horizontal_a_b(df):
     return [df.loc[:, "a"] + df.loc[:, "b"]]
 ```
