@@ -80,7 +80,7 @@ def get_backend_completeness_table() -> str:
             results.extend([narhwals, pandas, arrow])
 
     results = (
-        pl.concat(results)  # noqa: PD010
+        pl.concat(results)
         .with_columns(supported=pl.lit(":white_check_mark:"))
         .pivot(on="Backend", values="supported", index=["Class", "Method"])
         .filter(pl.col("narwhals").is_not_null())
