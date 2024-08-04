@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from datetime import datetime
 from typing import Any
 
@@ -19,6 +20,7 @@ data = {
 @pytest.mark.parametrize(
     ("attribute", "expected"),
     [
+        ("date", [date(2021, 3, 1), date(2020, 1, 2)]),
         ("year", [2021, 2020]),
         ("month", [3, 1]),
         ("day", [1, 2]),
@@ -42,6 +44,7 @@ def test_datetime_attributes(
 @pytest.mark.parametrize(
     ("attribute", "expected"),
     [
+        ("date", [date(2021, 3, 1), date(2020, 1, 2)]),
         ("year", [2021, 2020]),
         ("month", [3, 1]),
         ("day", [1, 2]),

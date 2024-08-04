@@ -704,6 +704,11 @@ class PandasLikeSeriesDateTimeNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
+    def date(self) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.date,
+        )
+
     def year(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.year,

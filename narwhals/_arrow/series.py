@@ -606,6 +606,12 @@ class ArrowSeriesDateTimeNamespace:
             pc.strftime(self._arrow_series._native_series, format)
         )
 
+    def date(self: Self) -> ArrowSeries:
+        pa = get_pyarrow()
+        return self._arrow_series._from_native_series(
+            self._arrow_series._native_series.cast(pa.date64())
+        )
+
     def year(self: Self) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._arrow_series._from_native_series(
