@@ -1834,7 +1834,7 @@ class ExprStringNamespace:
         self._expr = expr
 
     def strip_chars(self, characters: str | None = None) -> Expr:
-        """
+        r"""
         Remove leading and trailing characters.
 
         Arguments:
@@ -1855,6 +1855,23 @@ class ExprStringNamespace:
             ...     return df.with_columns(stripped=nw.col("fruits").str.strip_chars())
 
             We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                fruits stripped
+            0    apple    apple
+            1  \nmango    mango
+
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌────────┬──────────┐
+            │ fruits ┆ stripped │
+            │ ---    ┆ ---      │
+            │ str    ┆ str      │
+            ╞════════╪══════════╡
+            │ apple  ┆ apple    │
+            │        ┆ mango    │
+            │ mango  ┆          │
+            └────────┴──────────┘
         """
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.strip_chars(characters)

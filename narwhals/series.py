@@ -2149,7 +2149,7 @@ class SeriesStringNamespace:
         self._narwhals_series = series
 
     def strip_chars(self, characters: str | None = None) -> Series:
-        """
+        r"""
         Remove leading and trailing characters.
 
         Arguments:
@@ -2170,6 +2170,23 @@ class SeriesStringNamespace:
             ...     return df.with_columns(stripped=nw.col("fruits").str.strip_chars())
 
             We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                fruits stripped
+            0    apple    apple
+            1  \nmango    mango
+
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2, 2)
+            ┌────────┬──────────┐
+            │ fruits ┆ stripped │
+            │ ---    ┆ ---      │
+            │ str    ┆ str      │
+            ╞════════╪══════════╡
+            │ apple  ┆ apple    │
+            │        ┆ mango    │
+            │ mango  ┆          │
+            └────────┴──────────┘
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.strip_chars(characters)
