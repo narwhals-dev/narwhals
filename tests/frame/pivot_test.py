@@ -114,16 +114,16 @@ data_no_dups = {
 @pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
 def test_pivot(
     request: Any,
-    constructor: Any,
+    constructor_eager: Any,
     agg_func: str,
     expected: dict[str, list[Any]],
     on: str | list[str],
     index: str | list[str],
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.pivot(
         on=on,
         index=index,
@@ -141,11 +141,13 @@ def test_pivot(
         (data, pytest.raises((ValueError, pl.exceptions.ComputeError))),
     ],
 )
-def test_pivot_no_agg(request: Any, constructor: Any, data_: Any, context: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+def test_pivot_no_agg(
+    request: Any, constructor_eager: Any, data_: Any, context: Any
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data_), eager_only=True)
+    df = nw.from_native(constructor_eager(data_), eager_only=True)
     with context:
         df.pivot("col", index="ix", aggregate_function=None)
 
@@ -158,12 +160,12 @@ def test_pivot_no_agg(request: Any, constructor: Any, data_: Any, context: Any) 
     ],
 )
 def test_pivot_sort_columns(
-    request: Any, constructor: Any, sort_columns: Any, expected: list[str]
+    request: Any, constructor_eager: Any, sort_columns: Any, expected: list[str]
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.pivot(
         on="col",
         index="ix",
@@ -203,12 +205,12 @@ def test_pivot_sort_columns(
     ],
 )
 def test_pivot_names_out(
-    request: Any, constructor: Any, kwargs: Any, expected: list[str]
+    request: Any, constructor_eager: Any, kwargs: Any, expected: list[str]
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result = (
         df.pivot(aggregate_function="min", index="ix", **kwargs).collect_schema().names()
