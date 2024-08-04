@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals._dask.utils import parse_exprs_and_named_exprs
+from narwhals._pandas_like.utils import translate_dtype
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._dask.typing import IntoDaskExpr
+    from narwhals.dtypes import DType
 
 
 class DaskLazyFrame:
@@ -91,3 +93,18 @@ class DaskLazyFrame:
 
     def drop_nulls(self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.dropna())
+
+    @property
+    def schema(self) -> dict[str, DType]:
+        return {
+            col: translate_dtype(self._native_dataframe.loc[:, col])
+            for col in self._native_dataframe.columns
+        }
+
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
+
+    def drop(self: Self, *columns: str) -> Self:
+        return self._from_native_dataframe(
+            self._native_dataframe.drop(columns=list(columns))
+        )

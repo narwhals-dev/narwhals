@@ -198,6 +198,13 @@ class DaskExpr:
             other,
         )
 
+    def __or__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__or__(other),
+            "__or__",
+            other,
+        )
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
@@ -235,6 +242,8 @@ class DaskExpr:
         upper_bound: Any,
         closed: str = "both",
     ) -> Self:
+        if closed == "none":
+            closed = "neither"
         return self._from_call(
             lambda _input, lower_bound, upper_bound, closed: _input.between(
                 lower_bound,

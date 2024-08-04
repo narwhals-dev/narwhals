@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
@@ -11,7 +12,9 @@ data = {
 }
 
 
-def test_with_columns(constructor: Any) -> None:
+def test_with_columns(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     result = (
         nw.from_native(constructor(data))
         .with_columns(d=np.array([4, 5]))

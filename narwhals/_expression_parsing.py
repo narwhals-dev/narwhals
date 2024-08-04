@@ -124,6 +124,14 @@ def parse_into_exprs(
 ) -> list[ArrowExpr]: ...
 
 
+@overload
+def parse_into_exprs(
+    *exprs: IntoDaskExpr,
+    namespace: DaskNamespace,
+    **named_exprs: IntoDaskExpr,
+) -> list[DaskExpr]: ...
+
+
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace,
