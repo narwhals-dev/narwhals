@@ -193,7 +193,9 @@ class ArrowDataFrame:
             )
         names = [s.name for s in new_series]
         pa = get_pyarrow()
-        df = pa.Table.from_arrays(validate_shape(new_series), names=names)
+        df = pa.Table.from_arrays(
+            validate_shape(new_series, backend_version=self._backend_version), names=names
+        )
         return self._from_native_dataframe(df)
 
     def with_columns(

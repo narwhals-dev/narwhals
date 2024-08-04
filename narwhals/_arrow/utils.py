@@ -252,7 +252,9 @@ def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     return arrow_array, pa_object
 
 
-def validate_shape(series: list[ArrowSeries]) -> list[Any]:
+def validate_shape(
+    series: list[ArrowSeries], backend_version: tuple[int, ...]
+) -> list[Any]:
     pa = get_pyarrow()
     lengths = [len(s) for s in series]
     max_length = max(lengths)
@@ -260,12 +262,20 @@ def validate_shape(series: list[ArrowSeries]) -> list[Any]:
 
     if fast_path:
         return [s._native_series for s in series]
-    else:
-        return [
-            pa.chunked_array(
-                [[s._native_series[0]] * max_length], type=s._native_series.type
+
+    reshaped = []
+
+    for s, length in zip(series, lengths):
+        if max_length > 1 and length == 1:
+            value = s._native_series[0]
+
+            if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+                value = value.as_py()
+
+            reshaped.append(
+                pa.chunked_array([[value] * max_length], type=s._native_series.type)
             )
-            if length == 1
-            else s._native_series
-            for s, length in zip(series, lengths)
-        ]
+        else:
+            reshaped.append(s._native_series)
+
+    return reshaped
