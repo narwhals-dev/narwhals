@@ -417,9 +417,16 @@ def reverse_translate_dtype(  # noqa: PLR0915
 
 
 def validate_indices(series: list[PandasLikeSeries]) -> list[Any]:
-    idx = series[0]._native_series.index
-    reindexed = [series[0]._native_series]
-    for s in series[1:]:
+    lengths = [len(s) for s in series]
+    max_length = max(lengths)
+
+    idx = next(s for s in series if len(s) == max_length)._native_series.index
+    reindexed = []
+
+    for s, length in zip(series, lengths):
+        if max_length > 1 and length == 1:
+            s = s._from_native_series(s._native_series.repeat(max_length))  # noqa: PLW2901
+
         if s._native_series.index is not idx:
             reindexed.append(
                 set_axis(

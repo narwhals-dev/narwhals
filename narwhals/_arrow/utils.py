@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import isinstance_or_issubclass
+
+if TYPE_CHECKING:
+    from narwhals._arrow.series import ArrowSeries
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
@@ -246,3 +250,22 @@ def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
         )
 
     return arrow_array, pa_object
+
+
+def validate_shape(series: list[ArrowSeries]) -> list[Any]:
+    pa = get_pyarrow()
+    lengths = [len(s) for s in series]
+    max_length = max(lengths)
+    fast_path = all(_len == max_length for _len in lengths)
+
+    if fast_path:
+        return [s._native_series for s in series]
+    else:
+        return [
+            pa.chunked_array(
+                [[s._native_series[0]] * max_length], type=s._native_series.type
+            )
+            if length == 1
+            else s._native_series
+            for s, length in zip(series, lengths)
+        ]
