@@ -797,7 +797,7 @@ class ArrowSeriesStringNamespace:
         return self._arrow_series._from_native_series(
             pc.utf8_trim(
                 self._arrow_series._native_series,
-                whitespace + "\n" if characters is None else characters,
+                whitespace if characters is None else characters,
             )
         )
 
