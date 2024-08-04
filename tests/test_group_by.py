@@ -53,10 +53,7 @@ def test_invalid_group_by() -> None:
         )
 
 
-def test_group_by_iter(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
+def test_group_by_iter(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
