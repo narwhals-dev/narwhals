@@ -420,7 +420,7 @@ def validate_indices(series: list[PandasLikeSeries]) -> list[Any]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
 
-    idx = next(s for s in series if len(s) == max_length)._native_series.index
+    idx = series[lengths.index(max_length)]._native_series.index
     reindexed = []
 
     for s, length in zip(series, lengths):
