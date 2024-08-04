@@ -1833,6 +1833,33 @@ class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
+    def strip_chars(self, characters: str | None = None) -> Expr:
+        """
+        Remove leading and trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "\nmango"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(stripped=nw.col("fruits").str.strip_chars())
+
+            We can then pass either pandas or Polars to `func`:
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.strip_chars(characters)
+        )
+
     def starts_with(self, prefix: str) -> Expr:
         r"""
         Check if string values start with a substring.

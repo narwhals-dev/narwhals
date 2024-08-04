@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from string import whitespace
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -790,6 +791,15 @@ class ArrowSeriesCatNamespace:
 class ArrowSeriesStringNamespace:
     def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
+
+    def strip_chars(self: Self, characters: str | None = None) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.utf8_trim(
+                self._arrow_series._native_series,
+                whitespace + "\n" if characters is None else characters,
+            )
+        )
 
     def starts_with(self: Self, prefix: str) -> ArrowSeries:
         pc = get_pyarrow_compute()
