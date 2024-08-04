@@ -123,3 +123,8 @@ class DaskLazyFrame:
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
+
+    def group_by(self, *by: str) -> Any:
+        from narwhals._dask.group_by import DaskLazyGroupBy
+
+        return DaskLazyGroupBy(self, list(by))

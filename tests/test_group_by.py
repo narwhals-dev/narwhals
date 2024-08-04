@@ -94,17 +94,16 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_simple_named(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a")
         .agg(
             b_min=nw.col("b").min(),
             b_max=nw.col("b").max(),
         )
+        .collect()
         .sort("a")
     )
     expected = {
@@ -115,17 +114,16 @@ def test_group_by_simple_named(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_simple_unnamed(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_simple_unnamed(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a")
         .agg(
             nw.col("b").min(),
             nw.col("c").max(),
         )
+        .collect()
         .sort("a")
     )
     expected = {
@@ -136,17 +134,16 @@ def test_group_by_simple_unnamed(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_multiple_keys(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_multiple_keys(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a", "b")
         .agg(
             c_min=nw.col("c").min(),
             c_max=nw.col("c").max(),
         )
+        .collect()
         .sort("a")
     )
     expected = {
