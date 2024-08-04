@@ -17,16 +17,17 @@ This can stay lazy, so we just use `nw.from_native` and expressions:
 import narwhals as nw
 from narwhals.typing import FrameT
 
+
 @nw.narwhalify
 def my_func(df: FrameT) -> FrameT:
-    return df.filter(nw.col('a') > 0)
+    return df.filter(nw.col("a") > 0)
 ```
 
 === "pandas"
     ```python exec="true" source="material-block" result="python" session="ex1"
     import pandas as pd
 
-    df = pd.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pd.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
     ```
 
@@ -34,7 +35,7 @@ def my_func(df: FrameT) -> FrameT:
     ```python exec="true" source="material-block" result="python" session="ex1"
     import polars as pl
 
-    df = pl.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
     ```
 
@@ -42,7 +43,7 @@ def my_func(df: FrameT) -> FrameT:
     ```python exec="true" source="material-block" result="python" session="ex1"
     import polars as pl
 
-    df = pl.LazyFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pl.LazyFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df).collect())
     ```
 
@@ -55,16 +56,17 @@ Let's write a dataframe-agnostic function which multiplies the values in column
 import narwhals as nw
 from narwhals.typing import FrameT
 
+
 @nw.narwhalify
 def my_func(df: FrameT) -> FrameT:
-    return df.with_columns(nw.col('a')*2)
+    return df.with_columns(nw.col("a") * 2)
 ```
 
 === "pandas"
     ```python exec="true" source="material-block" result="python" session="ex2"
     import pandas as pd
 
-    df = pd.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pd.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
     ```
 
@@ -72,7 +74,7 @@ def my_func(df: FrameT) -> FrameT:
     ```python exec="true" source="material-block" result="python" session="ex2"
     import polars as pl
 
-    df = pl.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
     ```
 
@@ -80,7 +82,7 @@ def my_func(df: FrameT) -> FrameT:
     ```python exec="true" source="material-block" result="python" session="ex2"
     import polars as pl
 
-    df = pl.LazyFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pl.LazyFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df).collect())
     ```
 
@@ -91,16 +93,17 @@ values multiplied by 2, we could have used `Expr.alias`:
 import narwhals as nw
 from narwhals.typing import FrameT
 
+
 @nw.narwhalify
 def my_func(df: FrameT) -> FrameT:
-    return df.with_columns((nw.col('a')*2).alias('c'))
+    return df.with_columns((nw.col("a") * 2).alias("c"))
 ```
 
 === "pandas"
     ```python exec="true" source="material-block" result="python" session="ex2.1"
     import pandas as pd
 
-    df = pd.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pd.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
     ```
 
@@ -108,7 +111,7 @@ def my_func(df: FrameT) -> FrameT:
     ```python exec="true" source="material-block" result="python" session="ex2.1"
     import polars as pl
 
-    df = pl.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
     ```
 
@@ -116,7 +119,7 @@ def my_func(df: FrameT) -> FrameT:
     ```python exec="true" source="material-block" result="python" session="ex2.1"
     import polars as pl
 
-    df = pl.LazyFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pl.LazyFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df).collect())
     ```
 
@@ -131,16 +134,17 @@ of using expressions, we'll extract a `Series`.
 from __future__ import annotations
 import narwhals as nw
 
+
 @nw.narwhalify(eager_only=True)
 def my_func(df: nw.DataFrame) -> float | None:
-    return df['a'].mean()
+    return df["a"].mean()
 ```
 
 === "pandas"
     ```python exec="true" source="material-block" result="python" session="ex2"
     import pandas as pd
 
-    df = pd.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pd.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
     ```
 
@@ -148,7 +152,7 @@ def my_func(df: nw.DataFrame) -> float | None:
     ```python exec="true" source="material-block" result="python" session="ex2"
     import polars as pl
 
-    df = pl.DataFrame({'a': [-1, 1, 3], 'b': [3, 5, -3]})
+    df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
     ```
 

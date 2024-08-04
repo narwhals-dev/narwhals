@@ -25,12 +25,13 @@ Make a Python file with the following content:
 import narwhals as nw
 from narwhals.typing import FrameT
 
+
 @nw.narwhalify
 def func(df: FrameT) -> FrameT:
     return df.select(
-        a_sum=nw.col('a').sum(),
-        a_mean=nw.col('a').mean(),
-        a_std=nw.col('a').std(),
+        a_sum=nw.col("a").sum(),
+        a_mean=nw.col("a").mean(),
+        a_std=nw.col("a").std(),
     )
 ```
 Let's try it out:
@@ -39,7 +40,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex1"
     import pandas as pd
 
-    df = pd.DataFrame({'a': [1, 1, 2]})
+    df = pd.DataFrame({"a": [1, 1, 2]})
     print(func(df))
     ```
 
@@ -47,7 +48,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex1"
     import polars as pl
 
-    df = pl.DataFrame({'a': [1, 1, 2]})
+    df = pl.DataFrame({"a": [1, 1, 2]})
     print(func(df))
     ```
 
@@ -55,7 +56,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex1"
     import polars as pl
 
-    df = pl.LazyFrame({'a': [1, 1, 2]})
+    df = pl.LazyFrame({"a": [1, 1, 2]})
     print(func(df).collect())
     ```
 
@@ -64,17 +65,18 @@ Alternatively, we could have opted for the more explicit version:
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 
+
 def func(df_native: IntoFrameT) -> IntoFrameT:
     df = nw.from_native(df_native)
     df = df.select(
-        a_sum=nw.col('a').sum(),
-        a_mean=nw.col('a').mean(),
-        a_std=nw.col('a').std(),
+        a_sum=nw.col("a").sum(),
+        a_mean=nw.col("a").mean(),
+        a_std=nw.col("a").std(),
     )
     return nw.to_native(df)
 ```
 Despite being more verbose, it has the advantage of preserving the type annotation of the native
-object - see [typing](# todo) for more details.
+object - see [typing](../api-reference/typing.md) for more details.
 
 In general, in this tutorial, we'll use the former.
 
@@ -86,9 +88,10 @@ Make a Python file with the following content:
 import narwhals as nw
 from narwhals.typing import FrameT
 
+
 @nw.narwhalify
 def func(df: FrameT) -> FrameT:
-    return df.group_by('a').agg(nw.col('b').mean()).sort('a')
+    return df.group_by("a").agg(nw.col("b").mean()).sort("a")
 ```
 Let's try it out:
 
@@ -96,7 +99,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex2"
     import pandas as pd
 
-    df = pd.DataFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
+    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     print(func(df))
     ```
 
@@ -104,7 +107,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex2"
     import polars as pl
 
-    df = pl.DataFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
+    df = pl.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     print(func(df))
     ```
 
@@ -112,7 +115,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex2"
     import polars as pl
 
-    df = pl.LazyFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
+    df = pl.LazyFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     print(func(df).collect())
     ```
 
@@ -126,9 +129,10 @@ Make a Python file with the following content:
 import narwhals as nw
 from narwhals.typing import FrameT
 
+
 @nw.narwhalify
 def func(df: FrameT) -> FrameT:
-    return df.with_columns(a_plus_b=nw.sum_horizontal('a', 'b'))
+    return df.with_columns(a_plus_b=nw.sum_horizontal("a", "b"))
 ```
 Let's try it out:
 
@@ -136,7 +140,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex3"
     import pandas as pd
 
-    df = pd.DataFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
+    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     print(func(df))
     ```
 
@@ -144,7 +148,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex3"
     import polars as pl
 
-    df = pl.DataFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
+    df = pl.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     print(func(df))
     ```
 
@@ -152,7 +156,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex3"
     import polars as pl
 
-    df = pl.LazyFrame({'a': [1, 1, 2], 'b': [4, 5, 6]})
+    df = pl.LazyFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     print(func(df).collect())
     ```
 
@@ -170,6 +174,7 @@ from typing import Any
 
 import narwhals as nw
 
+
 @nw.narwhalify(eager_only=True)
 def func(df: nw.DataFrame[Any], s: nw.Series, col_name: str) -> int:
     return df.filter(nw.col(col_name).is_in(s)).shape[0]
@@ -183,16 +188,16 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex4"
     import pandas as pd
 
-    df = pd.DataFrame({'a': [1, 1, 2, 2, 3], 'b': [4, 5, 6, 7, 8]})
+    df = pd.DataFrame({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
     s = pd.Series([1, 3])
-    print(func(df, s.to_numpy(), 'a'))
+    print(func(df, s.to_numpy(), "a"))
     ```
 
 === "Polars (eager)"
     ```python exec="true" source="material-block" result="python" session="df_ex4"
     import polars as pl
 
-    df = pl.DataFrame({'a': [1, 1, 2, 2, 3], 'b': [4, 5, 6, 7, 8]})
+    df = pl.DataFrame({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
     s = pl.Series([1, 3])
-    print(func(df, s.to_numpy(), 'a'))
+    print(func(df, s.to_numpy(), "a"))
     ```

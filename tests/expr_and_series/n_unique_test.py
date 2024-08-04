@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -9,14 +11,17 @@ data = {
 }
 
 
-def test_n_unique(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_n_unique(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor(data))
     result = df.select(nw.all().n_unique())
-    expected = {
-        "a": [3],
-        "b": [4],
-    }
+    expected = {"a": [3], "b": [4]}
     compare_dicts(result, expected)
-    assert df["a"].n_unique() == 3
-    assert df["b"].n_unique() == 4
-    compare_dicts(result, expected)
+
+
+def test_n_unique_series(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    expected = {"a": [3], "b": [4]}
+    result_series = {"a": [df["a"].n_unique()], "b": [df["b"].n_unique()]}
+    compare_dicts(result_series, expected)

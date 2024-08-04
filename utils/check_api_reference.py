@@ -105,7 +105,7 @@ if extra := set(documented).difference(top_level_functions):
 top_level_functions = [
     i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
 ]
-with open("docs/api-reference/expressions.md") as fd:
+with open("docs/api-reference/expr.md") as fd:
     content = fd.read()
 documented = [
     remove_prefix(i, "        - ")
@@ -148,6 +148,7 @@ if (
     .difference(expr)
     .difference(
         {
+            "to_dummies",
             "to_pandas",
             "to_list",
             "to_numpy",

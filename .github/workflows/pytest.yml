@@ -1,4 +1,4 @@
-name: ci
+name: PyTest
 
 on:
   pull_request:
@@ -15,23 +15,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}
+      - name: Install uv (Unix)
+        if: runner.os != 'Windows'
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (Windows)
+        if: runner.os == 'Windows'
+        run: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
       - name: install-reqs
-        run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
-      - name: install-modin
-        run: python -m pip install --upgrade modin[dask]
+        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
       - name: show-deps
-        run: pip freeze
+        run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=90
       - name: Run doctests
@@ -46,23 +42,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}
+      - name: Install uv (Windows)
+        run: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
       - name: install-reqs
-        run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
+        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
       - name: install-modin
-        run: python -m pip install --upgrade modin[dask]
+        run: uv pip install --upgrade modin[dask] --system
       - name: show-deps
-        run: pip freeze
+        run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95
       - name: Run doctests
@@ -77,23 +67,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}
+      - name: Install uv (Unix)
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: install-reqs
-        run: python -m pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt
+        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
       - name: install-modin
-        run: python -m pip install --upgrade modin[dask]
+        run: uv pip install --upgrade modin[dask] --system
       - name: show-deps
-        run: pip freeze
+        run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow
       - name: Run doctests

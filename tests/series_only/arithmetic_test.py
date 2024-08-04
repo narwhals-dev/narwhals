@@ -15,45 +15,12 @@ from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
-@pytest.mark.parametrize("data", [[1, 2, 3], [1.0, 2, 3]])
-@pytest.mark.parametrize(
-    ("attr", "rhs", "expected"),
-    [
-        ("__add__", 1, [2, 3, 4]),
-        ("__sub__", 1, [0, 1, 2]),
-        ("__mul__", 2, [2, 4, 6]),
-        ("__truediv__", 2, [0.5, 1.0, 1.5]),
-        ("__truediv__", 1, [1, 2, 3]),
-        ("__floordiv__", 2, [0, 1, 1]),
-        ("__mod__", 2, [1, 0, 1]),
-        ("__pow__", 2, [1, 4, 9]),
-    ],
-)
-def test_arithmetic(
-    request: Any,
-    data: list[int | float],
-    attr: str,
-    rhs: Any,
-    expected: list[Any],
-    constructor_series: Any,
-) -> None:
-    if "pandas_series_pyarrow" in str(constructor_series) and attr == "__mod__":
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyarrow_series" in str(constructor_series) and attr == "__mod__":
-        request.applymarker(pytest.mark.xfail)
-
-    s = nw.from_native(constructor_series(data), series_only=True)
-    result = getattr(s, attr)(rhs)
-    assert result.to_numpy().tolist() == expected
-
-
-def test_truediv_same_dims(constructor_series: Any, request: Any) -> None:
-    if "polars" in str(constructor_series):
+def test_truediv_same_dims(constructor_eager: Any, request: Any) -> None:
+    if "polars" in str(constructor_eager):
         # https://github.com/pola-rs/polars/issues/17760
         request.applymarker(pytest.mark.xfail)
-    s_left = nw.from_native(constructor_series([1, 2, 3]), series_only=True)
-    s_right = nw.from_native(constructor_series([2, 2, 1]), series_only=True)
+    s_left = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
+    s_right = nw.from_native(constructor_eager({"a": [2, 2, 1]}), eager_only=True)["a"]
     result = (s_left / s_right).to_list()
     assert result == [0.5, 1.0, 3.0]
     result = (s_left.__rtruediv__(s_right)).to_list()
@@ -64,6 +31,9 @@ def test_truediv_same_dims(constructor_series: Any, request: Any) -> None:
 @given(  # type: ignore[misc]
     left=st.integers(-100, 100),
     right=st.integers(-100, 100),
+)
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < (2, 0), reason="convert_dtypes not available"
 )
 def test_mod(left: int, right: int) -> None:
     # hypothesis complains if we add `constructor` as an argument, so this

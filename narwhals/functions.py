@@ -11,6 +11,8 @@ from typing import Union
 
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
+from narwhals.translate import from_native
+from narwhals.utils import Implementation
 from narwhals.utils import validate_laziness
 
 # Missing type parameters for generic type "DataFrame"
@@ -19,6 +21,10 @@ from narwhals.utils import validate_laziness
 FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
+    from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.series import Series
 
 
@@ -42,6 +48,113 @@ def concat(
     )
 
 
+def from_dict(
+    data: dict[str, Any],
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: ModuleType,
+) -> DataFrame[Any]:
+    """
+    Instantiate DataFrame from dictionary.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Dictionary to create DataFrame from.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_dict(data, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+           c  d
+        0  5  1
+        1  2  4
+        >>> func(pl.DataFrame(data))
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ c   ┆ d   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 5   ┆ 1   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+    """
+    implementation = Implementation.from_native_namespace(native_namespace)
+
+    if implementation is Implementation.POLARS:
+        if schema:
+            from narwhals._polars.utils import (
+                reverse_translate_dtype as polars_reverse_translate_dtype,
+            )
+
+            schema = {
+                name: polars_reverse_translate_dtype(dtype)
+                for name, dtype in schema.items()
+            }
+
+        native_frame = native_namespace.from_dict(data, schema=schema)
+    elif implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    }:
+        native_frame = native_namespace.DataFrame.from_dict(data)
+
+        if schema:
+            from narwhals._pandas_like.utils import (
+                reverse_translate_dtype as pandas_like_reverse_translate_dtype,
+            )
+
+            schema = {
+                name: pandas_like_reverse_translate_dtype(
+                    schema[name], native_type, implementation
+                )
+                for name, native_type in native_frame.dtypes.items()
+            }
+            native_frame = native_frame.astype(schema)
+
+    elif implementation is Implementation.PYARROW:
+        if schema:
+            from narwhals._arrow.utils import (
+                reverse_translate_dtype as arrow_reverse_translate_dtype,
+            )
+
+            schema = native_namespace.schema(
+                [
+                    (name, arrow_reverse_translate_dtype(dtype))
+                    for name, dtype in schema.items()
+                ]
+            )
+        native_frame = native_namespace.table(data, schema=schema)
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narhwals extension using this feature should
+            # implement `from_dict` function in the top-level namespace.
+            native_frame = native_namespace.from_dict(data)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `from_dict` function."
+            raise AttributeError(msg) from e
+    return from_native(native_frame, eager_only=True)
+
+
 def _get_sys_info() -> dict[str, str]:
     """System information
 
@@ -52,11 +165,11 @@ def _get_sys_info() -> dict[str, str]:
     """
     python = sys.version.replace("\n", " ")
 
-    blob = [
+    blob = (
         ("python", python),
         ("executable", sys.executable),
         ("machine", platform.platform()),
-    ]
+    )
 
     return dict(blob)
 
@@ -72,14 +185,14 @@ def _get_deps_info() -> dict[str, str]:
     This function and show_versions were copied from sklearn and adapted
 
     """
-    deps = [
+    deps = (
         "pandas",
         "polars",
         "cudf",
         "modin",
         "pyarrow",
         "numpy",
-    ]
+    )
 
     from . import __version__
 

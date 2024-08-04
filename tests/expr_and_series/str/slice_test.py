@@ -17,9 +17,19 @@ data = {"a": ["fdas", "edfas"]}
 def test_str_slice(
     constructor: Any, offset: int, length: int | None, expected: Any
 ) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.slice(offset, length))
     compare_dicts(result_frame, expected)
 
+
+@pytest.mark.parametrize(
+    ("offset", "length", "expected"),
+    [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
+)
+def test_str_slice_series(
+    constructor_eager: Any, offset: int, length: int | None, expected: Any
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+
     result_series = df["a"].str.slice(offset, length)
-    assert result_series.to_numpy().tolist() == expected["a"]
+    assert result_series.to_list() == expected["a"]

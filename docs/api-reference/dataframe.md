@@ -11,6 +11,7 @@
         - drop
         - drop_nulls
         - filter
+        - gather_every
         - get_column
         - group_by
         - head

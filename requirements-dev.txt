@@ -1,11 +1,11 @@
 covdefaults
-ibis-framework
 pandas
 polars[timezones]
 pre-commit
 pyarrow
 pytest
 pytest-cov
+pytest-env
 hypothesis
 scikit-learn
-
+dask[dataframe]; python_version >= '3.9'

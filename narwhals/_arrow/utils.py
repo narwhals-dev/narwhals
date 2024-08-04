@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import isinstance_or_issubclass
-
-if TYPE_CHECKING:
-    import pyarrow as pa
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
@@ -128,7 +124,9 @@ def validate_column_comparand(other: Any) -> Any:
     return other
 
 
-def validate_dataframe_comparand(length: int, other: Any) -> Any:
+def validate_dataframe_comparand(
+    length: int, other: Any, backend_version: tuple[int, ...]
+) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -142,7 +140,10 @@ def validate_dataframe_comparand(length: int, other: Any) -> Any:
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
             pa = get_pyarrow()
-            return pa.chunked_array([[other.item()] * length])
+            value = other.item()
+            if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+                value = value.as_py()
+            return pa.chunked_array([[value] * length])
         return other._native_series
     msg = "Please report a bug"  # pragma: no cover
     raise AssertionError(msg)
@@ -229,9 +230,7 @@ def floordiv_compat(left: Any, right: Any) -> Any:
     return result
 
 
-def cast_for_truediv(
-    arrow_array: pa.ChunkedArray, pa_object: pa.Array | pa.Scalar
-) -> tuple[pa.ChunkedArray, pa.Array | pa.Scalar]:
+def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
     pc = get_pyarrow_compute()

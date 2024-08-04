@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from narwhals.dtypes import translate_dtype
-from narwhals.expression import Expr
+from narwhals.expr import Expr
 from narwhals.utils import flatten
 
 
@@ -31,8 +31,8 @@ def by_dtype(*dtypes: Any) -> Expr:
         dtypes and multiplies each value by 2:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(ncs.by_dtype(nw.Int64, nw.Float64) * 2)
+        ... def func(df):
+        ...     return df.select(ncs.by_dtype(nw.Int64, nw.Float64) * 2)
 
         We can then pass either pandas or Polars dataframes:
 
@@ -76,8 +76,8 @@ def numeric() -> Expr:
         dtypes and multiplies each value by 2:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(ncs.numeric() * 2)
+        ... def func(df):
+        ...     return df.select(ncs.numeric() * 2)
 
         We can then pass either pandas or Polars dataframes:
 
@@ -117,8 +117,8 @@ def boolean() -> Expr:
         dtypes:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(ncs.boolean())
+        ... def func(df):
+        ...     return df.select(ncs.boolean())
 
         We can then pass either pandas or Polars dataframes:
 
@@ -158,8 +158,8 @@ def string() -> Expr:
         dtypes:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(ncs.string())
+        ... def func(df):
+        ...     return df.select(ncs.string())
 
         We can then pass either pandas or Polars dataframes:
 
@@ -199,8 +199,8 @@ def categorical() -> Expr:
         dtypes:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(ncs.categorical())
+        ... def func(df):
+        ...     return df.select(ncs.categorical())
 
         We can then pass either pandas or Polars dataframes:
 
@@ -240,8 +240,8 @@ def all() -> Expr:
         dtypes:
 
         >>> @nw.narwhalify
-        ... def func(df_any):
-        ...     return df_any.select(ncs.all())
+        ... def func(df):
+        ...     return df.select(ncs.all())
 
         We can then pass either pandas or Polars dataframes:
 

@@ -20,20 +20,42 @@ from tests.utils import compare_dicts
     ],
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
-def test_quantile(
-    request: Any,
+def test_quantile_expr(
     constructor: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
+    request: Any,
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-
     q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-    result = nw.to_native(
-        df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
-    )
+    result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("interpolation", "expected"),
+    [
+        ("lower", 7.0),
+        ("higher", 8.0),
+        ("midpoint", 7.5),
+        ("linear", 7.6),
+        ("nearest", 8.0),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
+def test_quantile_series(
+    constructor_eager: Any,
+    interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    expected: float,
+) -> None:
+    q = 0.3
+
+    series = nw.from_native(constructor_eager({"a": [7.0, 8, 9]}), eager_only=True)[
+        "a"
+    ].alias("a")
+    result = series.quantile(quantile=q, interpolation=interpolation)
+    compare_dicts({"a": [result]}, {"a": [expected]})
