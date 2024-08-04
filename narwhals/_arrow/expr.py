@@ -322,6 +322,9 @@ class ArrowExprDateTimeNamespace:
             self._expr, "dt", "to_string", format
         )
 
+    def date(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "date")
+
     def year(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(self._expr, "dt", "year")
 
