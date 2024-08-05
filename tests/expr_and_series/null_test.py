@@ -6,7 +6,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_na(constructor: Any, request: Any) -> None:
+def test_null(constructor: Any, request: Any) -> None:
     data_na = {"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]}
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
