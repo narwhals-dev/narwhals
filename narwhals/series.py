@@ -2159,34 +2159,24 @@ class SeriesStringNamespace:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> data = {"fruits": ["apple", "\nmango"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
+            >>> data = ["apple", "\nmango"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
 
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df):
-            ...     return df.with_columns(stripped=nw.col("fruits").str.strip_chars())
+            ... def func(s):
+            ...     s = s.str.strip_chars()
+            ...     return s.to_list()
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
-                fruits stripped
-            0    apple    apple
-            1  \nmango    mango
+            >>> func(s_pd)
+            ['apple', 'mango']
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (2, 2)
-            ┌────────┬──────────┐
-            │ fruits ┆ stripped │
-            │ ---    ┆ ---      │
-            │ str    ┆ str      │
-            ╞════════╪══════════╡
-            │ apple  ┆ apple    │
-            │        ┆ mango    │
-            │ mango  ┆          │
-            └────────┴──────────┘
+            >>> func(s_pl)
+            ['apple', 'mango']
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.strip_chars(characters)
