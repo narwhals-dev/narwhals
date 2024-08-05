@@ -1638,12 +1638,12 @@ class Expr:
             decimals: Number of decimals to round by.
 
         Notes:
-            For values exactly halfway between rounded decimal values pandas and Polars behave differently.
+            For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
 
             pandas rounds to the nearest even value (e.g. -0.5 and 0.5 round to 0.0, 1.5 and 2.5 round to 2.0, 3.5 and
             4.5 to 4.0, etc..).
 
-            Polars rounds away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
+            Polars and Arrow round away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
 
 
         Examples:
@@ -1832,6 +1832,40 @@ class ExprCatNamespace:
 class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
+
+    def strip_chars(self, characters: str | None = None) -> Expr:
+        r"""
+        Remove leading and trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "\nmango"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     df = df.with_columns(stripped=nw.col("fruits").str.strip_chars())
+            ...     return df.to_dict(as_series=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
+
+            >>> func(df_pl)
+            {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.strip_chars(characters)
+        )
 
     def starts_with(self, prefix: str) -> Expr:
         r"""

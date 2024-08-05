@@ -11,11 +11,11 @@ from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasLikeExpr
+from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
-from narwhals._pandas_like.utils import validate_indices
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
@@ -225,7 +225,7 @@ class PandasLikeDataFrame:
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_dataframe(self._native_dataframe.__class__())
-        new_series = validate_indices(new_series)
+        new_series = broadcast_series(new_series)
         df = horizontal_concat(
             new_series,
             implementation=self._implementation,
