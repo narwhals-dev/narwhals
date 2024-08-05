@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import isinstance_or_issubclass
@@ -262,84 +261,16 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
         return [s._native_series for s in series]
 
     pa = get_pyarrow()
-    np = get_numpy()
 
     reshaped = []
     for s, length in zip(series, lengths):
         s_native = s._native_series
         if max_length > 1 and length == 1:
-            pa_dtype = s_native.type
-            np_dtype = pyarrow_to_numpy_dtype(pa_dtype)
-
             value = s_native[0]
-
             if hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
-
-            reshaped.append(
-                pa.array(
-                    np.full(shape=max_length, fill_value=value, dtype=np_dtype),
-                    type=pa_dtype,
-                )
-            )
+            reshaped.append(pa.array([value] * max_length, type=s_native.type))
         else:
             reshaped.append(s_native)
 
     return reshaped
-
-
-def pyarrow_to_numpy_dtype(pa_dtype: Any) -> Any:  # pragma: no cover
-    pa = get_pyarrow()
-    np = get_numpy()
-
-    if pa.types.is_int64(pa_dtype):
-        return np.int64
-
-    if pa.types.is_int32(pa_dtype):
-        return np.int32
-
-    if pa.types.is_int16(pa_dtype):
-        return np.int16
-
-    if pa.types.is_int8(pa_dtype):
-        return np.int8
-
-    if pa.types.is_uint64(pa_dtype):
-        return np.uint64
-
-    if pa.types.is_uint32(pa_dtype):
-        return np.uint32
-
-    if pa.types.is_uint16(pa_dtype):
-        return np.uint16
-
-    if pa.types.is_uint8(pa_dtype):
-        return np.uint8
-
-    if pa.types.is_boolean(pa_dtype):
-        return np.bool
-
-    if pa.types.is_float64(pa_dtype):
-        return np.float64
-
-    if pa.types.is_float32(pa_dtype):
-        return np.float32
-
-    if (
-        pa.types.is_string(pa_dtype)
-        or pa.types.is_large_string(pa_dtype)
-        or getattr(pa.types, "is_string_view", lambda _: False)(pa_dtype)
-        or pa.types.is_dictionary(pa_dtype)
-    ):
-        return np.str_
-    if (
-        pa.types.is_date32(pa_dtype)
-        or pa.types.is_date64(pa_dtype)
-        or pa.types.is_timestamp(pa_dtype)
-    ):
-        return np.datetime64
-
-    if pa.types.is_duration(pa_dtype):
-        return np.timedelta64
-
-    raise AssertionError
