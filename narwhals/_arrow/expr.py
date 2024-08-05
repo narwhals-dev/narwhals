@@ -182,6 +182,9 @@ class ArrowExpr:
     def cum_sum(self) -> Self:
         return reuse_series_implementation(self, "cum_sum")
 
+    def round(self, decimals: int) -> Self:
+        return reuse_series_implementation(self, "round", decimals)
+
     def any(self) -> Self:
         return reuse_series_implementation(self, "any", returns_scalar=True)
 

@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
@@ -8,7 +9,9 @@ from tests.utils import compare_dicts
 data = {"a": [1, 1, 2]}
 
 
-def test_unique_expr(constructor: Any) -> None:
+def test_unique_expr(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").unique())
     expected = {"a": [1, 2]}

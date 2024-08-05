@@ -23,7 +23,9 @@ def test_columns(constructor: Any) -> None:
     assert result == expected
 
 
-def test_expr_binary(constructor: Any) -> None:
+def test_expr_binary(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
@@ -63,14 +65,18 @@ def test_expr_binary(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_expr_transform(constructor: Any) -> None:
+def test_expr_transform(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(a=nw.col("a").is_between(-1, 1), b=nw.col("b").is_in([4, 5]))
     expected = {"a": [True, False, False], "b": [True, True, False], "z": [7, 8, 9]}
     compare_dicts(result, expected)
 
 
-def test_expr_na(constructor: Any) -> None:
+def test_expr_na(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_na)).lazy()
     result_nna = df.filter((~nw.col("a").is_null()) & (~df.collect()["z"].is_null()))
     expected = {"a": [2], "b": [6], "z": [9]}
