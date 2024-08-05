@@ -5,8 +5,6 @@ import pandas as pd
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
-# TODO: From Dask only to all backends
-
 
 def test_scalar_reduction() -> None:
     import dask.dataframe as dd
@@ -29,10 +27,11 @@ def test_scalar_reduction() -> None:
     expected = {"a": [1, 2, 3], "b": [4, 4, 4]}
     compare_dicts(result, expected)
 
-    # result = df.select(nw.col("a").max(), nw.col("b"))  #noqa: ERA001
-    # expected = {"a": [3, 3, 3], "b": [4, 5, 6]}  # noqa: ERA001
-    # compare_dicts(result, expected)  # noqa: ERA001
+    result = df.select(nw.col("a").max(), nw.col("b"))
+    expected = {"a": [3, 3, 3], "b": [4, 5, 6]}
+    compare_dicts(result, expected)
 
-    # result = df.select(nw.col("a"), nw.col("b").min().alias("min"))  #noqa: ERA001
-    # expected = {"a": [1, 2, 3], "min": [4, 4, 4]}  #noqa: ERA001
-    # compare_dicts(result, expected)  #noqa: ERA001
+    result = df.select(nw.col("a"), nw.col("b").min().alias("min"))
+
+    expected = {"a": [1, 2, 3], "min": [4, 4, 4]}
+    compare_dicts(result, expected)

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals._dask.utils import parse_exprs_and_named_exprs
+from narwhals._dask.utils import parse_series
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
@@ -87,8 +88,9 @@ class DaskLazyFrame:
             return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
 
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        idx, parsed_series = parse_series(new_series)
         pd = get_pandas()
-        df = dd.from_pandas(pd.DataFrame()).assign(**new_series)
+        df = dd.from_pandas(pd.DataFrame(index=idx)).assign(**parsed_series)
         return self._from_native_dataframe(df)
 
     def drop_nulls(self) -> Self:

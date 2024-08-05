@@ -60,4 +60,26 @@ def parse_exprs_and_named_exprs(
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
         results[name] = _results[0]
+
     return results
+
+
+def parse_series(named_series: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+    de = get_dask_expr()
+    series = list(named_series.values())
+    lengths = [
+        1 if isinstance(s, de._collection.Scalar) else len(s.index) for s in series
+    ]
+    max_length = max(lengths)
+
+    idx = series[lengths.index(max_length)].index
+    parsed_series = {
+        name: value
+        if length > 1
+        else value.compute()
+        if isinstance(value, de._collection.Scalar)
+        else value.loc[0][0]
+        for (name, value), length in zip(named_series.items(), lengths)
+    }
+
+    return idx, parsed_series
