@@ -430,7 +430,7 @@ def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
         if max_length > 1 and length == 1:
             reindexed.append(
                 native_namespace.Series(
-                    [s_native.item()] * max_length,
+                    [s_native.iloc[0]] * max_length,
                     index=idx,
                     name=s_native.name,
                     dtype=s_native.dtype,
