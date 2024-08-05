@@ -134,17 +134,17 @@ this section better are 110% welcome.
 
 ## Polars and other implementations
 
-Other implementations are similar to the above: their define their own Narwhals-compliant
+Other implementations are similar to the above: they define their own Narwhals-compliant
 objects. So, all-in-all, there are a couple of layers here:
 
 - `nw.DataFrame` is backed by a Narwhals-compliant Dataframe, such as:
-  - `narwhals._pandas_like.dataframe.PandasLikeDataFrame`
-  - `narwhals._arrow.dataframe.ArrowDataFrame`
-  - `narwhals._polars.dataframe.PolarsDataFrame`
+    - `narwhals._pandas_like.dataframe.PandasLikeDataFrame`
+    - `narwhals._arrow.dataframe.ArrowDataFrame`
+    - `narwhals._polars.dataframe.PolarsDataFrame`
 - each Narwhals-compliant DataFrame is backed by a native Dataframe, for example:
-  - `narwhals._pandas_like.dataframe.PandasLikeDataFrame` is backed by a pandas DataFrame
-  - `narwhals._arrow.dataframe.ArrowDataFrame` is backed by a PyArrow Table
-  - `narwhals._polars.dataframe.PolarsDataFrame` is backed by a Polars DataFrame
+    - `narwhals._pandas_like.dataframe.PandasLikeDataFrame` is backed by a pandas DataFrame
+    - `narwhals._arrow.dataframe.ArrowDataFrame` is backed by a PyArrow Table
+    - `narwhals._polars.dataframe.PolarsDataFrame` is backed by a Polars DataFrame
 
 Each implementation defines its own objects in subfolders such as `narwhals._pandas_like`,
 `narwhals._arrow`, `narwhals._polars`, whereas the top-level modules such as `narwhals.dataframe`
