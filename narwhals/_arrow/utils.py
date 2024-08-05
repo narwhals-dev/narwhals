@@ -253,10 +253,7 @@ def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     return arrow_array, pa_object
 
 
-def broadcast_series(
-    series: list[ArrowSeries], backend_version: tuple[int, ...]
-) -> list[Any]:
-    pa = get_pyarrow()
+def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
     fast_path = all(_len == max_length for _len in lengths)
@@ -264,27 +261,34 @@ def broadcast_series(
     if fast_path:
         return [s._native_series for s in series]
 
+    pa = get_pyarrow()
+    np = get_numpy()
+
     reshaped = []
-
     for s, length in zip(series, lengths):
+        s_native = s._native_series
         if max_length > 1 and length == 1:
-            value = s._native_series[0]
+            pa_dtype = s_native.type
+            np_dtype = pyarrow_to_numpy_dtype(pa_dtype)
 
-            if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+            value = s_native[0]
+
+            if hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
 
             reshaped.append(
-                pa.chunked_array([[value] * max_length], type=s._native_series.type)
+                pa.array(
+                    np.full(shape=max_length, fill_value=value, dtype=np_dtype),
+                    type=pa_dtype,
+                )
             )
         else:
-            reshaped.append(s._native_series)
+            reshaped.append(s_native)
 
     return reshaped
 
 
-
-
-def pyarrow_to_numpy_dtype(pa_dtype: Any) -> Any:
+def pyarrow_to_numpy_dtype(pa_dtype: Any) -> Any:  # pragma: no cover
     pa = get_pyarrow()
     np = get_numpy()
 
@@ -321,63 +325,21 @@ def pyarrow_to_numpy_dtype(pa_dtype: Any) -> Any:
     if pa.types.is_float32(pa_dtype):
         return np.float32
 
-    # TODO
-    if (  # pragma: no cover
+    if (
         pa.types.is_string(pa_dtype)
         or pa.types.is_large_string(pa_dtype)
         or getattr(pa.types, "is_string_view", lambda _: False)(pa_dtype)
+        or pa.types.is_dictionary(pa_dtype)
     ):
-        return dtypes.String()
-
-    if pa.types.is_date32(pa_dtype):
-        return dtypes.Date()
-
-    if pa.types.is_timestamp(pa_dtype):
-        return dtypes.Datetime()
+        return np.str_
+    if (
+        pa.types.is_date32(pa_dtype)
+        or pa.types.is_date64(pa_dtype)
+        or pa.types.is_timestamp(pa_dtype)
+    ):
+        return np.datetime64
 
     if pa.types.is_duration(pa_dtype):
-        return dtypes.Duration()
-
-    if pa.types.is_dictionary(pa_dtype):
-        return dtypes.Categorical()
+        return np.timedelta64
 
     raise AssertionError
-    """
-    if pa.types.is_boolean(pyarrow_type):
-        return np.bool_
-    elif pa.types.is_int8(pyarrow_type):
-        return np.int8
-    elif pa.types.is_int16(pyarrow_type):
-        return np.int16
-    elif pa.types.is_int32(pyarrow_type):
-        return np.int32
-    elif pa.types.is_int64(pyarrow_type):
-        return np.int64
-    elif pa.types.is_uint8(pyarrow_type):
-        return np.uint8
-    elif pa.types.is_uint16(pyarrow_type):
-        return np.uint16
-    elif pa.types.is_uint32(pyarrow_type):
-        return np.uint32
-    elif pa.types.is_uint64(pyarrow_type):
-        return np.uint64
-    elif pa.types.is_float16(pyarrow_type):
-        return np.float16
-    elif pa.types.is_float32(pyarrow_type):
-        return np.float32
-    elif pa.types.is_float64(pyarrow_type):
-        return np.float64
-    elif pa.types.is_string(pyarrow_type):
-        return np.str_
-    elif pa.types.is_binary(pyarrow_type):
-        return np.bytes_
-    elif pa.types.is_date32(pyarrow_type) or pa.types.is_date64(pyarrow_type) or pa.types.is_timestamp(pyarrow_type):
-        return np.datetime64
-    elif pa.types.is_time32(pyarrow_type) or pa.types.is_time64(pyarrow_type):
-        return np.timedelta64
-    elif pa.types.is_decimal(pyarrow_type):
-        return np.object_
-    else:
-        msg = f"Unsupported PyArrow type: {pyarrow_type}"
-        raise TypeError(msg)
-    """

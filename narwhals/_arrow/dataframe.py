@@ -194,7 +194,7 @@ class ArrowDataFrame:
         names = [s.name for s in new_series]
         pa = get_pyarrow()
         df = pa.Table.from_arrays(
-            broadcast_series(new_series, backend_version=self._backend_version),
+            broadcast_series(new_series),
             names=names,
         )
         return self._from_native_dataframe(df)
