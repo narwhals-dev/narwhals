@@ -154,6 +154,20 @@ class DaskExpr:
             other,
         )
 
+    def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__eq__(other),
+            "__eq__",
+            other,
+        )
+
+    def __ne__(self, other: DaskExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__ne__(other),
+            "__ne__",
+            other,
+        )
+
     def __ge__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__ge__(other),

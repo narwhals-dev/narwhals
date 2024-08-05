@@ -111,3 +111,15 @@ class DaskLazyFrame:
         return self._from_native_dataframe(
             self._native_dataframe.drop(columns=list(columns))
         )
+
+    def with_row_index(self: Self, name: str) -> Self:
+        # Implementation is based on the following StackOverflow reply:
+        # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
+        return self._from_native_dataframe(
+            self._native_dataframe.assign(**{name: 1}).assign(
+                **{name: lambda t: t[name].cumsum(method="blelloch") - 1}
+            )
+        )
+
+    def rename(self: Self, mapping: dict[str, str]) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
