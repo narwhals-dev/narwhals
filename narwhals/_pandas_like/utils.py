@@ -416,7 +416,9 @@ def reverse_translate_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def validate_indices(series: list[PandasLikeSeries]) -> list[Any]:
+def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
+    native_namespace = series[0].__native_namespace__()
+
     lengths = [len(s) for s in series]
     max_length = max(lengths)
 
@@ -424,20 +426,28 @@ def validate_indices(series: list[PandasLikeSeries]) -> list[Any]:
     reindexed = []
 
     for s, length in zip(series, lengths):
+        s_native = s._native_series
         if max_length > 1 and length == 1:
-            s = s._from_native_series(s._native_series.repeat(max_length))  # noqa: PLW2901
+            reindexed.append(
+                native_namespace.Series(
+                    [s_native.item()] * max_length,
+                    index=idx,
+                    name=s_native.name,
+                    dtype=s_native.dtype,
+                )
+            )
 
-        if s._native_series.index is not idx:
+        elif s_native.index is not idx:
             reindexed.append(
                 set_axis(
-                    s._native_series,
+                    s_native,
                     idx,
                     implementation=s._implementation,
                     backend_version=s._backend_version,
                 )
             )
         else:
-            reindexed.append(s._native_series)
+            reindexed.append(s_native)
     return reindexed
 
 

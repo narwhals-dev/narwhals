@@ -8,9 +8,9 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
-from narwhals._arrow.utils import validate_shape
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
@@ -194,7 +194,8 @@ class ArrowDataFrame:
         names = [s.name for s in new_series]
         pa = get_pyarrow()
         df = pa.Table.from_arrays(
-            validate_shape(new_series, backend_version=self._backend_version), names=names
+            broadcast_series(new_series, backend_version=self._backend_version),
+            names=names,
         )
         return self._from_native_dataframe(df)
 

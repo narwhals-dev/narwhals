@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import isinstance_or_issubclass
@@ -252,7 +253,7 @@ def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     return arrow_array, pa_object
 
 
-def validate_shape(
+def broadcast_series(
     series: list[ArrowSeries], backend_version: tuple[int, ...]
 ) -> list[Any]:
     pa = get_pyarrow()
@@ -279,3 +280,104 @@ def validate_shape(
             reshaped.append(s._native_series)
 
     return reshaped
+
+
+
+
+def pyarrow_to_numpy_dtype(pa_dtype: Any) -> Any:
+    pa = get_pyarrow()
+    np = get_numpy()
+
+    if pa.types.is_int64(pa_dtype):
+        return np.int64
+
+    if pa.types.is_int32(pa_dtype):
+        return np.int32
+
+    if pa.types.is_int16(pa_dtype):
+        return np.int16
+
+    if pa.types.is_int8(pa_dtype):
+        return np.int8
+
+    if pa.types.is_uint64(pa_dtype):
+        return np.uint64
+
+    if pa.types.is_uint32(pa_dtype):
+        return np.uint32
+
+    if pa.types.is_uint16(pa_dtype):
+        return np.uint16
+
+    if pa.types.is_uint8(pa_dtype):
+        return np.uint8
+
+    if pa.types.is_boolean(pa_dtype):
+        return np.bool
+
+    if pa.types.is_float64(pa_dtype):
+        return np.float64
+
+    if pa.types.is_float32(pa_dtype):
+        return np.float32
+
+    # TODO
+    if (  # pragma: no cover
+        pa.types.is_string(pa_dtype)
+        or pa.types.is_large_string(pa_dtype)
+        or getattr(pa.types, "is_string_view", lambda _: False)(pa_dtype)
+    ):
+        return dtypes.String()
+
+    if pa.types.is_date32(pa_dtype):
+        return dtypes.Date()
+
+    if pa.types.is_timestamp(pa_dtype):
+        return dtypes.Datetime()
+
+    if pa.types.is_duration(pa_dtype):
+        return dtypes.Duration()
+
+    if pa.types.is_dictionary(pa_dtype):
+        return dtypes.Categorical()
+
+    raise AssertionError
+    """
+    if pa.types.is_boolean(pyarrow_type):
+        return np.bool_
+    elif pa.types.is_int8(pyarrow_type):
+        return np.int8
+    elif pa.types.is_int16(pyarrow_type):
+        return np.int16
+    elif pa.types.is_int32(pyarrow_type):
+        return np.int32
+    elif pa.types.is_int64(pyarrow_type):
+        return np.int64
+    elif pa.types.is_uint8(pyarrow_type):
+        return np.uint8
+    elif pa.types.is_uint16(pyarrow_type):
+        return np.uint16
+    elif pa.types.is_uint32(pyarrow_type):
+        return np.uint32
+    elif pa.types.is_uint64(pyarrow_type):
+        return np.uint64
+    elif pa.types.is_float16(pyarrow_type):
+        return np.float16
+    elif pa.types.is_float32(pyarrow_type):
+        return np.float32
+    elif pa.types.is_float64(pyarrow_type):
+        return np.float64
+    elif pa.types.is_string(pyarrow_type):
+        return np.str_
+    elif pa.types.is_binary(pyarrow_type):
+        return np.bytes_
+    elif pa.types.is_date32(pyarrow_type) or pa.types.is_date64(pyarrow_type) or pa.types.is_timestamp(pyarrow_type):
+        return np.datetime64
+    elif pa.types.is_time32(pyarrow_type) or pa.types.is_time64(pyarrow_type):
+        return np.timedelta64
+    elif pa.types.is_decimal(pyarrow_type):
+        return np.object_
+    else:
+        msg = f"Unsupported PyArrow type: {pyarrow_type}"
+        raise TypeError(msg)
+    """
