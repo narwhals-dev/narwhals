@@ -188,3 +188,9 @@ class PolarsLazyFrame:
                 self._native_dataframe.with_row_count(name)
             )
         return self._from_native_dataframe(self._native_dataframe.with_row_index(name))
+
+    def head(self, n: int) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.head(n))
+
+    def tail(self, n: int) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.tail(n))
