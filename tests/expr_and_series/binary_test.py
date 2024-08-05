@@ -1,4 +1,5 @@
 from typing import Any
+
 import pytest
 
 import narwhals.stable.v1 as nw

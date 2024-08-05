@@ -1,7 +1,7 @@
-import pytest
-import polars as pl
 import pandas as pd
+import polars as pl
 import pyarrow as pa
+import pytest
 
 import narwhals.stable.v1 as nw
 

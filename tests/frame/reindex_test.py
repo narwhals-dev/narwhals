@@ -1,11 +1,10 @@
 from typing import Any
 
-import pytest
 import pandas as pd
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
-
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
 
