@@ -400,6 +400,14 @@ class ArrowExprStringNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
         self._expr = expr
 
+    def strip_chars(self, characters: str | None = None) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "strip_chars",
+            characters,
+        )
+
     def starts_with(self, prefix: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._expr,
