@@ -38,8 +38,9 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 
 
 def parse_exprs_and_named_exprs(
-    df: DaskLazyFrame, *exprs: Any, **named_exprs: Any
+    df: DaskLazyFrame, *exprs: Any, allow_scalar: bool = False, **named_exprs: Any
 ) -> dict[str, Any]:
+    dask_expr = get_dask_expr()
     results = {}
     for expr in exprs:
         if hasattr(expr, "__narwhals_expr__"):
@@ -49,8 +50,14 @@ def parse_exprs_and_named_exprs(
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
-        for _result in _results:
-            results[_result.name] = _result
+        for i, _result in enumerate(_results):
+            if allow_scalar and isinstance(_result, dask_expr.Scalar):
+                if expr._output_names is None:
+                    msg = "Anonymous expressions not allowed in this context"
+                    raise TypeError(msg)
+                results[expr._output_names[i]] = _result
+            else:
+                results[_result.name] = _result
     for name, value in named_exprs.items():
         _results = value._call(df)
         if len(_results) != 1:  # pragma: no cover
