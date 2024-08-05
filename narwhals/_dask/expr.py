@@ -267,7 +267,7 @@ class DaskExpr:
             "sum",
         )
 
-    def round(self, decimals: int = 0) -> Self:
+    def round(self, decimals: int) -> Self:
         return self._from_call(
             lambda _input, decimals: _input.round(decimals), "round", decimals
         )
