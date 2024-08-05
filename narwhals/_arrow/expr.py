@@ -284,6 +284,28 @@ class ArrowExpr:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
 
+    def over(self: Self, keys: list[str]) -> Self:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            if self._output_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in over.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+            tmp = df.group_by(*keys).agg(self)
+            tmp = df.select(*keys).join(tmp, how="left", left_on=keys, right_on=keys)
+            return [tmp[name] for name in self._output_names]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->over",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            backend_version=self._backend_version,
+        )
+
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)
