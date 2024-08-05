@@ -2148,6 +2148,40 @@ class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
 
+    def strip_chars(self, characters: str | None = None) -> Series:
+        r"""
+        Remove leading and trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["apple", "\nmango"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.strip_chars()
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['apple', 'mango']
+
+            >>> func(s_pl)
+            ['apple', 'mango']
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.strip_chars(characters)
+        )
+
     def starts_with(self, prefix: str) -> Series:
         r"""
         Check if string values start with a substring.

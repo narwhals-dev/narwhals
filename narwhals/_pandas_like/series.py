@@ -659,6 +659,11 @@ class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
+    def strip_chars(self, characters: str | None) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.strip(characters),
+        )
+
     def starts_with(self, prefix: str) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.startswith(prefix),
