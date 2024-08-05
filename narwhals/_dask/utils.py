@@ -38,7 +38,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 
 
 def parse_exprs_and_named_exprs(
-    df: DaskLazyFrame, *exprs: Any, allow_scalar: bool = False, **named_exprs: Any
+    df: DaskLazyFrame, *exprs: Any, allow_scalar: bool, **named_exprs: Any
 ) -> dict[str, Any]:
     dask_expr = get_dask_expr()
     results = {}
