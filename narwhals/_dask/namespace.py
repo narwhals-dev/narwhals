@@ -8,7 +8,7 @@ from typing import NoReturn
 
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
-from narwhals.utils import flatten
+from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -51,8 +51,10 @@ class DaskNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        # coverage shows 55->exit as uncovered?
-        return reduce(lambda x, y: x & y, flatten(exprs))  # type: ignore[no-any-return]  # pragma: no cover
+        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
+
+    def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"

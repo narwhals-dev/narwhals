@@ -154,6 +154,20 @@ class DaskExpr:
             other,
         )
 
+    def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__eq__(other),
+            "__eq__",
+            other,
+        )
+
+    def __ne__(self, other: DaskExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__ne__(other),
+            "__ne__",
+            other,
+        )
+
     def __ge__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__ge__(other),
@@ -186,6 +200,13 @@ class DaskExpr:
         return self._from_call(
             lambda _input, other: _input.__and__(other),
             "__and__",
+            other,
+        )
+
+    def __or__(self, other: DaskExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__or__(other),
+            "__or__",
             other,
         )
 
@@ -226,6 +247,8 @@ class DaskExpr:
         upper_bound: Any,
         closed: str = "both",
     ) -> Self:
+        if closed == "none":
+            closed = "neither"
         return self._from_call(
             lambda _input, lower_bound, upper_bound, closed: _input.between(
                 lower_bound,

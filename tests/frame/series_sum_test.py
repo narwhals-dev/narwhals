@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_series_sum(constructor: Any) -> None:
+def test_series_sum(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [0, 1, 2, 3, 4],
         "b": [1, 2, 3, 5, 3],

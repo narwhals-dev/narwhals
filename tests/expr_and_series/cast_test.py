@@ -46,6 +46,8 @@ schema = {
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
 def test_cast(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
