@@ -45,12 +45,15 @@ nav:
 theme:
   name: material
   font: false
+  favicon: assets/image.png
+  logo: assets/image.png
   features:
     - content.code.copy
     - content.code.annotate
     - navigation.footer
     - navigation.indexes
-  palette:
+    - navigation.top
+  palette:   
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
       toggle:
