@@ -18,6 +18,7 @@
         - filter
         - gather_every
         - head
+        - clip
         - is_between
         - is_duplicated
         - is_first_distinct

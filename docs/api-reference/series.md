@@ -20,6 +20,7 @@
         - gather_every
         - head
         - is_between
+        - clip
         - is_duplicated
         - is_empty
         - is_first_distinct

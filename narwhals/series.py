@@ -544,6 +544,107 @@ class Series:
         """
         return self._compliant_series.std(ddof=ddof)
 
+    def clip(
+        self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        r"""
+        Clip values in the Series.
+
+        Arguments:
+            lower_bound: Lower bound value.
+            upper_bound: Upper bound value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_lower(s):
+            ...     return s.clip(2)
+
+            We can then pass either pandas or Polars to `func_lower`:
+
+            >>> func_lower(s_pd)
+            0    2
+            1    2
+            2    3
+            dtype: int64
+            >>> func_lower(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               2
+               2
+               3
+            ]
+
+            We define another library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_upper(s):
+            ...     return s.clip(upper_bound=2)
+
+            We can then pass either pandas or Polars to `func_upper`:
+
+            >>> func_upper(s_pd)
+            0    1
+            1    2
+            2    2
+            dtype: int64
+            >>> func_upper(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               1
+               2
+               2
+            ]
+
+            We can have both at the same time
+
+            >>> s = [-1, 1, -3, 3, -5, 5]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.clip(-1, 3)
+
+            We can pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0   -1
+            1    1
+            2   -1
+            3    3
+            4   -1
+            5    3
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (6,)
+            Series: '' [i64]
+            [
+               -1
+               1
+               -1
+               3
+               -1
+               3
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.clip(lower_bound=lower_bound, upper_bound=upper_bound)
+        )
+
     def is_in(self, other: Any) -> Self:
         """
         Check if the elements of this Series are in the other sequence.
