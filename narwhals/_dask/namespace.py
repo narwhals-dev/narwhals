@@ -50,6 +50,18 @@ class DaskNamespace:
             backend_version=self._backend_version,
         )
 
+    def all(self) -> DaskExpr:
+        return DaskExpr(
+            lambda df: [
+                df._native_dataframe.loc[:, column_name] for column_name in df.columns
+            ],
+            depth=0,
+            function_name="all",
+            root_names=None,
+            output_names=None,
+            backend_version=self._backend_version,
+        )
+
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
 
