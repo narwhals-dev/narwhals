@@ -63,3 +63,15 @@ def test_datetime_attributes_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(getattr(df["a"].dt, attribute)())
     compare_dicts(result, {"a": expected})
+
+
+def test_datetime_chained_attributes(request: Any, constructor_eager: Any) -> None:
+    if "pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.select(df["a"].dt.date().dt.year())
+    compare_dicts(result, {"a": [2021, 2020]})
+
+    result = df.select(nw.col("a").dt.date().dt.year())
+    compare_dicts(result, {"a": [2021, 2020]})
