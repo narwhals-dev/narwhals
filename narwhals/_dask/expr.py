@@ -275,6 +275,16 @@ class DaskExpr:
     def fill_null(self, value: Any) -> DaskExpr:
         return self._from_call(lambda _input, _val: _input.fillna(_val), "fillna", value)
 
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        return self._from_call(
+            lambda _input, _lower, _upper: _input.clip(lower=_lower, upper=_upper),
+            "clip",
+            lower_bound,
+            upper_bound,
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)

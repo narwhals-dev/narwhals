@@ -634,11 +634,11 @@ class Series:
             Series: '' [i64]
             [
                -1
-               1
+                1
                -1
-               3
+                3
                -1
-               3
+                3
             ]
         """
         return self._from_compliant_series(
