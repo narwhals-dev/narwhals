@@ -36,8 +36,9 @@ def test_group_by_complex() -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.skipif(sys.version_info < (3, 9), reason="Dask requires python3.9 or higher")
 def test_invalid_group_by_dask() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr")
     import dask.dataframe as dd
 
     df_dask = dd.from_pandas(df_pandas)
