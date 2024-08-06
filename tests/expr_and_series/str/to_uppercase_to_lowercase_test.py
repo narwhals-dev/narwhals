@@ -40,7 +40,7 @@ def test_str_to_uppercase(
             "pandas_pyarrow_constructor",
             "pyarrow_table_constructor",
         )
-        or ("dask" in str(constructor) and parse_version(pa.__version__) >= (14,))
+        or ("dask" in str(constructor) and parse_version(pa.__version__) >= (12,))
     ):
         # We are marking it xfail for these conditions above
         # since the pyarrow backend will convert
