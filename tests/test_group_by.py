@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import sys
 from contextlib import nullcontext
 from typing import Any
 
-import dask.dataframe as dd
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -16,7 +16,6 @@ from tests.utils import compare_dicts
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
 
 df_pandas = pd.DataFrame(data)
-df_dask = dd.from_pandas(df_pandas)
 df_lazy = pl.LazyFrame(data)
 
 
@@ -37,6 +36,19 @@ def test_group_by_complex() -> None:
     compare_dicts(result, expected)
 
 
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="Dask requires python3.9 or higher")
+def test_invalid_group_by_dask() -> None:
+    import dask.dataframe as dd
+
+    df_dask = dd.from_pandas(df_pandas)
+
+    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+        nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
+
+    with pytest.raises(RuntimeError, match="does your"):
+        nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
+
+
 def test_invalid_group_by() -> None:
     df = nw.from_native(df_pandas)
     with pytest.raises(RuntimeError, match="does your"):
@@ -53,12 +65,6 @@ def test_invalid_group_by() -> None:
         nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(
             nw.col("b").mean().min()
         )
-
-    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
-        nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
-
-    with pytest.raises(RuntimeError, match="does your"):
-        nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
 
 def test_group_by_iter(constructor_eager: Any) -> None:
