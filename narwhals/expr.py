@@ -2445,13 +2445,16 @@ class ExprDateTimeNamespace:
         """
         Extract the date from underlying DateTime representation.
 
+        Raises:
+            NotImplementedError: If pandas default backend is being used.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
-            >>> s_pd = pd.Series(dates)
+            >>> s_pd = pd.Series(dates).convert_dtypes(dtype_backend="pyarrow")
             >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
@@ -2465,7 +2468,7 @@ class ExprDateTimeNamespace:
             >>> func(s_pd)
             0    2012-01-07
             1    2023-03-10
-            dtype: object
+            dtype: date32[day][pyarrow]
 
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
