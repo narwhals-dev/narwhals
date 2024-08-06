@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import warnings
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -9,8 +8,6 @@ from typing import Callable
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals._pandas_like.utils import native_series_from_iterable
-from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -42,7 +39,6 @@ class DaskLazyGroupBy:
             namespace=self._df.__narwhals_namespace__(),
             **named_aggs,
         )
-        implementation: Implementation = Implementation.PANDAS
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
             if expr._output_names is None:
@@ -60,9 +56,6 @@ class DaskLazyGroupBy:
             self._keys,
             output_names,
             self._from_native_dataframe,
-            dataframe_is_empty=False,
-            implementation=implementation,
-            backend_version=self._df._backend_version,
         )
 
     def _from_native_dataframe(self, df: DaskLazyFrame) -> DaskLazyFrame:
@@ -80,10 +73,6 @@ def agg_dask(
     keys: list[str],
     output_names: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
-    *,
-    implementation: Any,
-    backend_version: tuple[int, ...],
-    dataframe_is_empty: bool,
 ) -> DaskLazyFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
@@ -141,48 +130,14 @@ def agg_dask(
         result_simple = result_simple.rename(columns=name_mapping).reset_index()
         return from_dataframe(result_simple.loc[:, output_names])
 
-    if dataframe_is_empty:
-        # Don't even attempt this, it's way too inconsistent across pandas versions.
-        msg = (
-            "No results for group-by aggregation.\n\n"
-            "Hint: you were probably trying to apply a non-elementary aggregation with a "
-            "pandas-like API.\n"
-            "Please rewrite your query such that group-by aggregations "
-            "are elementary. For example, instead of:\n\n"
-            "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
-            "use:\n\n"
-            "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
-        )
-        raise ValueError(msg)
-
-    warnings.warn(
-        "Found complex group-by expression, which can't be expressed efficiently with the "
-        "pandas API. If you can, please rewrite your query such that group-by aggregations "
-        "are simple (e.g. mean, std, min, max, ...).",
-        UserWarning,
-        stacklevel=2,
+    msg = (
+        "Non-trivial complex found.\n\n"
+        "Hint: you were probably trying to apply a non-elementary aggregation with a "
+        "dask dataframe.\n"
+        "Please rewrite your query such that group-by aggregations "
+        "are elementary. For example, instead of:\n\n"
+        "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
+        "use:\n\n"
+        "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
     )
-
-    def func(df: Any) -> Any:
-        out_group = []
-        out_names = []
-        for expr in exprs:
-            results_keys = expr._call(from_dataframe(df))
-            for result_keys in results_keys:
-                out_group.append(result_keys._native_series.iloc[0])
-                out_names.append(result_keys.name)
-        return native_series_from_iterable(
-            out_group,
-            index=out_names,
-            name="",
-            implementation=implementation,
-        )
-
-    if implementation is Implementation.PANDAS and backend_version >= (2, 2):
-        result_complex = grouped.apply(func, include_groups=False)
-    else:  # pragma: no cover
-        result_complex = grouped.apply(func)
-
-    result = result_complex.reset_index()
-
-    return from_dataframe(result.loc[:, output_names])
+    raise ValueError(msg)

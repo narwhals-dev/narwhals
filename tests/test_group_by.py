@@ -66,11 +66,11 @@ def test_group_by_iter(constructor_eager: Any) -> None:
     assert sorted(keys) == sorted(expected_keys)
     expected_keys = [(1, 4), (3, 6)]  # type: ignore[list-item]
     keys = []
-    for key, _df in df.group_by("a", "b"):
+    for key, _ in df.group_by("a", "b"):
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
     keys = []
-    for key, _df in df.group_by(["a", "b"]):
+    for key, _ in df.group_by(["a", "b"]):
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
 
