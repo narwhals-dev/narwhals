@@ -273,9 +273,9 @@ def translate_dtype(column: Any) -> DType:
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
     if str(dtype) == "object":
-        if (idx := column.first_valid_index()) is not None and isinstance(
-            column.loc[idx], str
-        ):
+        if (
+            idx := getattr(column, "first_valid_index", lambda: None)()
+        ) is not None and isinstance(column.loc[idx], str):
             # Infer based on first non-missing value.
             # For pandas pre 3.0, this isn't perfect.
             # After pandas 3.0, pandas has a dedicated string dtype

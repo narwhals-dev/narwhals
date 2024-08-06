@@ -39,6 +39,7 @@ def test_str_to_uppercase(
             "pandas_nullable_constructor",
             "polars_eager_constructor",
             "polars_lazy_constructor",
+            "dask_lazy_constructor",
         )
     ):
         # We are marking it xfail for these conditions above
