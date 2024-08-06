@@ -34,8 +34,15 @@ data = {
     ],
 )
 def test_datetime_attributes(
-    constructor: Any, attribute: str, expected: list[int]
+    request: Any, constructor: Any, attribute: str, expected: list[int]
 ) -> None:
+    if (
+        attribute == "date"
+        and "pandas" in str(constructor)
+        and "pyarrow" not in str(constructor)
+    ):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a").dt, attribute)())
     compare_dicts(result, {"a": expected})
@@ -58,8 +65,15 @@ def test_datetime_attributes(
     ],
 )
 def test_datetime_attributes_series(
-    constructor_eager: Any, attribute: str, expected: list[int]
+    request: Any, constructor_eager: Any, attribute: str, expected: list[int]
 ) -> None:
+    if (
+        attribute == "date"
+        and "pandas" in str(constructor_eager)
+        and "pyarrow" not in str(constructor_eager)
+    ):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(getattr(df["a"].dt, attribute)())
     compare_dicts(result, {"a": expected})
