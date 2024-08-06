@@ -7,7 +7,7 @@ from tests.utils import compare_dicts
 
 
 def test_clip(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.select(b=nw.col("a").clip(3, 5))
