@@ -27,6 +27,9 @@ class DaskExpr:
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        # Whether the expression is a length-1 Series resulting from
+        # a reduction, such as `nw.col('a').sum()`
+        is_scalar: bool,
         backend_version: tuple[int, ...],
     ) -> None:
         self._call = call
@@ -34,6 +37,7 @@ class DaskExpr:
         self._function_name = function_name
         self._root_names = root_names
         self._output_names = output_names
+        self._is_scalar = is_scalar
         self._backend_version = backend_version
 
     def __narwhals_expr__(self) -> None: ...
@@ -60,6 +64,7 @@ class DaskExpr:
             function_name="col",
             root_names=list(column_names),
             output_names=list(column_names),
+            is_scalar=False,
             backend_version=backend_version,
         )
 
@@ -69,6 +74,7 @@ class DaskExpr:
         call: Any,
         expr_name: str,
         *args: Any,
+        is_scalar: bool,
         **kwargs: Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
@@ -116,6 +122,7 @@ class DaskExpr:
             function_name=f"{self._function_name}->{expr_name}",
             root_names=root_names,
             output_names=output_names,
+            is_scalar=self._is_scalar or is_scalar,
             backend_version=self._backend_version,
         )
 
@@ -130,6 +137,7 @@ class DaskExpr:
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=[name],
+            is_scalar=self._is_scalar,
             backend_version=self._backend_version,
         )
 
@@ -138,6 +146,7 @@ class DaskExpr:
             lambda _input, other: _input.__add__(other),
             "__add__",
             other,
+            is_scalar=False,
         )
 
     def __sub__(self, other: Any) -> Self:
@@ -145,6 +154,7 @@ class DaskExpr:
             lambda _input, other: _input.__sub__(other),
             "__sub__",
             other,
+            is_scalar=False,
         )
 
     def __mul__(self, other: Any) -> Self:
@@ -152,6 +162,7 @@ class DaskExpr:
             lambda _input, other: _input.__mul__(other),
             "__mul__",
             other,
+            is_scalar=False,
         )
 
     def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
@@ -159,6 +170,7 @@ class DaskExpr:
             lambda _input, other: _input.__eq__(other),
             "__eq__",
             other,
+            is_scalar=False,
         )
 
     def __ne__(self, other: DaskExpr) -> Self:  # type: ignore[override]
@@ -166,6 +178,7 @@ class DaskExpr:
             lambda _input, other: _input.__ne__(other),
             "__ne__",
             other,
+            is_scalar=False,
         )
 
     def __ge__(self, other: DaskExpr) -> Self:
@@ -173,6 +186,7 @@ class DaskExpr:
             lambda _input, other: _input.__ge__(other),
             "__ge__",
             other,
+            is_scalar=False,
         )
 
     def __gt__(self, other: DaskExpr) -> Self:
@@ -180,6 +194,7 @@ class DaskExpr:
             lambda _input, other: _input.__gt__(other),
             "__gt__",
             other,
+            is_scalar=False,
         )
 
     def __le__(self, other: DaskExpr) -> Self:
@@ -187,6 +202,7 @@ class DaskExpr:
             lambda _input, other: _input.__le__(other),
             "__le__",
             other,
+            is_scalar=False,
         )
 
     def __lt__(self, other: DaskExpr) -> Self:
@@ -194,6 +210,7 @@ class DaskExpr:
             lambda _input, other: _input.__lt__(other),
             "__lt__",
             other,
+            is_scalar=False,
         )
 
     def __and__(self, other: DaskExpr) -> Self:
@@ -201,6 +218,7 @@ class DaskExpr:
             lambda _input, other: _input.__and__(other),
             "__and__",
             other,
+            is_scalar=False,
         )
 
     def __or__(self, other: DaskExpr) -> Self:
@@ -208,24 +226,28 @@ class DaskExpr:
             lambda _input, other: _input.__or__(other),
             "__or__",
             other,
+            is_scalar=False,
         )
 
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
             "mean",
+            is_scalar=True,
         )
 
     def min(self) -> Self:
         return self._from_call(
             lambda _input: _input.min(),
             "min",
+            is_scalar=True,
         )
 
     def max(self) -> Self:
         return self._from_call(
             lambda _input: _input.max(),
             "max",
+            is_scalar=True,
         )
 
     def shift(self, n: int) -> Self:
@@ -233,12 +255,14 @@ class DaskExpr:
             lambda _input, n: _input.shift(n),
             "shift",
             n,
+            is_scalar=False,
         )
 
     def cum_sum(self) -> Self:
         return self._from_call(
             lambda _input: _input.cumsum(),
             "cum_sum",
+            is_scalar=False,
         )
 
     def is_between(
@@ -259,12 +283,14 @@ class DaskExpr:
             lower_bound,
             upper_bound,
             closed,
+            is_scalar=False,
         )
 
     def sum(self) -> Self:
         return self._from_call(
             lambda _input: _input.sum(),
             "sum",
+            is_scalar=True,
         )
 
     def round(self, decimals: int) -> Self:
@@ -273,7 +299,9 @@ class DaskExpr:
         )
 
     def fill_null(self, value: Any) -> DaskExpr:
-        return self._from_call(lambda _input, _val: _input.fillna(_val), "fillna", value)
+        return self._from_call(
+            lambda _input, _val: _input.fillna(_val), "fillna", value, is_scalar=False
+        )
 
     @property
     def str(self: Self) -> DaskExprStringNamespace:
@@ -290,17 +318,26 @@ class DaskExprStringNamespace:
 
     def strip_chars(self, characters: str | None = None) -> DaskExpr:
         return self._expr._from_call(
-            lambda _input, characters: _input.str.strip(characters), "strip", characters
+            lambda _input, characters: _input.str.strip(characters),
+            "strip",
+            characters,
+            is_scalar=False,
         )
 
     def starts_with(self, prefix: str) -> DaskExpr:
         return self._expr._from_call(
-            lambda _input, prefix: _input.str.startswith(prefix), "starts_with", prefix
+            lambda _input, prefix: _input.str.startswith(prefix),
+            "starts_with",
+            prefix,
+            is_scalar=False,
         )
 
     def ends_with(self, suffix: str) -> DaskExpr:
         return self._expr._from_call(
-            lambda _input, suffix: _input.str.endswith(suffix), "ends_with", suffix
+            lambda _input, suffix: _input.str.endswith(suffix),
+            "ends_with",
+            suffix,
+            is_scalar=False,
         )
 
     def contains(self, pattern: str, *, literal: bool = False) -> DaskExpr:
@@ -309,6 +346,7 @@ class DaskExprStringNamespace:
             "contains",
             pattern,
             not literal,
+            is_scalar=False,
         )
 
     def slice(self, offset: int, length: int | None = None) -> DaskExpr:
@@ -318,6 +356,7 @@ class DaskExprStringNamespace:
             "slice",
             offset,
             stop,
+            is_scalar=False,
         )
 
     def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
@@ -325,18 +364,21 @@ class DaskExprStringNamespace:
             lambda _input, fmt: get_dask().dataframe.to_datetime(_input, format=fmt),
             "to_datetime",
             format,
+            is_scalar=False,
         )
 
     def to_uppercase(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.str.upper(),
             "to_uppercase",
+            is_scalar=False,
         )
 
     def to_lowercase(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.str.lower(),
             "to_lowercase",
+            is_scalar=False,
         )
 
 
@@ -348,58 +390,68 @@ class DaskExprDateTimeNamespace:
         return self._expr._from_call(
             lambda _input: _input.dt.year,
             "year",
+            is_scalar=False,
         )
 
     def month(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.month,
             "month",
+            is_scalar=False,
         )
 
     def day(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.day,
             "day",
+            is_scalar=False,
         )
 
     def hour(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.hour,
             "hour",
+            is_scalar=False,
         )
 
     def minute(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.minute,
             "minute",
+            is_scalar=False,
         )
 
     def second(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.second,
             "second",
+            is_scalar=False,
         )
 
     def millisecond(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.microsecond // 1000,
             "millisecond",
+            is_scalar=False,
         )
 
     def microsecond(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.microsecond,
             "microsecond",
+            is_scalar=False,
         )
 
     def nanosecond(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.microsecond * 1000 + _input.dt.nanosecond,
             "nanosecond",
+            is_scalar=False,
         )
 
     def ordinal_day(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.dayofyear,
             "ordinal_day",
+            is_scalar=False,
         )

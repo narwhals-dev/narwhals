@@ -56,6 +56,7 @@ class DaskNamespace:
             function_name="all",
             root_names=None,
             output_names=None,
+            is_scalar=False,
             backend_version=self._backend_version,
         )
 
@@ -124,5 +125,6 @@ class DaskNamespace:
             function_name=function_name,
             root_names=root_names,
             output_names=output_names,
+            is_scalar=False,  # TODO(marco): check!
             backend_version=self._backend_version,
         )
