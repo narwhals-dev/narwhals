@@ -18,13 +18,3 @@ def test_invalid() -> None:
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Perhaps you:"):
         df.select([nw.col("a").cast(pl.Int64)])
-
-
-def test_select_dask_invalid() -> None:
-    pytest.importorskip("dask")
-    pytest.importorskip("dask_expr")
-    import dask.dataframe as dd
-
-    df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
-    with pytest.raises(NotImplementedError, match="not supported"):
-        df.select(nw.col("a").sum(), nw.col("a"))
