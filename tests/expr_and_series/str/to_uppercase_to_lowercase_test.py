@@ -39,6 +39,7 @@ def test_str_to_uppercase(
         in (
             "pandas_pyarrow_constructor",
             "pyarrow_table_constructor",
+            "modin_constructor",
         )
         or ("dask" in str(constructor) and parse_version(pa.__version__) >= (12,))
     ):
