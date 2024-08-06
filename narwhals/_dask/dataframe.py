@@ -160,8 +160,6 @@ class DaskLazyFrame:
             result = native_frame.drop_duplicates(subset=subset, keep=mapped_keep)
         return self._from_native_dataframe(result)
 
-      def group_by(self, *by: str) -> Any:
-
     def sort(
         self: Self,
         by: str | Iterable[str],
