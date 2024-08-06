@@ -797,6 +797,16 @@ class ArrowSeriesStringNamespace:
     def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
+    def strip_chars(self: Self, characters: str | None = None) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        whitespace = " \t\n\r\v\f"
+        return self._arrow_series._from_native_series(
+            pc.utf8_trim(
+                self._arrow_series._native_series,
+                characters or whitespace,
+            )
+        )
+
     def starts_with(self: Self, prefix: str) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._arrow_series._from_native_series(
