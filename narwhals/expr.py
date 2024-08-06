@@ -1774,9 +1774,11 @@ class Expr:
     ) -> Self:
         r"""
         Clip values in the Series.
+
         Arguments:
             lower_bound: Lower bound value.
             upper_bound: Upper bound value.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
