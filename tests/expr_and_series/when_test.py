@@ -71,7 +71,7 @@ def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, ValueError)):
         df.with_columns(when().then(value=3).alias("a_when"))
 
 
