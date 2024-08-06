@@ -281,7 +281,8 @@ def translate_dtype(column: Any) -> DType:
             # After pandas 3.0, pandas has a dedicated string dtype
             # which is inferred by default.
             return dtypes.String()
-        return dtypes.Object()
+        else:  # pragma: no cover  TODO(unassigned): cover this
+            return dtypes.Object()
     return dtypes.Unknown()
 
 
