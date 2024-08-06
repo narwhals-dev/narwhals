@@ -33,6 +33,9 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
             # https://github.com/dask/dask-expr/issues/1112.
             msg = "Implicit index alignment is not support for Dask DataFrame in Narwhals"
             raise NotImplementedError(msg)
+        if obj._is_scalar:
+            # Return scalar, let Dask do its broadcasting
+            return result[0]
         return result
     return obj
 
@@ -40,7 +43,6 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 def parse_exprs_and_named_exprs(
     df: DaskLazyFrame, *exprs: Any, **named_exprs: Any
 ) -> dict[str, Any]:
-    dask_expr = get_dask_expr()
     results = {}
     for expr in exprs:
         if hasattr(expr, "__narwhals_expr__"):
@@ -50,12 +52,9 @@ def parse_exprs_and_named_exprs(
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
-        for i, _result in enumerate(_results):
-            if isinstance(_result, dask_expr.Scalar):
-                if expr._output_names is None:
-                    msg = "Anonymous expressions (e.g. `nw.all()` instead of `nw.col('a')` or `nw.col('a', 'b')`) are not supported in this context for the Dask backend"
-                    raise TypeError(msg)
-                results[expr._output_names[i]] = _result
+        for _result in _results:
+            if getattr(expr, "_is_scalar", False):
+                results[_result.name] = _result[0]
             else:
                 results[_result.name] = _result
     for name, value in named_exprs.items():

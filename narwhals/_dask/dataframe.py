@@ -9,7 +9,6 @@ from typing import Sequence
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals.dependencies import get_dask_dataframe
-from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
@@ -99,14 +98,15 @@ class DaskLazyFrame:
             pd = get_pandas()
             return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
 
-        dask_expr = get_dask_expr()
-        if all(isinstance(x, dask_expr.Scalar) for x in new_series.values()):
+        if all(getattr(expr, "_is_scalar", False) for expr in exprs) and all(
+            getattr(val, "_is_scalar", False) for val in named_exprs.values()
+        ):
             df = dd.concat(
                 [val.to_series().rename(name) for name, val in new_series.items()], axis=1
             )
             return self._from_native_dataframe(df)
 
-        df = dd.concat([val.rename(name) for name, val in new_series.items()], axis=1)
+        df = self._native_dataframe.assign(**new_series).loc[:, list(new_series.keys())]
         return self._from_native_dataframe(df)
 
     def drop_nulls(self) -> Self:

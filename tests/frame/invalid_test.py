@@ -26,5 +26,5 @@ def test_select_dask_invalid() -> None:
     import dask.dataframe as dd
 
     df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
-    with pytest.raises(TypeError, match="not supported"):
-        df.select(nw.all().sum())
+    with pytest.raises(NotImplementedError, match="not supported"):
+        df.select(nw.col("a").sum(), nw.col("a"))

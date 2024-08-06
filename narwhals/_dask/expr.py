@@ -6,7 +6,6 @@ from typing import Any
 from typing import Callable
 
 from narwhals.dependencies import get_dask
-from narwhals.dependencies import get_dask_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -84,8 +83,9 @@ class DaskExpr:
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
                 result = call(_input, *_args, **_kwargs)
-                if isinstance(result, get_dask_expr()._collection.Series):
-                    result = result.rename(_input.name)
+                if is_scalar:
+                    result = result.to_series()
+                result = result.rename(_input.name)
                 results.append(result)
             return results
 
