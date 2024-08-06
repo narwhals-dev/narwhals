@@ -1,4 +1,3 @@
-import dask.dataframe as dd
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -22,6 +21,10 @@ def test_invalid() -> None:
 
 
 def test_select_dask_invalid() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr")
+    import dask.dataframe as dd
+
     df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
     with pytest.raises(TypeError, match="not supported"):
         df.select(nw.all().sum())
