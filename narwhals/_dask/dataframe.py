@@ -129,6 +129,37 @@ class DaskLazyFrame:
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
 
+    def unique(
+        self: Self,
+        subset: str | list[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"] = "any",
+        maintain_order: bool = False,
+    ) -> Self:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
+        subset = flatten(subset) if subset else None
+        native_frame = self._native_dataframe
+        if keep == "none":
+            subset = subset or self.columns
+            token = generate_unique_token(n_bytes=8, columns=subset)
+            unique = (
+                native_frame.groupby(subset)
+                .size()
+                .rename(token)
+                .loc[lambda t: t == 1]
+                .reset_index()
+                .drop(columns=token)
+            )
+            result = native_frame.merge(unique, on=subset, how="inner")
+        else:
+            mapped_keep = {"any": "first"}.get(keep, keep)
+            result = native_frame.drop_duplicates(subset=subset, keep=mapped_keep)
+        return self._from_native_dataframe(result)
+
     def sort(
         self: Self,
         by: str | Iterable[str],
