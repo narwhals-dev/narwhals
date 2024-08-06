@@ -25,10 +25,7 @@ def test_unique(
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
-    request: Any,
 ) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
@@ -36,9 +33,7 @@ def test_unique(
     compare_dicts(result, expected)
 
 
-def test_unique_none(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_unique_none(constructor: Any) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
