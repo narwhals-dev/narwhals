@@ -91,7 +91,7 @@ filterwarnings = [
   'ignore:.*implementation has mismatches with pandas',
   'ignore:.*Do not use the `random` module inside strategies',
   'ignore:.*You are using pyarrow version',
-  'ignore:.*but when imported by pytest it raised',
+  'ignore:.*but when imported by',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
