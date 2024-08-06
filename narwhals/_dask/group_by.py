@@ -41,13 +41,15 @@ class DaskLazyGroupBy:
         )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
-            if expr._output_names is None:
+            # TODO(unassigned): Need to implement `.all()` for Dask first, part of GH 637
+            if expr._output_names is None:  # pragma: no cover
                 msg = (
                     "Anonymous expressions are not supported in group_by.agg.\n"
                     "Instead of `nw.all()`, try using a named expression, such as "
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
+
             output_names.extend(expr._output_names)
 
         return agg_dask(
@@ -89,7 +91,8 @@ def agg_dask(
     if all_simple_aggs:
         simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
-            if expr._depth == 0:
+            # TODO(unassigned): Need to implement `.len()` for Dask first
+            if expr._depth == 0:  # pragma: no cover
                 # e.g. agg(nw.len()) # noqa: ERA001
                 if expr._output_names is None:  # pragma: no cover
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
@@ -123,7 +126,7 @@ def agg_dask(
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
         try:
             result_simple = grouped.agg(aggs)
-        except AttributeError as exc:
+        except ValueError as exc:
             msg = "Failed to aggregated - does your aggregation function return a scalar?"
             raise RuntimeError(msg) from exc
         result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
