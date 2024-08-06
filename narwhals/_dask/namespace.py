@@ -50,17 +50,29 @@ class DaskNamespace:
             backend_version=self._backend_version,
         )
 
-    def all(self) -> DaskExpr:
-        return DaskExpr(
-            lambda df: [
-                df._native_dataframe.loc[:, column_name] for column_name in df.columns
-            ],
-            depth=0,
-            function_name="all",
-            root_names=None,
-            output_names=None,
+    def min(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
             backend_version=self._backend_version,
-        )
+        ).min()
+
+    def max(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).max()
+
+    def mean(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).mean()
+
+    def sum(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).sum()
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
