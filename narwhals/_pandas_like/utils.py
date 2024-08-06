@@ -273,7 +273,7 @@ def translate_dtype(column: Any) -> DType:
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
     if str(dtype) == "object":
-        if (
+        if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
             idx := getattr(column, "first_valid_index", lambda: None)()
         ) is not None and isinstance(column.loc[idx], str):
             # Infer based on first non-missing value.
@@ -281,7 +281,7 @@ def translate_dtype(column: Any) -> DType:
             # After pandas 3.0, pandas has a dedicated string dtype
             # which is inferred by default.
             return dtypes.String()
-        else:  # pragma: no cover  TODO(unassigned): cover this
+        else:
             return dtypes.Object()
     return dtypes.Unknown()
 
