@@ -157,3 +157,8 @@ class DaskLazyFrame:
             mapped_keep = {"any": "first"}.get(keep, keep)
             result = native_frame.drop_duplicates(subset=subset, keep=mapped_keep)
         return self._from_native_dataframe(result)
+
+      def group_by(self, *by: str) -> Any:
+        from narwhals._dask.group_by import DaskLazyGroupBy
+
+        return DaskLazyGroupBy(self, list(by))

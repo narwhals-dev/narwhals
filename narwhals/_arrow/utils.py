@@ -267,7 +267,7 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
         s_native = s._native_series
         if max_length > 1 and length == 1:
             value = s_native[0]
-            if hasattr(value, "as_py"):  # pragma: no cover
+            if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
             reshaped.append(pa.array([value] * max_length, type=s_native.type))
         else:
