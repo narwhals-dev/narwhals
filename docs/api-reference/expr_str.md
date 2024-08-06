@@ -9,6 +9,7 @@
         - head
         - slice
         - starts_with
+        - strip_chars
         - tail
         - to_datetime
         - to_lowercase

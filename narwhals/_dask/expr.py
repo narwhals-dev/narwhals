@@ -154,6 +154,20 @@ class DaskExpr:
             other,
         )
 
+    def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__eq__(other),
+            "__eq__",
+            other,
+        )
+
+    def __ne__(self, other: DaskExpr) -> Self:  # type: ignore[override]
+        return self._from_call(
+            lambda _input, other: _input.__ne__(other),
+            "__ne__",
+            other,
+        )
+
     def __ge__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__ge__(other),
@@ -253,6 +267,11 @@ class DaskExpr:
             "sum",
         )
 
+    def round(self, decimals: int) -> Self:
+        return self._from_call(
+            lambda _input, decimals: _input.round(decimals), "round", decimals
+        )
+
     def fill_null(self, value: Any) -> DaskExpr:
         return self._from_call(lambda _input, _val: _input.fillna(_val), "fillna", value)
 
@@ -268,6 +287,11 @@ class DaskExpr:
 class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:
         self._expr = expr
+
+    def strip_chars(self, characters: str | None = None) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, characters: _input.str.strip(characters), "strip", characters
+        )
 
     def starts_with(self, prefix: str) -> DaskExpr:
         return self._expr._from_call(
