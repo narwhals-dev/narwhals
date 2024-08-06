@@ -238,3 +238,8 @@ class DaskLazyFrame:
                 suffixes=("", "_right"),
             ),
         )
+
+    def group_by(self, *by: str) -> Any:
+        from narwhals._dask.group_by import DaskLazyGroupBy
+
+        return DaskLazyGroupBy(self, list(by))
