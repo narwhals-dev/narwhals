@@ -48,9 +48,7 @@ class DaskLazyFrame:
 
     def with_columns(self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         df = self._native_dataframe
-        new_series = parse_exprs_and_named_exprs(
-            self, *exprs, allow_scalar=False, **named_exprs
-        )
+        new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         df = df.assign(**new_series)
         return self._from_native_dataframe(df)
 
@@ -94,9 +92,7 @@ class DaskLazyFrame:
             # This is a simple slice => fastpath!
             return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
 
-        new_series = parse_exprs_and_named_exprs(
-            self, *exprs, allow_scalar=True, **named_exprs
-        )
+        new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 
         if not new_series:
             # return empty dataframe, like Polars does

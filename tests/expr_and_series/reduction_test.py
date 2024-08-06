@@ -57,7 +57,7 @@ def test_scalar_reduction_select(
 def test_scalar_reduction_with_columns(
     request: Any, constructor: Any, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
-    if "dask" in str(constructor) and int(request.node.callspec.id[-1]) != 1:
+    if "dask" in str(constructor) and int(request.node.callspec.id[-1]) in [0, 4]:
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}

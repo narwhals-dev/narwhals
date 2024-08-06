@@ -44,6 +44,21 @@ class DaskNamespace:
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
 
+    def all(self) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[Any]:
+            return [
+                df._native_dataframe.loc[:, column_name] for column_name in df.columns
+            ]
+
+        return DaskExpr(
+            func,
+            depth=0,
+            function_name="all",
+            root_names=None,
+            output_names=None,
+            backend_version=self._backend_version,
+        )
+
     def col(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names,

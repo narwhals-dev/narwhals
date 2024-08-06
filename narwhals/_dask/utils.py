@@ -38,7 +38,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 
 
 def parse_exprs_and_named_exprs(
-    df: DaskLazyFrame, *exprs: Any, allow_scalar: bool, **named_exprs: Any
+    df: DaskLazyFrame, *exprs: Any, **named_exprs: Any
 ) -> dict[str, Any]:
     dask_expr = get_dask_expr()
     results = {}
@@ -51,9 +51,9 @@ def parse_exprs_and_named_exprs(
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
         for i, _result in enumerate(_results):
-            if allow_scalar and isinstance(_result, dask_expr.Scalar):
+            if isinstance(_result, dask_expr.Scalar):
                 if expr._output_names is None:
-                    msg = "Anonymous expressions not allowed in this context"
+                    msg = "Anonymous expressions (e.g. `nw.all()` instead of `nw.col('a')` or `nw.col('a', 'b')`) are not supported in this context for the Dask backend"
                     raise TypeError(msg)
                 results[expr._output_names[i]] = _result
             else:
