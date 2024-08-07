@@ -228,6 +228,13 @@ class DaskExpr:
             "max",
         )
 
+    def std(self, ddof: int = 1) -> Self:
+        return self._from_call(
+            lambda _input, ddof: _input.std(ddof=ddof),
+            "std",
+            ddof,
+        )
+
     def shift(self, n: int) -> Self:
         return self._from_call(
             lambda _input, n: _input.shift(n),
