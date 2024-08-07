@@ -149,6 +149,14 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __radd__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__radd__(other),
+            "__radd__",
+            other,
+            returns_scalar=False,
+        )
+
     def __sub__(self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__sub__(other),
@@ -157,10 +165,90 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __rsub__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rsub__(other),
+            "__rsub__",
+            other,
+            returns_scalar=False,
+        )
+
     def __mul__(self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mul__(other),
             "__mul__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rmul__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rmul__(other),
+            "__rmul__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __truediv__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__truediv__(other),
+            "__truediv__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rtruediv__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rtruediv__(other),
+            "__rtruediv__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __floordiv__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__floordiv__(other),
+            "__floordiv__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rfloordiv__(other),
+            "__rfloordiv__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __pow__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__pow__(other),
+            "__pow__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rpow__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rpow__(other),
+            "__rpow__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __mod__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__mod__(other),
+            "__mod__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rmod__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rmod__(other),
+            "__rmod__",
             other,
             returns_scalar=False,
         )
@@ -221,10 +309,26 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __rand__(self, other: DaskExpr) -> Self:  # pragma: no cover
+        return self._from_call(
+            lambda _input, other: _input.__rand__(other),
+            "__rand__",
+            other,
+            returns_scalar=False,
+        )
+
     def __or__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__or__(other),
             "__or__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __ror__(self, other: DaskExpr) -> Self:  # pragma: no cover
+        return self._from_call(
+            lambda _input, other: _input.__ror__(other),
+            "__ror__",
             other,
             returns_scalar=False,
         )
