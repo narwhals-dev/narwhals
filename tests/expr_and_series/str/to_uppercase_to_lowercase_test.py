@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
@@ -34,12 +36,12 @@ def test_str_to_uppercase(
 
     if any("ß" in s for value in data.values() for s in value) & (
         constructor.__name__
-        not in (
-            "pandas_constructor",
-            "pandas_nullable_constructor",
-            "polars_eager_constructor",
-            "polars_lazy_constructor",
+        in (
+            "pandas_pyarrow_constructor",
+            "pyarrow_table_constructor",
+            "modin_constructor",
         )
+        or ("dask" in str(constructor) and parse_version(pa.__version__) >= (12,))
     ):
         # We are marking it xfail for these conditions above
         # since the pyarrow backend will convert
