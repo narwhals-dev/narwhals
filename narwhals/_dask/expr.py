@@ -515,6 +515,13 @@ class DaskExprDateTimeNamespace:
     def __init__(self, expr: DaskExpr) -> None:
         self._expr = expr
 
+    def date(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.date,
+            "date",
+            returns_scalar=False,
+        )
+
     def year(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.year,

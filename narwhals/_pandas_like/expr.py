@@ -436,6 +436,9 @@ class PandasLikeExprDateTimeNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
         self._expr = expr
 
+    def date(self) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "date")
+
     def year(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(self._expr, "dt", "year")
 
