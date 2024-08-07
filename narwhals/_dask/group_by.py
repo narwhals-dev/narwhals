@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -115,12 +114,6 @@ def agg_dask(
             )
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (root_name, function_name)
-
-        aggs = collections.defaultdict(list)
-        name_mapping = {}
-        for output_name, named_agg in simple_aggregations.items():
-            aggs[named_agg[0]].append(named_agg[1])
-            name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
         try:
             result_simple = grouped.agg(**simple_aggregations)
         except ValueError as exc:
