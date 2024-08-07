@@ -85,6 +85,22 @@ class DaskNamespace:
             backend_version=self._backend_version,
         ).sum()
 
+    def len(self) -> DaskExpr:
+        import dask.dataframe as dd
+        import pandas as pd
+
+        return DaskExpr(
+            lambda df: [
+                dd.from_pandas(pd.Series([len(df._native_dataframe)], name="len"))["len"]
+            ],
+            depth=0,
+            function_name="len",
+            root_names=None,
+            output_names=["len"],
+            returns_scalar=True,
+            backend_version=self._backend_version,
+        )
+
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
 

@@ -17,7 +17,7 @@ from tests.utils import compare_dicts
 
 @pytest.mark.parametrize(
     "library",
-    ["pandas", "polars", "pyarrow"],
+    ["pandas", "polars", "pyarrow", "dask"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str, request: Any) -> None:
@@ -28,6 +28,12 @@ def test_q1(library: str, request: Any) -> None:
         df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     elif library == "polars":
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
+    elif library == "dask":
+        import dask.dataframe as dd
+
+        df_raw = dd.from_pandas(
+            pd.read_parquet("tests/data/lineitem.parquet", dtype_backend="pyarrow")
+        )
     else:
         df_raw = pq.read_table("tests/data/lineitem.parquet")
     var_1 = datetime(1998, 9, 2)

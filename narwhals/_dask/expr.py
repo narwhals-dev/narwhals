@@ -149,10 +149,26 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __radd__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__radd__(other),
+            "__radd__",
+            other,
+            returns_scalar=False,
+        )
+
     def __sub__(self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__sub__(other),
             "__sub__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rsub__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rsub__(other),
+            "__rsub__",
             other,
             returns_scalar=False,
         )
