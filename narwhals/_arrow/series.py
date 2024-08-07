@@ -223,27 +223,15 @@ class ArrowSeries:
 
     def shift(self, n: int) -> Self:
         pa = get_pyarrow()
-        chunks = self._native_series.chunks
-        dtype = self._native_series.type
+        ca = self._native_series
 
-        # This condition shifts the series by n positions.
         if n > 0:
-            # If n is positive, prepend nulls and truncate the end
-            shifted_chunks = [pa.array([None] * n, type=dtype)] + [
-                chunk.slice(0, len(chunk) - n) for chunk in chunks
-            ]
+            result = pa.concat_arrays([pa.nulls(n, ca.type), *ca[:-n].chunks])
         elif n < 0:
-            # If n is negative, append nulls and truncate the start
-            shifted_chunks = [chunk.slice(-n, len(chunk) + n) for chunk in chunks] + [
-                pa.array([None] * -n, type=dtype)
-            ]
+            result = pa.concat_arrays([*ca[-n:].chunks, pa.nulls(-n, ca.type)])
         else:
-            # If n is 0, return the original series
-            shifted_chunks = chunks
-
-        # Flatten the list of chunks to create a single array
-        shifted_array = pa.concat_arrays(shifted_chunks)
-        return self._from_native_series(shifted_array)
+            result = ca
+        return self._from_native_series(result)
 
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
