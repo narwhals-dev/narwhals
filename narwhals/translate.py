@@ -479,12 +479,10 @@ def from_native(  # noqa: PLR0915
     elif (dd := get_dask_dataframe()) is not None and isinstance(
         native_object, dd.DataFrame
     ):
-        if series_only:  # pragma: no cover
-            # TODO(unassigned): increase coverage
+        if series_only:
             msg = "Cannot only use `series_only` with dask DataFrame"
             raise TypeError(msg)
-        if eager_only or eager_or_interchange_only:  # pragma: no cover
-            # TODO(unassigned): increase coverage
+        if eager_only or eager_or_interchange_only:
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
             raise TypeError(msg)
         if get_dask_expr() is None:  # pragma: no cover
