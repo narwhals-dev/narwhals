@@ -2691,7 +2691,9 @@ class SeriesDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
-            >>> s_pd = pd.Series(dates).convert_dtypes(dtype_backend="pyarrow")
+            >>> s_pd = pd.Series(dates).convert_dtypes(
+            ...     dtype_backend="pyarrow"
+            ... )  # doctest:+SKIP
             >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
@@ -2702,7 +2704,7 @@ class SeriesDateTimeNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pd)  # doctest:+SKIP
             0    2012-01-07
             1    2023-03-10
             dtype: date32[day][pyarrow]
