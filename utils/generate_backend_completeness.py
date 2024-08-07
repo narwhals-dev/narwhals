@@ -37,31 +37,56 @@ def get_backend_completeness_table() -> str:
         for nw_class_name, nw_class in classes_:
             if nw_class_name in EXCLUDE_CLASSES:
                 continue
-            if nw_class_name == "LazyFrame":
-                backend_class_name = "DataFrame"
-            else:
-                backend_class_name = nw_class_name
-
-            arrow_class_name = f"Arrow{backend_class_name}"
-            arrow_module_ = importlib.import_module(f"narwhals._arrow.{sub_module_name}")
-            arrow_class = inspect.getmembers(
-                arrow_module_,
-                predicate=lambda c: inspect.isclass(c) and c.__name__ == arrow_class_name,  # noqa: B023
-            )
-
-            pandas_class_name = f"PandasLike{backend_class_name}"
-            pandas_module_ = importlib.import_module(
-                f"narwhals._pandas_like.{sub_module_name}"
-            )
-            pandas_class = inspect.getmembers(
-                pandas_module_,
-                predicate=lambda c: inspect.isclass(c)
-                and c.__name__ == pandas_class_name,  # noqa: B023
-            )
 
             nw_methods = get_class_methods(nw_class)
-            arrow_methods = get_class_methods(arrow_class[0][1]) if arrow_class else []
-            pandas_methods = get_class_methods(pandas_class[0][1]) if pandas_class else []
+
+            try:
+                arrow_class_name = f"Arrow{nw_class_name}"
+                arrow_module_ = importlib.import_module(
+                    f"narwhals._arrow.{sub_module_name}"
+                )
+                arrow_class = inspect.getmembers(
+                    arrow_module_,
+                    predicate=lambda c: inspect.isclass(c)
+                    and c.__name__ == arrow_class_name,  # noqa: B023
+                )
+
+                arrow_methods = (
+                    get_class_methods(arrow_class[0][1]) if arrow_class else []
+                )
+            except ModuleNotFoundError:
+                arrow_methods = []
+
+            try:
+                pandas_class_name = f"PandasLike{nw_class_name}"
+                pandas_module_ = importlib.import_module(
+                    f"narwhals._pandas_like.{sub_module_name}"
+                )
+                pandas_class = inspect.getmembers(
+                    pandas_module_,
+                    predicate=lambda c: inspect.isclass(c)
+                    and c.__name__ == pandas_class_name,  # noqa: B023
+                )
+                pandas_methods = (
+                    get_class_methods(pandas_class[0][1]) if pandas_class else []
+                )
+
+            except ModuleNotFoundError:
+                pandas_methods = []
+
+            try:
+                dask_class_name = f"Dask{nw_class_name}"
+                dask_module_ = importlib.import_module(
+                    f"narwhals._dask.{sub_module_name}"
+                )
+                dask_class = inspect.getmembers(
+                    dask_module_,
+                    predicate=lambda c: inspect.isclass(c)
+                    and c.__name__ == dask_class_name,  # noqa: B023
+                )
+                dask_methods = get_class_methods(dask_class[0][1]) if dask_class else []
+            except ModuleNotFoundError:
+                dask_methods = []
 
             narhwals = pl.DataFrame(
                 {"Class": nw_class_name, "Backend": "narwhals", "Method": nw_methods}
@@ -76,8 +101,10 @@ def get_backend_completeness_table() -> str:
                     "Method": pandas_methods,
                 }
             )
-
-            results.extend([narhwals, pandas, arrow])
+            dask = pl.DataFrame(
+                {"Class": nw_class_name, "Backend": "dask", "Method": dask_methods}
+            )
+            results.extend([narhwals, pandas, arrow, dask])
 
     results = (
         pl.concat(results)  # noqa: PD010
