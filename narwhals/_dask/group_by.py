@@ -41,8 +41,7 @@ class DaskLazyGroupBy:
         )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
-            # TODO(unassigned): Need to implement `.all()` for Dask first, part of GH 637
-            if expr._output_names is None:  # pragma: no cover
+            if expr._output_names is None:
                 msg = (
                     "Anonymous expressions are not supported in group_by.agg.\n"
                     "Instead of `nw.all()`, try using a named expression, such as "
