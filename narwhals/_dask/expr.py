@@ -317,6 +317,17 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        return self._from_call(
+            lambda _input, _lower, _upper: _input.clip(lower=_lower, upper=_upper),
+            "clip",
+            lower_bound,
+            upper_bound,
+            returns_scalar=False,
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
