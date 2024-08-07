@@ -491,7 +491,7 @@ class DaskExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=root_names,
-            returns_scalar=False,
+            returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
         )
 
@@ -517,7 +517,7 @@ class DaskExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            returns_scalar=False,
+            returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
         )
 
@@ -541,7 +541,7 @@ class DaskExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            returns_scalar=False,
+            returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
         )
 
@@ -566,7 +566,7 @@ class DaskExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            returns_scalar=False,
+            returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
         )
 
@@ -591,7 +591,7 @@ class DaskExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            returns_scalar=False,
+            returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
         )
 
@@ -616,6 +616,6 @@ class DaskExprNameNamespace:
             function_name=self._expr._function_name,
             root_names=root_names,
             output_names=output_names,
-            returns_scalar=False,
+            returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
         )
