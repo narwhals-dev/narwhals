@@ -2702,7 +2702,7 @@ class SeriesDateTimeNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)
+            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
             0    2012-01-07
             1    2023-03-10
             dtype: date32[day][pyarrow]
