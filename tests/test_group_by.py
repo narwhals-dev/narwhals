@@ -48,6 +48,11 @@ def test_invalid_group_by_dask() -> None:
     with pytest.raises(RuntimeError, match="does your"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
 
+    with pytest.raises(
+        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
+    ):
+        nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
+
 
 def test_invalid_group_by() -> None:
     df = nw.from_native(df_pandas)
