@@ -35,6 +35,25 @@ def test_group_by_complex() -> None:
     compare_dicts(result, expected)
 
 
+def test_invalid_group_by_dask() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
+    import dask.dataframe as dd
+
+    df_dask = dd.from_pandas(df_pandas)
+
+    with pytest.raises(ValueError, match=r"Non-trivial complex found"):
+        nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
+
+    with pytest.raises(RuntimeError, match="does your"):
+        nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
+
+    with pytest.raises(
+        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
+    ):
+        nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
+
+
 def test_invalid_group_by() -> None:
     df = nw.from_native(df_pandas)
     with pytest.raises(RuntimeError, match="does your"):
@@ -66,11 +85,11 @@ def test_group_by_iter(constructor_eager: Any) -> None:
     assert sorted(keys) == sorted(expected_keys)
     expected_keys = [(1, 4), (3, 6)]  # type: ignore[list-item]
     keys = []
-    for key, _df in df.group_by("a", "b"):
+    for key, _ in df.group_by("a", "b"):
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
     keys = []
-    for key, _df in df.group_by(["a", "b"]):
+    for key, _ in df.group_by(["a", "b"]):
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
 
@@ -94,17 +113,16 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_simple_named(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a")
         .agg(
             b_min=nw.col("b").min(),
             b_max=nw.col("b").max(),
         )
+        .collect()
         .sort("a")
     )
     expected = {
@@ -115,17 +133,16 @@ def test_group_by_simple_named(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_simple_unnamed(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_simple_unnamed(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a")
         .agg(
             nw.col("b").min(),
             nw.col("c").max(),
         )
+        .collect()
         .sort("a")
     )
     expected = {
@@ -136,17 +153,16 @@ def test_group_by_simple_unnamed(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_multiple_keys(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_multiple_keys(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a", "b")
         .agg(
             c_min=nw.col("c").min(),
             c_max=nw.col("c").max(),
         )
+        .collect()
         .sort("a")
     )
     expected = {

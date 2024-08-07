@@ -26,11 +26,8 @@ from tests.utils import compare_dicts
     ids=range(5),
 )
 def test_scalar_reduction_select(
-    request: Any, constructor: Any, expr: list[Any], expected: dict[str, list[Any]]
+    constructor: Any, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
-    if "dask" in str(constructor) and int(request.node.callspec.id[-1]) != 1:
-        request.applymarker(pytest.mark.xfail)
-
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.select(*expr)
@@ -55,11 +52,8 @@ def test_scalar_reduction_select(
     ids=range(5),
 )
 def test_scalar_reduction_with_columns(
-    request: Any, constructor: Any, expr: list[Any], expected: dict[str, list[Any]]
+    constructor: Any, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
-    if "dask" in str(constructor) and int(request.node.callspec.id[-1]) != 1:
-        request.applymarker(pytest.mark.xfail)
-
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(*expr).select(*expected.keys())
