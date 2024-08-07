@@ -16,27 +16,21 @@ def map_func(s: str | None) -> str:
     return str(s)[::-1].lower()
 
 
-def test_map(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_map(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.map(function=map_func))
     expected = {map_func(k): [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_map_after_alias(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_map_after_alias(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.map(function=map_func))
     expected = {map_func("foo"): data["foo"]}
     compare_dicts(result, expected)
 
 
-def test_map_raise_anonymous(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_map_raise_anonymous(constructor: Any) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
