@@ -55,7 +55,6 @@ class DaskLazyGroupBy:
             self._grouped,
             exprs,
             self._keys,
-            output_names,
             self._from_native_dataframe,
         )
 
@@ -72,7 +71,6 @@ def agg_dask(
     grouped: Any,
     exprs: list[DaskExpr],
     keys: list[str],
-    output_names: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:
     """
@@ -124,13 +122,11 @@ def agg_dask(
             aggs[named_agg[0]].append(named_agg[1])
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
         try:
-            result_simple = grouped.agg(aggs)
+            result_simple = grouped.agg(**simple_aggregations)
         except ValueError as exc:
             msg = "Failed to aggregated - does your aggregation function return a scalar?"
             raise RuntimeError(msg) from exc
-        result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
-        result_simple = result_simple.rename(columns=name_mapping).reset_index()
-        return from_dataframe(result_simple.loc[:, output_names])
+        return from_dataframe(result_simple.reset_index())
 
     msg = (
         "Non-trivial complex found.\n\n"
