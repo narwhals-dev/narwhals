@@ -325,6 +325,7 @@ class DaskExpr:
             "clip",
             lower_bound,
             upper_bound,
+            returns_scalar=False,
         )
 
     @property
