@@ -92,11 +92,21 @@ class DaskLazyFrame:
             return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
 
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+
         if not new_series:
             # return empty dataframe, like Polars does
             pd = get_pandas()
             return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
-        df = dd.concat([val.rename(name) for name, val in new_series.items()], axis=1)
+
+        if all(getattr(expr, "_returns_scalar", False) for expr in exprs) and all(
+            getattr(val, "_returns_scalar", False) for val in named_exprs.values()
+        ):
+            df = dd.concat(
+                [val.to_series().rename(name) for name, val in new_series.items()], axis=1
+            )
+            return self._from_native_dataframe(df)
+
+        df = self._native_dataframe.assign(**new_series).loc[:, list(new_series.keys())]
         return self._from_native_dataframe(df)
 
     def drop_nulls(self) -> Self:
