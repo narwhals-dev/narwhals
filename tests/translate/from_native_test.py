@@ -169,3 +169,33 @@ def test_init_already_narwhals_unstable() -> None:
     s = df["a"]
     result_s = unstable_nw.from_native(s, allow_series=True)
     assert result_s is s
+
+
+def test_series_only_dask() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr")
+    import dask.dataframe as dd
+
+    dframe = dd.from_pandas(df_pd)
+
+    with pytest.raises(TypeError, match="Cannot only use `series_only`"):
+        nw.from_native(dframe, series_only=True)
+
+
+@pytest.mark.parametrize(
+    ("eager_only", "context"),
+    [
+        (False, does_not_raise()),
+        (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
+    ],
+)
+def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr")
+    import dask.dataframe as dd
+
+    dframe = dd.from_pandas(df_pd)
+
+    with context:
+        res = nw.from_native(dframe, eager_only=eager_only)
+        assert isinstance(res, nw.LazyFrame)
