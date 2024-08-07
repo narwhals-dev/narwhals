@@ -173,7 +173,7 @@ def test_init_already_narwhals_unstable() -> None:
 
 def test_series_only_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     dframe = dd.from_pandas(df_pd)
