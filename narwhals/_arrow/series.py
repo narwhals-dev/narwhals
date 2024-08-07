@@ -221,6 +221,18 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.drop_null(self._native_series))
 
+    def shift(self, n: int) -> Self:
+        pa = get_pyarrow()
+        ca = self._native_series
+
+        if n > 0:
+            result = pa.concat_arrays([pa.nulls(n, ca.type), *ca[:-n].chunks])
+        elif n < 0:
+            result = pa.concat_arrays([*ca[-n:].chunks, pa.nulls(-n, ca.type)])
+        else:
+            result = ca
+        return self._from_native_series(result)
+
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]

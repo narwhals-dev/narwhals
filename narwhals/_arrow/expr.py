@@ -203,6 +203,9 @@ class ArrowExpr:
     def drop_nulls(self) -> Self:
         return reuse_series_implementation(self, "drop_nulls")
 
+    def shift(self, n: int) -> Self:
+        return reuse_series_implementation(self, "shift", n)
+
     def alias(self, name: str) -> Self:
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
