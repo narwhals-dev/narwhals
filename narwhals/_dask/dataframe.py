@@ -98,8 +98,8 @@ class DaskLazyFrame:
             pd = get_pandas()
             return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
 
-        if all(getattr(expr, "_is_scalar", False) for expr in exprs) and all(
-            getattr(val, "_is_scalar", False) for val in named_exprs.values()
+        if all(getattr(expr, "_returns_scalar", False) for expr in exprs) and all(
+            getattr(val, "_returns_scalar", False) for val in named_exprs.values()
         ):
             df = dd.concat(
                 [val.to_series().rename(name) for name, val in new_series.items()], axis=1

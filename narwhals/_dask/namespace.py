@@ -51,7 +51,7 @@ class DaskNamespace:
             function_name="all",
             root_names=None,
             output_names=None,
-            is_scalar=False,
+            returns_scalar=False,
             backend_version=self._backend_version,
         )
 
