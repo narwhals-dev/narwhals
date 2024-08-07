@@ -17,7 +17,7 @@ data = {
 
 
 def test_when(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -33,7 +33,7 @@ def test_when(request: Any, constructor: Any) -> None:
 
 
 def test_when_otherwise(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -49,7 +49,7 @@ def test_when_otherwise(request: Any, constructor: Any) -> None:
 
 
 def test_multiple_conditions(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -67,7 +67,7 @@ def test_multiple_conditions(request: Any, constructor: Any) -> None:
 
 
 def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -76,7 +76,7 @@ def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
 
 
 def test_value_numpy_array(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     import numpy as np
@@ -113,7 +113,7 @@ def test_value_series(request: Any, constructor_eager: Any) -> None:
 
 
 def test_value_expression(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(when(nw.col("a") == 1).then(nw.col("a") + 9).alias("a_when"))
@@ -130,7 +130,7 @@ def test_value_expression(request: Any, constructor: Any) -> None:
 def test_numpy_not_available(request: Any, constructor: Any, monkeypatch: Any) -> None:
     df = nw.from_native(constructor(data))
     context_manager = monkeypatch.context()
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
 
