@@ -255,6 +255,7 @@ class DaskExpr:
             lambda _input, ddof: _input.std(ddof=ddof),
             "std",
             ddof,
+            returns_scalar=True,
         )
 
     def shift(self, n: int) -> Self:
