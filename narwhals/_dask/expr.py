@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import NoReturn
 
 from narwhals.dependencies import get_dask
 
@@ -412,6 +413,11 @@ class DaskExpr:
             decimals,
             returns_scalar=False,
         )
+
+    def drop_nulls(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.drop_nulls` is not supported for the Dask backend. Please use `LazyFrame.drop_nulls` instead."
+        raise NotImplementedError(msg)
 
     def fill_null(self, value: Any) -> DaskExpr:
         return self._from_call(
