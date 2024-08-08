@@ -2267,6 +2267,21 @@ class SeriesStringNamespace:
             )
         )
 
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Series:
+        r"""
+        Replace first matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.replace_all(
+                pattern, value, literal=literal
+            )
+        )
+
     def strip_chars(self, characters: str | None = None) -> Series:
         r"""
         Remove leading and trailing characters.

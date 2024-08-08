@@ -837,6 +837,24 @@ class ArrowSeriesStringNamespace:
     def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.replace_substring_regex(
+                self._arrow_series._native_series,
+                pattern=pattern,
+                replacement=value,
+                max_replacements=n,
+            )
+        )
+
+    def replace_all(
+        self, pattern: str, value: str, *, literal: bool = False
+    ) -> ArrowSeries:
+        return self.replace(pattern, value, n=-1)
+
     def strip_chars(self: Self, characters: str | None = None) -> ArrowSeries:
         pc = get_pyarrow_compute()
         whitespace = " \t\n\r\v\f"

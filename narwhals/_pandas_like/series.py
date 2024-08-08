@@ -675,6 +675,11 @@ class PandasLikeSeriesStringNamespace:
             ),
         )
 
+    def replace_all(
+        self, pattern: str, value: str, *, literal: bool = False
+    ) -> PandasLikeSeries:
+        return self.replace(pattern, value, literal=literal, n=-1)
+
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.strip(characters),
