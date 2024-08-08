@@ -13,7 +13,7 @@ Alternatively, if you can't do that (for example, if you library is closed-sourc
 the next section for what else you can do.
 
 To check which methods are supported for which backend in depth, please refer to the
-[API completeness page](api-completeness.md).
+[API completeness page](api-completeness/index.md).
 
 ## Extending Narwhals
 
