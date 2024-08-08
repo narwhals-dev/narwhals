@@ -12,13 +12,13 @@ from tests.utils import compare_dicts
 data = {"a": ["one", "two", "two"]}
 
 
-def test_get_categories(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) and parse_version(
+def test_get_categories(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < parse_version("15.0.0"):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     df = df.select(nw.col("a").cast(nw.Categorical))
     expected = {"a": ["one", "two"]}
 

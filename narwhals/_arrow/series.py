@@ -106,11 +106,23 @@ class ArrowSeries:
         other = validate_column_comparand(other)
         return self._from_native_series(pc.and_kleene(ser, other))
 
+    def __rand__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.and_kleene(other, ser))
+
     def __or__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
         return self._from_native_series(pc.or_kleene(ser, other))
+
+    def __ror__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        return self._from_native_series(pc.or_kleene(other, ser))
 
     def __add__(self, other: Any) -> Self:
         pc = get_pyarrow_compute()
@@ -186,6 +198,14 @@ class ArrowSeries:
         res = pc.subtract(ser, pc.multiply(floor_div, other))
         return self._from_native_series(res)
 
+    def __rmod__(self, other: Any) -> Self:
+        pc = get_pyarrow_compute()
+        ser = self._native_series
+        other = validate_column_comparand(other)
+        floor_div = (other // self)._native_series
+        res = pc.subtract(other, pc.multiply(floor_div, ser))
+        return self._from_native_series(res)
+
     def __invert__(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.invert(self._native_series))
@@ -216,6 +236,18 @@ class ArrowSeries:
     def drop_nulls(self) -> ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.drop_null(self._native_series))
+
+    def shift(self, n: int) -> Self:
+        pa = get_pyarrow()
+        ca = self._native_series
+
+        if n > 0:
+            result = pa.concat_arrays([pa.nulls(n, ca.type), *ca[:-n].chunks])
+        elif n < 0:
+            result = pa.concat_arrays([*ca[-n:].chunks, pa.nulls(-n, ca.type)])
+        else:
+            result = ca
+        return self._from_native_series(result)
 
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
@@ -283,6 +315,12 @@ class ArrowSeries:
     def cum_sum(self) -> Self:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.cumulative_sum(self._native_series))
+
+    def round(self, decimals: int) -> Self:
+        pc = get_pyarrow_compute()
+        return self._from_native_series(
+            pc.round(self._native_series, decimals, round_mode="half_towards_infinity")
+        )
 
     def diff(self) -> Self:
         pc = get_pyarrow_compute()
@@ -537,19 +575,20 @@ class ArrowSeries:
     ) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
+        np = get_numpy()
         pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+
         series = self._native_series
-        unique_values = self.unique().sort()._native_series
-        columns = [pc.cast(pc.equal(series, v), pa.uint8()) for v in unique_values][
-            int(drop_first) :
-        ]
-        names = [f"{self._name}{separator}{v}" for v in unique_values][int(drop_first) :]
+        da = series.dictionary_encode().combine_chunks()
+
+        columns = np.zeros((len(da.dictionary), len(da)), np.uint8)
+        columns[da.indices, np.arange(len(da))] = 1
+        names = [f"{self._name}{separator}{v}" for v in da.dictionary]
 
         return ArrowDataFrame(
             pa.Table.from_arrays(columns, names=names),
             backend_version=self._backend_version,
-        )
+        ).select(*sorted(names)[int(drop_first) :])
 
     def quantile(
         self: Self,
@@ -560,6 +599,21 @@ class ArrowSeries:
         return pc.quantile(self._native_series, q=quantile, interpolation=interpolation)[
             0
         ]
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_series(self._native_series[offset::n])
+
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+
+        arr = self._native_series
+        arr = pc.max_element_wise(arr, pa.scalar(lower_bound, type=arr.type))
+        arr = pc.min_element_wise(arr, pa.scalar(upper_bound, type=arr.type))
+
+        return self._from_native_series(arr)
 
     @property
     def shape(self) -> tuple[int]:
@@ -579,10 +633,10 @@ class ArrowSeries:
 
 
 class ArrowSeriesDateTimeNamespace:
-    def __init__(self, series: ArrowSeries) -> None:
+    def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
-    def to_string(self, format: str) -> ArrowSeries:  # noqa: A002
+    def to_string(self: Self, format: str) -> ArrowSeries:  # noqa: A002
         pc = get_pyarrow_compute()
         # PyArrow differs from other libraries in that %S also prints out
         # the fractional part of the second...:'(
@@ -590,6 +644,178 @@ class ArrowSeriesDateTimeNamespace:
         format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
         return self._arrow_series._from_native_series(
             pc.strftime(self._arrow_series._native_series, format)
+        )
+
+    def date(self: Self) -> ArrowSeries:
+        pa = get_pyarrow()
+        return self._arrow_series._from_native_series(
+            self._arrow_series._native_series.cast(pa.date64())
+        )
+
+    def year(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.year(self._arrow_series._native_series)
+        )
+
+    def month(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.month(self._arrow_series._native_series)
+        )
+
+    def day(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.day(self._arrow_series._native_series)
+        )
+
+    def hour(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.hour(self._arrow_series._native_series)
+        )
+
+    def minute(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.minute(self._arrow_series._native_series)
+        )
+
+    def second(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.second(self._arrow_series._native_series)
+        )
+
+    def millisecond(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.millisecond(self._arrow_series._native_series)
+        )
+
+    def microsecond(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        arr = self._arrow_series._native_series
+        result = pc.add(pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr))
+
+        return self._arrow_series._from_native_series(result)
+
+    def nanosecond(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        pc = get_pyarrow_compute()
+        arr = self._arrow_series._native_series
+        result = pc.add(
+            pc.multiply(self.microsecond()._native_series, 1000), pc.nanosecond(arr)
+        )
+        return self._arrow_series._from_native_series(result)
+
+    def ordinal_day(self: Self) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        return self._arrow_series._from_native_series(
+            pc.day_of_year(self._arrow_series._native_series)
+        )
+
+    def total_minutes(self: Self) -> ArrowSeries:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        arr = self._arrow_series._native_series
+        unit = arr.type.unit
+
+        unit_to_minutes_factor = {
+            "s": 60,  # seconds
+            "ms": 60 * 1e3,  # milli
+            "us": 60 * 1e6,  # micro
+            "ns": 60 * 1e9,  # nano
+        }
+
+        factor = pa.scalar(unit_to_minutes_factor[unit], type=pa.int64())
+        return self._arrow_series._from_native_series(
+            pc.cast(pc.divide(arr, factor), pa.int64())
+        )
+
+    def total_seconds(self: Self) -> ArrowSeries:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        arr = self._arrow_series._native_series
+        unit = arr.type.unit
+
+        unit_to_seconds_factor = {
+            "s": 1,  # seconds
+            "ms": 1e3,  # milli
+            "us": 1e6,  # micro
+            "ns": 1e9,  # nano
+        }
+        factor = pa.scalar(unit_to_seconds_factor[unit], type=pa.int64())
+
+        return self._arrow_series._from_native_series(
+            pc.cast(pc.divide(arr, factor), pa.int64())
+        )
+
+    def total_milliseconds(self: Self) -> ArrowSeries:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        arr = self._arrow_series._native_series
+        unit = arr.type.unit
+
+        unit_to_milli_factor = {
+            "s": 1e3,  # seconds
+            "ms": 1,  # milli
+            "us": 1e3,  # micro
+            "ns": 1e6,  # nano
+        }
+
+        factor = pa.scalar(unit_to_milli_factor[unit], type=pa.int64())
+
+        if unit == "s":
+            return self._arrow_series._from_native_series(
+                pc.cast(pc.multiply(arr, factor), pa.int64())
+            )
+
+        return self._arrow_series._from_native_series(
+            pc.cast(pc.divide(arr, factor), pa.int64())
+        )
+
+    def total_microseconds(self: Self) -> ArrowSeries:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        arr = self._arrow_series._native_series
+        unit = arr.type.unit
+
+        unit_to_micro_factor = {
+            "s": 1e6,  # seconds
+            "ms": 1e3,  # milli
+            "us": 1,  # micro
+            "ns": 1e3,  # nano
+        }
+
+        factor = pa.scalar(unit_to_micro_factor[unit], type=pa.int64())
+
+        if unit in {"s", "ms"}:
+            return self._arrow_series._from_native_series(
+                pc.cast(pc.multiply(arr, factor), pa.int64())
+            )
+        return self._arrow_series._from_native_series(
+            pc.cast(pc.divide(arr, factor), pa.int64())
+        )
+
+    def total_nanoseconds(self: Self) -> ArrowSeries:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+        arr = self._arrow_series._native_series
+        unit = arr.type.unit
+
+        unit_to_nano_factor = {
+            "s": 1e9,  # seconds
+            "ms": 1e6,  # milli
+            "us": 1e3,  # micro
+            "ns": 1,  # nano
+        }
+
+        factor = pa.scalar(unit_to_nano_factor[unit], type=pa.int64())
+
+        return self._arrow_series._from_native_series(
+            pc.cast(pc.multiply(arr, factor), pa.int64())
         )
 
 
@@ -610,6 +836,16 @@ class ArrowSeriesCatNamespace:
 class ArrowSeriesStringNamespace:
     def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
+
+    def strip_chars(self: Self, characters: str | None = None) -> ArrowSeries:
+        pc = get_pyarrow_compute()
+        whitespace = " \t\n\r\v\f"
+        return self._arrow_series._from_native_series(
+            pc.utf8_trim(
+                self._arrow_series._native_series,
+                characters or whitespace,
+            )
+        )
 
     def starts_with(self: Self, prefix: str) -> ArrowSeries:
         pc = get_pyarrow_compute()

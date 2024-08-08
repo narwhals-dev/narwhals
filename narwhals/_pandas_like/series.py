@@ -628,6 +628,16 @@ class PandasLikeSeries:
             backend_version=self._backend_version,
         )
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_series(self._native_series.iloc[offset::n])
+
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        return self._from_native_series(
+            self._native_series.clip(lower_bound, upper_bound)
+        )
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
@@ -655,6 +665,11 @@ class PandasLikeSeriesCatNamespace:
 class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
+
+    def strip_chars(self, characters: str | None) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.strip(characters),
+        )
 
     def starts_with(self, prefix: str) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
@@ -700,6 +715,21 @@ class PandasLikeSeriesStringNamespace:
 class PandasLikeSeriesDateTimeNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
+
+    def date(self) -> PandasLikeSeries:
+        result = self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.date,
+        )
+        if str(result.dtype).lower() == "object":
+            msg = (
+                "Accessing `date` on the default pandas backend "
+                "will return a Series of type `object`."
+                "\nThis differs from polars API and will prevent `.dt` chaining. "
+                "Please switch to the `pyarrow` backend:"
+                '\ndf.convert_dtypes(dtype_backend="pyarrow")'
+            )
+            raise NotImplementedError(msg)
+        return result
 
     def year(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(

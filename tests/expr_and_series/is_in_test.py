@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -9,7 +11,9 @@ data = {
 }
 
 
-def test_expr_is_in(constructor: Any) -> None:
+def test_expr_is_in(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_in([4, 5]))
     expected = {"a": [False, True, False, True]}
@@ -17,8 +21,8 @@ def test_expr_is_in(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_ser_is_in(constructor_series: Any) -> None:
-    ser = nw.from_native(constructor_series(series), series_only=True)
+def test_ser_is_in(constructor_eager: Any) -> None:
+    ser = nw.from_native(constructor_eager({"a": series}), eager_only=True)["a"]
     result = ser.is_in([4, 5]).to_list()
     assert not result[0]
     assert result[1]

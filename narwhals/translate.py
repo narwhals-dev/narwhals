@@ -9,6 +9,9 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
+from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -280,6 +283,7 @@ def from_native(  # noqa: PLR0915
     """
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._interchange.dataframe import InterchangeFrame
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -392,7 +396,9 @@ def from_native(  # noqa: PLR0915
         )
 
     # Modin
-    elif (mpd := get_modin()) is not None and isinstance(native_object, mpd.DataFrame):
+    elif (mpd := get_modin()) is not None and isinstance(
+        native_object, mpd.DataFrame
+    ):  # pragma: no cover
         if series_only:
             msg = "Cannot only use `series_only` with modin.DataFrame"
             raise TypeError(msg)
@@ -404,7 +410,9 @@ def from_native(  # noqa: PLR0915
             ),
             level="full",
         )
-    elif (mpd := get_modin()) is not None and isinstance(native_object, mpd.Series):
+    elif (mpd := get_modin()) is not None and isinstance(
+        native_object, mpd.Series
+    ):  # pragma: no cover
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
@@ -463,6 +471,26 @@ def from_native(  # noqa: PLR0915
         return Series(
             ArrowSeries(
                 native_object, backend_version=parse_version(pa.__version__), name=""
+            ),
+            level="full",
+        )
+
+    # Dask
+    elif (dd := get_dask_dataframe()) is not None and isinstance(
+        native_object, dd.DataFrame
+    ):
+        if series_only:
+            msg = "Cannot only use `series_only` with dask DataFrame"
+            raise TypeError(msg)
+        if eager_only or eager_or_interchange_only:
+            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
+            raise TypeError(msg)
+        if get_dask_expr() is None:  # pragma: no cover
+            msg = "Please install dask-expr"
+            raise ImportError(msg)
+        return LazyFrame(
+            DaskLazyFrame(
+                native_object, backend_version=parse_version(get_dask().__version__)
             ),
             level="full",
         )
@@ -532,8 +560,8 @@ def narwhalify(
     import narwhals as nw
 
 
-    def func(df_any):
-        df = nw.from_native(df_any, strict=False)
+    def func(df):
+        df = nw.from_native(df, strict=False)
         df = df.group_by("a").agg(nw.col("b").sum())
         return nw.to_native(df)
     ```
@@ -545,8 +573,8 @@ def narwhalify(
 
 
     @nw.narwhalify
-    def func(df_any):
-        return df_any.group_by("a").agg(nw.col("b").sum())
+    def func(df):
+        return df.group_by("a").agg(nw.col("b").sum())
     ```
 
     You can also pass in extra arguments, e.g.

@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - date
         - year
         - month
         - day

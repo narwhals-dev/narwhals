@@ -11,11 +11,12 @@ For example:
 import narwhals as nw
 from narwhals.typing import FrameT
 
+
 @nw.narwhalify
 def func(df: FrameT) -> FrameT:
-    return df.group_by('a').agg(
-        b_mean=nw.col('b').mean(),
-        b_std=nw.col('b').std(),
+    return df.group_by("a").agg(
+        b_mean=nw.col("b").mean(),
+        b_std=nw.col("b").std(),
     )
 ```
 will work for any of pandas, Polars, cuDF, Modin, and PyArrow.
@@ -34,7 +35,7 @@ import narwhals as nw
 from narwhals.schema import Schema
 
 
-def func(df_any: Any) -> Schema:
+def func(df: Any) -> Schema:
     df = nw.from_native(df, eager_or_interchange_only=True)
     return df.schema
 ```
