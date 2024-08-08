@@ -87,8 +87,7 @@ def agg_dask(
     if all_simple_aggs:
         simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
-            # TODO(unassigned): Need to implement `.len()` for Dask first
-            if expr._depth == 0:  # pragma: no cover
+            if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
                 if expr._output_names is None:  # pragma: no cover
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"

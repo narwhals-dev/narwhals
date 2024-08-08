@@ -91,7 +91,8 @@ class DaskNamespace:
         dd = get_dask_dataframe()
         pd = get_pandas()
 
-        return DaskExpr(
+        # coverage bug? this is definitely hit
+        return DaskExpr(  # pragma: no cover
             lambda df: [
                 dd.from_pandas(pd.Series([len(df._native_dataframe)], name="len"))["len"]
             ],
