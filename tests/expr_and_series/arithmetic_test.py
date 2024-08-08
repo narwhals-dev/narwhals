@@ -28,12 +28,6 @@ def test_arithmetic(
     constructor: Any,
     request: Any,
 ) -> None:
-    if "dask" in str(constructor) and attr not in [
-        "__add__",
-        "__sub__",
-        "__mul__",
-    ]:
-        request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
@@ -64,8 +58,6 @@ def test_right_arithmetic(
     constructor: Any,
     request: Any,
 ) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
