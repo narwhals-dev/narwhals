@@ -420,6 +420,34 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def all(
+        self,
+        *,
+        ignore_nulls: bool = True,
+    ) -> Self:
+        return self._from_call(
+            lambda _input, ignore_nulls: _input.all(
+                axis=None, skipna=ignore_nulls, split_every=False, out=None
+            ),
+            "all",
+            ignore_nulls,
+            returns_scalar=True,
+        )
+
+    def any(
+        self,
+        *,
+        ignore_nulls: bool = True,
+    ) -> Self:
+        return self._from_call(
+            lambda _input, ignore_nulls: _input.any(
+                axis=0, skipna=ignore_nulls, split_every=False
+            ),
+            "any",
+            ignore_nulls,
+            returns_scalar=True,
+        )
+
     def fill_null(self, value: Any) -> DaskExpr:
         return self._from_call(
             lambda _input, _val: _input.fillna(_val),
