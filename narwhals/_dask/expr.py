@@ -420,6 +420,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def abs(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.abs(),
+            "abs",
+            returns_scalar=False,
+        )
+
     def fill_null(self, value: Any) -> DaskExpr:
         return self._from_call(
             lambda _input, _val: _input.fillna(_val),
