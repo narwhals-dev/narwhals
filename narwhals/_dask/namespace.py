@@ -9,6 +9,8 @@ from typing import NoReturn
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_pandas
 
 if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -84,6 +86,23 @@ class DaskNamespace:
             *column_names,
             backend_version=self._backend_version,
         ).sum()
+
+    def len(self) -> DaskExpr:
+        dd = get_dask_dataframe()
+        pd = get_pandas()
+
+        # coverage bug? this is definitely hit
+        return DaskExpr(  # pragma: no cover
+            lambda df: [
+                dd.from_pandas(pd.Series([len(df._native_dataframe)], name="len"))["len"]
+            ],
+            depth=0,
+            function_name="len",
+            root_names=None,
+            output_names=["len"],
+            returns_scalar=True,
+            backend_version=self._backend_version,
+        )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))

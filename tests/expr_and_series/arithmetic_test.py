@@ -29,7 +29,7 @@ def test_arithmetic(
     request: Any,
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor) for x in ["pandas_pyarrow", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -59,7 +59,7 @@ def test_right_arithmetic(
     request: Any,
 ) -> None:
     if attr == "__rmod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor) for x in ["pandas_pyarrow", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -90,7 +90,7 @@ def test_arithmetic_series(
     request: Any,
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -120,7 +120,7 @@ def test_right_arithmetic_series(
     request: Any,
 ) -> None:
     if attr == "__rmod__" and any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
