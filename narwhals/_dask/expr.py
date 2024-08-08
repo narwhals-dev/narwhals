@@ -419,6 +419,11 @@ class DaskExpr:
         msg = "`Expr.drop_nulls` is not supported for the Dask backend. Please use `LazyFrame.drop_nulls` instead."
         raise NotImplementedError(msg)
 
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
+        raise NotImplementedError(msg)
+
     def fill_null(self, value: Any) -> DaskExpr:
         return self._from_call(
             lambda _input, _val: _input.fillna(_val),
@@ -437,6 +442,16 @@ class DaskExpr:
             upper_bound,
             returns_scalar=False,
         )
+
+    def head(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
+        raise NotImplementedError(msg)
+
+    def tail(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.tail` is not supported for the Dask backend. Please use `LazyFrame.tail` instead."
+        raise NotImplementedError(msg)
 
     @property
     def str(self: Self) -> DaskExprStringNamespace:
