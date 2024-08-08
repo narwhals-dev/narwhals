@@ -431,7 +431,7 @@ class DaskExpr:
         msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
         raise NotImplementedError(msg)
 
-   def abs(self) -> Self:
+    def abs(self) -> Self:
         return self._from_call(
             lambda _input: _input.abs(),
             "abs",
