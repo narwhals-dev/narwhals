@@ -8,11 +8,26 @@ import narwhals.stable.v1 as nw
 
 
 @pytest.mark.parametrize(
-    ("data", "pattern", "value", "n", "expected"),
+    ("data", "pattern", "value", "n", "literal", "expected"),
     [
-        ({"a": ["123abc", "abc456"]}, r"abc\b", "ABC", 1, {"a": ["123ABC", "abc456"]}),
-        ({"a": ["abc abc", "abc456"]}, r"abc", "", 1, {"a": [" abc", "456"]}),
-        ({"a": ["abc abc abc", "456abc"]}, r"abc", "", -1, {"a": ["  ", "456"]}),
+        (
+            {"a": ["123abc", "abc456"]},
+            r"abc\b",
+            "ABC",
+            1,
+            False,
+            {"a": ["123ABC", "abc456"]},
+        ),
+        ({"a": ["abc abc", "abc456"]}, r"abc", "", 1, False, {"a": [" abc", "456"]}),
+        ({"a": ["abc abc abc", "456abc"]}, r"abc", "", -1, False, {"a": ["  ", "456"]}),
+        (
+            {"a": ["Dollar $ign", "literal"]},
+            r"$",
+            "S",
+            -1,
+            True,
+            {"a": ["Dollar Sign", "literal"]},
+        ),
     ],
 )
 def test_str_replace_series(
@@ -21,20 +36,36 @@ def test_str_replace_series(
     pattern: str,
     value: str,
     n: int,
+    literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    result_series = df["a"].str.replace(pattern=pattern, value=value, n=n)
+    result_series = df["a"].str.replace(
+        pattern=pattern, value=value, n=n, literal=literal
+    )
     assert result_series.to_list() == expected["a"]
 
 
 @pytest.mark.parametrize(
-    ("data", "pattern", "value", "expected"),
+    ("data", "pattern", "value", "literal", "expected"),
     [
-        ({"a": ["123abc", "abc456"]}, r"abc\b", "ABC", {"a": ["123ABC", "abc456"]}),
-        ({"a": ["abc abc", "abc456"]}, r"abc", "", {"a": [" ", "456"]}),
-        ({"a": ["abc abc abc", "456abc"]}, r"abc", "", {"a": ["  ", "456"]}),
+        (
+            {"a": ["123abc", "abc456"]},
+            r"abc\b",
+            "ABC",
+            False,
+            {"a": ["123ABC", "abc456"]},
+        ),
+        ({"a": ["abc abc", "abc456"]}, r"abc", "", False, {"a": [" ", "456"]}),
+        ({"a": ["abc abc abc", "456abc"]}, r"abc", "", False, {"a": ["  ", "456"]}),
+        (
+            {"a": ["Dollar $ign", "literal"]},
+            r"$",
+            "S",
+            True,
+            {"a": ["Dollar Sign", "literal"]},
+        ),
     ],
 )
 def test_str_replace_all_series(
@@ -42,9 +73,10 @@ def test_str_replace_all_series(
     data: dict[str, list[str]],
     pattern: str,
     value: str,
+    literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    result_series = df["a"].str.replace_all(pattern=pattern, value=value)
+    result_series = df["a"].str.replace_all(pattern=pattern, value=value, literal=literal)
     assert result_series.to_list() == expected["a"]
