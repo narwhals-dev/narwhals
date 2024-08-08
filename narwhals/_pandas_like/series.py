@@ -716,6 +716,21 @@ class PandasLikeSeriesDateTimeNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
+    def date(self) -> PandasLikeSeries:
+        result = self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.date,
+        )
+        if str(result.dtype).lower() == "object":
+            msg = (
+                "Accessing `date` on the default pandas backend "
+                "will return a Series of type `object`."
+                "\nThis differs from polars API and will prevent `.dt` chaining. "
+                "Please switch to the `pyarrow` backend:"
+                '\ndf.convert_dtypes(dtype_backend="pyarrow")'
+            )
+            raise NotImplementedError(msg)
+        return result
+
     def year(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.year,

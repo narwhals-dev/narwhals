@@ -287,6 +287,13 @@ class ArrowExpr:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
 
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "clip", lower_bound=lower_bound, upper_bound=upper_bound
+        )
+
     def over(self: Self, keys: list[str]) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             if self._output_names is None:
@@ -346,6 +353,9 @@ class ArrowExprDateTimeNamespace:
         return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
         )
+
+    def date(self: Self) -> ArrowExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "date")
 
     def year(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(self._expr, "dt", "year")
