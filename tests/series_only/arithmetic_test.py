@@ -35,7 +35,7 @@ def test_truediv_same_dims(constructor_eager: Any, request: Any) -> None:
 @pytest.mark.skipif(
     parse_version(pd.__version__) < (2, 0), reason="convert_dtypes not available"
 )
-def test_mod(left: int, right: int) -> None:
+def test_floordiv(left: int, right: int) -> None:
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)
@@ -63,5 +63,36 @@ def test_mod(left: int, right: int) -> None:
     compare_dicts(result, expected)
     result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
         nw.col("a") // right
+    )
+    compare_dicts(result, expected)
+
+
+@pytest.mark.slow()
+@given(  # type: ignore[misc]
+    left=st.integers(-100, 100),
+    right=st.integers(-100, 100),
+)
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < (2, 0), reason="convert_dtypes not available"
+)
+def test_mod(left: int, right: int) -> None:
+    # hypothesis complains if we add `constructor` as an argument, so this
+    # test is a bit manual unfortunately
+    assume(right != 0)
+    expected = {"a": [left % right]}
+    result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
+        nw.col("a") % right
+    )
+    compare_dicts(result, expected)
+    result = nw.from_native(
+        pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
+    ).select(nw.col("a") % right)
+    compare_dicts(result, expected)
+    result = nw.from_native(pl.DataFrame({"a": [left]}), eager_only=True).select(
+        nw.col("a") % right
+    )
+    compare_dicts(result, expected)
+    result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
+        nw.col("a") % right
     )
     compare_dicts(result, expected)
