@@ -450,16 +450,6 @@ class DaskExpr:
             returns_scalar=False,
         )
 
-    def head(self) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
-        raise NotImplementedError(msg)
-
-    def tail(self) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.tail` is not supported for the Dask backend. Please use `LazyFrame.tail` instead."
-        raise NotImplementedError(msg)
-
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
