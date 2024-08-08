@@ -406,6 +406,13 @@ class DaskExpr:
             returns_scalar=True,
         )
 
+    def count(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.count(),
+            "count",
+            returns_scalar=True,
+        )
+
     def round(self, decimals: int) -> Self:
         return self._from_call(
             lambda _input, decimals: _input.round(decimals),
