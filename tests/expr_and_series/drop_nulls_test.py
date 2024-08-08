@@ -51,23 +51,16 @@ def test_drop_nulls_invalid(constructor: Any) -> None:
 
 
 def test_drop_nulls_series(constructor_eager: Any) -> None:
-    data = {
-        "A": [1, 2, None, 4],
-        "B": [5, 6, 7, 8],
-        "C": [None, None, None, None],
-        "D": [9, 10, 11, 12],
-    }
-
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    result_a = df.select(df["A"].drop_nulls())
-    result_b = df.select(df["B"].drop_nulls())
-    result_c = df.select(df["C"].drop_nulls())
-    result_d = df.select(df["D"].drop_nulls())
-    expected_a = {"A": [1.0, 2.0, 4.0]}
-    expected_b = {"B": [5, 6, 7, 8]}
-    expected_c = {"C": []}  # type: ignore[var-annotated]
-    expected_d = {"D": [9, 10, 11, 12]}
+    result_a = df.select(df["a"].drop_nulls())
+    result_b = df.select(df["b"].drop_nulls())
+    result_c = df.select(df["c"].drop_nulls())
+    result_d = df.select(df["d"].drop_nulls())
+    expected_a = {"a": [1.0, 2.0]}
+    expected_b = {"b": [3, 4, 5]}
+    expected_c = {"c": []}  # type: ignore[var-annotated]
+    expected_d = {"d": [6]}
 
     compare_dicts(result_a, expected_a)
     compare_dicts(result_b, expected_b)
