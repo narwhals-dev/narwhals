@@ -58,7 +58,7 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
     return methods_
 
 
-def get_backend_completeness_table() -> str:
+def get_backend_completeness_table() -> None:
     for module_name in MODULES:
         results = []
 
