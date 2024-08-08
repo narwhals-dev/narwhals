@@ -2,11 +2,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import TypeVar
 
 from narwhals.dependencies import get_dask_expr
 
 if TYPE_CHECKING:
+    from dask_expr._collection import Index
+    from dask_expr._collection import Scalar
+    from dask_expr._collection import Series
+
     from narwhals._dask.dataframe import DaskLazyFrame
+
+    T = TypeVar("T", Scalar, Series)
 
 
 def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
@@ -64,3 +71,11 @@ def parse_exprs_and_named_exprs(
             raise AssertionError(msg)
         results[name] = _results[0]
     return results
+
+
+def set_axis(obj: T, index: Index) -> T:
+    de = get_dask_expr()
+    if isinstance(obj, de._collection.Scalar):
+        return obj
+    else:
+        return de._expr.AssignIndex(obj, index)

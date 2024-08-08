@@ -432,6 +432,31 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        na_position = "last" if nulls_last else "first"
+
+        def func(_input: Any, ascending: bool, na_position: bool) -> Any:  # noqa: FBT001
+            name = _input.name
+
+            return _input.to_frame(name=name).sort_values(
+                by=name, ascending=ascending, na_position=na_position
+            )[name]
+
+        return self._from_call(
+            func,
+            "sort",
+            not descending,
+            na_position,
+            returns_scalar=False,
+        )
+
+    def drop_nulls(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.dropna(),
+            "drop_nulls",
+            returns_scalar=False,
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)

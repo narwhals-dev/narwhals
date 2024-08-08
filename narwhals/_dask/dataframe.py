@@ -7,8 +7,10 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._dask.utils import parse_exprs_and_named_exprs
+from narwhals._dask.utils import set_axis
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
@@ -47,8 +49,9 @@ class DaskLazyFrame:
 
     def with_columns(self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         df = self._native_dataframe
+        index = df.index
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
-        df = df.assign(**new_series)
+        df = df.assign(**{k: set_axis(v, index) for k, v in new_series.items()})
         return self._from_native_dataframe(df)
 
     def collect(self) -> Any:
@@ -106,8 +109,26 @@ class DaskLazyFrame:
             )
             return self._from_native_dataframe(df)
 
-        df = self._native_dataframe.assign(**new_series).loc[:, list(new_series.keys())]
-        return self._from_native_dataframe(df)
+        pd = get_pandas()
+        de = get_dask_expr()
+
+        col_order = list(new_series.keys())
+
+        index = next(  # pragma: no cover
+            s for s in new_series.values() if not isinstance(s, de._collection.Scalar)
+        ).index
+
+        new_series = {
+            k: set_axis(v, index)
+            for k, v in sorted(
+                new_series.items(),
+                key=lambda item: isinstance(item[1], de._collection.Scalar),
+            )
+        }
+
+        return self._from_native_dataframe(
+            dd.from_pandas(pd.DataFrame()).assign(**new_series).loc[:, col_order]
+        )
 
     def drop_nulls(self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.dropna())

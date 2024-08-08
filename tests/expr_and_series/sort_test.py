@@ -17,16 +17,18 @@ data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
     ],
 )
 def test_sort_expr(
-    constructor_eager: Any, descending: Any, nulls_last: Any, expected: Any
+    constructor: Any, descending: Any, nulls_last: Any, expected: Any
 ) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor(data)).lazy()
     result = nw.to_native(
         df.select(
             "a",
             nw.col("b").sort(descending=descending, nulls_last=nulls_last),
-        )
+        ).collect()
     )
-    assert result.equals(constructor_eager(expected))
+
+    expected_df = nw.to_native(nw.from_native(constructor(expected)).lazy().collect())
+    assert result.equals(expected_df)
 
 
 @pytest.mark.parametrize(
