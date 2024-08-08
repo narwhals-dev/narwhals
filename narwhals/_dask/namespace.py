@@ -12,11 +12,6 @@ from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
-
-if TYPE_CHECKING:
-    from typing import Callable
-
-    from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.typing import IntoDaskExpr
 
 
@@ -44,23 +39,51 @@ class DaskNamespace:
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
 
+    def all(self) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[Any]:
+            return [
+                df._native_dataframe.loc[:, column_name] for column_name in df.columns
+            ]
+
+        return DaskExpr(
+            func,
+            depth=0,
+            function_name="all",
+            root_names=None,
+            output_names=None,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
+
     def col(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names,
             backend_version=self._backend_version,
         )
 
-    def all(self) -> DaskExpr:
-        return DaskExpr(
-            lambda df: [
-                df._native_dataframe.loc[:, column_name] for column_name in df.columns
-            ],
-            depth=0,
-            function_name="all",
-            root_names=None,
-            output_names=None,
+    def min(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
             backend_version=self._backend_version,
-        )
+        ).min()
+
+    def max(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).max()
+
+    def mean(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).mean()
+
+    def sum(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).sum()
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
@@ -91,11 +114,7 @@ class DaskNamespace:
         root_names: list[str] | None,
         output_names: list[str] | None,
     ) -> DaskExpr:
-        return DaskExpr(
-            call=func,
-            depth=depth,
-            function_name=function_name,
-            root_names=root_names,
-            output_names=output_names,
-            backend_version=self._backend_version,
+        msg = (
+            "`_create_expr_from_callable` for DaskNamespace exists only for compatibility"
         )
+        raise NotImplementedError(msg)

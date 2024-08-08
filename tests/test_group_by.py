@@ -37,7 +37,7 @@ def test_group_by_complex() -> None:
 
 def test_invalid_group_by_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
     df_dask = dd.from_pandas(df_pandas)
@@ -47,6 +47,11 @@ def test_invalid_group_by_dask() -> None:
 
     with pytest.raises(RuntimeError, match="does your"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
+
+    with pytest.raises(
+        ValueError, match=r"Anonymous expressions are not supported in group_by\.agg"
+    ):
+        nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
 
 
 def test_invalid_group_by() -> None:

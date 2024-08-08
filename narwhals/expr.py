@@ -1868,11 +1868,11 @@ class Expr:
             │ i64 │
             ╞═════╡
             │ -1  │
-            │ 1   │
+            │  1  │
             │ -1  │
-            │ 3   │
+            │  3  │
             │ -1  │
-            │ 3   │
+            │  3  │
             └─────┘
         """
         return self.__class__(
@@ -2440,6 +2440,47 @@ class ExprStringNamespace:
 class ExprDateTimeNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
+
+    def date(self) -> Expr:
+        """
+        Extract the date from underlying DateTime representation.
+
+        Raises:
+            NotImplementedError: If pandas default backend is being used.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
+            >>> s_pd = pd.Series(dates).convert_dtypes(
+            ...     dtype_backend="pyarrow"
+            ... )  # doctest:+SKIP
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.date()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+            0    2012-01-07
+            1    2023-03-10
+            dtype: date32[day][pyarrow]
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [date]
+            [
+               2012-01-07
+               2023-03-10
+            ]
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
 
     def year(self) -> Expr:
         """
