@@ -439,6 +439,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def abs(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.abs(),
+            "abs",
+            returns_scalar=False,
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
