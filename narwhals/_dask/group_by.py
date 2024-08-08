@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -55,7 +54,6 @@ class DaskLazyGroupBy:
             self._grouped,
             exprs,
             self._keys,
-            output_names,
             self._from_native_dataframe,
         )
 
@@ -72,7 +70,6 @@ def agg_dask(
     grouped: Any,
     exprs: list[DaskExpr],
     keys: list[str],
-    output_names: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:
     """
@@ -90,8 +87,7 @@ def agg_dask(
     if all_simple_aggs:
         simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
-            # TODO(unassigned): Need to implement `.len()` for Dask first
-            if expr._depth == 0:  # pragma: no cover
+            if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
                 if expr._output_names is None:  # pragma: no cover
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
@@ -117,20 +113,12 @@ def agg_dask(
             )
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (root_name, function_name)
-
-        aggs = collections.defaultdict(list)
-        name_mapping = {}
-        for output_name, named_agg in simple_aggregations.items():
-            aggs[named_agg[0]].append(named_agg[1])
-            name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
         try:
-            result_simple = grouped.agg(aggs)
+            result_simple = grouped.agg(**simple_aggregations)
         except ValueError as exc:
             msg = "Failed to aggregated - does your aggregation function return a scalar?"
             raise RuntimeError(msg) from exc
-        result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
-        result_simple = result_simple.rename(columns=name_mapping).reset_index()
-        return from_dataframe(result_simple.loc[:, output_names])
+        return from_dataframe(result_simple.reset_index())
 
     msg = (
         "Non-trivial complex found.\n\n"
