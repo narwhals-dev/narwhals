@@ -29,6 +29,8 @@ def test_q1(library: str, request: Any) -> None:
     elif library == "polars":
         df_raw = pl.scan_parquet("tests/data/lineitem.parquet")
     elif library == "dask":
+        pytest.importorskip("dask")
+        pytest.importorskip("dask_expr", exc_type=ImportError)
         import dask.dataframe as dd
 
         df_raw = dd.from_pandas(
