@@ -221,6 +221,18 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         return self._from_native_series(pc.drop_null(self._native_series))
 
+    def shift(self, n: int) -> Self:
+        pa = get_pyarrow()
+        ca = self._native_series
+
+        if n > 0:
+            result = pa.concat_arrays([pa.nulls(n, ca.type), *ca[:-n].chunks])
+        elif n < 0:
+            result = pa.concat_arrays([*ca[-n:].chunks, pa.nulls(-n, ca.type)])
+        else:
+            result = ca
+        return self._from_native_series(result)
+
     def std(self, ddof: int = 1) -> int:
         pc = get_pyarrow_compute()
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
@@ -575,6 +587,18 @@ class ArrowSeries:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_series(self._native_series[offset::n])
 
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        pa = get_pyarrow()
+        pc = get_pyarrow_compute()
+
+        arr = self._native_series
+        arr = pc.max_element_wise(arr, pa.scalar(lower_bound, type=arr.type))
+        arr = pc.min_element_wise(arr, pa.scalar(upper_bound, type=arr.type))
+
+        return self._from_native_series(arr)
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)
@@ -604,6 +628,12 @@ class ArrowSeriesDateTimeNamespace:
         format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
         return self._arrow_series._from_native_series(
             pc.strftime(self._arrow_series._native_series, format)
+        )
+
+    def date(self: Self) -> ArrowSeries:
+        pa = get_pyarrow()
+        return self._arrow_series._from_native_series(
+            self._arrow_series._native_series.cast(pa.date64())
         )
 
     def year(self: Self) -> ArrowSeries:

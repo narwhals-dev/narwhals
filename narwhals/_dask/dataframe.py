@@ -2,12 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import Literal
+from typing import Sequence
 
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
+from narwhals.utils import flatten
+from narwhals.utils import generate_unique_token
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -87,11 +92,21 @@ class DaskLazyFrame:
             return self._from_native_dataframe(self._native_dataframe.loc[:, exprs])
 
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+
         if not new_series:
             # return empty dataframe, like Polars does
             pd = get_pandas()
             return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
-        df = dd.concat([val.rename(name) for name, val in new_series.items()], axis=1)
+
+        if all(getattr(expr, "_returns_scalar", False) for expr in exprs) and all(
+            getattr(val, "_returns_scalar", False) for val in named_exprs.values()
+        ):
+            df = dd.concat(
+                [val.to_series().rename(name) for name, val in new_series.items()], axis=1
+            )
+            return self._from_native_dataframe(df)
+
+        df = self._native_dataframe.assign(**new_series).loc[:, list(new_series.keys())]
         return self._from_native_dataframe(df)
 
     def drop_nulls(self) -> Self:
@@ -123,3 +138,149 @@ class DaskLazyFrame:
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
+
+    def unique(
+        self: Self,
+        subset: str | list[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"] = "any",
+        maintain_order: bool = False,
+    ) -> Self:
+        """
+        NOTE:
+            The param `maintain_order` is only here for compatibility with the polars API
+            and has no effect on the output.
+        """
+        subset = flatten(subset) if subset else None
+        native_frame = self._native_dataframe
+        if keep == "none":
+            subset = subset or self.columns
+            token = generate_unique_token(n_bytes=8, columns=subset)
+            unique = (
+                native_frame.groupby(subset)
+                .size()
+                .rename(token)
+                .loc[lambda t: t == 1]
+                .reset_index()
+                .drop(columns=token)
+            )
+            result = native_frame.merge(unique, on=subset, how="inner")
+        else:
+            mapped_keep = {"any": "first"}.get(keep, keep)
+            result = native_frame.drop_duplicates(subset=subset, keep=mapped_keep)
+        return self._from_native_dataframe(result)
+
+    def sort(
+        self: Self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Sequence[bool] = False,
+    ) -> Self:
+        flat_keys = flatten([*flatten([by]), *more_by])
+        df = self._native_dataframe
+        if isinstance(descending, bool):
+            ascending: bool | list[bool] = not descending
+        else:
+            ascending = [not d for d in descending]
+        return self._from_native_dataframe(df.sort_values(flat_keys, ascending=ascending))
+
+    def join(
+        self: Self,
+        other: Self,
+        *,
+        how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+    ) -> Self:
+        if isinstance(left_on, str):
+            left_on = [left_on]
+        if isinstance(right_on, str):
+            right_on = [right_on]
+
+        if how == "cross":
+            key_token = generate_unique_token(
+                n_bytes=8, columns=[*self.columns, *other.columns]
+            )
+
+            return self._from_native_dataframe(
+                self._native_dataframe.assign(**{key_token: 0}).merge(
+                    other._native_dataframe.assign(**{key_token: 0}),
+                    how="inner",
+                    left_on=key_token,
+                    right_on=key_token,
+                    suffixes=("", "_right"),
+                ),
+            ).drop(key_token)
+
+        if how == "anti":
+            indicator_token = generate_unique_token(
+                n_bytes=8, columns=[*self.columns, *other.columns]
+            )
+
+            other_native = (
+                other._native_dataframe.loc[:, right_on]
+                .rename(  # rename to avoid creating extra columns in join
+                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                )
+                .drop_duplicates()
+            )
+            return self._from_native_dataframe(
+                self._native_dataframe.merge(
+                    other_native,
+                    how="outer",
+                    indicator=indicator_token,
+                    left_on=left_on,
+                    right_on=left_on,
+                )
+                .loc[lambda t: t[indicator_token] == "left_only"]
+                .drop(columns=[indicator_token])
+            )
+
+        if how == "semi":
+            other_native = (
+                other._native_dataframe.loc[:, right_on]
+                .rename(  # rename to avoid creating extra columns in join
+                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                )
+                .drop_duplicates()  # avoids potential rows duplication from inner join
+            )
+            return self._from_native_dataframe(
+                self._native_dataframe.merge(
+                    other_native,
+                    how="inner",
+                    left_on=left_on,
+                    right_on=left_on,
+                )
+            )
+
+        if how == "left":
+            other_native = other._native_dataframe
+            result_native = self._native_dataframe.merge(
+                other_native,
+                how="left",
+                left_on=left_on,
+                right_on=right_on,
+                suffixes=("", "_right"),
+            )
+            extra = []
+            for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
+                if right_key != left_key and right_key not in self.columns:
+                    extra.append(right_key)
+                elif right_key != left_key:
+                    extra.append(f"{right_key}_right")
+            return self._from_native_dataframe(result_native.drop(columns=extra))
+
+        return self._from_native_dataframe(
+            self._native_dataframe.merge(
+                other._native_dataframe,
+                left_on=left_on,
+                right_on=right_on,
+                how=how,
+                suffixes=("", "_right"),
+            ),
+        )
+
+    def group_by(self, *by: str) -> Any:
+        from narwhals._dask.group_by import DaskLazyGroupBy
+
+        return DaskLazyGroupBy(self, list(by))

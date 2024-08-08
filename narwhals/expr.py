@@ -1765,6 +1765,122 @@ class Expr:
             lambda plx: self._call(plx).gather_every(n=n, offset=offset)
         )
 
+    # need to allow numeric typing
+    # TODO @aivanoved: make type alias for numeric type
+    def clip(
+        self,
+        lower_bound: IntoExpr | Any | None = None,
+        upper_bound: IntoExpr | Any | None = None,
+    ) -> Self:
+        r"""
+        Clip values in the Series.
+
+        Arguments:
+            lower_bound: Lower bound value.
+            upper_bound: Upper bound value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s = [1, 2, 3]
+            >>> df_pd = pd.DataFrame({"s": s})
+            >>> df_pl = pl.DataFrame({"s": s})
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_lower(df):
+            ...     return df.select(nw.col("s").clip(2))
+
+            We can then pass either pandas or Polars to `func_lower`:
+
+            >>> func_lower(df_pd)
+               s
+            0  2
+            1  2
+            2  3
+            >>> func_lower(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 1)
+            ┌─────┐
+            │ s   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 2   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+
+            We define another library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_upper(df):
+            ...     return df.select(nw.col("s").clip(upper_bound=2))
+
+            We can then pass either pandas or Polars to `func_upper`:
+
+            >>> func_upper(df_pd)
+               s
+            0  1
+            1  2
+            2  2
+            >>> func_upper(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3, 1)
+            ┌─────┐
+            │ s   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 2   │
+            └─────┘
+
+            We can have both at the same time
+
+            >>> s = [-1, 1, -3, 3, -5, 5]
+            >>> df_pd = pd.DataFrame({"s": s})
+            >>> df_pl = pl.DataFrame({"s": s})
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("s").clip(-1, 3))
+
+            We can pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               s
+            0 -1
+            1  1
+            2 -1
+            3  3
+            4 -1
+            5  3
+            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (6, 1)
+            ┌─────┐
+            │ s   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ -1  │
+            │  1  │
+            │ -1  │
+            │  3  │
+            │ -1  │
+            │  3  │
+            └─────┘
+        """
+        return self.__class__(
+            lambda plx: self._call(plx).clip(
+                extract_compliant(plx, lower_bound), extract_compliant(plx, upper_bound)
+            )
+        )
+
     @property
     def str(self: Self) -> ExprStringNamespace:
         return ExprStringNamespace(self)
@@ -2324,6 +2440,47 @@ class ExprStringNamespace:
 class ExprDateTimeNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
+
+    def date(self) -> Expr:
+        """
+        Extract the date from underlying DateTime representation.
+
+        Raises:
+            NotImplementedError: If pandas default backend is being used.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
+            >>> s_pd = pd.Series(dates).convert_dtypes(
+            ...     dtype_backend="pyarrow"
+            ... )  # doctest:+SKIP
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.date()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+            0    2012-01-07
+            1    2023-03-10
+            dtype: date32[day][pyarrow]
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [date]
+            [
+               2012-01-07
+               2023-03-10
+            ]
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
 
     def year(self) -> Expr:
         """

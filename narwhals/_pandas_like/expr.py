@@ -196,6 +196,12 @@ class PandasLikeExpr:
         return reuse_series_implementation(self, "min", returns_scalar=True)
 
     # Other
+
+    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
+        return reuse_series_implementation(
+            self, "clip", lower_bound=lower_bound, upper_bound=upper_bound
+        )
+
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"
     ) -> Self:
@@ -429,6 +435,9 @@ class PandasLikeExprStringNamespace:
 class PandasLikeExprDateTimeNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
         self._expr = expr
+
+    def date(self) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(self._expr, "dt", "date")
 
     def year(self) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(self._expr, "dt", "year")
