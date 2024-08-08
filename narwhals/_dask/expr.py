@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import NoReturn
 
 from narwhals.dependencies import get_dask
 
@@ -181,6 +182,78 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __rmul__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rmul__(other),
+            "__rmul__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __truediv__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__truediv__(other),
+            "__truediv__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rtruediv__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rtruediv__(other),
+            "__rtruediv__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __floordiv__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__floordiv__(other),
+            "__floordiv__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rfloordiv__(other),
+            "__rfloordiv__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __pow__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__pow__(other),
+            "__pow__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rpow__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rpow__(other),
+            "__rpow__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __mod__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__mod__(other),
+            "__mod__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __rmod__(self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rmod__(other),
+            "__rmod__",
+            other,
+            returns_scalar=False,
+        )
+
     def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
         return self._from_call(
             lambda _input, other: _input.__eq__(other),
@@ -237,10 +310,26 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __rand__(self, other: DaskExpr) -> Self:  # pragma: no cover
+        return self._from_call(
+            lambda _input, other: _input.__rand__(other),
+            "__rand__",
+            other,
+            returns_scalar=False,
+        )
+
     def __or__(self, other: DaskExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__or__(other),
             "__or__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __ror__(self, other: DaskExpr) -> Self:  # pragma: no cover
+        return self._from_call(
+            lambda _input, other: _input.__ror__(other),
+            "__ror__",
             other,
             returns_scalar=False,
         )
@@ -263,6 +352,14 @@ class DaskExpr:
         return self._from_call(
             lambda _input: _input.max(),
             "max",
+            returns_scalar=True,
+        )
+
+    def std(self, ddof: int = 1) -> Self:
+        return self._from_call(
+            lambda _input, ddof: _input.std(ddof=ddof),
+            "std",
+            ddof,
             returns_scalar=True,
         )
 
@@ -309,11 +406,35 @@ class DaskExpr:
             returns_scalar=True,
         )
 
+    def count(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.count(),
+            "count",
+            returns_scalar=True,
+        )
+
     def round(self, decimals: int) -> Self:
         return self._from_call(
             lambda _input, decimals: _input.round(decimals),
             "round",
             decimals,
+            returns_scalar=False,
+        )
+
+    def drop_nulls(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.drop_nulls` is not supported for the Dask backend. Please use `LazyFrame.drop_nulls` instead."
+        raise NotImplementedError(msg)
+
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
+        raise NotImplementedError(msg)
+
+    def abs(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.abs(),
+            "abs",
             returns_scalar=False,
         )
 
@@ -325,6 +446,17 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        return self._from_call(
+            lambda _input, _lower, _upper: _input.clip(lower=_lower, upper=_upper),
+            "clip",
+            lower_bound,
+            upper_bound,
+            returns_scalar=False,
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -332,6 +464,10 @@ class DaskExpr:
     @property
     def dt(self: Self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
+
+    @property
+    def name(self: Self) -> DaskExprNameNamespace:
+        return DaskExprNameNamespace(self)
 
 
 class DaskExprStringNamespace:
@@ -408,6 +544,13 @@ class DaskExprDateTimeNamespace:
     def __init__(self, expr: DaskExpr) -> None:
         self._expr = expr
 
+    def date(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.date,
+            "date",
+            returns_scalar=False,
+        )
+
     def year(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.year,
@@ -476,4 +619,158 @@ class DaskExprDateTimeNamespace:
             lambda _input: _input.dt.dayofyear,
             "ordinal_day",
             returns_scalar=False,
+        )
+
+
+class DaskExprNameNamespace:
+    def __init__(self: Self, expr: DaskExpr) -> None:
+        self._expr = expr
+
+    def keep(self: Self) -> DaskExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.keep`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        return self._expr.__class__(
+            lambda df: [
+                series.rename(name)
+                for series, name in zip(self._expr._call(df), root_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=root_names,
+            returns_scalar=self._expr._returns_scalar,
+            backend_version=self._expr._backend_version,
+        )
+
+    def map(self: Self, function: Callable[[str], str]) -> DaskExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.map`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [function(str(name)) for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.rename(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            returns_scalar=self._expr._returns_scalar,
+            backend_version=self._expr._backend_version,
+        )
+
+    def prefix(self: Self, prefix: str) -> DaskExpr:
+        root_names = self._expr._root_names
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.prefix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [prefix + str(name) for name in root_names]
+        return self._expr.__class__(
+            lambda df: [
+                series.rename(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            returns_scalar=self._expr._returns_scalar,
+            backend_version=self._expr._backend_version,
+        )
+
+    def suffix(self: Self, suffix: str) -> DaskExpr:
+        root_names = self._expr._root_names
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.suffix`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+
+        output_names = [str(name) + suffix for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.rename(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            returns_scalar=self._expr._returns_scalar,
+            backend_version=self._expr._backend_version,
+        )
+
+    def to_lowercase(self: Self) -> DaskExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_lowercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+        output_names = [str(name).lower() for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.rename(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            returns_scalar=self._expr._returns_scalar,
+            backend_version=self._expr._backend_version,
+        )
+
+    def to_uppercase(self: Self) -> DaskExpr:
+        root_names = self._expr._root_names
+
+        if root_names is None:
+            msg = (
+                "Anonymous expressions are not supported in `.name.to_uppercase`.\n"
+                "Instead of `nw.all()`, try using a named expression, such as "
+                "`nw.col('a', 'b')`\n"
+            )
+            raise ValueError(msg)
+        output_names = [str(name).upper() for name in root_names]
+
+        return self._expr.__class__(
+            lambda df: [
+                series.rename(name)
+                for series, name in zip(self._expr._call(df), output_names)
+            ],
+            depth=self._expr._depth,
+            function_name=self._expr._function_name,
+            root_names=root_names,
+            output_names=output_names,
+            returns_scalar=self._expr._returns_scalar,
+            backend_version=self._expr._backend_version,
         )
