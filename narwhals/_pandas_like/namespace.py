@@ -287,7 +287,7 @@ def _when_then_value_arg_process(
         return plx._create_expr_from_series(plx._create_compliant_series(value))
     else:
         return plx._create_expr_from_series(
-            plx._create_compliant_series([value] * shape[0])
+            plx._create_compliant_series(np.full(shape[0], value))
         )
 
 
