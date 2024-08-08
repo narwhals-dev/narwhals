@@ -88,7 +88,6 @@ class DaskNamespace:
         ).sum()
 
     def len(self) -> DaskExpr:
-        # coverage bug? this is definitely hit
         pd = get_pandas()
         dd = get_dask_dataframe()
 
@@ -99,6 +98,7 @@ class DaskNamespace:
                 df._native_dataframe.loc[:, df.columns[0]].size.to_series().rename("len")
             ]
 
+        # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover
             func,
             depth=0,

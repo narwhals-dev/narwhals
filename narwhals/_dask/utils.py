@@ -63,7 +63,7 @@ def parse_exprs_and_named_exprs(
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
         for _result in _results:
-            if getattr(expr, "_returns_scalar", False):
+            if getattr(value, "_returns_scalar", False):
                 results[name] = _result[0]
             else:
                 results[name] = _result
