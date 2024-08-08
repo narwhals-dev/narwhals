@@ -20,6 +20,15 @@ def test_len(constructor: Any, request: Any) -> None:
 
 
 def test_namespace_len(constructor: Any) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3]})).select(nw.len(), a=nw.len())
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).select(
+        nw.len(), a=nw.len()
+    )
     expected = {"len": [3], "a": [3]}
+    compare_dicts(df, expected)
+    df = (
+        nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        .select()
+        .select(nw.len(), a=nw.len())
+    )
+    expected = {"len": [0], "a": [0]}
     compare_dicts(df, expected)
