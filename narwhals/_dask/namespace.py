@@ -9,6 +9,8 @@ from typing import NoReturn
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_pandas
 
 if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -86,8 +88,8 @@ class DaskNamespace:
         ).sum()
 
     def len(self) -> DaskExpr:
-        import dask.dataframe as dd
-        import pandas as pd
+        dd = get_dask_dataframe()
+        pd = get_pandas()
 
         return DaskExpr(
             lambda df: [
