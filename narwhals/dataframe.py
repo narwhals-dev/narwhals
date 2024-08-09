@@ -1999,8 +1999,8 @@ class DataFrame(BaseFrame[FrameT]):
             starting from a offset of 1:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.gather_every(n=2, offset=1)
+            ... def func(df):
+            ...     return df.gather_every(n=2, offset=1)
 
             >>> func(df_pd)
                a  b
@@ -3299,8 +3299,8 @@ class LazyFrame(BaseFrame[FrameT]):
             starting from a offset of 1:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.gather_every(n=2, offset=1)
+            ... def func(df):
+            ...     return df.gather_every(n=2, offset=1)
 
             >>> func(df_pd)
                a  b
