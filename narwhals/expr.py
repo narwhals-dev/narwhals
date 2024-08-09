@@ -2196,7 +2196,7 @@ class ExprStringNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
+            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
                          s s_sliced
             0         pear
             1         None     None
