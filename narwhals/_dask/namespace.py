@@ -88,14 +88,19 @@ class DaskNamespace:
         ).sum()
 
     def len(self) -> DaskExpr:
-        dd = get_dask_dataframe()
         pd = get_pandas()
+        dd = get_dask_dataframe()
+
+        def func(df: DaskLazyFrame) -> list[Any]:
+            if not df.columns:
+                return [dd.from_pandas(pd.Series([0], name="len"))]
+            return [
+                df._native_dataframe.loc[:, df.columns[0]].size.to_series().rename("len")
+            ]
 
         # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover
-            lambda df: [
-                dd.from_pandas(pd.Series([len(df._native_dataframe)], name="len"))["len"]
-            ],
+            func,
             depth=0,
             function_name="len",
             root_names=None,

@@ -1,14 +1,10 @@
 from typing import Any
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_any_all(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_any_all(constructor: Any) -> None:
     df = nw.from_native(
         constructor(
             {
@@ -18,7 +14,7 @@ def test_any_all(constructor: Any, request: Any) -> None:
             }
         )
     )
-    result = df.select(nw.all().all())
+    result = df.select(nw.col("a", "b", "c").all())
     expected = {"a": [False], "b": [True], "c": [False]}
     compare_dicts(result, expected)
     result = df.select(nw.all().any())
