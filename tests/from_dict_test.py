@@ -29,3 +29,20 @@ def test_from_dict_schema(constructor: Any, request: Any) -> None:
         schema=schema,  # type: ignore[arg-type]
     )
     assert result.collect_schema() == schema
+
+
+def test_from_dict_without_namespace(constructor: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
+    result = nw.from_dict({"c": df["a"], "d": df["b"]})
+    compare_dicts(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
+
+
+def test_from_dict_without_namespace_invalid(constructor: Any) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
+    with pytest.raises(TypeError, match="namespace"):
+        nw.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})
+
+
+def test_from_dict_empty() -> None:
+    with pytest.raises(ValueError, match="empty"):
+        nw.from_dict({})

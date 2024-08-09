@@ -1473,7 +1473,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
