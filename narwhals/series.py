@@ -110,29 +110,29 @@ class Series:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> s_pd = pd.Series([1, 2, 3, 4])
-            >>> s_pl = pl.Series([1, 1, 2, 3])
+            >>> s_pl = pl.Series([1, 2, 3, 4])
 
             Lets define a function to pipe into
             >>> @nw.narwhalify
             ... def func(s):
-            ...     return s.pipe(lambda x: x**2)
+            ...     return s.pipe(lambda x: x + 2)
 
             Now apply it to the series
 
             >>> func(s_pd)
-            0     1
-            1     4
-            2     9
-            3    16
+            0    3
+            1    4
+            2    5
+            3    6
             dtype: int64
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [i64]
             [
-               1
-               1
+               3
                4
-               9
+               5
+               6
             ]
 
 
