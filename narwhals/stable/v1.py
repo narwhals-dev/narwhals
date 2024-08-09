@@ -151,7 +151,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             ...     "A": [1, 2, 3, 4, 5],
             ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
             ...     "B": [5, 4, 3, 2, 1],
-            ...     "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+            ...     "animals": ["beetle", "fly", "beetle", "beetle", "beetle"],
             ...     "optional": [28, 300, None, 2, -30],
             ... }
             >>> df_pd = pd.DataFrame(df)
