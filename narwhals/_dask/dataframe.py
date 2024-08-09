@@ -153,14 +153,9 @@ class DaskLazyFrame:
         if keep == "none":
             subset = subset or self.columns
             token = generate_unique_token(n_bytes=8, columns=subset)
-            unique = (
-                native_frame.groupby(subset)
-                .size()
-                .rename(token)
-                .loc[lambda t: t == 1]
-                .reset_index()
-                .drop(columns=token)
-            )
+            ser = native_frame.groupby(subset).size().rename(token)
+            ser = ser.loc[ser == 1]
+            unique = ser.reset_index().drop(columns=token)
             result = native_frame.merge(unique, on=subset, how="inner")
         else:
             mapped_keep = {"any": "first"}.get(keep, keep)
@@ -221,16 +216,15 @@ class DaskLazyFrame:
                 )
                 .drop_duplicates()
             )
+            df = self._native_dataframe.merge(
+                other_native,
+                how="outer",
+                indicator=indicator_token,
+                left_on=left_on,
+                right_on=left_on,
+            )
             return self._from_native_dataframe(
-                self._native_dataframe.merge(
-                    other_native,
-                    how="outer",
-                    indicator=indicator_token,
-                    left_on=left_on,
-                    right_on=left_on,
-                )
-                .loc[lambda t: t[indicator_token] == "left_only"]
-                .drop(columns=[indicator_token])
+                df.loc[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
             )
 
         if how == "semi":
