@@ -1566,7 +1566,7 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                a   b
+                  a     b
             0  24.5  74.5
 
             >>> func(df_pl)
@@ -1652,7 +1652,7 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                 a
+               a
             7  7
             8  8
             9  9
@@ -1749,8 +1749,8 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                a1  a2
-            0    2   1
+               a1  a2
+            0   2   1
             >>> func(df_pl)
             shape: (1, 2)
             ┌─────┬─────┐
@@ -1909,11 +1909,11 @@ class Expr:
             │ i64 │
             ╞═════╡
             │ -1  │
-            │  1  │
+            │ 1   │
             │ -1  │
-            │  3  │
+            │ 3   │
             │ -1  │
-            │  3  │
+            │ 3   │
             └─────┘
         """
         return self.__class__(
@@ -2417,7 +2417,7 @@ class ExprStringNamespace:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-               fruits upper_col
+              fruits upper_col
             0  apple     APPLE
             1  mango     MANGO
             2   None      None
@@ -2458,10 +2458,10 @@ class ExprStringNamespace:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-              fruits  lower_col
-            0  APPLE      apple
-            1  MANGO      mango
-            2   None       None
+              fruits lower_col
+            0  APPLE     apple
+            1  MANGO     mango
+            2   None      None
 
             >>> func(df_pl)
             shape: (3, 2)
@@ -2494,32 +2494,35 @@ class ExprDateTimeNamespace:
             >>> import polars as pl
             >>> from datetime import datetime
             >>> import narwhals as nw
-            >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
-            >>> s_pd = pd.Series(dates).convert_dtypes(
+            >>> data = {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
+            >>> df_pd = pd.DataFrame(data).convert_dtypes(
             ...     dtype_backend="pyarrow"
             ... )  # doctest:+SKIP
-            >>> s_pl = pl.Series(dates)
+            >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s):
-            ...     return s.dt.date()
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.date())
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
-            0    2012-01-07
-            1    2023-03-10
-            dtype: date32[day][pyarrow]
+            >>> func(df_pd)  # doctest:+SKIP
+                        a
+            0  2012-01-07
+            1  2023-03-10
 
-            >>> func(s_pl)
-            shape: (2,)
-            Series: '' [date]
-            [
-               2012-01-07
-               2023-03-10
-            ]
+            >>> func(df_pl)  # docetst
+            shape: (2, 1)
+            ┌────────────┐
+            │ a          │
+            │ ---        │
+            │ date       │
+            ╞════════════╡
+            │ 2012-01-07 │
+            │ 2023-03-10 │
+            └────────────┘
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
 
