@@ -494,6 +494,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def len(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.size,
+            "len",
+            returns_scalar=True,
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
