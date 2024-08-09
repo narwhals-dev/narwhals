@@ -15,7 +15,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
-from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
@@ -254,11 +253,11 @@ class PandasLikeNamespace:
 
     def when(
         self,
-        *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
+        *predicates: IntoPandasLikeExpr,
     ) -> PandasWhen:
         plx = self.__class__(self._implementation, self._backend_version)
         if predicates:
-            condition = plx.all_horizontal(*flatten(predicates))
+            condition = plx.all_horizontal(*predicates)
         else:
             msg = "at least one predicate needs to be provided"
             raise TypeError(msg)
@@ -274,16 +273,14 @@ def _when_then_value_arg_process(
 ) -> PandasLikeExpr:
     from narwhals.dependencies import get_numpy
 
+    # NumPy is a required dependency of pandas
     np = get_numpy()
 
-    if not np:
-        msg = "numpy is required for this function"
-        raise ImportError(msg)
     if isinstance(value, PandasLikeExpr):
         return value
     elif isinstance(value, PandasLikeSeries):
         return plx._create_expr_from_series(value)
-    elif isinstance(value, np.ndarray):
+    elif (np := get_numpy()) is not None and isinstance(value, np.ndarray):
         return plx._create_expr_from_series(plx._create_compliant_series(value))
     else:
         return plx._create_expr_from_series(

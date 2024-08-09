@@ -125,22 +125,3 @@ def test_value_expression(request: Any, constructor: Any) -> None:
         "a_when": [10, None, None],
     }
     compare_dicts(result, expected)
-
-
-def test_numpy_not_available(request: Any, constructor: Any, monkeypatch: Any) -> None:
-    df = nw.from_native(constructor(data))
-    context_manager = monkeypatch.context()
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor):
-
-        def no_numpy() -> None:
-            return None
-
-        from narwhals import dependencies
-
-        monkeypatch.setattr(dependencies, "get_numpy", no_numpy)
-        context_manager = pytest.raises(ImportError)
-
-    with context_manager:
-        df.with_columns(when(nw.col("a") == 1).then(9).alias("a_when"))
