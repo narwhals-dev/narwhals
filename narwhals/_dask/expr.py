@@ -334,6 +334,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __invert__(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.__invert__(),
+            "__invert__",
+            returns_scalar=False,
+        )
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
@@ -470,6 +477,20 @@ class DaskExpr:
             "clip",
             lower_bound,
             upper_bound,
+            returns_scalar=False,
+        )
+
+    def n_unique(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.nunique(dropna=False),
+            "n_unique",
+            returns_scalar=True,
+        )
+
+    def is_null(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.isna(),
+            "is_null",
             returns_scalar=False,
         )
 
