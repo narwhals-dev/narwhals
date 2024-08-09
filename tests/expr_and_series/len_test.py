@@ -6,7 +6,18 @@ import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_len(constructor: Any, request: Any) -> None:
+def test_len_no_filter(constructor: Any) -> None:
+    data = {"a": list("xyz"), "b": [1, 2, 1]}
+    expected = {"l": [3], "l2": [6]}
+    df = nw.from_native(constructor(data)).select(
+        nw.col("a").len().alias("l"),
+        (nw.col("a").len() * 2).alias("l2"),
+    )
+
+    compare_dicts(df, expected)
+
+
+def test_len_len_chaining(constructor: Any, request: Any) -> None:
     data = {"a": list("xyz"), "b": [1, 2, 1]}
     expected = {"a1": [2], "a2": [1]}
     if "dask" in str(constructor):

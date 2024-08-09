@@ -6,6 +6,7 @@ from typing import Any
 from typing import Callable
 from typing import NoReturn
 
+from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals.dependencies import get_dask
 from narwhals.utils import generate_unique_token
@@ -334,6 +335,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __invert__(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.__invert__(),
+            "__invert__",
+            returns_scalar=False,
+        )
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
@@ -473,17 +481,32 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def n_unique(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.nunique(dropna=False),
+            "n_unique",
+            returns_scalar=True,
+        )
+
+    def is_null(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.isna(),
+            "is_null",
+            returns_scalar=False,
+        )
+
+    def len(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.size,
+            "len",
+            returns_scalar=True,
+        )
+
     def is_first_distinct(self: Self) -> Self:
         def func(_input: Any) -> Any:
             _name = _input.name
             col_token = generate_unique_token(n_bytes=8, columns=[_name])
-            _input = (
-                _input.to_frame()
-                .assign(**{col_token: 1})
-                .assign(
-                    **{col_token: lambda t: t[col_token].cumsum(method="blelloch") - 1}
-                )
-            )
+            _input = add_row_index(_input.to_frame(), col_token)
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
             ]
@@ -500,13 +523,7 @@ class DaskExpr:
         def func(_input: Any) -> Any:
             _name = _input.name
             col_token = generate_unique_token(n_bytes=8, columns=[_name])
-            _input = (
-                _input.to_frame()
-                .assign(**{col_token: 1})
-                .assign(
-                    **{col_token: lambda t: t[col_token].cumsum(method="blelloch") - 1}
-                )
-            )
+            _input = add_row_index(_input.to_frame(), col_token)
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
 
             return _input[col_token].isin(last_distinct_index)
