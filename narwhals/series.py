@@ -76,8 +76,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.shape
+            ... def func(s):
+            ...     return s.shape
 
             We can then pass either pandas or Polars to `func`:
 
@@ -173,8 +173,8 @@ class Series:
             Let's define a dataframe-agnostic function that computes the len of the series:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.len()
+            ... def func(s):
+            ...     return s.len()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -201,8 +201,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dtype
+            ... def func(s):
+            ...     return s.dtype
 
             We can then pass either pandas or Polars to `func`:
 
@@ -229,8 +229,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.name
+            ... def func(s):
+            ...     return s.name
 
             We can then pass either pandas or Polars to `func`:
 
@@ -262,8 +262,8 @@ class Series:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.cast(nw.Int64)
+            ... def func(s):
+            ...     return s.cast(nw.Int64)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -302,8 +302,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.to_frame()
+            ... def func(s):
+            ...     return s.to_frame()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -346,8 +346,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.to_list()
+            ... def func(s):
+            ...     return s.to_list()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -373,8 +373,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.mean()
+            ... def func(s):
+            ...     return s.mean()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -400,8 +400,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.count()
+            ... def func(s):
+            ...     return s.count()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -431,8 +431,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.any()
+            ... def func(s):
+            ...     return s.any()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -458,8 +458,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.all()
+            ... def func(s):
+            ...     return s.all()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -486,8 +486,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.min()
+            ... def func(s):
+            ...     return s.min()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -513,8 +513,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.max()
+            ... def func(s):
+            ...     return s.max()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -540,8 +540,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.sum()
+            ... def func(s):
+            ...     return s.sum()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -571,8 +571,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.std()
+            ... def func(s):
+            ...     return s.std()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -582,6 +582,107 @@ class Series:
             1.0
         """
         return self._compliant_series.std(ddof=ddof)
+
+    def clip(
+        self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        r"""
+        Clip values in the Series.
+
+        Arguments:
+            lower_bound: Lower bound value.
+            upper_bound: Upper bound value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_lower(s):
+            ...     return s.clip(2)
+
+            We can then pass either pandas or Polars to `func_lower`:
+
+            >>> func_lower(s_pd)
+            0    2
+            1    2
+            2    3
+            dtype: int64
+            >>> func_lower(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               2
+               2
+               3
+            ]
+
+            We define another library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_upper(s):
+            ...     return s.clip(upper_bound=2)
+
+            We can then pass either pandas or Polars to `func_upper`:
+
+            >>> func_upper(s_pd)
+            0    1
+            1    2
+            2    2
+            dtype: int64
+            >>> func_upper(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               1
+               2
+               2
+            ]
+
+            We can have both at the same time
+
+            >>> s = [-1, 1, -3, 3, -5, 5]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.clip(-1, 3)
+
+            We can pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0   -1
+            1    1
+            2   -1
+            3    3
+            4   -1
+            5    3
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (6,)
+            Series: '' [i64]
+            [
+               -1
+                1
+               -1
+                3
+               -1
+                3
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.clip(lower_bound=lower_bound, upper_bound=upper_bound)
+        )
 
     def is_in(self, other: Any) -> Self:
         """
@@ -600,8 +701,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.is_in([3, 2, 8])
+            ... def func(s):
+            ...     return s.is_in([3, 2, 8])
 
             We can then pass either pandas or Polars to `func`:
 
@@ -638,8 +739,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.is_null().arg_true()
+            ... def func(s):
+            ...     return s.is_null().arg_true()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -679,8 +780,8 @@ class Series:
           Now define a dataframe-agnostic function with a `column` argument for the column to evaluate :
 
           >>> @nw.narwhalify
-          ... def func(s_any):
-          ...     return s_any.drop_nulls()
+          ... def func(s):
+          ...     return s.drop_nulls()
 
           Then we can pass either Series (polars or pandas) to `func`:
 
@@ -717,8 +818,8 @@ class Series:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.abs()
+            ... def func(s):
+            ...     return s.abs()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -753,8 +854,8 @@ class Series:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.cum_sum()
+            ... def func(s):
+            ...     return s.cum_sum()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -789,8 +890,8 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.unique()
+            ... def func(s):
+            ...     return s.unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -821,7 +922,7 @@ class Series:
             the diff and fill missing values with `0` in a Int64 column, you could
             do:
 
-                s_any.diff().fill_null(0).cast(nw.Int64)
+                s.diff().fill_null(0).cast(nw.Int64)
 
         Examples:
             >>> import pandas as pd
@@ -834,8 +935,8 @@ class Series:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.diff()
+            ... def func(s):
+            ...     return s.diff()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -870,7 +971,7 @@ class Series:
             and fill missing values with `0` in a Int64 column, you could
             do:
 
-                s_any.shift(1).fill_null(0).cast(nw.Int64)
+                s.shift(1).fill_null(0).cast(nw.Int64)
 
         Examples:
             >>> import pandas as pd
@@ -883,8 +984,8 @@ class Series:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.shift(1)
+            ... def func(s):
+            ...     return s.shift(1)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -937,8 +1038,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.sample(fraction=1.0, with_replacement=True)
+            ... def func(s):
+            ...     return s.sample(fraction=1.0, with_replacement=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -982,8 +1083,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.alias("bar")
+            ... def func(s):
+            ...     return s.alias("bar")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1022,12 +1123,12 @@ class Series:
             We define library agnostic functions:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.sort()
+            ... def func(s):
+            ...     return s.sort()
 
             >>> @nw.narwhalify
-            ... def func_descend(s_any):
-            ...     return s_any.sort(descending=True)
+            ... def func_descend(s):
+            ...     return s.sort(descending=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1085,8 +1186,8 @@ class Series:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.is_null()
+            ... def func(s):
+            ...     return s.is_null()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1128,8 +1229,8 @@ class Series:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.fill_null(5)
+            ... def func(s):
+            ...     return s.fill_null(5)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1176,8 +1277,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.is_between(2, 4, "right")
+            ... def func(s):
+            ...     return s.is_between(2, 4, "right")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1218,8 +1319,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.n_unique()
+            ... def func(s):
+            ...     return s.n_unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1245,8 +1346,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.to_numpy()
+            ... def func(s):
+            ...     return s.to_numpy()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1272,8 +1373,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.to_pandas()
+            ... def func(s):
+            ...     return s.to_pandas()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1419,8 +1520,8 @@ class Series:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.filter(s_any > 10)
+            ... def func(s):
+            ...     return s.filter(s > 10)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1457,8 +1558,8 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.is_duplicated()
+            ... def func(s):
+            ...     return s.is_duplicated()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1493,8 +1594,8 @@ class Series:
             values are greater than 10, and then checks if the result is empty or not:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.filter(s_any > 10).is_empty()
+            ... def func(s):
+            ...     return s.filter(s > 10).is_empty()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1524,8 +1625,8 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.is_unique()
+            ... def func(s):
+            ...     return s.is_unique()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1567,8 +1668,8 @@ class Series:
             the series:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.null_count()
+            ... def func(s):
+            ...     return s.null_count()
 
             We can then pass either pandas or Polars to `func`:
             >>> func(s_pd)  # doctest:+SKIP
@@ -1593,8 +1694,8 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.is_first_distinct()
+            ... def func(s):
+            ...     return s.is_first_distinct()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1633,8 +1734,8 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.is_last_distinct()
+            ... def func(s):
+            ...     return s.is_last_distinct()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1676,8 +1777,8 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any, descending=False):
-            ...     return s_any.is_sorted(descending=descending)
+            ... def func(s, descending=False):
+            ...     return s.is_sorted(descending=descending)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1721,8 +1822,8 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.value_counts(sort=True)
+            ... def func(s):
+            ...     return s.value_counts(sort=True)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1781,9 +1882,9 @@ class Series:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
+            ... def func(s):
             ...     return [
-            ...         s_any.quantile(quantile=q, interpolation="nearest")
+            ...         s.quantile(quantile=q, interpolation="nearest")
             ...         for q in (0.1, 0.25, 0.5, 0.75, 0.9)
             ...     ]
 
@@ -1869,8 +1970,8 @@ class Series:
             Let's define a dataframe-agnostic function that returns item at given index
 
             >>> @nw.narwhalify
-            ... def func(s_any, index=None):
-            ...     return s_any.item(index)
+            ... def func(s, index=None):
+            ...     return s.item(index)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1901,8 +2002,8 @@ class Series:
             Let's define a dataframe-agnostic function that returns the first 3 rows:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.head(3)
+            ... def func(s):
+            ...     return s.head(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1943,8 +2044,8 @@ class Series:
             Let's define a dataframe-agnostic function that returns the last 3 rows:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.tail(3)
+            ... def func(s):
+            ...     return s.tail(3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -1973,12 +2074,12 @@ class Series:
             decimals: Number of decimals to round by.
 
         Notes:
-            For values exactly halfway between rounded decimal values pandas and Polars behave differently.
+            For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
 
             pandas rounds to the nearest even value (e.g. -0.5 and 0.5 round to 0.0, 1.5 and 2.5 round to 2.0, 3.5 and
             4.5 to 4.0, etc..).
 
-            Polars rounds away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
+            Polars and Arrow round away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
 
         Examples:
             >>> import narwhals as nw
@@ -1991,8 +2092,8 @@ class Series:
             Let's define a dataframe-agnostic function that rounds to the first decimal:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.round(1)
+            ... def func(s):
+            ...     return s.round(1)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2038,8 +2139,8 @@ class Series:
             Let's define a dataframe-agnostic function that rounds to the first decimal:
 
             >>> @nw.narwhalify
-            ... def func(s_any, drop_first: bool = False):
-            ...     return s_any.to_dummies(drop_first=drop_first)
+            ... def func(s, drop_first: bool = False):
+            ...     return s.to_dummies(drop_first=drop_first)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2084,6 +2185,46 @@ class Series:
         return DataFrame(
             self._compliant_series.to_dummies(separator=separator, drop_first=drop_first),
             level=self._level,
+        )
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""
+        Take every nth value in the Series and return as new Series.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1, 2, 3, 4]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            Let's define a dataframe-agnostic function in which gather every 2 rows,
+            starting from a offset of 1:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.gather_every(n=2, offset=1)
+
+            >>> func(s_pd)
+            1    2
+            3    4
+            Name: a, dtype: int64
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [i64]
+            [
+               2
+               4
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.gather_every(n=n, offset=offset)
         )
 
     @property
@@ -2147,6 +2288,40 @@ class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
 
+    def strip_chars(self, characters: str | None = None) -> Series:
+        r"""
+        Remove leading and trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["apple", "\nmango"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.strip_chars()
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['apple', 'mango']
+
+            >>> func(s_pl)
+            ['apple', 'mango']
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.strip_chars(characters)
+        )
+
     def starts_with(self, prefix: str) -> Series:
         r"""
         Check if string values start with a substring.
@@ -2165,8 +2340,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.str.starts_with("app")
+            ... def func(s):
+            ...     return s.str.starts_with("app")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2207,8 +2382,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.str.ends_with("ngo")
+            ... def func(s):
+            ...     return s.str.ends_with("ngo")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2251,8 +2426,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.str.contains("parrot|dove")
+            ... def func(s):
+            ...     return s.str.contains("parrot|dove")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2299,8 +2474,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.str.slice(4, length=3)
+            ... def func(s):
+            ...     return s.str.slice(4, length=3)
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2324,8 +2499,8 @@ class SeriesStringNamespace:
             Using negative indexes:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.str.slice(-3)
+            ... def func(s):
+            ...     return s.str.slice(-3)
 
             >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
             0     ear
@@ -2373,8 +2548,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.str.head()
+            ... def func(s):
+            ...     return s.str.head()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2421,8 +2596,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.str.tail()
+            ... def func(s):
+            ...     return s.str.tail()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2466,8 +2641,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.with_columns(upper_col=nw.col("fruits").str.to_uppercase())
+            ... def func(df):
+            ...     return df.with_columns(upper_col=nw.col("fruits").str.to_uppercase())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2509,8 +2684,8 @@ class SeriesStringNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.with_columns(lower_col=nw.col("fruits").str.to_lowercase())
+            ... def func(df):
+            ...     return df.with_columns(lower_col=nw.col("fruits").str.to_lowercase())
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2542,6 +2717,49 @@ class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
 
+    def date(self) -> Series:
+        """
+        Get the date in a datetime series.
+
+        Raises:
+            NotImplementedError: If pandas default backend is being used.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
+            >>> s_pd = pd.Series(dates).convert_dtypes(
+            ...     dtype_backend="pyarrow"
+            ... )  # doctest:+SKIP
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.date()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+            0    2012-01-07
+            1    2023-03-10
+            dtype: date32[day][pyarrow]
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [date]
+            [
+               2012-01-07
+               2023-03-10
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.date()
+        )
+
     def year(self) -> Series:
         """
         Get the year in a datetime series.
@@ -2558,8 +2776,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.year()
+            ... def func(s):
+            ...     return s.dt.year()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2595,8 +2813,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.month()
+            ... def func(s):
+            ...     return s.dt.month()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2632,8 +2850,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.day()
+            ... def func(s):
+            ...     return s.dt.day()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2669,8 +2887,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.hour()
+            ... def func(s):
+            ...     return s.dt.hour()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2706,8 +2924,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.minute()
+            ... def func(s):
+            ...     return s.dt.minute()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2743,8 +2961,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.second()
+            ... def func(s):
+            ...     return s.dt.second()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2787,8 +3005,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.millisecond().alias("datetime")
+            ... def func(s):
+            ...     return s.dt.millisecond().alias("datetime")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2837,8 +3055,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.microsecond().alias("datetime")
+            ... def func(s):
+            ...     return s.dt.microsecond().alias("datetime")
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2883,8 +3101,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.nanosecond()
+            ... def func(s):
+            ...     return s.dt.nanosecond()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2920,8 +3138,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.ordinal_day()
+            ... def func(s):
+            ...     return s.dt.ordinal_day()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -2962,8 +3180,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.total_minutes()
+            ... def func(s):
+            ...     return s.dt.total_minutes()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -3004,8 +3222,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.total_seconds()
+            ... def func(s):
+            ...     return s.dt.total_seconds()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -3049,8 +3267,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.total_milliseconds()
+            ... def func(s):
+            ...     return s.dt.total_milliseconds()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -3094,8 +3312,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.total_microseconds()
+            ... def func(s):
+            ...     return s.dt.total_microseconds()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -3136,8 +3354,8 @@ class SeriesDateTimeNamespace:
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.diff().dt.total_nanoseconds()
+            ... def func(s):
+            ...     return s.diff().dt.total_nanoseconds()
 
             We can then pass either pandas or Polars to `func`:
 
@@ -3208,8 +3426,8 @@ class SeriesDateTimeNamespace:
             We define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.dt.to_string("%Y/%m/%d")
+            ... def func(s):
+            ...     return s.dt.to_string("%Y/%m/%d")
 
             We can then pass either pandas or Polars to `func`:
 

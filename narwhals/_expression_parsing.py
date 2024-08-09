@@ -20,21 +20,27 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
+    from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.expr import DaskExpr
+    from narwhals._dask.namespace import DaskNamespace
+    from narwhals._dask.typing import IntoDaskExpr
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
 
-    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr]
-    IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr]
+    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace, DaskNamespace]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr]
+    IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
     CompliantSeries = Union[PandasLikeSeries, ArrowSeries]
-    ListOfCompliantSeries = Union[list[PandasLikeSeries], list[ArrowSeries]]
-    ListOfCompliantExpr = Union[list[PandasLikeExpr], list[ArrowExpr]]
-    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame]
+    ListOfCompliantSeries = Union[
+        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr]
+    ]
+    ListOfCompliantExpr = Union[list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr]]
+    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
 
     T = TypeVar("T")
 
@@ -63,6 +69,14 @@ def evaluate_into_exprs(
 ) -> list[ArrowSeries]: ...
 
 
+@overload
+def evaluate_into_exprs(
+    df: DaskLazyFrame,
+    *exprs: IntoDaskExpr,
+    **named_exprs: IntoDaskExpr,
+) -> list[DaskExpr]: ...
+
+
 def evaluate_into_exprs(
     df: CompliantDataFrame,
     *exprs: IntoCompliantExprT,
@@ -79,7 +93,8 @@ def evaluate_into_exprs(
         if len(evaluated_expr) > 1:
             msg = "Named expressions must return a single column"  # pragma: no cover
             raise AssertionError(msg)
-        series.append(evaluated_expr[0].alias(name))  # type: ignore[arg-type]
+        to_append = evaluated_expr[0].alias(name)
+        series.append(to_append)  # type: ignore[arg-type]
     return series
 
 
@@ -109,6 +124,14 @@ def parse_into_exprs(
 ) -> list[ArrowExpr]: ...
 
 
+@overload
+def parse_into_exprs(
+    *exprs: IntoDaskExpr,
+    namespace: DaskNamespace,
+    **named_exprs: IntoDaskExpr,
+) -> list[DaskExpr]: ...
+
+
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace,
@@ -116,12 +139,12 @@ def parse_into_exprs(
 ) -> ListOfCompliantExpr:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    out = [
+    return [  # type: ignore[return-value]
         parse_into_expr(into_expr, namespace=namespace) for into_expr in flatten(exprs)
+    ] + [
+        parse_into_expr(expr, namespace=namespace).alias(name)
+        for name, expr in named_exprs.items()
     ]
-    for name, expr in named_exprs.items():
-        out.append(parse_into_expr(expr, namespace=namespace).alias(name))
-    return out  # type: ignore[return-value]
 
 
 def parse_into_expr(

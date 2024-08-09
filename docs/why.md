@@ -18,13 +18,13 @@ Polars checks if it's in the values.
 For another example, try running the code below - note how the outputs have different column names after the join!
 
 ```python
-pd_df_left = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-pd_df_right = pd.DataFrame({'a': [1, 2, 3], 'c': [4, 5, 6]})
-pd_left_merge = pd_df_left.merge(pd_df_right, left_on='b', right_on='c', how='left')
+pd_df_left = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+pd_df_right = pd.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
+pd_left_merge = pd_df_left.merge(pd_df_right, left_on="b", right_on="c", how="left")
 
-pl_df_left = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-pl_df_right = pl.DataFrame({'a': [1, 2, 3], 'c': [4, 5, 6]})
-pl_left_merge = pl_df_left.join(pl_df_right, left_on='b', right_on='c', how='left')
+pl_df_left = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+pl_df_right = pl.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
+pl_left_merge = pl_df_left.join(pl_df_right, left_on="b", right_on="c", how="left")
 
 print(pd_left_merge.columns)
 print(pl_df_right.columns)

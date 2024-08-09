@@ -17,30 +17,31 @@ data = {
 }
 
 
-def test_slice_column(constructor: Any) -> None:
-    result = nw.from_native(constructor(data))["a"]
+def test_slice_column(constructor_eager: Any) -> None:
+    result = nw.from_native(constructor_eager(data))["a"]
     assert isinstance(result, nw.Series)
     assert result.to_numpy().tolist() == [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
 
 
-def test_slice_rows(constructor: Any) -> None:
-    result = nw.from_native(constructor(data))[1:]
+def test_slice_rows(constructor_eager: Any) -> None:
+    result = nw.from_native(constructor_eager(data))[1:]
     compare_dicts(result, {"a": [2.0, 3.0, 4.0, 5.0, 6.0], "b": [12, 13, 14, 15, 16]})
 
-    result = nw.from_native(constructor(data))[2:4]
+    result = nw.from_native(constructor_eager(data))[2:4]
     compare_dicts(result, {"a": [3.0, 4.0], "b": [13, 14]})
 
 
-def test_slice_rows_with_step(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+def test_slice_rows_with_step(request: Any, constructor_eager: Any) -> None:
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    result = nw.from_native(constructor(data))[1::2]
+    result = nw.from_native(constructor_eager(data))[1::2]
     compare_dicts(result, {"a": [2.0, 4.0, 6.0], "b": [12, 14, 16]})
 
 
 def test_slice_rows_with_step_pyarrow() -> None:
     with pytest.raises(
-        NotImplementedError, match="Slicing with step is not supported on PyArrow tables"
+        NotImplementedError,
+        match="Slicing with step is not supported on PyArrow tables",
     ):
         nw.from_native(pa.table(data))[1::2]
 
@@ -50,13 +51,13 @@ def test_slice_lazy_fails() -> None:
         _ = nw.from_native(pl.LazyFrame(data))[1:]
 
 
-def test_slice_int_fails(constructor: Any) -> None:
+def test_slice_int_fails(constructor_eager: Any) -> None:
     with pytest.raises(TypeError, match="Expected str or slice, got: <class 'int'>"):
-        _ = nw.from_native(constructor(data))[1]  # type: ignore[call-overload,index]
+        _ = nw.from_native(constructor_eager(data))[1]  # type: ignore[call-overload,index]
 
 
-def test_gather(constructor: Any) -> None:
-    df = nw.from_native(constructor(data), eager_only=True)
+def test_gather(constructor_eager: Any) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 3, 1]]
     expected = {
         "a": [1.0, 4.0, 2.0],
@@ -74,9 +75,13 @@ def test_gather_pandas_index() -> None:
     expected = {"a": [1, 2], "b": [4, 2]}
     compare_dicts(result, expected)
 
+    result = nw.from_native(df, eager_only=True)[[1, 2], "a"].to_frame()
+    expected = {"a": [1, 2]}
+    compare_dicts(result, expected)
 
-def test_gather_rows_cols(constructor: Any) -> None:
-    native_df = constructor(data)
+
+def test_gather_rows_cols(constructor_eager: Any) -> None:
+    native_df = constructor_eager(data)
     df = nw.from_native(native_df, eager_only=True)
     is_pandas_wo_pyarrow = parse_version(pd.__version__) < parse_version("1.0.0")
     if isinstance(native_df, pa.Table) or is_pandas_wo_pyarrow:
@@ -93,3 +98,26 @@ def test_gather_rows_cols(constructor: Any) -> None:
         assert_series_equal(result, expected, check_dtype=False)
         result = df[np.array([0, 3, 1]), "b"].to_pandas()
         assert_series_equal(result, expected, check_dtype=False)
+
+
+def test_slice_both_tuples_of_ints(constructor_eager: Any) -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df[[0, 1], [0, 2]]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)
+
+
+def test_slice_int_rows_str_columns(constructor_eager: Any) -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df[[0, 1], ["a", "c"]]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)
+
+
+def test_slice_invalid(constructor_eager: Any) -> None:
+    data = {"a": [1, 2], "b": [4, 5]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    with pytest.raises(TypeError, match="Hint:"):
+        df[0, 0]

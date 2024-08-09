@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterator
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
@@ -15,10 +16,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import IntoArrowExpr
-
-POLARS_TO_ARROW_AGGREGATIONS = {
-    "len": "size",
-}
 
 
 class ArrowGroupBy:
@@ -55,6 +52,23 @@ class ArrowGroupBy:
             self._keys,
             output_names,
             self._df._from_native_dataframe,
+        )
+
+    def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
+        key_values = (
+            self._df.select(*self._keys)
+            .unique(subset=self._keys, keep="first")
+            .iter_rows()
+        )
+        nw_namespace = self._df.__narwhals_namespace__()
+        yield from (
+            (
+                key_value,
+                self._df.filter(
+                    *[nw_namespace.col(k) == v for k, v in zip(self._keys, key_value)]
+                ),
+            )
+            for key_value in key_values
         )
 
 
@@ -98,12 +112,17 @@ def agg_arrow(
                 raise AssertionError(msg)
 
             function_name = remove_prefix(expr._function_name, "col->")
-            function_name = POLARS_TO_ARROW_AGGREGATIONS.get(function_name, function_name)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                simple_aggregations[output_name] = (
-                    (root_name, function_name),
-                    f"{root_name}_{function_name}",
-                )
+                if function_name != "len":
+                    simple_aggregations[output_name] = (
+                        (root_name, function_name),
+                        f"{root_name}_{function_name}",
+                    )
+                else:
+                    simple_aggregations[output_name] = (
+                        (root_name, "count", pc.CountOptions(mode="all")),
+                        f"{root_name}_count",
+                    )
 
         aggs: list[Any] = []
         name_mapping = {}

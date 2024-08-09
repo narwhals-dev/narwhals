@@ -8,6 +8,7 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
@@ -123,6 +124,15 @@ class ArrowDataFrame:
                 name=item,
                 backend_version=self._backend_version,
             )
+        elif (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and isinstance(item[1], (list, tuple))
+        ):
+            return self._from_native_dataframe(
+                self._native_dataframe.take(item[0]).select(item[1])
+            )
+
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._arrow.series import ArrowSeries
 
@@ -183,7 +193,10 @@ class ArrowDataFrame:
             )
         names = [s.name for s in new_series]
         pa = get_pyarrow()
-        df = pa.Table.from_arrays([s._native_series for s in new_series], names=names)
+        df = pa.Table.from_arrays(
+            broadcast_series(new_series),
+            names=names,
+        )
         return self._from_native_dataframe(df)
 
     def with_columns(
@@ -479,3 +492,6 @@ class ArrowDataFrame:
 
         keep_idx = self.select(*subset).is_unique()
         return self.filter(keep_idx)
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_dataframe(self._native_dataframe[offset::n])

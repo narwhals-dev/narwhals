@@ -11,11 +11,11 @@ from typing import overload
 
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasLikeExpr
+from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
-from narwhals._pandas_like.utils import validate_indices
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
@@ -122,11 +122,30 @@ class PandasLikeDataFrame:
                 backend_version=self._backend_version,
             )
 
+        elif (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and isinstance(item[1], (tuple, list))
+        ):
+            if all(isinstance(x, int) for x in item[1]):
+                return self._from_native_dataframe(self._native_dataframe.iloc[item])
+            if all(isinstance(x, str) for x in item[1]):
+                item = (
+                    item[0],
+                    self._native_dataframe.columns.get_indexer(item[1]),
+                )
+                return self._from_native_dataframe(self._native_dataframe.iloc[item])
+            msg = (
+                f"Expected sequence str or int, got: {type(item[1])}"  # pragma: no cover
+            )
+            raise TypeError(msg)  # pragma: no cover
+
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._pandas_like.series import PandasLikeSeries
 
             if isinstance(item[1], str):
-                native_series = self._native_dataframe.loc[item]
+                item = (item[0], self._native_dataframe.columns.get_loc(item[1]))
+                native_series = self._native_dataframe.iloc[item]
             elif isinstance(item[1], int):
                 native_series = self._native_dataframe.iloc[item]
             else:  # pragma: no cover
@@ -177,9 +196,11 @@ class PandasLikeDataFrame:
         if not named:
             yield from self._native_dataframe.itertuples(index=False, name=None)
         else:
+            col_names = self._native_dataframe.columns
             yield from (
-                row._asdict() for row in self._native_dataframe.itertuples(index=False)
-            )
+                dict(zip(col_names, row))
+                for row in self._native_dataframe.itertuples(index=False)
+            )  # type: ignore[misc]
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -204,7 +225,7 @@ class PandasLikeDataFrame:
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_dataframe(self._native_dataframe.__class__())
-        new_series = validate_indices(new_series)
+        new_series = broadcast_series(new_series)
         df = horizontal_concat(
             new_series,
             implementation=self._implementation,
@@ -564,3 +585,6 @@ class PandasLikeDataFrame:
 
     def clone(self: Self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.copy())
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.iloc[offset::n])
