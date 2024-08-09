@@ -40,40 +40,40 @@ class Expr:
     # --- convert ---
     def alias(self, name: str) -> Self:
         """
-                Rename the expression.
+        Rename the expression.
 
-                Arguments:
-                    name: The new name.
+        Arguments:
+            name: The new name.
 
-                Examples:
-                    >>> import pandas as pd
-                    >>> import polars as pl
-                    >>> import narwhals as nw
-                    >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
-                    >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 5]})
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 5]})
 
-                    Let's define a dataframe-agnostic function:
+            Let's define a dataframe-agnostic function:
 
-                    >>> @nw.narwhalify
-                    ... def func(df_any):
-                    ...     return df_any.select((nw.col("b") + 10).alias("c"))
+            >>> @nw.narwhalify
+            ... def func(df_any):
+            ...     return df_any.select((nw.col("b") + 10).alias("c"))
 
-                    We can then pass either pandas or Polars to `func`:
-        fu
-                    >>> func(df_pd)
-                        c
-                    0  14
-                    1  15
-                    >>> func(df_pl)
-                    shape: (2, 1)
-                    ┌─────┐
-                    │ c   │
-                    │ --- │
-                    │ i64 │
-                    ╞═════╡
-                    │ 14  │
-                    │ 15  │
-                    └─────┘
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                c
+            0  14
+            1  15
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌─────┐
+            │ c   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 14  │
+            │ 15  │
+            └─────┘
         """
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
@@ -86,44 +86,34 @@ class Expr:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> data = {"a": [1, 2, 3, 4]}
-            >>> pdf = pd.DataFrame(data)
-            >>> pldf = pl.DataFrame(data)
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
 
-
-            Lets define a function to pipe into
+            Lets define a library-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select(nw.col("a").pipe(lambda x: x**2))
+            ... def func(df):
+            ...     return df.select(nw.col("a").pipe(lambda x: x + 1))
 
-            Now apply it to the df
+            We can then pass any supported library:
 
-            >>> func(spl)
-            shape: (4,)
-            Series: '' [i64]
-            [
-                    1
-                    1
-                    4
-                    9
-            ]
-            >>> func(pdf)
-                a
-            0   1
-            1   4
-            2   9
-            3  16
-            >>> func(pldf)
+            >>> func(df_pd)
+               a
+            0  2
+            1  3
+            2  4
+            3  5
+            >>> func(df_pl)
             shape: (4, 1)
             ┌─────┐
             │ a   │
             │ --- │
             │ i64 │
             ╞═════╡
-            │ 1   │
+            │ 2   │
+            │ 3   │
             │ 4   │
-            │ 9   │
-            │ 16  │
+            │ 5   │
             └─────┘
         """
         return function(self, *args, **kwargs)
@@ -1360,13 +1350,13 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                    a      b
             0   True   True
             1  False   True
             2  False  False
             3   True  False
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌───────┬───────┐
             │ a     ┆ b     │
@@ -1401,13 +1391,13 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                    a      b
             0  False  False
             1   True  False
             2   True   True
             3  False   True
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌───────┬───────┐
             │ a     ┆ b     │
@@ -1482,13 +1472,13 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                    a      b
             0   True   True
             1   True  False
             2   True   True
             3  False   True
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌───────┬───────┐
             │ a     ┆ b     │
@@ -1522,13 +1512,13 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                    a      b
             0  False  False
             1   True   True
             2   True   True
             3   True   True
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌───────┬───────┐
             │ a     ┆ b     │
@@ -1575,11 +1565,11 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                 a   b
             0  24.5  74.5
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (1, 2)
             ┌──────┬──────┐
             │ a    ┆ b    │
@@ -1617,12 +1607,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                a
             0  0
             1  1
             2  2
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -1661,12 +1651,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                  a
             7  7
             8  8
             9  9
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -1713,12 +1703,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                  a
             0  1.1
             1  2.6
             2  3.9
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -1758,10 +1748,10 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                 a1  a2
             0    2   1
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (1, 2)
             ┌─────┬─────┐
             │ a1  ┆ a2  │
@@ -1852,7 +1842,7 @@ class Expr:
             0  2
             1  2
             2  3
-            >>> func_lower(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func_lower(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ s   │
@@ -1877,7 +1867,7 @@ class Expr:
             0  1
             1  2
             2  2
-            >>> func_upper(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func_upper(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ s   │
@@ -1911,7 +1901,7 @@ class Expr:
             3  3
             4 -1
             5  3
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (6, 1)
             ┌─────┐
             │ s   │
@@ -2206,14 +2196,14 @@ class ExprStringNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                          s s_sliced
             0         pear
             1         None     None
             2       papaya       ya
             3  dragonfruit      onf
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌─────────────┬──────────┐
             │ s           ┆ s_sliced │
@@ -2232,14 +2222,14 @@ class ExprStringNamespace:
             ... def func(df):
             ...     return df.with_columns(s_sliced=nw.col("s").str.slice(-3))
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                          s s_sliced
             0         pear      ear
             1         None     None
             2       papaya      aya
             3  dragonfruit      uit
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌─────────────┬──────────┐
             │ s           ┆ s_sliced │
@@ -2426,7 +2416,7 @@ class ExprStringNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                fruits upper_col
             0  apple     APPLE
             1  mango     MANGO
@@ -2467,13 +2457,13 @@ class ExprStringNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
               fruits  lower_col
             0  APPLE      apple
             1  MANGO      mango
             2   None       None
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (3, 2)
             ┌────────┬───────────┐
             │ fruits ┆ lower_col │
@@ -2523,7 +2513,7 @@ class ExprDateTimeNamespace:
             1    2023-03-10
             dtype: date32[day][pyarrow]
 
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pl)
             shape: (2,)
             Series: '' [date]
             [

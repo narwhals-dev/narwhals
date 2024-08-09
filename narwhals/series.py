@@ -109,8 +109,8 @@ class Series:
             >>> import polars as pl
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> spd = pd.Series([1, 2, 3, 4])
-            >>> spl = pl.Series([1, 1, 2, 3])
+            >>> s_pd = pd.Series([1, 2, 3, 4])
+            >>> s_pl = pl.Series([1, 1, 2, 3])
 
             Lets define a function to pipe into
             >>> @nw.narwhalify
@@ -119,21 +119,21 @@ class Series:
 
             Now apply it to the series
 
-            >>> func(spl)
-            shape: (4,)
-            Series: '' [i64]
-            [
-                    1
-                    1
-                    4
-                    9
-            ]
-            >>> func(spd)
+            >>> func(s_pd)
             0     1
             1     4
             2     9
             3    16
             dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               1
+               1
+               4
+               9
+            ]
 
 
         """
@@ -178,9 +178,9 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pd)
             3
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pl)
             3
         """
         return len(self._compliant_series)
