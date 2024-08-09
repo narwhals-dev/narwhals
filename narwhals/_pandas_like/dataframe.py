@@ -272,10 +272,7 @@ class PandasLikeDataFrame:
         index = self._native_dataframe.index
         new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
 
-        if not new_columns:
-            # We don't make any guarantees about mutability / copy-on-write,
-            # and we don't have any methods which mutate data, so...we can
-            # just return `self`.
+        if not new_columns and len(self) == 0:
             return self
 
         # If the inputs are all Expressions which return full columns
