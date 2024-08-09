@@ -2260,6 +2260,29 @@ class SeriesStringNamespace:
             value: String that will replace the matched substring.
             literal: Treat `pattern` as a literal string.
             n: Number of matches to replace.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["123abc", "abc abc123"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.replace("abc", "")
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['123', ' abc123']
+
+            >>> func(s_pl)
+            ['123', ' abc123']
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.replace(
@@ -2269,12 +2292,35 @@ class SeriesStringNamespace:
 
     def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Series:
         r"""
-        Replace first matching regex/literal substring with a new string value.
+        Replace all matching regex/literal substring with a new string value.
 
         Arguments:
             pattern: A valid regular expression pattern
             value: String that will replace the matched substring.
             literal: Treat `pattern` as a literal string.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["123abc", "abc abc123"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.replace_all("abc", "")
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['123', ' 123']
+
+            >>> func(s_pl)
+            ['123', ' 123']
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.replace_all(
