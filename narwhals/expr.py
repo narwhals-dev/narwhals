@@ -55,8 +55,8 @@ class Expr:
             Let's define a dataframe-agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.select((nw.col("b") + 10).alias("c"))
+            ... def func(df):
+            ...     return df.select((nw.col("b") + 10).alias("c"))
 
             We can then pass either pandas or Polars to `func`:
 
