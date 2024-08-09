@@ -34,11 +34,10 @@ def test_with_columns_empty(constructor: Any) -> None:
     compare_dicts(result, {})
 
 
-def test_with_columns_order_single_row(constructor_eager: Any) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(constructor_eager(data)[:1], eager_only=True)
-    assert len(df) == 1
+def test_with_columns_order_single_row(constructor: Any) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "i": [0, 1, 2]}
+    df = nw.from_native(constructor(data)).filter(nw.col("i") < 1).drop("i")
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
-    assert result.columns == ["a", "b", "z", "d"]
+    assert result.collect_schema().names() == ["a", "b", "z", "d"]
     expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
     compare_dicts(result, expected)
