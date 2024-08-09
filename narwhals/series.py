@@ -114,8 +114,8 @@ class Series:
 
             Lets define a function to pipe into
             >>> @nw.narwhalify
-            ... def func(s_any):
-            ...     return s_any.pipe(lambda x: x**2)
+            ... def func(s):
+            ...     return s.pipe(lambda x: x**2)
 
             Now apply it to the series
 
