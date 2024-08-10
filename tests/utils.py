@@ -20,7 +20,10 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
 def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
     if hasattr(result, "collect"):
         result = result.collect()
-    if hasattr(result, "columns"):
+    if hasattr(result, "column_names"):  # To handle Pyarrow ChuckedArray:
+        for key in result.column_names:
+            assert key in expected
+    elif hasattr(result, "columns"):
         for key in result.columns:
             assert key in expected
     for key in expected:
