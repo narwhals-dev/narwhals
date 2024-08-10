@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals._exceptions import ColumnNotFoundError
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import translate_dtype
@@ -126,6 +127,22 @@ class PolarsDataFrame:
             )
         return self._from_native_dataframe(self._native_dataframe.with_row_index(name))
 
+    def drop(self: Self, *columns: str, strict: bool) -> Self:
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            cols = set(self.columns)
+            to_drop = list(columns)
+            if strict:
+                for d in to_drop:
+                    if d not in cols:
+                        msg = f'"{d}" not found'
+                        raise ColumnNotFoundError(msg)
+            else:
+                to_drop = list(cols.intersection(set(to_drop)))
+            return self._from_native_dataframe(self._native_dataframe.drop(to_drop))
+        return self._from_native_dataframe(
+            self._native_dataframe.drop(*columns, strict=strict)
+        )
+
 
 class PolarsLazyFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
@@ -188,3 +205,19 @@ class PolarsLazyFrame:
                 self._native_dataframe.with_row_count(name)
             )
         return self._from_native_dataframe(self._native_dataframe.with_row_index(name))
+
+    def drop(self: Self, *columns: str, strict: bool) -> Self:
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            cols = set(self.columns)
+            to_drop = list(columns)
+            if strict:
+                for d in to_drop:
+                    if d not in cols:
+                        msg = f'"{d}" not found'
+                        raise ColumnNotFoundError(msg)
+            else:
+                to_drop = list(cols.intersection(set(to_drop)))
+            return self._from_native_dataframe(self._native_dataframe.drop(to_drop))
+        return self._from_native_dataframe(
+            self._native_dataframe.drop(*columns, strict=strict)
+        )
