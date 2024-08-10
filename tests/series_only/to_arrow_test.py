@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -15,7 +16,7 @@ def test_to_arrow(constructor_eager: Any) -> None:
     ].to_arrow()
 
     assert pa.types.is_int64(result.type)
-    assert result == pa.array(data, type=pa.int64())
+    assert pc.all(pc.equal(result, pa.array(data, type=pa.int64())))
 
 
 def test_to_arrow_with_nulls(constructor_eager: Any, request: Any) -> None:
@@ -32,4 +33,4 @@ def test_to_arrow_with_nulls(constructor_eager: Any, request: Any) -> None:
     )
 
     assert pa.types.is_int64(result.type)
-    assert result == pa.array(data, type=pa.int64())
+    assert pc.all(pc.equal(result, pa.array(data, type=pa.int64())))
