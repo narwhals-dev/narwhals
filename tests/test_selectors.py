@@ -7,6 +7,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.dependencies import get_dask
 from narwhals.selectors import all
 from narwhals.selectors import boolean
 from narwhals.selectors import by_dtype
@@ -66,6 +67,7 @@ def test_categorical(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
+@pytest.mark.skipif((get_dask() is not None), reason="too old for dask")
 def test_dask_categorical() -> None:
     import dask.dataframe as dd
 
