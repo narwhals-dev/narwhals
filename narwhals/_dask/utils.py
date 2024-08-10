@@ -69,8 +69,17 @@ def parse_exprs_and_named_exprs(
         if len(_results) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
-        results[name] = _results[0]
+        for _result in _results:
+            if getattr(value, "_returns_scalar", False):
+                results[name] = _result[0]
+            else:
+                results[name] = _result
     return results
+
+
+def add_row_index(frame: Any, name: str) -> Any:
+    frame = frame.assign(**{name: 1})
+    return frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1})
 
 
 def set_axis(obj: T, index: Index) -> T:

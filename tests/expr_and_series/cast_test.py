@@ -1,5 +1,6 @@
 from typing import Any
 
+import pandas as pd
 import pyarrow as pa
 import pytest
 
@@ -145,3 +146,15 @@ def test_cast_series(constructor_eager: Any, request: Any) -> None:
         df["p"].cast(nw.Duration),
     )
     assert result.schema == expected
+
+
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("1.0.0"),
+    reason="too old for convert_dtypes",
+)
+def test_cast_string() -> None:
+    s_pd = pd.Series([1, 2]).convert_dtypes()
+    s = nw.from_native(s_pd, series_only=True)
+    s = s.cast(nw.String)
+    result = nw.to_native(s)
+    assert str(result.dtype) in ("string", "object", "dtype('O')")

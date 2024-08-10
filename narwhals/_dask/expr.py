@@ -5,15 +5,16 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
+from narwhals._dask.utils import add_row_index
+from narwhals._dask.utils import maybe_evaluate
 from narwhals.dependencies import get_dask
+from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
-
-from narwhals._dask.utils import maybe_evaluate
 
 
 class DaskExpr:
@@ -333,6 +334,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def __invert__(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.__invert__(),
+            "__invert__",
+            returns_scalar=False,
+        )
+
     def mean(self) -> Self:
         return self._from_call(
             lambda _input: _input.mean(),
@@ -405,12 +413,42 @@ class DaskExpr:
             returns_scalar=True,
         )
 
+    def count(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.count(),
+            "count",
+            returns_scalar=True,
+        )
+
     def round(self, decimals: int) -> Self:
         return self._from_call(
             lambda _input, decimals: _input.round(decimals),
             "round",
             decimals,
             returns_scalar=False,
+        )
+
+    def abs(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.abs(),
+            "abs",
+            returns_scalar=False,
+        )
+
+    def all(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.all(
+                axis=None, skipna=True, split_every=False, out=None
+            ),
+            "all",
+            returns_scalar=True,
+        )
+
+    def any(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.any(axis=0, skipna=True, split_every=False),
+            "any",
+            returns_scalar=True,
         )
 
     def fill_null(self, value: Any) -> DaskExpr:
@@ -429,6 +467,59 @@ class DaskExpr:
             "clip",
             lower_bound,
             upper_bound,
+            returns_scalar=False,
+        )
+
+    def n_unique(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.nunique(dropna=False),
+            "n_unique",
+            returns_scalar=True,
+        )
+
+    def is_null(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.isna(),
+            "is_null",
+            returns_scalar=False,
+        )
+
+    def len(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.size,
+            "len",
+            returns_scalar=True,
+        )
+
+    def is_first_distinct(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            _name = _input.name
+            col_token = generate_unique_token(n_bytes=8, columns=[_name])
+            _input = add_row_index(_input.to_frame(), col_token)
+            first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
+                col_token
+            ]
+
+            return _input[col_token].isin(first_distinct_index)
+
+        return self._from_call(
+            func,
+            "is_first_distinct",
+            returns_scalar=False,
+        )
+
+    def is_last_distinct(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            _name = _input.name
+            col_token = generate_unique_token(n_bytes=8, columns=[_name])
+            _input = add_row_index(_input.to_frame(), col_token)
+            last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
+
+            return _input[col_token].isin(last_distinct_index)
+
+        return self._from_call(
+            func,
+            "is_last_distinct",
             returns_scalar=False,
         )
 
