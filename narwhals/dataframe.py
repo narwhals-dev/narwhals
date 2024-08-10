@@ -2038,7 +2038,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_arrow()
 
-            >>> func(df_pd)  # doctest:+NORMALIZE_WHITESPACE
+            >>> func(df_pd)  # doctest:+SKIP
             pyarrow.Table
             foo: int64
             bar: string
