@@ -615,6 +615,9 @@ class ArrowSeries:
 
         return self._from_native_series(arr)
 
+    def to_arrow(self: Self) -> Any:
+        return self._native_series.combine_chunks()
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)

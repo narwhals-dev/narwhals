@@ -47,6 +47,7 @@
         - std
         - sum
         - tail
+        - to_arrow
         - to_dummies
         - to_frame
         - to_list
