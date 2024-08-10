@@ -8,6 +8,7 @@ from typing import NoReturn
 
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
+from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
@@ -37,6 +38,10 @@ class DaskNamespace:
     Datetime = dtypes.Datetime
     Duration = dtypes.Duration
     Date = dtypes.Date
+
+    @property
+    def selectors(self) -> DaskSelectorNamespace:
+        return DaskSelectorNamespace(backend_version=self._backend_version)
 
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
