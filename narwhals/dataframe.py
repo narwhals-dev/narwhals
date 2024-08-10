@@ -2039,8 +2039,20 @@ class DataFrame(BaseFrame[FrameT]):
             ...     return df.to_arrow()
 
             >>> func(df_pd)  # doctest:+NORMALIZE_WHITESPACE
+            pyarrow.Table
+            foo: int64
+            bar: string
+            ----
+            foo: [[1,2,3]]
+            bar: [["a","b","c"]]
 
             >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            pyarrow.Table
+            foo: int64
+            bar: large_string
+            ----
+            foo: [[1,2,3]]
+            bar: [["a","b","c"]]
         """
         return self._compliant_frame.to_arrow()
 
