@@ -31,6 +31,7 @@
         - shape
         - sort
         - tail
+        - to_arrow
         - to_dict
         - to_numpy
         - to_pandas
