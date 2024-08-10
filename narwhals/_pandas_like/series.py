@@ -640,7 +640,7 @@ class PandasLikeSeries:
         )
 
     def to_arrow(self: Self) -> Any:
-        if self._implementation is Implementation.CUDF:
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
             msg = "`to_arrow` is not implemented for CuDF backend."
             raise NotImplementedError(msg)
 
