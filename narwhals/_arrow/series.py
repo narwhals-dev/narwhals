@@ -185,7 +185,7 @@ class ArrowSeries:
         pc = get_pyarrow_compute()
         ser = self._native_series
         other = validate_column_comparand(other)
-        if not isinstance(other, (pa.Array, pa.ChunkedArray)):
+        if not isinstance(other, (pa.Array, pa.ChunkedArray)):  # pragma: no cover
             # scalar
             other = pa.scalar(other)
         return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))

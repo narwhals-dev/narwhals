@@ -17,7 +17,7 @@ def test_len_no_filter(constructor: Any) -> None:
     compare_dicts(df, expected)
 
 
-def test_len_len_chaining(constructor: Any, request: Any) -> None:
+def test_len_chaining(constructor: Any, request: Any) -> None:
     data = {"a": list("xyz"), "b": [1, 2, 1]}
     expected = {"a1": [2], "a2": [1]}
     if "dask" in str(constructor):
@@ -43,3 +43,11 @@ def test_namespace_len(constructor: Any) -> None:
     )
     expected = {"len": [0], "a": [0]}
     compare_dicts(df, expected)
+
+
+def test_len_series(constructor_eager: Any) -> None:
+    data = {"a": [1, 2, 1]}
+    s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+
+    assert s.len() == 3
+    assert len(s) == 3
