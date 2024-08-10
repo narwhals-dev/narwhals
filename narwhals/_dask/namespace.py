@@ -63,6 +63,19 @@ class DaskNamespace:
             backend_version=self._backend_version,
         )
 
+    def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
+        # TODO @FBruzzesi: cast to dtype once `reverse_translate_dtype` is implemented.
+        # It should be enough to add `.astype(reverse_translate_dtype(dtype))`
+        return DaskExpr(
+            lambda df: [df._native_dataframe.assign(lit=value).loc[:, "lit"]],
+            depth=0,
+            function_name="lit",
+            root_names=None,
+            output_names=["lit"],
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
+
     def min(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names,
