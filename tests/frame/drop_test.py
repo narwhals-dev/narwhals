@@ -4,7 +4,6 @@ from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
-from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
 
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
@@ -13,15 +12,17 @@ from narwhals._exceptions import ColumnNotFoundError
 @pytest.mark.parametrize(
     ("to_drop", "expected"),
     [
-        (["a"], ["b", "z"]),
-        (["a", "b"], ["z"]),
+        ("abc", ["b", "z"]),
+        (["abc"], ["b", "z"]),
+        (["abc", "b"], ["z"]),
     ],
 )
 def test_drop(constructor: Any, to_drop: list[str], expected: list[str]) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     assert df.drop(to_drop).collect_schema().names() == expected
-    assert df.drop(*to_drop).collect_schema().names() == expected
+    if not isinstance(to_drop, str):
+        assert df.drop(*to_drop).collect_schema().names() == expected
 
 
 @pytest.mark.parametrize(
@@ -29,9 +30,7 @@ def test_drop(constructor: Any, to_drop: list[str], expected: list[str]) -> None
     [
         (
             True,
-            pytest.raises(
-                (PlColumnNotFoundError, ColumnNotFoundError), match='"z" not found'
-            ),
+            pytest.raises(ColumnNotFoundError, match='"z" not found'),
         ),
         (False, does_not_raise()),
     ],

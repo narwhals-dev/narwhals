@@ -11,7 +11,6 @@ from typing import overload
 from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
@@ -286,18 +285,8 @@ class ArrowDataFrame:
             ),
         )
 
-    def drop(self: Self, *columns: str, strict: bool = True) -> Self:
-        cols = set(self.columns)
-        to_drop = list(columns)
-        if strict:
-            for d in to_drop:
-                if d not in cols:
-                    msg = f'"{d}" not found'
-                    raise ColumnNotFoundError(msg)
-        else:
-            to_drop = list(cols.intersection(set(to_drop)))
-
-        return self._from_native_dataframe(self._native_dataframe.drop(to_drop))
+    def drop(self: Self, columns: str | list[str]) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.drop(columns))
 
     def drop_nulls(self) -> Self:
         return self._from_native_dataframe(self._native_dataframe.drop_null())

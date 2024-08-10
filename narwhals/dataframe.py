@@ -11,6 +11,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
+from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
 from narwhals.schema import Schema
@@ -137,10 +138,18 @@ class BaseFrame(Generic[FrameT]):
     def tail(self, n: int) -> Self:
         return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
-    def drop(self, *columns: str | Iterable[str], strict: bool) -> Self:
-        return self._from_compliant_dataframe(
-            self._compliant_frame.drop(*flatten(columns), strict=strict)
-        )
+    def drop(self, *columns: Iterable[str], strict: bool) -> Self:
+        cols = set(self.collect_schema().names())
+        to_drop = list(columns)
+
+        if strict:
+            for d in to_drop:
+                if d not in cols:
+                    msg = f'"{d}" not found'
+                    raise ColumnNotFoundError(msg)
+        else:
+            to_drop = list(cols.intersection(set(to_drop)))
+        return self._from_compliant_dataframe(self._compliant_frame.drop(to_drop))
 
     def unique(
         self,
@@ -1347,7 +1356,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*columns, strict=strict)
+        return super().drop(*flatten(columns), strict=strict)
 
     def unique(
         self,
@@ -2707,7 +2716,6 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
-                Accepts column selector input.
             strict: Validate that all column names exist in the schema and throw an
                 exception if a column name does not exist in the schema.
 

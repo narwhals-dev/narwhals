@@ -9,7 +9,6 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import broadcast_series
@@ -319,17 +318,8 @@ class PandasLikeDataFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
 
-    def drop(self: Self, *columns: str, strict: bool = True) -> Self:
-        cols = set(self.columns)
-        to_drop = list(columns)
-        if strict:
-            for d in to_drop:
-                if d not in cols:
-                    msg = f'"{d}" not found'
-                    raise ColumnNotFoundError(msg)
-        else:
-            to_drop = list(cols.intersection(set(to_drop)))
-        return self._from_native_dataframe(self._native_dataframe.drop(columns=to_drop))
+    def drop(self: Self, columns: str | list[str]) -> Self:
+        return self._from_native_dataframe(self._native_dataframe.drop(columns=columns))
 
     # --- transform ---
     def sort(
