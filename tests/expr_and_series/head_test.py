@@ -18,3 +18,11 @@ def test_head(constructor: Any, n: int, request: Any) -> None:
     result = df.select(nw.col("a").head(n))
     expected = {"a": [1, 2]}
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("n", [2, -1])
+def test_head_series(constructor_eager: Any, n: int) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    result = df.select(df["a"].head(n))
+    expected = {"a": [1, 2]}
+    compare_dicts(result, expected)
