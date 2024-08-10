@@ -140,10 +140,6 @@ class DaskLazyFrame:
         return self._from_native_dataframe(
             self._native_dataframe.head(n=n, compute=False)
         )
-        df = self.with_row_index("index")
-        return self._from_native_dataframe(
-            df._native_dataframe[df._native_dataframe["index"] < n]
-        ).drop("index")
 
     def unique(
         self: Self,
