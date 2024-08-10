@@ -114,20 +114,15 @@ class DaskLazyFrame:
 
         col_order = list(new_series.keys())
 
-        index = next(  # pragma: no cover
+        left_most_series = next(  # pragma: no cover
             s for s in new_series.values() if not isinstance(s, de._collection.Scalar)
-        ).index
-
-        new_series = {
-            k: set_axis(v, index)
-            for k, v in sorted(
-                new_series.items(),
-                key=lambda item: isinstance(item[1], de._collection.Scalar),
-            )
-        }
+        )
+        index = left_most_series.index
 
         return self._from_native_dataframe(
-            dd.from_pandas(pd.DataFrame()).assign(**new_series).loc[:, col_order]
+            left_most_series.to_frame()
+            .assign(**{k: set_axis(v, index) for k, v in new_series.items()})
+            .loc[:, col_order]
         )
 
     def drop_nulls(self) -> Self:
