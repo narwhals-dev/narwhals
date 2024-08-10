@@ -8,6 +8,7 @@ from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
+from narwhals._exceptions import ColumnNotFoundError
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
@@ -123,10 +124,18 @@ class DaskLazyFrame:
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
 
-    def drop(self: Self, *columns: str) -> Self:
-        return self._from_native_dataframe(
-            self._native_dataframe.drop(columns=list(columns))
-        )
+    def drop(self: Self, *columns: str, strict: bool = True) -> Self:
+        cols = set(self.columns)
+        to_drop = list(columns)
+        if strict:
+            for d in to_drop:
+                if d not in cols:
+                    msg = f'"{d}" not found'
+                    raise ColumnNotFoundError(msg)
+        else:
+            to_drop = list(cols.intersection(set(to_drop)))
+
+        return self._from_native_dataframe(self._native_dataframe.drop(columns=to_drop))
 
     def with_row_index(self: Self, name: str) -> Self:
         # Implementation is based on the following StackOverflow reply:
