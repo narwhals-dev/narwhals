@@ -491,19 +491,34 @@ class DaskExprStringNamespace:
         self._expr = expr
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+        n: int = 1,
     ) -> DaskExpr:
         return self._expr._from_call(
             lambda _input, _pattern, _value, _literal, _n: _input.str.replace(
                 _pattern, _value, n=n, regex=not literal
             ),
             "replace",
-            pat=pattern,
-            repl=value,
-            n=n,
-            regex=not literal,
+            pattern,
+            value,
+            n,
+            literal,
             returns_scalar=False,
         )
+
+    def replace_all(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+        n: int = 1,
+    ) -> DaskExpr:
+        return self.replace(pattern=pattern, value=value, literal=literal, n=-1)
 
     def strip_chars(self, characters: str | None = None) -> DaskExpr:
         return self._expr._from_call(

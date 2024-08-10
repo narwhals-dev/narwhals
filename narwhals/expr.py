@@ -1949,6 +1949,36 @@ class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> Expr:
+        r"""
+        Replace first matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+            n: Number of matches to replace.
+
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.replace(
+                pattern, value, literal=literal, n=n
+            )
+        )
+
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
+        r"""
+        Replace all matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+        """
+        return self.replace(pattern=pattern, value=value, literal=literal, n=-1)
+
     def strip_chars(self, characters: str | None = None) -> Expr:
         r"""
         Remove leading and trailing characters.

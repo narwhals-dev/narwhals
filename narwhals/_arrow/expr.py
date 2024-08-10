@@ -419,6 +419,33 @@ class ArrowExprStringNamespace:
     def __init__(self, expr: ArrowExpr) -> None:
         self._expr = expr
 
+    def replace(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+        n: int = 1,
+    ) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr,
+            "str",
+            "replace",
+            pattern,
+            value,
+            literal=literal,
+            n=n,
+        )
+
+    def replace_all(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+    ) -> ArrowExpr:
+        return self.replace(pattern=pattern, value=value, literal=literal, n=-1)
+
     def strip_chars(self, characters: str | None = None) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._expr,
