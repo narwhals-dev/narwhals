@@ -2227,6 +2227,45 @@ class Series:
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
+    def to_arrow(self: Self) -> Any:
+        r"""
+        Convert to arrow.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1, 2, 3, 4]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            Let's define a dataframe-agnostic function that converts to arrow:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.to_arrow()
+
+            >>> func(s_pd)  # doctest:+NORMALIZE_WHITESPACE
+            <pyarrow.lib.Int64Array object at ...>
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            <pyarrow.lib.Int64Array object at ...>
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+        """
+
+        return self._compliant_series.to_arrow()
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
