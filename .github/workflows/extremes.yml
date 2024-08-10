@@ -20,7 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install uv (Unix)
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      - name: install-minimu-versions
+      - name: install-minimum-versions
         run: uv pip install tox virtualenv setuptools pandas==0.25.3 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
       - name: install-reqs
         run: uv pip install -r requirements-dev.txt --system
@@ -43,7 +43,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install uv (Unix)
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      - name: install-minimu-versions
+      - name: install-minimum-versions
         run: uv pip install tox virtualenv setuptools pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 scipy==1.5.0 scikit-learn==1.1.0 tzdata --system
       - name: install-reqs
         run: uv pip install -r requirements-dev.txt --system
