@@ -142,7 +142,7 @@ class DaskLazyFrame:
 
     def head(self: Self, n: int) -> Self:
         return self._from_native_dataframe(
-            self._native_dataframe.head(n=n, compute=False)
+            self._native_dataframe.head(n=n, compute=False, npartitions=-1)
         )
 
     def unique(
