@@ -67,7 +67,7 @@ def test_categorical(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.skipif((get_dask() is not None), reason="too old for dask")
+@pytest.mark.skipif((get_dask() is None), reason="too old for dask")
 def test_dask_categorical() -> None:
     import dask.dataframe as dd
 
