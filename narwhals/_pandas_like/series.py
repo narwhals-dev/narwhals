@@ -640,12 +640,12 @@ class PandasLikeSeries:
         )
 
     def to_arrow(self: Self) -> Any:
-        if self._implementation is not Implementation.CUDF:
-            pa = get_pyarrow()
-            return pa.Array.from_pandas(self._native_series)
+        if self._implementation is Implementation.CUDF:
+            msg = "`to_arrow` is not implemented for CuDF backend."
+            raise NotImplementedError(msg)
 
-        msg = f"`to_arrow` is not implemented for {self._implementation} backend"
-        raise NotImplementedError(msg)
+        pa = get_pyarrow()
+        return pa.Array.from_pandas(self._native_series)
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
