@@ -271,6 +271,10 @@ class PandasLikeDataFrame:
     ) -> Self:
         index = self._native_dataframe.index
         new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
+
+        if not new_columns and len(self) == 0:
+            return self
+
         # If the inputs are all Expressions which return full columns
         # (as opposed to scalars), we can use a fast path (concat, instead of assign).
         # We can't use the fastpath if any input is not an expression (e.g.
