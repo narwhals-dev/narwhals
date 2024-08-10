@@ -5,10 +5,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
-series = [1, 4, 2, 5]
-data = {
-    "a": series,
-}
+data = {"a": [1, 4, 2, 5]}
 
 
 def test_expr_is_in(constructor: Any, request: Any) -> None:
@@ -22,9 +19,19 @@ def test_expr_is_in(constructor: Any, request: Any) -> None:
 
 
 def test_ser_is_in(constructor_eager: Any) -> None:
-    ser = nw.from_native(constructor_eager({"a": series}), eager_only=True)["a"]
-    result = ser.is_in([4, 5]).to_list()
-    assert not result[0]
-    assert result[1]
-    assert not result[2]
-    assert result[3]
+    ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = {"a": ser.is_in([4, 5]).to_list()}
+    expected = {"a": [False, True, False, True]}
+
+    compare_dicts(result, expected)
+
+
+def test_is_in_other(constructor: Any) -> None:
+    df_raw = constructor(data)
+    with pytest.raises(
+        NotImplementedError,
+        match=(
+            "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
+        ),
+    ):
+        nw.from_native(df_raw).with_columns(contains=nw.col("a").is_in("sets"))

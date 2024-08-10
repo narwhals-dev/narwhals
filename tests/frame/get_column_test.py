@@ -3,7 +3,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 
 def test_get_column(constructor_eager: Any) -> None:

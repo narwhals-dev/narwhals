@@ -11,7 +11,7 @@ data = {
 }
 
 
-def test_null_count(constructor: Any, request: Any) -> None:
+def test_null_count_expr(constructor: Any, request: Any) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -21,3 +21,10 @@ def test_null_count(constructor: Any, request: Any) -> None:
         "b": [1],
     }
     compare_dicts(result, expected)
+
+
+def test_null_count_series(constructor_eager: Any) -> None:
+    data = [1, 2, None]
+    series = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
+    result = series.null_count()
+    assert result == 1
