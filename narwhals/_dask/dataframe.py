@@ -97,7 +97,11 @@ class DaskLazyFrame:
         if not new_series:
             # return empty dataframe, like Polars does
             pd = get_pandas()
-            return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
+            return self._from_native_dataframe(
+                dd.from_pandas(
+                    pd.DataFrame(), npartitions=self._native_dataframe.npartitions
+                )
+            )
 
         if all(getattr(expr, "_returns_scalar", False) for expr in exprs) and all(
             getattr(val, "_returns_scalar", False) for val in named_exprs.values()

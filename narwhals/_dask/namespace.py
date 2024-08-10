@@ -93,7 +93,12 @@ class DaskNamespace:
 
         def func(df: DaskLazyFrame) -> list[Any]:
             if not df.columns:
-                return [dd.from_pandas(pd.Series([0], name="len"))]
+                return [
+                    dd.from_pandas(
+                        pd.Series([0], name="len"),
+                        npartitions=df._native_dataframe.npartitions,
+                    )
+                ]
             return [
                 df._native_dataframe.loc[:, df.columns[0]].size.to_series().rename("len")
             ]
