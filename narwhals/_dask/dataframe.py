@@ -136,6 +136,15 @@ class DaskLazyFrame:
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
 
+    def head(self: Self, n: int) -> Self:
+        return self._from_native_dataframe(
+            self._native_dataframe.head(n=n, compute=False)
+        )
+        df = self.with_row_index("index")
+        return self._from_native_dataframe(
+            df._native_dataframe[df._native_dataframe["index"] < n]
+        ).drop("index")
+
     def unique(
         self: Self,
         subset: str | list[str] | None,
