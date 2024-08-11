@@ -534,6 +534,16 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def tail(self: Self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.tail` is not supported for the Dask backend. Please use `LazyFrame.tail` instead."
+        raise NotImplementedError(msg)
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.gather_every` is not supported for the Dask backend. Please use `LazyFrame.gather_every` instead."
+        raise NotImplementedError(msg)
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
