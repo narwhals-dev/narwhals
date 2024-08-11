@@ -1810,8 +1810,8 @@ class Expr:
     # TODO @aivanoved: make type alias for numeric type
     def clip(
         self,
-        lower_bound: IntoExpr | Any | None = None,
-        upper_bound: IntoExpr | Any | None = None,
+        lower_bound: Any | None = None,
+        upper_bound: Any | None = None,
     ) -> Self:
         r"""
         Clip values in the Series.
@@ -1916,11 +1916,7 @@ class Expr:
             │ 3   │
             └─────┘
         """
-        return self.__class__(
-            lambda plx: self._call(plx).clip(
-                extract_compliant(plx, lower_bound), extract_compliant(plx, upper_bound)
-            )
-        )
+        return self.__class__(lambda plx: self._call(plx).clip(lower_bound, upper_bound))
 
     @property
     def str(self: Self) -> ExprStringNamespace:
