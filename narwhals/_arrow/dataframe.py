@@ -274,7 +274,7 @@ class ArrowDataFrame:
                     join_type="inner",
                     right_suffix="_right",
                 )
-                .drop(key_token),
+                .drop([key_token]),
             )
 
         return self._from_native_dataframe(
