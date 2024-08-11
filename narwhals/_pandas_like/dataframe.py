@@ -318,7 +318,7 @@ class PandasLikeDataFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
 
-    def drop(self: Self, columns: str | list[str]) -> Self:
+    def drop(self: Self, columns: list[str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.drop(columns=columns))
 
     # --- transform ---
@@ -379,14 +379,16 @@ class PandasLikeDataFrame:
                 )
 
                 return self._from_native_dataframe(
-                    self._native_dataframe.assign(**{key_token: 0}).merge(
+                    self._native_dataframe.assign(**{key_token: 0})
+                    .merge(
                         other._native_dataframe.assign(**{key_token: 0}),
                         how="inner",
                         left_on=key_token,
                         right_on=key_token,
                         suffixes=("", "_right"),
-                    ),
-                ).drop(key_token)
+                    )
+                    .drop(columns=key_token),
+                )
             else:
                 return self._from_native_dataframe(
                     self._native_dataframe.merge(
@@ -417,7 +419,7 @@ class PandasLikeDataFrame:
                     right_on=left_on,
                 )
                 .loc[lambda t: t[indicator_token] == "left_only"]
-                .drop(columns=[indicator_token])
+                .drop(columns=indicator_token)
             )
 
         if how == "semi":

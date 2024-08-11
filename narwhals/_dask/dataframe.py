@@ -123,7 +123,7 @@ class DaskLazyFrame:
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
 
-    def drop(self: Self, columns: str | list[str]) -> Self:
+    def drop(self: Self, columns: list[str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.drop(columns=columns))
 
     def with_row_index(self: Self, name: str) -> Self:
@@ -193,14 +193,16 @@ class DaskLazyFrame:
             )
 
             return self._from_native_dataframe(
-                self._native_dataframe.assign(**{key_token: 0}).merge(
+                self._native_dataframe.assign(**{key_token: 0})
+                .merge(
                     other._native_dataframe.assign(**{key_token: 0}),
                     how="inner",
                     left_on=key_token,
                     right_on=key_token,
                     suffixes=("", "_right"),
-                ),
-            ).drop(key_token)
+                )
+                .drop(columns=key_token),
+            )
 
         if how == "anti":
             indicator_token = generate_unique_token(

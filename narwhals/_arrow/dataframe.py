@@ -266,14 +266,16 @@ class ArrowDataFrame:
             )
 
             return self._from_native_dataframe(
-                self.with_columns(**{key_token: plx.lit(0, None)})._native_dataframe.join(
+                self.with_columns(**{key_token: plx.lit(0, None)})
+                ._native_dataframe.join(
                     other.with_columns(**{key_token: plx.lit(0, None)})._native_dataframe,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
                     right_suffix="_right",
-                ),
-            ).drop([key_token])
+                )
+                .drop(key_token),
+            )
 
         return self._from_native_dataframe(
             self._native_dataframe.join(
@@ -285,7 +287,7 @@ class ArrowDataFrame:
             ),
         )
 
-    def drop(self: Self, columns: str | list[str]) -> Self:
+    def drop(self: Self, columns: list[str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.drop(columns))
 
     def drop_nulls(self) -> Self:
