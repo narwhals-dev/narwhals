@@ -2256,7 +2256,7 @@ class SeriesStringNamespace:
         Replace first matching regex/literal substring with a new string value.
 
         Arguments:
-            pattern: A valid regular expression pattern
+            pattern: A valid regular expression pattern.
             value: String that will replace the matched substring.
             literal: Treat `pattern` as a literal string.
             n: Number of matches to replace.
@@ -2295,7 +2295,7 @@ class SeriesStringNamespace:
         Replace all matching regex/literal substring with a new string value.
 
         Arguments:
-            pattern: A valid regular expression pattern
+            pattern: A valid regular expression pattern.
             value: String that will replace the matched substring.
             literal: Treat `pattern` as a literal string.
 
