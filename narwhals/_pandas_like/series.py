@@ -17,6 +17,7 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import Implementation
 
@@ -637,6 +638,14 @@ class PandasLikeSeries:
         return self._from_native_series(
             self._native_series.clip(lower_bound, upper_bound)
         )
+
+    def to_arrow(self: Self) -> Any:
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
+            msg = "`to_arrow` is not implemented for CuDF backend."
+            raise NotImplementedError(msg)
+
+        pa = get_pyarrow()
+        return pa.Array.from_pandas(self._native_series)
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

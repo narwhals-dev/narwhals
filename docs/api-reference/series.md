@@ -37,6 +37,7 @@
         - name
         - null_count
         - n_unique
+        - pipe
         - quantile
         - round
         - sample
@@ -46,6 +47,7 @@
         - std
         - sum
         - tail
+        - to_arrow
         - to_dummies
         - to_frame
         - to_list

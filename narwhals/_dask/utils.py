@@ -68,3 +68,8 @@ def parse_exprs_and_named_exprs(
             else:
                 results[name] = _result
     return results
+
+
+def add_row_index(frame: Any, name: str) -> Any:
+    frame = frame.assign(**{name: 1})
+    return frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1})

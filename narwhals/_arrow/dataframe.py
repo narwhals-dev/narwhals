@@ -495,3 +495,6 @@ class ArrowDataFrame:
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_dataframe(self._native_dataframe[offset::n])
+
+    def to_arrow(self: Self) -> Any:
+        return self._native_dataframe

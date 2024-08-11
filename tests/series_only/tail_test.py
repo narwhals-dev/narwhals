@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 
 
 @pytest.mark.parametrize("n", [2, -1])

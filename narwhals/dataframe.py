@@ -588,7 +588,7 @@ class DataFrame(BaseFrame[FrameT]):
             ...     "A": [1, 2, 3, 4, 5],
             ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
             ...     "B": [5, 4, 3, 2, 1],
-            ...     "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+            ...     "animals": ["beetle", "fly", "beetle", "beetle", "beetle"],
             ...     "optional": [28, 300, None, 2, -30],
             ... }
             >>> df_pd = pd.DataFrame(df)
@@ -603,9 +603,9 @@ class DataFrame(BaseFrame[FrameT]):
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
+            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
             >>> func(df_pl)
-            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
+            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
         from narwhals.series import Series
 
@@ -1999,8 +1999,8 @@ class DataFrame(BaseFrame[FrameT]):
             starting from a offset of 1:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.gather_every(n=2, offset=1)
+            ... def func(df):
+            ...     return df.gather_every(n=2, offset=1)
 
             >>> func(df_pd)
                a  b
@@ -2019,6 +2019,42 @@ class DataFrame(BaseFrame[FrameT]):
             └─────┴─────┘
         """
         return super().gather_every(n=n, offset=offset)
+
+    def to_arrow(self: Self) -> Any:
+        r"""
+        Convert to arrow table.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2, 3], "bar": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function that converts to arrow table:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.to_arrow()
+
+            >>> func(df_pd)  # doctest:+SKIP
+            pyarrow.Table
+            foo: int64
+            bar: string
+            ----
+            foo: [[1,2,3]]
+            bar: [["a","b","c"]]
+
+            >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            pyarrow.Table
+            foo: int64
+            bar: large_string
+            ----
+            foo: [[1,2,3]]
+            bar: [["a","b","c"]]
+        """
+        return self._compliant_frame.to_arrow()
 
 
 class LazyFrame(BaseFrame[FrameT]):
@@ -3299,8 +3335,8 @@ class LazyFrame(BaseFrame[FrameT]):
             starting from a offset of 1:
 
             >>> @nw.narwhalify
-            ... def func(df_any):
-            ...     return df_any.gather_every(n=2, offset=1)
+            ... def func(df):
+            ...     return df.gather_every(n=2, offset=1)
 
             >>> func(df_pd)
                a  b

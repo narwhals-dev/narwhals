@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -100,6 +101,44 @@ class Series:
             level=self._level,
         )
 
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        """
+        Pipe function call.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3, 4])
+            >>> s_pl = pl.Series([1, 2, 3, 4])
+
+            Lets define a function to pipe into
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.pipe(lambda x: x + 2)
+
+            Now apply it to the series
+
+            >>> func(s_pd)
+            0    3
+            1    4
+            2    5
+            3    6
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               3
+               4
+               5
+               6
+            ]
+
+
+        """
+        return function(self, *args, **kwargs)
+
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals Series                                 "
         length = len(header)
@@ -139,9 +178,9 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pd)
             3
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pl)
             3
         """
         return len(self._compliant_series)
@@ -2187,6 +2226,45 @@ class Series:
         return self._from_compliant_series(
             self._compliant_series.gather_every(n=n, offset=offset)
         )
+
+    def to_arrow(self: Self) -> Any:
+        r"""
+        Convert to arrow.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1, 2, 3, 4]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            Let's define a dataframe-agnostic function that converts to arrow:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.to_arrow()
+
+            >>> func(s_pd)  # doctest:+NORMALIZE_WHITESPACE
+            <pyarrow.lib.Int64Array object at ...>
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            <pyarrow.lib.Int64Array object at ...>
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+        """
+
+        return self._compliant_series.to_arrow()
 
     @property
     def str(self) -> SeriesStringNamespace:
