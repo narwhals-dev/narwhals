@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 def test_lit(
     constructor: Any, dtype: DType | None, expected_lit: list[Any], request: Any
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) and dtype == nw.String:
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)

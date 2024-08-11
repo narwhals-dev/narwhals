@@ -202,25 +202,13 @@ class PandasLikeNamespace:
 
     # --- horizontal ---
     def sum_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        return reduce(
-            lambda x, y: x + y,
-            parse_into_exprs(
-                *exprs,
-                namespace=self,
-            ),
-        )
+        return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        return reduce(
-            lambda x, y: x & y,
-            parse_into_exprs(*exprs, namespace=self),
-        )
+        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
 
     def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        return reduce(
-            lambda x, y: x | y,
-            parse_into_exprs(*exprs, namespace=self),
-        )
+        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
 
     def concat(
         self,

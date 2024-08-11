@@ -148,6 +148,7 @@ if (
     .difference(expr)
     .difference(
         {
+            "to_arrow",
             "to_dummies",
             "to_pandas",
             "to_list",

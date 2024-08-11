@@ -275,3 +275,20 @@ class DaskLazyFrame:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
         return DaskLazyGroupBy(self, list(by))
+
+    def tail(self: Self, n: int) -> Self:
+        return self._from_native_dataframe(
+            self._native_dataframe.tail(n=n, compute=False)
+        )
+
+    def gather_every(self: Self, n: int, offset: int) -> Self:
+        row_index_token = generate_unique_token(n_bytes=8, columns=self.columns)
+        pln = self.__narwhals_namespace__()
+        return (
+            self.with_row_index(name=row_index_token)
+            .filter(
+                pln.col(row_index_token) >= offset,  # type: ignore[operator]
+                (pln.col(row_index_token) - offset) % n == 0,  # type: ignore[arg-type]
+            )
+            .drop(row_index_token)
+        )

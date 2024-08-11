@@ -20,6 +20,7 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
@@ -592,3 +593,11 @@ class PandasLikeDataFrame:
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_dataframe(self._native_dataframe.iloc[offset::n])
+
+    def to_arrow(self: Self) -> Any:
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
+            msg = "`to_arrow` is not implemented for CuDF backend."
+            raise NotImplementedError(msg)
+
+        pa = get_pyarrow()
+        return pa.Table.from_pandas(self._native_dataframe)
