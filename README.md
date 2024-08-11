@@ -40,6 +40,7 @@ Get started!
 
 Join the party!
 
+- [Altair](https://github.com/vega/altair/)
 - [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
