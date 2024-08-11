@@ -122,9 +122,7 @@ def test_str_replace_all_expr(
 ) -> None:
     df = nw.from_native(constructor(data))
 
-    result_df = nw.to_native(
-        df.select(
+    result= df.select(
             nw.col("a").str.replace_all(pattern=pattern, value=value, literal=literal)
         )
-    )
-    compare_dicts(result_df, expected)
+    compare_dicts(result, expected)
