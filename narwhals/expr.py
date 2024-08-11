@@ -2024,7 +2024,11 @@ class ExprStringNamespace:
             {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' 123']}
 
         """
-        return self.replace(pattern=pattern, value=value, literal=literal, n=-1)
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.replace_all(
+                pattern, value, literal=literal
+            )
+        )
 
     def strip_chars(self, characters: str | None = None) -> Expr:
         r"""

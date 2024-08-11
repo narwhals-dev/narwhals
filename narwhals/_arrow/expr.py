@@ -444,14 +444,13 @@ class ArrowExprStringNamespace:
         *,
         literal: bool = False,
     ) -> ArrowExpr:
-        return reuse_series_namespace_implementation(  # pragma: no cover , coverage bug?
+        return reuse_series_namespace_implementation(
             self._expr,
             "str",
             "replace_all",
             pattern,
             value,
             literal=literal,
-            n=-1,
         )
 
     def strip_chars(self, characters: str | None = None) -> ArrowExpr:

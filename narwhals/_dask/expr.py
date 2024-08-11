@@ -517,7 +517,7 @@ class DaskExprStringNamespace:
         *,
         literal: bool = False,
     ) -> DaskExpr:
-        return self._expr._from_call(  # pragma: no cover , coverage bug?
+        return self._expr._from_call(
             lambda _input, _pattern, _value, _literal: _input.str.replace(
                 _pattern, _value, n=-1, regex=not literal
             ),
