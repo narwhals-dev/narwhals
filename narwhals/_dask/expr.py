@@ -500,13 +500,13 @@ class DaskExprStringNamespace:
     ) -> DaskExpr:
         return self._expr._from_call(
             lambda _input, _pattern, _value, _literal, _n: _input.str.replace(
-                _pattern, _value, n=n, regex=not literal
+                _pattern, _value, regex=not _literal, n=_n
             ),
             "replace",
             pattern,
             value,
-            n,
             literal,
+            n,
             returns_scalar=False,
         )
 
