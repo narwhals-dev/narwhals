@@ -290,5 +290,5 @@ class DaskLazyFrame:
                 pln.col(row_index_token) >= offset,  # type: ignore[operator]
                 (pln.col(row_index_token) - offset) % n == 0,  # type: ignore[arg-type]
             )
-            .drop(row_index_token)
+            .drop([row_index_token])
         )
