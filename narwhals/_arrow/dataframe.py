@@ -288,8 +288,12 @@ class ArrowDataFrame:
     def drop(self, *columns: str) -> Self:
         return self._from_native_dataframe(self._native_dataframe.drop(list(columns)))
 
-    def drop_nulls(self) -> Self:
-        return self._from_native_dataframe(self._native_dataframe.drop_null())
+    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+        if subset is None:
+            return self._from_native_dataframe(self._native_dataframe.drop_null())
+        subset = [subset] if isinstance(subset, str) else subset
+        plx = self.__narwhals_namespace__()
+        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def sort(
         self,
