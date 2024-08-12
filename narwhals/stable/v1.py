@@ -1473,7 +1473,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
@@ -1485,7 +1485,8 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation.
+        native_namespace: The native library to use for DataFrame creation. Only
+            necessary if inputs are not Narwhals Series.
 
     Examples:
         >>> import pandas as pd
