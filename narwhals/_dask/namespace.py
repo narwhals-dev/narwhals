@@ -8,6 +8,7 @@ from typing import NoReturn
 
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
+from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
@@ -38,6 +39,10 @@ class DaskNamespace:
     Duration = dtypes.Duration
     Date = dtypes.Date
 
+    @property
+    def selectors(self) -> DaskSelectorNamespace:
+        return DaskSelectorNamespace(backend_version=self._backend_version)
+
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
 
@@ -60,6 +65,19 @@ class DaskNamespace:
     def col(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names,
+            backend_version=self._backend_version,
+        )
+
+    def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
+        # TODO @FBruzzesi: cast to dtype once `reverse_translate_dtype` is implemented.
+        # It should be enough to add `.astype(reverse_translate_dtype(dtype))`
+        return DaskExpr(
+            lambda df: [df._native_dataframe.assign(lit=value).loc[:, "lit"]],
+            depth=0,
+            function_name="lit",
+            root_names=None,
+            output_names=["lit"],
+            returns_scalar=False,
             backend_version=self._backend_version,
         )
 
@@ -114,6 +132,9 @@ class DaskNamespace:
 
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
+
+    def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+        return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"

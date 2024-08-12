@@ -2020,6 +2020,42 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().gather_every(n=n, offset=offset)
 
+    def to_arrow(self: Self) -> Any:
+        r"""
+        Convert to arrow table.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"foo": [1, 2, 3], "bar": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a dataframe-agnostic function that converts to arrow table:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.to_arrow()
+
+            >>> func(df_pd)  # doctest:+SKIP
+            pyarrow.Table
+            foo: int64
+            bar: string
+            ----
+            foo: [[1,2,3]]
+            bar: [["a","b","c"]]
+
+            >>> func(df_pl)  # doctest:+NORMALIZE_WHITESPACE
+            pyarrow.Table
+            foo: int64
+            bar: large_string
+            ----
+            foo: [[1,2,3]]
+            bar: [["a","b","c"]]
+        """
+        return self._compliant_frame.to_arrow()
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """

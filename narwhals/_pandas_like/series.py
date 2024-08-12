@@ -17,6 +17,7 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import Implementation
 
@@ -638,6 +639,14 @@ class PandasLikeSeries:
             self._native_series.clip(lower_bound, upper_bound)
         )
 
+    def to_arrow(self: Self) -> Any:
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
+            msg = "`to_arrow` is not implemented for CuDF backend."
+            raise NotImplementedError(msg)
+
+        pa = get_pyarrow()
+        return pa.Array.from_pandas(self._native_series)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
@@ -665,6 +674,20 @@ class PandasLikeSeriesCatNamespace:
 class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
+
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.replace(
+                pat=pattern, repl=value, n=n, regex=not literal
+            ),
+        )
+
+    def replace_all(
+        self, pattern: str, value: str, *, literal: bool = False
+    ) -> PandasLikeSeries:
+        return self.replace(pattern, value, literal=literal, n=-1)
 
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(

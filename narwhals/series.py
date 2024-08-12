@@ -2227,6 +2227,45 @@ class Series:
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
+    def to_arrow(self: Self) -> Any:
+        r"""
+        Convert to arrow.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1, 2, 3, 4]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            Let's define a dataframe-agnostic function that converts to arrow:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.to_arrow()
+
+            >>> func(s_pd)  # doctest:+NORMALIZE_WHITESPACE
+            <pyarrow.lib.Int64Array object at ...>
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            <pyarrow.lib.Int64Array object at ...>
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+        """
+
+        return self._compliant_series.to_arrow()
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
@@ -2287,6 +2326,85 @@ class SeriesCatNamespace:
 class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
+
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> Series:
+        r"""
+        Replace first matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+            n: Number of matches to replace.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["123abc", "abc abc123"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.replace("abc", "")
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['123', ' abc123']
+
+            >>> func(s_pl)
+            ['123', ' abc123']
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.replace(
+                pattern, value, literal=literal, n=n
+            )
+        )
+
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Series:
+        r"""
+        Replace all matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["123abc", "abc abc123"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.replace_all("abc", "")
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['123', ' 123']
+
+            >>> func(s_pl)
+            ['123', ' 123']
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.replace_all(
+                pattern, value, literal=literal
+            )
+        )
 
     def strip_chars(self, characters: str | None = None) -> Series:
         r"""

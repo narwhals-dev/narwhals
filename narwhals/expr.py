@@ -1810,8 +1810,8 @@ class Expr:
     # TODO @aivanoved: make type alias for numeric type
     def clip(
         self,
-        lower_bound: IntoExpr | Any | None = None,
-        upper_bound: IntoExpr | Any | None = None,
+        lower_bound: Any | None = None,
+        upper_bound: Any | None = None,
     ) -> Self:
         r"""
         Clip values in the Series.
@@ -1916,11 +1916,7 @@ class Expr:
             │ 3   │
             └─────┘
         """
-        return self.__class__(
-            lambda plx: self._call(plx).clip(
-                extract_compliant(plx, lower_bound), extract_compliant(plx, upper_bound)
-            )
-        )
+        return self.__class__(lambda plx: self._call(plx).clip(lower_bound, upper_bound))
 
     @property
     def str(self: Self) -> ExprStringNamespace:
@@ -1989,6 +1985,87 @@ class ExprCatNamespace:
 class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
+
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> Expr:
+        r"""
+        Replace first matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+            n: Number of matches to replace.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"foo": ["123abc", "abc abc123"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     df = df.with_columns(replaced=nw.col("foo").str.replace("abc", ""))
+            ...     return df.to_dict(as_series=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' abc123']}
+
+            >>> func(df_pl)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' abc123']}
+
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.replace(
+                pattern, value, literal=literal, n=n
+            )
+        )
+
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
+        r"""
+        Replace all matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"foo": ["123abc", "abc abc123"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     df = df.with_columns(replaced=nw.col("foo").str.replace_all("abc", ""))
+            ...     return df.to_dict(as_series=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' 123']}
+
+            >>> func(df_pl)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' 123']}
+
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.replace_all(
+                pattern, value, literal=literal
+            )
+        )
 
     def strip_chars(self, characters: str | None = None) -> Expr:
         r"""
