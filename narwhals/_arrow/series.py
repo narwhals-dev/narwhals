@@ -265,7 +265,7 @@ class ArrowSeries:
     def __native_namespace__(self) -> Any:  # pragma: no cover
         return get_pyarrow()
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
+    def __narwhals_namespace__(self) -> ArrowNamespace:  # pragma: no cover
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(backend_version=self._backend_version)

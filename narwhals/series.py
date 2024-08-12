@@ -55,7 +55,7 @@ class Series:
     def __native_namespace__(self) -> Any:
         return self._compliant_series.__native_namespace__()
 
-    def __narwhals_namespace__(self) -> Any:
+    def __narwhals_namespace__(self) -> Any:  # pragma: no cover
         return self._compliant_series.__narwhals_namespace__()
 
     @property

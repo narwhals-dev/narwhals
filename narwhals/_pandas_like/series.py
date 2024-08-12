@@ -99,7 +99,7 @@ class PandasLikeSeries:
         else:
             self._use_copy_false = False
 
-    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:  # pragma: no cover
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(self._implementation, self._backend_version)

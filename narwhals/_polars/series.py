@@ -39,7 +39,7 @@ class PolarsSeries:
     def __native_namespace__(self) -> Any:
         return get_polars()
 
-    def __narwhals_namespace__(self) -> PolarsNamespace:
+    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
         return PolarsNamespace(backend_version=self._backend_version)
 
     def _from_native_series(self, series: Any) -> Self:
