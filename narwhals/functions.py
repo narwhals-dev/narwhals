@@ -105,12 +105,14 @@ def from_dict(
         msg = "from_dict cannot be called with empty dictionary"
         raise ValueError(msg)
     if native_namespace is None:
-        val = next(iter(data.values()))
-        if not isinstance(val, Series):
+        for val in data.values():
+            if isinstance(val, Series):
+                native_namespace = val.__native_namespace__()
+                break
+        else:
             msg = "Calling `from_dict` without `native_namespace` is only supported if all input values are already Narwhals Series"
             raise TypeError(msg)
-        native_namespace = val.__native_namespace__()
-        data = {key: to_native(value) for key, value in data.items()}
+        data = {key: to_native(value, strict=False) for key, value in data.items()}
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
