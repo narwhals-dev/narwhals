@@ -8,6 +8,8 @@
         - ends_with
         - head
         - slice
+        - replace
+        - replace_all
         - starts_with
         - strip_chars
         - tail

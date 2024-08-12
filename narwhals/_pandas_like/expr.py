@@ -371,6 +371,29 @@ class PandasLikeExprStringNamespace:
     def __init__(self, expr: PandasLikeExpr) -> None:
         self._expr = expr
 
+    def replace(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+        n: int = 1,
+    ) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "replace", pattern, value, literal=literal, n=n
+        )
+
+    def replace_all(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+    ) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "str", "replace_all", pattern, value, literal=literal
+        )
+
     def strip_chars(self, characters: str | None = None) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._expr,
