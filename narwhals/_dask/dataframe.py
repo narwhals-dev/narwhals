@@ -97,7 +97,11 @@ class DaskLazyFrame:
         if not new_series:
             # return empty dataframe, like Polars does
             pd = get_pandas()
-            return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
+            return self._from_native_dataframe(
+                dd.from_pandas(
+                    pd.DataFrame(), npartitions=self._native_dataframe.npartitions
+                )
+            )
 
         if all(getattr(expr, "_returns_scalar", False) for expr in exprs) and all(
             getattr(val, "_returns_scalar", False) for val in named_exprs.values()
@@ -135,6 +139,11 @@ class DaskLazyFrame:
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
+
+    def head(self: Self, n: int) -> Self:
+        return self._from_native_dataframe(
+            self._native_dataframe.head(n=n, compute=False, npartitions=-1)
+        )
 
     def unique(
         self: Self,

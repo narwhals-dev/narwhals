@@ -434,6 +434,11 @@ class DaskExpr:
         msg = "`Expr.drop_nulls` is not supported for the Dask backend. Please use `LazyFrame.drop_nulls` instead."
         raise NotImplementedError(msg)
 
+    def head(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
+        raise NotImplementedError(msg)
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
