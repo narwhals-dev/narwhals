@@ -8,8 +8,8 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._pandas_like.utils import int_dtype_mapper
+from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
-from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
@@ -181,7 +181,7 @@ class PandasLikeSeries:
         dtype: Any,
     ) -> Self:
         ser = self._native_series
-        dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
+        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation)
         return self._from_native_series(ser.astype(dtype))
 
     def item(self: Self, index: int | None = None) -> Any:

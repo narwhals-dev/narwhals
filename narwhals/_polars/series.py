@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 from narwhals._polars.namespace import PolarsNamespace
-from narwhals._polars.utils import reverse_translate_dtype
+from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import translate_dtype
 
 PL = get_polars()
@@ -94,7 +94,7 @@ class PolarsSeries:
 
     def cast(self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype = reverse_translate_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype)
         return self._from_native_series(ser.cast(dtype))
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:

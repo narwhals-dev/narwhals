@@ -7,13 +7,12 @@ from typing import Iterable
 from typing import Literal
 
 from narwhals.dependencies import get_numpy
-from narwhals.dtypes import DType
-from narwhals.dtypes import translate_dtype
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals.dtypes import DType
     from narwhals.typing import IntoExpr
 
 
@@ -165,7 +164,7 @@ class Expr:
         """
 
         return self.__class__(
-            lambda plx: self._call(plx).cast(translate_dtype(plx, dtype)),
+            lambda plx: self._call(plx).cast(dtype),
         )
 
     # --- binary ---
@@ -4065,9 +4064,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    if dtype is None:
-        return Expr(lambda plx: plx.lit(value, dtype))
-    return Expr(lambda plx: plx.lit(value, translate_dtype(plx, dtype)))
+    return Expr(lambda plx: plx.lit(value, dtype))
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

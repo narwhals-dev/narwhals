@@ -69,8 +69,8 @@ class DaskNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
-        # TODO @FBruzzesi: cast to dtype once `reverse_translate_dtype` is implemented.
-        # It should be enough to add `.astype(reverse_translate_dtype(dtype))`
+        # TODO @FBruzzesi: cast to dtype once `narwhals_to_native_dtype` is implemented.
+        # It should be enough to add `.astype(narwhals_to_native_dtype(dtype))`
         return DaskExpr(
             lambda df: [df._native_dataframe.assign(lit=value).loc[:, "lit"]],
             depth=0,

@@ -9,7 +9,7 @@ from typing import overload
 
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
-from narwhals._arrow.utils import reverse_translate_dtype
+from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.dependencies import get_numpy
@@ -369,7 +369,7 @@ class ArrowSeries:
     def cast(self, dtype: DType) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series
-        dtype = reverse_translate_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype)
         return self._from_native_series(pc.cast(ser, dtype))
 
     def null_count(self: Self) -> int:
