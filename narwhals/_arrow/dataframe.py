@@ -13,7 +13,6 @@ from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_parquet
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
@@ -417,7 +416,8 @@ class ArrowDataFrame:
         return self._from_native_frame(df.rename_columns(new_cols))
 
     def write_parquet(self, file: Any) -> Any:
-        pp = get_pyarrow_parquet()
+        import pyarrow.parquet as pp  # ignore-banned-import
+
         pp.write_table(self._native_frame, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
