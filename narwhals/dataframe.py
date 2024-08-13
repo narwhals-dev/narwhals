@@ -2754,6 +2754,11 @@ class LazyFrame(BaseFrame[FrameT]):
             strict: Validate that all column names exist in the schema and throw an
                 exception if a column name does not exist in the schema.
 
+        Warning:
+            `strict` argument is ignored for `polars<1.0.0`.
+
+            Please consider upgrading to a newer version or pass to eager mode.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
