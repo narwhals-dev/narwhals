@@ -318,7 +318,7 @@ class ArrowDataFrame:
         return self._native_dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
 
         return np.column_stack([col.to_numpy() for col in self._native_dataframe.columns])
 
@@ -423,9 +423,10 @@ class ArrowDataFrame:
         pp.write_table(self._native_dataframe, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
+        import numpy as np  # ignore-banned-import
+
         from narwhals._arrow.series import ArrowSeries
 
-        np = get_numpy()
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
         df = self._native_dataframe
@@ -468,7 +469,8 @@ class ArrowDataFrame:
             and has no effect on the output.
         """
 
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
+
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
 
