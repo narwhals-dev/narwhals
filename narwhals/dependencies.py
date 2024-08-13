@@ -88,6 +88,11 @@ def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     return bool((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame))
 
 
+def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
+    """Check whether `df` is a pandas Series without importing pandas."""
+    return bool((pd := get_pandas()) is not None and isinstance(ser, pd.Series))
+
+
 def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
     """Check whether `df` is a Polars DataFrame without importing Polars."""
     return bool((pl := get_polars()) is not None and isinstance(df, pl.DataFrame))
