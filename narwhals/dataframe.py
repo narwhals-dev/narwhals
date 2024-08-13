@@ -263,7 +263,7 @@ class DataFrame(BaseFrame[FrameT]):
         if hasattr(native_frame, "__arrow_c_stream__"):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
-            import pyarrow as pa
+            import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
