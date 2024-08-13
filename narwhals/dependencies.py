@@ -45,17 +45,6 @@ def get_pyarrow() -> Any:  # pragma: no cover
     return sys.modules.get("pyarrow", None)
 
 
-def get_pyarrow_compute() -> Any:  # pragma: no cover
-    """Get pyarrow.compute module (if pyarrow has already been imported - else return None)."""
-    # TODO(marco): remove this one, as it's at odds with the others, as it imports
-    # something new
-    if "pyarrow" in sys.modules:
-        import pyarrow.compute as pc
-
-        return pc
-    return None
-
-
 def get_pyarrow_parquet() -> Any:  # pragma: no cover
     """Get pyarrow.parquet module (if pyarrow has already been imported - else return None)."""
     if "pyarrow" in sys.modules:
@@ -116,7 +105,6 @@ __all__ = [
     "get_modin",
     "get_cudf",
     "get_pyarrow",
-    "get_pyarrow_compute",
     "get_numpy",
     "is_pandas_dataframe",
 ]

@@ -9,7 +9,6 @@ from typing import Iterator
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -79,7 +78,8 @@ def agg_arrow(
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
-    pc = get_pyarrow_compute()
+    import pyarrow.compute as pc  # ignore-banned-import()
+
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):

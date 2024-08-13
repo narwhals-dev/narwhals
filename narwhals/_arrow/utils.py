@@ -5,7 +5,6 @@ from typing import Any
 
 from narwhals import dtypes
 from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -198,7 +197,8 @@ def vertical_concat(dfs: list[Any]) -> Any:
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    pc = get_pyarrow_compute()
+    import pyarrow.compute as pc  # ignore-banned-import()
+
     pa = get_pyarrow()
 
     if isinstance(left, (int, float)):
@@ -237,7 +237,8 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
-    pc = get_pyarrow_compute()
+    import pyarrow.compute as pc  # ignore-banned-import()
+
     pa = get_pyarrow()
 
     # Ensure int / int -> float mirroring Python/Numpy behavior

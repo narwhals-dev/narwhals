@@ -13,7 +13,6 @@ from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
 from narwhals.dependencies import get_pyarrow_parquet
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
@@ -424,7 +423,8 @@ class ArrowDataFrame:
         from narwhals._arrow.series import ArrowSeries
 
         pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         df = self._native_frame
 
         columns = self.columns
@@ -443,9 +443,10 @@ class ArrowDataFrame:
         return ArrowSeries(is_duplicated, name="", backend_version=self._backend_version)
 
     def is_unique(self: Self) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         from narwhals._arrow.series import ArrowSeries
 
-        pc = get_pyarrow_compute()
         is_duplicated = self.is_duplicated()._native_series
 
         return ArrowSeries(
@@ -468,7 +469,7 @@ class ArrowDataFrame:
         import numpy as np  # ignore-banned-import
 
         pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import pyarrow.compute as pc  # ignore-banned-import()
 
         df = self._native_frame
 
