@@ -18,9 +18,9 @@ from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
@@ -161,9 +161,7 @@ class PandasLikeDataFrame:
             )
 
         elif isinstance(item, (slice, Sequence)) or (
-            (np := get_numpy()) is not None
-            and isinstance(item, np.ndarray)
-            and item.ndim == 1
+            is_numpy_array(item) and item.ndim == 1
         ):
             return self._from_native_frame(self._native_frame.iloc[item])
 
@@ -532,7 +530,7 @@ class PandasLikeDataFrame:
         # returns Object) then we just call `to_numpy()` on the DataFrame.
         for dtype in self._native_frame.dtypes:
             if str(dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-                import numpy as np
+                import numpy as np  # ignore-banned-import
 
                 return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
         return self._native_frame.to_numpy()

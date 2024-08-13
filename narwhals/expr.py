@@ -6,7 +6,7 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 
-from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -4053,7 +4053,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         └─────┴─────┘
 
     """
-    if (np := get_numpy()) is not None and isinstance(value, np.ndarray):
+    if is_numpy_array(value):
         msg = (
             "numpy arrays are not supported as literal values. "
             "Consider using `with_columns` to create a new column from the array."

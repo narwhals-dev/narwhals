@@ -15,7 +15,6 @@ from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
@@ -224,7 +223,8 @@ class PandasLikeSeries:
         return self._from_native_series(res)
 
     def arg_true(self) -> PandasLikeSeries:
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
+
         ser = self._native_series
         res = np.flatnonzero(ser)
         return self._from_native_series(

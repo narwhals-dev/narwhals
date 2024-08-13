@@ -16,6 +16,10 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import is_pandas_dataframe
+from narwhals.dependencies import is_pandas_series
+from narwhals.dependencies import is_polars_dataframe
+from narwhals.dependencies import is_polars_lazyframe
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -340,22 +344,27 @@ def from_native(  # noqa: PLR0915
             level="full",
         )
 
+    # TODO(marco): write all of these in terms of `is_` rather
+    # than `get_` + walrus
+
     # Polars
-    elif (pl := get_polars()) is not None and isinstance(native_object, pl.DataFrame):
+    elif is_polars_dataframe(native_object):
         if series_only:
             msg = "Cannot only use `series_only` with polars.DataFrame"
             raise TypeError(msg)
+        pl = get_polars()
         return DataFrame(
             PolarsDataFrame(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
         )
-    elif (pl := get_polars()) is not None and isinstance(native_object, pl.LazyFrame):
+    elif is_polars_lazyframe(native_object):
         if series_only:
             msg = "Cannot only use `series_only` with polars.LazyFrame"
             raise TypeError(msg)
         if eager_only or eager_or_interchange_only:
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with polars.LazyFrame"
             raise TypeError(msg)
+        pl = get_polars()
         return LazyFrame(
             PolarsLazyFrame(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
@@ -370,10 +379,11 @@ def from_native(  # noqa: PLR0915
         )
 
     # pandas
-    elif (pd := get_pandas()) is not None and isinstance(native_object, pd.DataFrame):
+    elif is_pandas_dataframe(native_object):
         if series_only:
             msg = "Cannot only use `series_only` with dataframe"
             raise TypeError(msg)
+        pd = get_pandas()
         return DataFrame(
             PandasLikeDataFrame(
                 native_object,
@@ -382,10 +392,11 @@ def from_native(  # noqa: PLR0915
             ),
             level="full",
         )
-    elif (pd := get_pandas()) is not None and isinstance(native_object, pd.Series):
+    elif is_pandas_series(native_object):
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
+        pd = get_pandas()
         return Series(
             PandasLikeSeries(
                 native_object,
