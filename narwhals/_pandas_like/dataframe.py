@@ -490,7 +490,6 @@ class PandasLikeDataFrame:
             The param `maintain_order` is only here for compatibility with the polars API
             and has no effect on the output.
         """
-
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         subset = flatten(subset) if subset else None
         return self._from_native_frame(

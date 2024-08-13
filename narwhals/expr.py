@@ -162,7 +162,6 @@ class Expr:
             │ 3.0 ┆ 8   │
             └─────┴─────┘
         """
-
         return self.__class__(
             lambda plx: self._call(plx).cast(dtype),
         )
@@ -499,7 +498,6 @@ class Expr:
             │ 1   ┆ 3   │
             └─────┴─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).min())
 
     def max(self) -> Self:
@@ -1409,7 +1407,6 @@ class Expr:
             │ false ┆ true  │
             └───────┴───────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).is_unique())
 
     def null_count(self) -> Self:
@@ -1623,7 +1620,6 @@ class Expr:
             │ 2   │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).head(n))
 
     def tail(self, n: int = 10) -> Self:
@@ -1667,7 +1663,6 @@ class Expr:
             │ 9   │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).tail(n))
 
     def round(self, decimals: int = 0) -> Self:
@@ -1719,7 +1714,6 @@ class Expr:
             │ 3.9 │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).round(decimals))
 
     def len(self) -> Self:
@@ -2242,7 +2236,6 @@ class ExprStringNamespace:
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
         """
-
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
         )
@@ -3445,7 +3438,6 @@ class ExprNameNamespace:
             >>> func(df_pl).columns
             ['foo']
         """
-
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
 
     def map(self: Self, function: Callable[[str], str]) -> Expr:
@@ -3482,7 +3474,6 @@ class ExprNameNamespace:
             >>> func(df_pl).columns
             ['oof', 'RAB']
         """
-
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
 
     def prefix(self: Self, prefix: str) -> Expr:

@@ -1236,7 +1236,6 @@ class DataFrame(BaseFrame[FrameT]):
             │ 3   ┆ 8   ┆ c   │
             └─────┴─────┴─────┘
         """
-
         return super().head(n)
 
     def tail(self, n: int = 5) -> Self:
@@ -1808,7 +1807,6 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pd), func(df_pl)
             (False, False)
         """
-
         return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Series:
@@ -1914,7 +1912,6 @@ class DataFrame(BaseFrame[FrameT]):
             │ 1   ┆ 1   ┆ 0   │
             └─────┴─────┴─────┘
         """
-
         return self._from_compliant_dataframe(self._compliant_frame.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:

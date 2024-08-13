@@ -1670,7 +1670,6 @@ class Series:
             >>> func(s_pl)
             2
         """
-
         return self._compliant_series.null_count()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
@@ -1941,7 +1940,6 @@ class Series:
             4    5
             dtype: int64
         """
-
         return self._from_compliant_series(
             self._compliant_series.zip_with(
                 self._extract_native(mask), self._extract_native(other)
@@ -2015,7 +2013,6 @@ class Series:
                2
             ]
         """
-
         return self._from_compliant_series(self._compliant_series.head(n))
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -2056,7 +2053,6 @@ class Series:
                9
             ]
         """
-
         return self._from_compliant_series(self._compliant_series.tail(n))
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -2172,7 +2168,6 @@ class Series:
             │ 0   ┆ 1   │
             └─────┴─────┘
         """
-
         from narwhals.dataframe import DataFrame
 
         return DataFrame(
@@ -2256,7 +2251,6 @@ class Series:
                 4
             ]
         """
-
         return self._compliant_series.to_arrow()
 
     @property
