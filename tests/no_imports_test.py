@@ -1,6 +1,5 @@
 import sys
 
-import dask.dataframe as dd
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -41,6 +40,10 @@ def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
+    import dask.dataframe as dd
+
     monkeypatch.delitem(sys.modules, "polars")
     monkeypatch.delitem(sys.modules, "pyarrow")
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
