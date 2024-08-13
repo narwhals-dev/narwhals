@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from warnings import warn
 
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import extract_args_kwargs
@@ -132,9 +133,7 @@ class PolarsDataFrame:
             to_drop = parse_columns_to_drop(
                 compliant_frame=self, columns=columns, strict=strict
             )
-            return self._from_native_dataframe(
-                self._native_dataframe.drop(columns=to_drop)
-            )
+            return self._from_native_dataframe(self._native_dataframe.drop(to_drop))
         return self._from_native_dataframe(
             self._native_dataframe.drop(columns, strict=strict)
         )
@@ -204,12 +203,15 @@ class PolarsLazyFrame:
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         if self._backend_version < (1, 0, 0):  # pragma: no cover
-            to_drop = parse_columns_to_drop(
-                compliant_frame=self, columns=columns, strict=strict
-            )
-            return self._from_native_dataframe(
-                self._native_dataframe.drop(columns=to_drop)
-            )
+            if strict:
+                warn(
+                    "`strict` argument is ignored in `drop` method for lazy mode in "
+                    "Polars before v1.0.0. Please consider to upgrade to a newer version "
+                    "or pass to eager mode.",
+                    UserWarning,
+                    stacklevel=1,
+                )
+            return self._from_native_dataframe(self._native_dataframe.drop(columns))
         return self._from_native_dataframe(
             self._native_dataframe.drop(columns, strict=strict)
         )

@@ -93,6 +93,7 @@ filterwarnings = [
   'ignore:.*Do not use the `random` module inside strategies',
   'ignore:.*You are using pyarrow version',
   'ignore:.*but when imported by',
+  'ignore:`strict` argument is ignored in `drop` method for lazy mode in .*'
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
