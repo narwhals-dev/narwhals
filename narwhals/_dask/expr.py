@@ -398,6 +398,14 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def is_in(self, values: list[Any]) -> Self:
+        return self._from_call(
+            lambda _input, values: _input.isin(values),
+            "is_in",
+            values
+            returns_scalar=False,
+        )
+
     def sum(self) -> Self:
         return self._from_call(
             lambda _input: _input.sum(),
