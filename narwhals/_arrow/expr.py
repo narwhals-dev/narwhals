@@ -56,7 +56,7 @@ class ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 ArrowSeries(
-                    df._native_dataframe[column_name],
+                    df._native_frame[column_name],
                     name=column_name,
                     backend_version=df._backend_version,
                 )
@@ -158,9 +158,7 @@ class ArrowExpr:
         return reuse_series_implementation(self, "len", returns_scalar=True)
 
     def filter(self, *predicates: Any) -> Self:
-        from narwhals._arrow.namespace import ArrowNamespace
-
-        plx = ArrowNamespace(backend_version=self._backend_version)
+        plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(*predicates)
         return reuse_series_implementation(self, "filter", other=expr)
 

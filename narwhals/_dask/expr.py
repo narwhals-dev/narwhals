@@ -44,6 +44,7 @@ class DaskExpr:
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
+        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version)
@@ -55,9 +56,7 @@ class DaskExpr:
         backend_version: tuple[int, ...],
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
-            return [
-                df._native_dataframe.loc[:, column_name] for column_name in column_names
-            ]
+            return [df._native_frame.loc[:, column_name] for column_name in column_names]
 
         return cls(
             func,

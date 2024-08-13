@@ -7,8 +7,6 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals.dtypes import translate_dtype
-
 if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
@@ -56,9 +54,6 @@ class Series:
 
     def __native_namespace__(self) -> Any:
         return self._compliant_series.__native_namespace__()
-
-    def __narwhals_namespace__(self) -> Any:
-        return self._compliant_series.__narwhals_namespace__()
 
     @property
     def shape(self) -> tuple[int]:
@@ -281,11 +276,7 @@ class Series:
                1
             ]
         """
-        return self._from_compliant_series(
-            self._compliant_series.cast(
-                translate_dtype(self.__narwhals_namespace__(), dtype)
-            )
-        )
+        return self._from_compliant_series(self._compliant_series.cast(dtype))
 
     def to_frame(self) -> DataFrame[Any]:
         """

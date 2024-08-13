@@ -13,7 +13,7 @@ def extract_native(obj: Any) -> Any:
     from narwhals._polars.series import PolarsSeries
 
     if isinstance(obj, (PolarsDataFrame, PolarsLazyFrame)):
-        return obj._native_dataframe
+        return obj._native_frame
     if isinstance(obj, PolarsSeries):
         return obj._native_series
     if isinstance(obj, PolarsExpr):
@@ -68,7 +68,7 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     return dtypes.Unknown()
 
 
-def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
+def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     pl = get_polars()
     from narwhals import dtypes
 
@@ -100,8 +100,9 @@ def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         return pl.Object()
     if dtype == dtypes.Categorical:
         return pl.Categorical()
-    if dtype == dtypes.Enum:  # pragma: no cover
-        return pl.Enum()
+    if dtype == dtypes.Enum:
+        msg = "Converting to Enum is not (yet) supported"
+        raise NotImplementedError(msg)
     if dtype == dtypes.Datetime:
         return pl.Datetime()
     if dtype == dtypes.Duration:

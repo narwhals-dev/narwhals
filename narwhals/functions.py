@@ -212,11 +212,11 @@ def from_dict(
     if implementation is Implementation.POLARS:
         if schema:
             from narwhals._polars.utils import (
-                reverse_translate_dtype as polars_reverse_translate_dtype,
+                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
             schema = {
-                name: polars_reverse_translate_dtype(dtype)
+                name: polars_narwhals_to_native_dtype(dtype)
                 for name, dtype in schema.items()
             }
 
@@ -230,11 +230,11 @@ def from_dict(
 
         if schema:
             from narwhals._pandas_like.utils import (
-                reverse_translate_dtype as pandas_like_reverse_translate_dtype,
+                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
             schema = {
-                name: pandas_like_reverse_translate_dtype(
+                name: pandas_like_narwhals_to_native_dtype(
                     schema[name], native_type, implementation
                 )
                 for name, native_type in native_frame.dtypes.items()
@@ -244,12 +244,12 @@ def from_dict(
     elif implementation is Implementation.PYARROW:
         if schema:
             from narwhals._arrow.utils import (
-                reverse_translate_dtype as arrow_reverse_translate_dtype,
+                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
             schema = native_namespace.schema(
                 [
-                    (name, arrow_reverse_translate_dtype(dtype))
+                    (name, arrow_narwhals_to_native_dtype(dtype))
                     for name, dtype in schema.items()
                 ]
             )
