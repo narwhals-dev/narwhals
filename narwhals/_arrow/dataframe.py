@@ -19,6 +19,7 @@ from narwhals.dependencies import get_pyarrow_parquet
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
+from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -287,8 +288,11 @@ class ArrowDataFrame:
             ),
         )
 
-    def drop(self: Self, columns: list[str]) -> Self:
-        return self._from_native_dataframe(self._native_dataframe.drop(columns))
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        return self._from_native_dataframe(self._native_dataframe.drop(to_drop))
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
         if subset is None:

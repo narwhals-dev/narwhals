@@ -11,7 +11,6 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
-from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
 from narwhals.schema import Schema
@@ -139,17 +138,9 @@ class BaseFrame(Generic[FrameT]):
         return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
     def drop(self, *columns: Iterable[str], strict: bool) -> Self:
-        cols = set(self.collect_schema().names())
-        to_drop = list(columns)
-
-        if strict:
-            for d in to_drop:
-                if d not in cols:
-                    msg = f'"{d}" not found'
-                    raise ColumnNotFoundError(msg)
-        else:
-            to_drop = list(cols.intersection(set(to_drop)))
-        return self._from_compliant_dataframe(self._compliant_frame.drop(to_drop))
+        return self._from_compliant_dataframe(
+            self._compliant_frame.drop(columns, strict=strict)
+        )
 
     def unique(
         self,

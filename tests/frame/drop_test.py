@@ -4,6 +4,7 @@ from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
+from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
 
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
@@ -30,7 +31,9 @@ def test_drop(constructor: Any, to_drop: list[str], expected: list[str]) -> None
     [
         (
             True,
-            pytest.raises(ColumnNotFoundError, match='"z" not found'),
+            pytest.raises(
+                (ColumnNotFoundError, PlColumnNotFoundError), match='"z" not found'
+            ),
         ),
         (False, does_not_raise()),
     ],

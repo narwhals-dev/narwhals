@@ -14,6 +14,7 @@ from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
+from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -131,8 +132,12 @@ class DaskLazyFrame:
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
 
-    def drop(self: Self, columns: list[str]) -> Self:
-        return self._from_native_dataframe(self._native_dataframe.drop(columns=columns))
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+
+        return self._from_native_dataframe(self._native_dataframe.drop(columns=to_drop))
 
     def with_row_index(self: Self, name: str) -> Self:
         # Implementation is based on the following StackOverflow reply:
@@ -303,5 +308,5 @@ class DaskLazyFrame:
                 pln.col(row_index_token) >= offset,  # type: ignore[operator]
                 (pln.col(row_index_token) - offset) % n == 0,  # type: ignore[arg-type]
             )
-            .drop([row_index_token])
+            .drop([row_index_token], strict=False)
         )

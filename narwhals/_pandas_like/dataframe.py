@@ -24,6 +24,7 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
+from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -323,8 +324,11 @@ class PandasLikeDataFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
 
-    def drop(self: Self, columns: list[str]) -> Self:
-        return self._from_native_dataframe(self._native_dataframe.drop(columns=columns))
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        return self._from_native_dataframe(self._native_dataframe.drop(columns=to_drop))
 
     # --- transform ---
     def sort(
