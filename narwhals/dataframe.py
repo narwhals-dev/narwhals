@@ -247,6 +247,19 @@ class DataFrame(BaseFrame[FrameT]):
             + "┘"
         )
 
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
+        """
+        Export a DataFrame via the Arrow PyCapsule Interface.
+
+        Narwhals doesn't implement anything itself here - if the underlying dataframe
+        implements the interface, it'll return that, else you'll get an `AttributeError`.
+
+        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        """
+        return self._compliant_frame._native_frame.__arrow_c_stream__(
+            requested_schema=requested_schema
+        )
+
     def lazy(self) -> LazyFrame[Any]:
         """
         Lazify the DataFrame (if possible).

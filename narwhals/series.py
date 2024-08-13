@@ -55,6 +55,19 @@ class Series:
     def __native_namespace__(self) -> Any:
         return self._compliant_series.__native_namespace__()
 
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
+        """
+        Export a Series via the Arrow PyCapsule Interface.
+
+        Narwhals doesn't implement anything itself here - if the underlying series
+        implements the interface, it'll return that, else you'll get an `AttributeError`.
+
+        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        """
+        return self._compliant_series._native_series.__arrow_c_stream__(
+            requested_schema=requested_schema
+        )
+
     @property
     def shape(self) -> tuple[int]:
         """
