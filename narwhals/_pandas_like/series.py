@@ -8,8 +8,8 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._pandas_like.utils import int_dtype_mapper
+from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
-from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
@@ -98,11 +97,6 @@ class PandasLikeSeries:
             self._use_copy_false = True
         else:
             self._use_copy_false = False
-
-    def __narwhals_namespace__(self) -> PandasLikeNamespace:
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-        return PandasLikeNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
         if self._implementation is Implementation.PANDAS:
@@ -181,7 +175,7 @@ class PandasLikeSeries:
         dtype: Any,
     ) -> Self:
         ser = self._native_series
-        dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
+        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation)
         return self._from_native_series(ser.astype(dtype))
 
     def item(self: Self, index: int | None = None) -> Any:

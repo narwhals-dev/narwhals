@@ -60,7 +60,7 @@ def to_native(
     from narwhals.series import Series
 
     if isinstance(narwhals_object, BaseFrame):
-        return narwhals_object._compliant_frame._native_dataframe
+        return narwhals_object._compliant_frame._native_frame
     if isinstance(narwhals_object, Series):
         return narwhals_object._compliant_series._native_series
 

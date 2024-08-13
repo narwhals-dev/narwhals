@@ -64,7 +64,7 @@ class PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [
                 PandasLikeSeries(
-                    df._native_dataframe.loc[:, column_name],
+                    df._native_frame.loc[:, column_name],
                     implementation=df._implementation,
                     backend_version=df._backend_version,
                 )
@@ -226,9 +226,7 @@ class PandasLikeExpr:
         return reuse_series_implementation(self, "arg_true")
 
     def filter(self, *predicates: Any) -> Self:
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-        plx = PandasLikeNamespace(self._implementation, self._backend_version)
+        plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(*predicates)
         return reuse_series_implementation(self, "filter", other=expr)
 
