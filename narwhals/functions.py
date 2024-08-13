@@ -48,6 +48,101 @@ def concat(
     )
 
 
+def new_series(
+    name: str,
+    values: Any,
+    dtype: DType,
+    *,
+    native_namespace: ModuleType | None = None,
+) -> Series:
+    """
+    Instantiate Narwhals Series from raw data.
+
+    Arguments:
+        data: Dictionary to create DataFrame from.
+        schema: The DataFrame schema as Schema or dict of {name: type}.
+        native_namespace: The native library to use for DataFrame creation. Only
+            necessary if inputs are not Narwhals Series.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.from_dict(data, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+           c  d
+        0  5  1
+        1  2  4
+        >>> func(pl.DataFrame(data))
+        shape: (2, 2)
+        ┌─────┬─────┐
+        │ c   ┆ d   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 5   ┆ 1   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+    """
+    implementation = Implementation.from_native_namespace(native_namespace)
+
+    if implementation is Implementation.POLARS:
+        if dtype:
+            from narwhals._polars.utils import (
+                reverse_translate_dtype as polars_reverse_translate_dtype,
+            )
+
+            dtype = polars_reverse_translate_dtype(dtype)
+
+        native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
+    elif implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    }:
+        if dtype:
+            from narwhals._pandas_like.utils import (
+                reverse_translate_dtype as pandas_like_reverse_translate_dtype,
+            )
+
+            dtype = pandas_like_reverse_translate_dtype(dtype, None, implementation)
+        native_series = native_namespace.Series(values, name=name, dtype=dtype)
+
+    elif implementation is Implementation.PYARROW:
+        if schema:
+            from narwhals._arrow.utils import (
+                reverse_translate_dtype as arrow_reverse_translate_dtype,
+            )
+
+            schema = native_namespace.schema(
+                [
+                    (name, arrow_reverse_translate_dtype(dtype))
+                    for name, dtype in schema.items()
+                ]
+            )
+        native_frame = native_namespace.table(data, schema=schema)
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narhwals extension using this feature should
+            # implement `from_dict` function in the top-level namespace.
+            native_frame = native_namespace.from_dict(data)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `from_dict` function."
+            raise AttributeError(msg) from e
+    return native_namespace.Series(name=name, values=values, dtype=dtype)
+
+
 def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
