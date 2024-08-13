@@ -35,7 +35,7 @@ class ArrowDataFrame:
     def __init__(
         self, native_dataframe: Any, *, backend_version: tuple[int, ...]
     ) -> None:
-        self._native_dataframe = native_dataframe
+        self._native_frame = native_dataframe
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
 
@@ -53,15 +53,15 @@ class ArrowDataFrame:
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def _from_native_dataframe(self, df: Any) -> Self:
+    def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(df, backend_version=self._backend_version)
 
     @property
     def shape(self) -> tuple[int, int]:
-        return self._native_dataframe.shape  # type: ignore[no-any-return]
+        return self._native_frame.shape  # type: ignore[no-any-return]
 
     def __len__(self) -> int:
-        return len(self._native_dataframe)
+        return len(self._native_frame)
 
     def rows(
         self, *, named: bool = False
@@ -69,7 +69,7 @@ class ArrowDataFrame:
         if not named:
             msg = "Unnamed rows are not yet supported on PyArrow tables"
             raise NotImplementedError(msg)
-        return self._native_dataframe.to_pylist()  # type: ignore[no-any-return]
+        return self._native_frame.to_pylist()  # type: ignore[no-any-return]
 
     def iter_rows(
         self,
@@ -77,7 +77,7 @@ class ArrowDataFrame:
         named: bool = False,
         buffer_size: int = 512,
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
-        df = self._native_dataframe
+        df = self._native_frame
         num_rows = df.num_rows
 
         if not named:
@@ -96,7 +96,7 @@ class ArrowDataFrame:
             raise TypeError(msg)
 
         return ArrowSeries(
-            self._native_dataframe[name],
+            self._native_frame[name],
             name=name,
             backend_version=self._backend_version,
         )
@@ -120,7 +120,7 @@ class ArrowDataFrame:
             from narwhals._arrow.series import ArrowSeries
 
             return ArrowSeries(
-                self._native_dataframe[item],
+                self._native_frame[item],
                 name=item,
                 backend_version=self._backend_version,
             )
@@ -129,8 +129,8 @@ class ArrowDataFrame:
             and len(item) == 2
             and isinstance(item[1], (list, tuple))
         ):
-            return self._from_native_dataframe(
-                self._native_dataframe.take(item[0]).select(item[1])
+            return self._from_native_frame(
+                self._native_frame.take(item[0]).select(item[1])
             )
 
         elif isinstance(item, tuple) and len(item) == 2:
@@ -139,7 +139,7 @@ class ArrowDataFrame:
             # PyArrow columns are always strings
             col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
             return ArrowSeries(
-                self._native_dataframe[col_name].take(item[0]),
+                self._native_frame[col_name].take(item[0]),
                 name=col_name,
                 backend_version=self._backend_version,
             )
@@ -149,9 +149,9 @@ class ArrowDataFrame:
                 msg = "Slicing with step is not supported on PyArrow tables"
                 raise NotImplementedError(msg)
             start = item.start or 0
-            stop = item.stop or len(self._native_dataframe)
-            return self._from_native_dataframe(
-                self._native_dataframe.slice(item.start, stop - start),
+            stop = item.stop or len(self._native_frame)
+            return self._from_native_frame(
+                self._native_frame.slice(item.start, stop - start),
             )
 
         elif isinstance(item, Sequence) or (
@@ -159,7 +159,7 @@ class ArrowDataFrame:
             and isinstance(item, np.ndarray)
             and item.ndim == 1
         ):
-            return self._from_native_dataframe(self._native_dataframe.take(item))
+            return self._from_native_frame(self._native_frame.take(item))
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
@@ -167,7 +167,7 @@ class ArrowDataFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
-        schema = self._native_dataframe.schema
+        schema = self._native_frame.schema
         return {
             name: translate_dtype(dtype)
             for name, dtype in zip(schema.names, schema.types)
@@ -178,7 +178,7 @@ class ArrowDataFrame:
 
     @property
     def columns(self) -> list[str]:
-        return self._native_dataframe.schema.names  # type: ignore[no-any-return]
+        return self._native_frame.schema.names  # type: ignore[no-any-return]
 
     def select(
         self,
@@ -188,16 +188,14 @@ class ArrowDataFrame:
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
-            return self._from_native_dataframe(
-                self._native_dataframe.__class__.from_arrays([])
-            )
+            return self._from_native_frame(self._native_frame.__class__.from_arrays([]))
         names = [s.name for s in new_series]
         pa = get_pyarrow()
         df = pa.Table.from_arrays(
             broadcast_series(new_series),
             names=names,
         )
-        return self._from_native_dataframe(df)
+        return self._from_native_frame(df)
 
     def with_columns(
         self,
@@ -220,7 +218,7 @@ class ArrowDataFrame:
                     )
                 )
             else:
-                to_concat.append(self._native_dataframe[name])
+                to_concat.append(self._native_frame[name])
             output_names.append(name)
         for s in new_column_name_to_new_column_map:
             to_concat.append(
@@ -231,8 +229,8 @@ class ArrowDataFrame:
                 )
             )
             output_names.append(s)
-        df = self._native_dataframe.__class__.from_arrays(to_concat, names=output_names)
-        return self._from_native_dataframe(df)
+        df = self._native_frame.__class__.from_arrays(to_concat, names=output_names)
+        return self._from_native_frame(df)
 
     def group_by(self, *keys: str) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
@@ -265,9 +263,9 @@ class ArrowDataFrame:
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
-            return self._from_native_dataframe(
-                self.with_columns(**{key_token: plx.lit(0, None)})._native_dataframe.join(
-                    other.with_columns(**{key_token: plx.lit(0, None)})._native_dataframe,
+            return self._from_native_frame(
+                self.with_columns(**{key_token: plx.lit(0, None)})._native_frame.join(
+                    other.with_columns(**{key_token: plx.lit(0, None)})._native_frame,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
@@ -275,9 +273,9 @@ class ArrowDataFrame:
                 ),
             ).drop(key_token)
 
-        return self._from_native_dataframe(
-            self._native_dataframe.join(
-                other._native_dataframe,
+        return self._from_native_frame(
+            self._native_frame.join(
+                other._native_frame,
                 keys=left_on,
                 right_keys=right_on,
                 join_type=how_to_join_map[how],
@@ -286,11 +284,11 @@ class ArrowDataFrame:
         )
 
     def drop(self, *columns: str) -> Self:
-        return self._from_native_dataframe(self._native_dataframe.drop(list(columns)))
+        return self._from_native_frame(self._native_frame.drop(list(columns)))
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
         if subset is None:
-            return self._from_native_dataframe(self._native_dataframe.drop_null())
+            return self._from_native_frame(self._native_frame.drop_null())
         subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
@@ -302,7 +300,7 @@ class ArrowDataFrame:
         descending: bool | Sequence[bool] = False,
     ) -> Self:
         flat_keys = flatten([*flatten([by]), *more_by])
-        df = self._native_dataframe
+        df = self._native_frame
 
         if isinstance(descending, bool):
             order = "descending" if descending else "ascending"
@@ -312,18 +310,18 @@ class ArrowDataFrame:
                 (key, "descending" if is_descending else "ascending")
                 for key, is_descending in zip(flat_keys, descending)
             ]
-        return self._from_native_dataframe(df.sort_by(sorting=sorting))
+        return self._from_native_frame(df.sort_by(sorting=sorting))
 
     def to_pandas(self) -> Any:
-        return self._native_dataframe.to_pandas()
+        return self._native_frame.to_pandas()
 
     def to_numpy(self) -> Any:
         import numpy as np
 
-        return np.column_stack([col.to_numpy() for col in self._native_dataframe.columns])
+        return np.column_stack([col.to_numpy() for col in self._native_frame.columns])
 
     def to_dict(self, *, as_series: bool) -> Any:
-        df = self._native_dataframe
+        df = self._native_frame
 
         names_and_values = zip(df.column_names, df.columns)
         if as_series:
@@ -338,10 +336,10 @@ class ArrowDataFrame:
 
     def with_row_index(self, name: str) -> Self:
         pa = get_pyarrow()
-        df = self._native_dataframe
+        df = self._native_frame
 
         row_indices = pa.array(range(df.num_rows))
-        return self._from_native_dataframe(df.append_column(name, row_indices))
+        return self._from_native_frame(df.append_column(name, row_indices))
 
     def filter(
         self,
@@ -351,42 +349,38 @@ class ArrowDataFrame:
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
-        return self._from_native_dataframe(
-            self._native_dataframe.filter(mask._native_series)
-        )
+        return self._from_native_frame(self._native_frame.filter(mask._native_series))
 
     def null_count(self) -> Self:
         pa = get_pyarrow()
-        df = self._native_dataframe
+        df = self._native_frame
         names_and_values = zip(df.column_names, df.columns)
 
-        return self._from_native_dataframe(
+        return self._from_native_frame(
             pa.table({name: [col.null_count] for name, col in names_and_values})
         )
 
     def head(self, n: int) -> Self:
-        df = self._native_dataframe
+        df = self._native_frame
         if n >= 0:
-            return self._from_native_dataframe(df.slice(0, n))
+            return self._from_native_frame(df.slice(0, n))
         else:
             num_rows = df.num_rows
-            return self._from_native_dataframe(df.slice(0, max(0, num_rows + n)))
+            return self._from_native_frame(df.slice(0, max(0, num_rows + n)))
 
     def tail(self, n: int) -> Self:
-        df = self._native_dataframe
+        df = self._native_frame
         if n >= 0:
             num_rows = df.num_rows
-            return self._from_native_dataframe(df.slice(max(0, num_rows - n)))
+            return self._from_native_frame(df.slice(max(0, num_rows - n)))
         else:
-            return self._from_native_dataframe(df.slice(abs(n)))
+            return self._from_native_frame(df.slice(abs(n)))
 
     def lazy(self) -> Self:
         return self
 
     def collect(self) -> ArrowDataFrame:
-        return ArrowDataFrame(
-            self._native_dataframe, backend_version=self._backend_version
-        )
+        return ArrowDataFrame(self._native_frame, backend_version=self._backend_version)
 
     def clone(self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"
@@ -404,23 +398,23 @@ class ArrowDataFrame:
                     f" frame has shape {self.shape!r}"
                 )
                 raise ValueError(msg)
-            return self._native_dataframe[0][0]
+            return self._native_frame[0][0]
 
         elif row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
-        return self._native_dataframe[_col][row]
+        return self._native_frame[_col][row]
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        df = self._native_dataframe
+        df = self._native_frame
         new_cols = [mapping.get(c, c) for c in df.column_names]
-        return self._from_native_dataframe(df.rename_columns(new_cols))
+        return self._from_native_frame(df.rename_columns(new_cols))
 
     def write_parquet(self, file: Any) -> Any:
         pp = get_pyarrow_parquet()
-        pp.write_table(self._native_dataframe, file)
+        pp.write_table(self._native_frame, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
@@ -428,7 +422,7 @@ class ArrowDataFrame:
         np = get_numpy()
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
-        df = self._native_dataframe
+        df = self._native_frame
 
         columns = self.columns
         col_token = generate_unique_token(n_bytes=8, columns=columns)
@@ -472,7 +466,7 @@ class ArrowDataFrame:
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
 
-        df = self._native_dataframe
+        df = self._native_frame
 
         if isinstance(subset, str):
             subset = [subset]
@@ -490,13 +484,13 @@ class ArrowDataFrame:
                 .column(f"{col_token}_{agg_func}")
             )
 
-            return self._from_native_dataframe(pc.take(df, keep_idx))
+            return self._from_native_frame(pc.take(df, keep_idx))
 
         keep_idx = self.select(*subset).is_unique()
         return self.filter(keep_idx)
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
-        return self._from_native_dataframe(self._native_dataframe[offset::n])
+        return self._from_native_frame(self._native_frame[offset::n])
 
     def to_arrow(self: Self) -> Any:
-        return self._native_dataframe
+        return self._native_frame

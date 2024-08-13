@@ -21,9 +21,7 @@ class DaskSelectorNamespace:
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[Any]:
             return [
-                df._native_dataframe[col]
-                for col in df.columns
-                if df.schema[col] in dtypes
+                df._native_frame[col] for col in df.columns if df.schema[col] in dtypes
             ]
 
         return DaskSelector(
@@ -63,7 +61,7 @@ class DaskSelectorNamespace:
 
     def all(self: Self) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[Any]:
-            return [df._native_dataframe[col] for col in df.columns]
+            return [df._native_frame[col] for col in df.columns]
 
         return DaskSelector(
             func,

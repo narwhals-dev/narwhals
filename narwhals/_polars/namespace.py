@@ -71,7 +71,7 @@ class PolarsNamespace:
         from narwhals._polars.dataframe import PolarsLazyFrame
 
         pl = get_polars()
-        dfs: list[Any] = [item._native_dataframe for item in items]
+        dfs: list[Any] = [item._native_frame for item in items]
         result = pl.concat(dfs, how=how)
         if isinstance(result, pl.DataFrame):
             return PolarsDataFrame(result, backend_version=items[0]._backend_version)
