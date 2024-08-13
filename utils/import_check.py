@@ -2,17 +2,17 @@ import ast
 import sys
 
 BANNED_IMPORTS = {
+    "cudf",
     "pandas",
-    "dask.dataframe",
     "dask",
+    "dask.dataframe",
+    "dask_expr",
     "duckdb",
     "ibis",
-    "dask_expr",
-    "pyarrow",
-    "polars",
-    "numpy",
     "modin",
-    "cudf",
+    "numpy",
+    "polars",
+    "pyarrow",
 }
 
 
