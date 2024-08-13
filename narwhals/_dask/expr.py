@@ -56,9 +56,7 @@ class DaskExpr:
         backend_version: tuple[int, ...],
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
-            return [
-                df._native_dataframe.loc[:, column_name] for column_name in column_names
-            ]
+            return [df._native_frame.loc[:, column_name] for column_name in column_names]
 
         return cls(
             func,

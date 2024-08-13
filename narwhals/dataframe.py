@@ -139,9 +139,9 @@ class BaseFrame(Generic[FrameT]):
     def tail(self, n: int) -> Self:
         return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: Iterable[str], strict: bool) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.drop(*flatten(columns))
+            self._compliant_frame.drop(columns, strict=strict)
         )
 
     def unique(
@@ -1286,12 +1286,14 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         """
         Remove columns from the dataframe.
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
+            strict: Validate that all column names exist in the schema and throw an
+                exception if a column name does not exist in the schema.
 
         Examples:
             >>> import pandas as pd
@@ -1349,7 +1351,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*columns)
+        return super().drop(*flatten(columns), strict=strict)
 
     def unique(
         self,
@@ -2743,13 +2745,19 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         r"""
         Remove columns from the LazyFrame.
 
         Arguments:
-            *columns: Names of the columns that should be removed from the
-                      dataframe. Accepts column selector input.
+            *columns: Names of the columns that should be removed from the dataframe.
+            strict: Validate that all column names exist in the schema and throw an
+                exception if a column name does not exist in the schema.
+
+        Warning:
+            `strict` argument is ignored for `polars<1.0.0`.
+
+            Please consider upgrading to a newer version or pass to eager mode.
 
         Examples:
             >>> import pandas as pd
@@ -2807,7 +2815,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*flatten(columns))
+        return super().drop(*flatten(columns), strict=strict)
 
     def unique(
         self,

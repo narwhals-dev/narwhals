@@ -23,7 +23,7 @@ class ArrowGroupBy:
         pa = get_pyarrow()
         self._df = df
         self._keys = list(keys)
-        self._grouped = pa.TableGroupBy(self._df._native_dataframe, list(self._keys))
+        self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
 
     def agg(
         self,
@@ -51,7 +51,7 @@ class ArrowGroupBy:
             exprs,
             self._keys,
             output_names,
-            self._df._from_native_dataframe,
+            self._df._from_native_frame,
         )
 
     def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
