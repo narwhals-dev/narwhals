@@ -7,7 +7,7 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals.dependencies import get_pyarrow
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import numpy as np
@@ -71,7 +71,14 @@ class Series:
         native_series = self._compliant_series._native_series
         if hasattr(native_series, "__arrow_c_stream__"):
             return native_series.__arrow_c_stream__(requested_schema=requested_schema)
-        pa = get_pyarrow()
+        try:
+            import pyarrow as pa
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_series)}"
+            raise ModuleNotFoundError(msg) from exc
+        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_series)}"
+            raise ModuleNotFoundError(msg)
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 

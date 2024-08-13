@@ -15,6 +15,7 @@ from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
 from narwhals.schema import Schema
 from narwhals.utils import flatten
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -259,6 +260,14 @@ class DataFrame(BaseFrame[FrameT]):
         native_frame = self._compliant_frame._native_frame
         if hasattr(native_frame, "__arrow_c_stream__"):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
+        try:
+            import pyarrow as pa
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_frame)}"
+            raise ModuleNotFoundError(msg) from exc
+        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_frame)}"
+            raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
 
