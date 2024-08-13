@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import sys
 
@@ -17,8 +19,9 @@ BANNED_IMPORTS = {
 
 
 class ImportPandasChecker(ast.NodeVisitor):
-    def __init__(self, file_name: str) -> None:
+    def __init__(self, file_name: str, lines: list[str]) -> None:
         self.file_name = file_name
+        self.lines = lines
         self.found_import = False
 
     def visit_If(self, node: ast.If) -> None:  # noqa: N802
@@ -30,7 +33,10 @@ class ImportPandasChecker(ast.NodeVisitor):
 
     def visit_Import(self, node: ast.Import) -> None:  # noqa: N802
         for alias in node.names:
-            if alias.name in BANNED_IMPORTS:
+            if (
+                alias.name in BANNED_IMPORTS
+                and "# noqa: banned-import" not in self.lines[node.lineno - 1]
+            ):
                 print(  # noqa: T201
                     f"{self.file_name}:{node.lineno}:{node.col_offset}: found {alias.name} import"
                 )
@@ -38,7 +44,10 @@ class ImportPandasChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802
-        if node.module in BANNED_IMPORTS:
+        if (
+            node.module in BANNED_IMPORTS
+            and "# noqa: banned-import" not in self.lines[node.lineno - 1]
+        ):
             print(  # noqa: T201
                 f"{self.file_name}:{node.lineno}:{node.col_offset}: found {node.module} import"
             )
@@ -48,9 +57,10 @@ class ImportPandasChecker(ast.NodeVisitor):
 
 def check_import_pandas(filename: str) -> bool:
     with open(filename) as file:
-        tree = ast.parse(file.read(), filename=filename)
+        content = file.read()
+    tree = ast.parse(content, filename=filename)
 
-    checker = ImportPandasChecker(filename)
+    checker = ImportPandasChecker(filename, content.splitlines())
     checker.visit(tree)
 
     return checker.found_import
