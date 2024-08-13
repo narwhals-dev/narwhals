@@ -8,6 +8,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import translate_dtype
 from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
+from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -124,6 +125,14 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            to_drop = parse_columns_to_drop(
+                compliant_frame=self, columns=columns, strict=strict
+            )
+            return self._from_native_frame(self._native_frame.drop(to_drop))
+        return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+
 
 class PolarsLazyFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
@@ -184,3 +193,8 @@ class PolarsLazyFrame:
         if self._backend_version < (0, 20, 4):  # pragma: no cover
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
+
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            return self._from_native_frame(self._native_frame.drop(columns))
+        return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
