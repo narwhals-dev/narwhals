@@ -254,10 +254,11 @@ class DataFrame(BaseFrame[FrameT]):
         """
         Export a DataFrame via the Arrow PyCapsule Interface.
 
-        Narwhals doesn't implement anything itself here - if the underlying dataframe
-        implements the interface, it'll return that, else you'll get an `AttributeError`.
+        - if the underlying dataframe implements the interface, it'll return that
+        - else, it'll call `to_arrow` and then defer to PyArrow's implementation
 
-        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
         """
         native_frame = self._compliant_frame._native_frame
         if hasattr(native_frame, "__arrow_c_stream__"):

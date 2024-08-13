@@ -68,7 +68,8 @@ class Series:
         - if the underlying series implements the interface, it'll return that
         - else, it'll call `to_arrow` and then defer to PyArrow's implementation
 
-        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
         """
         native_series = self._compliant_series._native_series
         if hasattr(native_series, "__arrow_c_stream__"):
