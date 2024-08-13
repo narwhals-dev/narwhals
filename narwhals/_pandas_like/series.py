@@ -16,7 +16,6 @@ from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -637,7 +636,8 @@ class PandasLikeSeries:
             msg = "`to_arrow` is not implemented for CuDF backend."
             raise NotImplementedError(msg)
 
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         return pa.Array.from_pandas(self._native_series)
 
     @property

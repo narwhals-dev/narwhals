@@ -8,7 +8,6 @@ from typing import Iterator
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals.dependencies import get_pyarrow
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -19,7 +18,8 @@ if TYPE_CHECKING:
 
 class ArrowGroupBy:
     def __init__(self, df: ArrowDataFrame, keys: list[str]) -> None:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         self._df = df
         self._keys = list(keys)
         self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))

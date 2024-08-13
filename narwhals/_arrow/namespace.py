@@ -13,7 +13,6 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -87,9 +86,10 @@ class ArrowNamespace:
         )
 
     def _create_compliant_series(self, value: Any) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import()
+
         from narwhals._arrow.series import ArrowSeries
 
-        pa = get_pyarrow()
         return ArrowSeries(
             native_series=pa.chunked_array([value]),
             name="",

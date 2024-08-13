@@ -19,7 +19,6 @@ from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
@@ -603,5 +602,6 @@ class PandasLikeDataFrame:
             msg = "`to_arrow` is not implemented for CuDF backend."
             raise NotImplementedError(msg)
 
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         return pa.Table.from_pandas(self._native_frame)

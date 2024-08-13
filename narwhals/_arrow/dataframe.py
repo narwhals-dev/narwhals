@@ -186,7 +186,8 @@ class ArrowDataFrame:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__.from_arrays([]))
         names = [s.name for s in new_series]
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         df = pa.Table.from_arrays(
             broadcast_series(new_series),
             names=names,
@@ -336,7 +337,8 @@ class ArrowDataFrame:
             return {name: col.to_pylist() for name, col in names_and_values}
 
     def with_row_index(self, name: str) -> Self:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         df = self._native_frame
 
         row_indices = pa.array(range(df.num_rows))
@@ -353,7 +355,8 @@ class ArrowDataFrame:
         return self._from_native_frame(self._native_frame.filter(mask._native_series))
 
     def null_count(self) -> Self:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         df = self._native_frame
         names_and_values = zip(df.column_names, df.columns)
 
@@ -419,11 +422,10 @@ class ArrowDataFrame:
 
     def is_duplicated(self: Self) -> ArrowSeries:
         import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
 
         from narwhals._arrow.series import ArrowSeries
-
-        pa = get_pyarrow()
-        import pyarrow.compute as pc  # ignore-banned-import()
 
         df = self._native_frame
 
@@ -467,8 +469,7 @@ class ArrowDataFrame:
         """
 
         import numpy as np  # ignore-banned-import
-
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
 
         df = self._native_frame
