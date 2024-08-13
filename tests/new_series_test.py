@@ -1,5 +1,8 @@
 from typing import Any
 
+import pandas as pd
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -21,3 +24,15 @@ def test_new_series(constructor_eager: Any) -> None:
     # something different if necessary
     assert result.dtype == nw.Int32
     compare_dicts(result.to_frame(), expected)
+
+
+def test_new_series_dask() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
+    import dask.dataframe as dd
+
+    df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
+    with pytest.raises(
+        NotImplementedError, match="Dask support in Narwhals is lazy-only"
+    ):
+        nw.new_series("a", [1, 2, 3], native_namespace=nw.get_native_namespace(df))

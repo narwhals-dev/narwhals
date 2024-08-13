@@ -127,13 +127,17 @@ def new_series(
 
             dtype = arrow_reverse_translate_dtype(dtype)
         native_series = native_namespace.chunked_array([values], type=dtype)
+
+    elif implementation is Implementation.DASK:
+        msg = "Dask support in Narwhals is lazy-only, so `new_series` is " "not supported"
+        raise NotImplementedError(msg)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narhwals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
             native_series = native_namespace.new_series(name, values, dtype)
         except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `from_dict` function."
+            msg = "Unknown namespace is expected to implement `Series` constructor."
             raise AttributeError(msg) from e
     return from_native(native_series, series_only=True).alias(name)
 
