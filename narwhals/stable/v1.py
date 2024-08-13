@@ -1625,4 +1625,5 @@ __all__ = [
     "show_versions",
     "Schema",
     "from_dict",
+    "new_series",
 ]
