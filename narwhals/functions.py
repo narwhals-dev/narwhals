@@ -100,10 +100,10 @@ def new_series(
     if implementation is Implementation.POLARS:
         if dtype:
             from narwhals._polars.utils import (
-                reverse_translate_dtype as polars_reverse_translate_dtype,
+                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype = polars_reverse_translate_dtype(dtype)
+            dtype = polars_narwhals_to_native_dtype(dtype)
 
         native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
     elif implementation in {
@@ -113,19 +113,19 @@ def new_series(
     }:
         if dtype:
             from narwhals._pandas_like.utils import (
-                reverse_translate_dtype as pandas_like_reverse_translate_dtype,
+                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            dtype = pandas_like_reverse_translate_dtype(dtype, None, implementation)
+            dtype = pandas_like_narwhals_to_native_dtype(dtype, None, implementation)
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
     elif implementation is Implementation.PYARROW:
         if dtype:
             from narwhals._arrow.utils import (
-                reverse_translate_dtype as arrow_reverse_translate_dtype,
+                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            dtype = arrow_reverse_translate_dtype(dtype)
+            dtype = arrow_narwhals_to_native_dtype(dtype)
         native_series = native_namespace.chunked_array([values], type=dtype)
 
     elif implementation is Implementation.DASK:
