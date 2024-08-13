@@ -53,16 +53,17 @@ def new_series(
     values: Any,
     dtype: DType,
     *,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType,
 ) -> Series:
     """
     Instantiate Narwhals Series from raw data.
 
     Arguments:
-        data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation. Only
-            necessary if inputs are not Narwhals Series.
+        name: Name of resulting Series.
+        values: Values of make Series from.
+        dtype: (Narwhals) dtype. If not provided, the native library
+            may auto-infer it from `values`.
+        native_namespace: The native library to use for DataFrame creation.
 
     Examples:
         >>> import pandas as pd
@@ -74,26 +75,25 @@ def new_series(
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     values = [1, 2, 3]
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_dict(data, native_namespace=native_namespace)
+        ...     return nw.new_series("a", values, nw.Int32, native_namespace=native_namespace)
 
         Let's see what happens when passing pandas / Polars input:
 
         >>> func(pd.DataFrame(data))
-           c  d
-        0  5  1
-        1  2  4
-        >>> func(pl.DataFrame(data))
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ c   ┆ d   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 5   ┆ 1   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
+        0    1
+        1    2
+        2    3
+        Name: a, dtype: int32
+        >>> func(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
+        shape: (3,)
+        Series: 'a' [i32]
+        [
+           1
+           2
+           3
+        ]
     """
     implementation = Implementation.from_native_namespace(native_namespace)
 
@@ -120,27 +120,22 @@ def new_series(
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
     elif implementation is Implementation.PYARROW:
-        if schema:
+        if dtype:
             from narwhals._arrow.utils import (
                 reverse_translate_dtype as arrow_reverse_translate_dtype,
             )
 
-            schema = native_namespace.schema(
-                [
-                    (name, arrow_reverse_translate_dtype(dtype))
-                    for name, dtype in schema.items()
-                ]
-            )
-        native_frame = native_namespace.table(data, schema=schema)
+            dtype = arrow_reverse_translate_dtype(dtype)
+        native_series = native_namespace.chunked_array([values], type=dtype)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narhwals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
-            native_frame = native_namespace.from_dict(data)
+            native_series = native_namespace.new_series(name, values, dtype)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
             raise AttributeError(msg) from e
-    return native_namespace.Series(name=name, values=values, dtype=dtype)
+    return from_native(native_series, series_only=True)
 
 
 def from_dict(
