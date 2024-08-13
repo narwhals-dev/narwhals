@@ -7,6 +7,8 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals.dependencies import get_pyarrow
+
 if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
@@ -59,14 +61,19 @@ class Series:
         """
         Export a Series via the Arrow PyCapsule Interface.
 
-        Narwhals doesn't implement anything itself here - if the underlying series
-        implements the interface, it'll return that, else you'll get an `AttributeError`.
+        Narwhals doesn't implement anything itself here:
+
+        - if the underlying series implements the interface, it'll return that
+        - else, it'll call `to_arrow` and then defer to PyArrow's implementation
 
         https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
         """
-        return self._compliant_series._native_series.__arrow_c_stream__(
-            requested_schema=requested_schema
-        )
+        native_series = self._compliant_series._native_series
+        if hasattr(native_series, "__arrow_c_stream__"):
+            return native_series.__arrow_c_stream__(requested_schema=requested_schema)
+        pa = get_pyarrow()
+        ca = pa.chunked_array([self.to_arrow()])
+        return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
     @property
     def shape(self) -> tuple[int]:

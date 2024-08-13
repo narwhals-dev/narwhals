@@ -256,9 +256,11 @@ class DataFrame(BaseFrame[FrameT]):
 
         https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
         """
-        return self._compliant_frame._native_frame.__arrow_c_stream__(
-            requested_schema=requested_schema
-        )
+        native_frame = self._compliant_frame._native_frame
+        if hasattr(native_frame, "__arrow_c_stream__"):
+            return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
+        pa_table = self.to_arrow()
+        return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
 
     def lazy(self) -> LazyFrame[Any]:
         """

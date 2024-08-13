@@ -28,3 +28,15 @@ def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     df = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)
     with pytest.raises(ZeroDivisionError, match="division by zero"):
         pa.table(df)
+
+
+@pytest.mark.skipif(
+    parse_version(pl.__version__) < (1, 3), reason="too old for pycapsule in Polars"
+)
+def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Check that fallback to PyArrow works
+    monkeypatch.delattr("polars.DataFrame.__arrow_c_stream__")
+    df = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)
+    result = pa.table(df)
+    expected = pa.table({"a": [1, 2, 3]})
+    assert pc.all(pc.equal(result["a"], expected["a"])).as_py()
