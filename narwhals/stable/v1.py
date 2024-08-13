@@ -1469,6 +1469,58 @@ def get_level(
     return nw.get_level(obj)
 
 
+def new_series(
+    name: str,
+    values: Any,
+    dtype: DType | type[DType] | None = None,
+    *,
+    native_namespace: ModuleType,
+) -> Series:
+    """
+    Instantiate Narwhals Series from raw data.
+
+    Arguments:
+        name: Name of resulting Series.
+        values: Values of make Series from.
+        dtype: (Narwhals) dtype. If not provided, the native library
+            may auto-infer it from `values`.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     values = [1, 2, 3]
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.new_series("a", values, nw.Int32, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+        0    1
+        1    2
+        2    3
+        Name: a, dtype: int32
+        >>> func(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
+        shape: (3,)
+        Series: 'a' [i32]
+        [
+           1
+           2
+           3
+        ]
+    """
+    return _stableify(
+        nw.new_series(name, values, dtype, native_namespace=native_namespace)
+    )
+
+
 def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,

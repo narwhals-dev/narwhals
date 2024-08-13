@@ -51,7 +51,7 @@ def concat(
 def new_series(
     name: str,
     values: Any,
-    dtype: DType,
+    dtype: DType | type[DType] | None = None,
     *,
     native_namespace: ModuleType,
 ) -> Series:
@@ -135,7 +135,7 @@ def new_series(
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
             raise AttributeError(msg) from e
-    return from_native(native_series, series_only=True)
+    return from_native(native_series, series_only=True).alias(name)
 
 
 def from_dict(
