@@ -265,10 +265,10 @@ class DataFrame(BaseFrame[FrameT]):
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
         if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)

@@ -76,10 +76,10 @@ class Series:
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `__arrow_c_stream__` for object of type {type(native_series)}"
+        if parse_version(pa.__version__) < (16, 0):  # pragma: no cover
+            msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg)
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)

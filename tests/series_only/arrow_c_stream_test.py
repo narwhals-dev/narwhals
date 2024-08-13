@@ -35,6 +35,7 @@ def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     # Check that fallback to PyArrow works
     monkeypatch.delattr("polars.Series.__arrow_c_stream__")
     s = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)["a"]
+    s.__arrow_c_stream__()
     result = pa.chunked_array(s)
     expected = pa.chunked_array([[1, 2, 3]])
     assert pc.all(pc.equal(result, expected)).as_py()
