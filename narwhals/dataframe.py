@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     import numpy as np
     import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.group_by import GroupBy
@@ -2025,7 +2026,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().gather_every(n=n, offset=offset)
 
-    def to_arrow(self: Self) -> Any:
+    def to_arrow(self: Self) -> pa.Table:
         r"""
         Convert to arrow table.
 
