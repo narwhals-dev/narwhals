@@ -13,7 +13,7 @@ def extract_native(obj: Any) -> Any:
     from narwhals._polars.series import PolarsSeries
 
     if isinstance(obj, (PolarsDataFrame, PolarsLazyFrame)):
-        return obj._native_dataframe
+        return obj._native_frame
     if isinstance(obj, PolarsSeries):
         return obj._native_series
     if isinstance(obj, PolarsExpr):

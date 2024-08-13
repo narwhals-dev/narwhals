@@ -56,7 +56,7 @@ class ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 ArrowSeries(
-                    df._native_dataframe[column_name],
+                    df._native_frame[column_name],
                     name=column_name,
                     backend_version=df._backend_version,
                 )

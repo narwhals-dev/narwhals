@@ -48,9 +48,7 @@ class DaskNamespace:
 
     def all(self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[Any]:
-            return [
-                df._native_dataframe.loc[:, column_name] for column_name in df.columns
-            ]
+            return [df._native_frame.loc[:, column_name] for column_name in df.columns]
 
         return DaskExpr(
             func,
@@ -72,7 +70,7 @@ class DaskNamespace:
         # TODO @FBruzzesi: cast to dtype once `narwhals_to_native_dtype` is implemented.
         # It should be enough to add `.astype(narwhals_to_native_dtype(dtype))`
         return DaskExpr(
-            lambda df: [df._native_dataframe.assign(lit=value).loc[:, "lit"]],
+            lambda df: [df._native_frame.assign(lit=value).loc[:, "lit"]],
             depth=0,
             function_name="lit",
             root_names=None,
@@ -114,12 +112,10 @@ class DaskNamespace:
                 return [
                     dd.from_pandas(
                         pd.Series([0], name="len"),
-                        npartitions=df._native_dataframe.npartitions,
+                        npartitions=df._native_frame.npartitions,
                     )
                 ]
-            return [
-                df._native_dataframe.loc[:, df.columns[0]].size.to_series().rename("len")
-            ]
+            return [df._native_frame.loc[:, df.columns[0]].size.to_series().rename("len")]
 
         # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover

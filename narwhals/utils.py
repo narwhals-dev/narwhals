@@ -177,23 +177,23 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_frame._native_dataframe.index)
-        _validate_index(rhs_any._compliant_frame._native_dataframe.index)
+        _validate_index(lhs_any._compliant_frame._native_frame.index)
+        _validate_index(rhs_any._compliant_frame._native_frame.index)
         return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            lhs_any._compliant_frame._from_native_dataframe(
-                lhs_any._compliant_frame._native_dataframe.loc[
-                    rhs_any._compliant_frame._native_dataframe.index
+            lhs_any._compliant_frame._from_native_frame(
+                lhs_any._compliant_frame._native_frame.loc[
+                    rhs_any._compliant_frame._native_frame.index
                 ]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_frame._native_dataframe.index)
+        _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_series._native_series.index)
         return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            lhs_any._compliant_frame._from_native_dataframe(
-                lhs_any._compliant_frame._native_dataframe.loc[
+            lhs_any._compliant_frame._from_native_frame(
+                lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_series._native_series.index
                 ]
             )
@@ -202,11 +202,11 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_series._native_series.index)
-        _validate_index(rhs_any._compliant_frame._native_dataframe.index)
+        _validate_index(rhs_any._compliant_frame._native_frame.index)
         return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
             lhs_any._compliant_series._from_native_series(
                 lhs_any._compliant_series._native_series.loc[
-                    rhs_any._compliant_frame._native_dataframe.index
+                    rhs_any._compliant_frame._native_frame.index
                 ]
             )
         )
@@ -256,8 +256,8 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
         return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_dataframe(
-                df_any._compliant_frame._native_dataframe.set_index(column_names)
+            df_any._compliant_frame._from_native_frame(
+                df_any._compliant_frame._native_frame.set_index(column_names)
             )
         )
     return df
@@ -293,8 +293,8 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
         return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_dataframe(
-                df_any._compliant_frame._native_dataframe.convert_dtypes(*args, **kwargs)
+            df_any._compliant_frame._from_native_frame(
+                df_any._compliant_frame._native_frame.convert_dtypes(*args, **kwargs)
             )
         )
     return df

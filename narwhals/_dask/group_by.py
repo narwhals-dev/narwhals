@@ -23,7 +23,7 @@ class DaskLazyGroupBy:
     def __init__(self, df: DaskLazyFrame, keys: list[str]) -> None:
         self._df = df
         self._keys = keys
-        self._grouped = self._df._native_dataframe.groupby(
+        self._grouped = self._df._native_frame.groupby(
             list(self._keys),
             dropna=False,
         )
@@ -54,10 +54,10 @@ class DaskLazyGroupBy:
             self._grouped,
             exprs,
             self._keys,
-            self._from_native_dataframe,
+            self._from_native_frame,
         )
 
-    def _from_native_dataframe(self, df: DaskLazyFrame) -> DaskLazyFrame:
+    def _from_native_frame(self, df: DaskLazyFrame) -> DaskLazyFrame:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         return DaskLazyFrame(
