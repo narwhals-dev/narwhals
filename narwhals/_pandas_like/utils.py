@@ -303,10 +303,19 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
         return "numpy"
 
 
-def reverse_translate_dtype(  # noqa: PLR0915
+def narwhals_to_native_dtype(  # noqa: PLR0915
     dtype: DType | type[DType], starting_dtype: Any, implementation: Implementation
 ) -> Any:
     from narwhals import dtypes
+
+    if "polars" in str(type(dtype)):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
 
     dtype_backend = get_dtype_backend(starting_dtype, implementation)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -412,6 +421,9 @@ def reverse_translate_dtype(  # noqa: PLR0915
         if dtype_backend == "pyarrow-nullable":
             return "date32[pyarrow]"
         msg = "Date dtype only supported for pyarrow-backed data types in pandas"
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

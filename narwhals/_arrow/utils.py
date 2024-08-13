@@ -55,7 +55,7 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     raise AssertionError
 
 
-def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
+def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     from narwhals import dtypes
 
     pa = get_pyarrow()

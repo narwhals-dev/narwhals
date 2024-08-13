@@ -9,7 +9,7 @@ from typing import overload
 
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
-from narwhals._arrow.utils import reverse_translate_dtype
+from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.dependencies import get_numpy
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
-    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
 
 
@@ -265,11 +264,6 @@ class ArrowSeries:
     def __native_namespace__(self) -> Any:  # pragma: no cover
         return get_pyarrow()
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(backend_version=self._backend_version)
-
     @property
     def name(self) -> str:
         return self._name
@@ -369,7 +363,7 @@ class ArrowSeries:
     def cast(self, dtype: DType) -> Self:
         pc = get_pyarrow_compute()
         ser = self._native_series
-        dtype = reverse_translate_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype)
         return self._from_native_series(pc.cast(ser, dtype))
 
     def null_count(self: Self) -> int:

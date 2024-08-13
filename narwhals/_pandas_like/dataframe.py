@@ -260,9 +260,7 @@ class PandasLikeDataFrame:
         self,
         *predicates: IntoPandasLikeExpr,
     ) -> Self:
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-        plx = PandasLikeNamespace(self._implementation, self._backend_version)
+        plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]
