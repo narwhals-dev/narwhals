@@ -52,7 +52,7 @@ def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
@@ -64,7 +64,8 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation.
+        native_namespace: The native library to use for DataFrame creation. Only
+            necessary if inputs are not Narwhals Series.
 
     Examples:
         >>> import pandas as pd
@@ -97,6 +98,21 @@ def from_dict(
         │ 2   ┆ 4   │
         └─────┴─────┘
     """
+    from narwhals.series import Series
+    from narwhals.translate import to_native
+
+    if not data:
+        msg = "from_dict cannot be called with empty dictionary"
+        raise ValueError(msg)
+    if native_namespace is None:
+        for val in data.values():
+            if isinstance(val, Series):
+                native_namespace = val.__native_namespace__()
+                break
+        else:
+            msg = "Calling `from_dict` without `native_namespace` is only supported if all input values are already Narwhals Series"
+            raise TypeError(msg)
+        data = {key: to_native(value, strict=False) for key, value in data.items()}
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:

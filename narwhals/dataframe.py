@@ -96,9 +96,9 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.with_row_index(name),
         )
 
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.drop_nulls(),
+            self._compliant_frame.drop_nulls(subset=subset),
         )
 
     @property
@@ -672,9 +672,13 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().pipe(function, *args, **kwargs)
 
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
         """
         Drop null values.
+
+        Arguments:
+            subset: Column name(s) for which null values are considered. If set to None
+                (default), use all columns.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -709,7 +713,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 1.0 ┆ 1.0 │
             └─────┴─────┘
         """
-        return super().drop_nulls()
+        return super().drop_nulls(subset=subset)
 
     def with_row_index(self, name: str = "index") -> Self:
         """
@@ -2190,9 +2194,13 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().pipe(function, *args, **kwargs)
 
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
         """
         Drop null values.
+
+        Arguments:
+            subset: Column name(s) for which null values are considered. If set to None
+                (default), use all columns.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -2227,7 +2235,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 1.0 ┆ 1.0 │
             └─────┴─────┘
         """
-        return super().drop_nulls()
+        return super().drop_nulls(subset=subset)
 
     def with_row_index(self, name: str = "index") -> Self:
         """

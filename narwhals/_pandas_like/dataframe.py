@@ -234,8 +234,12 @@ class PandasLikeDataFrame:
         )
         return self._from_native_dataframe(df)
 
-    def drop_nulls(self) -> Self:
-        return self._from_native_dataframe(self._native_dataframe.dropna(axis=0))
+    def drop_nulls(self, subset: str | list[str] | None) -> Self:
+        if subset is None:
+            return self._from_native_dataframe(self._native_dataframe.dropna(axis=0))
+        subset = [subset] if isinstance(subset, str) else subset
+        plx = self.__narwhals_namespace__()
+        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def with_row_index(self, name: str) -> Self:
         row_index = create_native_series(

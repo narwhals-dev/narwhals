@@ -434,6 +434,11 @@ class DaskExpr:
         msg = "`Expr.drop_nulls` is not supported for the Dask backend. Please use `LazyFrame.drop_nulls` instead."
         raise NotImplementedError(msg)
 
+    def head(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
+        raise NotImplementedError(msg)
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
@@ -560,6 +565,44 @@ class DaskExpr:
 class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:
         self._expr = expr
+
+    def replace(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+        n: int = 1,
+    ) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, _pattern, _value, _literal, _n: _input.str.replace(
+                _pattern, _value, regex=not _literal, n=_n
+            ),
+            "replace",
+            pattern,
+            value,
+            literal,
+            n,
+            returns_scalar=False,
+        )
+
+    def replace_all(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+    ) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, _pattern, _value, _literal: _input.str.replace(
+                _pattern, _value, n=-1, regex=not _literal
+            ),
+            "replace",
+            pattern,
+            value,
+            literal,
+            returns_scalar=False,
+        )
 
     def strip_chars(self, characters: str | None = None) -> DaskExpr:
         return self._expr._from_call(

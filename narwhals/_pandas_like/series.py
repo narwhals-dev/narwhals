@@ -675,6 +675,20 @@ class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.replace(
+                pat=pattern, repl=value, n=n, regex=not literal
+            ),
+        )
+
+    def replace_all(
+        self, pattern: str, value: str, *, literal: bool = False
+    ) -> PandasLikeSeries:
+        return self.replace(pattern, value, literal=literal, n=-1)
+
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.str.strip(characters),

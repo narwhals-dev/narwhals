@@ -97,7 +97,11 @@ class DaskLazyFrame:
         if not new_series:
             # return empty dataframe, like Polars does
             pd = get_pandas()
-            return self._from_native_dataframe(dd.from_pandas(pd.DataFrame()))
+            return self._from_native_dataframe(
+                dd.from_pandas(
+                    pd.DataFrame(), npartitions=self._native_dataframe.npartitions
+                )
+            )
 
         if all(getattr(expr, "_returns_scalar", False) for expr in exprs) and all(
             getattr(val, "_returns_scalar", False) for val in named_exprs.values()
@@ -110,8 +114,12 @@ class DaskLazyFrame:
         df = self._native_dataframe.assign(**new_series).loc[:, list(new_series.keys())]
         return self._from_native_dataframe(df)
 
-    def drop_nulls(self) -> Self:
-        return self._from_native_dataframe(self._native_dataframe.dropna())
+    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+        if subset is None:
+            return self._from_native_dataframe(self._native_dataframe.dropna())
+        subset = [subset] if isinstance(subset, str) else subset
+        plx = self.__narwhals_namespace__()
+        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -133,6 +141,11 @@ class DaskLazyFrame:
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._from_native_dataframe(self._native_dataframe.rename(columns=mapping))
+
+    def head(self: Self, n: int) -> Self:
+        return self._from_native_dataframe(
+            self._native_dataframe.head(n=n, compute=False, npartitions=-1)
+        )
 
     def unique(
         self: Self,
