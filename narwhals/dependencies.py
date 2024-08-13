@@ -129,7 +129,7 @@ def is_polars_lazyframe(df: Any) -> TypeGuard[pl.LazyFrame]:
     return bool((pl := get_polars()) is not None and isinstance(df, pl.LazyFrame))
 
 
-def is_polars_series(ser: Any) -> TypeGuard[pl.LazyFrame]:
+def is_polars_series(ser: Any) -> TypeGuard[pl.Series]:
     """Check whether `ser` is a Polars Series without importing Polars."""
     return bool((pl := get_polars()) is not None and isinstance(ser, pl.Series))
 
