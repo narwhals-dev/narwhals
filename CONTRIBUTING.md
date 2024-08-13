@@ -67,6 +67,22 @@ Please adhere to the following guidelines:
 If Narwhals looks like underwater unicorn magic to you, then please read
 [how it works](https://narwhals-dev.github.io/narwhals/how-it-works/).
 
+## Imports
+
+In Narwhals, we are very particular about imports, and strive to follow these rules:
+
+- Never import anything to do `isinstance` checks. Instead, just use the functions
+  in `narwhals.dependencies` (such as `is_pandas_dataframe`), which do the isinstance
+  check without importing anything
+- If you need to import anything, do it in a place where you know that the import
+  is definitely available. For example, NumPy is a required dependency of PyArrow,
+  so it's OK to import NumPy in a PyArrow function - however, it should not be
+  imported for a Polars function.
+- Don't place a third-party import at the top of a file. Instead, place it in the
+  function where it's used, so that we minimise the chances of it being imported
+  unnecessarily. We're trying to be really lightweight and minimal-overhead, and
+  unnecessary imports can take a hit.
+
 ## Happy contributing!
 
 Please remember to abide by the code of conduct, else you'll be conducted away from this project.
