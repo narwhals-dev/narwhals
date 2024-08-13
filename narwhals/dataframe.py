@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import numpy as np
+    import pandas as pd
     from typing_extensions import Self
 
     from narwhals.group_by import GroupBy
@@ -281,7 +282,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().lazy()
 
-    def to_pandas(self) -> Any:
+    def to_pandas(self) -> pd.DataFrame:
         """
         Convert this DataFrame to a pandas DataFrame.
 
@@ -343,7 +344,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         self._compliant_frame.write_parquet(file)
 
-    def to_numpy(self) -> Any:
+    def to_numpy(self) -> np.ndarray:
         """
         Convert this DataFrame to a NumPy ndarray.
 

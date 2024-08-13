@@ -318,7 +318,7 @@ class ArrowDataFrame:
         return self._native_dataframe.to_pandas()
 
     def to_numpy(self) -> Any:
-        import numpy as np
+        np = get_numpy()
 
         return np.column_stack([col.to_numpy() for col in self._native_dataframe.columns])
 
