@@ -12,7 +12,6 @@ from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
@@ -393,7 +392,8 @@ class ArrowSeries:
         return self._from_native_series(pc.is_in(ser, value_set=value_set))
 
     def arg_true(self) -> Self:
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
+
         ser = self._native_series
         res = np.flatnonzero(ser)
         return self._from_iterable(
@@ -465,7 +465,8 @@ class ArrowSeries:
         *,
         with_replacement: bool = False,
     ) -> Self:
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
+
         pc = get_pyarrow_compute()
         ser = self._native_series
         num_rows = len(self)
@@ -503,7 +504,8 @@ class ArrowSeries:
         return self.to_frame().is_unique().alias(self.name)
 
     def is_first_distinct(self: Self) -> Self:
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
+
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
 
@@ -520,7 +522,8 @@ class ArrowSeries:
         return self._from_native_series(pc.is_in(row_number, first_distinct_index))
 
     def is_last_distinct(self: Self) -> Self:
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
+
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
 
@@ -567,9 +570,10 @@ class ArrowSeries:
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
     ) -> ArrowDataFrame:
+        import numpy as np  # ignore-banned-import
+
         from narwhals._arrow.dataframe import ArrowDataFrame
 
-        np = get_numpy()
         pa = get_pyarrow()
 
         series = self._native_series

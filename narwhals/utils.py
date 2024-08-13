@@ -12,6 +12,7 @@ from typing import TypeVar
 from typing import cast
 
 from narwhals import dtypes
+from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
@@ -395,3 +396,21 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
                 "join operation"
             )
             raise AssertionError(msg)
+
+
+def parse_columns_to_drop(
+    compliant_frame: Any,
+    columns: Iterable[str],
+    strict: bool,  # noqa: FBT001
+) -> list[str]:
+    cols = set(compliant_frame.columns)
+    to_drop = list(columns)
+
+    if strict:
+        for d in to_drop:
+            if d not in cols:
+                msg = f'"{d}" not found'
+                raise ColumnNotFoundError(msg)
+    else:
+        to_drop = list(cols.intersection(set(to_drop)))
+    return to_drop

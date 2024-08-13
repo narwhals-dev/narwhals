@@ -11,6 +11,8 @@ from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import numpy as np
+    import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.dataframe import DataFrame
@@ -1349,7 +1351,7 @@ class Series:
         """
         return self._compliant_series.n_unique()  # type: ignore[no-any-return]
 
-    def to_numpy(self) -> Any:
+    def to_numpy(self) -> np.ndarray:
         """
         Convert to numpy.
 
@@ -1376,7 +1378,7 @@ class Series:
         """
         return self._compliant_series.to_numpy()
 
-    def to_pandas(self) -> Any:
+    def to_pandas(self) -> pd.Series:
         """
         Convert to pandas.
 
@@ -2245,7 +2247,7 @@ class Series:
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
-    def to_arrow(self: Self) -> Any:
+    def to_arrow(self: Self) -> pa.Array:
         r"""
         Convert to arrow.
 

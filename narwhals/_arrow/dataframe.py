@@ -12,13 +12,14 @@ from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.dependencies import get_pyarrow_parquet
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
+from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -154,11 +155,7 @@ class ArrowDataFrame:
                 self._native_frame.slice(item.start, stop - start),
             )
 
-        elif isinstance(item, Sequence) or (
-            (np := get_numpy()) is not None
-            and isinstance(item, np.ndarray)
-            and item.ndim == 1
-        ):
+        elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
             return self._from_native_frame(self._native_frame.take(item))
 
         else:  # pragma: no cover
@@ -264,14 +261,16 @@ class ArrowDataFrame:
             )
 
             return self._from_native_frame(
-                self.with_columns(**{key_token: plx.lit(0, None)})._native_frame.join(
+                self.with_columns(**{key_token: plx.lit(0, None)})
+                ._native_frame.join(
                     other.with_columns(**{key_token: plx.lit(0, None)})._native_frame,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
                     right_suffix="_right",
-                ),
-            ).drop(key_token)
+                )
+                .drop([key_token]),
+            )
 
         return self._from_native_frame(
             self._native_frame.join(
@@ -283,8 +282,11 @@ class ArrowDataFrame:
             ),
         )
 
-    def drop(self, *columns: str) -> Self:
-        return self._from_native_frame(self._native_frame.drop(list(columns)))
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        return self._from_native_frame(self._native_frame.drop(to_drop))
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
         if subset is None:
@@ -316,7 +318,7 @@ class ArrowDataFrame:
         return self._native_frame.to_pandas()
 
     def to_numpy(self) -> Any:
-        import numpy as np
+        import numpy as np  # ignore-banned-import
 
         return np.column_stack([col.to_numpy() for col in self._native_frame.columns])
 
@@ -417,9 +419,10 @@ class ArrowDataFrame:
         pp.write_table(self._native_frame, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
+        import numpy as np  # ignore-banned-import
+
         from narwhals._arrow.series import ArrowSeries
 
-        np = get_numpy()
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
         df = self._native_frame
@@ -462,7 +465,8 @@ class ArrowDataFrame:
             and has no effect on the output.
         """
 
-        np = get_numpy()
+        import numpy as np  # ignore-banned-import
+
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
 

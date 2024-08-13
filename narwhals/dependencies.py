@@ -8,11 +8,14 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 if TYPE_CHECKING:
+    import numpy as np
+
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
     else:
         from typing_extensions import TypeGuard
     import pandas as pd
+    import polars as pl
 
 
 def get_polars() -> Any:
@@ -44,6 +47,8 @@ def get_pyarrow() -> Any:  # pragma: no cover
 
 def get_pyarrow_compute() -> Any:  # pragma: no cover
     """Get pyarrow.compute module (if pyarrow has already been imported - else return None)."""
+    # TODO(marco): remove this one, as it's at odds with the others, as it imports
+    # something new
     if "pyarrow" in sys.modules:
         import pyarrow.compute as pc
 
@@ -83,6 +88,26 @@ def get_dask_expr() -> Any:
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return bool((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame))
+
+
+def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
+    """Check whether `df` is a pandas Series without importing pandas."""
+    return bool((pd := get_pandas()) is not None and isinstance(ser, pd.Series))
+
+
+def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
+    """Check whether `df` is a Polars DataFrame without importing Polars."""
+    return bool((pl := get_polars()) is not None and isinstance(df, pl.DataFrame))
+
+
+def is_polars_lazyframe(df: Any) -> TypeGuard[pl.LazyFrame]:
+    """Check whether `df` is a Polars LazyFrame without importing Polars."""
+    return bool((pl := get_polars()) is not None and isinstance(df, pl.LazyFrame))
+
+
+def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
+    """Check whether `arr` is a NumPy Array without importing NumPy."""
+    return bool((np := get_numpy()) is not None and isinstance(arr, np.ndarray))
 
 
 __all__ = [

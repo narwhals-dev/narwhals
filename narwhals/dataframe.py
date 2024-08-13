@@ -11,8 +11,8 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
 from narwhals.utils import flatten
 from narwhals.utils import parse_version
@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import numpy as np
+    import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.group_by import GroupBy
@@ -138,9 +140,9 @@ class BaseFrame(Generic[FrameT]):
     def tail(self, n: int) -> Self:
         return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: Iterable[str], strict: bool) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.drop(*flatten(columns))
+            self._compliant_frame.drop(columns, strict=strict)
         )
 
     def unique(
@@ -305,7 +307,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().lazy()
 
-    def to_pandas(self) -> Any:
+    def to_pandas(self) -> pd.DataFrame:
         """
         Convert this DataFrame to a pandas DataFrame.
 
@@ -367,7 +369,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         self._compliant_frame.write_parquet(file)
 
-    def to_numpy(self) -> Any:
+    def to_numpy(self) -> np.ndarray:
         """
         Convert this DataFrame to a NumPy ndarray.
 
@@ -575,9 +577,7 @@ class DataFrame(BaseFrame[FrameT]):
             )
 
         elif isinstance(item, (Sequence, slice)) or (
-            (np := get_numpy()) is not None
-            and isinstance(item, np.ndarray)
-            and item.ndim == 1
+            is_numpy_array(item) and item.ndim == 1
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
 
@@ -1310,12 +1310,14 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         """
         Remove columns from the dataframe.
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
+            strict: Validate that all column names exist in the schema and throw an
+                exception if a column name does not exist in the schema.
 
         Examples:
             >>> import pandas as pd
@@ -1373,7 +1375,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*columns)
+        return super().drop(*flatten(columns), strict=strict)
 
     def unique(
         self,
@@ -2048,7 +2050,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().gather_every(n=n, offset=offset)
 
-    def to_arrow(self: Self) -> Any:
+    def to_arrow(self: Self) -> pa.Table:
         r"""
         Convert to arrow table.
 
@@ -2767,13 +2769,19 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         r"""
         Remove columns from the LazyFrame.
 
         Arguments:
-            *columns: Names of the columns that should be removed from the
-                      dataframe. Accepts column selector input.
+            *columns: Names of the columns that should be removed from the dataframe.
+            strict: Validate that all column names exist in the schema and throw an
+                exception if a column name does not exist in the schema.
+
+        Warning:
+            `strict` argument is ignored for `polars<1.0.0`.
+
+            Please consider upgrading to a newer version or pass to eager mode.
 
         Examples:
             >>> import pandas as pd
@@ -2831,7 +2839,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*flatten(columns))
+        return super().drop(*flatten(columns), strict=strict)
 
     def unique(
         self,

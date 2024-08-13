@@ -18,12 +18,13 @@ from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
+from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -160,9 +161,7 @@ class PandasLikeDataFrame:
             )
 
         elif isinstance(item, (slice, Sequence)) or (
-            (np := get_numpy()) is not None
-            and isinstance(item, np.ndarray)
-            and item.ndim == 1
+            is_numpy_array(item) and item.ndim == 1
         ):
             return self._from_native_frame(self._native_frame.iloc[item])
 
@@ -321,8 +320,11 @@ class PandasLikeDataFrame:
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._from_native_frame(self._native_frame.rename(columns=mapping))
 
-    def drop(self, *columns: str) -> Self:
-        return self._from_native_frame(self._native_frame.drop(columns=list(columns)))
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        return self._from_native_frame(self._native_frame.drop(columns=to_drop))
 
     # --- transform ---
     def sort(
@@ -382,14 +384,16 @@ class PandasLikeDataFrame:
                 )
 
                 return self._from_native_frame(
-                    self._native_frame.assign(**{key_token: 0}).merge(
+                    self._native_frame.assign(**{key_token: 0})
+                    .merge(
                         other._native_frame.assign(**{key_token: 0}),
                         how="inner",
                         left_on=key_token,
                         right_on=key_token,
                         suffixes=("", "_right"),
-                    ),
-                ).drop(key_token)
+                    )
+                    .drop(columns=key_token),
+                )
             else:
                 return self._from_native_frame(
                     self._native_frame.merge(
@@ -420,7 +424,7 @@ class PandasLikeDataFrame:
                     right_on=left_on,
                 )
                 .loc[lambda t: t[indicator_token] == "left_only"]
-                .drop(columns=[indicator_token])
+                .drop(columns=indicator_token)
             )
 
         if how == "semi":
@@ -526,7 +530,7 @@ class PandasLikeDataFrame:
         # returns Object) then we just call `to_numpy()` on the DataFrame.
         for dtype in self._native_frame.dtypes:
             if str(dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-                import numpy as np
+                import numpy as np  # ignore-banned-import
 
                 return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
         return self._native_frame.to_numpy()
