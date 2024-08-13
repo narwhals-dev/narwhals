@@ -8,11 +8,14 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 if TYPE_CHECKING:
+    import numpy as np
+
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
     else:
         from typing_extensions import TypeGuard
     import pandas as pd
+    import polars as pl
 
 
 def get_polars() -> Any:
@@ -83,6 +86,21 @@ def get_dask_expr() -> Any:
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return bool((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame))
+
+
+def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
+    """Check whether `df` is a Polars DataFrame without importing Polars."""
+    return bool((pl := get_polars()) is not None and isinstance(df, pl.DataFrame))
+
+
+def is_polars_lazyframe(df: Any) -> TypeGuard[pl.LazyFrame]:
+    """Check whether `df` is a Polars LazyFrame without importing Polars."""
+    return bool((pl := get_polars()) is not None and isinstance(df, pl.LazyFrame))
+
+
+def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
+    """Check whether `arr` is a NumPy Array without importing NumPy."""
+    return bool((np := get_numpy()) is not None and isinstance(arr, np.ndarray))
 
 
 __all__ = [

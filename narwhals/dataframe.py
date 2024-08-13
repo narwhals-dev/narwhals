@@ -11,8 +11,8 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
 from narwhals.utils import flatten
 
@@ -553,9 +553,7 @@ class DataFrame(BaseFrame[FrameT]):
             )
 
         elif isinstance(item, (Sequence, slice)) or (
-            (np := get_numpy()) is not None
-            and isinstance(item, np.ndarray)
-            and item.ndim == 1
+            is_numpy_array(item) and item.ndim == 1
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
 

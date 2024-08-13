@@ -12,10 +12,10 @@ from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyarrow_compute
 from narwhals.dependencies import get_pyarrow_parquet
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
@@ -154,11 +154,7 @@ class ArrowDataFrame:
                 self._native_dataframe.slice(item.start, stop - start),
             )
 
-        elif isinstance(item, Sequence) or (
-            (np := get_numpy()) is not None
-            and isinstance(item, np.ndarray)
-            and item.ndim == 1
-        ):
+        elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
             return self._from_native_dataframe(self._native_dataframe.take(item))
 
         else:  # pragma: no cover
