@@ -9,7 +9,7 @@ from tests.utils import compare_dicts
 
 data = {
     "a": [1.0, 2.0, None, 4.0],
-    "b": [None, 3.0, None, 5.0],
+    "b": [None, "x", None, "y"],
 }
 
 
@@ -17,16 +17,18 @@ def test_drop_nulls(constructor: Any) -> None:
     result = nw.from_native(constructor(data)).drop_nulls()
     expected = {
         "a": [2.0, 4.0],
-        "b": [3.0, 5.0],
+        "b": ["x", "y"],
     }
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("subset", ["a", ["a"]])
+@pytest.mark.parametrize(
+    "subset", ["a", ["a"], nw.selectors.numeric(), [nw.selectors.numeric()]]
+)
 def test_drop_nulls_subset(constructor: Any, subset: str | list[str]) -> None:
     result = nw.from_native(constructor(data)).drop_nulls(subset=subset)
     expected = {
         "a": [1, 2.0, 4.0],
-        "b": [float("nan"), 3.0, 5.0],
+        "b": [float("nan"), "x", "y"],
     }
     compare_dicts(result, expected)

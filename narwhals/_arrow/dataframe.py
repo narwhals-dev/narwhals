@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -283,17 +284,49 @@ class ArrowDataFrame:
         )
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
-        return self._from_native_frame(self._native_frame.drop(to_drop))
+        from narwhals.selectors import Selector
+
+        native_frame = self._native_frame
+        column_names = [c for c in columns if isinstance(c, str)]
+        selectors = [c for c in columns if isinstance(c, Selector)]
+
+        if column_names:
+            to_drop = parse_columns_to_drop(
+                compliant_frame=self, columns=column_names, strict=strict
+            )
+            native_frame = native_frame.drop(columns=to_drop)
+
+        result = self._from_native_frame(native_frame)
+        if selectors:
+            plx = self.__narwhals_namespace__()
+            selection = reduce(lambda x, y: x & y, selectors)
+            result = result.select(~selection._call(plx))
+        return result
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.drop_null())
-        subset = [subset] if isinstance(subset, str) else subset
+
+        from narwhals.selectors import Selector
+
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        subset = [subset] if isinstance(subset, (str, Selector)) else subset
+
+        column_names = [c for c in subset if isinstance(c, str)]
+        selectors = [c for c in subset if isinstance(c, Selector)]
+
+        result = (
+            self.filter(~plx.any_horizontal(plx.col(*column_names).is_null()))
+            if column_names
+            else self
+        )
+        return (
+            result.filter(
+                ~plx.any_horizontal(*[s.is_null()._call(plx) for s in selectors])
+            )
+            if selectors
+            else result
+        )
 
     def sort(
         self,

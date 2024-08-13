@@ -18,10 +18,12 @@ from narwhals.utils import parse_version
         ("abc", ["b", "z"]),
         (["abc"], ["b", "z"]),
         (["abc", "b"], ["z"]),
+        ([nw.selectors.string()], ["abc", "z"]),
+        ([nw.selectors.by_dtype(nw.Float64), "abc"], ["b"]),
     ],
 )
 def test_drop(constructor: Any, to_drop: list[str], expected: list[str]) -> None:
-    data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    data = {"abc": [1, 3, 2], "b": ["x", "y", "z"], "z": [7.1, 8, 9]}
     df = nw.from_native(constructor(data))
     assert df.drop(to_drop).collect_schema().names() == expected
     if not isinstance(to_drop, str):
