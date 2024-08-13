@@ -94,6 +94,11 @@ def is_polars_lazyframe(df: Any) -> TypeGuard[pl.LazyFrame]:
     return bool((pl := get_polars()) is not None and isinstance(df, pl.LazyFrame))
 
 
+def is_polars_series(ser: Any) -> TypeGuard[pl.LazyFrame]:
+    """Check whether `df` is a Polars Series without importing Polars."""
+    return bool((pl := get_polars()) is not None and isinstance(ser, pl.Series))
+
+
 def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
     """Check whether `arr` is a NumPy Array without importing NumPy."""
     return bool((np := get_numpy()) is not None and isinstance(arr, np.ndarray))

@@ -181,13 +181,13 @@ class ArrowDataFrame:
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
+        import pyarrow as pa  # ignore-banned-import()
+
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__.from_arrays([]))
         names = [s.name for s in new_series]
-        import pyarrow as pa  # ignore-banned-import()
-
         df = pa.Table.from_arrays(
             broadcast_series(new_series),
             names=names,

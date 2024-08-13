@@ -20,6 +20,7 @@ from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_dataframe
 from narwhals.dependencies import is_polars_lazyframe
+from narwhals.dependencies import is_polars_series
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -369,7 +370,8 @@ def from_native(  # noqa: PLR0915
             PolarsLazyFrame(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
         )
-    elif (pl := get_polars()) is not None and isinstance(native_object, pl.Series):
+    elif is_polars_series(native_object):
+        pl = get_polars()
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
