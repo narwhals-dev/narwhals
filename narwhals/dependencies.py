@@ -47,6 +47,8 @@ def get_pyarrow() -> Any:  # pragma: no cover
 
 def get_pyarrow_compute() -> Any:  # pragma: no cover
     """Get pyarrow.compute module (if pyarrow has already been imported - else return None)."""
+    # TODO(marco): remove this one, as it's at odds with the others, as it imports
+    # something new
     if "pyarrow" in sys.modules:
         import pyarrow.compute as pc
 
