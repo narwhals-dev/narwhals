@@ -35,7 +35,7 @@ class ImportPandasChecker(ast.NodeVisitor):
         for alias in node.names:
             if (
                 alias.name in BANNED_IMPORTS
-                and "# noqa: banned-import" not in self.lines[node.lineno - 1]
+                and "# ignore-banned-import" not in self.lines[node.lineno - 1]
             ):
                 print(  # noqa: T201
                     f"{self.file_name}:{node.lineno}:{node.col_offset}: found {alias.name} import"
@@ -46,7 +46,7 @@ class ImportPandasChecker(ast.NodeVisitor):
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802
         if (
             node.module in BANNED_IMPORTS
-            and "# noqa: banned-import" not in self.lines[node.lineno - 1]
+            and "# ignore-banned-import" not in self.lines[node.lineno - 1]
         ):
             print(  # noqa: T201
                 f"{self.file_name}:{node.lineno}:{node.col_offset}: found {node.module} import"
