@@ -45,6 +45,15 @@ def get_pyarrow() -> Any:  # pragma: no cover
     return sys.modules.get("pyarrow", None)
 
 
+def get_pyarrow_compute() -> Any:  # pragma: no cover
+    """Get pyarrow.compute module (if pyarrow has already been imported - else return None)."""
+    if "pyarrow" in sys.modules:
+        import pyarrow.compute as pc
+
+        return pc
+    return None
+
+
 def get_pyarrow_parquet() -> Any:  # pragma: no cover
     """Get pyarrow.parquet module (if pyarrow has already been imported - else return None)."""
     if "pyarrow" in sys.modules:
