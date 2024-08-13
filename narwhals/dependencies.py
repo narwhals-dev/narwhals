@@ -125,7 +125,7 @@ def is_pyarrow_chunked_array(ser: Any) -> TypeGuard[pa.ChunkedArray]:
 
 
 def is_pyarrow_table(df: Any) -> TypeGuard[pa.Table]:
-    """Check whether `ser` is a PyArrow Table without importing PyArrow."""
+    """Check whether `df` is a PyArrow Table without importing PyArrow."""
     return bool((pa := get_pyarrow()) is not None and isinstance(df, pa.Table))
 
 
