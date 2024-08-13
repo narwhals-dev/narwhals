@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -24,10 +23,6 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals.dtypes import DType
-
-with contextlib.suppress(ModuleNotFoundError):
-    # NumPy is required dependency of PyArrow
-    import numpy as np  # ignore-banned-import
 
 
 class ArrowSeries:
@@ -397,6 +392,8 @@ class ArrowSeries:
         return self._from_native_series(pc.is_in(ser, value_set=value_set))
 
     def arg_true(self) -> Self:
+        import numpy as np  # ignore-banned-import
+
         ser = self._native_series
         res = np.flatnonzero(ser)
         return self._from_iterable(
@@ -468,6 +465,8 @@ class ArrowSeries:
         *,
         with_replacement: bool = False,
     ) -> Self:
+        import numpy as np  # ignore-banned-import
+
         pc = get_pyarrow_compute()
         ser = self._native_series
         num_rows = len(self)
@@ -505,6 +504,8 @@ class ArrowSeries:
         return self.to_frame().is_unique().alias(self.name)
 
     def is_first_distinct(self: Self) -> Self:
+        import numpy as np  # ignore-banned-import
+
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
 
@@ -521,6 +522,8 @@ class ArrowSeries:
         return self._from_native_series(pc.is_in(row_number, first_distinct_index))
 
     def is_last_distinct(self: Self) -> Self:
+        import numpy as np  # ignore-banned-import
+
         pa = get_pyarrow()
         pc = get_pyarrow_compute()
 
@@ -567,6 +570,8 @@ class ArrowSeries:
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
     ) -> ArrowDataFrame:
+        import numpy as np  # ignore-banned-import
+
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         pa = get_pyarrow()
