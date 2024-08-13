@@ -3,7 +3,6 @@ import sys
 
 BANNED_IMPORTS = {
     "cudf",
-    "pandas",
     "dask",
     "dask.dataframe",
     "dask_expr",
@@ -11,6 +10,7 @@ BANNED_IMPORTS = {
     "ibis",
     "modin",
     "numpy",
+    "pandas",
     "polars",
     "pyarrow",
 }
