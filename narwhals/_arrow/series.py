@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
-    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
 
 
@@ -264,11 +263,6 @@ class ArrowSeries:
 
     def __native_namespace__(self) -> Any:  # pragma: no cover
         return get_pyarrow()
-
-    def __narwhals_namespace__(self) -> ArrowNamespace:  # pragma: no cover
-        from narwhals._arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(backend_version=self._backend_version)
 
     @property
     def name(self) -> str:

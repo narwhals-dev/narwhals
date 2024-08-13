@@ -44,6 +44,7 @@ class DaskExpr:
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
+        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version)

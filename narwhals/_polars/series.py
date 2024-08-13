@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
 
-from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import translate_dtype
 
@@ -38,9 +37,6 @@ class PolarsSeries:
 
     def __native_namespace__(self) -> Any:
         return get_polars()
-
-    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
-        return PolarsNamespace(backend_version=self._backend_version)
 
     def _from_native_series(self, series: Any) -> Self:
         return self.__class__(series, backend_version=self._backend_version)

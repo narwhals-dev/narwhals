@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
@@ -98,11 +97,6 @@ class PandasLikeSeries:
             self._use_copy_false = True
         else:
             self._use_copy_false = False
-
-    def __narwhals_namespace__(self) -> PandasLikeNamespace:  # pragma: no cover
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-        return PandasLikeNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
         if self._implementation is Implementation.PANDAS:
