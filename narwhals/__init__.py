@@ -36,6 +36,7 @@ from narwhals.expr import sum_horizontal
 from narwhals.functions import concat
 from narwhals.functions import from_dict
 from narwhals.functions import get_level
+from narwhals.functions import new_series
 from narwhals.functions import show_versions
 from narwhals.schema import Schema
 from narwhals.series import Series
@@ -55,6 +56,7 @@ __all__ = [
     "concat",
     "from_dict",
     "get_level",
+    "new_series",
     "to_native",
     "from_native",
     "is_ordered_categorical",

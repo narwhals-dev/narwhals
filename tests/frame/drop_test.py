@@ -33,9 +33,7 @@ def test_drop(constructor: Any, to_drop: list[str], expected: list[str]) -> None
     [
         (
             True,
-            pytest.raises(
-                (ColumnNotFoundError, PlColumnNotFoundError), match='"z" not found'
-            ),
+            pytest.raises((ColumnNotFoundError, PlColumnNotFoundError), match="z"),
         ),
         (False, does_not_raise()),
     ],

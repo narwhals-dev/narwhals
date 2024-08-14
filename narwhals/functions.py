@@ -48,6 +48,100 @@ def concat(
     )
 
 
+def new_series(
+    name: str,
+    values: Any,
+    dtype: DType | type[DType] | None = None,
+    *,
+    native_namespace: ModuleType,
+) -> Series:
+    """
+    Instantiate Narwhals Series from raw data.
+
+    Arguments:
+        name: Name of resulting Series.
+        values: Values of make Series from.
+        dtype: (Narwhals) dtype. If not provided, the native library
+            may auto-infer it from `values`.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     values = [4, 1, 2]
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.new_series("c", values, nw.Int32, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+        0    4
+        1    1
+        2    2
+        Name: c, dtype: int32
+        >>> func(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
+        shape: (3,)
+        Series: 'c' [i32]
+        [
+           4
+           1
+           2
+        ]
+    """
+    implementation = Implementation.from_native_namespace(native_namespace)
+
+    if implementation is Implementation.POLARS:
+        if dtype:
+            from narwhals._polars.utils import (
+                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
+            )
+
+            dtype = polars_narwhals_to_native_dtype(dtype)
+
+        native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
+    elif implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    }:
+        if dtype:
+            from narwhals._pandas_like.utils import (
+                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
+            )
+
+            dtype = pandas_like_narwhals_to_native_dtype(dtype, None, implementation)
+        native_series = native_namespace.Series(values, name=name, dtype=dtype)
+
+    elif implementation is Implementation.PYARROW:
+        if dtype:
+            from narwhals._arrow.utils import (
+                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
+            )
+
+            dtype = arrow_narwhals_to_native_dtype(dtype)
+        native_series = native_namespace.chunked_array([values], type=dtype)
+
+    elif implementation is Implementation.DASK:
+        msg = "Dask support in Narwhals is lazy-only, so `new_series` is " "not supported"
+        raise NotImplementedError(msg)
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narhwals extension using this feature should
+            # implement `from_dict` function in the top-level namespace.
+            native_series = native_namespace.new_series(name, values, dtype)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `Series` constructor."
+            raise AttributeError(msg) from e
+    return from_native(native_series, series_only=True).alias(name)
+
+
 def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,

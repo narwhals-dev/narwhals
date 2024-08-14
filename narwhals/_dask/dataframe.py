@@ -32,6 +32,7 @@ class DaskLazyFrame:
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
+        self._implementation = Implementation.DASK
 
     def __native_namespace__(self) -> Any:  # pragma: no cover
         return get_dask_dataframe()

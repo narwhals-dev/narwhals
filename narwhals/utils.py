@@ -14,6 +14,7 @@ from typing import cast
 from narwhals import dtypes
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -43,6 +44,7 @@ class Implementation(Enum):
     CUDF = auto()
     PYARROW = auto()
     POLARS = auto()
+    DASK = auto()
 
     UNKNOWN = auto()
 
@@ -57,6 +59,7 @@ class Implementation(Enum):
             get_cudf(): Implementation.CUDF,
             get_pyarrow(): Implementation.PYARROW,
             get_polars(): Implementation.POLARS,
+            get_dask_dataframe(): Implementation.DASK,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
