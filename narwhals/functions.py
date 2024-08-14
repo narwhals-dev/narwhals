@@ -75,24 +75,24 @@ def new_series(
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     values = [1, 2, 3]
+        ...     values = [4, 1, 2]
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.new_series("a", values, nw.Int32, native_namespace=native_namespace)
+        ...     return nw.new_series("c", values, nw.Int32, native_namespace=native_namespace)
 
         Let's see what happens when passing pandas / Polars input:
 
         >>> func(pd.DataFrame(data))
-        0    1
-        1    2
-        2    3
-        Name: a, dtype: int32
+        0    4
+        1    1
+        2    2
+        Name: c, dtype: int32
         >>> func(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
         shape: (3,)
-        Series: 'a' [i32]
+        Series: 'c' [i32]
         [
+           4
            1
            2
-           3
         ]
     """
     implementation = Implementation.from_native_namespace(native_namespace)

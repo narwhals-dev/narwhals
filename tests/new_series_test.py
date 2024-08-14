@@ -20,8 +20,6 @@ def test_new_series(constructor_eager: Any) -> None:
         "b", [4, 1, 2], nw.Int32, native_namespace=nw.get_native_namespace(s)
     )
     expected = {"b": [4, 1, 2]}
-    # all supported libraries auto-infer this to be int64, we can always special-case
-    # something different if necessary
     assert result.dtype == nw.Int32
     compare_dicts(result.to_frame(), expected)
 
