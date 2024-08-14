@@ -45,13 +45,13 @@ with open("docs/api-reference/dataframe.md") as fd:
 documented = [
     remove_prefix(i, "        - ")
     for i in content.splitlines()
-    if i.startswith("        - ")
+    if i.startswith("        - ") and not i.startswith("        - _")
 ]
 if missing := set(top_level_functions).difference(documented):
     print("DataFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions).difference({"__getitem__"}):
+if extra := set(documented).difference(top_level_functions):
     print("DataFrame: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
@@ -87,7 +87,7 @@ with open("docs/api-reference/series.md") as fd:
 documented = [
     remove_prefix(i, "        - ")
     for i in content.splitlines()
-    if i.startswith("        - ")
+    if i.startswith("        - ") and not i.startswith("        - _")
 ]
 if (
     missing := set(top_level_functions)

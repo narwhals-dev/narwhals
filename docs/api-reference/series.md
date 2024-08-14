@@ -4,6 +4,8 @@
     handler: python
     options:
       members:
+        - __arrow_c_stream__
+        - __getitem__
         - abs
         - alias
         - all

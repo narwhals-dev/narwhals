@@ -7,6 +7,8 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals.utils import parse_version
+
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
@@ -56,6 +58,32 @@ class Series:
 
     def __native_namespace__(self) -> Any:
         return self._compliant_series.__native_namespace__()
+
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
+        """
+        Export a Series via the Arrow PyCapsule Interface.
+
+        Narwhals doesn't implement anything itself here:
+
+        - if the underlying series implements the interface, it'll return that
+        - else, it'll call `to_arrow` and then defer to PyArrow's implementation
+
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
+        """
+        native_series = self._compliant_series._native_series
+        if hasattr(native_series, "__arrow_c_stream__"):
+            return native_series.__arrow_c_stream__(requested_schema=requested_schema)
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            raise ModuleNotFoundError(msg) from exc
+        if parse_version(pa.__version__) < (16, 0):  # pragma: no cover
+            msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            raise ModuleNotFoundError(msg)
+        ca = pa.chunked_array([self.to_arrow()])
+        return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
     @property
     def shape(self) -> tuple[int]:

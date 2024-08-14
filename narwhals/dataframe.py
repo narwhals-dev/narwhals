@@ -15,6 +15,7 @@ from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
 from narwhals.utils import flatten
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -248,6 +249,30 @@ class DataFrame(BaseFrame[FrameT]):
             + "─" * length
             + "┘"
         )
+
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
+        """
+        Export a DataFrame via the Arrow PyCapsule Interface.
+
+        - if the underlying dataframe implements the interface, it'll return that
+        - else, it'll call `to_arrow` and then defer to PyArrow's implementation
+
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
+        """
+        native_frame = self._compliant_frame._native_frame
+        if hasattr(native_frame, "__arrow_c_stream__"):
+            return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            raise ModuleNotFoundError(msg) from exc
+        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            raise ModuleNotFoundError(msg) from None
+        pa_table = self.to_arrow()
+        return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
 
     def lazy(self) -> LazyFrame[Any]:
         """

@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - __arrow_c_stream__
         - __getitem__
         - clone
         - collect_schema
