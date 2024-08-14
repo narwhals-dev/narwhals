@@ -17,14 +17,15 @@ Here are the top-level functions available in Narwhals.
         - get_native_namespace
         - is_ordered_categorical
         - len
-        - maybe_align_index
-        - maybe_set_index
-        - maybe_convert_dtypes
         - lit
         - max
+        - maybe_align_index
+        - maybe_convert_dtypes
+        - maybe_set_index
         - mean
         - min
         - narwhalify
+        - new_series
         - sum
         - sum_horizontal
         - show_versions

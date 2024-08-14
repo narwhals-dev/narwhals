@@ -7,7 +7,7 @@ from typing import Sequence
 
 from narwhals import dtypes
 from narwhals._polars.utils import extract_args_kwargs
-from narwhals._polars.utils import reverse_translate_dtype
+from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 
@@ -71,7 +71,7 @@ class PolarsNamespace:
         from narwhals._polars.dataframe import PolarsLazyFrame
 
         pl = get_polars()
-        dfs: list[Any] = [item._native_dataframe for item in items]
+        dfs: list[Any] = [item._native_frame for item in items]
         result = pl.concat(dfs, how=how)
         if isinstance(result, pl.DataFrame):
             return PolarsDataFrame(result, backend_version=items[0]._backend_version)
@@ -82,7 +82,7 @@ class PolarsNamespace:
 
         pl = get_polars()
         if dtype is not None:
-            return PolarsExpr(pl.lit(value, dtype=reverse_translate_dtype(dtype)))
+            return PolarsExpr(pl.lit(value, dtype=narwhals_to_native_dtype(dtype)))
         return PolarsExpr(pl.lit(value))
 
     def mean(self, *column_names: str) -> Any:
@@ -102,7 +102,7 @@ class PolarsSelectors:
 
         pl = get_polars()
         return PolarsExpr(
-            pl.selectors.by_dtype([reverse_translate_dtype(dtype) for dtype in dtypes])
+            pl.selectors.by_dtype([narwhals_to_native_dtype(dtype) for dtype in dtypes])
         )
 
     def numeric(self) -> PolarsExpr:

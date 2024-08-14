@@ -4,6 +4,8 @@
     handler: python
     options:
       members:
+        - __arrow_c_stream__
+        - __getitem__
         - abs
         - alias
         - all
@@ -47,6 +49,7 @@
         - std
         - sum
         - tail
+        - to_arrow
         - to_dummies
         - to_frame
         - to_list

@@ -13,7 +13,6 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -87,9 +86,10 @@ class ArrowNamespace:
         )
 
     def _create_compliant_series(self, value: Any) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import()
+
         from narwhals._arrow.series import ArrowSeries
 
-        pa = get_pyarrow()
         return ArrowSeries(
             native_series=pa.chunked_array([value]),
             name="",
@@ -114,7 +114,7 @@ class ArrowNamespace:
         return ArrowExpr(  # pragma: no cover
             lambda df: [
                 ArrowSeries._from_iterable(
-                    [len(df._native_dataframe)],
+                    [len(df._native_frame)],
                     name="len",
                     backend_version=self._backend_version,
                 )
@@ -133,7 +133,7 @@ class ArrowNamespace:
         return ArrowExpr(
             lambda df: [
                 ArrowSeries(
-                    df._native_dataframe[column_name],
+                    df._native_frame[column_name],
                     name=column_name,
                     backend_version=df._backend_version,
                 )
@@ -167,25 +167,13 @@ class ArrowNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(
-            lambda x, y: x & y,
-            parse_into_exprs(*exprs, namespace=self),
-        )
+        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
 
     def any_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(
-            lambda x, y: x | y,
-            parse_into_exprs(*exprs, namespace=self),
-        )
+        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
 
     def sum_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(
-            lambda x, y: x + y,
-            parse_into_exprs(
-                *exprs,
-                namespace=self,
-            ),
-        )
+        return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
 
     def concat(
         self,
@@ -193,7 +181,7 @@ class ArrowNamespace:
         *,
         how: str = "vertical",
     ) -> ArrowDataFrame:
-        dfs: list[Any] = [item._native_dataframe for item in items]
+        dfs: list[Any] = [item._native_frame for item in items]
 
         if how == "horizontal":
             return ArrowDataFrame(

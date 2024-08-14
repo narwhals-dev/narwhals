@@ -26,7 +26,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
             raise NotImplementedError(msg)
         result = results[0]
         if not get_dask_expr()._expr.are_co_aligned(
-            df._native_dataframe._expr, result._expr
+            df._native_frame._expr, result._expr
         ):  # pragma: no cover
             # are_co_aligned is a method which cheaply checks if two Dask expressions
             # have the same index, and therefore don't require index alignment.
@@ -55,7 +55,7 @@ def parse_exprs_and_named_exprs(
         if hasattr(expr, "__narwhals_expr__"):
             _results = expr._call(df)
         elif isinstance(expr, str):
-            _results = [df._native_dataframe.loc[:, expr]]
+            _results = [df._native_frame.loc[:, expr]]
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
