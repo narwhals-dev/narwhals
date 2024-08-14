@@ -16,8 +16,6 @@ from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -638,7 +636,8 @@ class PandasLikeSeries:
             msg = "`to_arrow` is not implemented for CuDF backend."
             raise NotImplementedError(msg)
 
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         return pa.Array.from_pandas(self._native_series)
 
     @property
@@ -786,7 +785,8 @@ class PandasLikeSeriesDateTimeNamespace:
             self._pandas_series._native_series.dtype
         ):
             # crazy workaround for https://github.com/pandas-dev/pandas/issues/59154
-            pc = get_pyarrow_compute()
+            import pyarrow.compute as pc  # ignore-banned-import()
+
             native_series = self._pandas_series._native_series
             arr = native_series.array.__arrow_array__()
             result_arr = pc.add(

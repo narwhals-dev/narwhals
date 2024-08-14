@@ -14,8 +14,12 @@ if TYPE_CHECKING:
         from typing import TypeGuard
     else:
         from typing_extensions import TypeGuard
+    import cudf
+    import dask.dataframe as dd
+    import modin.pandas as mpd
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
 
 
 def get_polars() -> Any:
@@ -45,26 +49,6 @@ def get_pyarrow() -> Any:  # pragma: no cover
     return sys.modules.get("pyarrow", None)
 
 
-def get_pyarrow_compute() -> Any:  # pragma: no cover
-    """Get pyarrow.compute module (if pyarrow has already been imported - else return None)."""
-    # TODO(marco): remove this one, as it's at odds with the others, as it imports
-    # something new
-    if "pyarrow" in sys.modules:
-        import pyarrow.compute as pc
-
-        return pc
-    return None
-
-
-def get_pyarrow_parquet() -> Any:  # pragma: no cover
-    """Get pyarrow.parquet module (if pyarrow has already been imported - else return None)."""
-    if "pyarrow" in sys.modules:
-        import pyarrow.parquet as pp
-
-        return pp
-    return None
-
-
 def get_numpy() -> Any:
     """Get numpy module (if already imported - else return None)."""
     return sys.modules.get("numpy", None)
@@ -91,8 +75,33 @@ def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
 
 
 def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
-    """Check whether `df` is a pandas Series without importing pandas."""
+    """Check whether `ser` is a pandas Series without importing pandas."""
     return bool((pd := get_pandas()) is not None and isinstance(ser, pd.Series))
+
+
+def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
+    """Check whether `df` is a modin DataFrame without importing modin."""
+    return bool((pd := get_modin()) is not None and isinstance(df, pd.DataFrame))
+
+
+def is_modin_series(ser: Any) -> TypeGuard[mpd.Series]:
+    """Check whether `ser` is a modin Series without importing modin."""
+    return bool((pd := get_modin()) is not None and isinstance(ser, pd.Series))
+
+
+def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
+    """Check whether `df` is a cudf DataFrame without importing cudf."""
+    return bool((pd := get_cudf()) is not None and isinstance(df, pd.DataFrame))
+
+
+def is_cudf_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
+    """Check whether `ser` is a cudf Series without importing cudf."""
+    return bool((pd := get_cudf()) is not None and isinstance(ser, pd.Series))
+
+
+def is_dask_dataframe(df: Any) -> TypeGuard[dd.DataFrame]:
+    """Check whether `df` is a Dask DataFrame without importing Dask."""
+    return bool((dd := get_dask_dataframe()) is not None and isinstance(df, dd.DataFrame))
 
 
 def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
@@ -103,6 +112,21 @@ def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
 def is_polars_lazyframe(df: Any) -> TypeGuard[pl.LazyFrame]:
     """Check whether `df` is a Polars LazyFrame without importing Polars."""
     return bool((pl := get_polars()) is not None and isinstance(df, pl.LazyFrame))
+
+
+def is_polars_series(ser: Any) -> TypeGuard[pl.Series]:
+    """Check whether `ser` is a Polars Series without importing Polars."""
+    return bool((pl := get_polars()) is not None and isinstance(ser, pl.Series))
+
+
+def is_pyarrow_chunked_array(ser: Any) -> TypeGuard[pa.ChunkedArray]:
+    """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
+    return bool((pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray))
+
+
+def is_pyarrow_table(df: Any) -> TypeGuard[pa.Table]:
+    """Check whether `df` is a PyArrow Table without importing PyArrow."""
+    return bool((pa := get_pyarrow()) is not None and isinstance(df, pa.Table))
 
 
 def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
@@ -116,7 +140,6 @@ __all__ = [
     "get_modin",
     "get_cudf",
     "get_pyarrow",
-    "get_pyarrow_compute",
     "get_numpy",
     "is_pandas_dataframe",
 ]

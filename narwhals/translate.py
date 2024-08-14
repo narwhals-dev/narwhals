@@ -10,16 +10,23 @@ from typing import overload
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
-from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import is_cudf_dataframe
+from narwhals.dependencies import is_cudf_series
+from narwhals.dependencies import is_dask_dataframe
+from narwhals.dependencies import is_modin_dataframe
+from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_dataframe
 from narwhals.dependencies import is_polars_lazyframe
+from narwhals.dependencies import is_polars_series
+from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.dependencies import is_pyarrow_table
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -369,7 +376,8 @@ def from_native(  # noqa: PLR0915
             PolarsLazyFrame(native_object, backend_version=parse_version(pl.__version__)),
             level="full",
         )
-    elif (pl := get_polars()) is not None and isinstance(native_object, pl.Series):
+    elif is_polars_series(native_object):
+        pl = get_polars()
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
@@ -407,9 +415,8 @@ def from_native(  # noqa: PLR0915
         )
 
     # Modin
-    elif (mpd := get_modin()) is not None and isinstance(
-        native_object, mpd.DataFrame
-    ):  # pragma: no cover
+    elif is_modin_dataframe(native_object):  # pragma: no cover
+        mpd = get_modin()
         if series_only:
             msg = "Cannot only use `series_only` with modin.DataFrame"
             raise TypeError(msg)
@@ -421,9 +428,8 @@ def from_native(  # noqa: PLR0915
             ),
             level="full",
         )
-    elif (mpd := get_modin()) is not None and isinstance(
-        native_object, mpd.Series
-    ):  # pragma: no cover
+    elif is_modin_series(native_object):  # pragma: no cover
+        mpd = get_modin()
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
@@ -437,9 +443,8 @@ def from_native(  # noqa: PLR0915
         )
 
     # cuDF
-    elif (cudf := get_cudf()) is not None and isinstance(  # pragma: no cover
-        native_object, cudf.DataFrame
-    ):
+    elif is_cudf_dataframe(native_object):  # pragma: no cover
+        cudf = get_cudf()
         if series_only:
             msg = "Cannot only use `series_only` with cudf.DataFrame"
             raise TypeError(msg)
@@ -451,9 +456,8 @@ def from_native(  # noqa: PLR0915
             ),
             level="full",
         )
-    elif (cudf := get_cudf()) is not None and isinstance(
-        native_object, cudf.Series
-    ):  # pragma: no cover
+    elif is_cudf_series(native_object):  # pragma: no cover
+        cudf = get_cudf()
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
@@ -467,7 +471,8 @@ def from_native(  # noqa: PLR0915
         )
 
     # PyArrow
-    elif (pa := get_pyarrow()) is not None and isinstance(native_object, pa.Table):
+    elif is_pyarrow_table(native_object):
+        pa = get_pyarrow()
         if series_only:
             msg = "Cannot only use `series_only` with arrow table"
             raise TypeError(msg)
@@ -475,7 +480,8 @@ def from_native(  # noqa: PLR0915
             ArrowDataFrame(native_object, backend_version=parse_version(pa.__version__)),
             level="full",
         )
-    elif (pa := get_pyarrow()) is not None and isinstance(native_object, pa.ChunkedArray):
+    elif is_pyarrow_chunked_array(native_object):
+        pa = get_pyarrow()
         if not allow_series:
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
@@ -487,9 +493,7 @@ def from_native(  # noqa: PLR0915
         )
 
     # Dask
-    elif (dd := get_dask_dataframe()) is not None and isinstance(
-        native_object, dd.DataFrame
-    ):
+    elif is_dask_dataframe(native_object):
         if series_only:
             msg = "Cannot only use `series_only` with dask DataFrame"
             raise TypeError(msg)

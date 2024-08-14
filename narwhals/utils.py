@@ -18,6 +18,12 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import is_cudf_series
+from narwhals.dependencies import is_modin_series
+from narwhals.dependencies import is_pandas_dataframe
+from narwhals.dependencies import is_pandas_series
+from narwhals.dependencies import is_polars_series
+from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
@@ -95,7 +101,7 @@ def tupleify(arg: Any) -> Any:
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
-    if (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame)):
+    if is_pandas_dataframe(arg) or is_pandas_series(arg):
         msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
         raise TypeError(msg)
     if (pl := get_polars()) is not None and isinstance(
@@ -352,19 +358,15 @@ def is_ordered_categorical(series: Series) -> bool:
     if series.dtype != dtypes.Categorical:
         return False
     native_series = to_native(series)
-    if (pl := get_polars()) is not None and isinstance(native_series, pl.Series):
-        return native_series.dtype.ordering == "physical"  # type: ignore[no-any-return]
-    if (pd := get_pandas()) is not None and isinstance(native_series, pd.Series):
+    if is_polars_series(native_series):
+        return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
+    if is_pandas_series(native_series):
         return native_series.cat.ordered  # type: ignore[no-any-return]
-    if (mpd := get_modin()) is not None and isinstance(
-        native_series, mpd.Series
-    ):  # pragma: no cover
+    if is_modin_series(native_series):  # pragma: no cover
         return native_series.cat.ordered  # type: ignore[no-any-return]
-    if (cudf := get_cudf()) is not None and isinstance(
-        native_series, cudf.Series
-    ):  # pragma: no cover
+    if is_cudf_series(native_series):  # pragma: no cover
         return native_series.cat.ordered  # type: ignore[no-any-return]
-    if (pa := get_pyarrow()) is not None and isinstance(native_series, pa.ChunkedArray):
+    if is_pyarrow_chunked_array(native_series):
         return native_series.type.ordered  # type: ignore[no-any-return]
     # If it doesn't match any of the above, let's just play it safe and return False.
     return False  # pragma: no cover
