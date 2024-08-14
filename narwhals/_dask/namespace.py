@@ -10,8 +10,6 @@ from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals.dependencies import get_dask_dataframe
-from narwhals.dependencies import get_pandas
 
 if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -104,8 +102,8 @@ class DaskNamespace:
         ).sum()
 
     def len(self) -> DaskExpr:
-        pd = get_pandas()
-        dd = get_dask_dataframe()
+        import dask.dataframe as dd  # ignore-banned-import
+        import pandas as pd  # ignore-banned-import
 
         def func(df: DaskLazyFrame) -> list[Any]:
             if not df.columns:

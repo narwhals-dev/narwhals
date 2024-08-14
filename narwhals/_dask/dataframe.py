@@ -88,7 +88,7 @@ class DaskLazyFrame:
         *exprs: IntoDaskExpr,
         **named_exprs: IntoDaskExpr,
     ) -> Self:
-        dd = get_dask_dataframe()
+        import dask.dataframe as dd  # ignore-banned-import
 
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
@@ -98,7 +98,8 @@ class DaskLazyFrame:
 
         if not new_series:
             # return empty dataframe, like Polars does
-            pd = get_pandas()
+            import pandas as pd  # ignore-banned-import
+
             return self._from_native_frame(
                 dd.from_pandas(pd.DataFrame(), npartitions=self._native_frame.npartitions)
             )

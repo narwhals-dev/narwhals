@@ -12,10 +12,8 @@ from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
-from narwhals.dependencies import get_pyarrow_parquet
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
@@ -155,11 +153,7 @@ class ArrowDataFrame:
                 self._native_frame.slice(item.start, stop - start),
             )
 
-        elif isinstance(item, Sequence) or (
-            (np := get_numpy()) is not None
-            and isinstance(item, np.ndarray)
-            and item.ndim == 1
-        ):
+        elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
             return self._from_native_frame(self._native_frame.take(item))
 
         else:  # pragma: no cover
@@ -186,12 +180,13 @@ class ArrowDataFrame:
         *exprs: IntoArrowExpr,
         **named_exprs: IntoArrowExpr,
     ) -> Self:
+        import pyarrow as pa  # ignore-banned-import()
+
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(self._native_frame.__class__.from_arrays([]))
         names = [s.name for s in new_series]
-        pa = get_pyarrow()
         df = pa.Table.from_arrays(
             broadcast_series(new_series),
             names=names,
@@ -322,7 +317,7 @@ class ArrowDataFrame:
         return self._native_frame.to_pandas()
 
     def to_numpy(self) -> Any:
-        import numpy as np
+        import numpy as np  # ignore-banned-import
 
         return np.column_stack([col.to_numpy() for col in self._native_frame.columns])
 
@@ -341,7 +336,8 @@ class ArrowDataFrame:
             return {name: col.to_pylist() for name, col in names_and_values}
 
     def with_row_index(self, name: str) -> Self:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         df = self._native_frame
 
         row_indices = pa.array(range(df.num_rows))
@@ -358,7 +354,8 @@ class ArrowDataFrame:
         return self._from_native_frame(self._native_frame.filter(mask._native_series))
 
     def null_count(self) -> Self:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         df = self._native_frame
         names_and_values = zip(df.column_names, df.columns)
 
@@ -419,15 +416,17 @@ class ArrowDataFrame:
         return self._from_native_frame(df.rename_columns(new_cols))
 
     def write_parquet(self, file: Any) -> Any:
-        pp = get_pyarrow_parquet()
+        import pyarrow.parquet as pp  # ignore-banned-import
+
         pp.write_table(self._native_frame, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         from narwhals._arrow.series import ArrowSeries
 
-        np = get_numpy()
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
         df = self._native_frame
 
         columns = self.columns
@@ -446,9 +445,10 @@ class ArrowDataFrame:
         return ArrowSeries(is_duplicated, name="", backend_version=self._backend_version)
 
     def is_unique(self: Self) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
         from narwhals._arrow.series import ArrowSeries
 
-        pc = get_pyarrow_compute()
         is_duplicated = self.is_duplicated()._native_series
 
         return ArrowSeries(
@@ -467,10 +467,9 @@ class ArrowDataFrame:
             The param `maintain_order` is only here for compatibility with the polars API
             and has no effect on the output.
         """
-
-        np = get_numpy()
-        pa = get_pyarrow()
-        pc = get_pyarrow_compute()
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import()
+        import pyarrow.compute as pc  # ignore-banned-import()
 
         df = self._native_frame
 
