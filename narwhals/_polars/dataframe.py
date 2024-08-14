@@ -13,6 +13,8 @@ from narwhals.utils import parse_columns_to_drop
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals.selectors import Selector
+
 
 class PolarsDataFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
@@ -125,13 +127,49 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: list[str | Selector], strict: bool) -> Self:  # noqa: FBT001
+        from narwhals.selectors import Selector
+
+        plx = self.__narwhals_namespace__()
+        column_names = [c for c in columns if isinstance(c, str)]
+        native_selectors = [
+            c._call(plx)._native_expr for c in columns if isinstance(c, Selector)
+        ]
+
         if self._backend_version < (1, 0, 0):  # pragma: no cover
             to_drop = parse_columns_to_drop(
-                compliant_frame=self, columns=columns, strict=strict
+                compliant_frame=self, columns=column_names, strict=strict
             )
-            return self._from_native_frame(self._native_frame.drop(to_drop))
-        return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+            return self._from_native_frame(
+                self._native_frame.drop(*to_drop, *native_selectors)
+            )
+
+        return self._from_native_frame(
+            self._native_frame.drop(*column_names, *native_selectors, strict=strict)
+        )
+
+    def drop_nulls(
+        self: Self, subset: str | Selector | list[Selector | str] | None
+    ) -> Self:
+        if subset is None:
+            return self._from_native_frame(self._native_frame.drop_nulls())
+        subset = [subset] if isinstance(subset, str) else subset
+
+        from narwhals.selectors import Selector
+
+        plx = self.__narwhals_namespace__()
+        subset_: list[Selector | str] = (
+            [subset] if isinstance(subset, (str, Selector)) else subset
+        )
+
+        return self._from_native_frame(
+            self._native_frame.drop_nulls(
+                subset=[
+                    c if isinstance(c, str) else c._call(plx)._native_expr
+                    for c in subset_
+                ]
+            )
+        )
 
 
 class PolarsLazyFrame:
@@ -194,7 +232,36 @@ class PolarsLazyFrame:
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: list[str | Selector], strict: bool) -> Self:  # noqa: FBT001
+        from narwhals.selectors import Selector
+
+        plx = self.__narwhals_namespace__()
+        column_names = [c for c in columns if isinstance(c, str)]
+        native_selectors = [
+            c._call(plx)._native_expr for c in columns if isinstance(c, Selector)
+        ]
+
         if self._backend_version < (1, 0, 0):  # pragma: no cover
-            return self._from_native_frame(self._native_frame.drop(columns))
-        return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+            return self._from_native_frame(
+                self._native_frame.drop(*column_names, *native_selectors)
+            )
+
+        return self._from_native_frame(
+            self._native_frame.drop(*column_names, *native_selectors, strict=strict)
+        )
+
+    def drop_nulls(
+        self: Self, subset: str | Selector | list[Selector | str] | None
+    ) -> Self:
+        if subset is None:
+            return self._from_native_frame(self._native_frame.drop_nulls())
+        subset = [subset] if isinstance(subset, str) else subset
+
+        from narwhals.selectors import Selector
+
+        plx = self.__narwhals_namespace__()
+        subset = [subset] if isinstance(subset, (str, Selector)) else subset
+
+        subset = [c if isinstance(c, str) else c._call(plx)._native_expr for c in subset]
+
+        return self._from_native_frame(self._native_frame.drop_nulls(subset=subset))

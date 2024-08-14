@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
+    from narwhals.selectors import Selector
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
@@ -97,7 +98,9 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.with_row_index(name),
         )
 
-    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
+    def drop_nulls(
+        self: Self, subset: str | list[str] | Selector | list[Selector] | None = None
+    ) -> Self:
         return self._from_compliant_dataframe(
             self._compliant_frame.drop_nulls(subset=subset),
         )
@@ -139,7 +142,7 @@ class BaseFrame(Generic[FrameT]):
     def tail(self, n: int) -> Self:
         return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
-    def drop(self, *columns: Iterable[str], strict: bool) -> Self:
+    def drop(self, *columns: Iterable[str | Selector], strict: bool) -> Self:
         return self._from_compliant_dataframe(
             self._compliant_frame.drop(columns, strict=strict)
         )
@@ -663,7 +666,9 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().pipe(function, *args, **kwargs)
 
-    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
+    def drop_nulls(
+        self: Self, subset: str | list[str] | Selector | list[Selector] | None = None
+    ) -> Self:
         """
         Drop null values.
 
@@ -1286,7 +1291,11 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
+    def drop(
+        self: Self,
+        *columns: str | Selector | Iterable[Selector | str],
+        strict: bool = True,
+    ) -> Self:
         """
         Remove columns from the dataframe.
 
@@ -2185,7 +2194,9 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().pipe(function, *args, **kwargs)
 
-    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
+    def drop_nulls(
+        self: Self, subset: str | list[str] | Selector | list[Selector] | None = None
+    ) -> Self:
         """
         Drop null values.
 
@@ -2745,7 +2756,11 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
+    def drop(
+        self: Self,
+        *columns: str | Selector | Iterable[Selector | str],
+        strict: bool = True,
+    ) -> Self:
         r"""
         Remove columns from the LazyFrame.
 
