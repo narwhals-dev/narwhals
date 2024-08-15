@@ -210,7 +210,11 @@ def set_axis(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
+    if hasattr(obj, "set_axis"):
+        return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
+    obj = obj.copy(deep=False)
+    obj.index = index
+    return obj
 
 
 def translate_dtype(column: Any) -> DType:
