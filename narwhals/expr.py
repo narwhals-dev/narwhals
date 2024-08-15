@@ -1114,8 +1114,8 @@ class Expr:
 
             >>> func(df_pd)
                a
-            0  1
-            1  2
+            1  1
+            2  2
             >>> func(df_pl)
             shape: (2, 1)
             ┌─────┐
