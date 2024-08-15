@@ -294,7 +294,7 @@ def translate_dtype(column: Any) -> DType:
                     )
                 except Exception:  # noqa: BLE001
                     return dtypes.Object()
-            else:
+            else:  # pragma: no cover
                 return dtypes.Object()
     return dtypes.Unknown()
 
