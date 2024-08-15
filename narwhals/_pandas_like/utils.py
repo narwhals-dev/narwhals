@@ -211,9 +211,9 @@ def set_axis(
     else:  # pragma: no cover
         pass
     if hasattr(obj, "set_axis"):
-        return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
-    obj = obj.copy(deep=False)
-    obj.index = index
+        return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return]
+    obj = obj.copy(deep=False)  # type: ignore[attr-defined]
+    obj.index = index  # type: ignore[attr-defined]
     return obj
 
 

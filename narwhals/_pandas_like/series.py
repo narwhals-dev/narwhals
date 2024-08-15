@@ -224,7 +224,7 @@ class PandasLikeSeries:
         import numpy as np  # ignore-banned-import
 
         ser = self._native_series
-        res = np.flatnonzero(ser)
+        res = np.nonzero(ser)[0]
         return self._from_native_series(
             native_series_from_iterable(
                 res,
