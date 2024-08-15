@@ -282,7 +282,20 @@ def translate_dtype(column: Any) -> DType:
             # which is inferred by default.
             return dtypes.String()
         else:
-            return dtypes.Object()
+            df = column.to_frame()
+            if hasattr(df, "__dataframe__"):
+                from narwhals._interchange.dataframe import (
+                    map_interchange_dtype_to_narwhals_dtype,
+                )
+
+                try:
+                    return map_interchange_dtype_to_narwhals_dtype(
+                        df.__dataframe__().get_column(0).dtype
+                    )
+                except Exception:  # noqa: BLE001
+                    return dtypes.Object()
+            else:  # pragma: no cover
+                return dtypes.Object()
     return dtypes.Unknown()
 
 
