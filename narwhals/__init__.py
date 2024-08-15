@@ -49,7 +49,7 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.4.1"
+__version__ = "1.4.2"
 
 __all__ = [
     "selectors",
