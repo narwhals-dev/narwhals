@@ -295,7 +295,7 @@ class ArrowDataFrame:
             to_drop = parse_columns_to_drop(
                 compliant_frame=self, columns=column_names, strict=strict
             )
-            native_frame = native_frame.drop(columns=to_drop)
+            native_frame = native_frame.drop(to_drop)
 
         result = self._from_native_frame(native_frame)
         if selectors:
