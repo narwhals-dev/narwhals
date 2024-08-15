@@ -151,7 +151,7 @@ class DaskLazyFrame:
         from narwhals.selectors import Selector
 
         native_frame = self._native_frame
-        column_names = [c for c in columns if isinstance(c, str)]
+        column_names = [c for c in columns if isinstance(c, (str, int))]
         selectors = [c for c in columns if isinstance(c, Selector)]
 
         if column_names:

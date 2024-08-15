@@ -344,7 +344,7 @@ class PandasLikeDataFrame:
 
         native_frame = self._native_frame
         t1, t2 = tee(columns)
-        column_names = [c for c in t1 if isinstance(c, str)]
+        column_names = [c for c in t1 if isinstance(c, (str, int))]
         selectors = [c for c in t2 if isinstance(c, Selector)]
 
         if column_names:
