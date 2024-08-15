@@ -45,7 +45,9 @@ def test_schema_comparison() -> None:
 
 
 def test_object() -> None:
-    df = pd.DataFrame({"a": [1, 2, 3]}).astype(object)
+    class Foo: ...
+
+    df = pd.DataFrame({"a": [Foo()]}).astype(object)
     result = nw.from_native(df).schema
     assert result["a"] == nw.Object
 
