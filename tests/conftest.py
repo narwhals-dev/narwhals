@@ -19,7 +19,7 @@ with contextlib.suppress(ImportError):
 with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
 with contextlib.suppress(ImportError):
-    pass
+    import cudf  # noqa: F401
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -96,7 +96,7 @@ lazy_constructors = [polars_lazy_constructor]
 if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
 if get_cudf() is not None:
-    eager_constructors.append(modin_constructor)  # pragma: no cover
+    eager_constructors.append(cudf_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover
     lazy_constructors.append(dask_lazy_constructor)  # type: ignore  # noqa: PGH003
 
