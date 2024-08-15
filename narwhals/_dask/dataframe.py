@@ -129,14 +129,13 @@ class DaskLazyFrame:
         )
 
         column_names = [c for c in subset_ if isinstance(c, str)]
-        selectors = [c.is_null()._call(plx) for c in subset_ if isinstance(c, Selector)]
+        selector_names = self.select(
+            *[c.is_null()._call(plx) for c in subset_ if isinstance(c, Selector)]
+        ).columns
 
-        result = (
-            self.filter(~plx.any_horizontal(plx.col(*column_names).is_null()))
-            if column_names
-            else self
+        return self._from_native_frame(
+            self._native_frame.dropna(subset=list(set(*column_names, *selector_names)))
         )
-        return result.filter(~plx.any_horizontal(*selectors)) if selectors else result
 
     @property
     def schema(self) -> dict[str, DType]:

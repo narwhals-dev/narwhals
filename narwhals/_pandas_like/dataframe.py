@@ -253,7 +253,7 @@ class PandasLikeDataFrame:
         selectors = [c.is_null()._call(plx) for c in subset_ if isinstance(c, Selector)]
 
         result = (
-            self.filter(~plx.any_horizontal(plx.col(*column_names).is_null()))
+            (self._from_native_frame(self._native_frame.dropna(subset=column_names)))
             if column_names
             else self
         )
