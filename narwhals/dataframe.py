@@ -99,7 +99,7 @@ class BaseFrame(Generic[FrameT]):
         )
 
     def drop_nulls(
-        self: Self, subset: str | list[str] | Selector | list[Selector] | None = None
+        self: Self, subset: str | Selector | list[Selector | str] | None = None
     ) -> Self:
         return self._from_compliant_dataframe(
             self._compliant_frame.drop_nulls(subset=subset),
@@ -667,14 +667,14 @@ class DataFrame(BaseFrame[FrameT]):
         return super().pipe(function, *args, **kwargs)
 
     def drop_nulls(
-        self: Self, subset: str | list[str] | Selector | list[Selector] | None = None
+        self: Self, subset: str | Selector | list[Selector | str] | None = None
     ) -> Self:
         """
         Drop null values.
 
         Arguments:
             subset: Column name(s) for which null values are considered. If set to None
-                (default), use all columns.
+                (default), use all columns. Accepts column selector input.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -1301,6 +1301,7 @@ class DataFrame(BaseFrame[FrameT]):
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
+                Accepts column selector input.
             strict: Validate that all column names exist in the schema and throw an
                 exception if a column name does not exist in the schema.
 
@@ -2195,14 +2196,14 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().pipe(function, *args, **kwargs)
 
     def drop_nulls(
-        self: Self, subset: str | list[str] | Selector | list[Selector] | None = None
+        self: Self, subset: str | Selector | list[Selector | str] | None = None
     ) -> Self:
         """
         Drop null values.
 
         Arguments:
             subset: Column name(s) for which null values are considered. If set to None
-                (default), use all columns.
+                (default), use all columns. Accepts column selector input.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -2766,6 +2767,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
+                Accepts column selector input.
             strict: Validate that all column names exist in the schema and throw an
                 exception if a column name does not exist in the schema.
 
