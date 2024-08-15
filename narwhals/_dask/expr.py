@@ -485,6 +485,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def diff(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.diff(),
+            "diff",
+            returns_scalar=False,
+        )
+
     def n_unique(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.nunique(dropna=False),
