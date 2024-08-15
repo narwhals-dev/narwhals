@@ -538,6 +538,13 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def null_count(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.isna().sum(),
+            "null_count",
+            returns_scalar=True,
+        )
+
     def tail(self: Self) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.tail` is not supported for the Dask backend. Please use `LazyFrame.tail` instead."
