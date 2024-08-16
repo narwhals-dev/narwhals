@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Iterable
 
 from narwhals import dtypes
+from narwhals import maybe_convert_dtypes
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
@@ -307,7 +308,7 @@ class PandasWhen:
             plx, self._otherwise_value, shape=condition.shape
         )._call(df)[0]
 
-        return [value_series.zip_with(condition, otherwise_series)]
+        return [maybe_convert_dtypes(value_series.zip_with(condition, otherwise_series))]
 
     def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value

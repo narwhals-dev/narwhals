@@ -302,10 +302,24 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
 
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
-        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_frame(
-                df_any._compliant_frame._native_frame.convert_dtypes(*args, **kwargs)
-            )
+        return cast(
+            T,
+            df_any._from_compliant_dataframe(
+                df_any._compliant_frame._from_native_frame(
+                    df_any._compliant_frame._native_frame.convert_dtypes(*args, **kwargs)
+                )
+            ),
+        )
+    if isinstance(getattr(df_any, "_compliant_series", None), PandasLikeDataFrame):
+        return cast(
+            T,
+            df_any._compliant_series(
+                df_any._compliant_series._from_native_series(
+                    df_any._compliant_series._native_series.convert_dtypes(
+                        *args, **kwargs
+                    )
+                )
+            ),
         )
     return df
 
