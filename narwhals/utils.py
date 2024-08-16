@@ -313,16 +313,18 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         )
 
     if isinstance(df_any, PandasLikeSeries):
-        from importlib.metadata import version
+        native_ser = df_any._native_series
+        ser = (
+            native_ser.convert_dtypes(*args, **kwargs)
+            if getattr(native_ser, "convert_dtypes", None)
+            else native_ser.apply(lambda x: x)
+        )
 
-        pd_version = version("pandas").split(".")
-        ser = df_any._native_series.apply(lambda x: x)
-        if int(pd_version[0]) > 1:
-            ser = df_any._native_series.convert_dtypes(*args, **kwargs)
         return cast(
             T,
             df_any._from_native_series(ser),
         )
+
     return df
 
 
