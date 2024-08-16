@@ -597,7 +597,17 @@ class PandasLikeSeries:
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        res = ser.where(mask._native_series, other._native_series)
+        other_ser = other._native_series
+
+        null_mask = self.is_null() & mask
+        null_mask |= other.is_null() & ~mask
+
+        other_sanitized = other_ser.where(~other.is_null()._native_series, ser).astype(
+            ser.dtype
+        )
+
+        res = ser.where(mask._native_series, other_sanitized).astype(ser.dtype)
+        res = res.where(~null_mask._native_series)
         return self._from_native_series(res)
 
     def head(self: Self, n: int) -> Self:
