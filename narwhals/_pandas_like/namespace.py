@@ -283,13 +283,13 @@ class PandasWhen:
         implementation: Implementation,
         backend_version: tuple[int, ...],
         then_value: Any = None,
-        otherise_value: Any = None,
+        otherwise_value: Any = None,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
         self._condition = condition
         self._then_value = then_value
-        self._otherwise_value = otherise_value
+        self._otherwise_value = otherwise_value
 
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
