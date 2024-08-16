@@ -766,8 +766,8 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
-            0    1
-            1    2
+            1    1
+            2    2
             Name: a, dtype: int64
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)

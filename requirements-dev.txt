@@ -1,6 +1,6 @@
 covdefaults
 pandas
-polars[timezones]
+polars
 pre-commit
 pyarrow
 pytest

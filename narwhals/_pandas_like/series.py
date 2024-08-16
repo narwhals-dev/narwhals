@@ -221,18 +221,9 @@ class PandasLikeSeries:
         return self._from_native_series(res)
 
     def arg_true(self) -> PandasLikeSeries:
-        import numpy as np  # ignore-banned-import
-
         ser = self._native_series
-        res = np.flatnonzero(ser)
-        return self._from_native_series(
-            native_series_from_iterable(
-                res,
-                name=self.name,
-                index=range(len(res)),
-                implementation=self._implementation,
-            )
-        )
+        result = ser.__class__(range(len(ser)), name=ser.name, index=ser.index).loc[ser]
+        return self._from_native_series(result)
 
     # Binary comparisons
 
