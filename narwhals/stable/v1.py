@@ -1350,7 +1350,7 @@ def maybe_align_index(lhs: T, rhs: Series | DataFrame[Any] | LazyFrame[Any]) -> 
 
 def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     """
-    Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
