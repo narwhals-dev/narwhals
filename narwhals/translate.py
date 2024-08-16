@@ -595,7 +595,7 @@ def narwhalify(
     You can also pass in extra arguments, e.g.
 
     ```python
-    @nw.narhwalify(eager_only=True)
+    @nw.narwhalify(eager_only=True)
     ```
 
     that will get passed down to `nw.from_native`.

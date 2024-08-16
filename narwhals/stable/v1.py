@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -39,6 +38,7 @@ from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
+from narwhals.translate import narwhalify as nw_narwhalify
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
@@ -734,6 +734,7 @@ def narwhalify(
     *,
     strict: bool = False,
     eager_only: bool | None = False,
+    eager_or_interchange_only: bool | None = False,
     series_only: bool | None = False,
     allow_series: bool | None = True,
 ) -> Callable[..., Any]:
@@ -776,7 +777,7 @@ def narwhalify(
     You can also pass in extra arguments, e.g.
 
     ```python
-    @nw.narhwalify(eager_only=True)
+    @nw.narwhalify(eager_only=True)
     ```
 
     that will get passed down to `nw.from_native`.
@@ -792,53 +793,14 @@ def narwhalify(
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
     """
 
-    # TODO(Unassigned): do we have a way to de-dupe this a bit?
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            args = [
-                from_native(
-                    arg,
-                    strict=strict,
-                    eager_only=eager_only,
-                    series_only=series_only,
-                    allow_series=allow_series,
-                )
-                for arg in args
-            ]  # type: ignore[assignment]
-
-            kwargs = {
-                name: from_native(
-                    value,
-                    strict=strict,
-                    eager_only=eager_only,
-                    series_only=series_only,
-                    allow_series=allow_series,
-                )
-                for name, value in kwargs.items()
-            }
-
-            backends = {
-                b()
-                for v in [*args, *kwargs.values()]
-                if (b := getattr(v, "__native_namespace__", None))
-            }
-
-            if backends.__len__() > 1:
-                msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
-                raise ValueError(msg)
-
-            result = func(*args, **kwargs)
-
-            return to_native(result, strict=strict)
-
-        return wrapper
-
-    if func is None:
-        return decorator
-    else:
-        # If func is not None, it means the decorator is used without arguments
-        return decorator(func)
+    return nw_narwhalify(
+        func=func,
+        strict=strict,
+        eager_only=eager_only,
+        eager_or_interchange_only=eager_or_interchange_only,
+        series_only=series_only,
+        allow_series=allow_series,
+    )
 
 
 def all() -> Expr:
