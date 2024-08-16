@@ -20,6 +20,9 @@ data = {
 def test_when(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
 
     df = nw.from_native(constructor(data))
     result = df.select(when(nw.col("a") == 1).then(value=3).alias("a_when"))
@@ -32,6 +35,9 @@ def test_when(request: Any, constructor: Any) -> None:
 def test_when_otherwise(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
 
     df = nw.from_native(constructor(data))
     result = df.select(when(nw.col("a") == 1).then(3).otherwise(6).alias("a_when"))
@@ -44,6 +50,9 @@ def test_when_otherwise(request: Any, constructor: Any) -> None:
 def test_multiple_conditions(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
 
     df = nw.from_native(constructor(data))
     result = df.select(when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when"))
@@ -65,6 +74,10 @@ def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
 def test_value_numpy_array(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
+
     df = nw.from_native(constructor(data))
     import numpy as np
 
@@ -80,6 +93,10 @@ def test_value_numpy_array(request: Any, constructor: Any) -> None:
 def test_value_series(request: Any, constructor_eager: Any) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor_eager):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
+
     df = nw.from_native(constructor_eager(data))
     s_data = {"s": [3, 4, 5]}
     s = nw.from_native(constructor_eager(s_data))["s"]
@@ -94,6 +111,10 @@ def test_value_series(request: Any, constructor_eager: Any) -> None:
 def test_value_expression(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
+
     df = nw.from_native(constructor(data))
     result = df.select(when(nw.col("a") == 1).then(nw.col("a") + 9).alias("a_when"))
     expected = {
@@ -105,6 +126,10 @@ def test_value_expression(request: Any, constructor: Any) -> None:
 def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
+
     df = nw.from_native(constructor(data))
     import numpy as np
 
@@ -123,6 +148,10 @@ def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
 def test_otherwise_series(request: Any, constructor_eager: Any) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor_eager):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
+
     df = nw.from_native(constructor_eager(data))
     s_data = {"s": [0, 9, 10]}
     s = nw.from_native(constructor_eager(s_data))["s"]
@@ -137,6 +166,10 @@ def test_otherwise_series(request: Any, constructor_eager: Any) -> None:
 def test_otherwise_expression(request: Any, constructor: Any) -> None:
     if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        msg = "modin has a known issue with casting #7364"
+        request.applymarker(pytest.mark.xfail(reason=msg))
+
     df = nw.from_native(constructor(data))
     result = df.select(
         when(nw.col("a") == 1).then(-1).otherwise(nw.col("a") + 7).alias("a_when")
