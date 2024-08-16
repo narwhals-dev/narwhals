@@ -18,31 +18,60 @@ data = {
 
 
 @pytest.mark.parametrize(
-    "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
+    "fmt",
+    [
+        "%Y-%m-%d",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+        "%G-W%V-%u",
+        "%G-W%V",
+    ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string(constructor_eager: Any, fmt: str) -> None:
+def test_dt_to_string_series(constructor_eager: Any, fmt: str) -> None:
     input_frame = nw.from_native(constructor_eager(data), eager_only=True)
     input_series = input_frame["a"]
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
-    result = input_series.dt.to_string(fmt).to_list()
+    result = input_frame.select(input_series.dt.to_string(fmt))
+
     if any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
-        result = [x[: x.find(".")] if "." in x else x for x in result]
-    assert result == expected_col
-    result = input_frame.select(nw.col("a").dt.to_string(fmt))["a"].to_list()
-    if any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
-    ):
+        result = input_frame.select(
+            input_series.dt.to_string(fmt).str.replace(r"\.\d+$", "")
+        )
+
+    compare_dicts(result, {"a": expected_col})
+
+
+@pytest.mark.parametrize(
+    "fmt",
+    [
+        "%Y-%m-%d",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+        "%G-W%V-%u",
+        "%G-W%V",
+    ],
+)
+@pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
+def test_dt_to_string_expr(constructor: Any, fmt: str) -> None:
+    input_frame = nw.from_native(constructor(data))
+
+    expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
+
+    result = input_frame.select(nw.col("a").dt.to_string(fmt).alias("b"))
+    if any(x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
-        result = [x[: x.find(".")] if "." in x else x for x in result]
-    assert result == expected_col
+        result = input_frame.select(
+            nw.col("a").dt.to_string(fmt).str.replace(r"\.\d+$", "").alias("b")
+        )
+    compare_dicts(result, {"b": expected_col})
 
 
 def _clean_string(result: str) -> str:
@@ -59,7 +88,10 @@ def _clean_string(result: str) -> str:
         (datetime(2020, 1, 9), "2020-01-09T00:00:00.000000"),
         (datetime(2020, 1, 9, 12, 34, 56), "2020-01-09T12:34:56.000000"),
         (datetime(2020, 1, 9, 12, 34, 56, 123), "2020-01-09T12:34:56.000123"),
-        (datetime(2020, 1, 9, 12, 34, 56, 123456), "2020-01-09T12:34:56.123456"),
+        (
+            datetime(2020, 1, 9, 12, 34, 56, 123456),
+            "2020-01-09T12:34:56.123456",
+        ),
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
@@ -87,7 +119,10 @@ def test_dt_to_string_iso_local_datetime_series(
     [
         (datetime(2020, 1, 9, 12, 34, 56), "2020-01-09T12:34:56.000000"),
         (datetime(2020, 1, 9, 12, 34, 56, 123), "2020-01-09T12:34:56.000123"),
-        (datetime(2020, 1, 9, 12, 34, 56, 123456), "2020-01-09T12:34:56.123456"),
+        (
+            datetime(2020, 1, 9, 12, 34, 56, 123456),
+            "2020-01-09T12:34:56.123456",
+        ),
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
