@@ -4,6 +4,8 @@
     handler: python
     options:
       members:
+        - __arrow_c_stream__
+        - __getitem__
         - abs
         - alias
         - all
@@ -20,6 +22,7 @@
         - gather_every
         - head
         - is_between
+        - clip
         - is_duplicated
         - is_empty
         - is_first_distinct
@@ -36,6 +39,7 @@
         - name
         - null_count
         - n_unique
+        - pipe
         - quantile
         - round
         - sample
@@ -45,6 +49,7 @@
         - std
         - sum
         - tail
+        - to_arrow
         - to_dummies
         - to_frame
         - to_list

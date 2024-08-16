@@ -8,6 +8,7 @@
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
+[![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
@@ -39,6 +40,7 @@ Get started!
 
 Join the party!
 
+- [Altair](https://github.com/vega/altair/)
 - [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)

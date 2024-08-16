@@ -13,5 +13,10 @@ def test_double(constructor: Any) -> None:
     compare_dicts(result, expected)
 
     result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
-    expected = {"o": [1, 3, 2], "a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
+    expected = {
+        "o": [1, 3, 2],
+        "a": [2, 6, 4],
+        "b": [8, 8, 12],
+        "z": [14.0, 16.0, 18.0],
+    }
     compare_dicts(result, expected)

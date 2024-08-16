@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import isinstance_or_issubclass
+
+if TYPE_CHECKING:
+    from narwhals._arrow.series import ArrowSeries
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import()
+
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
     if pa.types.is_int32(dtype):
@@ -51,10 +54,10 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     raise AssertionError
 
 
-def reverse_translate_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
-    from narwhals import dtypes
+def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
+    import pyarrow as pa  # ignore-banned-import()
 
-    pa = get_pyarrow()
+    from narwhals import dtypes
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
@@ -139,7 +142,8 @@ def validate_dataframe_comparand(
         return NotImplemented
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
-            pa = get_pyarrow()
+            import pyarrow as pa  # ignore-banned-import()
+
             value = other.item()
             if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
@@ -155,7 +159,8 @@ def horizontal_concat(dfs: list[Any]) -> Any:
 
     Should be in namespace.
     """
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import()
+
     if not dfs:
         msg = "No dataframes to concatenate"  # pragma: no cover
         raise AssertionError(msg)
@@ -187,15 +192,16 @@ def vertical_concat(dfs: list[Any]) -> Any:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
 
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import()
+
     return pa.concat_tables(dfs).combine_chunks()
 
 
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    pc = get_pyarrow_compute()
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow.compute as pc  # ignore-banned-import()
 
     if isinstance(left, (int, float)):
         left = pa.scalar(left)
@@ -233,8 +239,8 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
-    pc = get_pyarrow_compute()
-    pa = get_pyarrow()
+    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow.compute as pc  # ignore-banned-import()
 
     # Ensure int / int -> float mirroring Python/Numpy behavior
     # as pc.divide_checked(int, int) -> int
@@ -246,3 +252,27 @@ def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
         )
 
     return arrow_array, pa_object
+
+
+def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
+    lengths = [len(s) for s in series]
+    max_length = max(lengths)
+    fast_path = all(_len == max_length for _len in lengths)
+
+    if fast_path:
+        return [s._native_series for s in series]
+
+    import pyarrow as pa  # ignore-banned-import()
+
+    reshaped = []
+    for s, length in zip(series, lengths):
+        s_native = s._native_series
+        if max_length > 1 and length == 1:
+            value = s_native[0]
+            if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
+                value = value.as_py()
+            reshaped.append(pa.array([value] * max_length, type=s_native.type))
+        else:
+            reshaped.append(s_native)
+
+    return reshaped

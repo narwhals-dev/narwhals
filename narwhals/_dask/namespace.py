@@ -8,14 +8,10 @@ from typing import NoReturn
 
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
-from narwhals.utils import flatten
+from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
-    from narwhals._dask.dataframe import DaskLazyFrame
-
-if TYPE_CHECKING:
-    from typing import Callable
-
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.typing import IntoDaskExpr
 
@@ -41,8 +37,26 @@ class DaskNamespace:
     Duration = dtypes.Duration
     Date = dtypes.Date
 
+    @property
+    def selectors(self) -> DaskSelectorNamespace:
+        return DaskSelectorNamespace(backend_version=self._backend_version)
+
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
+
+    def all(self) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[Any]:
+            return [df._native_frame.loc[:, column_name] for column_name in df.columns]
+
+        return DaskExpr(
+            func,
+            depth=0,
+            function_name="all",
+            root_names=None,
+            output_names=None,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
 
     def col(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
@@ -50,9 +64,76 @@ class DaskNamespace:
             backend_version=self._backend_version,
         )
 
+    def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
+        # TODO @FBruzzesi: cast to dtype once `narwhals_to_native_dtype` is implemented.
+        # It should be enough to add `.astype(narwhals_to_native_dtype(dtype))`
+        return DaskExpr(
+            lambda df: [df._native_frame.assign(lit=value).loc[:, "lit"]],
+            depth=0,
+            function_name="lit",
+            root_names=None,
+            output_names=["lit"],
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
+
+    def min(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).min()
+
+    def max(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).max()
+
+    def mean(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).mean()
+
+    def sum(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names,
+            backend_version=self._backend_version,
+        ).sum()
+
+    def len(self) -> DaskExpr:
+        import dask.dataframe as dd  # ignore-banned-import
+        import pandas as pd  # ignore-banned-import
+
+        def func(df: DaskLazyFrame) -> list[Any]:
+            if not df.columns:
+                return [
+                    dd.from_pandas(
+                        pd.Series([0], name="len"),
+                        npartitions=df._native_frame.npartitions,
+                    )
+                ]
+            return [df._native_frame.loc[:, df.columns[0]].size.to_series().rename("len")]
+
+        # coverage bug? this is definitely hit
+        return DaskExpr(  # pragma: no cover
+            func,
+            depth=0,
+            function_name="len",
+            root_names=None,
+            output_names=["len"],
+            returns_scalar=True,
+            backend_version=self._backend_version,
+        )
+
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        # coverage shows 55->exit as uncovered?
-        return reduce(lambda x, y: x & y, flatten(exprs))  # type: ignore[no-any-return]  # pragma: no cover
+        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
+
+    def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
+
+    def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
+        return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
@@ -77,11 +158,7 @@ class DaskNamespace:
         root_names: list[str] | None,
         output_names: list[str] | None,
     ) -> DaskExpr:
-        return DaskExpr(
-            call=func,
-            depth=depth,
-            function_name=function_name,
-            root_names=root_names,
-            output_names=output_names,
-            backend_version=self._backend_version,
+        msg = (
+            "`_create_expr_from_callable` for DaskNamespace exists only for compatibility"
         )
+        raise NotImplementedError(msg)

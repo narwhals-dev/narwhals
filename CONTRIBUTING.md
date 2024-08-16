@@ -54,14 +54,38 @@ When you have resolved your issue, [open a pull request](https://docs.github.com
 
 Please adhere to the following guidelines:
 
-1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).
-2. Use a descriptive title starting with an uppercase letter. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
+1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).<br>
+    TLDR:
+    The PR title should start with any of these abbreviations: `build`, `chore`, `ci`, `depr`,
+    `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test`. Add a `!`at the end, if it is a breaking change. For example `refactor!`.
+    <br>
+2. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
 3. Please follow the instructions in the pull request form and submit. 
 
 ## How it works
 
 If Narwhals looks like underwater unicorn magic to you, then please read
 [how it works](https://narwhals-dev.github.io/narwhals/how-it-works/).
+
+## Imports
+
+In Narwhals, we are very particular about imports. When it comes to importing
+heavy third-party libraries (pandas, NumPy, Polars, etc...) please follow these rules:
+
+- Never import anything to do `isinstance` checks. Instead, just use the functions
+  in `narwhals.dependencies` (such as `is_pandas_dataframe`);
+- If you need to import anything, do it in a place where you know that the import
+  is definitely available. For example, NumPy is a required dependency of PyArrow,
+  so it's OK to import NumPy to implement a PyArrow function - however, NumPy
+  should never be imported to implement a Polars function. The only exception is
+  for when there's simply no way around it by definition - for example, `Series.to_numpy`
+  always requires NumPy to be installed.
+- Don't place a third-party import at the top of a file. Instead, place it in the
+  function where it's used, so that we minimise the chances of it being imported
+  unnecessarily.
+
+We're trying to be really lightweight and minimal-overhead, and
+unnecessary imports can slow things down.
 
 ## Happy contributing!
 

@@ -19,7 +19,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
             raise NotImplementedError(msg)
         result = results[0]
         if not get_dask_expr()._expr.are_co_aligned(
-            df._native_dataframe._expr, result._expr
+            df._native_frame._expr, result._expr
         ):  # pragma: no cover
             # are_co_aligned is a method which cheaply checks if two Dask expressions
             # have the same index, and therefore don't require index alignment.
@@ -33,6 +33,9 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
             # https://github.com/dask/dask-expr/issues/1112.
             msg = "Implicit index alignment is not support for Dask DataFrame in Narwhals"
             raise NotImplementedError(msg)
+        if obj._returns_scalar:
+            # Return scalar, let Dask do its broadcasting
+            return result[0]
         return result
     return obj
 
@@ -45,16 +48,28 @@ def parse_exprs_and_named_exprs(
         if hasattr(expr, "__narwhals_expr__"):
             _results = expr._call(df)
         elif isinstance(expr, str):
-            _results = [df._native_dataframe.loc[:, expr]]
+            _results = [df._native_frame.loc[:, expr]]
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
         for _result in _results:
-            results[_result.name] = _result
+            if getattr(expr, "_returns_scalar", False):
+                results[_result.name] = _result[0]
+            else:
+                results[_result.name] = _result
     for name, value in named_exprs.items():
         _results = value._call(df)
         if len(_results) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
-        results[name] = _results[0]
+        for _result in _results:
+            if getattr(value, "_returns_scalar", False):
+                results[name] = _result[0]
+            else:
+                results[name] = _result
     return results
+
+
+def add_row_index(frame: Any, name: str) -> Any:
+    frame = frame.assign(**{name: 1})
+    return frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1})

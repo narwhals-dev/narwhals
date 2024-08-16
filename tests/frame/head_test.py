@@ -22,6 +22,3 @@ def test_head(constructor: Any) -> None:
     # negative indices not allowed for lazyframes
     result = df.lazy().collect().head(-1)
     compare_dicts(result, expected)
-
-    result = df.select(nw.col("a").head(2))
-    compare_dicts(result, {"a": expected["a"]})

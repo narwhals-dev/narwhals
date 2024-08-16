@@ -8,23 +8,20 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._pandas_like.utils import int_dtype_mapper
+from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
-from narwhals._pandas_like.utils import reverse_translate_dtype
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
@@ -97,11 +94,6 @@ class PandasLikeSeries:
             self._use_copy_false = True
         else:
             self._use_copy_false = False
-
-    def __narwhals_namespace__(self) -> PandasLikeNamespace:
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-        return PandasLikeNamespace(self._implementation, self._backend_version)
 
     def __native_namespace__(self) -> Any:
         if self._implementation is Implementation.PANDAS:
@@ -180,7 +172,7 @@ class PandasLikeSeries:
         dtype: Any,
     ) -> Self:
         ser = self._native_series
-        dtype = reverse_translate_dtype(dtype, ser.dtype, self._implementation)
+        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation)
         return self._from_native_series(ser.astype(dtype))
 
     def item(self: Self, index: int | None = None) -> Any:
@@ -229,17 +221,9 @@ class PandasLikeSeries:
         return self._from_native_series(res)
 
     def arg_true(self) -> PandasLikeSeries:
-        np = get_numpy()
         ser = self._native_series
-        res = np.flatnonzero(ser)
-        return self._from_native_series(
-            native_series_from_iterable(
-                res,
-                name=self.name,
-                index=range(len(res)),
-                implementation=self._implementation,
-            )
-        )
+        result = ser.__class__(range(len(ser)), name=ser.name, index=ser.index).loc[ser]
+        return self._from_native_series(result)
 
     # Binary comparisons
 
@@ -641,6 +625,22 @@ class PandasLikeSeries:
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_native_series(self._native_series.iloc[offset::n])
 
+    def clip(
+        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        return self._from_native_series(
+            self._native_series.clip(lower_bound, upper_bound)
+        )
+
+    def to_arrow(self: Self) -> Any:
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
+            msg = "`to_arrow` is not implemented for CuDF backend."
+            raise NotImplementedError(msg)
+
+        import pyarrow as pa  # ignore-banned-import()
+
+        return pa.Array.from_pandas(self._native_series)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
@@ -668,6 +668,25 @@ class PandasLikeSeriesCatNamespace:
 class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
+
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.replace(
+                pat=pattern, repl=value, n=n, regex=not literal
+            ),
+        )
+
+    def replace_all(
+        self, pattern: str, value: str, *, literal: bool = False
+    ) -> PandasLikeSeries:
+        return self.replace(pattern, value, literal=literal, n=-1)
+
+    def strip_chars(self, characters: str | None) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.strip(characters),
+        )
 
     def starts_with(self, prefix: str) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
@@ -714,6 +733,21 @@ class PandasLikeSeriesDateTimeNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
+    def date(self) -> PandasLikeSeries:
+        result = self._pandas_series._from_native_series(
+            self._pandas_series._native_series.dt.date,
+        )
+        if str(result.dtype).lower() == "object":
+            msg = (
+                "Accessing `date` on the default pandas backend "
+                "will return a Series of type `object`."
+                "\nThis differs from polars API and will prevent `.dt` chaining. "
+                "Please switch to the `pyarrow` backend:"
+                '\ndf.convert_dtypes(dtype_backend="pyarrow")'
+            )
+            raise NotImplementedError(msg)
+        return result
+
     def year(self) -> PandasLikeSeries:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.year,
@@ -752,7 +786,8 @@ class PandasLikeSeriesDateTimeNamespace:
             self._pandas_series._native_series.dtype
         ):
             # crazy workaround for https://github.com/pandas-dev/pandas/issues/59154
-            pc = get_pyarrow_compute()
+            import pyarrow.compute as pc  # ignore-banned-import()
+
             native_series = self._pandas_series._native_series
             arr = native_series.array.__arrow_array__()
             result_arr = pc.add(

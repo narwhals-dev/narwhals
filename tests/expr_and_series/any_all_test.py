@@ -14,7 +14,7 @@ def test_any_all(constructor: Any) -> None:
             }
         )
     )
-    result = df.select(nw.all().all())
+    result = df.select(nw.col("a", "b", "c").all())
     expected = {"a": [False], "b": [True], "c": [False]}
     compare_dicts(result, expected)
     result = df.select(nw.all().any())

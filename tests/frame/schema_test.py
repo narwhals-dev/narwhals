@@ -45,7 +45,9 @@ def test_schema_comparison() -> None:
 
 
 def test_object() -> None:
-    df = pd.DataFrame({"a": [1, 2, 3]}).astype(object)
+    class Foo: ...
+
+    df = pd.DataFrame({"a": [Foo()]}).astype(object)
     result = nw.from_native(df).schema
     assert result["a"] == nw.Object
 
@@ -57,7 +59,7 @@ def test_string_disguised_as_object() -> None:
 
 
 def test_actual_object(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...

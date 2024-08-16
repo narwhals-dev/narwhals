@@ -11,7 +11,7 @@ from typing import Union
 from typing import cast
 from typing import overload
 
-from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -124,6 +124,14 @@ def parse_into_exprs(
 ) -> list[ArrowExpr]: ...
 
 
+@overload
+def parse_into_exprs(
+    *exprs: IntoDaskExpr,
+    namespace: DaskNamespace,
+    **named_exprs: IntoDaskExpr,
+) -> list[DaskExpr]: ...
+
+
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace,
@@ -162,7 +170,7 @@ def parse_into_expr(
         return namespace._create_expr_from_series(into_expr)  # type: ignore[arg-type]
     if isinstance(into_expr, str):
         return namespace.col(into_expr)
-    if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
+    if is_numpy_array(into_expr):
         series = namespace._create_compliant_series(into_expr)
         return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover

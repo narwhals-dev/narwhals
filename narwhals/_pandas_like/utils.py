@@ -197,6 +197,10 @@ def set_axis(
     implementation: Implementation,
     backend_version: tuple[int, ...],
 ) -> T:
+    if implementation is Implementation.CUDF:  # pragma: no cover
+        obj = obj.copy(deep=False)  # type: ignore[attr-defined]
+        obj.index = index  # type: ignore[attr-defined]
+        return obj
     if implementation is Implementation.PANDAS and backend_version < (
         1,
     ):  # pragma: no cover
@@ -210,7 +214,7 @@ def set_axis(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
+    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
 def translate_dtype(column: Any) -> DType:
@@ -273,15 +277,29 @@ def translate_dtype(column: Any) -> DType:
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
     if str(dtype) == "object":
-        if (idx := column.first_valid_index()) is not None and isinstance(
-            column.loc[idx], str
-        ):
+        if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
+            idx := getattr(column, "first_valid_index", lambda: None)()
+        ) is not None and isinstance(column.loc[idx], str):
             # Infer based on first non-missing value.
             # For pandas pre 3.0, this isn't perfect.
             # After pandas 3.0, pandas has a dedicated string dtype
             # which is inferred by default.
             return dtypes.String()
-        return dtypes.Object()
+        else:
+            df = column.to_frame()
+            if hasattr(df, "__dataframe__"):
+                from narwhals._interchange.dataframe import (
+                    map_interchange_dtype_to_narwhals_dtype,
+                )
+
+                try:
+                    return map_interchange_dtype_to_narwhals_dtype(
+                        df.__dataframe__().get_column(0).dtype
+                    )
+                except Exception:  # noqa: BLE001
+                    return dtypes.Object()
+            else:  # pragma: no cover
+                return dtypes.Object()
     return dtypes.Unknown()
 
 
@@ -302,10 +320,19 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
         return "numpy"
 
 
-def reverse_translate_dtype(  # noqa: PLR0915
+def narwhals_to_native_dtype(  # noqa: PLR0915
     dtype: DType | type[DType], starting_dtype: Any, implementation: Implementation
 ) -> Any:
     from narwhals import dtypes
+
+    if "polars" in str(type(dtype)):
+        msg = (
+            f"Expected Narwhals object, got: {type(dtype)}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.Int64` instead of `nw.Int64`?"
+        )
+        raise TypeError(msg)
 
     dtype_backend = get_dtype_backend(starting_dtype, implementation)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -412,25 +439,45 @@ def reverse_translate_dtype(  # noqa: PLR0915
             return "date32[pyarrow]"
         msg = "Date dtype only supported for pyarrow-backed data types in pandas"
         raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        msg = "Converting to Enum is not (yet) supported"
+        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
 
-def validate_indices(series: list[PandasLikeSeries]) -> list[Any]:
-    idx = series[0]._native_series.index
-    reindexed = [series[0]._native_series]
-    for s in series[1:]:
-        if s._native_series.index is not idx:
+def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
+    native_namespace = series[0].__native_namespace__()
+
+    lengths = [len(s) for s in series]
+    max_length = max(lengths)
+
+    idx = series[lengths.index(max_length)]._native_series.index
+    reindexed = []
+
+    for s, length in zip(series, lengths):
+        s_native = s._native_series
+        if max_length > 1 and length == 1:
+            reindexed.append(
+                native_namespace.Series(
+                    [s_native.iloc[0]] * max_length,
+                    index=idx,
+                    name=s_native.name,
+                    dtype=s_native.dtype,
+                )
+            )
+
+        elif s_native.index is not idx:
             reindexed.append(
                 set_axis(
-                    s._native_series,
+                    s_native,
                     idx,
                     implementation=s._implementation,
                     backend_version=s._backend_version,
                 )
             )
         else:
-            reindexed.append(s._native_series)
+            reindexed.append(s_native)
     return reindexed
 
 

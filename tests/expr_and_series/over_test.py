@@ -1,6 +1,5 @@
 from typing import Any
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -14,7 +13,7 @@ data = {
 
 
 def test_over_single(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -29,7 +28,7 @@ def test_over_single(request: Any, constructor: Any) -> None:
 
 
 def test_over_multiple(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -43,7 +42,10 @@ def test_over_multiple(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_over_invalid() -> None:
-    df = nw.from_native(pd.DataFrame(data))
+def test_over_invalid(request: Any, constructor: Any) -> None:
+    if "polars" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
     with pytest.raises(ValueError, match="Anonymous expressions"):
         df.with_columns(c_min=nw.all().min().over("a", "b"))

@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - __arrow_c_stream__
         - __getitem__
         - clone
         - collect_schema
@@ -31,6 +32,7 @@
         - shape
         - sort
         - tail
+        - to_arrow
         - to_dict
         - to_numpy
         - to_pandas
