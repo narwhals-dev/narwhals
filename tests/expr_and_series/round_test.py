@@ -28,4 +28,4 @@ def test_round_series(constructor_eager: Any, decimals: int) -> None:
     expected_data = {k: [round(e, decimals) for e in v] for k, v in data.items()}
     result_series = df["a"].round(decimals)
 
-    assert result_series.to_list() == expected_data["a"]
+    compare_dicts({"a": result_series}, expected_data)

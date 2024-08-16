@@ -88,7 +88,7 @@ def test_str_to_uppercase_series(
         request.applymarker(pytest.mark.xfail)
 
     result_series = df["a"].str.to_uppercase()
-    assert result_series.to_numpy().tolist() == expected["a"]
+    compare_dicts({"a": result_series}, expected)
 
 
 @pytest.mark.parametrize(
@@ -139,4 +139,4 @@ def test_str_to_lowercase_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.to_lowercase()
-    assert result_series.to_numpy().tolist() == expected["a"]
+    compare_dicts({"a": result_series}, expected)

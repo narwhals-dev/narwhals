@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import narwhals.stable.v1 as nw
+from tests.utils import compare_dicts
 
 
 def test_zip_with(constructor_eager: Any) -> None:
@@ -14,4 +15,4 @@ def test_zip_with(constructor_eager: Any) -> None:
 
     result = series1.zip_with(mask, series2)
     expected = [1, 4, 2]
-    assert result.to_list() == expected
+    compare_dicts({"a": result}, {"a": expected})

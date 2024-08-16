@@ -17,4 +17,5 @@ def test_pipe_series(
     constructor_eager: Any,
 ) -> None:
     s = nw.from_native(constructor_eager(input_list), eager_only=True)["a"]
-    assert s.pipe(lambda x: x**2).to_list() == expected
+    result = s.pipe(lambda x: x**2)
+    compare_dicts({"a": result}, {"a": expected})
