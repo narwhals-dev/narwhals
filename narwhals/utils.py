@@ -275,7 +275,7 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
 
 def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     """
-    Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
@@ -299,6 +299,7 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         dtype: object
     """
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.series import PandasLikeSeries
 
     df_any = cast(Any, df)
     if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
@@ -310,15 +311,12 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
                 )
             ),
         )
-    if isinstance(getattr(df_any, "_compliant_series", None), PandasLikeDataFrame):
+
+    if isinstance(df_any, PandasLikeSeries):
         return cast(
             T,
-            df_any._compliant_series(
-                df_any._compliant_series._from_native_series(
-                    df_any._compliant_series._native_series.convert_dtypes(
-                        *args, **kwargs
-                    )
-                )
+            df_any._from_native_series(
+                df_any._native_series.convert_dtypes(*args, **kwargs)
             ),
         )
     return df
