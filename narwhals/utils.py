@@ -316,9 +316,8 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         from importlib.metadata import version
 
         pd_version = version("pandas").split(".")
-        if int(pd_version[0]) < 1:
-            ser = df_any._native_series.apply(lambda x: x)
-        else:
+        ser = df_any._native_series.apply(lambda x: x)
+        if int(pd_version[0]) > 1:
             ser = df_any._native_series.convert_dtypes(*args, **kwargs)
         return cast(
             T,
