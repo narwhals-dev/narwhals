@@ -29,11 +29,11 @@ data = {
 @pytest.mark.parametrize(
     ("attribute", "expected_a", "expected_b", "expected_c"),
     [
-        ("total_minutes", [0, 1], [0, 0], None),
-        ("total_seconds", [0, 61], [0, 0], None),
-        ("total_milliseconds", [0, 61001], [2, 1], None),
-        ("total_microseconds", None, [2000, 1300], [0, 0]),
-        ("total_nanoseconds", None, [2000000, 1300000], [0, 20]),
+        ("total_minutes", [0, 1], [0, 0], [0, 0]),
+        ("total_seconds", [0, 61], [0, 0], [0, 0]),
+        ("total_milliseconds", [0, 61001], [2, 1]),
+        ("total_microseconds", [0, 0], [2000, 1300], [0, 0]),
+        ("total_nanoseconds", [0, 0], [2000000, 1300000], [0, 20]),
     ],
 )
 def test_duration_attributes(
@@ -51,26 +51,23 @@ def test_duration_attributes(
 
     df = nw.from_native(constructor(data), eager_only=True)
 
-    if expected_a is not None:
-        result_a = df.select(getattr(nw.col("a").dt, attribute)().fill_null(0))
-        compare_dicts(result_a, {"a": expected_a})
+    result_a = df.select(getattr(nw.col("a").dt, attribute)().fill_null(0))
+    compare_dicts(result_a, {"a": expected_a})
 
-        result_a = df.select(getattr(df["a"].dt, attribute)().fill_null(0))
-        compare_dicts(result_a, {"a": expected_a})
+    result_a = df.select(getattr(df["a"].dt, attribute)().fill_null(0))
+    compare_dicts(result_a, {"a": expected_a})
 
-    if expected_b is not None:
-        result_b = df.select(getattr(nw.col("b").dt, attribute)().fill_null(0))
-        compare_dicts(result_b, {"b": expected_b})
+    result_b = df.select(getattr(nw.col("b").dt, attribute)().fill_null(0))
+    compare_dicts(result_b, {"b": expected_b})
 
-        result_b = df.select(getattr(df["b"].dt, attribute)().fill_null(0))
-        compare_dicts(result_b, {"b": expected_b})
+    result_b = df.select(getattr(df["b"].dt, attribute)().fill_null(0))
+    compare_dicts(result_b, {"b": expected_b})
 
-    if expected_c is not None:
-        result_c = df.select(getattr(nw.col("c").dt, attribute)().fill_null(0))
-        compare_dicts(result_c, {"c": expected_c})
+    result_c = df.select(getattr(nw.col("c").dt, attribute)().fill_null(0))
+    compare_dicts(result_c, {"c": expected_c})
 
-        result_c = df.select(getattr(df["c"].dt, attribute)().fill_null(0))
-        compare_dicts(result_c, {"c": expected_c})
+    result_c = df.select(getattr(df["c"].dt, attribute)().fill_null(0))
+    compare_dicts(result_c, {"c": expected_c})
 
 
 @pytest.mark.parametrize("unit", ["s", "ms", "us", "ns"])
