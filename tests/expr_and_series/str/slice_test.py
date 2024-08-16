@@ -32,4 +32,4 @@ def test_str_slice_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.slice(offset, length)
-    assert result_series.to_list() == expected["a"]
+    compare_dicts({"a": result_series.to_list()}, expected)
