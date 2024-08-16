@@ -197,6 +197,10 @@ def set_axis(
     implementation: Implementation,
     backend_version: tuple[int, ...],
 ) -> T:
+    if implementation is Implementation.CUDF:  # pragma: no cover
+        obj = obj.copy(deep=False)  # type: ignore[attr-defined]
+        obj.index = index  # type: ignore[attr-defined]
+        return obj
     if implementation is Implementation.PANDAS and backend_version < (
         1,
     ):  # pragma: no cover
@@ -210,7 +214,7 @@ def set_axis(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[no-any-return, attr-defined]
+    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
 def translate_dtype(column: Any) -> DType:

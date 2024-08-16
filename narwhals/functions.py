@@ -133,7 +133,7 @@ def new_series(
         raise NotImplementedError(msg)
     else:  # pragma: no cover
         try:
-            # implementation is UNKNOWN, Narhwals extension using this feature should
+            # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
             native_series = native_namespace.new_series(name, values, dtype)
         except AttributeError as e:
@@ -256,7 +256,7 @@ def from_dict(
         native_frame = native_namespace.table(data, schema=schema)
     else:  # pragma: no cover
         try:
-            # implementation is UNKNOWN, Narhwals extension using this feature should
+            # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
             native_frame = native_namespace.from_dict(data)
         except AttributeError as e:
