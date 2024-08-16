@@ -20,7 +20,7 @@ data = {
 def test_slice_column(constructor_eager: Any) -> None:
     result = nw.from_native(constructor_eager(data))["a"]
     assert isinstance(result, nw.Series)
-    assert result.to_numpy().tolist() == [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    compare_dicts({"a": result}, {"a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
 
 
 def test_slice_rows(constructor_eager: Any) -> None:
