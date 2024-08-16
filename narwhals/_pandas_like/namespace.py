@@ -307,9 +307,7 @@ class PandasWhen:
             plx, self._otherwise_value, shape=condition.shape
         )._call(df)[0]
 
-        return [
-            value_series.zip_with(condition, otherwise_series).cast(value_series.dtype)
-        ]
+        return [value_series.zip_with(condition, otherwise_series)]
 
     def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value
