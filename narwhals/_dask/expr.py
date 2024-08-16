@@ -545,6 +545,22 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def is_duplicated(self: Self) -> Self:
+        msg = "`Expr.is_duplicated` is not support since Dask currently has no native duplicated check"
+        raise NotImplementedError(msg)
+
+    def is_unique(self: Self) -> Self:
+        msg = "`Expr.is_duplicated` is not support since Dask currently has no native duplicated check"
+        raise NotImplementedError(msg)
+
+    def is_in(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.isin(other),
+            "is_in",
+            other,
+            returns_scalar=False,
+        )
+
     def null_count(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.isna().sum(),
