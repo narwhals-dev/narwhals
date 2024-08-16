@@ -31,9 +31,9 @@ data = {
     [
         ("total_minutes", [0, 1], [0, 0], [0, 0]),
         ("total_seconds", [0, 61], [0, 0], [0, 0]),
-        ("total_milliseconds", [0, 61001], [2, 1]),
-        ("total_microseconds", [0, 0], [2000, 1300], [0, 0]),
-        ("total_nanoseconds", [0, 0], [2000000, 1300000], [0, 20]),
+        ("total_milliseconds", [0, 61001], [2, 1], [0, 0]),
+        ("total_microseconds", [0, 61001001], [2000, 1300], [0, 0]),
+        ("total_nanoseconds", [0, 61001001000], [2000000, 1300000], [0, 20]),
     ],
 )
 def test_duration_attributes(
