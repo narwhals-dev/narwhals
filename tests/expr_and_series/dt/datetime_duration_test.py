@@ -40,9 +40,9 @@ def test_duration_attributes(
     request: Any,
     constructor: Any,
     attribute: str,
-    expected_a: list[int] | None,
-    expected_b: list[int] | None,
-    expected_c: list[int] | None,
+    expected_a: list[int],
+    expected_b: list[int],
+    expected_c: list[int],
 ) -> None:
     if "lazy" in str(constructor) or (
         parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor)
