@@ -38,7 +38,7 @@ def concat(
 
     Notes:
         Only horizontal and vertical concatenations are supported.
-     
+
     Arguments:
         items: DataFrames, LazyFrames, or Series to concatenate.
 
