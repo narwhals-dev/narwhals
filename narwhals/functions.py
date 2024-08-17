@@ -33,6 +33,64 @@ def concat(
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> FrameT:
+    """
+    Concatenate multiple DataFrames, LazyFrames, or Series into a single entity.
+
+    Notes:
+        Only horizontal and vertical concatenations are supported.
+
+    Arguments:
+        items: DataFrames, LazyFrames, or Series to concatenate.
+
+        how: {'vertical', 'horizontal'}
+            * vertical: Stacks Series from DataFrames vertically and fills with `null`
+              if the lengths don't match.
+            * horizontal: Stacks Series from DataFrames horizontally and fills with `null`
+              if the lengths don't match.
+
+    Returns:
+        A new DataFrame, Lazyframe or Series resulting from the concatenation.
+
+    Raises:
+        NotImplementedError: The items to concatenate should either all be eager, or all lazy
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     data = {"a": [5, 2], "b": [1, 4]}
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     new_df = nw.from_dict(data, native_namespace=native_namespace)
+        ...     return nw.concat([df, new_df], how="vertical")
+
+        >>> func(pd.DataFrame(data))
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+        0  5  1
+        1  2  4
+        >>> func(pl.DataFrame(data))
+        shape: (5, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        │ 5   ┆ 1   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+    """
+
     if how not in ("horizontal", "vertical"):  # pragma: no cover
         msg = "Only horizontal and vertical concatenations are supported"
         raise NotImplementedError(msg)
