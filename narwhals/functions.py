@@ -33,6 +33,55 @@ def concat(
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> FrameT:
+    """
+    Concatenate multiple DataFrames, LazyFrames, or Series into a single entity.
+
+    Notes:
+        Only horizontal and vertical concatenations are supported.
+     
+    Arguments:
+        items: DataFrames, LazyFrames, or Series to concatenate.
+
+        how: {'vertical', 'horizontal'}
+            * vertical: Stacks Series from DataFrames vertically and fills with `null`
+              if the lengths don't match.
+            * horizontal: Stacks Series from DataFrames horizontally and fills with `null`
+              if the lengths don't match.
+
+    Returns:
+        A new DataFrame or Series resulting from the concatenation.
+
+    Raises:
+        NotImplementedError: The items to concatenate should either all be eager, or all lazy
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        >>> @nw.narwhalify
+            def func(df):
+                data = {"c": [5, 2], "d": [1, 4]}
+                native_namespace = nw.get_native_namespace(df)
+                return nw.from_dict(data, native_namespace=native_namespace)
+
+        >>>  func(pd.DataFrame(data))
+           c  d
+        0  5  1
+        1  2  4
+        >>>  func(pl.DataFrame(data))
+          shape: (2, 2)
+          ┌─────┬─────┐
+          │ c   ┆ d   │
+          │ --- ┆ --- │
+          │ i64 ┆ i64 │
+          ╞═════╪═════╡
+          │ 5   ┆ 1   │
+          │ 2   ┆ 4   │
+          └─────┴─────┘
+    """
+
     if how not in ("horizontal", "vertical"):  # pragma: no cover
         msg = "Only horizontal and vertical concatenations are supported"
         raise NotImplementedError(msg)
