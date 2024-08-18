@@ -25,7 +25,7 @@ def q2(
     supplier_ds: Any,
     part_ds: Any,
     part_supp_ds: Any,
-) -> dict[str, list[Any]]:
+) -> Any:
     var_1 = 15
     var_2 = "BRASS"
     var_3 = "EUROPE"
@@ -68,10 +68,9 @@ def q2(
         )
         .head(100)
     )
-    return query_result.collect().to_dict(as_series=False)
+    return query_result.collect()
 
 
-@pytest.mark.benchmark()
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow", "dask"])
 def test_q2(benchmark: Any, library: str, request: Any) -> None:
     if library == "pandas" and parse_version(pd.__version__) < (1, 5):
