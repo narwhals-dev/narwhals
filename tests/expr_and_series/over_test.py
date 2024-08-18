@@ -14,7 +14,7 @@ data = {
 
 def test_over_single(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = df.with_columns(c_max=nw.col("c").max().over("a")).lazy().collect()
+    result = df.with_columns(c_max=nw.col("c").max().over("a"))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
