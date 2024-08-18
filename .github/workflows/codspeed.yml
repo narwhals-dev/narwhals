@@ -19,7 +19,7 @@ jobs:
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Install dependencies
-        run: uv pip install -r requirements-dev.txt --system
+        run: uv pip install -e . -r requirements-dev.txt --system
       - name: show-deps
         run: uv pip freeze
       - name: Run benchmarks
