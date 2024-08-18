@@ -25,4 +25,5 @@ jobs:
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v3
         with:
+          token: ${{ secrets.CODSPEED_TOKEN }}
           run: pytest tests/tpch --codspeed
