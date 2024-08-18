@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-import dask.dataframe as dd
 import pandas as pd
 import polars as pl
 import pyarrow.parquet as pq
@@ -11,13 +10,6 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-
-lib_to_reader = {
-    "pandas": pd.read_parquet,
-    "polars": pl.scan_parquet,
-    "dask": lambda path: dd.read_parquet(path, dtype_backend="pyarrow"),
-    "pyarrow": pq.read_table,
-}
 
 
 def q1(lineitem_ds: Any) -> Any:
@@ -54,6 +46,15 @@ def q1(lineitem_ds: Any) -> Any:
 def test_q1(benchmark: Any, library: str, request: Any) -> None:
     if library == "pandas" and parse_version(pd.__version__) < (1, 5):
         request.applymarker(pytest.mark.xfail)
+
+    import dask.dataframe as dd
+
+    lib_to_reader = {
+        "pandas": pd.read_parquet,
+        "polars": pl.scan_parquet,
+        "dask": lambda path: dd.read_parquet(path, dtype_backend="pyarrow"),
+        "pyarrow": pq.read_table,
+    }
 
     read_fn = lib_to_reader[library]
     lineitem_ds = nw.from_native(read_fn("tests/data/lineitem.parquet")).lazy()
