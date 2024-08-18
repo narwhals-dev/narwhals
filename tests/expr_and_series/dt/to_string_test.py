@@ -34,16 +34,14 @@ def test_dt_to_string_series(constructor_eager: Any, fmt: str) -> None:
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
-    result = input_frame.select(input_series.dt.to_string(fmt))
+    result = {"a": input_series.dt.to_string(fmt)}
 
     if any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
-        result = input_frame.select(
-            input_series.dt.to_string(fmt).str.replace(r"\.\d+$", "")
-        )
+        result = {"a": input_series.dt.to_string(fmt).str.replace(r"\.\d+$", "")}
 
     compare_dicts(result, {"a": expected_col})
 
