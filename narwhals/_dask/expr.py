@@ -804,7 +804,7 @@ class DaskExprDateTimeNamespace:
         return self._expr._from_call(
             lambda _input, _format: _input.dt.strftime(_format),
             "strftime",
-            format,
+            format.replace("%.f", ".%f"),
             returns_scalar=False,
         )
 
