@@ -82,6 +82,11 @@ def _clean_string(result: str) -> str:
     return result
 
 
+def _clean_string_expr(e: Any) -> Any:
+    # Same as `_clean_string` but for Expr
+    return e.str.replace_all(r"0+$", "").str.replace_all(r"\.$", "")
+
+
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
@@ -132,22 +137,13 @@ def test_dt_to_string_iso_local_datetime_expr(
     df = constructor({"a": [data]})
 
     result = nw.from_native(df).with_columns(
-        nw.col("a")
-        .dt.to_string("%Y-%m-%dT%H:%M:%S.%f")
-        .str.replace_all(r"0+$", "")
-        .str.replace_all(r"\.$", "")
-        .alias("b")
+        _clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f")).alias("b")
     )
     compare_dicts(result, {"a": [data], "b": [_clean_string(expected)]})
 
     result = nw.from_native(df).with_columns(
-        nw.col("a")
-        .dt.to_string("%Y-%m-%dT%H:%M:%S%.f")
-        .str.replace_all(r"0+$", "")
-        .str.replace_all(r"\.$", "")
-        .alias("b")
+        _clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f")).alias("b")
     )
-    expected = _clean_string(expected)
     compare_dicts(result, {"a": [data], "b": [_clean_string(expected)]})
 
 
