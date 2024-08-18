@@ -9,31 +9,31 @@ autolabeler:
   - label: breaking
     title:
       # Example: feat!: ...
-      - '/^(build|chore|ci|depr|docs|feat|fix|perf|refactor|release|test)(\(.*\))?\!\: /'
+      - '/^([B|b]uild|[C|c]hore|[CI|ci]|[D|d]epr|[D|d]oc|DOC|[F|f]eat|[F|f]ix|[P|p]erf|[R|r]efactor|[R|r]elease|[T|t]est)\! /'
   - label: build
     title:
-      - '/^build/'
+      - '/^[B|b]uild/'
   - label: internal
     title:
-      - '/^(chore|ci|refactor|test|template|bench)/'
+      - '/^[C|c]hore|[CI|ci]|[R|r]efactor|[T|t]est|[T|t]emplate|[B|b]ench/'
   - label: deprecation
     title:
-      - '/^depr/'
+      - '/^[D|d]epr/'
   - label: documentation
     title:
-      - '/(.*doc|.*docstring)/'
+      - '/^[D|d]oc|DOC/'
   - label: enhancement
     title:
-      - '/^(.*feat|.*enh)/'
+      - '/^.*feat|.*enh|Feat|ENH|Enh/'
   - label: fix
     title:
-      - '/^fix/'
+      - '/^[F|f]ix/'
   - label: performance
     title:
-      - '/^perf/'
+      - '/^[P|p]erf/'
   - label: release
     title:
-      - '/^release/'
+      - '/^[R|r]elease/'
       
 version-resolver:
   major:
