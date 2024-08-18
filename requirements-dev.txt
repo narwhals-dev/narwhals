@@ -4,6 +4,7 @@ polars[timezones]
 pre-commit
 pyarrow
 pytest
+pytest-codspeed
 pytest-cov
 pytest-env
 hypothesis
