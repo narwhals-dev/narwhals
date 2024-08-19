@@ -545,6 +545,40 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def is_duplicated(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            _name = _input.name
+            return (
+                _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) > 1
+            )
+
+        return self._from_call(
+            func,
+            "is_duplicated",
+            returns_scalar=False,
+        )
+
+    def is_unique(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            _name = _input.name
+            return (
+                _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) == 1
+            )
+
+        return self._from_call(
+            func,
+            "is_unique",
+            returns_scalar=False,
+        )
+
+    def is_in(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.isin(other),
+            "is_in",
+            other,
+            returns_scalar=False,
+        )
+
     def null_count(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.isna().sum(),
