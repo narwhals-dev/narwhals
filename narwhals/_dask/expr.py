@@ -800,11 +800,47 @@ class DaskExprDateTimeNamespace:
             returns_scalar=False,
         )
 
+
     def to_string(self, format: str) -> DaskExpr:  # noqa: A002
         return self._expr._from_call(
             lambda _input, _format: _input.dt.strftime(_format),
             "strftime",
-            format.replace("%.f", ".%f"),
+            format.replace("%.f", ".%f"),            
+            returns_scalar=False,
+        )
+
+    def total_minutes(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() // 60,
+            "total_minutes",
+            returns_scalar=False,
+        )
+
+    def total_seconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() // 1,
+            "total_seconds",
+            returns_scalar=False,
+        )
+
+    def total_milliseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1000 // 1,
+            "total_milliseconds",
+            returns_scalar=False,
+        )
+
+    def total_microseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1_000_000 // 1,
+            "total_microseconds",
+            returns_scalar=False,
+        )
+
+    def total_nanoseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1_000_000_000 // 1,
+            "total_nanoseconds",
             returns_scalar=False,
         )
 

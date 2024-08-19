@@ -1,6 +1,5 @@
 from typing import Any
 
-import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -28,5 +27,5 @@ def test_is_duplicated_expr(constructor: Any, request: Any) -> None:
 def test_is_duplicated_series(constructor_eager: Any) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_duplicated()
-    expected = np.array([True, True, False])
-    assert (result.to_numpy() == expected).all()
+    expected = {"a": [True, True, False]}
+    compare_dicts({"a": result}, expected)
