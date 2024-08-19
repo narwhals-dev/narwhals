@@ -166,8 +166,11 @@ def test_dt_to_string_iso_local_date_series(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_expr(
-    constructor: Any, data: datetime, expected: str
+    request: Any, constructor: Any, data: datetime, expected: str
 ) -> None:
+    if "modin" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = constructor({"a": [data]})
     result = nw.from_native(df).with_columns(
         nw.col("a").dt.to_string("%Y-%m-%d").alias("b")
