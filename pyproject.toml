@@ -97,6 +97,7 @@ filterwarnings = [
   'ignore:.*You are using pyarrow version',
   'ignore:.*but when imported by',
   'ignore:Distributing .*This may take some time',
+  'ignore:Using or importing the ABCs',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
