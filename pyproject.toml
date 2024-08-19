@@ -27,7 +27,7 @@ exclude = [
 
 [project.optional-dependencies]
 cudf = ["cudf>=23.08.00"]
-modin = ["modin>=0.7.1"]
+modin = ["modin>=0.31.0"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
 pyarrow = ['pyarrow>=11.0.0']
@@ -97,7 +97,6 @@ filterwarnings = [
   'ignore:.*You are using pyarrow version',
   'ignore:.*but when imported by',
   'ignore:Distributing .*This may take some time',
-  'ignore:Using or importing the ABCs',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
