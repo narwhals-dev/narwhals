@@ -4,7 +4,6 @@ polars
 pre-commit
 pyarrow
 pytest
-pytest-benchmark
 pytest-codspeed
 pytest-cov
 pytest-env
