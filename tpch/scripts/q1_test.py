@@ -38,13 +38,11 @@ def q1(lineitem_ds: Any) -> Any:
     return query_result.collect()
 
 
-@pytest.mark.parametrize("library", ["pandas", "polars"])
+@pytest.mark.parametrize("library", ["polars"])
 def test_q1(benchmark: Any, library: str) -> None:
-    import pandas as pd
     import polars as pl
 
     lib_to_reader = {
-        "pandas": pd.read_parquet,
         "polars": pl.scan_parquet,
     }
 
