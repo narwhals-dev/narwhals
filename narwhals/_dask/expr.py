@@ -798,6 +798,41 @@ class DaskExprDateTimeNamespace:
             returns_scalar=False,
         )
 
+    def total_minutes(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() // 60,
+            "total_minutes",
+            returns_scalar=False,
+        )
+
+    def total_seconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() // 1,
+            "total_seconds",
+            returns_scalar=False,
+        )
+
+    def total_milliseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1000 // 1,
+            "total_milliseconds",
+            returns_scalar=False,
+        )
+
+    def total_microseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1_000_000 // 1,
+            "total_microseconds",
+            returns_scalar=False,
+        )
+
+    def total_nanoseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1_000_000_000 // 1,
+            "total_nanoseconds",
+            returns_scalar=False,
+        )
+
 
 class DaskExprNameNamespace:
     def __init__(self: Self, expr: DaskExpr) -> None:
