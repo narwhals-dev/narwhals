@@ -130,7 +130,7 @@ class DaskLazyFrame:
 
         column_names = [c for c in subset_ if isinstance(c, str)]
         selector_names = self.select(
-            *[c.is_null()._call(plx) for c in subset_ if isinstance(c, Selector)]
+            *[c._call(plx) for c in subset_ if isinstance(c, Selector)]
         ).columns
 
         return self._from_native_frame(
