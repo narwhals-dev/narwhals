@@ -26,4 +26,4 @@ jobs:
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v3
         with:
-          run: pytest tpch/scripts --codspeed
+          run: pytest tpch/benchmarks --codspeed
