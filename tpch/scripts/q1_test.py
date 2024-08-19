@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+import dask.dataframe as dd
+import pandas as pd
 import polars as pl
 import pyarrow.parquet as pq
 import pytest
@@ -40,10 +42,12 @@ def q1(lineitem_ds: Any) -> Any:
     return query_result.collect()
 
 
-@pytest.mark.parametrize("library", ["polars", "pyarrow"])
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow", "dask"])
 def test_q1(benchmark: Any, library: str) -> None:
     lib_to_reader = {
+        "pandas": pd.read_parquet,
         "polars": pl.scan_parquet,
+        "dask": lambda path: dd.read_parquet(path, dtype_backend="pyarrow"),
         "pyarrow": pq.read_table,
     }
 
