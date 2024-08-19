@@ -475,7 +475,9 @@ class DaskExpr:
         )
 
     def clip(
-        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+        self: Self,
+        lower_bound: Any | None = None,
+        upper_bound: Any | None = None,
     ) -> Self:
         return self._from_call(
             lambda _input, _lower, _upper: _input.clip(lower=_lower, upper=_upper),
@@ -795,6 +797,14 @@ class DaskExprDateTimeNamespace:
         return self._expr._from_call(
             lambda _input: _input.dt.dayofyear,
             "ordinal_day",
+            returns_scalar=False,
+        )
+
+    def to_string(self, format: str) -> DaskExpr:  # noqa: A002
+        return self._expr._from_call(
+            lambda _input, _format: _input.dt.strftime(_format),
+            "strftime",
+            format.replace("%.f", ".%f"),
             returns_scalar=False,
         )
 
