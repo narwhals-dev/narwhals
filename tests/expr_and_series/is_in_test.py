@@ -18,7 +18,7 @@ def test_expr_is_in(constructor: Any) -> None:
 
 def test_ser_is_in(constructor_eager: Any) -> None:
     ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-    result = {"a": ser.is_in([4, 5]).to_list()}
+    result = {"a": ser.is_in([4, 5])}
     expected = {"a": [False, True, False, True]}
 
     compare_dicts(result, expected)
