@@ -9,7 +9,6 @@ import pyarrow.parquet as pq
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 pytestmark = pytest.mark.benchmark
 
@@ -45,10 +44,7 @@ def q1(lineitem_ds: Any) -> Any:
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow", "dask"])
-def test_q1(benchmark: Any, library: str, request: Any) -> None:
-    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
-        request.applymarker(pytest.mark.xfail)
-
+def test_q1(benchmark: Any, library: str) -> None:
     import dask.dataframe as dd
 
     lib_to_reader = {
