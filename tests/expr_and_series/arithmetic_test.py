@@ -143,10 +143,10 @@ def test_truediv_same_dims(constructor_eager: Any, request: Any) -> None:
         request.applymarker(pytest.mark.xfail)
     s_left = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     s_right = nw.from_native(constructor_eager({"a": [2, 2, 1]}), eager_only=True)["a"]
-    result = (s_left / s_right).to_list()
-    assert result == [0.5, 1.0, 3.0]
-    result = (s_left.__rtruediv__(s_right)).to_list()
-    assert result == [2, 1, 1 / 3]
+    result = s_left / s_right
+    compare_dicts({"a": result}, {"a": [0.5, 1.0, 3.0]})
+    result = s_left.__rtruediv__(s_right)
+    compare_dicts({"a": result}, {"a": [2, 1, 1 / 3]})
 
 
 @pytest.mark.slow()

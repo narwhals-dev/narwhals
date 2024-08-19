@@ -3,6 +3,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import compare_dicts
 
 
 @pytest.mark.filterwarnings(
@@ -22,4 +23,4 @@ def test_to_dict_as_series(constructor_eager: Any) -> None:
     assert isinstance(result["a"], nw.Series)
     assert isinstance(result["b"], nw.Series)
     assert isinstance(result["c"], nw.Series)
-    assert {key: value.to_list() for key, value in result.items()} == data
+    compare_dicts(result, data)
