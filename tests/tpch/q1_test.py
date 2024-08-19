@@ -11,6 +11,8 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
+pytestmark = pytest.mark.benchmark
+
 
 def q1(lineitem_ds: Any) -> Any:
     var_1 = date(1998, 9, 2)

@@ -10,6 +10,8 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
+pytestmark = pytest.mark.benchmark
+
 
 def q2(
     region_ds: Any,
