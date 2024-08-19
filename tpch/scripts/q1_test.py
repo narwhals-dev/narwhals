@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+import polars as pl
+import pyarrow.parquet as pq
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -38,12 +40,11 @@ def q1(lineitem_ds: Any) -> Any:
     return query_result.collect()
 
 
-@pytest.mark.parametrize("library", ["polars"])
+@pytest.mark.parametrize("library", ["polars", "pyarrow"])
 def test_q1(benchmark: Any, library: str) -> None:
-    import polars as pl
-
     lib_to_reader = {
         "polars": pl.scan_parquet,
+        "pyarrow": pq.read_table,
     }
 
     read_fn = lib_to_reader[library]
