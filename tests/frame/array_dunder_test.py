@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -32,9 +33,17 @@ def test_array_dunder_with_dtype(request: Any, constructor_eager: Any) -> None:
 
 
 def test_array_dunder_with_copy(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager) and parse_version(
-        pa.__version__
-    ) < parse_version("16.0.0"):  # pragma: no cover
+    if "pyarrow_table" in str(constructor_eager) and parse_version(pa.__version__) < (
+        16,
+        0,
+        0,
+    ):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor_eager) and parse_version(pl.__version__) < (
+        0,
+        20,
+        28,
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
