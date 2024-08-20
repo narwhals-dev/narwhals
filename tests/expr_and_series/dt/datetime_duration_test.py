@@ -44,9 +44,7 @@ def test_duration_attributes(
     expected_b: list[int],
     expected_c: list[int],
 ) -> None:
-    if "dask_lazy" in str(constructor) or (
-        parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor)
-    ):
+    if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))

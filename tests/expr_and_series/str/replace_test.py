@@ -66,7 +66,7 @@ def test_str_replace_series(
     result_series = df["a"].str.replace(
         pattern=pattern, value=value, n=n, literal=literal
     )
-    assert result_series.to_list() == expected["a"]
+    compare_dicts({"a": result_series}, expected)
 
 
 @pytest.mark.parametrize(
@@ -84,7 +84,7 @@ def test_str_replace_all_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.replace_all(pattern=pattern, value=value, literal=literal)
-    assert result_series.to_list() == expected["a"]
+    compare_dicts({"a": result_series}, expected)
 
 
 @pytest.mark.parametrize(

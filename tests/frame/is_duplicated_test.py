@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
-
 import narwhals.stable.v1 as nw
+from tests.utils import compare_dicts
 
 
 def test_is_duplicated(constructor_eager: Any) -> None:
@@ -12,5 +11,5 @@ def test_is_duplicated(constructor_eager: Any) -> None:
     df_raw = constructor_eager(data)
     df = nw.from_native(df_raw, eager_only=True)
     result = nw.concat([df, df.head(1)]).is_duplicated()
-    expected = np.array([True, False, False, True])
-    assert (result.to_numpy() == expected).all()
+    expected = {"is_duplicated": [True, False, False, True]}
+    compare_dicts({"is_duplicated": result}, expected)
