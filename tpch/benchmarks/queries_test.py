@@ -30,6 +30,6 @@ def test_queries(benchmark: BenchmarkFixture, library: str) -> None:
     region = nw.from_native(read_fn(DATA_FOLDER / "region.parquet")).lazy()
     supplier = nw.from_native(read_fn(DATA_FOLDER / "supplier.parquet")).lazy()
 
-    _ = benchmark(q1, lineitem)
-    _ = benchmark(q2, region, nation, supplier, part, partsupp)
-    _ = benchmark(q3, customer, lineitem, orders)
+    q1_result = benchmark(q1, lineitem)  # noqa: F841
+    q2_result = benchmark(q2, region, nation, supplier, part, partsupp)  # noqa: F841
+    q3_result = benchmark(q3, customer, lineitem, orders)  # noqa: F841
