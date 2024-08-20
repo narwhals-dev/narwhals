@@ -3,10 +3,10 @@
 # and pandas or PyArrow.
 from __future__ import annotations
 
+from collections.abc import Hashable
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Hashable
 from typing import TypeVar
 from typing import Union
 from typing import cast
