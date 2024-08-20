@@ -186,6 +186,10 @@ def test_schema_object(method: str, expected: Any) -> None:
     assert getattr(schema, method)() == expected
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < (2,),
+    reason="Before 2.0, pandas would raise on `drop_duplicates`",
+)
 def test_from_non_hashable_column_name() -> None:
     # This is technically super-illegal
     # BUT, it shows up in a scikit-learn test, so...
