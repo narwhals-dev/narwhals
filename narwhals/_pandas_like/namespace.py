@@ -202,7 +202,10 @@ class PandasLikeNamespace:
 
     # --- horizontal ---
     def sum_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
+        return reduce(
+            lambda x, y: x + y,
+            [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
+        )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
