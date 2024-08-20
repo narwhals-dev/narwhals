@@ -5,7 +5,7 @@ import pyarrow.parquet as pq
 
 lib_to_reader = {
     "dask": lambda path: dd.read_parquet(path, dtype_backend="pyarrow"),
-    "pandas": pd.read_parquet,
+    "pandas": lambda path: pd.read_parquet(path, engine="pyarrow"),
     "polars": pl.scan_parquet,
     "pyarrow": pq.read_table,
 }
