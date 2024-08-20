@@ -26,6 +26,7 @@ from narwhals.utils import generate_unique_token
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
@@ -98,6 +99,9 @@ class PandasLikeDataFrame:
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
+
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str | int]) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
@@ -519,19 +523,24 @@ class PandasLikeDataFrame:
             }
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
-    def to_numpy(self) -> Any:
+    def to_numpy(self, dtype: Any = None, copy: bool | None = None) -> Any:
         from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 
-        # pandas return `object` dtype for nullable dtypes, so we cast each
-        # Series to numpy and let numpy find a common dtype.
+        if dtype is not None:
+            return self._native_frame.to_numpy(dtype=dtype, copy=copy)
+
+        # pandas return `object` dtype for nullable dtypes if dtype=None,
+        # so we cast each Series to numpy and let numpy find a common dtype.
         # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
         # returns Object) then we just call `to_numpy()` on the DataFrame.
-        for dtype in self._native_frame.dtypes:
-            if str(dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
+        for col_dtype in self._native_frame.dtypes:
+            if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
                 import numpy as np  # ignore-banned-import
 
-                return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
-        return self._native_frame.to_numpy()
+                return np.hstack(
+                    [self[col].to_numpy(copy=copy)[:, None] for col in self.columns]
+                )
+        return self._native_frame.to_numpy(copy=copy)
 
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
