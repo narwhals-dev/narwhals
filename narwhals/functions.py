@@ -36,9 +36,6 @@ def concat(
     """
     Concatenate multiple DataFrames, LazyFrames into a single entity.
 
-    Notes:
-        Only horizontal and vertical concatenations are supported.
-
     Arguments:
         items: DataFrames, LazyFrames to concatenate.
 
@@ -73,8 +70,6 @@ def concat(
 
         >>> @nw.narwhalify
         ... def func(df1, df2):
-        ...     native_namespace_df1 = nw.get_native_namespace(df1)
-        ...     native_namespace_df2 = nw.get_native_namespace(df2)
         ...     return nw.concat([df1, df2], how="vertical")
 
         >>> func(df_pd_1, df_pd_2)
@@ -115,8 +110,6 @@ def concat(
 
         >>> @nw.narwhalify
         ... def func(df1, df2):
-        ...     native_namespace_df1 = nw.get_native_namespace(df1)
-        ...     native_namespace_df2 = nw.get_native_namespace(df2)
         ...     return nw.concat([df1, df2], how="horizontal")
 
         >>> func(df_pd_1, df_pd_2)
