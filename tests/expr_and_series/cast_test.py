@@ -162,7 +162,6 @@ def test_cast_string() -> None:
     assert str(result.dtype) in ("string", "object", "dtype('O')")
 
 
-@pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
 def test_cast_raises_for_unknown_dtype(constructor: Any, request: Any) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
