@@ -69,12 +69,9 @@ def test_categorical(request: Any, constructor: Any) -> None:
 
 
 @pytest.mark.skipif((get_dask_dataframe() is None), reason="too old for dask")
-def test_dask_categorical() -> None:
-    import dask.dataframe as dd
-
+def test_dask_categorical(constructor: Any) -> None:
     expected = {"b": ["a", "b", "c"]}
-    df_raw = dd.from_dict(expected, npartitions=1).astype({"b": "category"})
-    df = nw.from_native(df_raw)
+    df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
     result = df.select(categorical())
     compare_dicts(result, expected)
 
