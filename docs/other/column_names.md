@@ -10,8 +10,8 @@ Polars and PyArrow only allow for string column names. What about pandas?
 1  2  3
 ```
 
-Oh...not only does it let us create a dataframe a column named `0` - it lets us
-create one with _two_ columns named like that!
+Oh...not only does it let us create a dataframe with a column named `0` - it lets us
+create one with _two_ such columns!
 
 What does Narwhals do about this?
 
