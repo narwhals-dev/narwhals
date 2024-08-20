@@ -76,7 +76,7 @@ class PandasLikeDataFrame:
     def _validate_columns(self, columns: pd.Index) -> None:
         try:
             len_unique_columns = len(columns.drop_duplicates())
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # pragma: no cover
             msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
             raise ValueError(msg) from None
 
