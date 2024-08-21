@@ -6,9 +6,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_concat_horizontal(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_concat_horizontal(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_left = nw.from_native(constructor(data))
 
@@ -29,9 +27,7 @@ def test_concat_horizontal(constructor: Any, request: Any) -> None:
         nw.concat([])
 
 
-def test_concat_vertical(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_concat_vertical(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_left = (
         nw.from_native(constructor(data)).rename({"a": "c", "b": "d"}).drop("z").lazy()

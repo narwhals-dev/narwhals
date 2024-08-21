@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 from functools import reduce
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterable
 from typing import NoReturn
 
 from narwhals import dtypes
+from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
-    from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.typing import IntoDaskExpr
 
 
@@ -134,6 +136,52 @@ class DaskNamespace:
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
+
+    def concat(
+        self,
+        items: Iterable[DaskLazyFrame],
+        *,
+        how: str = "vertical",
+    ) -> DaskLazyFrame:
+        import dask.dataframe as dd  # ignore-banned-import
+
+        if len(list(items)) == 0:
+            msg = "No items to concatenate"
+            raise ValueError(msg)
+        native_frames = [i._native_frame for i in items]
+        axis: int
+        join: str
+        if how == "vertical":
+            if not all(
+                tuple(i.columns) == tuple(native_frames[0].columns) for i in native_frames
+            ):
+                msg = "unable to vstack with non-matching columns"
+                raise TypeError(msg)
+            axis = 0
+            join = "inner"
+        elif how == "horizontal":
+            all_column_names: list[str] = list(chain(*[i.columns for i in native_frames]))
+            if len(all_column_names) != len(set(all_column_names)):
+                duplicates = [
+                    i for i in all_column_names if all_column_names.count(i) > 1
+                ]
+                msg = (
+                    f"Columns with name(s): {', '.join(duplicates)} "
+                    "have more than one occurrence"
+                )
+                raise TypeError(msg)
+            axis = 1
+            join = "outer"
+        else:
+            msg = (
+                "Only valid options for concat are 'vertical' and 'horizontal' "
+                f"({how} not recognised)"
+            )
+            raise NotImplementedError(msg)
+        return DaskLazyFrame(
+            dd.concat(native_frames, axis=axis, join=join),
+            backend_version=self._backend_version,
+        )
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
