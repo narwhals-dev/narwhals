@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -27,6 +26,8 @@ from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     import numpy as np
+    import pandas as pd
+
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
@@ -74,15 +75,16 @@ class PandasLikeDataFrame:
     def __len__(self) -> int:
         return len(self._native_frame)
 
-    def _validate_columns(self, columns: Sequence[str]) -> None:
-        if len(columns) != len(set(columns)):
-            counter = collections.Counter(columns)
-            for col, count in counter.items():
-                if count > 1:
-                    msg = f"Expected unique column names, got {col!r} {count} time(s)"
-                    raise ValueError(msg)
-            msg = "Please report a bug"  # pragma: no cover
-            raise AssertionError(msg)
+    def _validate_columns(self, columns: pd.Index) -> None:
+        try:
+            len_unique_columns = len(columns.drop_duplicates())
+        except Exception:  # noqa: BLE001  # pragma: no cover
+            msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
+            raise ValueError(msg) from None
+
+        if len(columns) != len_unique_columns:
+            msg = f"Expected unique column names, got: {columns}"
+            raise ValueError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(
