@@ -161,7 +161,7 @@ class ArrowDataFrame:
                         )
                     )
                 msg = f"Expected slice of integers of strings, got: {type(item[1])}"  # pragma: no cover
-                raise TypeError(msg)
+                raise TypeError(msg)  # pragma: no cover
 
             from narwhals._arrow.series import ArrowSeries
 

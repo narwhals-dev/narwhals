@@ -168,7 +168,7 @@ class PandasLikeDataFrame:
                     ]
                 )
             msg = f"Expected slice of integers of strings, got: {type(item[1])}"  # pragma: no cover
-            raise TypeError(msg)
+            raise TypeError(msg)  # pragma: no cover
 
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._pandas_like.series import PandasLikeSeries

@@ -108,7 +108,7 @@ class PolarsDataFrame:
                     ).__getitem__(item[0])
                 )
             msg = f"Expected slice of integers of strings, got: {type(item[1])}"  # pragma: no cover
-            raise TypeError(msg)
+            raise TypeError(msg)  # pragma: no cover
         pl = get_polars()
         result = self._native_frame.__getitem__(item)
         if isinstance(result, pl.Series):
