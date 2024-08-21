@@ -11,6 +11,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    import numpy as np
     from typing_extensions import Self
 
 
@@ -57,6 +58,14 @@ class PolarsDataFrame:
             )
 
         return func
+
+    def __array__(self, dtype: Any | None = None, copy: bool | None = None) -> np.ndarray:
+        if self._backend_version < (0, 20, 28) and copy is not None:  # pragma: no cover
+            msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"
+            raise NotImplementedError(msg)
+        if self._backend_version < (0, 20, 28):  # pragma: no cover
+            return self._native_frame.__array__(dtype)
+        return self._native_frame.__array__(dtype)
 
     @property
     def schema(self) -> dict[str, Any]:

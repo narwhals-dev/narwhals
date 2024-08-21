@@ -233,8 +233,8 @@ class DataFrame(BaseFrame[FrameT]):
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
 
-    def __array__(self) -> np.ndarray:
-        return self._compliant_frame.to_numpy()
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "
