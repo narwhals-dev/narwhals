@@ -1537,10 +1537,9 @@ class Expr:
         r"""Get quantile value.
 
         Note:
-            pandas and Polars may have implementation differences for a given interpolation method.
-
-        Note:
-            dask has its own method to approximate quantile and it doesn't implement 'nearest', 'higher', 'lower', 'midpoint' as interpolation method - use 'linear' instead
+            * pandas and Polars may have implementation differences for a given interpolation method.
+            * [dask](https://docs.dask.org/en/stable/generated/dask.dataframe.Series.quantile.html) has its own method to approximate quantile and it doesn't implement 'nearest', 'higher', 'lower', 'midpoint'
+            as interpolation method - use 'linear' which is closest to the native 'dask' - method.
 
         Arguments:
             quantile : float
