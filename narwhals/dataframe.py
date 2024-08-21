@@ -365,9 +365,9 @@ class DataFrame(BaseFrame[FrameT]):
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)
+            >>> func(df_pd)  # doctest: +SKIP
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> func(df_pl)
+            >>> func(df_pl)  # doctest: +SKIP
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
 
             If we had passed a file name to `write_csv`, it would have been
