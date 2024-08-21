@@ -3,6 +3,7 @@
 # and pandas or PyArrow.
 from __future__ import annotations
 
+from collections.abc import Hashable
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -168,11 +169,12 @@ def parse_into_expr(
         return into_expr  # type: ignore[return-value]
     if hasattr(into_expr, "__narwhals_series__"):
         return namespace._create_expr_from_series(into_expr)  # type: ignore[arg-type]
-    if isinstance(into_expr, str):
-        return namespace.col(into_expr)
+    if isinstance(into_expr, Hashable):
+        # pandas allows non-string column names, so we pass them through here.
+        return namespace.col(into_expr)  # type: ignore[arg-type]
     if is_numpy_array(into_expr):
         series = namespace._create_compliant_series(into_expr)
-        return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
+        return namespace._create_expr_from_series(series)
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 
