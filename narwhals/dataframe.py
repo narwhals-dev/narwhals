@@ -343,6 +343,38 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return self._compliant_frame.to_pandas()
 
+    def write_csv(self, file: str | Path | BytesIO | None = None) -> Any:
+        r"""
+        Write dataframe to parquet file.
+
+        Examples:
+            Construct pandas and Polars DataFrames:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df):
+            ...     df = nw.from_native(df)
+            ...     return df.write_csv()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +SKIP
+            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+            >>> func(df_pl)  # doctest: +SKIP
+            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+
+            If we had passed a file name to `write_csv`, it would have been
+            written to that file.
+        """
+        return self._compliant_frame.write_csv(file)
+
     def write_parquet(self, file: str | Path | BytesIO) -> Any:
         """
         Write dataframe to parquet file.

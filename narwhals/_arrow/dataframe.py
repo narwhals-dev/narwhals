@@ -424,6 +424,17 @@ class ArrowDataFrame:
 
         pp.write_table(self._native_frame, file)
 
+    def write_csv(self, file: Any) -> Any:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.csv as pa_csv  # ignore-banned-import
+
+        pa_table = self._native_frame
+        if file is None:
+            csv_buffer = pa.BufferOutputStream()
+            pa_csv.write_csv(pa_table, csv_buffer)
+            return csv_buffer.getvalue().to_pybytes().decode()
+        return pa_csv.write_csv(pa_table, file)
+
     def is_duplicated(self: Self) -> ArrowSeries:
         import numpy as np  # ignore-banned-import
         import pyarrow as pa  # ignore-banned-import()
