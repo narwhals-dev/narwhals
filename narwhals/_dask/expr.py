@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import NoReturn
 
 from narwhals._dask.utils import add_row_index
@@ -514,6 +515,22 @@ class DaskExpr:
             "len",
             returns_scalar=True,
         )
+
+    def quantile(
+        self: Self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Self:
+        if interpolation == "nearest":
+            return self._from_call(
+                lambda _input, quantile: _input.quantile(q=quantile, method="dask"),
+                "quantile",
+                quantile,
+                returns_scalar=True,
+            )
+        else:
+            msg = "`higher`, `lower`, `midpoint`, `linear` - interpolation methods are not supported by Dask. Please use `nearest` instead."
+            raise NotImplementedError(msg)
 
     def is_first_distinct(self: Self) -> Self:
         def func(_input: Any) -> Any:
