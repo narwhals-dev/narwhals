@@ -544,6 +544,9 @@ class PandasLikeDataFrame:
     def write_parquet(self, file: Any) -> Any:
         self._native_frame.to_parquet(file)
 
+    def write_csv(self, file: Any = None) -> Any:
+        return self._native_frame.to_csv(file, index=False)
+
     # --- descriptive ---
     def is_duplicated(self: Self) -> PandasLikeSeries:
         from narwhals._pandas_like.series import PandasLikeSeries
