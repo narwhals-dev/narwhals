@@ -1560,6 +1560,12 @@ class Series:
                50
             ]
         """
+        if isinstance(other, list) and all(isinstance(x, bool) for x in other):
+            from narwhals.functions import new_series
+
+            other = new_series(
+                "mask", other, native_namespace=self.__native_namespace__()
+            )
         return self._from_compliant_series(
             self._compliant_series.filter(self._extract_native(other))
         )

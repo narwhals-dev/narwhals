@@ -164,8 +164,12 @@ class BaseFrame(Generic[FrameT]):
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            return self._from_compliant_dataframe(
-                self._compliant_frame.filter(*predicates),
+            from narwhals.functions import new_series
+
+            predicates = (
+                new_series(
+                    "mask", predicates[0], native_namespace=self.__native_namespace__()
+                ),
             )
         predicates, _ = self._flatten_and_extract(*predicates)
         return self._from_compliant_dataframe(
