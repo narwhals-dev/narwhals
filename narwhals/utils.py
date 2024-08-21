@@ -314,7 +314,7 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
 
     if isinstance(df_any, PandasLikeSeries):
         native_ser = df_any._native_series
-        ser = (
+        ser = (  # pragma: no cover
             native_ser.convert_dtypes(*args, **kwargs)
             if getattr(native_ser, "convert_dtypes", None)
             else native_ser.apply(lambda x: x)
