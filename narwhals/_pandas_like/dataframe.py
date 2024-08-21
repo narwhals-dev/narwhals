@@ -27,7 +27,6 @@ from narwhals.utils import parse_columns_to_drop
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
-
     from typing_extensions import Self
 
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
