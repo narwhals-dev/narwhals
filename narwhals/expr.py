@@ -1539,6 +1539,9 @@ class Expr:
         Note:
             pandas and Polars may have implementation differences for a given interpolation method.
 
+        Note:
+            dask has its own method to approximate quantile and it doesn't implement 'nearest', 'higher', 'lower', 'midpoint' as interpolation method - use 'linear' instead
+
         Arguments:
             quantile : float
                 Quantile between 0.0 and 1.0.
