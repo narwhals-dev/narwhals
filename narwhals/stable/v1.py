@@ -528,26 +528,26 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrameT | T,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT] | T: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrameT | T,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT] | T: ...
 
 
 @overload
@@ -576,14 +576,14 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoFrameT | T,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
 
 
 @overload
