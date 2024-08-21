@@ -104,7 +104,9 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
         return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
-        if (pd := get_pandas()) is not None and parse_version(pd.__version__) >= parse_version("2.0.0"):
+        if (pd := get_pandas()) is not None and parse_version(
+            pd.__version__
+        ) >= parse_version("2.0.0"):
             if get_pyarrow() is not None:
                 return "string[pyarrow]"
             return "string[python]"
