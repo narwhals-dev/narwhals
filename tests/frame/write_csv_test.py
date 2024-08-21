@@ -18,7 +18,7 @@ def test_write_csv(constructor_eager: Any, tmpdir: pytest.TempdirFactory) -> Non
     assert result is None
     result = nw.from_native(constructor_eager(data), eager_only=True).write_csv()
     if is_windows():  # pragma: no cover
-        result = result.replace("\n", "\r\n")
+        result = result.replace("\r\n", "\n")
     if "pyarrow_table" in str(constructor_eager):
         assert result == '"a"\n1\n2\n3\n'
     else:
