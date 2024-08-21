@@ -146,6 +146,30 @@ class PandasLikeDataFrame:
             )
             raise TypeError(msg)  # pragma: no cover
 
+        elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
+            columns = self._native_frame.columns
+            if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
+                start = (
+                    columns.get_loc(item[1].start) if item[1].start is not None else None
+                )
+                stop = (
+                    columns.get_loc(item[1].stop) + 1
+                    if item[1].stop is not None
+                    else None
+                )
+                step = item[1].step
+                return self._from_native_frame(
+                    self._native_frame.iloc[item[0], slice(start, stop, step)]
+                )
+            if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
+                return self._from_native_frame(
+                    self._native_frame.iloc[
+                        item[0], slice(item[1].start, item[1].stop, item[1].step)
+                    ]
+                )
+            msg = f"Expected slice of integers of strings, got: {type(item[1])}"  # pragma: no cover
+            raise TypeError(msg)
+
         elif isinstance(item, tuple) and len(item) == 2:
             from narwhals._pandas_like.series import PandasLikeSeries
 
