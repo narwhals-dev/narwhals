@@ -11,9 +11,10 @@ nav:
     - basics/dataframe.md
     - basics/column.md
     - basics/complete_example.md
-  - Other concepts:
+  - Pandas-like concepts:
     - other/pandas_index.md
     - other/user_warning.md
+    - other/column_names.md
   - levels.md
   - overhead.md
   - backcompat.md
