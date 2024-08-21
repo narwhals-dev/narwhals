@@ -611,6 +611,8 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
+        if isinstance(item, int):
+            item = [item]
         if (
             isinstance(item, tuple)
             and len(item) == 2
@@ -704,6 +706,9 @@ class DataFrame(BaseFrame[FrameT]):
                 ).items()
             }
         return self._compliant_frame.to_dict(as_series=as_series)  # type: ignore[no-any-return]
+
+    def row(self, row: int) -> tuple[Any, ...]:
+        return self._compliant_frame.row(row)
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:

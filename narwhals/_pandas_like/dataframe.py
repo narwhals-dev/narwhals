@@ -283,6 +283,9 @@ class PandasLikeDataFrame:
             )
         )
 
+    def row(self, row: int) -> tuple[Any, ...]:
+        return tuple(x for x in self._native_frame.iloc[row])
+
     def filter(
         self,
         *predicates: IntoPandasLikeExpr,

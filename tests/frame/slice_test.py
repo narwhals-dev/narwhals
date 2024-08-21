@@ -50,8 +50,8 @@ def test_slice_lazy_fails() -> None:
 
 
 def test_slice_int_fails(constructor_eager: Any) -> None:
-    with pytest.raises(TypeError, match="Expected str or slice, got: <class 'int'>"):
-        _ = nw.from_native(constructor_eager(data))[1]  # type: ignore[call-overload,index]
+    result = nw.from_native(constructor_eager(data))[1]
+    compare_dicts(result, {"a": [2], "b": [12]})
 
 
 def test_gather(constructor_eager: Any) -> None:
