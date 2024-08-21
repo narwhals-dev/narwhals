@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals.dtypes import DType
 
 
 class DaskExpr:
@@ -612,10 +613,10 @@ class DaskExpr:
         return DaskExprNameNamespace(self)
 
     def cast(
-        self,
-        dtype: Any,
+        self: Self,
+        dtype: DType | type[DType],
     ) -> Self:
-        def func(_input: Any, dtype: Any) -> Any:
+        def func(_input: Any, dtype: DType | type[DType]) -> Any:
             dtype = reverse_translate_dtype(dtype)
             return _input.astype(dtype)
 
