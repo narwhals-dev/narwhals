@@ -109,8 +109,8 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         ) >= parse_version("2.0.0"):
             if get_pyarrow() is not None:
                 return "string[pyarrow]"
-            return "string[python]"
-        return "object"
+            return "string[python]"  # pragma: no cover
+        return "object"  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
