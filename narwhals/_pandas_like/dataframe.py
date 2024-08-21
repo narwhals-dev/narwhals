@@ -527,6 +527,10 @@ class PandasLikeDataFrame:
     def to_numpy(self, dtype: Any = None, copy: bool | None = None) -> Any:
         from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 
+        if copy is None:
+            # pandas default differs from Polars
+            copy = False
+
         if dtype is not None:
             return self._native_frame.to_numpy(dtype=dtype, copy=copy)
 
