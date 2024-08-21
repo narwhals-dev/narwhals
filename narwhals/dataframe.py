@@ -159,6 +159,14 @@ class BaseFrame(Generic[FrameT]):
         )
 
     def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            return self._from_compliant_dataframe(
+                self._compliant_frame.filter(*predicates),
+            )
         predicates, _ = self._flatten_and_extract(*predicates)
         return self._from_compliant_dataframe(
             self._compliant_frame.filter(*predicates),

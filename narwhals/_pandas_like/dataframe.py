@@ -288,10 +288,17 @@ class PandasLikeDataFrame:
         *predicates: IntoPandasLikeExpr,
     ) -> Self:
         plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(*predicates)
-        # Safety: all_horizontal's expression only returns a single column.
-        mask = expr._call(self)[0]
-        _mask = validate_dataframe_comparand(self._native_frame.index, mask)
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            _mask = predicates[0]
+        else:
+            expr = plx.all_horizontal(*predicates)
+            # Safety: all_horizontal's expression only returns a single column.
+            mask = expr._call(self)[0]
+            _mask = validate_dataframe_comparand(self._native_frame.index, mask)
         return self._from_native_frame(self._native_frame.loc[_mask])
 
     def with_columns(
