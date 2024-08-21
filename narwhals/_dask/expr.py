@@ -521,7 +521,7 @@ class DaskExpr:
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
-        if interpolation == "nearest":
+        if interpolation == "linear":
             return self._from_call(
                 lambda _input, quantile: _input.quantile(q=quantile, method="dask"),
                 "quantile",
@@ -529,7 +529,7 @@ class DaskExpr:
                 returns_scalar=True,
             )
         else:
-            msg = "`higher`, `lower`, `midpoint`, `linear` - interpolation methods are not supported by Dask. Please use `nearest` instead."
+            msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
             raise NotImplementedError(msg)
 
     def is_first_distinct(self: Self) -> Self:
