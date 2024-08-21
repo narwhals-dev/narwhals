@@ -7,7 +7,6 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.dependencies import get_dask_dataframe
 from narwhals.selectors import all
 from narwhals.selectors import boolean
 from narwhals.selectors import by_dtype
@@ -63,14 +62,6 @@ def test_categorical(request: Any, constructor: Any) -> None:
         request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
-    df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
-    result = df.select(categorical())
-    compare_dicts(result, expected)
-
-
-@pytest.mark.skipif((get_dask_dataframe() is None), reason="too old for dask")
-def test_dask_categorical(constructor: Any) -> None:
-    expected = {"b": ["a", "b", "c"]}
     df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
     result = df.select(categorical())
     compare_dicts(result, expected)
