@@ -75,6 +75,12 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
    - if you started with PyArrow, you'll get PyArrow back
+<h1 align="center">
+	<img
+		width="400"
+		alt="narwhals_gif"
+		src="https://github.com/user-attachments/assets/f5241faa-eb21-4358-bda7-10a4a40a22fe">
+</h1>
 
 ## Example
 
