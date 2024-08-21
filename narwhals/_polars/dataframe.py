@@ -84,6 +84,31 @@ class PolarsDataFrame:
         return self._native_frame.shape  # type: ignore[no-any-return]
 
     def __getitem__(self, item: Any) -> Any:
+        if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
+            # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
+            # Polars version we support
+            columns = self.columns
+            if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
+                start = (
+                    columns.index(item[1].start) if item[1].start is not None else None
+                )
+                stop = (
+                    columns.index(item[1].stop) + 1 if item[1].stop is not None else None
+                )
+                step = item[1].step
+                return self._from_native_frame(
+                    self._native_frame.select(columns[start:stop:step]).__getitem__(
+                        item[0]
+                    )
+                )
+            if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
+                return self._from_native_frame(
+                    self._native_frame.select(
+                        columns[item[1].start : item[1].stop : item[1].step]
+                    ).__getitem__(item[0])
+                )
+            msg = f"Expected slice of integers of strings, got: {type(item[1])}"  # pragma: no cover
+            raise TypeError(msg)
         pl = get_polars()
         result = self._native_frame.__getitem__(item)
         if isinstance(result, pl.Series):
