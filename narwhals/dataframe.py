@@ -1531,7 +1531,8 @@ class DataFrame(BaseFrame[FrameT]):
         The original order of the remaining rows is preserved.
 
         Arguments:
-            predicates: Expression(s) that evaluates to a boolean Series.
+            *predicates: Expression(s) that evaluates to a boolean Series. Can
+                also be a (single!) boolean list.
 
         Examples:
             >>> import pandas as pd
@@ -2997,7 +2998,8 @@ class LazyFrame(BaseFrame[FrameT]):
         The original order of the remaining rows is preserved.
 
         Arguments:
-            *predicates: Expression that evaluates to a boolean Series.
+            *predicates: Expression that evaluates to a boolean Series. Can
+                also be a (single!) boolean list.
 
         Examples:
             >>> import pandas as pd
