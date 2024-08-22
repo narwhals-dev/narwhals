@@ -707,8 +707,35 @@ class DataFrame(BaseFrame[FrameT]):
             }
         return self._compliant_frame.to_dict(as_series=as_series)  # type: ignore[no-any-return]
 
-    def row(self, row: int) -> tuple[Any, ...]:
-        return self._compliant_frame.row(row)
+    def row(self, index: int) -> tuple[Any, ...]:
+        """
+        Get values at given row.
+
+        Arguments:
+            index: Row number.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a library-agnostic function to get the second row.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.row(1)
+
+            We can then pass pandas / Polars / any other supported library:
+
+            >>> func(df_pd)
+            (2, 5)
+            >>> func(df_pl)
+            (2, 5)
+        """
+        return self._compliant_frame.row(index)  # type: ignore[no-any-return]
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:

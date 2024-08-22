@@ -26,6 +26,7 @@
         - null_count
         - pipe
         - rename
+        - row
         - rows
         - schema
         - select
