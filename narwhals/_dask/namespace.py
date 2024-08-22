@@ -135,6 +135,12 @@ class DaskNamespace:
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
 
+    def mean_horizontal(self, *exprs: IntoDaskExpr) -> IntoDaskExpr:
+        dask_exprs = parse_into_exprs(*exprs, namespace=self)
+        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in dask_exprs))
+        n_non_zero = reduce(lambda x, y: x + y, ((1 - e.is_null()) for e in dask_exprs))
+        return total / n_non_zero
+
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
         raise NotImplementedError(msg)
