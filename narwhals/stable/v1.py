@@ -1403,7 +1403,8 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
 
     Arguments:
         obj: DataFrame or Series.
-        args, kwargs: Additional arguments or keyword-arguments which gets passed through.
+        *args: Additional arguments which gets passed through.
+        **kwargs: Additional arguments which gets passed through.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
