@@ -1401,6 +1401,10 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     """
     Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
+    Arguments:
+        obj: DataFrame or Series.
+        args, kwargs: Additional arguments or keyword-arguments which gets passed through.
+
     Notes:
         For non-pandas-like inputs, this is a no-op.
         Also, `args` and `kwargs` just get passed down to the underlying library as-is.
