@@ -39,6 +39,7 @@
         - unique
         - with_columns
         - with_row_index
+        - write_csv
         - write_parquet
       show_source: false
       show_bases: false

@@ -1,6 +1,5 @@
 from typing import Any
 
-import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -21,5 +20,5 @@ def test_unique_expr(constructor: Any, request: Any) -> None:
 def test_unique_series(constructor_eager: Any) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.unique()
-    expected = np.array([1, 2])
-    assert (result.to_numpy() == expected).all()
+    expected = {"a": [1, 2]}
+    compare_dicts({"a": result}, expected)

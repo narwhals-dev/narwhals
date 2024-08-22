@@ -30,6 +30,7 @@ from narwhals.expr import len
 from narwhals.expr import lit
 from narwhals.expr import max
 from narwhals.expr import mean
+from narwhals.expr import mean_horizontal
 from narwhals.expr import min
 from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
@@ -49,7 +50,7 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.4.2"
+__version__ = "1.5.2"
 
 __all__ = [
     "selectors",
@@ -73,6 +74,7 @@ __all__ = [
     "min",
     "max",
     "mean",
+    "mean_horizontal",
     "sum",
     "sum_horizontal",
     "DataFrame",

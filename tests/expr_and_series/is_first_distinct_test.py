@@ -1,6 +1,5 @@
 from typing import Any
 
-import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -28,5 +27,7 @@ def test_is_first_distinct_expr(constructor: Any, request: Any) -> None:
 def test_is_first_distinct_series(constructor_eager: Any) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_first_distinct()
-    expected = np.array([True, False, True, True, False])
-    assert (result.to_numpy() == expected).all()
+    expected = {
+        "a": [True, False, True, True, False],
+    }
+    compare_dicts({"a": result}, expected)

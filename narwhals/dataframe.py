@@ -233,8 +233,8 @@ class DataFrame(BaseFrame[FrameT]):
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
 
-    def __array__(self) -> np.ndarray:
-        return self._compliant_frame.to_numpy()
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "
@@ -342,6 +342,38 @@ class DataFrame(BaseFrame[FrameT]):
             2    3  8.0   c
         """
         return self._compliant_frame.to_pandas()
+
+    def write_csv(self, file: str | Path | BytesIO | None = None) -> Any:
+        r"""
+        Write dataframe to parquet file.
+
+        Examples:
+            Construct pandas and Polars DataFrames:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df):
+            ...     df = nw.from_native(df)
+            ...     return df.write_csv()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +SKIP
+            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+            >>> func(df_pl)  # doctest: +SKIP
+            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+
+            If we had passed a file name to `write_csv`, it would have been
+            written to that file.
+        """
+        return self._compliant_frame.write_csv(file)
 
     def write_parquet(self, file: str | Path | BytesIO) -> Any:
         """
@@ -481,6 +513,8 @@ class DataFrame(BaseFrame[FrameT]):
         )
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
@@ -504,20 +538,33 @@ class DataFrame(BaseFrame[FrameT]):
         | slice
         | Sequence[int]
         | tuple[Sequence[int], str | int]
-        | tuple[Sequence[int], Sequence[int] | Sequence[str]],
+        | tuple[Sequence[int], Sequence[int] | Sequence[str] | slice],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
 
         Arguments:
-            item: how to slice dataframe:
+            item: How to slice dataframe. What happens depends on what is passed. It's easiest
+                to explain by example. Suppose we have a Dataframe `df`:
 
-                - str: extract column
-                - slice or Sequence of integers: slice rows from dataframe.
-                - tuple of Sequence of integers and str or int: slice rows and extract column at the same time.
-                - tuple of Sequence of integers and Sequence of integers: slice rows and extract columns at the same time.
+                - `df['a']` extracts column `'a'` and returns a `Series`.
+                - `df[0:2]` extracts the first two rows and returns a `DataFrame`.
+                - `df[0:2, 'a']` extracts the first two rows from column `'a'` and returns
+                    a `Series`.
+                - `df[0:2, 0]` extracts the first two rows from the first column and returns
+                    a `Series`.
+                - `df[[0, 1], [0, 1, 2]]` extracts the first two rows and the first three columns
+                    and returns a `DataFrame`
+                - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
+                    returns a `DataFrame`
+                - `df[:, 0: 2]` extracts all rows from the first two columns and returns a `DataFrame`
+                - `df[:, 'a': 'c']` extracts all rows and all columns positioned between `'a'` and `'c'`
+                    _inclusive_ and returns a `DataFrame`. For example, if the columns are
+                    `'a', 'd', 'c', 'b'`, then that would extract columns `'a'`, `'d'`, and `'c'`.
+
         Notes:
-            Integers are always interpreted as positions, and strings always as column names.
+            - Integers are always interpreted as positions
+            - Strings are always interpreted as column names.
 
             In contrast with Polars, pandas allows non-string column names.
             If you don't know whether the column name you're trying to extract
@@ -566,7 +613,7 @@ class DataFrame(BaseFrame[FrameT]):
         if (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[1], (list, tuple))
+            and isinstance(item[1], (list, tuple, slice))
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
