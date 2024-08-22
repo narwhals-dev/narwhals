@@ -1607,6 +1607,7 @@ __all__ = [
     "min",
     "max",
     "mean",
+    "mean_horizontal",
     "sum",
     "sum_horizontal",
     "DataFrame",
