@@ -76,6 +76,13 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
    - if you started with PyArrow, you'll get PyArrow back
 
+<h1 align="left">
+	<img
+		width="600"
+		alt="narwhals_gif"
+		src="https://github.com/user-attachments/assets/fef71d91-b479-467d-a3b7-93685dd2dbe1">
+</h1>
+
 ## Example
 
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
