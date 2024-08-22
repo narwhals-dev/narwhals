@@ -167,9 +167,6 @@ def test_cast_raises_for_unknown_dtype(constructor: Any, request: Any) -> None:
         pa.__version__
     ) <= (15,):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # TODO(unassigned): in modin, we end up with `'<U0'` dtype
-        request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
