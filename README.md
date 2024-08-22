@@ -80,7 +80,8 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 	<img
 		width="600"
 		alt="narwhals_gif"
-		src="https://github.com/user-attachments/assets/fef71d91-b479-467d-a3b7-93685dd2dbe1">
+		src="https://github.com/user-attachments/assets/88292d3c-6359-4155-973d-d0f8e3fbf5ac">
+
 </h1>
 
 ## Example
