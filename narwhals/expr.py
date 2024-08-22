@@ -4118,6 +4118,59 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
+def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Compute the mean of all values horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function that computes the horizontal mean of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.mean_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  2.5
+        1  6.5
+        2  3.0
+        >>> func(df_pl)
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 2.5 │
+        │ 6.5 │
+        │ 3.0 │
+        └─────┘
+    """
+    return Expr(
+        lambda plx: plx.mean_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
 __all__ = [
     "Expr",
 ]
