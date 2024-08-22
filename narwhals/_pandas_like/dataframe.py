@@ -167,7 +167,7 @@ class PandasLikeDataFrame:
                         item[0], slice(item[1].start, item[1].stop, item[1].step)
                     ]
                 )
-            msg = f"Expected slice of integers of strings, got: {type(item[1])}"  # pragma: no cover
+            msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
             raise TypeError(msg)  # pragma: no cover
 
         elif isinstance(item, tuple) and len(item) == 2:

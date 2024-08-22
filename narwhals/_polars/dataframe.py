@@ -107,7 +107,7 @@ class PolarsDataFrame:
                         columns[item[1].start : item[1].stop : item[1].step]
                     ).__getitem__(item[0])
                 )
-            msg = f"Expected slice of integers of strings, got: {type(item[1])}"  # pragma: no cover
+            msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
             raise TypeError(msg)  # pragma: no cover
         pl = get_polars()
         result = self._native_frame.__getitem__(item)
