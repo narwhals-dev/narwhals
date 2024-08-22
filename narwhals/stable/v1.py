@@ -10,6 +10,7 @@ from typing import TypeVar
 from typing import overload
 
 import narwhals as nw
+from narwhals import dependencies
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
@@ -1592,6 +1593,7 @@ def from_dict(
 __all__ = [
     "selectors",
     "concat",
+    "dependencies",
     "to_native",
     "from_native",
     "is_ordered_categorical",
