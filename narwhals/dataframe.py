@@ -11,16 +11,19 @@ from typing import Sequence
 from typing import TypeVar
 from typing import overload
 
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_polars
+from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
 from narwhals.utils import flatten
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
 
     import numpy as np
+    import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.group_by import GroupBy
@@ -95,9 +98,9 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.with_row_index(name),
         )
 
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.drop_nulls(),
+            self._compliant_frame.drop_nulls(subset=subset),
         )
 
     @property
@@ -137,9 +140,9 @@ class BaseFrame(Generic[FrameT]):
     def tail(self, n: int) -> Self:
         return self._from_compliant_dataframe(self._compliant_frame.tail(n))
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: Iterable[str], strict: bool) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.drop(*flatten(columns))
+            self._compliant_frame.drop(columns, strict=strict)
         )
 
     def unique(
@@ -230,8 +233,8 @@ class DataFrame(BaseFrame[FrameT]):
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
 
-    def __array__(self) -> np.ndarray:
-        return self._compliant_frame.to_numpy()
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "
@@ -246,6 +249,30 @@ class DataFrame(BaseFrame[FrameT]):
             + "─" * length
             + "┘"
         )
+
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
+        """
+        Export a DataFrame via the Arrow PyCapsule Interface.
+
+        - if the underlying dataframe implements the interface, it'll return that
+        - else, it'll call `to_arrow` and then defer to PyArrow's implementation
+
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
+        """
+        native_frame = self._compliant_frame._native_frame
+        if hasattr(native_frame, "__arrow_c_stream__"):
+            return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            raise ModuleNotFoundError(msg) from exc
+        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            raise ModuleNotFoundError(msg) from None
+        pa_table = self.to_arrow()
+        return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
 
     def lazy(self) -> LazyFrame[Any]:
         """
@@ -281,7 +308,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().lazy()
 
-    def to_pandas(self) -> Any:
+    def to_pandas(self) -> pd.DataFrame:
         """
         Convert this DataFrame to a pandas DataFrame.
 
@@ -316,6 +343,38 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return self._compliant_frame.to_pandas()
 
+    def write_csv(self, file: str | Path | BytesIO | None = None) -> Any:
+        r"""
+        Write dataframe to parquet file.
+
+        Examples:
+            Construct pandas and Polars DataFrames:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df):
+            ...     df = nw.from_native(df)
+            ...     return df.write_csv()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +SKIP
+            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+            >>> func(df_pl)  # doctest: +SKIP
+            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+
+            If we had passed a file name to `write_csv`, it would have been
+            written to that file.
+        """
+        return self._compliant_frame.write_csv(file)
+
     def write_parquet(self, file: str | Path | BytesIO) -> Any:
         """
         Write dataframe to parquet file.
@@ -343,7 +402,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         self._compliant_frame.write_parquet(file)
 
-    def to_numpy(self) -> Any:
+    def to_numpy(self) -> np.ndarray:
         """
         Convert this DataFrame to a NumPy ndarray.
 
@@ -454,6 +513,8 @@ class DataFrame(BaseFrame[FrameT]):
         )
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
@@ -477,20 +538,33 @@ class DataFrame(BaseFrame[FrameT]):
         | slice
         | Sequence[int]
         | tuple[Sequence[int], str | int]
-        | tuple[Sequence[int], Sequence[int] | Sequence[str]],
+        | tuple[Sequence[int], Sequence[int] | Sequence[str] | slice],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
 
         Arguments:
-            item: how to slice dataframe:
+            item: how to slice dataframe. What happens depends on what is passed. It's easiest
+                to explain by example. Suppose we have a Dataframe `df`:
 
-                - str: extract column
-                - slice or Sequence of integers: slice rows from dataframe.
-                - tuple of Sequence of integers and str or int: slice rows and extract column at the same time.
-                - tuple of Sequence of integers and Sequence of integers: slice rows and extract columns at the same time.
+                    - `df['a']` extracts column `'a'` and returns a `Series`.
+                    - `df[0:2]` extracts the first two rows and returns a `DataFrame`.
+                    - `df[0:2, 'a']` extracts the first two rows from column `'a'` and returns
+                        a `Series`.
+                    - `df[0:2, 0]` extracts the first two rows from the first column and returns
+                        a `Series`.
+                    - `df[[0, 1], [0, 1, 2]]` extracts the first two rows and the first three columns
+                        and returns a `DataFrame`
+                    - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
+                        returns a `DataFrame`
+                    - `df[:, 0: 2]` extracts all rows from the first two columns and returns a `DataFrame`
+                    - `df[:, 'a': 'c']` extracts all rows and all columns positioned between `'a'` and `'c'`
+                        _inclusive_ and returns a `DataFrame`. For example, if the columns are
+                        `'a', 'b', 'c', 'd'`, then that would extract columns `'a'`, `'b'`, and `'c'`.
+
         Notes:
-            Integers are always interpreted as positions, and strings always as column names.
+            - Integers are always interpreted as positions
+            - Strings are always interpreted as column names.
 
             In contrast with Polars, pandas allows non-string column names.
             If you don't know whether the column name you're trying to extract
@@ -539,7 +613,7 @@ class DataFrame(BaseFrame[FrameT]):
         if (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[1], (list, tuple))
+            and isinstance(item[1], (list, tuple, slice))
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
@@ -551,9 +625,7 @@ class DataFrame(BaseFrame[FrameT]):
             )
 
         elif isinstance(item, (Sequence, slice)) or (
-            (np := get_numpy()) is not None
-            and isinstance(item, np.ndarray)
-            and item.ndim == 1
+            is_numpy_array(item) and item.ndim == 1
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
 
@@ -663,9 +735,13 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().pipe(function, *args, **kwargs)
 
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
         """
         Drop null values.
+
+        Arguments:
+            subset: Column name(s) for which null values are considered. If set to None
+                (default), use all columns.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -700,7 +776,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 1.0 ┆ 1.0 │
             └─────┴─────┘
         """
-        return super().drop_nulls()
+        return super().drop_nulls(subset=subset)
 
     def with_row_index(self, name: str = "index") -> Self:
         """
@@ -1232,7 +1308,6 @@ class DataFrame(BaseFrame[FrameT]):
             │ 3   ┆ 8   ┆ c   │
             └─────┴─────┴─────┘
         """
-
         return super().head(n)
 
     def tail(self, n: int = 5) -> Self:
@@ -1282,12 +1357,14 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         """
         Remove columns from the dataframe.
 
         Arguments:
             *columns: Names of the columns that should be removed from the dataframe.
+            strict: Validate that all column names exist in the schema and throw an
+                exception if a column name does not exist in the schema.
 
         Examples:
             >>> import pandas as pd
@@ -1345,7 +1422,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*columns)
+        return super().drop(*flatten(columns), strict=strict)
 
     def unique(
         self,
@@ -1802,7 +1879,6 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pd), func(df_pl)
             (False, False)
         """
-
         return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Series:
@@ -1908,7 +1984,6 @@ class DataFrame(BaseFrame[FrameT]):
             │ 1   ┆ 1   ┆ 0   │
             └─────┴─────┴─────┘
         """
-
         return self._from_compliant_dataframe(self._compliant_frame.null_count())
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
@@ -2020,7 +2095,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().gather_every(n=n, offset=offset)
 
-    def to_arrow(self: Self) -> Any:
+    def to_arrow(self: Self) -> pa.Table:
         r"""
         Convert to arrow table.
 
@@ -2179,9 +2254,13 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().pipe(function, *args, **kwargs)
 
-    def drop_nulls(self) -> Self:
+    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
         """
         Drop null values.
+
+        Arguments:
+            subset: Column name(s) for which null values are considered. If set to None
+                (default), use all columns.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -2216,7 +2295,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 1.0 ┆ 1.0 │
             └─────┴─────┘
         """
-        return super().drop_nulls()
+        return super().drop_nulls(subset=subset)
 
     def with_row_index(self, name: str = "index") -> Self:
         """
@@ -2735,13 +2814,19 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self, *columns: str | Iterable[str]) -> Self:
+    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         r"""
         Remove columns from the LazyFrame.
 
         Arguments:
-            *columns: Names of the columns that should be removed from the
-                      dataframe. Accepts column selector input.
+            *columns: Names of the columns that should be removed from the dataframe.
+            strict: Validate that all column names exist in the schema and throw an
+                exception if a column name does not exist in the schema.
+
+        Warning:
+            `strict` argument is ignored for `polars<1.0.0`.
+
+            Please consider upgrading to a newer version or pass to eager mode.
 
         Examples:
             >>> import pandas as pd
@@ -2799,7 +2884,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 8.0 │
             └─────┘
         """
-        return super().drop(*flatten(columns))
+        return super().drop(*flatten(columns), strict=strict)
 
     def unique(
         self,

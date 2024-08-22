@@ -10,8 +10,6 @@ from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals.dependencies import get_dask_dataframe
-from narwhals.dependencies import get_pandas
 
 if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -48,9 +46,7 @@ class DaskNamespace:
 
     def all(self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[Any]:
-            return [
-                df._native_dataframe.loc[:, column_name] for column_name in df.columns
-            ]
+            return [df._native_frame.loc[:, column_name] for column_name in df.columns]
 
         return DaskExpr(
             func,
@@ -69,10 +65,10 @@ class DaskNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
-        # TODO @FBruzzesi: cast to dtype once `reverse_translate_dtype` is implemented.
-        # It should be enough to add `.astype(reverse_translate_dtype(dtype))`
+        # TODO @FBruzzesi: cast to dtype once `narwhals_to_native_dtype` is implemented.
+        # It should be enough to add `.astype(narwhals_to_native_dtype(dtype))`
         return DaskExpr(
-            lambda df: [df._native_dataframe.assign(lit=value).loc[:, "lit"]],
+            lambda df: [df._native_frame.assign(lit=value).loc[:, "lit"]],
             depth=0,
             function_name="lit",
             root_names=None,
@@ -106,15 +102,18 @@ class DaskNamespace:
         ).sum()
 
     def len(self) -> DaskExpr:
-        pd = get_pandas()
-        dd = get_dask_dataframe()
+        import dask.dataframe as dd  # ignore-banned-import
+        import pandas as pd  # ignore-banned-import
 
         def func(df: DaskLazyFrame) -> list[Any]:
             if not df.columns:
-                return [dd.from_pandas(pd.Series([0], name="len"))]
-            return [
-                df._native_dataframe.loc[:, df.columns[0]].size.to_series().rename("len")
-            ]
+                return [
+                    dd.from_pandas(
+                        pd.Series([0], name="len"),
+                        npartitions=df._native_frame.npartitions,
+                    )
+                ]
+            return [df._native_frame.loc[:, df.columns[0]].size.to_series().rename("len")]
 
         # coverage bug? this is definitely hit
         return DaskExpr(  # pragma: no cover
@@ -135,6 +134,12 @@ class DaskNamespace:
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
+
+    def mean_horizontal(self, *exprs: IntoDaskExpr) -> IntoDaskExpr:
+        dask_exprs = parse_into_exprs(*exprs, namespace=self)
+        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in dask_exprs))
+        n_non_zero = reduce(lambda x, y: x + y, ((1 - e.is_null()) for e in dask_exprs))
+        return total / n_non_zero
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"

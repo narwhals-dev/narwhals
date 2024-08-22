@@ -25,8 +25,8 @@ def test_get_categories(request: Any, constructor_eager: Any) -> None:
     result_expr = df.select(nw.col("a").cat.get_categories())
     compare_dicts(result_expr, expected)
 
-    result_series = df["a"].cat.get_categories().to_list()
-    assert set(result_series) == set(expected["a"])
+    result_series = df["a"].cat.get_categories()
+    compare_dicts({"a": result_series}, expected)
 
 
 def test_get_categories_pyarrow() -> None:
@@ -41,5 +41,5 @@ def test_get_categories_pyarrow() -> None:
     result_expr = df.select(nw.col("a").cat.get_categories())
     compare_dicts(result_expr, expected)
 
-    result_series = df["a"].cat.get_categories().to_list()
-    assert result_series == expected["a"]
+    result_series = df["a"].cat.get_categories()
+    compare_dicts({"a": result_series}, expected)

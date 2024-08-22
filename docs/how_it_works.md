@@ -88,7 +88,7 @@ The `_call` method gives us that function! Let's see it in action.
 
 Note: the following examples use `PandasLikeDataFrame` and `PandasLikeSeries`. These are backed
 by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
-underlying pandas objects via `PandasLikeDataFrame._native_dataframe` and `PandasLikeSeries._native_series`.
+underlying pandas objects via `PandasLikeDataFrame._native_frame` and `PandasLikeSeries._native_series`.
 
 ```python exec="1" result="python" session="pandas_impl" source="above"
 import narwhals as nw
@@ -222,10 +222,10 @@ df_compliant = df._compliant_frame
 result = df_compliant.select(expr)
 ```
 
-We can then view the underlying pandas Dataframe which was produced by calling `._native_dataframe`:
+We can then view the underlying pandas Dataframe which was produced by calling `._native_frame`:
 
 ```python exec="1" result="python" session="pandas_api_mapping" source="above"
-print(result._native_dataframe)
+print(result._native_frame)
 ```
 which is the same as we'd have obtained by just using the Narwhals API directly:
 

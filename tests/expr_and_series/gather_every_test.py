@@ -29,4 +29,4 @@ def test_gather_every_series(constructor_eager: Any, n: int, offset: int) -> Non
     result = series.gather_every(n=n, offset=offset)
     expected = data["a"][offset::n]
 
-    assert result.to_list() == expected
+    compare_dicts({"a": result}, {"a": expected})

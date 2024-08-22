@@ -1,7 +1,7 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.5.6'
+  rev: 'v0.5.7'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -31,8 +31,8 @@ repos:
       additional_dependencies: [polars]
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
-      entry: (?<!>>> )import (pandas|polars|modin|cudf|pyarrow|dask)
-      language: pygrep
+      entry: python utils/import_check.py
+      language: python
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
 - repo: https://github.com/kynan/nbstripout

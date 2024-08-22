@@ -4,6 +4,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import NoReturn
 
 from narwhals._dask.utils import add_row_index
@@ -44,6 +45,7 @@ class DaskExpr:
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
+        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version)
@@ -55,9 +57,7 @@ class DaskExpr:
         backend_version: tuple[int, ...],
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
-            return [
-                df._native_dataframe.loc[:, column_name] for column_name in column_names
-            ]
+            return [df._native_frame.loc[:, column_name] for column_name in column_names]
 
         return cls(
             func,
@@ -434,6 +434,11 @@ class DaskExpr:
         msg = "`Expr.drop_nulls` is not supported for the Dask backend. Please use `LazyFrame.drop_nulls` instead."
         raise NotImplementedError(msg)
 
+    def head(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.head` is not supported for the Dask backend. Please use `LazyFrame.head` instead."
+        raise NotImplementedError(msg)
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
@@ -471,13 +476,22 @@ class DaskExpr:
         )
 
     def clip(
-        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+        self: Self,
+        lower_bound: Any | None = None,
+        upper_bound: Any | None = None,
     ) -> Self:
         return self._from_call(
             lambda _input, _lower, _upper: _input.clip(lower=_lower, upper=_upper),
             "clip",
             lower_bound,
             upper_bound,
+            returns_scalar=False,
+        )
+
+    def diff(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.diff(),
+            "diff",
             returns_scalar=False,
         )
 
@@ -501,6 +515,22 @@ class DaskExpr:
             "len",
             returns_scalar=True,
         )
+
+    def quantile(
+        self: Self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Self:
+        if interpolation == "linear":
+            return self._from_call(
+                lambda _input, quantile: _input.quantile(q=quantile, method="dask"),
+                "quantile",
+                quantile,
+                returns_scalar=True,
+            )
+        else:
+            msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
+            raise NotImplementedError(msg)
 
     def is_first_distinct(self: Self) -> Self:
         def func(_input: Any) -> Any:
@@ -534,6 +564,84 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def is_duplicated(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            _name = _input.name
+            return (
+                _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) > 1
+            )
+
+        return self._from_call(
+            func,
+            "is_duplicated",
+            returns_scalar=False,
+        )
+
+    def is_unique(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            _name = _input.name
+            return (
+                _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) == 1
+            )
+
+        return self._from_call(
+            func,
+            "is_unique",
+            returns_scalar=False,
+        )
+
+    def is_in(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.isin(other),
+            "is_in",
+            other,
+            returns_scalar=False,
+        )
+
+    def null_count(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.isna().sum(),
+            "null_count",
+            returns_scalar=True,
+        )
+
+    def tail(self: Self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.tail` is not supported for the Dask backend. Please use `LazyFrame.tail` instead."
+        raise NotImplementedError(msg)
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.gather_every` is not supported for the Dask backend. Please use `LazyFrame.gather_every` instead."
+        raise NotImplementedError(msg)
+
+    def over(self: Self, keys: list[str]) -> Self:
+        def func(df: DaskLazyFrame) -> list[Any]:
+            if self._output_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in over.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+            tmp = df.group_by(*keys).agg(self)
+            tmp = (
+                df.select(*keys)
+                .join(tmp, how="left", left_on=keys, right_on=keys)
+                ._native_frame
+            )
+            return [tmp[name] for name in self._output_names]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->over",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -550,6 +658,44 @@ class DaskExpr:
 class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:
         self._expr = expr
+
+    def replace(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+        n: int = 1,
+    ) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, _pattern, _value, _literal, _n: _input.str.replace(
+                _pattern, _value, regex=not _literal, n=_n
+            ),
+            "replace",
+            pattern,
+            value,
+            literal,
+            n,
+            returns_scalar=False,
+        )
+
+    def replace_all(
+        self,
+        pattern: str,
+        value: str,
+        *,
+        literal: bool = False,
+    ) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, _pattern, _value, _literal: _input.str.replace(
+                _pattern, _value, n=-1, regex=not _literal
+            ),
+            "replace",
+            pattern,
+            value,
+            literal,
+            returns_scalar=False,
+        )
 
     def strip_chars(self, characters: str | None = None) -> DaskExpr:
         return self._expr._from_call(
@@ -695,6 +841,49 @@ class DaskExprDateTimeNamespace:
         return self._expr._from_call(
             lambda _input: _input.dt.dayofyear,
             "ordinal_day",
+            returns_scalar=False,
+        )
+
+    def to_string(self, format: str) -> DaskExpr:  # noqa: A002
+        return self._expr._from_call(
+            lambda _input, _format: _input.dt.strftime(_format),
+            "strftime",
+            format.replace("%.f", ".%f"),
+            returns_scalar=False,
+        )
+
+    def total_minutes(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() // 60,
+            "total_minutes",
+            returns_scalar=False,
+        )
+
+    def total_seconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() // 1,
+            "total_seconds",
+            returns_scalar=False,
+        )
+
+    def total_milliseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1000 // 1,
+            "total_milliseconds",
+            returns_scalar=False,
+        )
+
+    def total_microseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1_000_000 // 1,
+            "total_microseconds",
+            returns_scalar=False,
+        )
+
+    def total_nanoseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1_000_000_000 // 1,
+            "total_nanoseconds",
             returns_scalar=False,
         )
 

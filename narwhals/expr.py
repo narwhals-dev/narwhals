@@ -6,14 +6,13 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 
-from narwhals.dependencies import get_numpy
-from narwhals.dtypes import DType
-from narwhals.dtypes import translate_dtype
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals.dtypes import DType
     from narwhals.typing import IntoExpr
 
 
@@ -163,9 +162,8 @@ class Expr:
             │ 3.0 ┆ 8   │
             └─────┴─────┘
         """
-
         return self.__class__(
-            lambda plx: self._call(plx).cast(translate_dtype(plx, dtype)),
+            lambda plx: self._call(plx).cast(dtype),
         )
 
     # --- binary ---
@@ -500,7 +498,6 @@ class Expr:
             │ 1   ┆ 3   │
             └─────┴─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).min())
 
     def max(self) -> Self:
@@ -1117,8 +1114,8 @@ class Expr:
 
             >>> func(df_pd)
                a
-            0  1
-            1  2
+            1  1
+            2  2
             >>> func(df_pl)
             shape: (2, 1)
             ┌─────┐
@@ -1410,7 +1407,6 @@ class Expr:
             │ false ┆ true  │
             └───────┴───────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).is_unique())
 
     def null_count(self) -> Self:
@@ -1541,7 +1537,9 @@ class Expr:
         r"""Get quantile value.
 
         Note:
-            pandas and Polars may have implementation differences for a given interpolation method.
+            * pandas and Polars may have implementation differences for a given interpolation method.
+            * [dask](https://docs.dask.org/en/stable/generated/dask.dataframe.Series.quantile.html) has its own method to approximate quantile and it doesn't implement 'nearest', 'higher', 'lower', 'midpoint'
+            as interpolation method - use 'linear' which is closest to the native 'dask' - method.
 
         Arguments:
             quantile : float
@@ -1624,7 +1622,6 @@ class Expr:
             │ 2   │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).head(n))
 
     def tail(self, n: int = 10) -> Self:
@@ -1668,7 +1665,6 @@ class Expr:
             │ 9   │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).tail(n))
 
     def round(self, decimals: int = 0) -> Self:
@@ -1720,7 +1716,6 @@ class Expr:
             │ 3.9 │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).round(decimals))
 
     def len(self) -> Self:
@@ -1986,6 +1981,87 @@ class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> Expr:
+        r"""
+        Replace first matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+            n: Number of matches to replace.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"foo": ["123abc", "abc abc123"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     df = df.with_columns(replaced=nw.col("foo").str.replace("abc", ""))
+            ...     return df.to_dict(as_series=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' abc123']}
+
+            >>> func(df_pl)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' abc123']}
+
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.replace(
+                pattern, value, literal=literal, n=n
+            )
+        )
+
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
+        r"""
+        Replace all matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"foo": ["123abc", "abc abc123"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     df = df.with_columns(replaced=nw.col("foo").str.replace_all("abc", ""))
+            ...     return df.to_dict(as_series=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' 123']}
+
+            >>> func(df_pl)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' 123']}
+
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.replace_all(
+                pattern, value, literal=literal
+            )
+        )
+
     def strip_chars(self, characters: str | None = None) -> Expr:
         r"""
         Remove leading and trailing characters.
@@ -2162,7 +2238,6 @@ class ExprStringNamespace:
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
         """
-
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
         )
@@ -3365,7 +3440,6 @@ class ExprNameNamespace:
             >>> func(df_pl).columns
             ['foo']
         """
-
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
 
     def map(self: Self, function: Callable[[str], str]) -> Expr:
@@ -3402,7 +3476,6 @@ class ExprNameNamespace:
             >>> func(df_pl).columns
             ['oof', 'RAB']
         """
-
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
 
     def prefix(self: Self, prefix: str) -> Expr:
@@ -3973,7 +4046,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         └─────┴─────┘
 
     """
-    if (np := get_numpy()) is not None and isinstance(value, np.ndarray):
+    if is_numpy_array(value):
         msg = (
             "numpy arrays are not supported as literal values. "
             "Consider using `with_columns` to create a new column from the array."
@@ -3984,9 +4057,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    if dtype is None:
-        return Expr(lambda plx: plx.lit(value, dtype))
-    return Expr(lambda plx: plx.lit(value, translate_dtype(plx, dtype)))
+    return Expr(lambda plx: plx.lit(value, dtype))
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -4044,6 +4115,59 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
     return Expr(
         lambda plx: plx.any_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Compute the mean of all values horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function that computes the horizontal mean of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.mean_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  2.5
+        1  6.5
+        2  3.0
+        >>> func(df_pl)
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 2.5 │
+        │ 6.5 │
+        │ 3.0 │
+        └─────┘
+    """
+    return Expr(
+        lambda plx: plx.mean_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
         )
     )

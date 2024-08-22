@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -39,6 +38,7 @@ from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
+from narwhals.translate import narwhalify as nw_narwhalify
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
@@ -68,6 +68,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     `narwhals.from_native`.
     """
 
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
 
@@ -734,6 +736,7 @@ def narwhalify(
     *,
     strict: bool = False,
     eager_only: bool | None = False,
+    eager_or_interchange_only: bool | None = False,
     series_only: bool | None = False,
     allow_series: bool | None = True,
 ) -> Callable[..., Any]:
@@ -776,7 +779,7 @@ def narwhalify(
     You can also pass in extra arguments, e.g.
 
     ```python
-    @nw.narhwalify(eager_only=True)
+    @nw.narwhalify(eager_only=True)
     ```
 
     that will get passed down to `nw.from_native`.
@@ -792,53 +795,14 @@ def narwhalify(
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
     """
 
-    # TODO(Unassigned): do we have a way to de-dupe this a bit?
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            args = [
-                from_native(
-                    arg,
-                    strict=strict,
-                    eager_only=eager_only,
-                    series_only=series_only,
-                    allow_series=allow_series,
-                )
-                for arg in args
-            ]  # type: ignore[assignment]
-
-            kwargs = {
-                name: from_native(
-                    value,
-                    strict=strict,
-                    eager_only=eager_only,
-                    series_only=series_only,
-                    allow_series=allow_series,
-                )
-                for name, value in kwargs.items()
-            }
-
-            backends = {
-                b()
-                for v in [*args, *kwargs.values()]
-                if (b := getattr(v, "__native_namespace__", None))
-            }
-
-            if backends.__len__() > 1:
-                msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
-                raise ValueError(msg)
-
-            result = func(*args, **kwargs)
-
-            return to_native(result, strict=strict)
-
-        return wrapper
-
-    if func is None:
-        return decorator
-    else:
-        # If func is not None, it means the decorator is used without arguments
-        return decorator(func)
+    return nw_narwhalify(
+        func=func,
+        strict=strict,
+        eager_only=eager_only,
+        eager_or_interchange_only=eager_or_interchange_only,
+        series_only=series_only,
+        allow_series=allow_series,
+    )
 
 
 def all() -> Expr:
@@ -1315,6 +1279,55 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.any_horizontal(*exprs))
 
 
+def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Compute the mean of all values horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function that computes the horizontal mean of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.mean_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  2.5
+        1  6.5
+        2  3.0
+        >>> func(df_pl)
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 2.5 │
+        │ 6.5 │
+        │ 3.0 │
+        └─────┘
+    """
+    return _stableify(nw.mean_horizontal(*exprs))
+
+
 def is_ordered_categorical(series: Series) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
@@ -1469,11 +1482,63 @@ def get_level(
     return nw.get_level(obj)
 
 
+def new_series(
+    name: str,
+    values: Any,
+    dtype: DType | type[DType] | None = None,
+    *,
+    native_namespace: ModuleType,
+) -> Series:
+    """
+    Instantiate Narwhals Series from raw data.
+
+    Arguments:
+        name: Name of resulting Series.
+        values: Values of make Series from.
+        dtype: (Narwhals) dtype. If not provided, the native library
+            may auto-infer it from `values`.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     values = [4, 1, 2]
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.new_series("c", values, nw.Int32, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+        0    4
+        1    1
+        2    2
+        Name: c, dtype: int32
+        >>> func(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
+        shape: (3,)
+        Series: 'c' [i32]
+        [
+           4
+           1
+           2
+        ]
+    """
+    return _stableify(
+        nw.new_series(name, values, dtype, native_namespace=native_namespace)
+    )
+
+
 def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
@@ -1485,7 +1550,8 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation.
+        native_namespace: The native library to use for DataFrame creation. Only
+            necessary if inputs are not Narwhals Series.
 
     Examples:
         >>> import pandas as pd
@@ -1543,6 +1609,7 @@ __all__ = [
     "min",
     "max",
     "mean",
+    "mean_horizontal",
     "sum",
     "sum_horizontal",
     "DataFrame",
@@ -1572,4 +1639,5 @@ __all__ = [
     "show_versions",
     "Schema",
     "from_dict",
+    "new_series",
 ]

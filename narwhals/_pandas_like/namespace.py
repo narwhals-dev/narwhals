@@ -115,7 +115,7 @@ class PandasLikeNamespace:
         return PandasLikeExpr(
             lambda df: [
                 PandasLikeSeries(
-                    df._native_dataframe.loc[:, column_name],
+                    df._native_frame.loc[:, column_name],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                 )
@@ -134,7 +134,7 @@ class PandasLikeNamespace:
             pandas_series = PandasLikeSeries._from_iterable(
                 data=[value],
                 name="lit",
-                index=df._native_dataframe.index[0:1],
+                index=df._native_frame.index[0:1],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
@@ -185,7 +185,7 @@ class PandasLikeNamespace:
         return PandasLikeExpr(
             lambda df: [
                 PandasLikeSeries._from_iterable(
-                    [len(df._native_dataframe)],
+                    [len(df._native_frame)],
                     name="len",
                     index=[0],
                     implementation=self._implementation,
@@ -210,13 +210,21 @@ class PandasLikeNamespace:
     def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
 
+    def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        pandas_like_exprs = parse_into_exprs(*exprs, namespace=self)
+        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in pandas_like_exprs))
+        n_non_zero = reduce(
+            lambda x, y: x + y, ((1 - e.is_null()) for e in pandas_like_exprs)
+        )
+        return total / n_non_zero
+
     def concat(
         self,
         items: Iterable[PandasLikeDataFrame],
         *,
         how: str = "vertical",
     ) -> PandasLikeDataFrame:
-        dfs: list[Any] = [item._native_dataframe for item in items]
+        dfs: list[Any] = [item._native_frame for item in items]
         if how == "horizontal":
             return PandasLikeDataFrame(
                 horizontal_concat(

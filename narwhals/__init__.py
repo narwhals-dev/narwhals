@@ -30,12 +30,14 @@ from narwhals.expr import len
 from narwhals.expr import lit
 from narwhals.expr import max
 from narwhals.expr import mean
+from narwhals.expr import mean_horizontal
 from narwhals.expr import min
 from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
 from narwhals.functions import concat
 from narwhals.functions import from_dict
 from narwhals.functions import get_level
+from narwhals.functions import new_series
 from narwhals.functions import show_versions
 from narwhals.schema import Schema
 from narwhals.series import Series
@@ -48,13 +50,14 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.3.0"
+__version__ = "1.5.2"
 
 __all__ = [
     "selectors",
     "concat",
     "from_dict",
     "get_level",
+    "new_series",
     "to_native",
     "from_native",
     "is_ordered_categorical",
@@ -71,6 +74,7 @@ __all__ = [
     "min",
     "max",
     "mean",
+    "mean_horizontal",
     "sum",
     "sum_horizontal",
     "DataFrame",

@@ -19,4 +19,4 @@ def test_str_tail_series(constructor_eager: Any) -> None:
     expected = {"a": ["foo", "ars"]}
 
     result_series = df["a"].str.tail(3)
-    assert result_series.to_list() == expected["a"]
+    compare_dicts({"a": result_series}, expected)

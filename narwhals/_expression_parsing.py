@@ -3,6 +3,7 @@
 # and pandas or PyArrow.
 from __future__ import annotations
 
+from collections.abc import Hashable
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
@@ -11,7 +12,7 @@ from typing import Union
 from typing import cast
 from typing import overload
 
-from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -29,17 +30,27 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._polars.series import PolarsSeries
+    from narwhals._polars.typing import IntoPolarsExpr
 
-    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace, DaskNamespace]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr]
-    IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr]
+    CompliantNamespace = Union[
+        PandasLikeNamespace, ArrowNamespace, DaskNamespace, PolarsNamespace
+    ]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr]
+    IntoCompliantExpr = Union[
+        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr
+    ]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
-    CompliantSeries = Union[PandasLikeSeries, ArrowSeries]
+    CompliantSeries = Union[PandasLikeSeries, ArrowSeries, PolarsSeries]
     ListOfCompliantSeries = Union[
-        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr]
+        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr], list[PolarsSeries]
     ]
-    ListOfCompliantExpr = Union[list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr]]
+    ListOfCompliantExpr = Union[
+        list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr], list[PolarsExpr]
+    ]
     CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
 
     T = TypeVar("T")
@@ -132,6 +143,14 @@ def parse_into_exprs(
 ) -> list[DaskExpr]: ...
 
 
+@overload
+def parse_into_exprs(
+    *exprs: IntoPolarsExpr,
+    namespace: PolarsNamespace,
+    **named_exprs: IntoPolarsExpr,
+) -> list[PolarsExpr]: ...
+
+
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace,
@@ -139,7 +158,7 @@ def parse_into_exprs(
 ) -> ListOfCompliantExpr:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    return [  # type: ignore[return-value]
+    return [
         parse_into_expr(into_expr, namespace=namespace) for into_expr in flatten(exprs)
     ] + [
         parse_into_expr(expr, namespace=namespace).alias(name)
@@ -168,11 +187,12 @@ def parse_into_expr(
         return into_expr  # type: ignore[return-value]
     if hasattr(into_expr, "__narwhals_series__"):
         return namespace._create_expr_from_series(into_expr)  # type: ignore[arg-type]
-    if isinstance(into_expr, str):
-        return namespace.col(into_expr)
-    if (np := get_numpy()) is not None and isinstance(into_expr, np.ndarray):
+    if isinstance(into_expr, Hashable):
+        # pandas allows non-string column names, so we pass them through here.
+        return namespace.col(into_expr)  # type: ignore[arg-type]
+    if is_numpy_array(into_expr):
         series = namespace._create_compliant_series(into_expr)
-        return namespace._create_expr_from_series(series)  # type: ignore[arg-type]
+        return namespace._create_expr_from_series(series)
     msg = f"Expected IntoExpr, got {type(into_expr)}"  # pragma: no cover
     raise AssertionError(msg)
 

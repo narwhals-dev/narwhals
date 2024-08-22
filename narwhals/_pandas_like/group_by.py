@@ -32,16 +32,16 @@ class PandasLikeGroupBy:
             self._df._implementation is Implementation.PANDAS
             and self._df._backend_version < (1, 0)
         ):  # pragma: no cover
-            if self._df._native_dataframe.loc[:, self._keys].isna().any().any():
+            if self._df._native_frame.loc[:, self._keys].isna().any().any():
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
-            self._grouped = self._df._native_dataframe.groupby(
+            self._grouped = self._df._native_frame.groupby(
                 list(self._keys),
                 sort=False,
                 as_index=True,
             )
         else:
-            self._grouped = self._df._native_dataframe.groupby(
+            self._grouped = self._df._native_frame.groupby(
                 list(self._keys),
                 sort=False,
                 as_index=True,
@@ -75,13 +75,13 @@ class PandasLikeGroupBy:
             exprs,
             self._keys,
             output_names,
-            self._from_native_dataframe,
-            dataframe_is_empty=self._df._native_dataframe.empty,
+            self._from_native_frame,
+            dataframe_is_empty=self._df._native_frame.empty,
             implementation=implementation,
             backend_version=self._df._backend_version,
         )
 
-    def _from_native_dataframe(self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
+    def _from_native_frame(self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         return PandasLikeDataFrame(
@@ -100,9 +100,7 @@ class PandasLikeGroupBy:
                 category=FutureWarning,
             )
             iterator = self._grouped.__iter__()
-        yield from (
-            (key, self._from_native_dataframe(sub_df)) for (key, sub_df) in iterator
-        )
+        yield from ((key, self._from_native_frame(sub_df)) for (key, sub_df) in iterator)
 
 
 def agg_pandas(
