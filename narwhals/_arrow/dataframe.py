@@ -20,6 +20,7 @@ from narwhals.utils import generate_unique_token
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -99,6 +100,9 @@ class ArrowDataFrame:
             name=name,
             backend_version=self._backend_version,
         )
+
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self._native_frame.__array__(dtype, copy=copy)
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
@@ -419,6 +423,17 @@ class ArrowDataFrame:
         import pyarrow.parquet as pp  # ignore-banned-import
 
         pp.write_table(self._native_frame, file)
+
+    def write_csv(self, file: Any) -> Any:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.csv as pa_csv  # ignore-banned-import
+
+        pa_table = self._native_frame
+        if file is None:
+            csv_buffer = pa.BufferOutputStream()
+            pa_csv.write_csv(pa_table, csv_buffer)
+            return csv_buffer.getvalue().to_pybytes().decode()
+        return pa_csv.write_csv(pa_table, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
         import numpy as np  # ignore-banned-import
