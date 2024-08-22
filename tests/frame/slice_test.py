@@ -54,6 +54,13 @@ def test_slice_int(constructor_eager: Any) -> None:
     compare_dicts(result, {"a": [2], "b": [12]})
 
 
+def test_slice_fails(constructor_eager: Any) -> None:
+    class Foo: ...
+
+    with pytest.raises(TypeError, match="Expected str or slice, got:"):
+        nw.from_native(constructor_eager(data), eager_only=True)[Foo()]  # type: ignore[call-overload]
+
+
 def test_gather(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 3, 1]]
