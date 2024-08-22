@@ -560,7 +560,7 @@ class DataFrame(BaseFrame[FrameT]):
                 - `df[:, 0: 2]` extracts all rows from the first two columns and returns a `DataFrame`
                 - `df[:, 'a': 'c']` extracts all rows and all columns positioned between `'a'` and `'c'`
                     _inclusive_ and returns a `DataFrame`. For example, if the columns are
-                    `'a', 'd', 'c', 'b'`, then that would extract columns `'a'`, `'b'`, and `'c'`.
+                    `'a', 'd', 'c', 'b'`, then that would extract columns `'a'`, `'d'`, and `'c'`.
 
         Notes:
             - Integers are always interpreted as positions
