@@ -49,8 +49,8 @@ def test_slice_lazy_fails() -> None:
         _ = nw.from_native(pl.LazyFrame(data))[1:]
 
 
-def test_slice_int_fails(constructor_eager: Any) -> None:
-    result = nw.from_native(constructor_eager(data))[1]
+def test_slice_int(constructor_eager: Any) -> None:
+    result = nw.from_native(constructor_eager(data), eager_only=True)[1]  # type: ignore[call-overload]
     compare_dicts(result, {"a": [2], "b": [12]})
 
 
