@@ -107,6 +107,35 @@ def test_slice_int_rows_str_columns(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
+def test_slice_slice_columns(constructor_eager: Any) -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df[[0, 1], "b":"c"]  # type: ignore[misc]
+    expected = {"b": [4, 5], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], :"c"]  # type: ignore[misc]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], "a":"d":2]  # type: ignore[misc]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], "b":]  # type: ignore[misc]
+    expected = {"b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], 1:3]
+    expected = {"b": [4, 5], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], :3]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], 0:4:2]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], 1:]
+    expected = {"b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
+
+
 def test_slice_invalid(constructor_eager: Any) -> None:
     data = {"a": [1, 2], "b": [4, 5]}
     df = nw.from_native(constructor_eager(data), eager_only=True)

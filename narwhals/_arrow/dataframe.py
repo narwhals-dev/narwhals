@@ -137,6 +137,32 @@ class ArrowDataFrame:
             )
 
         elif isinstance(item, tuple) and len(item) == 2:
+            if isinstance(item[1], slice):
+                columns = self.columns
+                if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
+                    start = (
+                        columns.index(item[1].start)
+                        if item[1].start is not None
+                        else None
+                    )
+                    stop = (
+                        columns.index(item[1].stop) + 1
+                        if item[1].stop is not None
+                        else None
+                    )
+                    step = item[1].step
+                    return self._from_native_frame(
+                        self._native_frame.take(item[0]).select(columns[start:stop:step])
+                    )
+                if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
+                    return self._from_native_frame(
+                        self._native_frame.take(item[0]).select(
+                            columns[item[1].start : item[1].stop : item[1].step]
+                        )
+                    )
+                msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
+                raise TypeError(msg)  # pragma: no cover
+
             from narwhals._arrow.series import ArrowSeries
 
             # PyArrow columns are always strings

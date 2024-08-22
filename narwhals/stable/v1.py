@@ -69,6 +69,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     """
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
 
     @overload
