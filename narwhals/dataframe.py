@@ -544,23 +544,23 @@ class DataFrame(BaseFrame[FrameT]):
         Extract column or slice of DataFrame.
 
         Arguments:
-            item: how to slice dataframe. What happens depends on what is passed. It's easiest
+            item: How to slice dataframe. What happens depends on what is passed. It's easiest
                 to explain by example. Suppose we have a Dataframe `df`:
 
-                    - `df['a']` extracts column `'a'` and returns a `Series`.
-                    - `df[0:2]` extracts the first two rows and returns a `DataFrame`.
-                    - `df[0:2, 'a']` extracts the first two rows from column `'a'` and returns
-                        a `Series`.
-                    - `df[0:2, 0]` extracts the first two rows from the first column and returns
-                        a `Series`.
-                    - `df[[0, 1], [0, 1, 2]]` extracts the first two rows and the first three columns
-                        and returns a `DataFrame`
-                    - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
-                        returns a `DataFrame`
-                    - `df[:, 0: 2]` extracts all rows from the first two columns and returns a `DataFrame`
-                    - `df[:, 'a': 'c']` extracts all rows and all columns positioned between `'a'` and `'c'`
-                        _inclusive_ and returns a `DataFrame`. For example, if the columns are
-                        `'a', 'b', 'c', 'd'`, then that would extract columns `'a'`, `'b'`, and `'c'`.
+                - `df['a']` extracts column `'a'` and returns a `Series`.
+                - `df[0:2]` extracts the first two rows and returns a `DataFrame`.
+                - `df[0:2, 'a']` extracts the first two rows from column `'a'` and returns
+                    a `Series`.
+                - `df[0:2, 0]` extracts the first two rows from the first column and returns
+                    a `Series`.
+                - `df[[0, 1], [0, 1, 2]]` extracts the first two rows and the first three columns
+                    and returns a `DataFrame`
+                - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
+                    returns a `DataFrame`
+                - `df[:, 0: 2]` extracts all rows from the first two columns and returns a `DataFrame`
+                - `df[:, 'a': 'c']` extracts all rows and all columns positioned between `'a'` and `'c'`
+                    _inclusive_ and returns a `DataFrame`. For example, if the columns are
+                    `'a', 'd', 'c', 'b'`, then that would extract columns `'a'`, `'d'`, and `'c'`.
 
         Notes:
             - Integers are always interpreted as positions
