@@ -63,6 +63,9 @@ class ArrowDataFrame:
     def __len__(self) -> int:
         return len(self._native_frame)
 
+    def row(self, index: int) -> tuple[Any, ...]:
+        return tuple(col[index] for col in self._native_frame)
+
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:

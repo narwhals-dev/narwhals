@@ -711,6 +711,10 @@ class DataFrame(BaseFrame[FrameT]):
         """
         Get values at given row.
 
+        !!!note
+            You should NEVER use this method to iterate over a DataFrame;
+            if you require row-iteration you should strongly prefer use of iter_rows() instead.
+
         Arguments:
             index: Row number.
 
