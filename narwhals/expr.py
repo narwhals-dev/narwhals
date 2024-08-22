@@ -1033,7 +1033,11 @@ class Expr:
             │ 7   ┆ 12  │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).filter(*predicates))
+        return self.__class__(
+            lambda plx: self._call(plx).filter(
+                *[extract_compliant(plx, pred) for pred in flatten(predicates)]
+            )
+        )
 
     def is_null(self) -> Self:
         """
