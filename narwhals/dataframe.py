@@ -158,20 +158,13 @@ class BaseFrame(Generic[FrameT]):
             )
         )
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
-        if (
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
+        if not (
             len(predicates) == 1
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            from narwhals.functions import new_series
-
-            predicates = (
-                new_series(
-                    "mask", predicates[0], native_namespace=self.__native_namespace__()
-                ),
-            )
-        predicates, _ = self._flatten_and_extract(*predicates)
+            predicates, _ = self._flatten_and_extract(*predicates)
         return self._from_compliant_dataframe(
             self._compliant_frame.filter(*predicates),
         )
@@ -1531,7 +1524,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
         r"""
         Filter the rows in the DataFrame based on one or more predicate expressions.
 
@@ -2997,7 +2990,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
         r"""
         Filter the rows in the LazyFrame based on a predicate expression.
 
