@@ -120,5 +120,5 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return "timedelta64[ns]"
 
-    msg = f"Unknown dtype: {dtype}"
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
