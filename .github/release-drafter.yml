@@ -12,28 +12,28 @@ autolabeler:
       - '/^([B|b]uild|[C|c]hore|[CI|ci]|[D|d]epr|[D|d]oc|DOC|[F|f]eat|[F|f]ix|[P|p]erf|[R|r]efactor|[R|r]elease|[T|t]est)\! /'
   - label: build
     title:
-      - '/^[B|b]uild/'
+      - '/^([B|b]uild)/'
   - label: internal
     title:
-      - '/^[C|c]hore|[CI|ci]|[R|r]efactor|[T|t]est|[T|t]emplate|[B|b]ench/'
+      - '/^(chore|ci|refactor|test|template|bench|Chore|CI|Refactor|Test|Template|Bench)'
   - label: deprecation
     title:
-      - '/^[D|d]epr/'
+      - '/^([D|d]epr)/'
   - label: documentation
     title:
-      - '/^[D|d]oc|DOC/'
+      - '/^([D|d]oc|DOC)/'
   - label: enhancement
     title:
-      - '/^.*feat|.*enh|Feat|ENH|Enh/'
+      - '/^(feat|enh|Feat|ENH|Enh)/'
   - label: fix
     title:
-      - '/^[F|f]ix/'
+      - '/^([F|f]ix)/'
   - label: performance
     title:
-      - '/^[P|p]erf/'
+      - '/^([P|p]erf)/'
   - label: release
     title:
-      - '/^[R|r]elease/'
+      - '/^([R|r]elease)/'
       
 version-resolver:
   major:
