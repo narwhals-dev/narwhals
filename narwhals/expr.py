@@ -1033,11 +1033,7 @@ class Expr:
             │ 7   ┆ 12  │
             └─────┴─────┘
         """
-        return self.__class__(
-            lambda plx: self._call(plx).filter(
-                *[extract_compliant(plx, pred) for pred in flatten(predicates)]
-            )
-        )
+        return self.__class__(lambda plx: self._call(plx).filter(*predicates))
 
     def is_null(self) -> Self:
         """
@@ -3657,7 +3653,8 @@ def col(*names: str | Iterable[str]) -> Expr:
     return Expr(func)
 
 
-def all() -> Expr:
+# Add underscore so it doesn't conflict with builtin `all`
+def all_() -> Expr:
     """
     Instantiate an expression representing all columns.
 
@@ -3696,7 +3693,8 @@ def all() -> Expr:
     return Expr(lambda plx: plx.all())
 
 
-def len() -> Expr:
+# Add underscore so it doesn't conflict with builtin `len`
+def len_() -> Expr:
     """
     Return the number of rows.
 

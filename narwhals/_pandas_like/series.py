@@ -229,7 +229,8 @@ class PandasLikeSeries:
 
     def filter(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
+            other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.loc[other], ser.name))
 
     def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
