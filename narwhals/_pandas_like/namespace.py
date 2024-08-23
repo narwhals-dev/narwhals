@@ -130,7 +130,7 @@ class PandasLikeNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasLikeExpr:
-        if self._implementation is Implementation.CUDF:
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
             import cupy as np  # ignore-banned-import
         else:
             import numpy as np  # ignore-banned-import
