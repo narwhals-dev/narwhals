@@ -315,7 +315,7 @@ class PandasWhen:
         # - if it's a string, then parse it as `nw.col(self._then_value)`
         # - if it's a scalar (e.g. int), then just leave it as a scalar
         # - if it's an expression, then...resolve it!
-        breakpoint()
+        # todo: raise if the evaluated expression has multiple outputs
         value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
         if self._otherwise_value is None:
             return [
@@ -323,9 +323,7 @@ class PandasWhen:
                     value_series._native_series.where(condition._native_series)
                 )
             ]
-        otherwise_series = _when_then_value_arg_process(
-            plx, self._otherwise_value, shape=condition.shape
-        )._call(df)[0]
+        breakpoint()
 
         return [value_series.zip_with(condition, otherwise_series)]
 
