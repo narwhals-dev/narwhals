@@ -270,30 +270,6 @@ class PandasLikeNamespace:
         return PandasWhen(condition, self._implementation, self._backend_version)
 
 
-def _when_then_value_arg_process(
-    plx: PandasLikeNamespace,
-    value: PandasLikeExpr | PandasLikeSeries | Any,
-    *,
-    shape: tuple[int],
-) -> PandasLikeExpr:
-    from narwhals.dependencies import get_numpy
-
-    # NumPy is a required dependency of pandas
-    np = get_numpy()
-
-    if isinstance(value, PandasLikeExpr):
-        return value
-    elif isinstance(value, PandasLikeSeries):
-        return plx._create_expr_from_series(value)
-    elif np is not None and isinstance(value, np.ndarray):
-        return plx._create_expr_from_series(plx._create_compliant_series(value))
-    else:
-        msg = (
-            "Cannot pass a scalar value to the `then` predicate of `when-then-otherwise`"
-        )
-        raise TypeError(msg)
-
-
 class PandasWhen:
     def __init__(
         self,
@@ -312,29 +288,42 @@ class PandasWhen:
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
         from narwhals._expression_parsing import parse_into_expr
         from narwhals._pandas_like.namespace import PandasLikeNamespace
+        from narwhals._pandas_like.utils import broadcast_series
 
         plx = PandasLikeNamespace(
             implementation=self._implementation, backend_version=self._backend_version
         )
 
-        # what if `condition` was a `Series`? do we handle that?
-        condition = self._condition._call(df)[0]
+        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]
+        try:
+            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
+        except TypeError:
+            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            value_series = condition.__class__._from_iterable(
+                [self._then_value]*len(condition),
+                name='literal',
+                index=condition._native_series.index,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
 
-        # strategy:
-        # - if it's a string, then parse it as `nw.col(self._then_value)`
-        # - if it's a scalar (e.g. int), then just leave it as a scalar
-        # - if it's an expression, then...resolve it!
-        # TODO: raise if the evaluated expression has multiple outputs
-        value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
         if self._otherwise_value is None:
             return [
                 value_series._from_native_series(
                     value_series._native_series.where(condition._native_series)
                 )
             ]
-        breakpoint()
-
-        return [value_series.zip_with(condition, otherwise_series)]
+        try:
+            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx, pass_through=True)._call(df)[0]
+        except TypeError:
+            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            return [
+                value_series._from_native_series(
+                    value_series._native_series.where(condition._native_series, self._otherwise_value)
+                )
+            ]
+        else:
+            return [value_series.zip_with(condition, otherwise_series)]
 
     def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value
