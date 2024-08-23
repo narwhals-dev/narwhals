@@ -147,9 +147,9 @@ class ArrowNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> ArrowExpr:
-        def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
+        def _lit_arrow_series(df: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries._from_iterable(
-                data=[value],
+                data=[value] * len(df),
                 name="lit",
                 backend_version=self._backend_version,
             )
