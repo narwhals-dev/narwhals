@@ -3,10 +3,10 @@
 Thank you for your interest in contributing to Narwhals! Any kind of improvement is welcome!
 
 ## Local development vs Codespaces
-You can contribute to Narwhals using your local development environment, using python3, git and your editor of choice.
+You can contribute to Narwhals in your local development environment, using python3, git and your editor of choice.
 You can also contribute to Narwhals using [Github Codespaces](https://docs.github.com/en/codespaces/overview) - a development environment that's hosted in the cloud.
 This way you can easily start to work from your browser without installing git and cloning the repo.
-Scroll down for instructions on how to use Codespaces.
+Scroll down for instructions on how to use [Codespaces](https://github.com/narwhals-dev/narwhals/blob/c424c226fecba1a799e90b6ab59a76d7d9606896/CONTRIBUTING.md#working-with-codespaces).
 
 ## Working with local development environment
 
@@ -127,7 +127,7 @@ Go to the forked repository on your GitHub account - you'll find it on your acco
 Click on the green `Code` button and navigate to the `Codespaces` tab.
 Click on the green button `Create codespace on main` - it will open a browser version of VSCode,
 with the complete repository and git installed. 
-You can now proceed with the steps "4. Setting up your environment" up to "8. Pull request"
+You can now proceed with the steps ["4. Setting up your environment"](https://github.com/narwhals-dev/narwhals/blob/c424c226fecba1a799e90b6ab59a76d7d9606896/CONTRIBUTING.md#4-setting-up-your-environment) up to "8. Pull request"
 listed above in "Working with the local development environment".
 
 
