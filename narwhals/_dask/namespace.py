@@ -147,7 +147,7 @@ class DaskNamespace:
 
         if len(list(items)) == 0:
             msg = "No items to concatenate"
-            raise ValueError(msg)
+            raise AssertionError(msg)
         native_frames = [i._native_frame for i in items]
         axis: int
         join: str
