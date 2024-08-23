@@ -10,6 +10,7 @@ from typing import TypeVar
 from typing import overload
 
 import narwhals as nw
+from narwhals import dependencies
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
@@ -1400,6 +1401,11 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     """
     Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
+    Arguments:
+        obj: DataFrame or Series.
+        *args: Additional arguments which gets passed through.
+        **kwargs: Additional arguments which gets passed through.
+
     Notes:
         For non-pandas-like inputs, this is a no-op.
         Also, `args` and `kwargs` just get passed down to the underlying library as-is.
@@ -1592,6 +1598,7 @@ def from_dict(
 __all__ = [
     "selectors",
     "concat",
+    "dependencies",
     "to_native",
     "from_native",
     "is_ordered_categorical",

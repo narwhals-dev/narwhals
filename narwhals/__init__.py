@@ -1,3 +1,4 @@
+from narwhals import dependencies
 from narwhals import selectors
 from narwhals import stable
 from narwhals.dataframe import DataFrame
@@ -53,6 +54,7 @@ from narwhals.utils import maybe_set_index
 __version__ = "1.5.3"
 
 __all__ = [
+    "dependencies",
     "selectors",
     "concat",
     "from_dict",

@@ -16,6 +16,8 @@
         - is_modin_series
         - is_numpy_array
         - is_pandas_dataframe
+        - is_pandas_like_dataframe
+        - is_pandas_like_series
         - is_pandas_series
         - is_polars_dataframe
         - is_polars_lazyframe
