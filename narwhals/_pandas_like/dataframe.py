@@ -25,6 +25,7 @@ from narwhals.utils import generate_unique_token
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    import numpy as np
     import pandas as pd
     from typing_extensions import Self
 
@@ -100,6 +101,9 @@ class PandasLikeDataFrame:
             backend_version=self._backend_version,
         )
 
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self.to_numpy(dtype=dtype, copy=copy)
+
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str | int]) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
 
@@ -140,6 +144,30 @@ class PandasLikeDataFrame:
             msg = (
                 f"Expected sequence str or int, got: {type(item[1])}"  # pragma: no cover
             )
+            raise TypeError(msg)  # pragma: no cover
+
+        elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
+            columns = self._native_frame.columns
+            if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
+                start = (
+                    columns.get_loc(item[1].start) if item[1].start is not None else None
+                )
+                stop = (
+                    columns.get_loc(item[1].stop) + 1
+                    if item[1].stop is not None
+                    else None
+                )
+                step = item[1].step
+                return self._from_native_frame(
+                    self._native_frame.iloc[item[0], slice(start, stop, step)]
+                )
+            if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
+                return self._from_native_frame(
+                    self._native_frame.iloc[
+                        item[0], slice(item[1].start, item[1].stop, item[1].step)
+                    ]
+                )
+            msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
             raise TypeError(msg)  # pragma: no cover
 
         elif isinstance(item, tuple) and len(item) == 2:
@@ -520,19 +548,28 @@ class PandasLikeDataFrame:
             }
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
-    def to_numpy(self) -> Any:
+    def to_numpy(self, dtype: Any = None, copy: bool | None = None) -> Any:
         from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 
-        # pandas return `object` dtype for nullable dtypes, so we cast each
-        # Series to numpy and let numpy find a common dtype.
+        if copy is None:
+            # pandas default differs from Polars
+            copy = False
+
+        if dtype is not None:
+            return self._native_frame.to_numpy(dtype=dtype, copy=copy)
+
+        # pandas return `object` dtype for nullable dtypes if dtype=None,
+        # so we cast each Series to numpy and let numpy find a common dtype.
         # If there aren't any dtypes where `to_numpy()` is "broken" (i.e. it
         # returns Object) then we just call `to_numpy()` on the DataFrame.
-        for dtype in self._native_frame.dtypes:
-            if str(dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
+        for col_dtype in self._native_frame.dtypes:
+            if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
                 import numpy as np  # ignore-banned-import
 
-                return np.hstack([self[col].to_numpy()[:, None] for col in self.columns])
-        return self._native_frame.to_numpy()
+                return np.hstack(
+                    [self[col].to_numpy(copy=copy)[:, None] for col in self.columns]
+                )
+        return self._native_frame.to_numpy(copy=copy)
 
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
@@ -543,6 +580,9 @@ class PandasLikeDataFrame:
 
     def write_parquet(self, file: Any) -> Any:
         self._native_frame.to_parquet(file)
+
+    def write_csv(self, file: Any = None) -> Any:
+        return self._native_frame.to_csv(file, index=False)
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> PandasLikeSeries:

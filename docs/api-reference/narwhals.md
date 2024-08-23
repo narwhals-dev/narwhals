@@ -23,6 +23,7 @@ Here are the top-level functions available in Narwhals.
         - maybe_convert_dtypes
         - maybe_set_index
         - mean
+        - mean_horizontal
         - min
         - narwhalify
         - new_series

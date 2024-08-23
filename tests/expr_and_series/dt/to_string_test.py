@@ -105,16 +105,16 @@ def test_dt_to_string_iso_local_datetime_series(
     result = (
         nw.from_native(df, eager_only=True)["a"]
         .dt.to_string("%Y-%m-%dT%H:%M:%S.%f")
-        .to_list()[0]
+        .item(0)
     )
-    assert _clean_string(result) == _clean_string(expected)
+    assert _clean_string(str(result)) == _clean_string(expected)
 
     result = (
         nw.from_native(df, eager_only=True)["a"]
         .dt.to_string("%Y-%m-%dT%H:%M:%S%.f")
-        .to_list()[0]
+        .item(0)
     )
-    assert _clean_string(result) == _clean_string(expected)
+    assert _clean_string(str(result)) == _clean_string(expected)
 
 
 @pytest.mark.parametrize(
@@ -156,10 +156,8 @@ def test_dt_to_string_iso_local_date_series(
     constructor_eager: Any, data: datetime, expected: str
 ) -> None:
     df = constructor_eager({"a": [data]})
-    result = (
-        nw.from_native(df, eager_only=True)["a"].dt.to_string("%Y-%m-%d").to_list()[0]
-    )
-    assert result == expected
+    result = nw.from_native(df, eager_only=True)["a"].dt.to_string("%Y-%m-%d").item(0)
+    assert str(result) == expected
 
 
 @pytest.mark.parametrize(

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Sequence
 
 from narwhals import dtypes
+from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_polars
@@ -15,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.typing import IntoPolarsExpr
 
 
 class PolarsNamespace:
@@ -85,11 +88,28 @@ class PolarsNamespace:
             return PolarsExpr(pl.lit(value, dtype=narwhals_to_native_dtype(dtype)))
         return PolarsExpr(pl.lit(value))
 
-    def mean(self, *column_names: str) -> Any:
+    def mean(self, *column_names: str) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
         pl = get_polars()
         if self._backend_version < (0, 20, 4):  # pragma: no cover
-            return pl.mean([*column_names])
-        return pl.mean(*column_names)
+            return PolarsExpr(pl.mean([*column_names]))
+        return PolarsExpr(pl.mean(*column_names))
+
+    def mean_horizontal(self, *exprs: IntoPolarsExpr) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        polars_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        if self._backend_version < (0, 20, 8):  # pragma: no cover
+            total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in polars_exprs))
+            n_non_zero = reduce(
+                lambda x, y: x + y, ((1 - e.is_null()) for e in polars_exprs)
+            )
+            return PolarsExpr(total._native_expr / n_non_zero._native_expr)
+
+        return PolarsExpr(pl.mean_horizontal([e._native_expr for e in polars_exprs]))
 
     @property
     def selectors(self) -> PolarsSelectors:

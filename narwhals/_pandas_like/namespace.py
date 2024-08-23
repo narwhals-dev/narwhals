@@ -211,6 +211,14 @@ class PandasLikeNamespace:
     def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
 
+    def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        pandas_like_exprs = parse_into_exprs(*exprs, namespace=self)
+        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in pandas_like_exprs))
+        n_non_zero = reduce(
+            lambda x, y: x + y, ((1 - e.is_null()) for e in pandas_like_exprs)
+        )
+        return total / n_non_zero
+
     def concat(
         self,
         items: Iterable[PandasLikeDataFrame],
