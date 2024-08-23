@@ -15,7 +15,7 @@ autolabeler:
       - '/^([Bb]uild)/'
   - label: internal
     title:
-      - '/^(chore|ci|refactor|test|template|bench|Chore|CI|Refactor|Test|Template|Bench)'
+      - '/^(chore|ci|refactor|test|template|bench|Chore|CI|Refactor|Test|Template|Bench)/'
   - label: deprecation
     title:
       - '/^([Dd]epr)/'
