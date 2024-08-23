@@ -23,17 +23,20 @@ def run_common(session: Session, coverage_threshold: float) -> None:
 
 @nox.session(python=PYTHON_VERSIONS)  # type: ignore[misc]
 def pytest_coverage(session: Session) -> None:
-    coverage_threshold = 90 if session.python == "3.8" else 100
-
-    session.install("modin[dask]")
+    if session.python == "3.8":
+        coverage_threshold = 90
+    else:
+        coverage_threshold = 100
+        session.install("modin[dask]")
 
     run_common(session, coverage_threshold)
 
 
 @nox.session(python=PYTHON_VERSIONS[0])  # type: ignore[misc]
-def minimum_versions(session: Session) -> None:
+@nox.parametrize("pandas_version", ["0.25.3", "1.1.5"])  # type: ignore[misc]
+def min_and_old_versions(session: Session, pandas_version: str) -> None:
     session.install(
-        "pandas==0.25.3",
+        f"pandas=={pandas_version}",
         "polars==0.20.3",
         "numpy==1.17.5",
         "pyarrow==11.0.0",
@@ -46,12 +49,29 @@ def minimum_versions(session: Session) -> None:
 
 @nox.session(python=PYTHON_VERSIONS[-1])  # type: ignore[misc]
 def nightly_versions(session: Session) -> None:
-    session.install("modin[dask]", "polars")
-    session.install(
+    session.install("polars")
+
+    session.install(  # pandas nightly
         "--pre",
         "--extra-index-url",
         "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple",
         "pandas",
+    )
+
+    session.install(  # numpy nightly
+        "--pre",
+        "--extra-index-url",
+        "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple",
+        "numpy",
+    )
+
+    session.run("uv", "pip", "install", "pip")
+    session.run(  # dask nightly
+        "pip",
+        "install",
+        "git+https://github.com/dask/distributed",
+        "git+https://github.com/dask/dask",
+        "git+https://github.com/dask/dask-expr",
     )
 
     run_common(session, coverage_threshold=50)
