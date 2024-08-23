@@ -169,7 +169,7 @@ class DaskNamespace:
                     f"Columns with name(s): {', '.join(duplicates)} "
                     "have more than one occurrence"
                 )
-                raise TypeError(msg)
+                raise AssertionError(msg)
             axis = 1
             join = "outer"
         else:
