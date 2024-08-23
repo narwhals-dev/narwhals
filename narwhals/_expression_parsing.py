@@ -30,17 +30,27 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._polars.series import PolarsSeries
+    from narwhals._polars.typing import IntoPolarsExpr
 
-    CompliantNamespace = Union[PandasLikeNamespace, ArrowNamespace, DaskNamespace]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr]
-    IntoCompliantExpr = Union[IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr]
+    CompliantNamespace = Union[
+        PandasLikeNamespace, ArrowNamespace, DaskNamespace, PolarsNamespace
+    ]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr]
+    IntoCompliantExpr = Union[
+        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr
+    ]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
-    CompliantSeries = Union[PandasLikeSeries, ArrowSeries]
+    CompliantSeries = Union[PandasLikeSeries, ArrowSeries, PolarsSeries]
     ListOfCompliantSeries = Union[
-        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr]
+        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr], list[PolarsSeries]
     ]
-    ListOfCompliantExpr = Union[list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr]]
+    ListOfCompliantExpr = Union[
+        list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr], list[PolarsExpr]
+    ]
     CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
 
     T = TypeVar("T")
@@ -133,6 +143,14 @@ def parse_into_exprs(
 ) -> list[DaskExpr]: ...
 
 
+@overload
+def parse_into_exprs(
+    *exprs: IntoPolarsExpr,
+    namespace: PolarsNamespace,
+    **named_exprs: IntoPolarsExpr,
+) -> list[PolarsExpr]: ...
+
+
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace,
@@ -140,7 +158,7 @@ def parse_into_exprs(
 ) -> ListOfCompliantExpr:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    return [  # type: ignore[return-value]
+    return [
         parse_into_expr(into_expr, namespace=namespace) for into_expr in flatten(exprs)
     ] + [
         parse_into_expr(expr, namespace=namespace).alias(name)

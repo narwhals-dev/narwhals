@@ -22,7 +22,11 @@ nav:
   - how_it_works.md
   - Roadmap: roadmap.md
   - Related projects: related.md
-  - API Completeness: api-completeness.md
+  - API Completeness:
+    - api-completeness/index.md
+    - api-completeness/dataframe.md
+    - api-completeness/expr.md
+    - api-completeness/series.md
   - API Reference:
     - api-reference/narwhals.md
     - api-reference/dataframe.md
