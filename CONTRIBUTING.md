@@ -127,8 +127,8 @@ Go to the forked repository on your GitHub account - you'll find it on your acco
 Click on the green `Code` button and navigate to the `Codespaces` tab.
 Click on the green button `Create codespace on main` - it will open a browser version of VSCode,
 with the complete repository and git installed. 
-You can now proceed with the step [4. Setting up your environment](https://github.com/narwhals-dev/narwhals/blob/c424c226fecba1a799e90b6ab59a76d7d9606896/CONTRIBUTING.md#4-setting-up-your-environment) up to 8. Pull request
-listed above in "Working with the local development environment".
+You can now proceed with the steps [4. Setting up your environment](https://github.com/narwhals-dev/narwhals/blob/c424c226fecba1a799e90b6ab59a76d7d9606896/CONTRIBUTING.md#4-setting-up-your-environment) up to [8. Pull request](https://github.com/narwhals-dev/narwhals/blob/4052abd24bf6db5d71c5562722f7283eba3420c7/CONTRIBUTING.md#8-pull-requests)
+listed above in [Working with local development environment](https://github.com/narwhals-dev/narwhals/blob/4052abd24bf6db5d71c5562722f7283eba3420c7/CONTRIBUTING.md#8-pull-requests).
 
 
 ## How it works
