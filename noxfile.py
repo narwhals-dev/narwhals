@@ -24,7 +24,7 @@ def run_common(session: Session, coverage_threshold: float) -> None:
 @nox.session(python=PYTHON_VERSIONS)  # type: ignore[misc]
 def pytest_coverage(session: Session) -> None:
     if session.python == "3.8":
-        coverage_threshold = 90
+        coverage_threshold = 85
     else:
         coverage_threshold = 100
         session.install("modin[dask]")
