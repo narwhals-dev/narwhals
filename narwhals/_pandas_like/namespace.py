@@ -288,7 +288,7 @@ class PandasWhen:
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
         from narwhals._expression_parsing import parse_into_expr
         from narwhals._pandas_like.namespace import PandasLikeNamespace
-        from narwhals._pandas_like.utils import broadcast_series
+        from narwhals._pandas_like.utils import validate_column_comparand
 
         plx = PandasLikeNamespace(
             implementation=self._implementation, backend_version=self._backend_version
@@ -300,26 +300,31 @@ class PandasWhen:
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             value_series = condition.__class__._from_iterable(
-                [self._then_value]*len(condition),
-                name='literal',
+                [self._then_value] * len(condition),
+                name="literal",
                 index=condition._native_series.index,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
 
+        value_series_native = value_series._native_series
+        condition_native = validate_column_comparand(value_series_native.index, condition)
+
         if self._otherwise_value is None:
             return [
                 value_series._from_native_series(
-                    value_series._native_series.where(condition._native_series)
+                    value_series_native.where(condition_native)
                 )
             ]
         try:
-            otherwise_series = parse_into_expr(self._otherwise_value, namespace=plx, pass_through=True)._call(df)[0]
+            otherwise_series = parse_into_expr(
+                self._otherwise_value, namespace=plx, pass_through=True
+            )._call(df)[0]
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [
                 value_series._from_native_series(
-                    value_series._native_series.where(condition._native_series, self._otherwise_value)
+                    value_series_native.where(condition_native, self._otherwise_value)
                 )
             ]
         else:
