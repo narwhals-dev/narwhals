@@ -154,7 +154,7 @@ class DaskNamespace:
         if how == "vertical":
             if not all(
                 tuple(i.columns) == tuple(native_frames[0].columns) for i in native_frames
-            ):
+            ):  # pragma: no cover
                 msg = "unable to vstack with non-matching columns"
                 raise AssertionError(msg)
             axis = 0
