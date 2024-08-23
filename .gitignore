@@ -5,6 +5,7 @@ todo.md
 site/
 .coverage.*
 .nox
+*.lock
 
 docs/api-completeness/*.md
 !docs/api-completeness/index.md
