@@ -7,7 +7,6 @@ from typing import Callable
 from typing import Iterable
 
 from narwhals import dtypes
-from narwhals import maybe_convert_dtypes
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
@@ -280,9 +279,10 @@ def _when_then_value_arg_process(
     elif np is not None and isinstance(value, np.ndarray):
         return plx._create_expr_from_series(plx._create_compliant_series(value))
     else:
-        return plx._create_expr_from_series(
-            plx._create_compliant_series(np.full(shape[0], value))
+        msg = (
+            "Cannot pass a scalar value to the `then` predicate of `when-then-otherwise`"
         )
+        raise TypeError(msg)
 
 
 class PandasWhen:
@@ -301,22 +301,33 @@ class PandasWhen:
         self._otherwise_value = otherwise_value
 
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+        from narwhals._expression_parsing import parse_into_expr
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         plx = PandasLikeNamespace(
             implementation=self._implementation, backend_version=self._backend_version
         )
 
+        # what if `condition` was a `Series`? do we handle that?
         condition = self._condition._call(df)[0]
 
-        value_series = _when_then_value_arg_process(
-            plx, self._then_value, shape=condition.shape
-        )._call(df)[0]
+        # strategy:
+        # - if it's a string, then parse it as `nw.col(self._then_value)`
+        # - if it's a scalar (e.g. int), then just leave it as a scalar
+        # - if it's an expression, then...resolve it!
+        breakpoint()
+        value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
+        if self._otherwise_value is None:
+            return [
+                value_series._from_native_series(
+                    value_series._native_series.where(condition._native_series)
+                )
+            ]
         otherwise_series = _when_then_value_arg_process(
             plx, self._otherwise_value, shape=condition.shape
         )._call(df)[0]
 
-        return [maybe_convert_dtypes(value_series.zip_with(condition, otherwise_series))]
+        return [value_series.zip_with(condition, otherwise_series)]
 
     def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value
