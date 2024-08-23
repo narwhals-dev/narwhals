@@ -72,12 +72,19 @@ class DaskLazyFrame:
         self,
         *predicates: DaskExpr,
     ) -> Self:
-        from narwhals._dask.namespace import DaskNamespace
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            mask = predicates[0]
+        else:
+            from narwhals._dask.namespace import DaskNamespace
 
-        plx = DaskNamespace(backend_version=self._backend_version)
-        expr = plx.all_horizontal(*predicates)
-        # Safety: all_horizontal's expression only returns a single column.
-        mask = expr._call(self)[0]
+            plx = DaskNamespace(backend_version=self._backend_version)
+            expr = plx.all_horizontal(*predicates)
+            # Safety: all_horizontal's expression only returns a single column.
+            mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
 
     def lazy(self) -> Self:

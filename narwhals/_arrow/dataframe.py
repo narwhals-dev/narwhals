@@ -63,6 +63,9 @@ class ArrowDataFrame:
     def __len__(self) -> int:
         return len(self._native_frame)
 
+    def row(self, index: int) -> tuple[Any, ...]:
+        return tuple(col[index] for col in self._native_frame)
+
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
@@ -377,11 +380,18 @@ class ArrowDataFrame:
         self,
         *predicates: IntoArrowExpr,
     ) -> Self:
-        plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(*predicates)
-        # Safety: all_horizontal's expression only returns a single column.
-        mask = expr._call(self)[0]
-        return self._from_native_frame(self._native_frame.filter(mask._native_series))
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            mask = predicates[0]
+        else:
+            plx = self.__narwhals_namespace__()
+            expr = plx.all_horizontal(*predicates)
+            # Safety: all_horizontal's expression only returns a single column.
+            mask = expr._call(self)[0]._native_series
+        return self._from_native_frame(self._native_frame.filter(mask))
 
     def null_count(self) -> Self:
         import pyarrow as pa  # ignore-banned-import()

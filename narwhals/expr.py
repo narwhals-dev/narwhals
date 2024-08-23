@@ -3657,7 +3657,8 @@ def col(*names: str | Iterable[str]) -> Expr:
     return Expr(func)
 
 
-def all() -> Expr:
+# Add underscore so it doesn't conflict with builtin `all`
+def all_() -> Expr:
     """
     Instantiate an expression representing all columns.
 
@@ -3696,7 +3697,8 @@ def all() -> Expr:
     return Expr(lambda plx: plx.all())
 
 
-def len() -> Expr:
+# Add underscore so it doesn't conflict with builtin `len`
+def len_() -> Expr:
     """
     Return the number of rows.
 

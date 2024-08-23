@@ -24,6 +24,9 @@ def test_non_string_name() -> None:
     result = nw.from_native(df, eager_only=True).get_column(0)  # type: ignore[arg-type]
     compare_dicts({"a": result}, {"a": [1, 2]})
     assert result.name == 0  # type: ignore[comparison-overlap]
-    with pytest.raises(TypeError, match="Expected str or slice"):
-        # Check that getitem would have raised
-        nw.from_native(df, eager_only=True)[0]  # type: ignore[call-overload]
+
+
+def test_get_single_row() -> None:
+    df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+    result = nw.from_native(df, eager_only=True)[0]  # type: ignore[call-overload]
+    compare_dicts(result, {"a": [1], "b": [3]})
