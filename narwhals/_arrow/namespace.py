@@ -178,6 +178,15 @@ class ArrowNamespace:
             [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
         )
 
+    def mean_horizontal(self, *exprs: IntoArrowExpr) -> IntoArrowExpr:
+        arrow_exprs = parse_into_exprs(*exprs, namespace=self)
+        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in arrow_exprs))
+        n_non_zero = reduce(
+            lambda x, y: x + y,
+            ((1 - e.is_null().cast(self.Int64())) for e in arrow_exprs),
+        )
+        return total / n_non_zero
+
     def concat(
         self,
         items: Iterable[ArrowDataFrame],
