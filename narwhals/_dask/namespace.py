@@ -156,7 +156,7 @@ class DaskNamespace:
                 tuple(i.columns) == tuple(native_frames[0].columns) for i in native_frames
             ):
                 msg = "unable to vstack with non-matching columns"
-                raise TypeError(msg)
+                raise AssertionError(msg)
             axis = 0
             join = "inner"
         elif how == "horizontal":
