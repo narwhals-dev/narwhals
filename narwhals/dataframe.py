@@ -2493,11 +2493,15 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             *exprs: Column(s) to select, specified as positional arguments.
-                     Accepts expression input. Strings are parsed as column names,
-                     other non-expression inputs are parsed as literals.
-
+                Accepts expression input. Strings are parsed as column names.
             **named_exprs: Additional columns to select, specified as keyword arguments.
-                            The columns will be renamed to the keyword used.
+                The columns will be renamed to the keyword used.
+
+        Notes:
+            If you'd like to select a column whose name isn't a string (for example,
+            if you're working with pandas) then you should explicitly use `nw.col` instead
+            of just passing the column name. For example, to select a column named
+            `0` use `df.select(nw.col(0))`, not `df.select(0)`.
 
         Examples:
             >>> import pandas as pd
