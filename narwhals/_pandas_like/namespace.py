@@ -15,10 +15,10 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
-    from narwhals.utils import Implementation
 
 
 class PandasLikeNamespace:
@@ -130,11 +130,17 @@ class PandasLikeNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasLikeExpr:
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
+            import cupy as np  # ignore-banned-import
+        else:
+            import numpy as np  # ignore-banned-import
+
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
+            native_frame = df._native_frame
             pandas_series = PandasLikeSeries._from_iterable(
-                data=[value],
+                data=np.full(native_frame.shape[0], value),
                 name="lit",
-                index=df._native_frame.index[0:1],
+                index=native_frame.index,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
@@ -202,7 +208,10 @@ class PandasLikeNamespace:
 
     # --- horizontal ---
     def sum_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
+        return reduce(
+            lambda x, y: x + y,
+            [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
+        )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
@@ -315,7 +324,7 @@ class PandasWhen:
         # - if it's a string, then parse it as `nw.col(self._then_value)`
         # - if it's a scalar (e.g. int), then just leave it as a scalar
         # - if it's an expression, then...resolve it!
-        # todo: raise if the evaluated expression has multiple outputs
+        # TODO: raise if the evaluated expression has multiple outputs
         value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]
         if self._otherwise_value is None:
             return [

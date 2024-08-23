@@ -22,6 +22,8 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
+from narwhals.dependencies import is_pandas_like_dataframe
+from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
@@ -261,21 +263,25 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         4  1
         5  2
     """
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
     df_any = cast(Any, df)
-    if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
+    native_frame = to_native(df_any)
+    if is_pandas_like_dataframe(native_frame):
         return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
             df_any._compliant_frame._from_native_frame(
-                df_any._compliant_frame._native_frame.set_index(column_names)
+                native_frame.set_index(column_names)
             )
         )
-    return df
+    return df_any  # type: ignore[no-any-return]
 
 
-def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
+def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
     """
     Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+
+    Arguments:
+        obj: DataFrame or Series.
+        *args: Additional arguments which gets passed through.
+        **kwargs: Additional arguments which gets passed through.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
@@ -298,34 +304,21 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         b           boolean
         dtype: object
     """
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.series import PandasLikeSeries
-
-    df_any = cast(Any, df)
-    if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
-        return cast(
-            T,
-            df_any._from_compliant_dataframe(
-                df_any._compliant_frame._from_native_frame(
-                    df_any._compliant_frame._native_frame.convert_dtypes(*args, **kwargs)
-                )
-            ),
+    obj_any = cast(Any, obj)
+    native_obj = to_native(obj_any)
+    if is_pandas_like_dataframe(native_obj):
+        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            obj_any._compliant_frame._from_native_frame(
+                native_obj.convert_dtypes(*args, **kwargs)
+            )
         )
-
-    if isinstance(df_any, PandasLikeSeries):
-        native_ser = df_any._native_series
-        ser = (  # pragma: no cover
-            native_ser.convert_dtypes(*args, **kwargs)
-            if getattr(native_ser, "convert_dtypes", None)
-            else native_ser.apply(lambda x: x)
+    if is_pandas_like_series(native_obj):
+        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+            obj_any._compliant_series._from_native_series(
+                native_obj.convert_dtypes(*args, **kwargs)
+            )
         )
-
-        return cast(
-            T,
-            df_any._from_native_series(ser),
-        )
-
-    return df
+    return obj_any  # type: ignore[no-any-return]
 
 
 def is_ordered_categorical(series: Series) -> bool:

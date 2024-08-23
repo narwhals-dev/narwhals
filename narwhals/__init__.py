@@ -1,3 +1,4 @@
+from narwhals import dependencies
 from narwhals import selectors
 from narwhals import stable
 from narwhals.dataframe import DataFrame
@@ -22,11 +23,11 @@ from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr
-from narwhals.expr import all
+from narwhals.expr import all_ as all
 from narwhals.expr import all_horizontal
 from narwhals.expr import any_horizontal
 from narwhals.expr import col
-from narwhals.expr import len
+from narwhals.expr import len_ as len
 from narwhals.expr import lit
 from narwhals.expr import max
 from narwhals.expr import mean
@@ -51,9 +52,10 @@ from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.5.3"
+__version__ = "1.5.4"
 
 __all__ = [
+    "dependencies",
     "selectors",
     "concat",
     "from_dict",

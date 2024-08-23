@@ -147,9 +147,9 @@ class ArrowNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> ArrowExpr:
-        def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
+        def _lit_arrow_series(df: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries._from_iterable(
-                data=[value],
+                data=[value] * len(df),
                 name="lit",
                 backend_version=self._backend_version,
             )
@@ -173,7 +173,10 @@ class ArrowNamespace:
         return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
 
     def sum_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(lambda x, y: x + y, parse_into_exprs(*exprs, namespace=self))
+        return reduce(
+            lambda x, y: x + y,
+            [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
+        )
 
     def mean_horizontal(self, *exprs: IntoArrowExpr) -> IntoArrowExpr:
         arrow_exprs = parse_into_exprs(*exprs, namespace=self)

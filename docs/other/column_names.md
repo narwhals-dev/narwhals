@@ -16,7 +16,7 @@ create one with _two_ such columns!
 What does Narwhals do about this?
 
 - In general, non-string column names are supported. In some places where this might
-  create ambiguity (such as `DataFrame.__getitem__`) we may be strict and only
+  create ambiguity (such as `DataFrame.__getitem__` or `DataFrame.select`) we may be strict and only
   allow passing in column names if they're strings.
 - If you have a use-case that's
   failing for non-string column names, please report it to [https://github.com/narwhals-dev/narwhals/issues](https://github.com/narwhals-dev/narwhals/issues)

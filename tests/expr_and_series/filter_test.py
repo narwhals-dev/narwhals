@@ -27,3 +27,6 @@ def test_filter_series(constructor_eager: Any) -> None:
     result = df.select(df["a"].filter((df["i"] < 2) & (df["c"] == 5)))
     expected = {"a": [0]}
     compare_dicts(result, expected)
+    result_s = df["a"].filter([True, False, False, False, False])
+    expected = {"a": [0]}
+    compare_dicts({"a": result_s}, expected)

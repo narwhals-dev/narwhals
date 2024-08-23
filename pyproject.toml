@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.5.3"
+version = "1.5.4"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -26,12 +26,12 @@ exclude = [
 ]
 
 [project.optional-dependencies]
-cudf = ["cudf>=23.08.00"]
+cudf = ["cudf>=23.08.00; python_version >= '3.9'"]
 modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
-pyarrow = ['pyarrow>=11.0.0']
-dask = ['dask[dataframe]>=2024.7']
+pyarrow = ["pyarrow>=11.0.0"]
+dask = ["dask[dataframe]>=2024.7; python_version >= '3.9'"]
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"

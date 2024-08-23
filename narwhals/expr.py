@@ -3657,7 +3657,8 @@ def col(*names: str | Iterable[str]) -> Expr:
     return Expr(func)
 
 
-def all() -> Expr:
+# Add underscore so it doesn't conflict with builtin `all`
+def all_() -> Expr:
     """
     Instantiate an expression representing all columns.
 
@@ -3696,7 +3697,8 @@ def all() -> Expr:
     return Expr(lambda plx: plx.all())
 
 
-def len() -> Expr:
+# Add underscore so it doesn't conflict with builtin `len`
+def len_() -> Expr:
     """
     Return the number of rows.
 
@@ -3903,17 +3905,22 @@ def max(*columns: str) -> Expr:
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
-    Sum all values horizontally across columns
+    Sum all values horizontally across columns.
+
+    Warning:
+        Unlike Polars, we support horizontal sum over numeric columns only.
 
     Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
 
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
-        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
-        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
 
         We define a dataframe-agnostic function:
 
@@ -3924,10 +3931,10 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
-            a
-        0   6
-        1  12
-        2  18
+              a
+        0   6.0
+        1  12.0
+        2   3.0
         >>> func(df_pl)
         shape: (3, 1)
         ┌─────┐
@@ -3937,7 +3944,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ╞═════╡
         │ 6   │
         │ 12  │
-        │ 18  │
+        │ 3   │
         └─────┘
     """
     return Expr(

@@ -10,6 +10,7 @@ from typing import TypeVar
 from typing import overload
 
 import narwhals as nw
+from narwhals import dependencies
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
@@ -1130,17 +1131,22 @@ def sum(*columns: str) -> Expr:
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
-    Sum all values horizontally across columns
+    Sum all values horizontally across columns.
+
+    Warning:
+        Unlike Polars, we support horizontal sum over numeric columns only.
 
     Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
 
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals.stable.v1 as nw
-        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
-        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
 
         We define a dataframe-agnostic function:
 
@@ -1151,10 +1157,10 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
-            a
-        0   6
-        1  12
-        2  18
+              a
+        0   6.0
+        1  12.0
+        2   3.0
         >>> func(df_pl)
         shape: (3, 1)
         ┌─────┐
@@ -1164,7 +1170,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ╞═════╡
         │ 6   │
         │ 12  │
-        │ 18  │
+        │ 3   │
         └─────┘
     """
     return _stableify(nw.sum_horizontal(*exprs))
@@ -1402,6 +1408,11 @@ def maybe_align_index(lhs: T, rhs: Series | DataFrame[Any] | LazyFrame[Any]) -> 
 def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     """
     Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+
+    Arguments:
+        obj: DataFrame or Series.
+        *args: Additional arguments which gets passed through.
+        **kwargs: Additional arguments which gets passed through.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
@@ -1660,6 +1671,7 @@ def from_dict(
 __all__ = [
     "selectors",
     "concat",
+    "dependencies",
     "to_native",
     "from_native",
     "is_ordered_categorical",

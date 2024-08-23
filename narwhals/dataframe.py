@@ -158,8 +158,13 @@ class BaseFrame(Generic[FrameT]):
             )
         )
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
-        predicates, _ = self._flatten_and_extract(*predicates)
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
+        if not (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            predicates, _ = self._flatten_and_extract(*predicates)
         return self._from_compliant_dataframe(
             self._compliant_frame.filter(*predicates),
         )
@@ -599,6 +604,8 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
+        if isinstance(item, int):
+            item = [item]
         if (
             isinstance(item, tuple)
             and len(item) == 2
@@ -692,6 +699,40 @@ class DataFrame(BaseFrame[FrameT]):
                 ).items()
             }
         return self._compliant_frame.to_dict(as_series=as_series)  # type: ignore[no-any-return]
+
+    def row(self, index: int) -> tuple[Any, ...]:
+        """
+        Get values at given row.
+
+        !!!note
+            You should NEVER use this method to iterate over a DataFrame;
+            if you require row-iteration you should strongly prefer use of iter_rows() instead.
+
+        Arguments:
+            index: Row number.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a library-agnostic function to get the second row.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.row(1)
+
+            We can then pass pandas / Polars / any other supported library:
+
+            >>> func(df_pd)
+            (2, 5)
+            >>> func(df_pl)
+            (2, 5)
+        """
+        return self._compliant_frame.row(index)  # type: ignore[no-any-return]
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
@@ -1483,14 +1524,15 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
         r"""
         Filter the rows in the DataFrame based on one or more predicate expressions.
 
         The original order of the remaining rows is preserved.
 
         Arguments:
-            predicates: Expression(s) that evaluates to a boolean Series.
+            *predicates: Expression(s) that evaluates to a boolean Series. Can
+                also be a (single!) boolean list.
 
         Examples:
             >>> import pandas as pd
@@ -2493,11 +2535,15 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             *exprs: Column(s) to select, specified as positional arguments.
-                     Accepts expression input. Strings are parsed as column names,
-                     other non-expression inputs are parsed as literals.
-
+                Accepts expression input. Strings are parsed as column names.
             **named_exprs: Additional columns to select, specified as keyword arguments.
-                            The columns will be renamed to the keyword used.
+                The columns will be renamed to the keyword used.
+
+        Notes:
+            If you'd like to select a column whose name isn't a string (for example,
+            if you're working with pandas) then you should explicitly use `nw.col` instead
+            of just passing the column name. For example, to select a column named
+            `0` use `df.select(nw.col(0))`, not `df.select(0)`.
 
         Examples:
             >>> import pandas as pd
@@ -2949,14 +2995,15 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
         r"""
         Filter the rows in the LazyFrame based on a predicate expression.
 
         The original order of the remaining rows is preserved.
 
         Arguments:
-            *predicates: Expression that evaluates to a boolean Series.
+            *predicates: Expression that evaluates to a boolean Series. Can
+                also be a (single!) boolean list.
 
         Examples:
             >>> import pandas as pd
