@@ -110,9 +110,7 @@ def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if (
-        "pyarrow_table" in str(constructor)
-        and is_windows()
-        and sys.version_info <= (3, 8)
+        "pyarrow_table" in str(constructor) and is_windows() and sys.version_info < (3, 9)
     ):  # pragma: no cover
         # seriously...
         request.applymarker(pytest.mark.xfail)
