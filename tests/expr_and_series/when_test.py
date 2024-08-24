@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from typing import Any
 
 import numpy as np
@@ -8,7 +7,6 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
-from tests.utils import is_windows
 
 data = {
     "a": [1, 2, 3],
@@ -108,11 +106,6 @@ def test_value_expression(request: Any, constructor: Any) -> None:
 
 def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
     if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if (
-        "pyarrow_table" in str(constructor) and is_windows() and sys.version_info < (3, 9)
-    ):  # pragma: no cover
-        # seriously...
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
