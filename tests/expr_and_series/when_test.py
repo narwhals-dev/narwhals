@@ -3,10 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
+from tests.utils import is_windows
 
 data = {
     "a": [1, 2, 3],
@@ -106,6 +109,13 @@ def test_value_expression(request: Any, constructor: Any) -> None:
 
 def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
     if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if (
+        "pyarrow_table" in str(constructor)
+        and is_windows()
+        and parse_version(pa.__version__) <= (11,)
+    ):  # pragma: no cover
+        # seriously...
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
