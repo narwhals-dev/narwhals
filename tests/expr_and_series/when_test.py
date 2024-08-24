@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 import numpy as np
@@ -7,6 +8,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
+from tests.utils import is_windows
 
 data = {
     "a": [1, 2, 3],
@@ -18,7 +20,7 @@ data = {
 
 
 def test_when(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -30,7 +32,7 @@ def test_when(request: Any, constructor: Any) -> None:
 
 
 def test_when_otherwise(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -42,7 +44,7 @@ def test_when_otherwise(request: Any, constructor: Any) -> None:
 
 
 def test_multiple_conditions(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -56,7 +58,7 @@ def test_multiple_conditions(request: Any, constructor: Any) -> None:
 
 
 def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -65,7 +67,7 @@ def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
 
 
 def test_value_numpy_array(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -80,10 +82,7 @@ def test_value_numpy_array(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_value_series(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
+def test_value_series(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data))
     s_data = {"s": [3, 4, 5]}
     s = nw.from_native(constructor_eager(s_data))["s"]
@@ -96,7 +95,7 @@ def test_value_series(request: Any, constructor_eager: Any) -> None:
 
 
 def test_value_expression(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -108,17 +107,19 @@ def test_value_expression(request: Any, constructor: Any) -> None:
 
 
 def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if (
+        "pyarrow_table" in str(constructor) and is_windows() and sys.version_info < (3, 9)
+    ):  # pragma: no cover
+        # seriously...
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     import numpy as np
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
-        .then(-1)
-        .otherwise(np.asanyarray([0, 9, 10]))
-        .alias("a_when")
+        nw.when(nw.col("a") == 1).then(-1).otherwise(np.array([0, 9, 10])).alias("a_when")
     )
     expected = {
         "a_when": [-1, 9, 10],
@@ -126,10 +127,7 @@ def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_otherwise_series(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
+def test_otherwise_series(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data))
     s_data = {"s": [0, 9, 10]}
     s = nw.from_native(constructor_eager(s_data))["s"]
@@ -142,7 +140,7 @@ def test_otherwise_series(request: Any, constructor_eager: Any) -> None:
 
 
 def test_otherwise_expression(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -156,7 +154,7 @@ def test_otherwise_expression(request: Any, constructor: Any) -> None:
 
 
 def test_when_then_otherwise_into_expr(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
