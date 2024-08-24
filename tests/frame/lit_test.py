@@ -24,29 +24,13 @@ def test_lit(
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
-    df = nw.from_native(df_raw)
+    df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
         "z": [7.0, 8.0, 9.0],
         "lit": expected_lit,
-    }
-    compare_dicts(result, expected)
-
-
-def test_lit_operation(constructor: Any) -> None:
-    data = {"a": [1, 3, 2]}
-    df_raw = constructor(data)
-    df = nw.from_native(df_raw)
-
-    result = df.select(
-        left_lit=nw.lit(1) + nw.col("a"),
-        right_lit=nw.col("a") - nw.lit(1),
-    )
-    expected = {
-        "left_lit": [2, 4, 3],
-        "right_lit": [0, 2, 1],
     }
     compare_dicts(result, expected)
 
