@@ -2,7 +2,50 @@
 
 Thank you for your interest in contributing to Narwhals! Any kind of improvement is welcome!
 
-## Setting up your environment
+## Local development vs Codespaces
+You can contribute to Narwhals in your local development environment, using python3, git and your editor of choice.
+You can also contribute to Narwhals using [Github Codespaces](https://docs.github.com/en/codespaces/overview) - a development environment that's hosted in the cloud.
+This way you can easily start to work from your browser without installing git and cloning the repo.
+Scroll down for instructions on how to use [Codespaces](https://github.com/narwhals-dev/narwhals/blob/c424c226fecba1a799e90b6ab59a76d7d9606896/CONTRIBUTING.md#working-with-codespaces).
+
+## Working with local development environment
+
+### 1. Make sure you have git on your machine and a GitHub account
+
+Open your terminal and run the following command:
+
+```bash
+git --version
+``` 
+
+If the output looks like `git version 2.34.1` and you have a personal account on GitHub - you're good to go to the next step.
+If the terminal output informs about `command not found` you need to [install git](https://docs.github.com/en/get-started/quickstart/set-up-git).
+
+If you're new to GitHub, you'll need to create an account on [GitHub.com](https://github.com/) and verify your email address.
+
+### 2. Fork the repository
+
+Go to the [main project page](https://github.com/narwhals-dev/narwhals).
+Fork the repository by clicking on the fork button. You can find it in the right corner on the top of the page.
+
+### 3. Clone the repository
+
+Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories. 
+Click on the green `Code` button and then click the `Copy url to clipboard` icon.
+Open a terminal, choose the directory where you would like to have Narwhals repository and run the following git command:
+
+```bash
+git clone <url you just copied>
+``` 
+
+for example:
+
+```bash
+git clone git@github.com:YOUR-USERNAME/narwhals.git
+```
+
+
+### 4. Setting up your environment
 
 Here's how you can set up your local development environment to contribute:
 
@@ -20,13 +63,13 @@ pre-commit install
 ```
 This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
-## Working on your issue
+### 5. Working on your issue
 
 Create a new git branch from the `main` branch in your local repository.
 Note that your work cannot be merged if the test below fail.
 If you add code that should be tested, please add tests.
 
-## Running tests
+### 6. Running tests
 
 To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`.
 To run tests on the docset-module, use `pytest narwhals --doctest-modules`.
@@ -42,13 +85,13 @@ nox
 
 Notice that nox will also require to have all the python versions that are defined in the `noxfile.py` installed in your system.
 
-## Building docs
+### 7. Building docs
 
 To build the docs, run `mkdocs serve`, and then open the link provided in a browser.
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then
 do `mkdocs build` and then `mkdocs serve`.
 
-## Pull requests
+### 8. Pull requests
 
 When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.
 
@@ -61,6 +104,32 @@ Please adhere to the following guidelines:
     <br>
 2. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
 3. Please follow the instructions in the pull request form and submit. 
+
+## Working with Codespaces
+Codespaces is a great way to work on Narwhals without the need of configuring your local development environment.
+Every GitHub.com user has a monthly quota of free use of GitHub Codespaces, and you can start working in a codespace without providing any payment details.
+You'll be informed per email if you'll be close to using 100% of included services.
+To learn more about it visit [GitHub Docs](https://docs.github.com/en/codespaces/overview)
+
+
+### 1. Make sure you have GitHub account
+
+If you're new to GitHub, you'll need to create an account on [GitHub.com](https://github.com/) and verify your email address.
+
+### 2. Fork the repository
+
+Go to the [main project page](https://github.com/narwhals-dev/narwhals).
+Fork the repository by clicking on the fork button. You can find it in the right corner on the top of the page.
+
+### 3. Create codespace 
+
+Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories. 
+Click on the green `Code` button and navigate to the `Codespaces` tab.
+Click on the green button `Create codespace on main` - it will open a browser version of VSCode,
+with the complete repository and git installed. 
+You can now proceed with the steps [4. Setting up your environment](https://github.com/narwhals-dev/narwhals/blob/c424c226fecba1a799e90b6ab59a76d7d9606896/CONTRIBUTING.md#4-setting-up-your-environment) up to [8. Pull request](https://github.com/narwhals-dev/narwhals/blob/4052abd24bf6db5d71c5562722f7283eba3420c7/CONTRIBUTING.md#8-pull-requests)
+listed above in [Working with local development environment](https://github.com/narwhals-dev/narwhals/blob/4052abd24bf6db5d71c5562722f7283eba3420c7/CONTRIBUTING.md#8-pull-requests).
+
 
 ## How it works
 
