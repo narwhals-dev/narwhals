@@ -13,6 +13,7 @@ data = {
     "b": ["a", "b", "c"],
     "c": [4.1, 5.0, 6.0],
     "d": [True, False, True],
+    "e": [7.0, 2.0, 1.1],
 }
 
 
@@ -151,4 +152,14 @@ def test_otherwise_expression(request: Any, constructor: Any) -> None:
     expected = {
         "a_when": [-1, 9, 10],
     }
+    compare_dicts(result, expected)
+
+
+def test_when_then_otherwise_into_expr(request: Any, constructor: Any) -> None:
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.when(nw.col("a") > 1).then("c").otherwise("e"))
+    expected = {"c": [7, 5, 6]}
     compare_dicts(result, expected)
