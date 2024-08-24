@@ -26,12 +26,12 @@ exclude = [
 ]
 
 [project.optional-dependencies]
-cudf = ["cudf>=23.08.00; python_version >= '3.9'"]
+cudf = ["cudf>=23.08.00"]
 modin = ["modin"]
 pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
 pyarrow = ["pyarrow>=11.0.0"]
-dask = ["dask[dataframe]>=2024.7; python_version >= '3.9'"]
+dask = ["dask[dataframe]>=2024.7"]
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"

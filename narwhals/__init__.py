@@ -35,6 +35,7 @@ from narwhals.expr import mean_horizontal
 from narwhals.expr import min
 from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
+from narwhals.expr import when
 from narwhals.functions import concat
 from narwhals.functions import from_dict
 from narwhals.functions import get_level
@@ -79,6 +80,7 @@ __all__ = [
     "mean_horizontal",
     "sum",
     "sum_horizontal",
+    "when",
     "DataFrame",
     "LazyFrame",
     "Series",

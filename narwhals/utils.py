@@ -276,7 +276,7 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
 
 def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
     """
-    Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
     Arguments:
         obj: DataFrame or Series.

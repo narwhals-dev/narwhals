@@ -34,6 +34,9 @@ from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr as NwExpr
+from narwhals.expr import Then as NwThen
+from narwhals.expr import When as NwWhen
+from narwhals.expr import when as nw_when
 from narwhals.functions import concat
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
@@ -1404,7 +1407,7 @@ def maybe_align_index(lhs: T, rhs: Series | DataFrame[Any] | LazyFrame[Any]) -> 
 
 def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     """
-    Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
 
     Arguments:
         obj: DataFrame or Series.
@@ -1491,6 +1494,72 @@ def get_level(
     - 'metadata': only metadata operations are supported (`df.schema`)
     """
     return nw.get_level(obj)
+
+
+class When(NwWhen):
+    @classmethod
+    def from_when(cls, when: NwWhen) -> Self:
+        return cls(*when._predicates)
+
+    def then(self, value: Any) -> Then:
+        return Then.from_then(super().then(value))
+
+
+class Then(NwThen, Expr):
+    @classmethod
+    def from_then(cls, then: NwThen) -> Self:
+        return cls(then._call)
+
+    def otherwise(self, value: Any) -> Expr:
+        return _stableify(super().otherwise(value))
+
+
+def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
+    """
+    Start a `when-then-otherwise` expression.
+
+    Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
+    Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
+    If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
+
+    Arguments:
+        predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.with_columns(
+        ...         nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
+        ...     )
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a   b  a_when
+        0  1   5       5
+        1  2  10       5
+        2  3  15       6
+        >>> func(df_pl)
+        shape: (3, 3)
+        ┌─────┬─────┬────────┐
+        │ a   ┆ b   ┆ a_when │
+        │ --- ┆ --- ┆ ---    │
+        │ i64 ┆ i64 ┆ i32    │
+        ╞═════╪═════╪════════╡
+        │ 1   ┆ 5   ┆ 5      │
+        │ 2   ┆ 10  ┆ 5      │
+        │ 3   ┆ 15  ┆ 6      │
+        └─────┴─────┴────────┘
+    """
+    return When.from_when(nw_when(*predicates))
 
 
 def new_series(
@@ -1624,6 +1693,7 @@ __all__ = [
     "mean_horizontal",
     "sum",
     "sum_horizontal",
+    "when",
     "DataFrame",
     "LazyFrame",
     "Series",

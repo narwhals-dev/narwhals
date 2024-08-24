@@ -3954,6 +3954,77 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
+class When:
+    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+        self._predicates = flatten([predicates])
+
+    def _extract_predicates(self, plx: Any) -> Any:
+        return [extract_compliant(plx, v) for v in self._predicates]
+
+    def then(self, value: Any) -> Then:
+        return Then(
+            lambda plx: plx.when(*self._extract_predicates(plx)).then(
+                extract_compliant(plx, value)
+            )
+        )
+
+
+class Then(Expr):
+    def __init__(self, call: Callable[[Any], Any]) -> None:
+        self._call = call
+
+    def otherwise(self, value: Any) -> Expr:
+        return Expr(lambda plx: self._call(plx).otherwise(extract_compliant(plx, value)))
+
+
+def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
+    """
+    Start a `when-then-otherwise` expression.
+
+    Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
+    Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
+    If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
+
+    Arguments:
+        predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df_any):
+        ...     return df_any.with_columns(
+        ...         nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
+        ...     )
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a   b  a_when
+        0  1   5       5
+        1  2  10       5
+        2  3  15       6
+        >>> func(df_pl)
+        shape: (3, 3)
+        ┌─────┬─────┬────────┐
+        │ a   ┆ b   ┆ a_when │
+        │ --- ┆ --- ┆ ---    │
+        │ i64 ┆ i64 ┆ i32    │
+        ╞═════╪═════╪════════╡
+        │ 1   ┆ 5   ┆ 5      │
+        │ 2   ┆ 10  ┆ 5      │
+        │ 3   ┆ 15  ┆ 6      │
+        └─────┴─────┴────────┘
+    """
+    return When(*predicates)
+
+
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     r"""
     Compute the bitwise AND horizontally across columns.

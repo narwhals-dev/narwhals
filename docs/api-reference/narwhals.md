@@ -29,6 +29,7 @@ Here are the top-level functions available in Narwhals.
         - new_series
         - sum
         - sum_horizontal
+        - when
         - show_versions
         - to_native
       show_source: false
