@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 import numpy as np
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 from tests.utils import is_windows
 
@@ -113,7 +112,7 @@ def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
     if (
         "pyarrow_table" in str(constructor)
         and is_windows()
-        and parse_version(pa.__version__) <= (11,)
+        and sys.version_info <= (3, 8)
     ):  # pragma: no cover
         # seriously...
         request.applymarker(pytest.mark.xfail)
