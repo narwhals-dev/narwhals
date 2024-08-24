@@ -15,10 +15,10 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
-from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
+    from narwhals.utils import Implementation
 
 
 class PandasLikeNamespace:
@@ -130,17 +130,11 @@ class PandasLikeNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasLikeExpr:
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
-            import cupy as np  # ignore-banned-import
-        else:
-            import numpy as np  # ignore-banned-import
-
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
-            native_frame = df._native_frame
             pandas_series = PandasLikeSeries._from_iterable(
-                data=np.full(native_frame.shape[0], value),
+                data=[value],
                 name="lit",
-                index=native_frame.index,
+                index=df._native_frame.index[0:1],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
