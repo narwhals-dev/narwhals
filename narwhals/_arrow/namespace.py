@@ -285,7 +285,7 @@ class ArrowWhen:
         value_series = cast(ArrowSeries, value_series)
 
         value_series_native = value_series._native_series
-        condition_native = pc.invert(condition._native_series.combine_chunks())
+        condition_native = condition._native_series.combine_chunks()
 
         if self._otherwise_value is None:
             otherwise_native = pa.array(
@@ -293,9 +293,7 @@ class ArrowWhen:
             )
             return [
                 value_series._from_native_series(
-                    pc.replace_with_mask(
-                        value_series_native, condition_native, otherwise_native
-                    )
+                    pc.if_else(condition_native, value_series_native, otherwise_native)
                 )
             ]
         try:
@@ -306,8 +304,8 @@ class ArrowWhen:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [
                 value_series._from_native_series(
-                    pc.replace_with_mask(
-                        value_series_native, condition_native, self._otherwise_value
+                    pc.if_else(
+                        condition_native, value_series_native, self._otherwise_value
                     )
                 )
             ]
