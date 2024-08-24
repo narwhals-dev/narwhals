@@ -490,11 +490,12 @@ class ArrowSeries:
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
+        mask = pc.invert(mask._native_series.combine_chunks())
         return self._from_native_series(
             pc.replace_with_mask(
-                self._native_series.combine_chunks(),
-                pc.invert(mask._native_series.combine_chunks()),
-                other._native_series.combine_chunks(),
+                self._native_series,
+                mask,
+                other._native_series.combine_chunks().filter(mask),
             )
         )
 
