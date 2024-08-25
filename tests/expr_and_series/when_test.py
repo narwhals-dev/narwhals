@@ -17,10 +17,7 @@ data = {
 }
 
 
-def test_when(request: Any, constructor: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_when(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(value=3).alias("a_when"))
     expected = {
