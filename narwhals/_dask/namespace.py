@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import NoReturn
+from typing import cast
 
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
@@ -205,11 +206,11 @@ class DaskWhen:
     def __call__(self, df: DaskLazyFrame) -> list[Any]:
         from narwhals._dask.namespace import DaskNamespace
         from narwhals._expression_parsing import parse_into_expr
-        # from narwhals._dask.utils import validate_column_comparand
 
         plx = DaskNamespace(backend_version=self._backend_version)
 
         condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        condition = cast(Any, condition)
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
         except TypeError:
@@ -217,6 +218,7 @@ class DaskWhen:
             _df = condition.to_frame("a")
             _df["tmp"] = self._then_value
             value_series = _df["tmp"]
+        value_series = cast(Any, value_series)
 
         if self._otherwise_value is None:
             return [value_series.where(condition)]
@@ -230,7 +232,7 @@ class DaskWhen:
         else:
             return [value_series.zip_with(condition, otherwise_series)]
 
-    def then(self, value: DaskExpr | DaskSeries | Any) -> DaskThen:
+    def then(self, value: DaskExpr | Any) -> DaskThen:
         self._then_value = value
 
         return DaskThen(
@@ -265,7 +267,7 @@ class DaskThen(DaskExpr):
         self._output_names = output_names
         self._returns_scalar = returns_scalar
 
-    def otherwise(self, value: DaskExpr | DaskSeries | Any) -> DaskExpr:
+    def otherwise(self, value: DaskExpr | Any) -> DaskExpr:
         # type ignore because we are setting the `_call` attribute to a
         # callable object of type `DaskWhen`, base class has the attribute as
         # only a `Callable`
