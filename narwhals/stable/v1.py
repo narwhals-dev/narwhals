@@ -43,7 +43,6 @@ from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import narwhalify as nw_narwhalify
 from narwhals.translate import to_native
-from narwhals.typing import FrameT
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
@@ -61,6 +60,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
 
 T = TypeVar("T")
+FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
