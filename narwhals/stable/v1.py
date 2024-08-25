@@ -603,8 +603,8 @@ def from_native(
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_or_interchange_only=True, allow_series=True)
-    from_native(df, eager_or_interchange_only=True, allow_series=True)
+    from_native(df, strict=True, eager_or_interchange_only=True)
+    from_native(df, eager_or_interchange_only=True)
     """
 
 
@@ -619,8 +619,8 @@ def from_native(
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_only=True, allow_series=True)
-    from_native(df, eager_only=True, allow_series=True)
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
     """
 
 
@@ -635,8 +635,8 @@ def from_native(
     allow_series: Literal[True],
 ) -> DataFrame[Any] | LazyFrame[Any] | Series:
     """
-    from_native(df, strict=True, eager_only=True)
-    from_native(df, eager_only=True)
+    from_native(df, strict=True, allow_series=True)
+    from_native(df, allow_series=True)
     """
 
 
