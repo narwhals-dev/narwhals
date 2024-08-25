@@ -26,10 +26,7 @@ def test_when(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_when_otherwise(request: Any, constructor: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_when_otherwise(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(3).otherwise(6).alias("a_when"))
     expected = {
@@ -38,10 +35,7 @@ def test_when_otherwise(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_multiple_conditions(request: Any, constructor: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_multiple_conditions(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when")
@@ -52,10 +46,7 @@ def test_multiple_conditions(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_no_arg_when_fail(request: Any, constructor: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_no_arg_when_fail(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     with pytest.raises((TypeError, ValueError)):
         df.select(nw.when().then(value=3).alias("a_when"))
@@ -89,10 +80,7 @@ def test_value_series(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_value_expression(request: Any, constructor: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_value_expression(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(nw.col("a") + 9).alias("a_when"))
     expected = {
