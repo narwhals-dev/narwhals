@@ -18,9 +18,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
             msg = "Multi-output expressions not supported in this context"
             raise NotImplementedError(msg)
         result = results[0]
-        if not validate_comparand(df._native_frame, result):  # pragma: no cover
-            msg = "Implicit index alignment is not support for Dask DataFrame in Narwhals"
-            raise NotImplementedError(msg)
+        validate_comparand(df._native_frame, result)
         if obj._returns_scalar:
             # Return scalar, let Dask do its broadcasting
             return result[0]
