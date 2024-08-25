@@ -4,9 +4,14 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.dependencies import get_dask_expr
+from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_pyarrow
+from narwhals.utils import isinstance_or_issubclass
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals.dtypes import DType
 
 
 def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
@@ -73,3 +78,47 @@ def parse_exprs_and_named_exprs(
 def add_row_index(frame: Any, name: str) -> Any:
     frame = frame.assign(**{name: 1})
     return frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1})
+
+
+def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
+    from narwhals import dtypes
+
+    if isinstance_or_issubclass(dtype, dtypes.Float64):
+        return "float64"
+    if isinstance_or_issubclass(dtype, dtypes.Float32):
+        return "float32"
+    if isinstance_or_issubclass(dtype, dtypes.Int64):
+        return "int64"
+    if isinstance_or_issubclass(dtype, dtypes.Int32):
+        return "int32"
+    if isinstance_or_issubclass(dtype, dtypes.Int16):
+        return "int16"
+    if isinstance_or_issubclass(dtype, dtypes.Int8):
+        return "int8"
+    if isinstance_or_issubclass(dtype, dtypes.UInt64):
+        return "uint64"
+    if isinstance_or_issubclass(dtype, dtypes.UInt32):
+        return "uint32"
+    if isinstance_or_issubclass(dtype, dtypes.UInt16):
+        return "uint16"
+    if isinstance_or_issubclass(dtype, dtypes.UInt8):
+        return "uint8"
+    if isinstance_or_issubclass(dtype, dtypes.String):
+        if (pd := get_pandas()) is not None and parse_version(
+            pd.__version__
+        ) >= parse_version("2.0.0"):
+            if get_pyarrow() is not None:
+                return "string[pyarrow]"
+            return "string[python]"  # pragma: no cover
+        return "object"  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Boolean):
+        return "bool"
+    if isinstance_or_issubclass(dtype, dtypes.Categorical):
+        return "category"
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        return "datetime64[us]"
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        return "timedelta64[ns]"
+
+    msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+    raise AssertionError(msg)

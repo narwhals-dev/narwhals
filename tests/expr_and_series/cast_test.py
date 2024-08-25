@@ -47,8 +47,6 @@ schema = {
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
 def test_cast(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
@@ -98,17 +96,21 @@ def test_cast(constructor: Any, request: Any) -> None:
     assert dict(result.collect_schema()) == expected
 
 
-def test_cast_series(constructor_eager: Any, request: Any) -> None:
-    if "pyarrow_table_constructor" in str(constructor_eager) and parse_version(
+def test_cast_series(constructor: Any, request: Any) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor_eager):
+    if "modin" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_eager(data), eager_only=True).select(
-        nw.col(key).cast(value) for key, value in schema.items()
+    df = (
+        nw.from_native(constructor(data))
+        .select(nw.col(key).cast(value) for key, value in schema.items())
+        .lazy()
+        .collect()
     )
+
     expected = {
         "a": nw.Int32,
         "b": nw.Int16,
@@ -158,3 +160,22 @@ def test_cast_string() -> None:
     s = s.cast(nw.String)
     result = nw.to_native(s)
     assert str(result.dtype) in ("string", "object", "dtype('O')")
+
+
+def test_cast_raises_for_unknown_dtype(constructor: Any, request: Any) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and parse_version(
+        pa.__version__
+    ) <= (15,):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data)).select(
+        nw.col(key).cast(value) for key, value in schema.items()
+    )
+
+    class Banana:
+        pass
+
+    with pytest.raises(AssertionError, match=r"Unknown dtype"):
+        df.select(nw.col("a").cast(Banana))
