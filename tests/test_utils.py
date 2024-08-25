@@ -70,11 +70,17 @@ def test_maybe_get_index_pandas() -> None:
     pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
     result = nw.maybe_get_index(nw.from_native(pandas_df))
     assert_index_equal(result, pandas_df.index)
+    pandas_series = pd.Series([1, 2, 3], index=[1, 2, 0])
+    result_s = nw.maybe_get_index(nw.from_native(pandas_series, series_only=True))
+    assert_index_equal(result_s, pandas_series.index)
 
 
 def test_maybe_get_index_polars() -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = nw.maybe_get_index(df)
+    assert result is None
+    series = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
+    result = nw.maybe_get_index(series)
     assert result is None
 
 

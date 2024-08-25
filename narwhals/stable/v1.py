@@ -1439,9 +1439,9 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     return nw_maybe_convert_dtypes(df, *args, **kwargs)
 
 
-def maybe_get_index(df: T) -> Any | None:
+def maybe_get_index(obj: T) -> Any | None:
     """
-    Get the index of `df`, if `df` is pandas-like.
+    Get the index of a DataFrame or a Series, if it's pandas-like.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -1458,8 +1458,12 @@ def maybe_get_index(df: T) -> Any | None:
         >>> df = nw.from_native(df_pd)
         >>> nw.maybe_get_index(df)
         RangeIndex(start=0, stop=2, step=1)
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
     """
-    return nw_maybe_get_index(df)
+    return nw_maybe_get_index(obj)
 
 
 def maybe_set_index(df: T, column_names: str | list[str]) -> T:

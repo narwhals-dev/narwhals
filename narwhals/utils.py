@@ -240,9 +240,9 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     return lhs
 
 
-def maybe_get_index(df: T) -> Any | None:
+def maybe_get_index(obj: T) -> Any | None:
     """
-    Get the index of `df`, if `df` is pandas-like.
+    Get the index of a DataFrame or a Series, if it's pandas-like.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -259,11 +259,15 @@ def maybe_get_index(df: T) -> Any | None:
         >>> df = nw.from_native(df_pd)
         >>> nw.maybe_get_index(df)
         RangeIndex(start=0, stop=2, step=1)
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
     """
-    df_any = cast(Any, df)
-    native_frame = to_native(df_any)
-    if is_pandas_like_dataframe(native_frame):
-        return native_frame.index
+    obj_any = cast(Any, obj)
+    native_obj = to_native(obj_any)
+    if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
+        return native_obj.index
     return None
 
 
