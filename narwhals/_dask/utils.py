@@ -6,6 +6,8 @@ from typing import Any
 from narwhals.dependencies import get_dask_expr
 
 if TYPE_CHECKING:
+    import dask_expr
+
     from narwhals._dask.dataframe import DaskLazyFrame
 
 
@@ -73,3 +75,11 @@ def parse_exprs_and_named_exprs(
 def add_row_index(frame: Any, name: str) -> Any:
     frame = frame.assign(**{name: 1})
     return frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1})
+
+
+def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
+    import dask_expr  # ignore-banned-import
+
+    if not dask_expr._expr.are_co_aligned(lhs._expr, rhs._expr):
+        msg = "Objects are not co-aligned, so this operation is not supported for Dask backend"
+        raise RuntimeError(msg)

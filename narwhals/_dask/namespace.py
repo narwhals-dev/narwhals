@@ -10,6 +10,7 @@ from typing import cast
 from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
@@ -221,6 +222,7 @@ class DaskWhen:
             _df["tmp"] = self._then_value
             value_series = _df["tmp"]
         value_series = cast("dask_expr.Series", value_series)
+        validate_comparand(condition, value_series)
 
         if self._otherwise_value is None:
             return [value_series.where(condition)]
@@ -231,8 +233,8 @@ class DaskWhen:
         except TypeError:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [value_series.where(condition, self._otherwise_value)]
-        else:
-            return [value_series.zip_with(condition, otherwise_series)]
+        validate_comparand(condition, otherwise_series)
+        return [value_series.zip_with(condition, otherwise_series)]
 
     def then(self, value: DaskExpr | Any) -> DaskThen:
         self._then_value = value
