@@ -37,13 +37,13 @@ from narwhals.expr import Expr as NwExpr
 from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
 from narwhals.expr import when as nw_when
-from narwhals.functions import concat
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import narwhalify as nw_narwhalify
 from narwhals.translate import to_native
+from narwhals.typing import FrameT
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
@@ -1336,6 +1336,14 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         └─────┘
     """
     return _stableify(nw.mean_horizontal(*exprs))
+
+
+def concat(
+    items: Iterable[FrameT],
+    *,
+    how: Literal["horizontal", "vertical"] = "vertical",
+) -> FrameT:
+    return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
 
 
 def is_ordered_categorical(series: Series) -> bool:
