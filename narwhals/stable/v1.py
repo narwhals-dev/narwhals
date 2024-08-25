@@ -60,7 +60,6 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
 
 T = TypeVar("T")
-FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
@@ -1338,11 +1337,27 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.mean_horizontal(*exprs))
 
 
+@overload
 def concat(
-    items: Iterable[FrameT],
+    items: Iterable[NwDataFrame[Any]],
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
-) -> FrameT:
+) -> DataFrame[Any]: ...
+
+
+@overload
+def concat(
+    items: Iterable[NwLazyFrame[Any]],
+    *,
+    how: Literal["horizontal", "vertical"] = "vertical",
+) -> LazyFrame[Any]: ...
+
+
+def concat(
+    items: Iterable[NwDataFrame[Any] | NwLazyFrame[Any]],
+    *,
+    how: Literal["horizontal", "vertical"] = "vertical",
+) -> DataFrame[Any] | LazyFrame[Any]:
     return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
 
 
