@@ -21,6 +21,7 @@ Here are the top-level functions available in Narwhals.
         - max
         - maybe_align_index
         - maybe_convert_dtypes
+        - maybe_get_index
         - maybe_set_index
         - mean
         - mean_horizontal

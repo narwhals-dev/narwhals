@@ -49,6 +49,7 @@ from narwhals.typing import IntoFrameT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
+from narwhals.utils import maybe_get_index as nw_maybe_get_index
 from narwhals.utils import maybe_set_index as nw_maybe_set_index
 
 if TYPE_CHECKING:
@@ -1436,6 +1437,29 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         dtype: object
     """
     return nw_maybe_convert_dtypes(df, *args, **kwargs)
+
+
+def maybe_get_index(df: T) -> Any | None:
+    """
+    Get the index of `df`, if `df` is pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already aligns indices for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this returns `None`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+        >>> df = nw.from_native(df_pd)
+        >>> nw.maybe_get_index(df)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    return nw_maybe_get_index(df)
 
 
 def maybe_set_index(df: T, column_names: str | list[str]) -> T:

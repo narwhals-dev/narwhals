@@ -240,6 +240,33 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     return lhs
 
 
+def maybe_get_index(df: T) -> Any | None:
+    """
+    Get the index of `df`, if `df` is pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already aligns indices for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this returns `None`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+        >>> df = nw.from_native(df_pd)
+        >>> nw.maybe_get_index(df)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    df_any = cast(Any, df)
+    native_frame = to_native(df_any)
+    if is_pandas_like_dataframe(native_frame):
+        return native_frame.index
+    return None
+
+
 def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     """
     Set columns `columns` to be the index of `df`, if `df` is pandas-like.

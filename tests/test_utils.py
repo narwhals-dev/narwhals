@@ -2,6 +2,7 @@ import pandas as pd
 import polars as pl
 import pytest
 from pandas.testing import assert_frame_equal
+from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
@@ -63,6 +64,18 @@ def test_maybe_set_index_polars() -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, "b")
     assert result is df
+
+
+def test_maybe_get_index_pandas() -> None:
+    pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
+    result = nw.maybe_get_index(nw.from_native(pandas_df))
+    assert_index_equal(result, pandas_df.index)
+
+
+def test_maybe_get_index_polars() -> None:
+    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    result = nw.maybe_get_index(df)
+    assert result is None
 
 
 @pytest.mark.skipif(
