@@ -160,7 +160,7 @@ class DaskNamespace:
             axis = 0
             join = "inner"
         elif how == "horizontal":
-            all_column_names: list[str] = list(chain(*[i.columns for i in native_frames]))
+            all_column_names: list[str] = [column for frame in native_frames for column in frame.columns]
             if len(all_column_names) != len(set(all_column_names)):
                 duplicates = [
                     i for i in all_column_names if all_column_names.count(i) > 1
