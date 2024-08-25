@@ -13,6 +13,8 @@ from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
+    import dask_expr
+
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.typing import IntoDaskExpr
 
@@ -210,7 +212,7 @@ class DaskWhen:
         plx = DaskNamespace(backend_version=self._backend_version)
 
         condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
-        condition = cast(Any, condition)
+        condition = cast("dask_expr.Series", condition)
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
         except TypeError:
@@ -218,7 +220,7 @@ class DaskWhen:
             _df = condition.to_frame("a")
             _df["tmp"] = self._then_value
             value_series = _df["tmp"]
-        value_series = cast(Any, value_series)
+        value_series = cast("dask_expr.Series", value_series)
 
         if self._otherwise_value is None:
             return [value_series.where(condition)]
