@@ -1702,6 +1702,7 @@ __all__ = [
     "is_ordered_categorical",
     "maybe_align_index",
     "maybe_convert_dtypes",
+    "maybe_get_index",
     "maybe_set_index",
     "get_native_namespace",
     "get_level",
