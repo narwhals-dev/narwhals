@@ -254,7 +254,7 @@ def maybe_get_index(df: T) -> Any | None:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import narwhals.stable.v1 as nw
+        >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
         >>> df = nw.from_native(df_pd)
         >>> nw.maybe_get_index(df)
