@@ -11,8 +11,10 @@ nav:
     - basics/dataframe.md
     - basics/column.md
     - basics/complete_example.md
-  - Other concepts:
+  - Pandas-like concepts:
     - other/pandas_index.md
+    - other/user_warning.md
+    - other/column_names.md
   - levels.md
   - overhead.md
   - backcompat.md
@@ -20,7 +22,11 @@ nav:
   - how_it_works.md
   - Roadmap: roadmap.md
   - Related projects: related.md
-  - API Completeness: api-completeness.md
+  - API Completeness:
+    - api-completeness/index.md
+    - api-completeness/dataframe.md
+    - api-completeness/expr.md
+    - api-completeness/series.md
   - API Reference:
     - api-reference/narwhals.md
     - api-reference/dataframe.md
@@ -44,12 +50,15 @@ nav:
 theme:
   name: material
   font: false
+  favicon: assets/image.png
+  logo: assets/image.png
   features:
     - content.code.copy
     - content.code.annotate
     - navigation.footer
     - navigation.indexes
-  palette:
+    - navigation.top
+  palette:   
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
       toggle:

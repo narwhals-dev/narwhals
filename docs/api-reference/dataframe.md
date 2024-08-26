@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - __arrow_c_stream__
         - __getitem__
         - clone
         - collect_schema
@@ -25,18 +26,21 @@
         - null_count
         - pipe
         - rename
+        - row
         - rows
         - schema
         - select
         - shape
         - sort
         - tail
+        - to_arrow
         - to_dict
         - to_numpy
         - to_pandas
         - unique
         - with_columns
         - with_row_index
+        - write_csv
         - write_parquet
       show_source: false
       show_bases: false

@@ -6,14 +6,13 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 
-from narwhals.dependencies import get_numpy
-from narwhals.dtypes import DType
-from narwhals.dtypes import translate_dtype
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals.dtypes import DType
     from narwhals.typing import IntoExpr
 
 
@@ -77,6 +76,47 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        """
+        Pipe function call.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 2, 3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Lets define a library-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").pipe(lambda x: x + 1))
+
+            We can then pass any supported library:
+
+            >>> func(df_pd)
+               a
+            0  2
+            1  3
+            2  4
+            3  5
+            >>> func(df_pl)
+            shape: (4, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 2   │
+            │ 3   │
+            │ 4   │
+            │ 5   │
+            └─────┘
+        """
+        return function(self, *args, **kwargs)
+
     def cast(
         self,
         dtype: Any,
@@ -122,9 +162,8 @@ class Expr:
             │ 3.0 ┆ 8   │
             └─────┴─────┘
         """
-
         return self.__class__(
-            lambda plx: self._call(plx).cast(translate_dtype(plx, dtype)),
+            lambda plx: self._call(plx).cast(dtype),
         )
 
     # --- binary ---
@@ -459,7 +498,6 @@ class Expr:
             │ 1   ┆ 3   │
             └─────┴─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).min())
 
     def max(self) -> Self:
@@ -1076,8 +1114,8 @@ class Expr:
 
             >>> func(df_pd)
                a
-            0  1
-            1  2
+            1  1
+            2  2
             >>> func(df_pl)
             shape: (2, 1)
             ┌─────┐
@@ -1309,13 +1347,13 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                    a      b
             0   True   True
             1  False   True
             2  False  False
             3   True  False
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌───────┬───────┐
             │ a     ┆ b     │
@@ -1350,13 +1388,13 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                    a      b
             0  False  False
             1   True  False
             2   True   True
             3  False   True
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌───────┬───────┐
             │ a     ┆ b     │
@@ -1369,7 +1407,6 @@ class Expr:
             │ false ┆ true  │
             └───────┴───────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).is_unique())
 
     def null_count(self) -> Self:
@@ -1431,13 +1468,13 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                    a      b
             0   True   True
             1   True  False
             2   True   True
             3  False   True
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌───────┬───────┐
             │ a     ┆ b     │
@@ -1471,13 +1508,13 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                    a      b
             0  False  False
             1   True   True
             2   True   True
             3   True   True
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌───────┬───────┐
             │ a     ┆ b     │
@@ -1500,7 +1537,9 @@ class Expr:
         r"""Get quantile value.
 
         Note:
-            pandas and Polars may have implementation differences for a given interpolation method.
+            * pandas and Polars may have implementation differences for a given interpolation method.
+            * [dask](https://docs.dask.org/en/stable/generated/dask.dataframe.Series.quantile.html) has its own method to approximate quantile and it doesn't implement 'nearest', 'higher', 'lower', 'midpoint'
+            as interpolation method - use 'linear' which is closest to the native 'dask' - method.
 
         Arguments:
             quantile : float
@@ -1524,11 +1563,11 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
-                a   b
+            >>> func(df_pd)
+                  a     b
             0  24.5  74.5
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (1, 2)
             ┌──────┬──────┐
             │ a    ┆ b    │
@@ -1566,12 +1605,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                a
             0  0
             1  1
             2  2
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -1583,7 +1622,6 @@ class Expr:
             │ 2   │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).head(n))
 
     def tail(self, n: int = 10) -> Self:
@@ -1610,12 +1648,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
-                 a
+            >>> func(df_pd)
+               a
             7  7
             8  8
             9  9
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -1627,7 +1665,6 @@ class Expr:
             │ 9   │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).tail(n))
 
     def round(self, decimals: int = 0) -> Self:
@@ -1638,12 +1675,12 @@ class Expr:
             decimals: Number of decimals to round by.
 
         Notes:
-            For values exactly halfway between rounded decimal values pandas and Polars behave differently.
+            For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
 
             pandas rounds to the nearest even value (e.g. -0.5 and 0.5 round to 0.0, 1.5 and 2.5 round to 2.0, 3.5 and
             4.5 to 4.0, etc..).
 
-            Polars rounds away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
+            Polars and Arrow round away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
 
 
         Examples:
@@ -1662,12 +1699,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                  a
             0  1.1
             1  2.6
             2  3.9
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -1679,7 +1716,6 @@ class Expr:
             │ 3.9 │
             └─────┘
         """
-
         return self.__class__(lambda plx: self._call(plx).round(decimals))
 
     def len(self) -> Self:
@@ -1707,10 +1743,10 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
-                a1  a2
-            0    2   1
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
+               a1  a2
+            0   2   1
+            >>> func(df_pl)
             shape: (1, 2)
             ┌─────┬─────┐
             │ a1  ┆ a2  │
@@ -1764,6 +1800,118 @@ class Expr:
         return self.__class__(
             lambda plx: self._call(plx).gather_every(n=n, offset=offset)
         )
+
+    # need to allow numeric typing
+    # TODO @aivanoved: make type alias for numeric type
+    def clip(
+        self,
+        lower_bound: Any | None = None,
+        upper_bound: Any | None = None,
+    ) -> Self:
+        r"""
+        Clip values in the Series.
+
+        Arguments:
+            lower_bound: Lower bound value.
+            upper_bound: Upper bound value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s = [1, 2, 3]
+            >>> df_pd = pd.DataFrame({"s": s})
+            >>> df_pl = pl.DataFrame({"s": s})
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_lower(df):
+            ...     return df.select(nw.col("s").clip(2))
+
+            We can then pass either pandas or Polars to `func_lower`:
+
+            >>> func_lower(df_pd)
+               s
+            0  2
+            1  2
+            2  3
+            >>> func_lower(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ s   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 2   │
+            │ 2   │
+            │ 3   │
+            └─────┘
+
+            We define another library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_upper(df):
+            ...     return df.select(nw.col("s").clip(upper_bound=2))
+
+            We can then pass either pandas or Polars to `func_upper`:
+
+            >>> func_upper(df_pd)
+               s
+            0  1
+            1  2
+            2  2
+            >>> func_upper(df_pl)
+            shape: (3, 1)
+            ┌─────┐
+            │ s   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            │ 2   │
+            │ 2   │
+            └─────┘
+
+            We can have both at the same time
+
+            >>> s = [-1, 1, -3, 3, -5, 5]
+            >>> df_pd = pd.DataFrame({"s": s})
+            >>> df_pl = pl.DataFrame({"s": s})
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("s").clip(-1, 3))
+
+            We can pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               s
+            0 -1
+            1  1
+            2 -1
+            3  3
+            4 -1
+            5  3
+            >>> func(df_pl)
+            shape: (6, 1)
+            ┌─────┐
+            │ s   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ -1  │
+            │ 1   │
+            │ -1  │
+            │ 3   │
+            │ -1  │
+            │ 3   │
+            └─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).clip(lower_bound, upper_bound))
 
     @property
     def str(self: Self) -> ExprStringNamespace:
@@ -1832,6 +1980,121 @@ class ExprCatNamespace:
 class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
+
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> Expr:
+        r"""
+        Replace first matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+            n: Number of matches to replace.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"foo": ["123abc", "abc abc123"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     df = df.with_columns(replaced=nw.col("foo").str.replace("abc", ""))
+            ...     return df.to_dict(as_series=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' abc123']}
+
+            >>> func(df_pl)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' abc123']}
+
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.replace(
+                pattern, value, literal=literal, n=n
+            )
+        )
+
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
+        r"""
+        Replace all matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"foo": ["123abc", "abc abc123"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     df = df.with_columns(replaced=nw.col("foo").str.replace_all("abc", ""))
+            ...     return df.to_dict(as_series=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' 123']}
+
+            >>> func(df_pl)
+            {'foo': ['123abc', 'abc abc123'], 'replaced': ['123', ' 123']}
+
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.replace_all(
+                pattern, value, literal=literal
+            )
+        )
+
+    def strip_chars(self, characters: str | None = None) -> Expr:
+        r"""
+        Remove leading and trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"fruits": ["apple", "\nmango"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     df = df.with_columns(stripped=nw.col("fruits").str.strip_chars())
+            ...     return df.to_dict(as_series=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+            {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
+
+            >>> func(df_pl)
+            {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).str.strip_chars(characters)
+        )
 
     def starts_with(self, prefix: str) -> Expr:
         r"""
@@ -1975,7 +2238,6 @@ class ExprStringNamespace:
             │ null              ┆ null          ┆ null                   ┆ null          │
             └───────────────────┴───────────────┴────────────────────────┴───────────────┘
         """
-
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
         )
@@ -2012,7 +2274,7 @@ class ExprStringNamespace:
             2       papaya       ya
             3  dragonfruit      onf
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌─────────────┬──────────┐
             │ s           ┆ s_sliced │
@@ -2031,14 +2293,14 @@ class ExprStringNamespace:
             ... def func(df):
             ...     return df.with_columns(s_sliced=nw.col("s").str.slice(-3))
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pd)
                          s s_sliced
             0         pear      ear
             1         None     None
             2       papaya      aya
             3  dragonfruit      uit
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (4, 2)
             ┌─────────────┬──────────┐
             │ s           ┆ s_sliced │
@@ -2225,8 +2487,8 @@ class ExprStringNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
-               fruits upper_col
+            >>> func(df_pd)
+              fruits upper_col
             0  apple     APPLE
             1  mango     MANGO
             2   None      None
@@ -2266,13 +2528,13 @@ class ExprStringNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
-              fruits  lower_col
-            0  APPLE      apple
-            1  MANGO      mango
-            2   None       None
+            >>> func(df_pd)
+              fruits lower_col
+            0  APPLE     apple
+            1  MANGO     mango
+            2   None      None
 
-            >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(df_pl)
             shape: (3, 2)
             ┌────────┬───────────┐
             │ fruits ┆ lower_col │
@@ -2290,6 +2552,50 @@ class ExprStringNamespace:
 class ExprDateTimeNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
+
+    def date(self) -> Expr:
+        """
+        Extract the date from underlying DateTime representation.
+
+        Raises:
+            NotImplementedError: If pandas default backend is being used.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> data = {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
+            >>> df_pd = pd.DataFrame(data).convert_dtypes(
+            ...     dtype_backend="pyarrow"
+            ... )  # doctest:+SKIP
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.date())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest:+SKIP
+                        a
+            0  2012-01-07
+            1  2023-03-10
+
+            >>> func(df_pl)  # docetst
+            shape: (2, 1)
+            ┌────────────┐
+            │ a          │
+            │ ---        │
+            │ date       │
+            ╞════════════╡
+            │ 2012-01-07 │
+            │ 2023-03-10 │
+            └────────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
 
     def year(self) -> Expr:
         """
@@ -3134,7 +3440,6 @@ class ExprNameNamespace:
             >>> func(df_pl).columns
             ['foo']
         """
-
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
 
     def map(self: Self, function: Callable[[str], str]) -> Expr:
@@ -3171,7 +3476,6 @@ class ExprNameNamespace:
             >>> func(df_pl).columns
             ['oof', 'RAB']
         """
-
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
 
     def prefix(self: Self, prefix: str) -> Expr:
@@ -3353,7 +3657,8 @@ def col(*names: str | Iterable[str]) -> Expr:
     return Expr(func)
 
 
-def all() -> Expr:
+# Add underscore so it doesn't conflict with builtin `all`
+def all_() -> Expr:
     """
     Instantiate an expression representing all columns.
 
@@ -3392,7 +3697,8 @@ def all() -> Expr:
     return Expr(lambda plx: plx.all())
 
 
-def len() -> Expr:
+# Add underscore so it doesn't conflict with builtin `len`
+def len_() -> Expr:
     """
     Return the number of rows.
 
@@ -3599,17 +3905,22 @@ def max(*columns: str) -> Expr:
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
-    Sum all values horizontally across columns
+    Sum all values horizontally across columns.
+
+    Warning:
+        Unlike Polars, we support horizontal sum over numeric columns only.
 
     Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
 
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals as nw
-        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
-        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
 
         We define a dataframe-agnostic function:
 
@@ -3620,10 +3931,10 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
-            a
-        0   6
-        1  12
-        2  18
+              a
+        0   6.0
+        1  12.0
+        2   3.0
         >>> func(df_pl)
         shape: (3, 1)
         ┌─────┐
@@ -3633,7 +3944,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ╞═════╡
         │ 6   │
         │ 12  │
-        │ 18  │
+        │ 3   │
         └─────┘
     """
     return Expr(
@@ -3643,17 +3954,18 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
-def _extract_predicates(plx: Any, predicates: Iterable[IntoExpr]) -> Any:
-    return [extract_compliant(plx, v) for v in predicates]
-
-
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicates = flatten([predicates])
 
+    def _extract_predicates(self, plx: Any) -> Any:
+        return [extract_compliant(plx, v) for v in self._predicates]
+
     def then(self, value: Any) -> Then:
         return Then(
-            lambda plx: plx.when(*_extract_predicates(plx, self._predicates)).then(value)
+            lambda plx: plx.when(*self._extract_predicates(plx)).then(
+                extract_compliant(plx, value)
+            )
         )
 
 
@@ -3662,56 +3974,50 @@ class Then(Expr):
         self._call = call
 
     def otherwise(self, value: Any) -> Expr:
-        return Expr(lambda plx: self._call(plx).otherwise(value))
-
-    def when(
-        self,
-        *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> ChainedWhen:
-        return ChainedWhen(self, *predicates)
+        return Expr(lambda plx: self._call(plx).otherwise(extract_compliant(plx, value)))
 
 
-class ChainedWhen:
-    def __init__(
-        self,
-        above_then: Then | ChainedThen,
-        *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> None:
-        self._above_then = above_then
-        self._predicates = predicates
+# class ChainedWhen:
+#     def __init__(
+#         self,
+#         above_then: Then | ChainedThen,
+#         *predicates: IntoExpr | Iterable[IntoExpr],
+#     ) -> None:
+#         self._above_then = above_then
+#         self._predicates = predicates
 
-    def then(self, value: Any) -> ChainedThen:
-        return ChainedThen(
-            lambda plx: self._above_then._call(plx)
-            .when(*_extract_predicates(plx, flatten([self._predicates])))
-            .then(value)
-        )
+#     def then(self, value: Any) -> ChainedThen:
+#         return ChainedThen(
+#             lambda plx: self._above_then._call(plx)
+#             .when(*_extract_predicates(plx, flatten([self._predicates])))
+#             .then(value)
+#         )
 
 
-class ChainedThen(Expr):
-    def __init__(self, call: Callable[[Any], Any]) -> None:
-        self._call = call
+# class ChainedThen(Expr):
+#     def __init__(self, call: Callable[[Any], Any]) -> None:
+#         self._call = call
 
-    def when(
-        self,
-        *predicates: IntoExpr | Iterable[IntoExpr],
-    ) -> ChainedWhen:
-        return ChainedWhen(self, *predicates)
+#     def when(
+#         self,
+#         *predicates: IntoExpr | Iterable[IntoExpr],
+#     ) -> ChainedWhen:
+#         return ChainedWhen(self, *predicates)
 
-    def otherwise(self, value: Any) -> Expr:
-        return Expr(lambda plx: self._call(plx).otherwise(value))
+#     def otherwise(self, value: Any) -> Expr:
+#         return Expr(lambda plx: self._call(plx).otherwise(value))
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """
     Start a `when-then-otherwise` expression.
+
     Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
     Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
     If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
 
-    Parameters:
-        predicates
-            Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+    Arguments:
+        predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
 
     Examples:
         >>> import pandas as pd
@@ -3849,7 +4155,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         └─────┴─────┘
 
     """
-    if (np := get_numpy()) is not None and isinstance(value, np.ndarray):
+    if is_numpy_array(value):
         msg = (
             "numpy arrays are not supported as literal values. "
             "Consider using `with_columns` to create a new column from the array."
@@ -3860,9 +4166,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    if dtype is None:
-        return Expr(lambda plx: plx.lit(value, dtype))
-    return Expr(lambda plx: plx.lit(value, translate_dtype(plx, dtype)))
+    return Expr(lambda plx: plx.lit(value, dtype))
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -3920,6 +4224,59 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
     return Expr(
         lambda plx: plx.any_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Compute the mean of all values horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function that computes the horizontal mean of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.mean_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  2.5
+        1  6.5
+        2  3.0
+        >>> func(df_pl)
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 2.5 │
+        │ 6.5 │
+        │ 3.0 │
+        └─────┘
+    """
+    return Expr(
+        lambda plx: plx.mean_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
         )
     )

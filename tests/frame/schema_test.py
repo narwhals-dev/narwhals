@@ -45,7 +45,9 @@ def test_schema_comparison() -> None:
 
 
 def test_object() -> None:
-    df = pd.DataFrame({"a": [1, 2, 3]}).astype(object)
+    class Foo: ...
+
+    df = pd.DataFrame({"a": [Foo()]}).astype(object)
     result = nw.from_native(df).schema
     assert result["a"] == nw.Object
 
@@ -57,7 +59,7 @@ def test_string_disguised_as_object() -> None:
 
 
 def test_actual_object(request: Any, constructor_eager: Any) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
@@ -168,3 +170,31 @@ def test_unknown_dtype_polars() -> None:
 
 def test_hash() -> None:
     assert nw.Int64() in {nw.Int64, nw.Int32}
+
+
+@pytest.mark.parametrize(
+    ("method", "expected"),
+    [
+        ("names", ["a", "b", "c"]),
+        ("dtypes", [nw.Int64(), nw.Float32(), nw.String()]),
+        ("len", 3),
+    ],
+)
+def test_schema_object(method: str, expected: Any) -> None:
+    data = {"a": nw.Int64(), "b": nw.Float32(), "c": nw.String()}
+    schema = nw.Schema(data)
+    assert getattr(schema, method)() == expected
+
+
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < (2,),
+    reason="Before 2.0, pandas would raise on `drop_duplicates`",
+)
+def test_from_non_hashable_column_name() -> None:
+    # This is technically super-illegal
+    # BUT, it shows up in a scikit-learn test, so...
+    df = pd.DataFrame([[1, 2], [3, 4]], columns=["pizza", ["a", "b"]])
+
+    df = nw.from_native(df, eager_only=True)
+    assert df.columns == ["pizza", ["a", "b"]]
+    assert df["pizza"].dtype == nw.Int64

@@ -7,6 +7,7 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
+from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from narwhals.typing import IntoDataFrame
@@ -17,6 +18,8 @@ with contextlib.suppress(ImportError):
     import modin.pandas  # noqa: F401
 with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
+with contextlib.suppress(ImportError):
+    import cudf  # noqa: F401
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -56,6 +59,11 @@ def modin_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
+def cudf_constructor(obj: Any) -> IntoDataFrame:  # pragma: no cover
+    cudf = get_cudf()
+    return cudf.DataFrame(obj)  # type: ignore[no-any-return]
+
+
 def polars_eager_constructor(obj: Any) -> IntoDataFrame:
     return pl.DataFrame(obj)
 
@@ -87,9 +95,10 @@ lazy_constructors = [polars_lazy_constructor]
 
 if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
-# TODO(unassigned): when Dask gets better support, remove the "False and" part
-if False and get_dask_dataframe() is not None:  # pragma: no cover  # noqa: SIM223
-    lazy_constructors.append(dask_lazy_constructor)
+if get_cudf() is not None:
+    eager_constructors.append(cudf_constructor)  # pragma: no cover
+if get_dask_dataframe() is not None:  # pragma: no cover
+    lazy_constructors.append(dask_lazy_constructor)  # type: ignore  # noqa: PGH003
 
 
 @pytest.fixture(params=eager_constructors)

@@ -12,7 +12,7 @@ data = {
 
 def test_cum_sum_simple(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.all().cum_sum())
+    result = df.select(nw.col("a", "b", "c").cum_sum())
     expected = {
         "a": [0, 1, 3, 6, 10],
         "b": [1, 3, 6, 11, 14],

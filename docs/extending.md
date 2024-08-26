@@ -13,7 +13,7 @@ Alternatively, if you can't do that (for example, if you library is closed-sourc
 the next section for what else you can do.
 
 To check which methods are supported for which backend in depth, please refer to the
-[API completeness page](api-completeness.md).
+[API completeness page](api-completeness/index.md).
 
 ## Extending Narwhals
 
@@ -26,14 +26,16 @@ Make sure that, in addition to the public Narwhals API, you also define:
     from `Narwhals.DataFrame`
   - `DataFrame.__narwhals_namespace__`: return an object which implements public top-level
     functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
+  - `DataFrame.__native_namespace__`: return a native namespace object which must have a
+    `from_dict` method
   - `LazyFrame.__narwhals_lazyframe__`: return an object which implements public methods
     from `Narwhals.LazyFrame`
   - `LazyFrame.__narwhals_namespace__`: return an object which implements public top-level
     functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
+  - `LazyFrame.__native_namespace__`: return a native namespace object which must have a
+    `from_dict` method
   - `Series.__narwhals_series__`: return an object which implements public methods
     from `Narwhals.Series`
-  - `Series.__narwhals_namespace__`: return an object which implements public top-level
-    functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
 
   If your library doesn't distinguish between lazy and eager, then it's OK for your dataframe
   object to implement both `__narwhals_dataframe__` and `__narwhals_lazyframe__`. In fact,

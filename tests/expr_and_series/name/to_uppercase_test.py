@@ -6,7 +6,7 @@ from typing import Any
 import polars as pl
 import pytest
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}

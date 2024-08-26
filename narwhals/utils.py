@@ -12,11 +12,21 @@ from typing import TypeVar
 from typing import cast
 
 from narwhals import dtypes
+from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import is_cudf_series
+from narwhals.dependencies import is_modin_series
+from narwhals.dependencies import is_pandas_dataframe
+from narwhals.dependencies import is_pandas_like_dataframe
+from narwhals.dependencies import is_pandas_like_series
+from narwhals.dependencies import is_pandas_series
+from narwhals.dependencies import is_polars_series
+from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
@@ -36,6 +46,7 @@ class Implementation(Enum):
     CUDF = auto()
     PYARROW = auto()
     POLARS = auto()
+    DASK = auto()
 
     UNKNOWN = auto()
 
@@ -50,6 +61,7 @@ class Implementation(Enum):
             get_cudf(): Implementation.CUDF,
             get_pyarrow(): Implementation.PYARROW,
             get_polars(): Implementation.POLARS,
+            get_dask_dataframe(): Implementation.DASK,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -94,7 +106,7 @@ def tupleify(arg: Any) -> Any:
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
-    if (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame)):
+    if is_pandas_dataframe(arg) or is_pandas_series(arg):
         msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
         raise TypeError(msg)
     if (pl := get_polars()) is not None and isinstance(
@@ -177,23 +189,23 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_frame._native_dataframe.index)
-        _validate_index(rhs_any._compliant_frame._native_dataframe.index)
+        _validate_index(lhs_any._compliant_frame._native_frame.index)
+        _validate_index(rhs_any._compliant_frame._native_frame.index)
         return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            lhs_any._compliant_frame._from_native_dataframe(
-                lhs_any._compliant_frame._native_dataframe.loc[
-                    rhs_any._compliant_frame._native_dataframe.index
+            lhs_any._compliant_frame._from_native_frame(
+                lhs_any._compliant_frame._native_frame.loc[
+                    rhs_any._compliant_frame._native_frame.index
                 ]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_frame._native_dataframe.index)
+        _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_series._native_series.index)
         return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            lhs_any._compliant_frame._from_native_dataframe(
-                lhs_any._compliant_frame._native_dataframe.loc[
+            lhs_any._compliant_frame._from_native_frame(
+                lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_series._native_series.index
                 ]
             )
@@ -202,11 +214,11 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_series._native_series.index)
-        _validate_index(rhs_any._compliant_frame._native_dataframe.index)
+        _validate_index(rhs_any._compliant_frame._native_frame.index)
         return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
             lhs_any._compliant_series._from_native_series(
                 lhs_any._compliant_series._native_series.loc[
-                    rhs_any._compliant_frame._native_dataframe.index
+                    rhs_any._compliant_frame._native_frame.index
                 ]
             )
         )
@@ -226,6 +238,37 @@ def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
         msg = f"Expected `lhs` and `rhs` to have the same length, got {len(lhs_any)} and {len(rhs_any)}"
         raise ValueError(msg)
     return lhs
+
+
+def maybe_get_index(obj: T) -> Any | None:
+    """
+    Get the index of a DataFrame or a Series, if it's pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already aligns indices for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this returns `None`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+        >>> df = nw.from_native(df_pd)
+        >>> nw.maybe_get_index(df)
+        RangeIndex(start=0, stop=2, step=1)
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    obj_any = cast(Any, obj)
+    native_obj = to_native(obj_any)
+    if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
+        return native_obj.index
+    return None
 
 
 def maybe_set_index(df: T, column_names: str | list[str]) -> T:
@@ -251,21 +294,25 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
         4  1
         5  2
     """
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
     df_any = cast(Any, df)
-    if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
+    native_frame = to_native(df_any)
+    if is_pandas_like_dataframe(native_frame):
         return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_dataframe(
-                df_any._compliant_frame._native_dataframe.set_index(column_names)
+            df_any._compliant_frame._from_native_frame(
+                native_frame.set_index(column_names)
             )
         )
-    return df
+    return df_any  # type: ignore[no-any-return]
 
 
-def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
+def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
     """
-    Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+
+    Arguments:
+        obj: DataFrame or Series.
+        *args: Additional arguments which gets passed through.
+        **kwargs: Additional arguments which gets passed through.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
@@ -288,16 +335,21 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         b           boolean
         dtype: object
     """
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-    df_any = cast(Any, df)
-    if isinstance(getattr(df_any, "_compliant_frame", None), PandasLikeDataFrame):
-        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
-            df_any._compliant_frame._from_native_dataframe(
-                df_any._compliant_frame._native_dataframe.convert_dtypes(*args, **kwargs)
+    obj_any = cast(Any, obj)
+    native_obj = to_native(obj_any)
+    if is_pandas_like_dataframe(native_obj):
+        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            obj_any._compliant_frame._from_native_frame(
+                native_obj.convert_dtypes(*args, **kwargs)
             )
         )
-    return df
+    if is_pandas_like_series(native_obj):
+        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+            obj_any._compliant_series._from_native_series(
+                native_obj.convert_dtypes(*args, **kwargs)
+            )
+        )
+    return obj_any  # type: ignore[no-any-return]
 
 
 def is_ordered_categorical(series: Series) -> bool:
@@ -351,19 +403,15 @@ def is_ordered_categorical(series: Series) -> bool:
     if series.dtype != dtypes.Categorical:
         return False
     native_series = to_native(series)
-    if (pl := get_polars()) is not None and isinstance(native_series, pl.Series):
-        return native_series.dtype.ordering == "physical"  # type: ignore[no-any-return]
-    if (pd := get_pandas()) is not None and isinstance(native_series, pd.Series):
+    if is_polars_series(native_series):
+        return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
+    if is_pandas_series(native_series):
         return native_series.cat.ordered  # type: ignore[no-any-return]
-    if (mpd := get_modin()) is not None and isinstance(
-        native_series, mpd.Series
-    ):  # pragma: no cover
+    if is_modin_series(native_series):  # pragma: no cover
         return native_series.cat.ordered  # type: ignore[no-any-return]
-    if (cudf := get_cudf()) is not None and isinstance(
-        native_series, cudf.Series
-    ):  # pragma: no cover
+    if is_cudf_series(native_series):  # pragma: no cover
         return native_series.cat.ordered  # type: ignore[no-any-return]
-    if (pa := get_pyarrow()) is not None and isinstance(native_series, pa.ChunkedArray):
+    if is_pyarrow_chunked_array(native_series):
         return native_series.type.ordered  # type: ignore[no-any-return]
     # If it doesn't match any of the above, let's just play it safe and return False.
     return False  # pragma: no cover
@@ -395,3 +443,21 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
                 "join operation"
             )
             raise AssertionError(msg)
+
+
+def parse_columns_to_drop(
+    compliant_frame: Any,
+    columns: Iterable[str],
+    strict: bool,  # noqa: FBT001
+) -> list[str]:
+    cols = set(compliant_frame.columns)
+    to_drop = list(columns)
+
+    if strict:
+        for d in to_drop:
+            if d not in cols:
+                msg = f'"{d}" not found'
+                raise ColumnNotFoundError(msg)
+    else:
+        to_drop = list(cols.intersection(set(to_drop)))
+    return to_drop

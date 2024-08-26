@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -11,6 +10,7 @@ from typing import TypeVar
 from typing import overload
 
 import narwhals as nw
+from narwhals import dependencies
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
@@ -33,8 +33,9 @@ from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
-from narwhals.expr import ChainedThen as NwChainedThen
-from narwhals.expr import ChainedWhen as NwChainedWhen
+
+# from narwhals.expr import ChainedThen as NwChainedThen
+# from narwhals.expr import ChainedWhen as NwChainedWhen
 from narwhals.expr import Expr as NwExpr
 from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
@@ -44,12 +45,14 @@ from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
+from narwhals.translate import narwhalify as nw_narwhalify
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
+from narwhals.utils import maybe_get_index as nw_maybe_get_index
 from narwhals.utils import maybe_set_index as nw_maybe_set_index
 
 if TYPE_CHECKING:
@@ -73,6 +76,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     `narwhals.from_native`.
     """
 
+    @overload
+    def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
 
@@ -156,7 +161,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             ...     "A": [1, 2, 3, 4, 5],
             ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
             ...     "B": [5, 4, 3, 2, 1],
-            ...     "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+            ...     "animals": ["beetle", "fly", "beetle", "beetle", "beetle"],
             ...     "optional": [28, 300, None, 2, -30],
             ... }
             >>> df_pd = pd.DataFrame(df)
@@ -171,9 +176,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
+            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
             >>> func(df_pl)
-            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'cars': ['beetle', 'audi', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
+            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
         if as_series:
             return {key: _stableify(value) for key, value in super().to_dict().items()}
@@ -482,12 +487,12 @@ def _stableify(obj: NwSeries) -> Series: ...
 def _stableify(obj: NwExpr) -> Expr: ...
 @overload
 def _stableify(when_then: NwWhen) -> When: ...
-@overload
-def _stableify(when_then: NwChainedWhen) -> ChainedWhen: ...
+# @overload
+# def _stableify(when_then: NwChainedWhen) -> ChainedWhen: ...
 @overload
 def _stableify(when_then: NwThen) -> Then: ...
-@overload
-def _stableify(when_then: NwChainedThen) -> ChainedThen: ...
+# @overload
+# def _stableify(when_then: NwChainedThen) -> ChainedThen: ...
 @overload
 def _stableify(obj: Any) -> Any: ...
 
@@ -498,9 +503,9 @@ def _stableify(
     | NwSeries
     | NwExpr
     | NwWhen
-    | NwChainedWhen
+    # | NwChainedWhen
     | NwThen
-    | NwChainedThen
+    # | NwChainedThen
     | Any,
 ) -> (
     DataFrame[IntoFrameT]
@@ -508,9 +513,9 @@ def _stableify(
     | Series
     | Expr
     | When
-    | ChainedWhen
+    # | ChainedWhen
     | Then
-    | ChainedThen
+    # | ChainedThen
     | Any
 ):
     if isinstance(obj, NwDataFrame):
@@ -528,14 +533,14 @@ def _stableify(
             obj._compliant_series,
             level=obj._level,
         )
-    elif isinstance(obj, NwChainedWhen):
-        return ChainedWhen.from_base(obj)
+    # elif isinstance(obj, NwChainedWhen):
+    # return ChainedWhen.from_base(obj)
     if isinstance(obj, NwWhen):
-        return When.from_base(obj)
-    elif isinstance(obj, NwChainedThen):
-        return ChainedThen.from_base(obj)
+        return When.from_when(obj)
+    # elif isinstance(obj, NwChainedThen):
+    # return ChainedThen.from_base(obj)
     elif isinstance(obj, NwThen):
-        return Then.from_base(obj)
+        return Then.from_then(obj)
     if isinstance(obj, NwExpr):
         return Expr(obj._call)
     return obj
@@ -636,8 +641,8 @@ def from_native(
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_or_interchange_only=True, allow_series=True)
-    from_native(df, eager_or_interchange_only=True, allow_series=True)
+    from_native(df, strict=True, eager_or_interchange_only=True)
+    from_native(df, eager_or_interchange_only=True)
     """
 
 
@@ -652,8 +657,8 @@ def from_native(
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_only=True, allow_series=True)
-    from_native(df, eager_only=True, allow_series=True)
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
     """
 
 
@@ -668,8 +673,8 @@ def from_native(
     allow_series: Literal[True],
 ) -> DataFrame[Any] | LazyFrame[Any] | Series:
     """
-    from_native(df, strict=True, eager_only=True)
-    from_native(df, eager_only=True)
+    from_native(df, strict=True, allow_series=True)
+    from_native(df, allow_series=True)
     """
 
 
@@ -773,6 +778,7 @@ def narwhalify(
     *,
     strict: bool = False,
     eager_only: bool | None = False,
+    eager_or_interchange_only: bool | None = False,
     series_only: bool | None = False,
     allow_series: bool | None = True,
 ) -> Callable[..., Any]:
@@ -815,7 +821,7 @@ def narwhalify(
     You can also pass in extra arguments, e.g.
 
     ```python
-    @nw.narhwalify(eager_only=True)
+    @nw.narwhalify(eager_only=True)
     ```
 
     that will get passed down to `nw.from_native`.
@@ -831,53 +837,14 @@ def narwhalify(
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
     """
 
-    # TODO(Unassigned): do we have a way to de-dupe this a bit?
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            args = [
-                from_native(
-                    arg,
-                    strict=strict,
-                    eager_only=eager_only,
-                    series_only=series_only,
-                    allow_series=allow_series,
-                )
-                for arg in args
-            ]  # type: ignore[assignment]
-
-            kwargs = {
-                name: from_native(
-                    value,
-                    strict=strict,
-                    eager_only=eager_only,
-                    series_only=series_only,
-                    allow_series=allow_series,
-                )
-                for name, value in kwargs.items()
-            }
-
-            backends = {
-                b()
-                for v in [*args, *kwargs.values()]
-                if (b := getattr(v, "__native_namespace__", None))
-            }
-
-            if backends.__len__() > 1:
-                msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
-                raise ValueError(msg)
-
-            result = func(*args, **kwargs)
-
-            return to_native(result, strict=strict)
-
-        return wrapper
-
-    if func is None:
-        return decorator
-    else:
-        # If func is not None, it means the decorator is used without arguments
-        return decorator(func)
+    return nw_narwhalify(
+        func=func,
+        strict=strict,
+        eager_only=eager_only,
+        eager_or_interchange_only=eager_or_interchange_only,
+        series_only=series_only,
+        allow_series=allow_series,
+    )
 
 
 def all() -> Expr:
@@ -1202,17 +1169,22 @@ def sum(*columns: str) -> Expr:
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
-    Sum all values horizontally across columns
+    Sum all values horizontally across columns.
+
+    Warning:
+        Unlike Polars, we support horizontal sum over numeric columns only.
 
     Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
 
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals.stable.v1 as nw
-        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
-        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
 
         We define a dataframe-agnostic function:
 
@@ -1223,10 +1195,10 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
-            a
-        0   6
-        1  12
-        2  18
+              a
+        0   6.0
+        1  12.0
+        2   3.0
         >>> func(df_pl)
         shape: (3, 1)
         ┌─────┐
@@ -1236,7 +1208,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ╞═════╡
         │ 6   │
         │ 12  │
-        │ 18  │
+        │ 3   │
         └─────┘
     """
     return _stableify(nw.sum_horizontal(*exprs))
@@ -1354,6 +1326,55 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.any_horizontal(*exprs))
 
 
+def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Compute the mean of all values horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function that computes the horizontal mean of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.mean_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  2.5
+        1  6.5
+        2  3.0
+        >>> func(df_pl)
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 2.5 │
+        │ 6.5 │
+        │ 3.0 │
+        └─────┘
+    """
+    return _stableify(nw.mean_horizontal(*exprs))
+
+
 def is_ordered_categorical(series: Series) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
@@ -1424,7 +1445,12 @@ def maybe_align_index(lhs: T, rhs: Series | DataFrame[Any] | LazyFrame[Any]) -> 
 
 def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     """
-    Convert columns to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+    Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
+
+    Arguments:
+        obj: DataFrame or Series.
+        *args: Additional arguments which gets passed through.
+        **kwargs: Additional arguments which gets passed through.
 
     Notes:
         For non-pandas-like inputs, this is a no-op.
@@ -1448,6 +1474,33 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
         dtype: object
     """
     return nw_maybe_convert_dtypes(df, *args, **kwargs)
+
+
+def maybe_get_index(obj: T) -> Any | None:
+    """
+    Get the index of a DataFrame or a Series, if it's pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already aligns indices for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this returns `None`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+        >>> df = nw.from_native(df_pd)
+        >>> nw.maybe_get_index(df)
+        RangeIndex(start=0, stop=2, step=1)
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    return nw_maybe_get_index(obj)
 
 
 def maybe_set_index(df: T, column_names: str | list[str]) -> T:
@@ -1510,41 +1563,17 @@ def get_level(
 
 class When(NwWhen):
     @classmethod
-    def from_base(cls, when: NwWhen) -> Self:
+    def from_when(cls, when: NwWhen) -> Self:
         return cls(*when._predicates)
 
     def then(self, value: Any) -> Then:
-        return _stableify(super().then(value))
+        return Then.from_then(super().then(value))
 
 
 class Then(NwThen, Expr):
     @classmethod
-    def from_base(cls, then: NwThen) -> Self:
+    def from_then(cls, then: NwThen) -> Self:
         return cls(then._call)
-
-    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
-        return _stableify(super().when(*predicates))
-
-    def otherwise(self, value: Any) -> Expr:
-        return _stableify(super().otherwise(value))
-
-
-class ChainedWhen(NwChainedWhen):
-    @classmethod
-    def from_base(cls, chained_when: NwChainedWhen) -> Self:
-        return cls(_stableify(chained_when._above_then), *chained_when._predicates)
-
-    def then(self, value: Any) -> ChainedThen:
-        return _stableify(super().then(value))
-
-
-class ChainedThen(NwChainedThen, Expr):
-    @classmethod
-    def from_base(cls, chained_then: NwChainedThen) -> Self:
-        return cls(chained_then._call)
-
-    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
-        return _stableify(super().when(*predicates))
 
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
@@ -1553,13 +1582,13 @@ class ChainedThen(NwChainedThen, Expr):
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """
     Start a `when-then-otherwise` expression.
+
     Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
     Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
     If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
 
-    Parameters:
-        predicates
-            Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
+    Arguments:
+        predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
 
     Examples:
         >>> import pandas as pd
@@ -1595,14 +1624,87 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
     """
-    return _stableify(nw_when(*predicates))
+    return When.from_when(nw_when(*predicates))
+
+
+def new_series(
+    name: str,
+    values: Any,
+    dtype: DType | type[DType] | None = None,
+    *,
+    native_namespace: ModuleType,
+) -> Series:
+    """
+    Instantiate Narwhals Series from raw data.
+
+    Arguments:
+        name: Name of resulting Series.
+        values: Values of make Series from.
+        dtype: (Narwhals) dtype. If not provided, the native library
+            may auto-infer it from `values`.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     values = [4, 1, 2]
+        ...     native_namespace = nw.get_native_namespace(df)
+        ...     return nw.new_series("c", values, nw.Int32, native_namespace=native_namespace)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))
+        0    4
+        1    1
+        2    2
+        Name: c, dtype: int32
+        >>> func(pl.DataFrame(data))  # doctest: +NORMALIZE_WHITESPACE
+        shape: (3,)
+        Series: 'c' [i32]
+        [
+           4
+           1
+           2
+        ]
+    """
+    return _stableify(
+        nw.new_series(name, values, dtype, native_namespace=native_namespace)
+    )
+
+
+# class ChainedWhen(NwChainedWhen):
+#     @classmethod
+#     def from_base(cls, chained_when: NwChainedWhen) -> Self:
+#         return cls(_stableify(chained_when._above_then), *chained_when._predicates)
+
+#     def then(self, value: Any) -> ChainedThen:
+#         return _stableify(super().then(value))
+
+
+# class ChainedThen(NwChainedThen, Expr):
+#     @classmethod
+#     def from_base(cls, chained_then: NwChainedThen) -> Self:
+#         return cls(chained_then._call)
+
+#     def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
+#         return _stableify(super().when(*predicates))
+
+#     def otherwise(self, value: Any) -> Expr:
+#         return _stableify(super().otherwise(value))
 
 
 def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
     *,
-    native_namespace: ModuleType,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """
     Instantiate DataFrame from dictionary.
@@ -1614,7 +1716,8 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema or dict of {name: type}.
-        native_namespace: The native library to use for DataFrame creation.
+        native_namespace: The native library to use for DataFrame creation. Only
+            necessary if inputs are not Narwhals Series.
 
     Examples:
         >>> import pandas as pd
@@ -1655,11 +1758,13 @@ def from_dict(
 __all__ = [
     "selectors",
     "concat",
+    "dependencies",
     "to_native",
     "from_native",
     "is_ordered_categorical",
     "maybe_align_index",
     "maybe_convert_dtypes",
+    "maybe_get_index",
     "maybe_set_index",
     "get_native_namespace",
     "get_level",
@@ -1672,6 +1777,7 @@ __all__ = [
     "min",
     "max",
     "mean",
+    "mean_horizontal",
     "sum",
     "sum_horizontal",
     "when",
@@ -1702,4 +1808,5 @@ __all__ = [
     "show_versions",
     "Schema",
     "from_dict",
+    "new_series",
 ]

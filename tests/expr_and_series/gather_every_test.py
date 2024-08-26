@@ -10,7 +10,9 @@ data = {"a": list(range(10))}
 
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [1, 2, 3])
-def test_gather_every_expr(constructor: Any, n: int, offset: int) -> None:
+def test_gather_every_expr(constructor: Any, n: int, offset: int, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
 
     result = df.select(nw.col("a").gather_every(n=n, offset=offset))
@@ -27,4 +29,4 @@ def test_gather_every_series(constructor_eager: Any, n: int, offset: int) -> Non
     result = series.gather_every(n=n, offset=offset)
     expected = data["a"][offset::n]
 
-    assert result.to_list() == expected
+    compare_dicts({"a": result}, {"a": expected})

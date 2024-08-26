@@ -8,6 +8,7 @@
 </h1>
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
+[![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
@@ -39,6 +40,7 @@ Get started!
 
 Join the party!
 
+- [Altair](https://github.com/vega/altair/)
 - [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
@@ -73,6 +75,14 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
    - if you started with PyArrow, you'll get PyArrow back
+
+<h1 align="left">
+	<img
+		width="600"
+		alt="narwhals_gif"
+		src="https://github.com/user-attachments/assets/88292d3c-6359-4155-973d-d0f8e3fbf5ac">
+
+</h1>
 
 ## Example
 

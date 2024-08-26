@@ -11,9 +11,10 @@ accepts a `nw.DataFrame` and returns a `nw.DataFrame` backed by the same backend
   import narwhals as nw
   from narwhals.typing import DataFrameT
 
+
   @nw.narwhalify
   def func(df: DataFrameT) -> DataFrameT:
-      return df.with_columns(c=df['a']+1)
+      return df.with_columns(c=df["a"] + 1)
   ```
 
 ## `Frame`
@@ -24,6 +25,7 @@ either and your function doesn't care about its backend, for example:
   ```python
   import narwhals as nw
   from narwhals.typing import Frame
+
 
   @nw.narwhalify
   def func(df: Frame) -> list[str]:
@@ -38,9 +40,10 @@ or `nw.LazyFrame` and returns an object backed by the same backend, for example:
   import narwhals as nw
   from narwhals.typing import FrameT
 
+
   @nw.narwhalify
   def func(df: FrameT) -> FrameT:
-      return df.with_columns(c=nw.col('a')+1)
+      return df.with_columns(c=nw.col("a") + 1)
   ```
 
 ## `IntoDataFrame`
@@ -52,6 +55,7 @@ Use this if your function accepts a narwhalifiable object but doesn't care about
 
   import narwhals as nw
   from narwhals.typing import IntoDataFrame
+
 
   def func(df_native: IntoDataFrame) -> tuple[int, int]:
       df = nw.from_native(df_native, eager_only=True)
@@ -67,9 +71,10 @@ class:
   import narwhals as nw
   from narwhals.typing import IntoDataFrameT
 
+
   def func(df_native: IntoDataFrameT) -> IntoDataFrameT:
       df = nw.from_native(df_native, eager_only=True)
-      return nw.to_native(df.with_columns(c=df['a']+1))
+      return nw.to_native(df.with_columns(c=df["a"] + 1))
   ```
 
 ## `IntoExpr`
@@ -88,6 +93,7 @@ care about its backend:
 import narwhals as nw
 from narwhals.typing import IntoFrame
 
+
 def func(df_native: IntoFrame) -> list[str]:
     df = nw.from_native(df_native)
     return df.columns
@@ -102,9 +108,10 @@ of the same type:
   import narwhals as nw
   from narwhals.typing import IntoFrameT
 
+
   def func(df_native: IntoFrameT) -> IntoFrameT:
       df = nw.from_native(df_native)
-      return nw.to_native(df.with_columns(c=nw.col('a')+1))
+      return nw.to_native(df.with_columns(c=nw.col("a") + 1))
   ```
 
 ## `nw.narwhalify`, or `nw.from_native`?
@@ -117,17 +124,21 @@ import polars as pl
 import narwhals as nw
 from narwhals.typing import IntoDataFrameT, DataFrameT
 
-df = pl.DataFrame({'a': [1,2,3]})
+df = pl.DataFrame({"a": [1, 2, 3]})
+
 
 def func(df: IntoDataFrameT) -> IntoDataFrameT:
     df = nw.from_native(df, eager_only=True)
-    return nw.to_native(df.select(b=nw.col('a')))
+    return nw.to_native(df.select(b=nw.col("a")))
+
 
 reveal_type(func(df))
 
+
 @nw.narwhalify(strict=True)
 def func_2(df: DataFrameT) -> DataFrameT:
-    return df.select(b=nw.col('a'))
+    return df.select(b=nw.col("a"))
+
 
 reveal_type(func_2(df))
 ```

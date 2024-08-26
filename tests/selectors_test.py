@@ -45,7 +45,10 @@ def test_boolean(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_string(constructor: Any) -> None:
+def test_string(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor) and parse_version(pa.__version__) < (12,):
+        # Dask doesn't infer `'b'` as String for old PyArrow versions
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(string())
     expected = {"b": ["a", "b", "c"]}

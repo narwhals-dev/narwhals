@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -11,7 +13,9 @@ data = {
 }
 
 
-def test_filter(constructor: Any) -> None:
+def test_filter(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").filter(nw.col("i") < 2, nw.col("c") == 5))
     expected = {"a": [0]}
@@ -23,3 +27,6 @@ def test_filter_series(constructor_eager: Any) -> None:
     result = df.select(df["a"].filter((df["i"] < 2) & (df["c"] == 5)))
     expected = {"a": [0]}
     compare_dicts(result, expected)
+    result_s = df["a"].filter([True, False, False, False, False])
+    expected = {"a": [0]}
+    compare_dicts({"a": result_s}, expected)

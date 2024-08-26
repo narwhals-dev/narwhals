@@ -1,6 +1,5 @@
 from typing import Any
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -13,10 +12,7 @@ data = {
 }
 
 
-def test_over_single(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_over_single(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_max=nw.col("c").max().over("a"))
     expected = {
@@ -28,10 +24,7 @@ def test_over_single(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_over_multiple(request: Any, constructor: Any) -> None:
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_over_multiple(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
     expected = {
@@ -43,7 +36,10 @@ def test_over_multiple(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_over_invalid() -> None:
-    df = nw.from_native(pd.DataFrame(data))
+def test_over_invalid(request: Any, constructor: Any) -> None:
+    if "polars" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
     with pytest.raises(ValueError, match="Anonymous expressions"):
         df.with_columns(c_min=nw.all().min().over("a", "b"))

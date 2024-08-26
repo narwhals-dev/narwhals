@@ -1,7 +1,7 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.5.1'
+  rev: 'v0.5.7'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -9,10 +9,10 @@ repos:
     - id: ruff
       args: [--fix]
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: 'v1.10.1'
+  rev: 'v1.11.1'
   hooks:
     - id: mypy
-      additional_dependencies: ['polars==1.1.0', 'pytest==8.0.1']
+      additional_dependencies: ['polars==1.4.1', 'pytest==8.3.2']
       exclude: utils|tpch
 - repo: https://github.com/codespell-project/codespell
   rev: 'v2.3.0'
@@ -31,11 +31,18 @@ repos:
       additional_dependencies: [polars]
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
-      entry: (?<!>>> )import (pandas|polars|modin|cudf|pyarrow)
-      language: pygrep
+      entry: python utils/import_check.py
+      language: python
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
 - repo: https://github.com/kynan/nbstripout
   rev: 0.7.1
   hooks:
     - id: nbstripout
+- repo: https://github.com/adamchainz/blacken-docs
+  rev: "1.18.0"  # replace with latest tag on GitHub
+  hooks:
+  -   id: blacken-docs
+      args: [--skip-errors]
+      additional_dependencies:
+      - black==22.12.0

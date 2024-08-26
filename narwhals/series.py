@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals.dtypes import translate_dtype
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import numpy as np
+    import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.dataframe import DataFrame
@@ -56,8 +59,31 @@ class Series:
     def __native_namespace__(self) -> Any:
         return self._compliant_series.__native_namespace__()
 
-    def __narwhals_namespace__(self) -> Any:
-        return self._compliant_series.__narwhals_namespace__()
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
+        """
+        Export a Series via the Arrow PyCapsule Interface.
+
+        Narwhals doesn't implement anything itself here:
+
+        - if the underlying series implements the interface, it'll return that
+        - else, it'll call `to_arrow` and then defer to PyArrow's implementation
+
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
+        """
+        native_series = self._compliant_series._native_series
+        if hasattr(native_series, "__arrow_c_stream__"):
+            return native_series.__arrow_c_stream__(requested_schema=requested_schema)
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            raise ModuleNotFoundError(msg) from exc
+        if parse_version(pa.__version__) < (16, 0):  # pragma: no cover
+            msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            raise ModuleNotFoundError(msg)
+        ca = pa.chunked_array([self.to_arrow()])
+        return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
     @property
     def shape(self) -> tuple[int]:
@@ -100,6 +126,44 @@ class Series:
             level=self._level,
         )
 
+    def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
+        """
+        Pipe function call.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_pd = pd.Series([1, 2, 3, 4])
+            >>> s_pl = pl.Series([1, 2, 3, 4])
+
+            Lets define a function to pipe into
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.pipe(lambda x: x + 2)
+
+            Now apply it to the series
+
+            >>> func(s_pd)
+            0    3
+            1    4
+            2    5
+            3    6
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [i64]
+            [
+               3
+               4
+               5
+               6
+            ]
+
+
+        """
+        return function(self, *args, **kwargs)
+
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals Series                                 "
         length = len(header)
@@ -139,9 +203,9 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pd)
             3
-            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func(s_pl)
             3
         """
         return len(self._compliant_series)
@@ -242,11 +306,7 @@ class Series:
                1
             ]
         """
-        return self._from_compliant_series(
-            self._compliant_series.cast(
-                translate_dtype(self.__narwhals_namespace__(), dtype)
-            )
-        )
+        return self._from_compliant_series(self._compliant_series.cast(dtype))
 
     def to_frame(self) -> DataFrame[Any]:
         """
@@ -544,6 +604,107 @@ class Series:
         """
         return self._compliant_series.std(ddof=ddof)
 
+    def clip(
+        self, lower_bound: Any | None = None, upper_bound: Any | None = None
+    ) -> Self:
+        r"""
+        Clip values in the Series.
+
+        Arguments:
+            lower_bound: Lower bound value.
+            upper_bound: Upper bound value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_lower(s):
+            ...     return s.clip(2)
+
+            We can then pass either pandas or Polars to `func_lower`:
+
+            >>> func_lower(s_pd)
+            0    2
+            1    2
+            2    3
+            dtype: int64
+            >>> func_lower(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               2
+               2
+               3
+            ]
+
+            We define another library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func_upper(s):
+            ...     return s.clip(upper_bound=2)
+
+            We can then pass either pandas or Polars to `func_upper`:
+
+            >>> func_upper(s_pd)
+            0    1
+            1    2
+            2    2
+            dtype: int64
+            >>> func_upper(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               1
+               2
+               2
+            ]
+
+            We can have both at the same time
+
+            >>> s = [-1, 1, -3, 3, -5, 5]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.clip(-1, 3)
+
+            We can pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0   -1
+            1    1
+            2   -1
+            3    3
+            4   -1
+            5    3
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (6,)
+            Series: '' [i64]
+            [
+               -1
+                1
+               -1
+                3
+               -1
+                3
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.clip(lower_bound=lower_bound, upper_bound=upper_bound)
+        )
+
     def is_in(self, other: Any) -> Self:
         """
         Check if the elements of this Series are in the other sequence.
@@ -605,8 +766,8 @@ class Series:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(s_pd)
-            0    1
-            1    2
+            1    1
+            2    2
             Name: a, dtype: int64
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
@@ -1191,7 +1352,7 @@ class Series:
         """
         return self._compliant_series.n_unique()  # type: ignore[no-any-return]
 
-    def to_numpy(self) -> Any:
+    def to_numpy(self) -> np.ndarray:
         """
         Convert to numpy.
 
@@ -1218,7 +1379,7 @@ class Series:
         """
         return self._compliant_series.to_numpy()
 
-    def to_pandas(self) -> Any:
+    def to_pandas(self) -> pd.Series:
         """
         Convert to pandas.
 
@@ -1537,7 +1698,6 @@ class Series:
             >>> func(s_pl)
             2
         """
-
         return self._compliant_series.null_count()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
@@ -1808,7 +1968,6 @@ class Series:
             4    5
             dtype: int64
         """
-
         return self._from_compliant_series(
             self._compliant_series.zip_with(
                 self._extract_native(mask), self._extract_native(other)
@@ -1882,7 +2041,6 @@ class Series:
                2
             ]
         """
-
         return self._from_compliant_series(self._compliant_series.head(n))
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1923,7 +2081,6 @@ class Series:
                9
             ]
         """
-
         return self._from_compliant_series(self._compliant_series.tail(n))
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1934,12 +2091,12 @@ class Series:
             decimals: Number of decimals to round by.
 
         Notes:
-            For values exactly halfway between rounded decimal values pandas and Polars behave differently.
+            For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
 
             pandas rounds to the nearest even value (e.g. -0.5 and 0.5 round to 0.0, 1.5 and 2.5 round to 2.0, 3.5 and
             4.5 to 4.0, etc..).
 
-            Polars rounds away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
+            Polars and Arrow round away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
 
         Examples:
             >>> import narwhals as nw
@@ -2039,7 +2196,6 @@ class Series:
             │ 0   ┆ 1   │
             └─────┴─────┘
         """
-
         from narwhals.dataframe import DataFrame
 
         return DataFrame(
@@ -2086,6 +2242,44 @@ class Series:
         return self._from_compliant_series(
             self._compliant_series.gather_every(n=n, offset=offset)
         )
+
+    def to_arrow(self: Self) -> pa.Array:
+        r"""
+        Convert to arrow.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = [1, 2, 3, 4]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            Let's define a dataframe-agnostic function that converts to arrow:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.to_arrow()
+
+            >>> func(s_pd)  # doctest:+NORMALIZE_WHITESPACE
+            <pyarrow.lib.Int64Array object at ...>
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            <pyarrow.lib.Int64Array object at ...>
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+        """
+        return self._compliant_series.to_arrow()
 
     @property
     def str(self) -> SeriesStringNamespace:
@@ -2147,6 +2341,119 @@ class SeriesCatNamespace:
 class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
+
+    def replace(
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> Series:
+        r"""
+        Replace first matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+            n: Number of matches to replace.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["123abc", "abc abc123"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.replace("abc", "")
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['123', ' abc123']
+
+            >>> func(s_pl)
+            ['123', ' abc123']
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.replace(
+                pattern, value, literal=literal, n=n
+            )
+        )
+
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Series:
+        r"""
+        Replace all matching regex/literal substring with a new string value.
+
+        Arguments:
+            pattern: A valid regular expression pattern.
+            value: String that will replace the matched substring.
+            literal: Treat `pattern` as a literal string.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["123abc", "abc abc123"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.replace_all("abc", "")
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['123', ' 123']
+
+            >>> func(s_pl)
+            ['123', ' 123']
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.replace_all(
+                pattern, value, literal=literal
+            )
+        )
+
+    def strip_chars(self, characters: str | None = None) -> Series:
+        r"""
+        Remove leading and trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["apple", "\nmango"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     s = s.str.strip_chars()
+            ...     return s.to_list()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            ['apple', 'mango']
+
+            >>> func(s_pl)
+            ['apple', 'mango']
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.strip_chars(characters)
+        )
 
     def starts_with(self, prefix: str) -> Series:
         r"""
@@ -2542,6 +2849,49 @@ class SeriesStringNamespace:
 class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
+
+    def date(self) -> Series:
+        """
+        Get the date in a datetime series.
+
+        Raises:
+            NotImplementedError: If pandas default backend is being used.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
+            >>> s_pd = pd.Series(dates).convert_dtypes(
+            ...     dtype_backend="pyarrow"
+            ... )  # doctest:+SKIP
+            >>> s_pl = pl.Series(dates)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.date()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)  # doctest:+SKIP
+            0    2012-01-07
+            1    2023-03-10
+            dtype: date32[day][pyarrow]
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [date]
+            [
+               2012-01-07
+               2023-03-10
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.date()
+        )
 
     def year(self) -> Series:
         """

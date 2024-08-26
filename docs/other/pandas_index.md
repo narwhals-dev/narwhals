@@ -21,9 +21,10 @@ Let's learn about what Narwhals promises.
 ```python exec="1" source="above" session="ex1"
 import narwhals as nw
 
+
 def my_func(df):
     df = nw.from_native(df)
-    df = df.with_columns(a_plus_one=nw.col('a')+1)
+    df = df.with_columns(a_plus_one=nw.col("a") + 1)
     return nw.to_native(df)
 ```
 
@@ -32,7 +33,7 @@ Let's start with a dataframe with an Index with values `[7, 8, 9]`.
 ```python exec="true" source="material-block" result="python" session="ex1"
 import pandas as pd
 
-df = pd.DataFrame({'a': [2, 1, 3], 'b': [3, 5, -3]}, index=[7, 8, 9])
+df = pd.DataFrame({"a": [2, 1, 3], "b": [3, 5, -3]}, index=[7, 8, 9])
 print(my_func(df))
 ```
 
@@ -46,9 +47,9 @@ pandas automatically aligns indices for users. For example:
 ```python exec="1" source="above" session="ex2"
 import pandas as pd
 
-df_pd = pd.DataFrame({'a': [2, 1, 3], 'b': [4, 5, 6]})
-s_pd = df_pd['a'].sort_values()
-df_pd['a_sorted'] = s_pd
+df_pd = pd.DataFrame({"a": [2, 1, 3], "b": [4, 5, 6]})
+s_pd = df_pd["a"].sort_values()
+df_pd["a_sorted"] = s_pd
 ```
 Reading the code, you might expect that `'a_sorted'` will contain the
 values `[1, 2, 3]`.

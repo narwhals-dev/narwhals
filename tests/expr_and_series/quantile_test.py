@@ -24,7 +24,10 @@ def test_quantile_expr(
     constructor: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
+    request: Any,
 ) -> None:
+    if "dask" in str(constructor) and interpolation != "linear":
+        request.applymarker(pytest.mark.xfail)
     q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)

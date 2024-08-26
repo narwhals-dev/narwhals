@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 from typing import Any
+
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
@@ -14,5 +18,15 @@ def test_drop_nulls(constructor: Any) -> None:
     expected = {
         "a": [2.0, 4.0],
         "b": [3.0, 5.0],
+    }
+    compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("subset", ["a", ["a"]])
+def test_drop_nulls_subset(constructor: Any, subset: str | list[str]) -> None:
+    result = nw.from_native(constructor(data)).drop_nulls(subset=subset)
+    expected = {
+        "a": [1, 2.0, 4.0],
+        "b": [float("nan"), 3.0, 5.0],
     }
     compare_dicts(result, expected)

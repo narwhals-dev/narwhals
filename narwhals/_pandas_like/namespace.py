@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import cast
 
 from narwhals import dtypes
 from narwhals._expression_parsing import parse_into_exprs
@@ -15,7 +16,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
-from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
@@ -127,7 +127,7 @@ class PandasLikeNamespace:
         return PandasLikeExpr(
             lambda df: [
                 PandasLikeSeries(
-                    df._native_dataframe.loc[:, column_name],
+                    df._native_frame.loc[:, column_name],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                 )
@@ -146,7 +146,7 @@ class PandasLikeNamespace:
             pandas_series = PandasLikeSeries._from_iterable(
                 data=[value],
                 name="lit",
-                index=df._native_dataframe.index[0:1],
+                index=df._native_frame.index[0:1],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
@@ -197,7 +197,7 @@ class PandasLikeNamespace:
         return PandasLikeExpr(
             lambda df: [
                 PandasLikeSeries._from_iterable(
-                    [len(df._native_dataframe)],
+                    [len(df._native_frame)],
                     name="len",
                     index=[0],
                     implementation=self._implementation,
@@ -216,23 +216,22 @@ class PandasLikeNamespace:
     def sum_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         return reduce(
             lambda x, y: x + y,
-            parse_into_exprs(
-                *exprs,
-                namespace=self,
-            ),
+            [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
         )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        return reduce(
-            lambda x, y: x & y,
-            parse_into_exprs(*exprs, namespace=self),
-        )
+        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
 
     def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        return reduce(
-            lambda x, y: x | y,
-            parse_into_exprs(*exprs, namespace=self),
+        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
+
+    def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        pandas_like_exprs = parse_into_exprs(*exprs, namespace=self)
+        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in pandas_like_exprs))
+        n_non_zero = reduce(
+            lambda x, y: x + y, ((1 - e.is_null()) for e in pandas_like_exprs)
         )
+        return total / n_non_zero
 
     def concat(
         self,
@@ -240,7 +239,7 @@ class PandasLikeNamespace:
         *,
         how: str = "vertical",
     ) -> PandasLikeDataFrame:
-        dfs: list[Any] = [item._native_dataframe for item in items]
+        dfs: list[Any] = [item._native_frame for item in items]
         if how == "horizontal":
             return PandasLikeDataFrame(
                 horizontal_concat(
@@ -265,26 +264,16 @@ class PandasLikeNamespace:
 
     def when(
         self,
-        *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
+        *predicates: IntoPandasLikeExpr,
     ) -> PandasWhen:
-        return PandasWhen(
-            when_processing(self, *predicates),
-            self._implementation,
-            self._backend_version,
-        )
+        plx = self.__class__(self._implementation, self._backend_version)
+        if predicates:
+            condition = plx.all_horizontal(*predicates)
+        else:
+            msg = "at least one predicate needs to be provided"
+            raise TypeError(msg)
 
-
-def when_processing(
-    plx: PandasLikeNamespace,
-    *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-) -> PandasLikeExpr:
-    if predicates:
-        condition = plx.all_horizontal(*flatten(predicates))
-    else:
-        msg = "at least one predicate needs to be provided"
-        raise TypeError(msg)
-
-    return condition
+        return PandasWhen(condition, self._implementation, self._backend_version)
 
 
 class PandasWhen:
@@ -294,33 +283,61 @@ class PandasWhen:
         implementation: Implementation,
         backend_version: tuple[int, ...],
         then_value: Any = None,
-        otherise_value: Any = None,
+        otherwise_value: Any = None,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
         self._condition = condition
         self._then_value = then_value
-        self._otherwise_value = otherise_value
-        self._already_set = self._condition
+        self._otherwise_value = otherwise_value
 
     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+        from narwhals._expression_parsing import parse_into_expr
         from narwhals._pandas_like.namespace import PandasLikeNamespace
+        from narwhals._pandas_like.utils import validate_column_comparand
 
         plx = PandasLikeNamespace(
             implementation=self._implementation, backend_version=self._backend_version
         )
 
-        condition = self._condition._call(df)[0]
+        condition = parse_into_expr(self._condition, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        try:
+            value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
+        except TypeError:
+            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            value_series = condition.__class__._from_iterable(  # type: ignore[call-arg]
+                [self._then_value] * len(condition),
+                name="literal",
+                index=condition._native_series.index,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
+        value_series = cast(PandasLikeSeries, value_series)
 
-        value_series = plx._create_broadcast_series_from_scalar(
-            self._then_value, condition
-        )
-        otherwise_series = plx._create_broadcast_series_from_scalar(
-            self._otherwise_value, condition
-        )
-        return [value_series.zip_with(condition, otherwise_series)]
+        value_series_native = value_series._native_series
+        condition_native = validate_column_comparand(value_series_native.index, condition)
 
-    def then(self, value: Any) -> PandasThen:
+        if self._otherwise_value is None:
+            return [
+                value_series._from_native_series(
+                    value_series_native.where(condition_native)
+                )
+            ]
+        try:
+            otherwise_series = parse_into_expr(
+                self._otherwise_value, namespace=plx
+            )._call(df)[0]  # type: ignore[arg-type]
+        except TypeError:
+            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            return [
+                value_series._from_native_series(
+                    value_series_native.where(condition_native, self._otherwise_value)
+                )
+            ]
+        else:
+            return [value_series.zip_with(condition, otherwise_series)]
+
+    def then(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
         self._then_value = value
 
         return PandasThen(
@@ -329,8 +346,8 @@ class PandasWhen:
             function_name="whenthen",
             root_names=None,
             output_names=None,
-            implementation=self._condition._implementation,
-            backend_version=self._condition._backend_version,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
         )
 
 
@@ -355,22 +372,7 @@ class PandasThen(PandasLikeExpr):
         self._root_names = root_names
         self._output_names = output_names
 
-    def when(
-        self,
-        *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-    ) -> PandasChainedWhen:
-        return PandasChainedWhen(
-            self._call,  # type: ignore[arg-type]
-            when_processing(
-                PandasLikeNamespace(self._implementation, self._backend_version),
-                *predicates,
-            ),
-            depth=self._depth + 1,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-        )
-
-    def otherwise(self, value: Any) -> PandasLikeExpr:
+    def otherwise(self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasLikeExpr:
         # type ignore because we are setting the `_call` attribute to a
         # callable object of type `PandasWhen`, base class has the attribute as
         # only a `Callable`
@@ -379,105 +381,105 @@ class PandasThen(PandasLikeExpr):
         return self
 
 
-class PandasChainedWhen:
-    def __init__(
-        self,
-        above_when: PandasWhen | PandasChainedWhen,
-        condition: PandasLikeExpr,
-        depth: int,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        then_value: Any = None,
-        otherise_value: Any = None,
-    ) -> None:
-        self._implementation = implementation
-        self._depth = depth
-        self._backend_version = backend_version
-        self._condition = condition
-        self._above_when = above_when
-        self._then_value = then_value
-        self._otherwise_value = otherise_value
-
-        # TODO @aivanoved: this is way slow as during computation time this takes
-        # quadratic time need to improve this to linear time
-        self._condition = self._condition & (~self._above_when._already_set)  # type: ignore[has-type]
-        self._already_set = self._above_when._already_set | self._condition  # type: ignore[has-type]
-
-    def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-        from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-        plx = PandasLikeNamespace(
-            implementation=self._implementation, backend_version=self._backend_version
-        )
-
-        set_then = self._condition._call(df)[0]
-        already_set = self._already_set._call(df)[0]
-
-        value_series = plx._create_broadcast_series_from_scalar(
-            self._then_value, set_then
-        )
-        otherwise_series = plx._create_broadcast_series_from_scalar(
-            self._otherwise_value, set_then
-        )
-
-        above_result = self._above_when(df)[0]
-
-        result = value_series.zip_with(set_then, above_result).zip_with(
-            already_set, otherwise_series
-        )
-
-        return [result]
-
-    def then(self, value: Any) -> PandasChainedThen:
-        self._then_value = value
-        return PandasChainedThen(
-            self,
-            depth=self._depth,
-            implementation=self._implementation,
-            function_name="chainedwhen",
-            root_names=None,
-            output_names=None,
-            backend_version=self._backend_version,
-        )
-
-
-class PandasChainedThen(PandasLikeExpr):
-    def __init__(
-        self,
-        call: PandasChainedWhen,
-        *,
-        depth: int,
-        function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-    ) -> None:
-        self._implementation = implementation
-        self._backend_version = backend_version
-
-        self._call = call
-        self._depth = depth
-        self._function_name = function_name
-        self._root_names = root_names
-        self._output_names = output_names
-
-    def when(
-        self,
-        *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
-    ) -> PandasChainedWhen:
-        return PandasChainedWhen(
-            self._call,  # type: ignore[arg-type]
-            when_processing(
-                PandasLikeNamespace(self._implementation, self._backend_version),
-                *predicates,
-            ),
-            depth=self._depth + 1,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-        )
-
-    def otherwise(self, value: Any) -> PandasLikeExpr:
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
-        self._function_name = "chainedwhenotherwise"
-        return self
+# class PandasChainedWhen:
+#     def __init__(
+#         self,
+#         above_when: PandasWhen | PandasChainedWhen,
+#         condition: PandasLikeExpr,
+#         depth: int,
+#         implementation: Implementation,
+#         backend_version: tuple[int, ...],
+#         then_value: Any = None,
+#         otherise_value: Any = None,
+#     ) -> None:
+#         self._implementation = implementation
+#         self._depth = depth
+#         self._backend_version = backend_version
+#         self._condition = condition
+#         self._above_when = above_when
+#         self._then_value = then_value
+#         self._otherwise_value = otherise_value
+#
+#         # TODO @aivanoved: this is way slow as during computation time this takes
+#         # quadratic time need to improve this to linear time
+#         self._condition = self._condition & (~self._above_when._already_set)  # type: ignore[has-type]
+#         self._already_set = self._above_when._already_set | self._condition  # type: ignore[has-type]
+#
+#     def __call__(self, df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+#         from narwhals._pandas_like.namespace import PandasLikeNamespace
+#
+#         plx = PandasLikeNamespace(
+#             implementation=self._implementation, backend_version=self._backend_version
+#         )
+#
+#         set_then = self._condition._call(df)[0]
+#         already_set = self._already_set._call(df)[0]
+#
+#         value_series = plx._create_broadcast_series_from_scalar(
+#             self._then_value, set_then
+#         )
+#         otherwise_series = plx._create_broadcast_series_from_scalar(
+#             self._otherwise_value, set_then
+#         )
+#
+#         above_result = self._above_when(df)[0]
+#
+#         result = value_series.zip_with(set_then, above_result).zip_with(
+#             already_set, otherwise_series
+#         )
+#
+#         return [result]
+#
+#     def then(self, value: Any) -> PandasChainedThen:
+#         self._then_value = value
+#         return PandasChainedThen(
+#             self,
+#             depth=self._depth,
+#             implementation=self._implementation,
+#             function_name="chainedwhen",
+#             root_names=None,
+#             output_names=None,
+#             backend_version=self._backend_version,
+#         )
+#
+#
+# class PandasChainedThen(PandasLikeExpr):
+#     def __init__(
+#         self,
+#         call: PandasChainedWhen,
+#         *,
+#         depth: int,
+#         function_name: str,
+#         root_names: list[str] | None,
+#         output_names: list[str] | None,
+#         implementation: Implementation,
+#         backend_version: tuple[int, ...],
+#     ) -> None:
+#         self._implementation = implementation
+#         self._backend_version = backend_version
+#
+#         self._call = call
+#         self._depth = depth
+#         self._function_name = function_name
+#         self._root_names = root_names
+#         self._output_names = output_names
+#
+#     def when(
+#         self,
+#         *predicates: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
+#     ) -> PandasChainedWhen:
+#         return PandasChainedWhen(
+#             self._call,  # type: ignore[arg-type]
+#             when_processing(
+#                 PandasLikeNamespace(self._implementation, self._backend_version),
+#                 *predicates,
+#             ),
+#             depth=self._depth + 1,
+#             implementation=self._implementation,
+#             backend_version=self._backend_version,
+#         )
+#
+#     def otherwise(self, value: Any) -> PandasLikeExpr:
+#         self._call._otherwise_value = value  # type: ignore[attr-defined]
+#         self._function_name = "chainedwhenotherwise"
+#         return self

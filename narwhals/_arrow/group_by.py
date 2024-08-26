@@ -4,11 +4,10 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterator
 
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyarrow_compute
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
@@ -19,10 +18,11 @@ if TYPE_CHECKING:
 
 class ArrowGroupBy:
     def __init__(self, df: ArrowDataFrame, keys: list[str]) -> None:
-        pa = get_pyarrow()
+        import pyarrow as pa  # ignore-banned-import()
+
         self._df = df
         self._keys = list(keys)
-        self._grouped = pa.TableGroupBy(self._df._native_dataframe, list(self._keys))
+        self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
 
     def agg(
         self,
@@ -50,7 +50,24 @@ class ArrowGroupBy:
             exprs,
             self._keys,
             output_names,
-            self._df._from_native_dataframe,
+            self._df._from_native_frame,
+        )
+
+    def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
+        key_values = (
+            self._df.select(*self._keys)
+            .unique(subset=self._keys, keep="first")
+            .iter_rows()
+        )
+        nw_namespace = self._df.__narwhals_namespace__()
+        yield from (
+            (
+                key_value,
+                self._df.filter(
+                    *[nw_namespace.col(k) == v for k, v in zip(self._keys, key_value)]
+                ),
+            )
+            for key_value in key_values
         )
 
 
@@ -61,7 +78,8 @@ def agg_arrow(
     output_names: list[str],
     from_dataframe: Callable[[Any], ArrowDataFrame],
 ) -> ArrowDataFrame:
-    pc = get_pyarrow_compute()
+    import pyarrow.compute as pc  # ignore-banned-import()
+
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
