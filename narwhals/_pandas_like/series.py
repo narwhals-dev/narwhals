@@ -527,10 +527,14 @@ class PandasLikeSeries:
         return self._native_series.isna().sum()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
-        return self._from_native_series(~self._native_series.duplicated(keep="first"))
+        res = ~self._native_series.duplicated(keep="first")
+        res = self._rename(res, self.name)
+        return self._from_native_series(res)
 
     def is_last_distinct(self: Self) -> Self:
-        return self._from_native_series(~self._native_series.duplicated(keep="last"))
+        res = ~self._native_series.duplicated(keep="last")
+        res = self._rename(res, self.name)
+        return self._from_native_series(res)
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
         if not isinstance(descending, bool):

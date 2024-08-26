@@ -1,7 +1,5 @@
 from typing import Any
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -11,10 +9,7 @@ data = {
 }
 
 
-def test_is_last_distinct_expr(constructor: Any, request: Any) -> None:
-    if "modin" in str(constructor):
-        # TODO(unassigned): why is Modin failing here?
-        request.applymarker(pytest.mark.xfail)
+def test_is_last_distinct_expr(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().is_last_distinct())
     expected = {
