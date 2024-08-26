@@ -1339,7 +1339,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 @overload
 def concat(
-    items: Iterable[NwDataFrame[Any]],
+    items: Iterable[DataFrame[Any]],
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> DataFrame[Any]: ...
@@ -1347,14 +1347,14 @@ def concat(
 
 @overload
 def concat(
-    items: Iterable[NwLazyFrame[Any]],
+    items: Iterable[LazyFrame[Any]],
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> LazyFrame[Any]: ...
 
 
 def concat(
-    items: Iterable[NwDataFrame[Any] | NwLazyFrame[Any]],
+    items: Iterable[DataFrame[Any] | LazyFrame[Any]],
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> DataFrame[Any] | LazyFrame[Any]:
