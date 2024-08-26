@@ -515,13 +515,17 @@ class PandasLikeSeries:
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
-        return self._from_native_series(self._native_series.duplicated(keep=False))
+        res = self._native_series.duplicated(keep=False)
+        res = self._rename(res, self.name)
+        return self._from_native_series(res)
 
     def is_empty(self: Self) -> bool:
         return self._native_series.empty  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Self:
-        return self._from_native_series(~self._native_series.duplicated(keep=False))
+        res = ~self._native_series.duplicated(keep=False)
+        res = self._rename(res, self.name)
+        return self._from_native_series(res)
 
     def null_count(self: Self) -> int:
         return self._native_series.isna().sum()  # type: ignore[no-any-return]
