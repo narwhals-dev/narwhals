@@ -49,6 +49,7 @@ from narwhals.typing import IntoFrameT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
+from narwhals.utils import maybe_get_index as nw_maybe_get_index
 from narwhals.utils import maybe_set_index as nw_maybe_set_index
 
 if TYPE_CHECKING:
@@ -603,8 +604,8 @@ def from_native(
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_or_interchange_only=True, allow_series=True)
-    from_native(df, eager_or_interchange_only=True, allow_series=True)
+    from_native(df, strict=True, eager_or_interchange_only=True)
+    from_native(df, eager_or_interchange_only=True)
     """
 
 
@@ -619,8 +620,8 @@ def from_native(
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_only=True, allow_series=True)
-    from_native(df, eager_only=True, allow_series=True)
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
     """
 
 
@@ -635,8 +636,8 @@ def from_native(
     allow_series: Literal[True],
 ) -> DataFrame[Any] | LazyFrame[Any] | Series:
     """
-    from_native(df, strict=True, eager_only=True)
-    from_native(df, eager_only=True)
+    from_native(df, strict=True, allow_series=True)
+    from_native(df, allow_series=True)
     """
 
 
@@ -1438,6 +1439,33 @@ def maybe_convert_dtypes(df: T, *args: bool, **kwargs: bool | str) -> T:
     return nw_maybe_convert_dtypes(df, *args, **kwargs)
 
 
+def maybe_get_index(obj: T) -> Any | None:
+    """
+    Get the index of a DataFrame or a Series, if it's pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already aligns indices for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this returns `None`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
+        >>> df = nw.from_native(df_pd)
+        >>> nw.maybe_get_index(df)
+        RangeIndex(start=0, stop=2, step=1)
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    return nw_maybe_get_index(obj)
+
+
 def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     """
     Set columns `columns` to be the index of `df`, if `df` is pandas-like.
@@ -1678,6 +1706,7 @@ __all__ = [
     "is_ordered_categorical",
     "maybe_align_index",
     "maybe_convert_dtypes",
+    "maybe_get_index",
     "maybe_set_index",
     "get_native_namespace",
     "get_level",
