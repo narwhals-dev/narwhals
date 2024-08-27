@@ -173,9 +173,6 @@ def test_group_by_multiple_keys(constructor: Any) -> None:
 
 
 def test_key_with_nulls(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)

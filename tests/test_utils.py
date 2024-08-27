@@ -2,6 +2,7 @@ import pandas as pd
 import polars as pl
 import pytest
 from pandas.testing import assert_frame_equal
+from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
@@ -65,6 +66,24 @@ def test_maybe_set_index_polars() -> None:
     assert result is df
 
 
+def test_maybe_get_index_pandas() -> None:
+    pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
+    result = nw.maybe_get_index(nw.from_native(pandas_df))
+    assert_index_equal(result, pandas_df.index)
+    pandas_series = pd.Series([1, 2, 3], index=[1, 2, 0])
+    result_s = nw.maybe_get_index(nw.from_native(pandas_series, series_only=True))
+    assert_index_equal(result_s, pandas_series.index)
+
+
+def test_maybe_get_index_polars() -> None:
+    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    result = nw.maybe_get_index(df)
+    assert result is None
+    series = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
+    result = nw.maybe_get_index(series)
+    assert result is None
+
+
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("1.0.0"),
     reason="too old for convert_dtypes",
@@ -72,10 +91,15 @@ def test_maybe_set_index_polars() -> None:
 def test_maybe_convert_dtypes_pandas() -> None:
     import numpy as np
 
-    df = nw.from_native(pd.DataFrame({"a": [1, np.nan]}, dtype=np.dtype("float64")))
+    df = nw.from_native(
+        pd.DataFrame({"a": [1, np.nan]}, dtype=np.dtype("float64")), eager_only=True
+    )
     result = nw.to_native(nw.maybe_convert_dtypes(df))
     expected = pd.DataFrame({"a": [1, pd.NA]}, dtype="Int64")
     pd.testing.assert_frame_equal(result, expected)
+    result_s = nw.to_native(nw.maybe_convert_dtypes(df["a"]))
+    expected_s = pd.Series([1, pd.NA], name="a", dtype="Int64")
+    pd.testing.assert_series_equal(result_s, expected_s)
 
 
 def test_maybe_convert_dtypes_polars() -> None:

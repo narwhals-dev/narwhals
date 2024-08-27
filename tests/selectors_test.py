@@ -7,7 +7,6 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.dependencies import get_dask_dataframe
 from narwhals.selectors import all
 from narwhals.selectors import boolean
 from narwhals.selectors import by_dtype
@@ -57,8 +56,6 @@ def test_string(constructor: Any, request: Any) -> None:
 
 
 def test_categorical(request: Any, constructor: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
@@ -66,17 +63,6 @@ def test_categorical(request: Any, constructor: Any) -> None:
     expected = {"b": ["a", "b", "c"]}
 
     df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
-    result = df.select(categorical())
-    compare_dicts(result, expected)
-
-
-@pytest.mark.skipif((get_dask_dataframe() is None), reason="too old for dask")
-def test_dask_categorical() -> None:
-    import dask.dataframe as dd
-
-    expected = {"b": ["a", "b", "c"]}
-    df_raw = dd.from_dict(expected, npartitions=1).astype({"b": "category"})
-    df = nw.from_native(df_raw)
     result = df.select(categorical())
     compare_dicts(result, expected)
 

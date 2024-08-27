@@ -233,7 +233,8 @@ class ArrowSeries:
         return len(self._native_series)
 
     def filter(self, other: Any) -> Self:
-        other = validate_column_comparand(other)
+        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
+            other = validate_column_comparand(other)
         return self._from_native_series(self._native_series.filter(other))
 
     def mean(self) -> int:
@@ -489,11 +490,12 @@ class ArrowSeries:
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
+        mask = mask._native_series.combine_chunks()
         return self._from_native_series(
-            pc.replace_with_mask(
-                self._native_series.combine_chunks(),
-                pc.invert(mask._native_series.combine_chunks()),
-                other._native_series.combine_chunks(),
+            pc.if_else(
+                mask,
+                self._native_series,
+                other._native_series,
             )
         )
 
