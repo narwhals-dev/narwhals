@@ -18,7 +18,6 @@ from narwhals._expression_parsing import parse_into_exprs
 if TYPE_CHECKING:
     import dask_expr
 
-    from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.typing import IntoDaskExpr
 
 
@@ -153,7 +152,7 @@ class DaskNamespace:
         import dask.dataframe as dd  # ignore-banned-import
 
         if len(list(items)) == 0:
-            msg = "No items to concatenate"
+            msg = "No items to concatenate"  # pragma: no cover
             raise AssertionError(msg)
         native_frames = [i._native_frame for i in items]
         if how == "vertical":
