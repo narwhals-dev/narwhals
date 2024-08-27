@@ -49,6 +49,15 @@ class DaskLazyFrame:
         return self.__class__(df, backend_version=self._backend_version)
 
     def with_columns(self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
+        n_modifies_index = sum(
+            getattr(e, "_modifies_index", 0)
+            for e in list(exprs) + list(named_exprs.values())
+        )
+
+        if n_modifies_index > 0:
+            msg = "Expressions that modify the index are not supported in `with_columns`."
+            raise ValueError(msg)
+
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         return self._from_native_frame(self._native_frame.assign(**new_series))
 
@@ -100,6 +109,14 @@ class DaskLazyFrame:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
             return self._from_native_frame(self._native_frame.loc[:, exprs])
+
+        n_modifies_index = sum(
+            getattr(e, "_modifies_index", 0)
+            for e in list(exprs) + list(named_exprs.values())
+        )
+        if n_modifies_index > 1:
+            msg = "Found multiple expressions that modify the index"
+            raise ValueError(msg)
 
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
 

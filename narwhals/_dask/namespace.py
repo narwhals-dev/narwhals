@@ -59,6 +59,7 @@ class DaskNamespace:
             root_names=None,
             output_names=None,
             returns_scalar=False,
+            modifies_index=False,
             backend_version=self._backend_version,
         )
 
@@ -78,6 +79,7 @@ class DaskNamespace:
             root_names=None,
             output_names=["lit"],
             returns_scalar=False,
+            modifies_index=False,
             backend_version=self._backend_version,
         )
 
@@ -127,6 +129,7 @@ class DaskNamespace:
             root_names=None,
             output_names=["len"],
             returns_scalar=True,
+            modifies_index=False,
             backend_version=self._backend_version,
         )
 
@@ -187,7 +190,9 @@ class DaskNamespace:
             msg = "at least one predicate needs to be provided"
             raise TypeError(msg)
 
-        return DaskWhen(condition, self._backend_version, returns_scalar=False)
+        return DaskWhen(
+            condition, self._backend_version, returns_scalar=False, modifies_index=False
+        )
 
 
 class DaskWhen:
@@ -199,12 +204,14 @@ class DaskWhen:
         otherwise_value: Any = None,
         *,
         returns_scalar: bool,
+        modifies_index: bool,
     ) -> None:
         self._backend_version = backend_version
         self._condition = condition
         self._then_value = then_value
         self._otherwise_value = otherwise_value
         self._returns_scalar = returns_scalar
+        self._modifies_index = modifies_index
 
     def __call__(self, df: DaskLazyFrame) -> list[Any]:
         from narwhals._dask.namespace import DaskNamespace
@@ -247,6 +254,7 @@ class DaskWhen:
             output_names=None,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
+            modifies_index=self._modifies_index,
         )
 
 
@@ -260,6 +268,7 @@ class DaskThen(DaskExpr):
         root_names: list[str] | None,
         output_names: list[str] | None,
         returns_scalar: bool,
+        modifies_index: bool,
         backend_version: tuple[int, ...],
     ) -> None:
         self._backend_version = backend_version
@@ -270,6 +279,7 @@ class DaskThen(DaskExpr):
         self._root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
+        self._modifies_index = modifies_index
 
     def otherwise(self, value: DaskExpr | Any) -> DaskExpr:
         # type ignore because we are setting the `_call` attribute to a
