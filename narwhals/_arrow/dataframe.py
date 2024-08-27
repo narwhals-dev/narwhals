@@ -20,6 +20,7 @@ from narwhals.utils import generate_unique_token
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    import numpy as np
     from typing_extensions import Self
 
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -62,6 +63,9 @@ class ArrowDataFrame:
     def __len__(self) -> int:
         return len(self._native_frame)
 
+    def row(self, index: int) -> tuple[Any, ...]:
+        return tuple(col[index] for col in self._native_frame)
+
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
@@ -100,6 +104,9 @@ class ArrowDataFrame:
             backend_version=self._backend_version,
         )
 
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self._native_frame.__array__(dtype, copy=copy)
+
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str | int]) -> ArrowSeries: ...  # type: ignore[overload-overlap]
 
@@ -133,6 +140,32 @@ class ArrowDataFrame:
             )
 
         elif isinstance(item, tuple) and len(item) == 2:
+            if isinstance(item[1], slice):
+                columns = self.columns
+                if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
+                    start = (
+                        columns.index(item[1].start)
+                        if item[1].start is not None
+                        else None
+                    )
+                    stop = (
+                        columns.index(item[1].stop) + 1
+                        if item[1].stop is not None
+                        else None
+                    )
+                    step = item[1].step
+                    return self._from_native_frame(
+                        self._native_frame.take(item[0]).select(columns[start:stop:step])
+                    )
+                if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
+                    return self._from_native_frame(
+                        self._native_frame.take(item[0]).select(
+                            columns[item[1].start : item[1].stop : item[1].step]
+                        )
+                    )
+                msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
+                raise TypeError(msg)  # pragma: no cover
+
             from narwhals._arrow.series import ArrowSeries
 
             # PyArrow columns are always strings
@@ -347,11 +380,18 @@ class ArrowDataFrame:
         self,
         *predicates: IntoArrowExpr,
     ) -> Self:
-        plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(*predicates)
-        # Safety: all_horizontal's expression only returns a single column.
-        mask = expr._call(self)[0]
-        return self._from_native_frame(self._native_frame.filter(mask._native_series))
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            mask = predicates[0]
+        else:
+            plx = self.__narwhals_namespace__()
+            expr = plx.all_horizontal(*predicates)
+            # Safety: all_horizontal's expression only returns a single column.
+            mask = expr._call(self)[0]._native_series
+        return self._from_native_frame(self._native_frame.filter(mask))
 
     def null_count(self) -> Self:
         import pyarrow as pa  # ignore-banned-import()
@@ -419,6 +459,17 @@ class ArrowDataFrame:
         import pyarrow.parquet as pp  # ignore-banned-import
 
         pp.write_table(self._native_frame, file)
+
+    def write_csv(self, file: Any) -> Any:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.csv as pa_csv  # ignore-banned-import
+
+        pa_table = self._native_frame
+        if file is None:
+            csv_buffer = pa.BufferOutputStream()
+            pa_csv.write_csv(pa_table, csv_buffer)
+            return csv_buffer.getvalue().to_pybytes().decode()
+        return pa_csv.write_csv(pa_table, file)
 
     def is_duplicated(self: Self) -> ArrowSeries:
         import numpy as np  # ignore-banned-import

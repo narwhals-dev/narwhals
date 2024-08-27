@@ -1114,8 +1114,8 @@ class Expr:
 
             >>> func(df_pd)
                a
-            0  1
-            1  2
+            1  1
+            2  2
             >>> func(df_pl)
             shape: (2, 1)
             ┌─────┐
@@ -1537,7 +1537,9 @@ class Expr:
         r"""Get quantile value.
 
         Note:
-            pandas and Polars may have implementation differences for a given interpolation method.
+            * pandas and Polars may have implementation differences for a given interpolation method.
+            * [dask](https://docs.dask.org/en/stable/generated/dask.dataframe.Series.quantile.html) has its own method to approximate quantile and it doesn't implement 'nearest', 'higher', 'lower', 'midpoint'
+            as interpolation method - use 'linear' which is closest to the native 'dask' - method.
 
         Arguments:
             quantile : float
@@ -3655,7 +3657,8 @@ def col(*names: str | Iterable[str]) -> Expr:
     return Expr(func)
 
 
-def all() -> Expr:
+# Add underscore so it doesn't conflict with builtin `all`
+def all_() -> Expr:
     """
     Instantiate an expression representing all columns.
 
@@ -3694,7 +3697,8 @@ def all() -> Expr:
     return Expr(lambda plx: plx.all())
 
 
-def len() -> Expr:
+# Add underscore so it doesn't conflict with builtin `len`
+def len_() -> Expr:
     """
     Return the number of rows.
 
@@ -3901,10 +3905,88 @@ def max(*columns: str) -> Expr:
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
-    Sum all values horizontally across columns
+    Sum all values horizontally across columns.
+
+    Warning:
+        Unlike Polars, we support horizontal sum over numeric columns only.
 
     Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts expression input.
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.sum_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+              a
+        0   6.0
+        1  12.0
+        2   3.0
+        >>> func(df_pl)
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 6   │
+        │ 12  │
+        │ 3   │
+        └─────┘
+    """
+    return Expr(
+        lambda plx: plx.sum_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+class When:
+    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+        self._predicates = flatten([predicates])
+
+    def _extract_predicates(self, plx: Any) -> Any:
+        return [extract_compliant(plx, v) for v in self._predicates]
+
+    def then(self, value: Any) -> Then:
+        return Then(
+            lambda plx: plx.when(*self._extract_predicates(plx)).then(
+                extract_compliant(plx, value)
+            )
+        )
+
+
+class Then(Expr):
+    def __init__(self, call: Callable[[Any], Any]) -> None:
+        self._call = call
+
+    def otherwise(self, value: Any) -> Expr:
+        return Expr(lambda plx: self._call(plx).otherwise(extract_compliant(plx, value)))
+
+
+def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
+    """
+    Start a `when-then-otherwise` expression.
+
+    Expression similar to an `if-else` statement in Python. Always initiated by a `pl.when(<condition>).then(<value if condition>)`., and optionally followed by chaining one or more `.when(<condition>).then(<value>)` statements.
+    Chained when-then operations should be read as Python `if, elif, ... elif` blocks, not as `if, if, ... if`, i.e. the first condition that evaluates to `True` will be picked.
+    If none of the conditions are `True`, an optional `.otherwise(<value if all statements are false>)` can be appended at the end. If not appended, and none of the conditions are `True`, `None` will be returned.
+
+    Arguments:
+        predicates: Condition(s) that must be met in order to apply the subsequent statement. Accepts one or more boolean expressions, which are implicitly combined with `&`. String input is parsed as a column name.
 
     Examples:
         >>> import pandas as pd
@@ -3916,33 +3998,31 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.select(nw.sum_horizontal("a", "b"))
+        ... def func(df_any):
+        ...     return df_any.with_columns(
+        ...         nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
+        ...     )
 
         We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
-            a
-        0   6
-        1  12
-        2  18
+           a   b  a_when
+        0  1   5       5
+        1  2  10       5
+        2  3  15       6
         >>> func(df_pl)
-        shape: (3, 1)
-        ┌─────┐
-        │ a   │
-        │ --- │
-        │ i64 │
-        ╞═════╡
-        │ 6   │
-        │ 12  │
-        │ 18  │
-        └─────┘
+        shape: (3, 3)
+        ┌─────┬─────┬────────┐
+        │ a   ┆ b   ┆ a_when │
+        │ --- ┆ --- ┆ ---    │
+        │ i64 ┆ i64 ┆ i32    │
+        ╞═════╪═════╪════════╡
+        │ 1   ┆ 5   ┆ 5      │
+        │ 2   ┆ 10  ┆ 5      │
+        │ 3   ┆ 15  ┆ 6      │
+        └─────┴─────┴────────┘
     """
-    return Expr(
-        lambda plx: plx.sum_horizontal(
-            *[extract_compliant(plx, v) for v in flatten(exprs)]
-        )
-    )
+    return When(*predicates)
 
 
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -4113,6 +4193,59 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """
     return Expr(
         lambda plx: plx.any_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Compute the mean of all values horizontally across columns.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+
+        We define a dataframe-agnostic function that computes the horizontal mean of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.mean_horizontal("a", "b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  2.5
+        1  6.5
+        2  3.0
+        >>> func(df_pl)
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 2.5 │
+        │ 6.5 │
+        │ 3.0 │
+        └─────┘
+    """
+    return Expr(
+        lambda plx: plx.mean_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
         )
     )

@@ -4,10 +4,12 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import NoReturn
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
+from narwhals._dask.utils import reverse_translate_dtype
 from narwhals.dependencies import get_dask
 from narwhals.utils import generate_unique_token
 
@@ -16,6 +18,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals.dtypes import DType
 
 
 class DaskExpr:
@@ -465,13 +468,22 @@ class DaskExpr:
         )
 
     def clip(
-        self: Self, lower_bound: Any | None = None, upper_bound: Any | None = None
+        self: Self,
+        lower_bound: Any | None = None,
+        upper_bound: Any | None = None,
     ) -> Self:
         return self._from_call(
             lambda _input, _lower, _upper: _input.clip(lower=_lower, upper=_upper),
             "clip",
             lower_bound,
             upper_bound,
+            returns_scalar=False,
+        )
+
+    def diff(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.diff(),
+            "diff",
             returns_scalar=False,
         )
 
@@ -495,6 +507,22 @@ class DaskExpr:
             "len",
             returns_scalar=True,
         )
+
+    def quantile(
+        self: Self,
+        quantile: float,
+        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+    ) -> Self:
+        if interpolation == "linear":
+            return self._from_call(
+                lambda _input, quantile: _input.quantile(q=quantile, method="dask"),
+                "quantile",
+                quantile,
+                returns_scalar=True,
+            )
+        else:
+            msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
+            raise NotImplementedError(msg)
 
     def is_first_distinct(self: Self) -> Self:
         def func(_input: Any) -> Any:
@@ -528,6 +556,47 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def is_duplicated(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            _name = _input.name
+            return (
+                _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) > 1
+            )
+
+        return self._from_call(
+            func,
+            "is_duplicated",
+            returns_scalar=False,
+        )
+
+    def is_unique(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            _name = _input.name
+            return (
+                _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) == 1
+            )
+
+        return self._from_call(
+            func,
+            "is_unique",
+            returns_scalar=False,
+        )
+
+    def is_in(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.isin(other),
+            "is_in",
+            other,
+            returns_scalar=False,
+        )
+
+    def null_count(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.isna().sum(),
+            "null_count",
+            returns_scalar=True,
+        )
+
     def tail(self: Self) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.tail` is not supported for the Dask backend. Please use `LazyFrame.tail` instead."
@@ -538,15 +607,45 @@ class DaskExpr:
         msg = "`Expr.gather_every` is not supported for the Dask backend. Please use `LazyFrame.gather_every` instead."
         raise NotImplementedError(msg)
 
+    def over(self: Self, keys: list[str]) -> Self:
+        def func(df: DaskLazyFrame) -> list[Any]:
+            if self._output_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in over.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+            tmp = df.group_by(*keys).agg(self)
+            tmp = (
+                df.select(*keys)
+                .join(tmp, how="left", left_on=keys, right_on=keys)
+                ._native_frame
+            )
+            return [tmp[name] for name in self._output_names]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->over",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
+
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         na_position = "last" if nulls_last else "first"
 
         def func(_input: Any, ascending: bool, na_position: bool) -> Any:  # noqa: FBT001
+            import dask_expr as de  # ignore-banned-import
+
             name = _input.name
 
-            return _input.to_frame(name=name).sort_values(
+            result = _input.to_frame(name=name).sort_values(
                 by=name, ascending=ascending, na_position=na_position
             )[name]
+            return de._collection.Series(de._expr.AssignIndex(result, _input.index))
 
         return self._from_call(
             func,
@@ -574,6 +673,21 @@ class DaskExpr:
     @property
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
+
+    def cast(
+        self: Self,
+        dtype: DType | type[DType],
+    ) -> Self:
+        def func(_input: Any, dtype: DType | type[DType]) -> Any:
+            dtype = reverse_translate_dtype(dtype)
+            return _input.astype(dtype)
+
+        return self._from_call(
+            func,
+            "cast",
+            dtype,
+            returns_scalar=False,
+        )
 
 
 class DaskExprStringNamespace:
@@ -762,6 +876,49 @@ class DaskExprDateTimeNamespace:
         return self._expr._from_call(
             lambda _input: _input.dt.dayofyear,
             "ordinal_day",
+            returns_scalar=False,
+        )
+
+    def to_string(self, format: str) -> DaskExpr:  # noqa: A002
+        return self._expr._from_call(
+            lambda _input, _format: _input.dt.strftime(_format),
+            "strftime",
+            format.replace("%.f", ".%f"),
+            returns_scalar=False,
+        )
+
+    def total_minutes(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() // 60,
+            "total_minutes",
+            returns_scalar=False,
+        )
+
+    def total_seconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() // 1,
+            "total_seconds",
+            returns_scalar=False,
+        )
+
+    def total_milliseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1000 // 1,
+            "total_milliseconds",
+            returns_scalar=False,
+        )
+
+    def total_microseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1_000_000 // 1,
+            "total_microseconds",
+            returns_scalar=False,
+        )
+
+    def total_nanoseconds(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.dt.total_seconds() * 1_000_000_000 // 1,
+            "total_nanoseconds",
             returns_scalar=False,
         )
 

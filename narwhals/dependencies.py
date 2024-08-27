@@ -134,6 +134,24 @@ def is_numpy_array(arr: Any) -> TypeGuard[np.ndarray]:
     return bool((np := get_numpy()) is not None and isinstance(arr, np.ndarray))
 
 
+def is_pandas_like_dataframe(df: Any) -> bool:
+    """
+    Check whether `df` is a pandas-like DataFrame without doing any imports
+
+    By "pandas-like", we mean: pandas, Modin, cuDF.
+    """
+    return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df)
+
+
+def is_pandas_like_series(arr: Any) -> bool:
+    """
+    Check whether `arr` is a pandas-like Series without doing any imports
+
+    By "pandas-like", we mean: pandas, Modin, cuDF.
+    """
+    return is_pandas_series(arr) or is_modin_series(arr) or is_cudf_series(arr)
+
+
 __all__ = [
     "get_polars",
     "get_pandas",
@@ -142,4 +160,18 @@ __all__ = [
     "get_pyarrow",
     "get_numpy",
     "is_pandas_dataframe",
+    "is_pandas_series",
+    "is_polars_dataframe",
+    "is_polars_lazyframe",
+    "is_polars_series",
+    "is_modin_dataframe",
+    "is_modin_series",
+    "is_cudf_dataframe",
+    "is_cudf_series",
+    "is_pyarrow_table",
+    "is_pyarrow_chunked_array",
+    "is_numpy_array",
+    "is_dask_dataframe",
+    "is_pandas_like_dataframe",
+    "is_pandas_like_series",
 ]

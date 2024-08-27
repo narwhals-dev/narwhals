@@ -221,24 +221,16 @@ class PandasLikeSeries:
         return self._from_native_series(res)
 
     def arg_true(self) -> PandasLikeSeries:
-        import numpy as np  # ignore-banned-import
-
         ser = self._native_series
-        res = np.flatnonzero(ser)
-        return self._from_native_series(
-            native_series_from_iterable(
-                res,
-                name=self.name,
-                index=range(len(res)),
-                implementation=self._implementation,
-            )
-        )
+        result = ser.__class__(range(len(ser)), name=ser.name, index=ser.index).loc[ser]
+        return self._from_native_series(result)
 
     # Binary comparisons
 
     def filter(self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        other = validate_column_comparand(self._native_series.index, other)
+        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
+            other = validate_column_comparand(self._native_series.index, other)
         return self._from_native_series(self._rename(ser.loc[other], ser.name))
 
     def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
@@ -523,22 +515,30 @@ class PandasLikeSeries:
 
     # --- descriptive ---
     def is_duplicated(self: Self) -> Self:
-        return self._from_native_series(self._native_series.duplicated(keep=False))
+        res = self._native_series.duplicated(keep=False)
+        res = self._rename(res, self.name)
+        return self._from_native_series(res)
 
     def is_empty(self: Self) -> bool:
         return self._native_series.empty  # type: ignore[no-any-return]
 
     def is_unique(self: Self) -> Self:
-        return self._from_native_series(~self._native_series.duplicated(keep=False))
+        res = ~self._native_series.duplicated(keep=False)
+        res = self._rename(res, self.name)
+        return self._from_native_series(res)
 
     def null_count(self: Self) -> int:
         return self._native_series.isna().sum()  # type: ignore[no-any-return]
 
     def is_first_distinct(self: Self) -> Self:
-        return self._from_native_series(~self._native_series.duplicated(keep="first"))
+        res = ~self._native_series.duplicated(keep="first")
+        res = self._rename(res, self.name)
+        return self._from_native_series(res)
 
     def is_last_distinct(self: Self) -> Self:
-        return self._from_native_series(~self._native_series.duplicated(keep="last"))
+        res = ~self._native_series.duplicated(keep="last")
+        res = self._rename(res, self.name)
+        return self._from_native_series(res)
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
         if not isinstance(descending, bool):
@@ -590,7 +590,9 @@ class PandasLikeSeries:
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        res = ser.where(mask._native_series, other._native_series)
+        mask = validate_column_comparand(ser.index, mask)
+        other = validate_column_comparand(ser.index, other)
+        res = ser.where(mask, other)
         return self._from_native_series(res)
 
     def head(self: Self, n: int) -> Self:

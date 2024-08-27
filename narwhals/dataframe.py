@@ -158,8 +158,13 @@ class BaseFrame(Generic[FrameT]):
             )
         )
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
-        predicates, _ = self._flatten_and_extract(*predicates)
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
+        if not (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            predicates, _ = self._flatten_and_extract(*predicates)
         return self._from_compliant_dataframe(
             self._compliant_frame.filter(*predicates),
         )
@@ -233,8 +238,8 @@ class DataFrame(BaseFrame[FrameT]):
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
 
-    def __array__(self) -> np.ndarray:
-        return self._compliant_frame.to_numpy()
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+        return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
         header = " Narwhals DataFrame                            "
@@ -342,6 +347,38 @@ class DataFrame(BaseFrame[FrameT]):
             2    3  8.0   c
         """
         return self._compliant_frame.to_pandas()
+
+    def write_csv(self, file: str | Path | BytesIO | None = None) -> Any:
+        r"""
+        Write dataframe to parquet file.
+
+        Examples:
+            Construct pandas and Polars DataFrames:
+
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
+            >>> df_pl = pl.DataFrame(df)
+
+            We define a library agnostic function:
+
+            >>> def func(df):
+            ...     df = nw.from_native(df)
+            ...     return df.write_csv()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)  # doctest: +SKIP
+            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+            >>> func(df_pl)  # doctest: +SKIP
+            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+
+            If we had passed a file name to `write_csv`, it would have been
+            written to that file.
+        """
+        return self._compliant_frame.write_csv(file)
 
     def write_parquet(self, file: str | Path | BytesIO) -> Any:
         """
@@ -481,6 +518,8 @@ class DataFrame(BaseFrame[FrameT]):
         )
 
     @overload
+    def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
@@ -504,20 +543,33 @@ class DataFrame(BaseFrame[FrameT]):
         | slice
         | Sequence[int]
         | tuple[Sequence[int], str | int]
-        | tuple[Sequence[int], Sequence[int] | Sequence[str]],
+        | tuple[Sequence[int], Sequence[int] | Sequence[str] | slice],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
 
         Arguments:
-            item: how to slice dataframe:
+            item: How to slice dataframe. What happens depends on what is passed. It's easiest
+                to explain by example. Suppose we have a Dataframe `df`:
 
-                - str: extract column
-                - slice or Sequence of integers: slice rows from dataframe.
-                - tuple of Sequence of integers and str or int: slice rows and extract column at the same time.
-                - tuple of Sequence of integers and Sequence of integers: slice rows and extract columns at the same time.
+                - `df['a']` extracts column `'a'` and returns a `Series`.
+                - `df[0:2]` extracts the first two rows and returns a `DataFrame`.
+                - `df[0:2, 'a']` extracts the first two rows from column `'a'` and returns
+                    a `Series`.
+                - `df[0:2, 0]` extracts the first two rows from the first column and returns
+                    a `Series`.
+                - `df[[0, 1], [0, 1, 2]]` extracts the first two rows and the first three columns
+                    and returns a `DataFrame`
+                - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
+                    returns a `DataFrame`
+                - `df[:, 0: 2]` extracts all rows from the first two columns and returns a `DataFrame`
+                - `df[:, 'a': 'c']` extracts all rows and all columns positioned between `'a'` and `'c'`
+                    _inclusive_ and returns a `DataFrame`. For example, if the columns are
+                    `'a', 'd', 'c', 'b'`, then that would extract columns `'a'`, `'d'`, and `'c'`.
+
         Notes:
-            Integers are always interpreted as positions, and strings always as column names.
+            - Integers are always interpreted as positions
+            - Strings are always interpreted as column names.
 
             In contrast with Polars, pandas allows non-string column names.
             If you don't know whether the column name you're trying to extract
@@ -552,6 +604,8 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
+        if isinstance(item, int):
+            item = [item]
         if (
             isinstance(item, tuple)
             and len(item) == 2
@@ -566,7 +620,7 @@ class DataFrame(BaseFrame[FrameT]):
         if (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[1], (list, tuple))
+            and isinstance(item[1], (list, tuple, slice))
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
@@ -645,6 +699,40 @@ class DataFrame(BaseFrame[FrameT]):
                 ).items()
             }
         return self._compliant_frame.to_dict(as_series=as_series)  # type: ignore[no-any-return]
+
+    def row(self, index: int) -> tuple[Any, ...]:
+        """
+        Get values at given row.
+
+        !!!note
+            You should NEVER use this method to iterate over a DataFrame;
+            if you require row-iteration you should strongly prefer use of iter_rows() instead.
+
+        Arguments:
+            index: Row number.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            Let's define a library-agnostic function to get the second row.
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.row(1)
+
+            We can then pass pandas / Polars / any other supported library:
+
+            >>> func(df_pd)
+            (2, 5)
+            >>> func(df_pl)
+            (2, 5)
+        """
+        return self._compliant_frame.row(index)  # type: ignore[no-any-return]
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
@@ -1436,14 +1524,15 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
         r"""
         Filter the rows in the DataFrame based on one or more predicate expressions.
 
         The original order of the remaining rows is preserved.
 
         Arguments:
-            predicates: Expression(s) that evaluates to a boolean Series.
+            *predicates: Expression(s) that evaluates to a boolean Series. Can
+                also be a (single!) boolean list.
 
         Examples:
             >>> import pandas as pd
@@ -2446,11 +2535,15 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             *exprs: Column(s) to select, specified as positional arguments.
-                     Accepts expression input. Strings are parsed as column names,
-                     other non-expression inputs are parsed as literals.
-
+                Accepts expression input. Strings are parsed as column names.
             **named_exprs: Additional columns to select, specified as keyword arguments.
-                            The columns will be renamed to the keyword used.
+                The columns will be renamed to the keyword used.
+
+        Notes:
+            If you'd like to select a column whose name isn't a string (for example,
+            if you're working with pandas) then you should explicitly use `nw.col` instead
+            of just passing the column name. For example, to select a column named
+            `0` use `df.select(nw.col(0))`, not `df.select(0)`.
 
         Examples:
             >>> import pandas as pd
@@ -2902,14 +2995,15 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().unique(subset, keep=keep, maintain_order=maintain_order)
 
-    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> Self:
+    def filter(self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool]) -> Self:
         r"""
         Filter the rows in the LazyFrame based on a predicate expression.
 
         The original order of the remaining rows is preserved.
 
         Arguments:
-            *predicates: Expression that evaluates to a boolean Series.
+            *predicates: Expression that evaluates to a boolean Series. Can
+                also be a (single!) boolean list.
 
         Examples:
             >>> import pandas as pd

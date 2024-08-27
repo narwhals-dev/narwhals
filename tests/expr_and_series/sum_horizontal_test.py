@@ -18,3 +18,12 @@ def test_sumh(constructor: Any, col_expr: Any) -> None:
         "horizontal_sum": [5, 7, 8],
     }
     compare_dicts(result, expected)
+
+
+def test_sumh_nullable(constructor: Any) -> None:
+    data = {"a": [1, 8, 3], "b": [4, 5, None]}
+    expected = {"hsum": [5, 13, 3]}
+
+    df = nw.from_native(constructor(data))
+    result = df.select(hsum=nw.sum_horizontal("a", "b"))
+    compare_dicts(result, expected)

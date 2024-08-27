@@ -227,8 +227,8 @@ class PandasLikeExpr:
 
     def filter(self, *predicates: Any) -> Self:
         plx = self.__narwhals_namespace__()
-        expr = plx.all_horizontal(*predicates)
-        return reuse_series_implementation(self, "filter", other=expr)
+        other = plx.all_horizontal(*predicates)
+        return reuse_series_implementation(self, "filter", other=other)
 
     def drop_nulls(self) -> Self:
         return reuse_series_implementation(self, "drop_nulls")

@@ -8,7 +8,6 @@ from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
-from narwhals._dask.utils import set_axis
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_pandas
@@ -50,11 +49,8 @@ class DaskLazyFrame:
         return self.__class__(df, backend_version=self._backend_version)
 
     def with_columns(self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
-        df = self._native_frame
-        index = df.index
         new_series = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
-        df = df.assign(**{k: set_axis(v, index) for k, v in new_series.items()})
-        return self._from_native_frame(df)
+        return self._from_native_frame(self._native_frame.assign(**new_series))
 
     def collect(self) -> Any:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -74,12 +70,19 @@ class DaskLazyFrame:
         self,
         *predicates: DaskExpr,
     ) -> Self:
-        from narwhals._dask.namespace import DaskNamespace
+        if (
+            len(predicates) == 1
+            and isinstance(predicates[0], list)
+            and all(isinstance(x, bool) for x in predicates[0])
+        ):
+            mask = predicates[0]
+        else:
+            from narwhals._dask.namespace import DaskNamespace
 
-        plx = DaskNamespace(backend_version=self._backend_version)
-        expr = plx.all_horizontal(*predicates)
-        # Safety: all_horizontal's expression only returns a single column.
-        mask = expr._call(self)[0]
+            plx = DaskNamespace(backend_version=self._backend_version)
+            expr = plx.all_horizontal(*predicates)
+            # Safety: all_horizontal's expression only returns a single column.
+            mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
 
     def lazy(self) -> Self:
@@ -119,12 +122,9 @@ class DaskLazyFrame:
         left_most_series = next(  # pragma: no cover
             s for s in new_series.values() if not isinstance(s, de._collection.Scalar)
         )
-        index = left_most_series.index
 
         return self._from_native_frame(
-            left_most_series.to_frame()
-            .assign(**{k: set_axis(v, index) for k, v in new_series.items()})
-            .loc[:, col_order]
+            left_most_series.to_frame().assign(**new_series).loc[:, col_order]
         )
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:

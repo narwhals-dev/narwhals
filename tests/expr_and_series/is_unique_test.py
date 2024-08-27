@@ -1,8 +1,5 @@
 from typing import Any
 
-import numpy as np
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -12,12 +9,7 @@ data = {
 }
 
 
-def test_is_unique_expr(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # TODO(unassigned): why is Modin failing here?
-        request.applymarker(pytest.mark.xfail)
+def test_is_unique_expr(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().is_unique())
     expected = {
@@ -30,5 +22,7 @@ def test_is_unique_expr(constructor: Any, request: Any) -> None:
 def test_is_unique_series(constructor_eager: Any) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_unique()
-    expected = np.array([False, False, True])
-    assert (result.to_numpy() == expected).all()
+    expected = {
+        "a": [False, False, True],
+    }
+    compare_dicts({"a": result}, expected)

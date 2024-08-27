@@ -8,9 +8,7 @@ from tests.utils import compare_dicts
 data = {"a": [1, 4, 2, 5]}
 
 
-def test_expr_is_in(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_expr_is_in(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_in([4, 5]))
     expected = {"a": [False, True, False, True]}
@@ -20,7 +18,7 @@ def test_expr_is_in(constructor: Any, request: Any) -> None:
 
 def test_ser_is_in(constructor_eager: Any) -> None:
     ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-    result = {"a": ser.is_in([4, 5]).to_list()}
+    result = {"a": ser.is_in([4, 5])}
     expected = {"a": [False, True, False, True]}
 
     compare_dicts(result, expected)

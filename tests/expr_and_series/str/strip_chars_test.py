@@ -36,4 +36,4 @@ def test_str_strip_chars_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.strip_chars(characters)
-    assert result_series.to_list() == expected["a"]
+    compare_dicts({"a": result_series}, expected)
