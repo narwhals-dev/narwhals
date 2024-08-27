@@ -131,7 +131,8 @@ class DaskExpr:
             root_names=root_names,
             output_names=output_names,
             returns_scalar=self._returns_scalar or returns_scalar,
-            modifies_index=self._modifies_index or modifies_index,
+            modifies_index=(self._modifies_index or modifies_index)
+            and not (self._returns_scalar or returns_scalar),
             backend_version=self._backend_version,
         )
 

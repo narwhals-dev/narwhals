@@ -110,11 +110,9 @@ class DaskLazyFrame:
             # This is a simple slice => fastpath!
             return self._from_native_frame(self._native_frame.loc[:, exprs])
 
-        n_modifies_index = sum(
-            getattr(e, "_modifies_index", 0)
-            for e in list(exprs) + list(named_exprs.values())
-        )
-        if n_modifies_index > 1:
+        all_exprs = list(exprs) + list(named_exprs.values())
+        n_modifies_index = sum(getattr(e, "_modifies_index", 0) for e in all_exprs)
+        if len(all_exprs) > 1 and n_modifies_index > 1:
             msg = "Found multiple expressions that modify the index"
             raise ValueError(msg)
 

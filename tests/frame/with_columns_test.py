@@ -49,11 +49,8 @@ def test_dask_with_columns_modifies_index() -> None:
     pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
 
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "i": [0, 1, 2]}
-
-    df = nw.from_native(dd.from_dict(data, npartitions=2))
-
+    df = nw.from_native(dd.from_dict({"a": [1, 3, 2]}, npartitions=2))
     with pytest.raises(
         ValueError, match="Expressions that modify the index are not supported"
     ):
-        df.with_columns(nw.col("b").head(1))
+        df.with_columns(nw.col("a").head(1))

@@ -31,3 +31,29 @@ def test_non_string_select_invalid() -> None:
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(TypeError, match="\n\nHint: if you were trying to select"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
+
+
+def test_dask_select_reduction_and_modify_index() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
+    import dask.dataframe as dd
+
+    data = {"a": [1, 3, 2], "b": [4, 4.0, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(dd.from_dict(data, npartitions=1))
+
+    result = df.select(
+        nw.col("a").head(2).sum(),
+        nw.col("b").tail(2).mean(),
+        nw.col("z").head(2),
+    )
+    expected = {"a": [4, 4], "b": [5, 5], "z": [7.0, 8]}
+    compare_dicts(result, expected)
+
+    # all reductions
+    result = df.select(
+        nw.col("a").head(2).sum(),
+        nw.col("b").tail(2).mean(),
+        nw.col("z").max(),
+    )
+    expected = {"a": [4], "b": [5], "z": [9]}
+    compare_dicts(result, expected)
