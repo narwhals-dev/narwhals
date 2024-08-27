@@ -148,21 +148,21 @@ class DaskNamespace:
             msg = "No items to concatenate"
             raise AssertionError(msg)
         native_frames = [i._native_frame for i in items]
-        axis: int
-        join: str
         if how == "vertical":
             if not all(
                 tuple(i.columns) == tuple(native_frames[0].columns) for i in native_frames
             ):  # pragma: no cover
                 msg = "unable to vstack with non-matching columns"
                 raise AssertionError(msg)
-            axis = 0
-            join = "inner"
-        elif how == "horizontal":
+            return DaskLazyFrame(
+                dd.concat(native_frames, axis=0, join="inner"),
+                backend_version=self._backend_version,
+            )
+        if how == "horizontal":
             all_column_names: list[str] = [
                 column for frame in native_frames for column in frame.columns
             ]
-            if len(all_column_names) != len(set(all_column_names)):
+            if len(all_column_names) != len(set(all_column_names)):  # pragma: no cover
                 duplicates = [
                     i for i in all_column_names if all_column_names.count(i) > 1
                 ]
@@ -171,18 +171,11 @@ class DaskNamespace:
                     "have more than one occurrence"
                 )
                 raise AssertionError(msg)
-            axis = 1
-            join = "outer"
-        else:
-            msg = (
-                "Only valid options for concat are 'vertical' and 'horizontal' "
-                f"({how} not recognised)"
+            return DaskLazyFrame(
+                dd.concat(native_frames, axis=1, join="outer"),
+                backend_version=self._backend_version,
             )
-            raise NotImplementedError(msg)
-        return DaskLazyFrame(
-            dd.concat(native_frames, axis=axis, join=join),
-            backend_version=self._backend_version,
-        )
+        raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> IntoDaskExpr:
         dask_exprs = parse_into_exprs(*exprs, namespace=self)
