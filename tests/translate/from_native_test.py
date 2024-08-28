@@ -199,3 +199,10 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
     with context:
         res = nw.from_native(dframe, eager_only=eager_only)
         assert isinstance(res, nw.LazyFrame)
+
+
+def test_from_native_strict_false_typing() -> None:
+    df = pl.DataFrame()
+    nw.from_native(df, strict=False)
+    nw.from_native(df, strict=False, eager_only=True)
+    nw.from_native(df, strict=False, eager_or_interchange_only=True)
