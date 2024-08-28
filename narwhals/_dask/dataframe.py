@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._dask.expr import DaskExpr
+    from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
@@ -296,7 +297,7 @@ class DaskLazyFrame:
             ),
         )
 
-    def group_by(self, *by: str) -> Any:
+    def group_by(self, *by: str) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
         return DaskLazyGroupBy(self, list(by))

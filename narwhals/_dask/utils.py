@@ -9,6 +9,7 @@ from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    import dask.dataframe as dd
     import dask_expr
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -34,7 +35,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
 
 def parse_exprs_and_named_exprs(
     df: DaskLazyFrame, *exprs: Any, **named_exprs: Any
-) -> dict[str, Any]:
+) -> dict[str, dask_expr.Series]:
     results = {}
     for expr in exprs:
         if hasattr(expr, "__narwhals_expr__"):
@@ -62,7 +63,7 @@ def parse_exprs_and_named_exprs(
     return results
 
 
-def add_row_index(frame: Any, name: str) -> Any:
+def add_row_index(frame: dd.DataFrame, name: str) -> dd.DataFrame:
     frame = frame.assign(**{name: 1})
     return frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1})
 
