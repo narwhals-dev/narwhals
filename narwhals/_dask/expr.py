@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 class DaskExpr:
     def __init__(
         self,
-        call: Callable[[DaskLazyFrame], dask_expr.Series],
+        call: Callable[[DaskLazyFrame], list[dask_expr.Series]],
         *,
         depth: int,
         function_name: str,
