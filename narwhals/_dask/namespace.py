@@ -4,10 +4,12 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterable
 from typing import NoReturn
 from typing import cast
 
 from narwhals import dtypes
+from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._dask.utils import validate_comparand
@@ -16,7 +18,6 @@ from narwhals._expression_parsing import parse_into_exprs
 if TYPE_CHECKING:
     import dask_expr
 
-    from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.typing import IntoDaskExpr
 
 
@@ -141,6 +142,47 @@ class DaskNamespace:
             lambda x, y: x + y,
             [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
         )
+
+    def concat(
+        self,
+        items: Iterable[DaskLazyFrame],
+        *,
+        how: str = "vertical",
+    ) -> DaskLazyFrame:
+        import dask.dataframe as dd  # ignore-banned-import
+
+        if len(list(items)) == 0:
+            msg = "No items to concatenate"  # pragma: no cover
+            raise AssertionError(msg)
+        native_frames = [i._native_frame for i in items]
+        if how == "vertical":
+            if not all(
+                tuple(i.columns) == tuple(native_frames[0].columns) for i in native_frames
+            ):  # pragma: no cover
+                msg = "unable to vstack with non-matching columns"
+                raise AssertionError(msg)
+            return DaskLazyFrame(
+                dd.concat(native_frames, axis=0, join="inner"),
+                backend_version=self._backend_version,
+            )
+        if how == "horizontal":
+            all_column_names: list[str] = [
+                column for frame in native_frames for column in frame.columns
+            ]
+            if len(all_column_names) != len(set(all_column_names)):  # pragma: no cover
+                duplicates = [
+                    i for i in all_column_names if all_column_names.count(i) > 1
+                ]
+                msg = (
+                    f"Columns with name(s): {', '.join(duplicates)} "
+                    "have more than one occurrence"
+                )
+                raise AssertionError(msg)
+            return DaskLazyFrame(
+                dd.concat(native_frames, axis=1, join="outer"),
+                backend_version=self._backend_version,
+            )
+        raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> IntoDaskExpr:
         dask_exprs = parse_into_exprs(*exprs, namespace=self)
