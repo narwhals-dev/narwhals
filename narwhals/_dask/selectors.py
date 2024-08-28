@@ -8,6 +8,7 @@ from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
 
 if TYPE_CHECKING:
+    import dask_expr
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -118,12 +119,10 @@ class DaskSelector(DaskExpr):
     def __or__(self: Self, other: DaskSelector | Any) -> DaskSelector | Any:
         if isinstance(other, DaskSelector):
 
-            def call(df: DaskLazyFrame) -> list[Any]:
+            def call(df: DaskLazyFrame) -> list[dask_expr.Series]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [  # type: ignore[no-any-return]
-                    x for x in lhs if x.name not in [x.name for x in rhs]
-                ] + rhs
+                return [x for x in lhs if x.name not in [x.name for x in rhs]] + rhs
 
             return DaskSelector(
                 call,

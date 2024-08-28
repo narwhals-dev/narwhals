@@ -14,6 +14,7 @@ from narwhals.dependencies import get_dask
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
+    import dask_expr
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -24,8 +25,7 @@ if TYPE_CHECKING:
 class DaskExpr:
     def __init__(
         self,
-        # callable from DaskLazyFrame to list of (native) Dask Series
-        call: Callable[[DaskLazyFrame], Any],
+        call: Callable[[DaskLazyFrame], list[dask_expr.Series]],
         *,
         depth: int,
         function_name: str,
@@ -58,7 +58,7 @@ class DaskExpr:
         *column_names: str,
         backend_version: tuple[int, ...],
     ) -> Self:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             return [df._native_frame.loc[:, column_name] for column_name in column_names]
 
         return cls(
@@ -73,14 +73,14 @@ class DaskExpr:
 
     def _from_call(
         self,
-        # callable from DaskLazyFrame to list of (native) Dask Series
-        call: Any,
+        # First argument to `call` should be `dask_expr.Series`
+        call: Callable[..., dask_expr.Series],
         expr_name: str,
         *args: Any,
         returns_scalar: bool,
         **kwargs: Any,
     ) -> Self:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             results = []
             inputs = self._call(df)
             _args = [maybe_evaluate(df, x) for x in args]
@@ -131,7 +131,7 @@ class DaskExpr:
         )
 
     def alias(self, name: str) -> Self:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             inputs = self._call(df)
             return [_input.rename(name) for _input in inputs]
 
@@ -535,7 +535,7 @@ class DaskExpr:
             raise NotImplementedError(msg)
 
     def is_first_distinct(self: Self) -> Self:
-        def func(_input: Any) -> Any:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_unique_token(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
@@ -552,7 +552,7 @@ class DaskExpr:
         )
 
     def is_last_distinct(self: Self) -> Self:
-        def func(_input: Any) -> Any:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_unique_token(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
@@ -567,7 +567,7 @@ class DaskExpr:
         )
 
     def is_duplicated(self: Self) -> Self:
-        def func(_input: Any) -> Any:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             return (
                 _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) > 1
@@ -580,7 +580,7 @@ class DaskExpr:
         )
 
     def is_unique(self: Self) -> Self:
-        def func(_input: Any) -> Any:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             return (
                 _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) == 1
@@ -627,12 +627,12 @@ class DaskExpr:
                 )
                 raise ValueError(msg)
             tmp = df.group_by(*keys).agg(self)
-            tmp = (
+            tmp_native = (
                 df.select(*keys)
                 .join(tmp, how="left", left_on=keys, right_on=keys)
                 ._native_frame
             )
-            return [tmp[name] for name in self._output_names]
+            return [tmp_native[name] for name in self._output_names]
 
         return self.__class__(
             func,

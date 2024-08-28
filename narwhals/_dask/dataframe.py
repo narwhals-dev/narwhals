@@ -18,9 +18,11 @@ from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    import dask.dataframe as dd
     from typing_extensions import Self
 
     from narwhals._dask.expr import DaskExpr
+    from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
@@ -28,7 +30,7 @@ if TYPE_CHECKING:
 
 class DaskLazyFrame:
     def __init__(
-        self, native_dataframe: Any, *, backend_version: tuple[int, ...]
+        self, native_dataframe: dd.DataFrame, *, backend_version: tuple[int, ...]
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
@@ -296,7 +298,7 @@ class DaskLazyFrame:
             ),
         )
 
-    def group_by(self, *by: str) -> Any:
+    def group_by(self, *by: str) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
         return DaskLazyGroupBy(self, list(by))
