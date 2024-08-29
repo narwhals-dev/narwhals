@@ -107,10 +107,3 @@ def test_series_docstrings() -> None:
             )
             == getattr(df, item).__doc__
         )
-
-
-def test_from_native_strict_false_typing() -> None:
-    df = pl.DataFrame()
-    nw_v1.from_native(df, strict=False)
-    nw_v1.from_native(df, strict=False, eager_only=True)
-    nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)

@@ -206,3 +206,7 @@ def test_from_native_strict_false_typing() -> None:
     nw.from_native(df, strict=False)
     nw.from_native(df, strict=False, eager_only=True)
     nw.from_native(df, strict=False, eager_or_interchange_only=True)
+
+    unstable_nw.from_native(df, strict=False)
+    unstable_nw.from_native(df, strict=False, eager_only=True)
+    unstable_nw.from_native(df, strict=False, eager_or_interchange_only=True)
