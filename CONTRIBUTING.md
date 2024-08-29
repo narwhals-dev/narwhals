@@ -49,6 +49,8 @@ git clone git@github.com:YOUR-USERNAME/narwhals.git
 
 Here's how you can set up your local development environment to contribute.
 
+#### Option 1: Use UV (recommended)
+
 1. Make sure you have Python3.8+ installed (for example, Python 3.11), create a virtual environment,
    and activate it. If you're new to this, here's one way that we recommend:
    1. Install uv: https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started
@@ -72,6 +74,14 @@ uv pip install pre-commit
 pre-commit install
 ```
 This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
+
+#### Option 2: use python3-venv
+
+1. Make sure you have Python 3.8+ installed. If you don't, you can check [install Python](https://realpython.com/installing-python/)
+   to learn how. Then, [create and activate](https://realpython.com/python-virtual-environments-a-primer/)
+   a virtual environment.
+
+Then, follow steps 2-4 from above but using `pip install` instead of `uv pip install`.
 
 ### 5. Working on your issue
 
