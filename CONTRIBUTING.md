@@ -80,8 +80,7 @@ This will automatically format and lint your code before each commit, and it wil
 1. Make sure you have Python 3.8+ installed. If you don't, you can check [install Python](https://realpython.com/installing-python/)
    to learn how. Then, [create and activate](https://realpython.com/python-virtual-environments-a-primer/)
    a virtual environment.
-
-Then, follow steps 2-4 from above but using `pip install` instead of `uv pip install`.
+2. Then, follow steps 2-4 from above but using `pip install` instead of `uv pip install`.
 
 ### 5. Working on your issue
 
