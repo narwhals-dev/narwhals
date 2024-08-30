@@ -1,4 +1,3 @@
-# To investigate
 from typing import Any
 
 import pytest
