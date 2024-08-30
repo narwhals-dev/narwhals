@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import polars as pl
-from queries import q10
+from queries import q11
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True
@@ -22,16 +22,16 @@ IO_FUNCS = {
 
 tool = "pandas"
 fn = IO_FUNCS[tool]
-print(q10.query(fn(nation), fn(nation), fn(partsupp), fn(supplier)))
+print(q11.query(fn(nation), fn(partsupp), fn(supplier)))
 
 tool = "pandas[pyarrow]"
 fn = IO_FUNCS[tool]
-print(q10.query(fn(nation), fn(nation), fn(partsupp), fn(supplier)))
+print(q11.query(fn(nation), fn(partsupp), fn(supplier)))
 
 tool = "polars[eager]"
 fn = IO_FUNCS[tool]
-print(q10.query(fn(nation), fn(nation), fn(partsupp), fn(supplier)))
+print(q11.query(fn(nation), fn(partsupp), fn(supplier)))
 
 tool = "polars[lazy]"
 fn = IO_FUNCS[tool]
-print(q10.query(fn(nation), fn(nation), fn(partsupp), fn(supplier)).collect())
+print(q11.query(fn(nation), fn(partsupp), fn(supplier)).collect())
