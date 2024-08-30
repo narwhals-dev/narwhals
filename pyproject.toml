@@ -24,6 +24,11 @@ exclude = [
   "/tests",
   "/tpch",
   "/utils",
+  ".gitignore",
+  "CONTRIBUTING.md",
+  "mkdocs.yml",
+  "noxfile.py",
+  "requirements-dev.txt",
 ]
 
 [project.optional-dependencies]
