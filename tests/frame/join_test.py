@@ -122,7 +122,7 @@ def test_join_not_implemented(constructor: Any, how: str) -> None:
     with pytest.raises(
         NotImplementedError,
         match=re.escape(
-            f"Only the following join stragies are supported: ('inner', 'left', 'cross', 'anti', 'semi'); found '{how}'."
+            f"Only the following join strategies are supported: ('inner', 'left', 'cross', 'anti', 'semi'); found '{how}'."
         ),
     ):
         df.join(df, left_on="a", right_on="a", how=how)  # type: ignore[arg-type]
