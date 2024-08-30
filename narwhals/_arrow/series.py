@@ -18,6 +18,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -26,7 +27,11 @@ if TYPE_CHECKING:
 
 class ArrowSeries:
     def __init__(
-        self, native_series: Any, *, name: str, backend_version: tuple[int, ...]
+        self,
+        native_series: pa.ChunkedArray,
+        *,
+        name: str,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._name = name
         self._native_series = native_series
@@ -366,7 +371,9 @@ class ArrowSeries:
 
         return pc.all(self._native_series)  # type: ignore[no-any-return]
 
-    def is_between(self, lower_bound: Any, upper_bound: Any, closed: str = "both") -> Any:
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series
@@ -657,7 +664,7 @@ class ArrowSeries:
 
         return self._from_native_series(arr)
 
-    def to_arrow(self: Self) -> Any:
+    def to_arrow(self: Self) -> pa.Array:
         return self._native_series.combine_chunks()
 
     @property

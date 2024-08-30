@@ -21,6 +21,7 @@ from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     import numpy as np
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 class ArrowDataFrame:
     # --- not in the spec ---
     def __init__(
-        self, native_dataframe: Any, *, backend_version: tuple[int, ...]
+        self, native_dataframe: pa.Table, *, backend_version: tuple[int, ...]
     ) -> None:
         self._native_frame = native_dataframe
         self._implementation = Implementation.PYARROW

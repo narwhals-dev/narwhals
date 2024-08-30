@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
 
 
@@ -157,7 +158,7 @@ class ArrowExpr:
     def len(self) -> Self:
         return reuse_series_implementation(self, "len", returns_scalar=True)
 
-    def filter(self, *predicates: Any) -> Self:
+    def filter(self, *predicates: IntoArrowExpr) -> Self:
         plx = self.__narwhals_namespace__()
         expr = plx.all_horizontal(*predicates)
         return reuse_series_implementation(self, "filter", other=expr)
@@ -228,7 +229,7 @@ class ArrowExpr:
     def is_null(self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
-    def is_between(self, lower_bound: Any, upper_bound: Any, closed: str) -> Any:
+    def is_between(self, lower_bound: Any, upper_bound: Any, closed: str) -> Self:
         return reuse_series_implementation(
             self, "is_between", lower_bound, upper_bound, closed
         )
