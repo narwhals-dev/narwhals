@@ -36,7 +36,7 @@ BACKENDS = [
     Backend(name="dask", module="_dask", type_=BackendType.LAZY),
 ]
 
-EXCLUDE_CLASSES = {"BaseFrame"}
+EXCLUDE_CLASSES = {"BaseFrame", "Then", "When"}
 
 
 def get_class_methods(kls: type[Any]) -> list[str]:
@@ -113,6 +113,7 @@ def get_backend_completeness_table() -> None:
             tbl_hide_column_data_types=True,
             tbl_hide_dataframe_shape=True,
             set_tbl_rows=results.shape[0],
+            set_tbl_width_chars=1_000,
         ):
             table = str(results)
 
