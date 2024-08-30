@@ -190,7 +190,7 @@ class BaseFrame(Generic[FrameT]):
         _supported_joins = ("inner", "left", "cross", "anti", "semi")
 
         if how not in _supported_joins:
-            msg = f"Only the following join stragies are supported: {_supported_joins}; found '{how}'."
+            msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
         if how == "cross" and (left_on or right_on):
