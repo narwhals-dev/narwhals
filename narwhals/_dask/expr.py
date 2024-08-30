@@ -712,7 +712,7 @@ class DaskExpr:
 
     def head(self: Self, n: int) -> Self:
         return self._from_call(
-            lambda _input, _n: _input.head(_n, compute=False),
+            lambda _input, _n: _input.head(_n, npartitions=-1, compute=False),
             "head",
             n,
             returns_scalar=False,
