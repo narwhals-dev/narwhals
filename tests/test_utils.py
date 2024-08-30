@@ -15,15 +15,15 @@ def test_maybe_align_index_pandas() -> None:
     result = nw.maybe_align_index(df, s)
     expected = pd.DataFrame({"a": [2, 1, 3]}, index=[2, 1, 0])
     assert_frame_equal(nw.to_native(result), expected)
-    result = nw.maybe_align_index(s, df)
-    expected = pd.Series([2, 1, 3], index=[1, 2, 0])
-    assert_series_equal(nw.to_native(result), expected)
-    result = nw.maybe_align_index(s, s.sort(descending=True))
-    expected = pd.Series([3, 2, 1], index=[0, 1, 2])
-    assert_series_equal(nw.to_native(result), expected)
     result = nw.maybe_align_index(df, df.sort("a", descending=True))
     expected = pd.DataFrame({"a": [3, 2, 1]}, index=[0, 2, 1])
     assert_frame_equal(nw.to_native(result), expected)
+    result_s = nw.maybe_align_index(s, df)
+    expected_s = pd.Series([2, 1, 3], index=[1, 2, 0])
+    assert_series_equal(nw.to_native(result_s), expected_s)
+    result_s = nw.maybe_align_index(s, s.sort(descending=True))
+    expected_s = pd.Series([3, 2, 1], index=[0, 1, 2])
+    assert_series_equal(nw.to_native(result_s), expected_s)
 
 
 def test_with_columns_sort() -> None:
