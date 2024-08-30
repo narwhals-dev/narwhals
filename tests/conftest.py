@@ -74,7 +74,7 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
 
 def dask_lazy_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
     dd = get_dask_dataframe()
-    return dd.from_pandas(pd.DataFrame(obj), npartitions=2)  # type: ignore[no-any-return]
+    return dd.from_pandas(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
 
 def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
