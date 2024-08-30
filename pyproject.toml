@@ -23,6 +23,7 @@ exclude = [
   "/docs",
   "/tests",
   "/tpch",
+  "/utils",
 ]
 
 [project.optional-dependencies]
