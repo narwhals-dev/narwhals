@@ -6,15 +6,17 @@ from tests.utils import compare_dicts
 data = {
     "a": [1, 1, 2],
     "b": [1, 2, 3],
+    "index": [0, 1, 2]
 }
 
 
 def test_is_duplicated_expr(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.all().is_duplicated())
+    result = df.select(nw.col("a", "b").is_duplicated(), "index").sort("index")
     expected = {
         "a": [True, True, False],
         "b": [False, False, False],
+        "index": [0, 1, 2]
     }
     compare_dicts(result, expected)
 

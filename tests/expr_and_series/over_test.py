@@ -1,3 +1,4 @@
+# To investigate
 from typing import Any
 
 import pytest
@@ -9,6 +10,7 @@ data = {
     "a": ["a", "a", "b", "b", "b"],
     "b": [1, 2, 3, 5, 3],
     "c": [5, 4, 3, 2, 1],
+    "index": [0, 1, 2, 3, 4],
 }
 
 
