@@ -4,19 +4,16 @@ from typing import Any
 import narwhals as nw
 
 
+@nw.narwhalify
 def query(
-    customer_ds_raw: Any,
-    line_item_ds_raw: Any,
-    orders_ds_raw: Any,
+    customer_ds: Any,
+    line_item_ds: Any,
+    orders_ds: Any,
 ) -> Any:
     var_1 = var_2 = datetime(1995, 3, 15)
     var_3 = "BUILDING"
 
-    customer_ds = nw.from_native(customer_ds_raw)
-    line_item_ds = nw.from_native(line_item_ds_raw)
-    orders_ds = nw.from_native(orders_ds_raw)
-
-    q_final = (
+    return (
         customer_ds.filter(nw.col("c_mktsegment") == var_3)
         .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
@@ -40,5 +37,3 @@ def query(
         .sort(by=["revenue", "o_orderdate"], descending=[True, False])
         .head(10)
     )
-
-    return nw.to_native(q_final)
