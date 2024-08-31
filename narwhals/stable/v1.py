@@ -1723,7 +1723,7 @@ def from_dict(
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import narwhals as nw
+        >>> import narwhals.stable.v1 as nw
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
         Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
