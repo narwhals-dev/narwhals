@@ -1724,13 +1724,12 @@ def from_dict(
         >>> import pandas as pd
         >>> import polars as pl
         >>> import narwhals.stable.v1 as nw
-        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+        >>> data = {"c": [5, 2], "d": [1, 4]}
 
         Let's define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     data = {"c": [5, 2], "d": [1, 4]}
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_dict(data, native_namespace=native_namespace)
 
