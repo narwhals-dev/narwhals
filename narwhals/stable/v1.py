@@ -1726,13 +1726,13 @@ def from_dict(
         >>> import narwhals.stable.v1 as nw
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
-        Let's define a dataframe-agnostic function:
+        Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     new_data = {"c": [5, 2], "d": [1, 4]}
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_dict(data, native_namespace=native_namespace)
+        ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
         Let's see what happens when passing pandas / Polars input:
 
