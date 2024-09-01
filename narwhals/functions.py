@@ -57,7 +57,7 @@ def concat(
 
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import narwhals.stable.v1 as nw
+        >>> import narwhals as nw
         >>> data_1 = {"a": [1, 2, 3], "b": [4, 5, 6]}
         >>> data_2 = {"a": [5, 2], "b": [1, 4]}
 
@@ -97,7 +97,7 @@ def concat(
 
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import narwhals.stable.v1 as nw
+        >>> import narwhals as nw
         >>> data_1 = {"a": [1, 2, 3], "b": [4, 5, 6]}
         >>> data_2 = {"c": [5, 2], "d": [1, 4]}
 
