@@ -1,0 +1,27 @@
+name: Tests for TPCH Queries
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev/queries_validation]
+jobs:
+  validate-queries:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv 
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: install-reqs
+        run: uv pip install --upgrade -r tpch/requirements-tpch.txt --system
+      - name: generate-data
+        run: python -m tpch.generate_data
+      - name: tpch-tests 
+        run: python -m unittest discover -s 'tpch/tests'
