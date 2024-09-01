@@ -6,16 +6,13 @@ from narwhals.typing import FrameT
 
 @nw.narwhalify
 def query(
-    line_item_ds_raw: FrameT,
-    orders_ds_raw: FrameT,
+    line_item_ds: FrameT,
+    orders_ds: FrameT,
 ) -> FrameT:
     var_1 = datetime(1993, 7, 1)
     var_2 = datetime(1993, 10, 1)
 
-    line_item_ds = nw.from_native(line_item_ds_raw)
-    orders_ds = nw.from_native(orders_ds_raw)
-
-    result = (
+    return (
         line_item_ds.join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
         .filter(
             nw.col("o_orderdate").is_between(var_1, var_2, closed="left"),
@@ -27,5 +24,3 @@ def query(
         .sort(by="o_orderpriority")
         .with_columns(nw.col("order_count").cast(nw.Int64))
     )
-
-    return nw.to_native(result)

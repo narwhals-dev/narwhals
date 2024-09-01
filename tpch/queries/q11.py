@@ -1,22 +1,13 @@
-from datetime import datetime
-
 import narwhals as nw
 from narwhals.typing import FrameT
 
 
 @nw.narwhalify
 def query(
-    nation_ds_raw: FrameT,
-    partsupp_ds_raw: FrameT,
-    supplier_ds_raw: FrameT,
+    nation_ds: FrameT,
+    partsupp_ds: FrameT,
+    supplier_ds: FrameT,
 ) -> FrameT:
-    var1 = datetime(1993, 10, 1)
-    var2 = datetime(1994, 1, 1)
-
-    nation_ds = nw.from_native(nation_ds_raw)
-    partsupp_ds = nw.from_native(partsupp_ds_raw)
-    supplier_ds = nw.from_native(supplier_ds_raw)
-
     var1 = "GERMANY"
     var2 = 0.0001
 
@@ -30,7 +21,7 @@ def query(
         * var2
     )
 
-    q_final = (
+    return (
         q1.with_columns((nw.col("ps_supplycost") * nw.col("ps_availqty")).alias("value"))
         .group_by("ps_partkey")
         .agg(nw.sum("value"))
@@ -39,5 +30,3 @@ def query(
         .select("ps_partkey", "value")
         .sort("value", descending=True)
     )
-
-    return nw.to_native(q_final)

@@ -6,25 +6,18 @@ from narwhals.typing import FrameT
 
 @nw.narwhalify
 def query(
-    region_ds_raw: FrameT,
-    nation_ds_raw: FrameT,
-    customer_ds_raw: FrameT,
-    line_item_ds_raw: FrameT,
-    orders_ds_raw: FrameT,
-    supplier_ds_raw: FrameT,
+    region_ds: FrameT,
+    nation_ds: FrameT,
+    customer_ds: FrameT,
+    line_item_ds: FrameT,
+    orders_ds: FrameT,
+    supplier_ds: FrameT,
 ) -> FrameT:
     var_1 = "ASIA"
     var_2 = datetime(1994, 1, 1)
     var_3 = datetime(1995, 1, 1)
 
-    region_ds = nw.from_native(region_ds_raw)
-    nation_ds = nw.from_native(nation_ds_raw)
-    customer_ds = nw.from_native(customer_ds_raw)
-    line_item_ds = nw.from_native(line_item_ds_raw)
-    orders_ds = nw.from_native(orders_ds_raw)
-    supplier_ds = nw.from_native(supplier_ds_raw)
-
-    result = (
+    return (
         region_ds.join(nation_ds, left_on="r_regionkey", right_on="n_regionkey")
         .join(customer_ds, left_on="n_nationkey", right_on="c_nationkey")
         .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
@@ -45,5 +38,3 @@ def query(
         .agg([nw.sum("revenue")])
         .sort(by="revenue", descending=True)
     )
-
-    return nw.to_native(result)
