@@ -22,6 +22,6 @@ jobs:
       - name: install-reqs
         run: uv pip install --upgrade -r tpch/requirements-tpch.txt --system
       - name: generate-data
-        run: python -m tpch.generate_data
+        run: cd tpch && python generate_data.py
       - name: tpch-tests 
         run: python -m unittest discover -s 'tpch/tests'
