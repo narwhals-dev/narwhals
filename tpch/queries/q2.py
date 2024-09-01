@@ -1,16 +1,15 @@
-from typing import Any
-
 import narwhals as nw
+from narwhals.typing import FrameT
 
 
 @nw.narwhalify
 def query(
-    region_ds: Any,
-    nation_ds: Any,
-    supplier_ds: Any,
-    part_ds: Any,
-    part_supp_ds: Any,
-) -> Any:
+    region_ds: FrameT,
+    nation_ds: FrameT,
+    supplier_ds: FrameT,
+    part_ds: FrameT,
+    part_supp_ds: FrameT,
+) -> FrameT:
     var_1 = 15
     var_2 = "BRASS"
     var_3 = "EUROPE"

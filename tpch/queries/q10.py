@@ -14,7 +14,7 @@ def query(
     var1 = datetime(1993, 10, 1)
     var2 = datetime(1994, 1, 1)
 
-    result = (
+    return (
         customer_ds.join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .join(lineitem_ds, left_on="o_orderkey", right_on="l_orderkey")
         .join(nation_ds, left_on="c_nationkey", right_on="n_nationkey")
@@ -46,5 +46,3 @@ def query(
         .sort(by="revenue", descending=True)
         .head(20)
     )
-
-    return nw.to_native(result)
