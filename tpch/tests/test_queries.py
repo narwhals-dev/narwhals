@@ -24,4 +24,6 @@ class TestQueries(unittest.TestCase):
                 check=False,
                 shell=False,
             )
-            assert result.returncode == 0
+            assert (
+                result.returncode == 0
+            ), f"Script {script_path} failed with error: {result.stderr}"
