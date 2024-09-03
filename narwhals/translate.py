@@ -18,6 +18,7 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_dask_dataframe
+from narwhals.dependencies import is_duckdb_relation
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -556,6 +557,19 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return DataFrame(
             InterchangeFrame(native_object.__dataframe__()),
+            level="interchange",
+        )
+
+    # Interchange protocol
+    elif is_duckdb_relation(native_object):
+        if eager_only or series_only:
+            msg = (
+                "Cannot only use `series_only=True` or `eager_only=False` "
+                "with DuckDB Relation"
+            )
+            raise TypeError(msg)
+        return DataFrame(
+            InterchangeFrame(native_object),
             level="interchange",
         )
 
