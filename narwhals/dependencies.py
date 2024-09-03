@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         from typing_extensions import TypeGuard
     import cudf
     import dask.dataframe as dd
+    import duckdb
     import modin.pandas as mpd
     import pandas as pd
     import polars as pl
@@ -69,6 +70,11 @@ def get_dask_expr() -> Any:
     return sys.modules.get("dask_expr", None)
 
 
+def get_ibis() -> Any:
+    """Get ibis module (if already imported - else return None)."""
+    return sys.modules.get("ibis", None)
+
+
 def is_pandas_dataframe(df: Any) -> TypeGuard[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return bool((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame))
@@ -102,6 +108,12 @@ def is_cudf_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
 def is_dask_dataframe(df: Any) -> TypeGuard[dd.DataFrame]:
     """Check whether `df` is a Dask DataFrame without importing Dask."""
     return bool((dd := get_dask_dataframe()) is not None and isinstance(df, dd.DataFrame))
+
+
+
+def is_ibis_table(df: Any) -> TypeGuard[duckdb.DuckDBPyRelation]:
+    """Check whether `df` is a Ibis Table without importing Ibis."""
+    return bool((ibis := get_ibis()) is not None and isinstance(df, ibis.Table))
 
 
 def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
