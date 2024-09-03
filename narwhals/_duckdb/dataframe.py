@@ -42,12 +42,7 @@ def map_duckdb_dtype_to_narwhals_dtype(
         return dtypes.Boolean()
     if duckdb_dtype == "INTERVAL":
         return dtypes.Duration()
-    msg = (  # pragma: no cover
-        f"Invalid dtype, got: {duckdb_dtype}.\n\n"
-        "If you believe this dtype should be supported in Narwhals, "
-        "please report an issue at https://github.com/narwhals-dev/narwhals."
-    )
-    raise AssertionError(msg)
+    return dtypes.Unknown()
 
 
 class DuckDBInterchangeFrame:

@@ -51,7 +51,7 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Duration()
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
-    raise AssertionError
+    return dtypes.Unknown()  # pragma: no cover
 
 
 def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
