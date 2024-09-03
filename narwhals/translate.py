@@ -18,6 +18,7 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_dask_dataframe
+from narwhals.dependencies import is_duckdb_relation
 from narwhals.dependencies import is_ibis_table
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
@@ -332,6 +333,7 @@ def from_native(  # noqa: PLR0915
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
     from narwhals._ibis.dataframe import IbisInterchangeFrame
     from narwhals._interchange.dataframe import InterchangeFrame
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -546,6 +548,19 @@ def from_native(  # noqa: PLR0915
                 native_object, backend_version=parse_version(get_dask().__version__)
             ),
             level="full",
+        )
+
+    # DuckDB
+    elif is_duckdb_relation(native_object):
+        if eager_only or series_only:  # pragma: no cover
+            msg = (
+                "Cannot only use `series_only=True` or `eager_only=False` "
+                "with DuckDB Relation"
+            )
+            raise TypeError(msg)
+        return DataFrame(
+            DuckDBInterchangeFrame(native_object),
+            level="interchange",
         )
 
     # Ibis
