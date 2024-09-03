@@ -8,28 +8,36 @@ from narwhals import dtypes
 def map_ibis_dtype_to_narwhals_dtype(
     ibis_dtype: Any,
 ) -> dtypes.DType:
-    import ibis
-
-    if ibis_dtype == ibis.dtype("int64"):
+    if ibis_dtype.is_int64():
         return dtypes.Int64()
-    if ibis_dtype == ibis.dtype("int32"):
+    if ibis_dtype.is_int32():
         return dtypes.Int32()
-    if ibis_dtype == ibis.dtype("int16"):
+    if ibis_dtype.is_int16():
         return dtypes.Int16()
-    if ibis_dtype == ibis.dtype("int8"):
+    if ibis_dtype.is_int8():
         return dtypes.Int8()
-    if ibis_dtype == ibis.dtype("uint64"):
+    if ibis_dtype.is_uint64():
         return dtypes.UInt64()
-    if ibis_dtype == ibis.dtype("uint32"):
+    if ibis_dtype.is_uint32():
         return dtypes.UInt32()
-    if ibis_dtype == ibis.dtype("uint16"):
+    if ibis_dtype.is_uint16():
         return dtypes.UInt16()
-    if ibis_dtype == ibis.dtype("uint8"):
+    if ibis_dtype.is_uint8():
         return dtypes.UInt8()
-    if ibis_dtype == ibis.dtype("float64"):
+    if ibis_dtype.is_boolean():
+        return dtypes.Boolean()
+    if ibis_dtype.is_float64():
         return dtypes.Float64()
-    if ibis_dtype == ibis.dtype("float32"):
+    if ibis_dtype.is_float32():
         return dtypes.Float32()
+    if ibis_dtype.is_string():
+        return dtypes.String()
+    if ibis_dtype.is_date():
+        return dtypes.Date()
+    if ibis_dtype.is_timestamp():
+        return dtypes.Datetime()
+    if ibis_dtype.is_duration():
+        return dtypes.Duration()
     msg = (  # pragma: no cover
         f"Invalid dtype, got: {ibis_dtype}.\n\n"
         "If you believe this dtype should be supported in Narwhals, "
