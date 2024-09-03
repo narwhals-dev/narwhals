@@ -1,15 +1,15 @@
 from datetime import datetime
-from typing import Any
 
 import narwhals as nw
+from narwhals.typing import FrameT
 
 
 @nw.narwhalify
 def query(
-    customer_ds: Any,
-    line_item_ds: Any,
-    orders_ds: Any,
-) -> Any:
+    customer_ds: FrameT,
+    line_item_ds: FrameT,
+    orders_ds: FrameT,
+) -> FrameT:
     var_1 = var_2 = datetime(1995, 3, 15)
     var_3 = "BUILDING"
 

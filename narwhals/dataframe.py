@@ -350,7 +350,7 @@ class DataFrame(BaseFrame[FrameT]):
 
     def write_csv(self, file: str | Path | BytesIO | None = None) -> Any:
         r"""
-        Write dataframe to parquet file.
+        Write dataframe to comma-separated values (CSV) file.
 
         Examples:
             Construct pandas and Polars DataFrames:
