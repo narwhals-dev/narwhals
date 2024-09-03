@@ -8,6 +8,7 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 
 
 def test_interchange_schema() -> None:
@@ -67,7 +68,9 @@ def test_interchange_schema() -> None:
     assert df["a"].dtype == nw.Int64
 
 
-def test_interchange_schema_ibis() -> None:  # pragma: no cover
+def test_interchange_schema_ibis(
+    tmpdir: pytest.TempdirFactory,
+) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
     df_pl = pl.DataFrame(
         {
@@ -105,26 +108,49 @@ def test_interchange_schema_ibis() -> None:  # pragma: no cover
             "o": pl.Boolean,
         },
     )
-    tbl = ibis.memtable(df_pl)
+    filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
+    df_pl.write_parquet(filepath)
+    tbl = ibis.read_parquet(filepath)
     df = nw.from_native(tbl, eager_or_interchange_only=True)
     result = df.schema
-    expected = {
-        "a": nw.Int64,
-        "b": nw.Int32,
-        "c": nw.Int16,
-        "d": nw.Int8,
-        "e": nw.UInt64,
-        "f": nw.UInt32,
-        "g": nw.UInt16,
-        "h": nw.UInt8,
-        "i": nw.Float64,
-        "j": nw.Float32,
-        "k": nw.String,
-        "l": nw.String,
-        "m": nw.Date,
-        "n": nw.Datetime,
-        "o": nw.Boolean,
-    }
+    if parse_version(ibis.__version__) > (6, 0, 0):
+        expected = {
+            "a": nw.Int64,
+            "b": nw.Int32,
+            "c": nw.Int16,
+            "d": nw.Int8,
+            "e": nw.UInt64,
+            "f": nw.UInt32,
+            "g": nw.UInt16,
+            "h": nw.UInt8,
+            "i": nw.Float64,
+            "j": nw.Float32,
+            "k": nw.String,
+            "l": nw.String,
+            "m": nw.Date,
+            "n": nw.Datetime,
+            "o": nw.Boolean,
+        }
+    else:
+        # Old versions of Ibis would read the file in
+        # with different data types
+        expected = {
+            "a": nw.Int64,
+            "b": nw.Int32,
+            "c": nw.Int16,
+            "d": nw.Int32,
+            "e": nw.Int32,
+            "f": nw.Int32,
+            "g": nw.Int32,
+            "h": nw.Int32,
+            "i": nw.Float64,
+            "j": nw.Float64,
+            "k": nw.String,
+            "l": nw.String,
+            "m": nw.Date,
+            "n": nw.Datetime,
+            "o": nw.Boolean,
+        }
     assert result == expected
     assert df["a"].dtype == nw.Int64
 
