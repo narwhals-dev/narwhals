@@ -128,7 +128,7 @@ def test_interchange_schema_ibis() -> None:  # pragma: no cover
     assert df["a"].dtype == nw.Int64
 
 
-def test_interchange_schema_duckdb() -> None:  # pragma: no cover
+def test_interchange_schema_duckdb() -> None:
     df_pl = pl.DataFrame(  # noqa: F841
         {
             "a": [1, 1, 2],
