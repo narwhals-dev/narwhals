@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import contextlib
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
@@ -10,8 +13,7 @@ import pytest
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
-from narwhals.typing import IntoDataFrame
-from narwhals.typing import IntoFrame
+from narwhals.dependencies import get_pyspark_sql
 from narwhals.utils import parse_version
 
 with contextlib.suppress(ImportError):
@@ -20,6 +22,13 @@ with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
 with contextlib.suppress(ImportError):
     import cudf  # noqa: F401
+with contextlib.suppress(ImportError):
+    from pyspark.sql import SparkSession
+
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoFrame
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -81,6 +90,26 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
+@pytest.fixture(scope="session")
+def spark_session() -> SparkSession | None:
+    try:
+        from pyspark.sql import SparkSession
+    except ImportError:
+        pytest.skip("pyspark is not installed")
+        return
+
+    import os
+
+    os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
+    session = SparkSession.builder.appName("unit-tests").getOrCreate()
+    yield session
+    session.stop()
+
+
+def pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> IntoFrame:
+    return spark_session.createDataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
+
+
 if parse_version(pd.__version__) >= parse_version("2.0.0"):
     eager_constructors = [
         pandas_constructor,
@@ -99,6 +128,8 @@ if get_cudf() is not None:
     eager_constructors.append(cudf_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover
     lazy_constructors.append(dask_lazy_constructor)  # type: ignore  # noqa: PGH003
+if get_pyspark_sql() is not None:  # pragma: no cover
+    lazy_constructors.append(pyspark_constructor_with_session)  # type: ignore  # noqa: PGH003
 
 
 @pytest.fixture(params=eager_constructors)
@@ -107,5 +138,10 @@ def constructor_eager(request: Any) -> Callable[[Any], IntoDataFrame]:
 
 
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor(request: Any) -> Callable[[Any], Any]:
+def constructor(request: Any, spark_session: SparkSession) -> Callable[[Any], Any]:
+    def pyspark_constructor(obj: Any) -> Any:
+        return request.param(obj, spark_session)
+
+    if request.param is pyspark_constructor_with_session:
+        return pyspark_constructor
     return request.param  # type: ignore[no-any-return]

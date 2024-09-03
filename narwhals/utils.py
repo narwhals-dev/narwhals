@@ -45,6 +45,7 @@ class Implementation(Enum):
     MODIN = auto()
     CUDF = auto()
     PYARROW = auto()
+    PYSPARK = auto()
     POLARS = auto()
     DASK = auto()
 

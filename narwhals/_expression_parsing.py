@@ -33,24 +33,43 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import IntoPolarsExpr
+    from narwhals._pyspark.dataframe import PySparkLazyFrame
+    from narwhals._pyspark.expr import PySparkExpr
+    from narwhals._pyspark.namespace import PySparkNamespace
+    from narwhals._pyspark.series import PySparkSeries
+    from narwhals._pyspark.typing import IntoPySparkExpr
 
     CompliantNamespace = Union[
-        PandasLikeNamespace, ArrowNamespace, DaskNamespace, PolarsNamespace
+        PandasLikeNamespace,
+        ArrowNamespace,
+        DaskNamespace,
+        PolarsNamespace,
+        PySparkNamespace,
     ]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr, PySparkExpr]
     IntoCompliantExpr = Union[
-        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr
+        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr, IntoPySparkExpr
     ]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
-    CompliantSeries = Union[PandasLikeSeries, ArrowSeries, PolarsSeries]
+    CompliantSeries = Union[PandasLikeSeries, ArrowSeries, PolarsSeries, PySparkSeries]
     ListOfCompliantSeries = Union[
-        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr], list[PolarsSeries]
+        list[PandasLikeSeries],
+        list[ArrowSeries],
+        list[DaskExpr],
+        list[PolarsSeries],
+        list[PySparkSeries],
     ]
     ListOfCompliantExpr = Union[
-        list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr], list[PolarsExpr]
+        list[PandasLikeExpr],
+        list[ArrowExpr],
+        list[DaskExpr],
+        list[PolarsExpr],
+        list[PySparkExpr],
     ]
-    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
+    CompliantDataFrame = Union[
+        PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame, PySparkLazyFrame
+    ]
 
     T = TypeVar("T")
 
