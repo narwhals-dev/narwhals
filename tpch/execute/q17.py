@@ -4,6 +4,9 @@ import pandas as pd
 import polars as pl
 from queries import q17
 
+pd.options.mode.copy_on_write = True
+pd.options.future.infer_string = True
+
 lineitem = Path("data") / "lineitem.parquet"
 part = Path("data") / "part.parquet"
 

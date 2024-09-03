@@ -1,12 +1,7 @@
 from datetime import datetime
 
-import pandas as pd
-
 import narwhals as nw
 from narwhals.typing import FrameT
-
-pd.options.mode.copy_on_write = True
-pd.options.future.infer_string = True
 
 
 @nw.narwhalify

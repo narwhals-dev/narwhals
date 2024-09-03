@@ -4,6 +4,9 @@ import pandas as pd
 import polars as pl
 from queries import q9
 
+pd.options.mode.copy_on_write = True
+pd.options.future.infer_string = True
+
 part = Path("data") / "part.parquet"
 partsupp = Path("data") / "partsupp.parquet"
 nation = Path("data") / "nation.parquet"

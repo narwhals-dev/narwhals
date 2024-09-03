@@ -4,6 +4,9 @@ import pandas as pd
 import polars as pl
 from queries import q6
 
+pd.options.mode.copy_on_write = True
+pd.options.future.infer_string = True
+
 lineitem = Path("data") / "lineitem.parquet"
 IO_FUNCS = {
     "pandas": lambda x: pd.read_parquet(x, engine="pyarrow"),

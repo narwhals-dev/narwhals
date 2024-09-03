@@ -7,7 +7,6 @@ from queries import q3
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True
 
-
 customer = Path("data") / "customer.parquet"
 lineitem = Path("data") / "lineitem.parquet"
 orders = Path("data") / "orders.parquet"

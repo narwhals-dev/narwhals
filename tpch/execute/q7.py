@@ -4,6 +4,9 @@ import pandas as pd
 import polars as pl
 from queries import q7
 
+pd.options.mode.copy_on_write = True
+pd.options.future.infer_string = True
+
 nation = Path("data") / "nation.parquet"
 customer = Path("data") / "customer.parquet"
 lineitem = Path("data") / "lineitem.parquet"

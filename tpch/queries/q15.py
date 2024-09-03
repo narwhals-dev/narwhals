@@ -1,20 +1,14 @@
 from datetime import datetime
-from typing import Any
-
-import pandas as pd
 
 import narwhals as nw
 from narwhals.typing import FrameT
-
-pd.options.mode.copy_on_write = True
-pd.options.future.infer_string = True
 
 
 @nw.narwhalify
 def query(
     lineitem_ds: FrameT,
     supplier_ds: FrameT,
-) -> Any:
+) -> FrameT:
     var1 = datetime(1996, 1, 1)
     var2 = datetime(1996, 4, 1)
 
