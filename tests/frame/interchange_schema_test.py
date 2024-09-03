@@ -68,6 +68,7 @@ def test_interchange_schema() -> None:
     assert df["a"].dtype == nw.Int64
 
 
+@pytest.mark.filterwarnings("ignore:.*locale specific date formats")
 def test_interchange_schema_ibis(
     tmpdir: pytest.TempdirFactory,
 ) -> None:  # pragma: no cover
