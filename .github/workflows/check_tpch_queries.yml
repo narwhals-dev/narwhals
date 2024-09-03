@@ -2,10 +2,13 @@ name: Tests for TPCH Queries
 
 on:
   pull_request:
+    types: [labeled]
   push:
-    branches: [main, dev/queries_validation]
+    branches: [main]
+
 jobs:
   validate-queries:
+    if: ${{ github.event.label.name == 'full-test' }}
     strategy:
       matrix:
         python-version: ["3.12"]
