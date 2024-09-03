@@ -552,7 +552,7 @@ def from_native(  # noqa: PLR0915
 
     # DuckDB
     elif is_duckdb_relation(native_object):
-        if eager_only or series_only:
+        if eager_only or series_only:  # pragma: no cover
             msg = (
                 "Cannot only use `series_only=True` or `eager_only=False` "
                 "with DuckDB Relation"

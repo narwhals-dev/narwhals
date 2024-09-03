@@ -71,11 +71,10 @@ class DuckDBInterchangeFrame:
                 )
             }
 
-        msg = (
+        msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
-            "Hint: you probably called `nw.from_native` on an object which isn't fully "
-            "supported by Narwhals, yet implements `__dataframe__`. If you would like to "
-            "see this kind of object supported in Narwhals, please open a feature request "
+            "If you would like to see this kind of object better supported in "
+            "Narwhals, please open a feature request "
             "at https://github.com/narwhals-dev/narwhals/issues."
         )
-        raise NotImplementedError(msg)
+        raise NotImplementedError(msg)  # pragma: no cover
