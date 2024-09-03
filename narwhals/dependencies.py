@@ -125,7 +125,7 @@ def is_duckdb_relation(df: Any) -> TypeGuard[duckdb.DuckDBPyRelation]:
 
 def is_ibis_table(df: Any) -> TypeGuard[ibis.Table]:
     """Check whether `df` is a Ibis Table without importing Ibis."""
-    return (ibis := get_ibis()) is not None and isinstance(df, ibis.expr.dtypes.Table)
+    return (ibis := get_ibis()) is not None and isinstance(df, ibis.expr.types.Table)
 
 
 def is_polars_dataframe(df: Any) -> TypeGuard[pl.DataFrame]:
