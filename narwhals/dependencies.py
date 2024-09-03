@@ -170,6 +170,8 @@ __all__ = [
     "get_cudf",
     "get_pyarrow",
     "get_numpy",
+    "get_ibis",
+    "is_ibis_table",
     "is_pandas_dataframe",
     "is_pandas_series",
     "is_polars_dataframe",

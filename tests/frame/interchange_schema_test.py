@@ -64,7 +64,7 @@ def test_interchange_schema() -> None:
     assert df["a"].dtype == nw.Int64
 
 
-def test_interchange_schema_ibis() -> None:
+def test_interchange_schema_ibis() -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
     df_pl = pl.DataFrame(
         {
