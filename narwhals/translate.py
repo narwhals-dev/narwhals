@@ -18,6 +18,7 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_dask_dataframe
+from narwhals.dependencies import is_ibis_table
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -331,6 +332,7 @@ def from_native(  # noqa: PLR0915
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._ibis.dataframe import IbisInterchangeFrame
     from narwhals._interchange.dataframe import InterchangeFrame
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -546,6 +548,19 @@ def from_native(  # noqa: PLR0915
             level="full",
         )
 
+    # Ibis
+    elif is_ibis_table(native_object):  # pragma: no cover
+        if eager_only or series_only:
+            msg = (
+                "Cannot only use `series_only=True` or `eager_only=False` "
+                "with Ibis table"
+            )
+            raise TypeError(msg)
+        return DataFrame(
+            IbisInterchangeFrame(native_object),
+            level="interchange",
+        )
+
     # Interchange protocol
     elif hasattr(native_object, "__dataframe__"):
         if eager_only or series_only:
@@ -555,7 +570,7 @@ def from_native(  # noqa: PLR0915
             )
             raise TypeError(msg)
         return DataFrame(
-            InterchangeFrame(native_object.__dataframe__()),
+            InterchangeFrame(native_object),
             level="interchange",
         )
 
