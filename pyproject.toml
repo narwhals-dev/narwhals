@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.6.0"
+version = "1.6.2"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -122,7 +122,11 @@ env = [
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
-omit = ['narwhals/typing.py']
+omit = [
+  'narwhals/typing.py',
+  # we can run this in every environment that we measure coverage on due to upper-bound constraits
+  'narwhals/_ibis/*',
+]
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",

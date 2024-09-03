@@ -1394,6 +1394,104 @@ def concat(
     *,
     how: Literal["horizontal", "vertical"] = "vertical",
 ) -> DataFrame[Any] | LazyFrame[Any]:
+    """
+    Concatenate multiple DataFrames, LazyFrames into a single entity.
+
+    Arguments:
+        items: DataFrames, LazyFrames to concatenate.
+
+        how: {'vertical', 'horizontal'}
+            * vertical: Stacks Series from DataFrames vertically and fills with `null`
+              if the lengths don't match.
+            * horizontal: Stacks Series from DataFrames horizontally and fills with `null`
+              if the lengths don't match.
+
+    Returns:
+        A new DataFrame, Lazyframe resulting from the concatenation.
+
+    Raises:
+        NotImplementedError: The items to concatenate should either all be eager, or all lazy
+
+    Examples:
+
+        Let's take an example of vertical concatenation:
+
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data_1 = {"a": [1, 2, 3], "b": [4, 5, 6]}
+        >>> data_2 = {"a": [5, 2], "b": [1, 4]}
+
+        >>> df_pd_1 = pd.DataFrame(data_1)
+        >>> df_pd_2 = pd.DataFrame(data_2)
+        >>> df_pl_1 = pl.DataFrame(data_1)
+        >>> df_pl_2 = pl.DataFrame(data_2)
+
+        Let's define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df1, df2):
+        ...     return nw.concat([df1, df2], how="vertical")
+
+        >>> func(df_pd_1, df_pd_2)
+           a  b
+        0  1  4
+        1  2  5
+        2  3  6
+        0  5  1
+        1  2  4
+        >>> func(df_pl_1, df_pl_2)
+        shape: (5, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 4   │
+        │ 2   ┆ 5   │
+        │ 3   ┆ 6   │
+        │ 5   ┆ 1   │
+        │ 2   ┆ 4   │
+        └─────┴─────┘
+
+        Let's look at case a for horizontal concatenation:
+
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> data_1 = {"a": [1, 2, 3], "b": [4, 5, 6]}
+        >>> data_2 = {"c": [5, 2], "d": [1, 4]}
+
+        >>> df_pd_1 = pd.DataFrame(data_1)
+        >>> df_pd_2 = pd.DataFrame(data_2)
+        >>> df_pl_1 = pl.DataFrame(data_1)
+        >>> df_pl_2 = pl.DataFrame(data_2)
+
+        Defining a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df1, df2):
+        ...     return nw.concat([df1, df2], how="horizontal")
+
+        >>> func(df_pd_1, df_pd_2)
+           a  b    c    d
+        0  1  4  5.0  1.0
+        1  2  5  2.0  4.0
+        2  3  6  NaN  NaN
+
+        >>> func(df_pl_1, df_pl_2)
+        shape: (3, 4)
+        ┌─────┬─────┬──────┬──────┐
+        │ a   ┆ b   ┆ c    ┆ d    │
+        │ --- ┆ --- ┆ ---  ┆ ---  │
+        │ i64 ┆ i64 ┆ i64  ┆ i64  │
+        ╞═════╪═════╪══════╪══════╡
+        │ 1   ┆ 4   ┆ 5    ┆ 1    │
+        │ 2   ┆ 5   ┆ 2    ┆ 4    │
+        │ 3   ┆ 6   ┆ null ┆ null │
+        └─────┴─────┴──────┴──────┘
+
+    """
     return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
 
 
@@ -1726,13 +1824,13 @@ def from_dict(
         >>> import narwhals.stable.v1 as nw
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
-        Let's define a dataframe-agnostic function:
+        Let's create a new dataframe of the same class as the dataframe we started with, from a dict of new data:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     data = {"c": [5, 2], "d": [1, 4]}
+        ...     new_data = {"c": [5, 2], "d": [1, 4]}
         ...     native_namespace = nw.get_native_namespace(df)
-        ...     return nw.from_dict(data, native_namespace=native_namespace)
+        ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
         Let's see what happens when passing pandas / Polars input:
 
