@@ -40,12 +40,7 @@ def map_ibis_dtype_to_narwhals_dtype(
         return dtypes.Date()
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
-    msg = (  # pragma: no cover
-        f"Invalid dtype, got: {ibis_dtype}.\n\n"
-        "If you believe this dtype should be supported in Narwhals, "
-        "please report an issue at https://github.com/narwhals-dev/narwhals."
-    )
-    raise AssertionError(msg)
+    return dtypes.Unknown()  # pragma: no cover
 
 
 class IbisInterchangeFrame:
