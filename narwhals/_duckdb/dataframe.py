@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
+
+if TYPE_CHECKING:
+    from narwhals._duckdb.series import DuckDBInterchangeSeries
 
 
 def map_duckdb_dtype_to_narwhals_dtype(
@@ -10,10 +14,34 @@ def map_duckdb_dtype_to_narwhals_dtype(
 ) -> dtypes.DType:
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
+    if duckdb_dtype == "INTEGER":
+        return dtypes.Int32()
+    if duckdb_dtype == "SMALLINT":
+        return dtypes.Int16()
+    if duckdb_dtype == "TINYINT":
+        return dtypes.Int8()
+    if duckdb_dtype == "UBIGINT":
+        return dtypes.UInt64()
+    if duckdb_dtype == "UINTEGER":
+        return dtypes.UInt32()
+    if duckdb_dtype == "USMALLINT":
+        return dtypes.UInt16()
+    if duckdb_dtype == "UTINYINT":
+        return dtypes.UInt8()
     if duckdb_dtype == "DOUBLE":
         return dtypes.Float64()
+    if duckdb_dtype == "FLOAT":
+        return dtypes.Float32()
     if duckdb_dtype == "VARCHAR":
         return dtypes.String()
+    if duckdb_dtype == "DATE":
+        return dtypes.Date()
+    if duckdb_dtype == "TIMESTAMP":
+        return dtypes.Datetime()
+    if duckdb_dtype == "BOOLEAN":
+        return dtypes.Boolean()
+    if duckdb_dtype == "INTERVAL":
+        return dtypes.Duration()
     msg = (  # pragma: no cover
         f"Invalid dtype, got: {duckdb_dtype}.\n\n"
         "If you believe this dtype should be supported in Narwhals, "
@@ -29,21 +57,20 @@ class DuckDBInterchangeFrame:
     def __narwhals_dataframe__(self) -> Any:
         return self
 
-    def __getitem__(self, item: str) -> InterchangeSeries:
+    def __getitem__(self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
 
         return DuckDBInterchangeSeries(self._native_frame.select(item))
 
-    @property
-    def schema(self) -> dict[str, dtypes.DType]:
-        return {
-            column_name: map_duckdb_dtype_to_narwhals_dtype(
-                self._native_frame.get_column_by_name(column_name).dtype
-            )
-            for column_name in zip(self._native_frame.columns, self._native_frame.types)
-        }
+    def __getattr__(self, attr: str) -> Any:
+        if attr == "schema":
+            return {
+                column_name: map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype)
+                for column_name, duckdb_dtype in zip(
+                    self._native_frame.columns, self._native_frame.types
+                )
+            }
 
-    def __getattr__(self, attr: str) -> NoReturn:
         msg = (
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "Hint: you probably called `nw.from_native` on an object which isn't fully "

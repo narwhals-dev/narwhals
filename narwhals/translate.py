@@ -558,25 +558,23 @@ def from_native(  # noqa: PLR0915
                 "with DuckDB Relation"
             )
             raise TypeError(msg)
-        ret = DataFrame(
+        return DataFrame(
             DuckDBInterchangeFrame(native_object),
             level="interchange",
         )
-        return ret
 
     # Ibis
-    elif is_ibis_table(native_object):
+    elif is_ibis_table(native_object):  # pragma: no cover
         if eager_only or series_only:
             msg = (
                 "Cannot only use `series_only=True` or `eager_only=False` "
-                "with DuckDB Relation"
+                "with Ibis table"
             )
             raise TypeError(msg)
-        ret = DataFrame(
+        return DataFrame(
             IbisInterchangeFrame(native_object),
             level="interchange",
         )
-        return ret
 
     # Interchange protocol
     elif hasattr(native_object, "__dataframe__"):

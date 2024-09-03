@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     import cudf
     import dask.dataframe as dd
     import duckdb
+    import ibis
     import modin.pandas as mpd
     import pandas as pd
     import polars as pl
@@ -122,7 +123,7 @@ def is_duckdb_relation(df: Any) -> TypeGuard[duckdb.DuckDBPyRelation]:
     )
 
 
-def is_ibis_table(df: Any) -> TypeGuard[duckdb.DuckDBPyRelation]:
+def is_ibis_table(df: Any) -> TypeGuard[ibis.Table]:
     """Check whether `df` is a Ibis Table without importing Ibis."""
     return bool((ibis := get_ibis()) is not None and isinstance(df, ibis.Table))
 
@@ -182,6 +183,8 @@ __all__ = [
     "get_cudf",
     "get_pyarrow",
     "get_numpy",
+    "get_ibis",
+    "is_ibis_table",
     "is_pandas_dataframe",
     "is_pandas_series",
     "is_polars_dataframe",
