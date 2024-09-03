@@ -549,11 +549,11 @@ def from_native(  # noqa: PLR0915
         )
 
     # Ibis
-    elif is_ibis_table(native_object):
-        if eager_only or series_only:  # pragma: no cover
+    elif is_ibis_table(native_object):  # pragma: no cover
+        if eager_only or series_only:
             msg = (
                 "Cannot only use `series_only=True` or `eager_only=False` "
-                "with DuckDB Relation"
+                "with Ibis table"
             )
             raise TypeError(msg)
         return DataFrame(
