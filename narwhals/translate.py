@@ -19,6 +19,7 @@ from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_dask_dataframe
 from narwhals.dependencies import is_duckdb_relation
+from narwhals.dependencies import is_ibis_table
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -332,6 +333,8 @@ def from_native(  # noqa: PLR0915
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._ibis.dataframe import IbisInterchangeFrame
     from narwhals._interchange.dataframe import InterchangeFrame
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -547,25 +550,40 @@ def from_native(  # noqa: PLR0915
             level="full",
         )
 
+    # DuckDB
+    elif is_duckdb_relation(native_object):
+        if eager_only or series_only:
+            msg = (
+                "Cannot only use `series_only=True` or `eager_only=False` "
+                "with DuckDB Relation"
+            )
+            raise TypeError(msg)
+        ret = DataFrame(
+            DuckDBInterchangeFrame(native_object),
+            level="interchange",
+        )
+        return ret
+
+    # Ibis
+    elif is_ibis_table(native_object):
+        if eager_only or series_only:
+            msg = (
+                "Cannot only use `series_only=True` or `eager_only=False` "
+                "with DuckDB Relation"
+            )
+            raise TypeError(msg)
+        ret = DataFrame(
+            IbisInterchangeFrame(native_object),
+            level="interchange",
+        )
+        return ret
+
     # Interchange protocol
     elif hasattr(native_object, "__dataframe__"):
         if eager_only or series_only:
             msg = (
                 "Cannot only use `series_only=True` or `eager_only=False` "
                 "with object which only implements __dataframe__"
-            )
-            raise TypeError(msg)
-        return DataFrame(
-            InterchangeFrame(native_object.__dataframe__()),
-            level="interchange",
-        )
-
-    # Interchange protocol
-    elif is_duckdb_relation(native_object):
-        if eager_only or series_only:
-            msg = (
-                "Cannot only use `series_only=True` or `eager_only=False` "
-                "with DuckDB Relation"
             )
             raise TypeError(msg)
         return DataFrame(
