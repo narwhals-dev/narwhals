@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
+
+if TYPE_CHECKING:
+    from narwhals._ibis.series import IbisInterchangeSeries
 
 
 def map_ibis_dtype_to_narwhals_dtype(
@@ -36,8 +40,6 @@ def map_ibis_dtype_to_narwhals_dtype(
         return dtypes.Date()
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
-    if ibis_dtype.is_duration():
-        return dtypes.Duration()
     msg = (  # pragma: no cover
         f"Invalid dtype, got: {ibis_dtype}.\n\n"
         "If you believe this dtype should be supported in Narwhals, "
@@ -53,12 +55,12 @@ class IbisInterchangeFrame:
     def __narwhals_dataframe__(self) -> Any:
         return self
 
-    def __getitem__(self, item: str) -> InterchangeSeries:
+    def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
         return IbisInterchangeSeries(self._native_frame[item])
 
-    def __getattr__(self, attr: str) -> NoReturn:
+    def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
                 column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype)
