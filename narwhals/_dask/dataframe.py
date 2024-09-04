@@ -314,6 +314,7 @@ class DaskLazyFrame:
                 left_on=left_on,
                 right_on=right_on,
                 direction=strategy,
+                suffixes=("", "_right"),
             ),
         )
 

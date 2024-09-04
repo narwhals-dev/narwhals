@@ -1870,6 +1870,85 @@ class DataFrame(BaseFrame[FrameT]):
         right_on: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
+        """
+        Perform an asof join.
+
+        This is similar to a left-join except that we match on nearest key rather than equal keys.
+
+        Both DataFrames must be sorted by the asof_join key.
+
+        Arguments:
+            other: DataFrame to join with.
+
+            left_on: Name(s) of the left join column(s).
+
+            right_on: Name(s) of the right join column(s).
+
+            strategy: A “backward” search selects the last row in the right DataFrame whose "on" key is less than or equal to the left's key.
+
+            A “forward” search selects the first row in the right DataFrame whose "on" key is greater than or equal to the left's key.
+
+            A “nearest” search selects the last row in the right DataFrame whose value is nearest to the left's key.
+            String keys are not currently supported for a nearest search.
+
+            The default is “backward”.
+
+        Returns:
+            A new joined DataFrame
+
+        Examples:
+            >>> from datetime import date
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data_gdp = {
+            ...     "date": [
+            ...         date(2016, 1, 1),
+            ...         date(2017, 1, 1),
+            ...         date(2018, 1, 1),
+            ...         date(2019, 1, 1),
+            ...         date(2020, 1, 1),
+            ...     ],
+            ...     "gdp": [4164, 4411, 4566, 4696, 4827],
+            ... }
+            >>> data_population = {
+            ...     "date": [date(2016, 3, 1), date(2018, 8, 1), date(2019, 1, 1)],
+            ...     "population": [82.19, 82.66, 83.12],
+            ... }
+            >>> gdp_pd = pd.DataFrame(data_gdp).astype({"date": "datetime64[ns]"})
+            >>> population_pd = pd.DataFrame(data_population).astype(
+            ...     {"date": "datetime64[ns]"}
+            ... )
+
+            >>> gdp_pl = pl.DataFrame(data_gdp)
+            >>> population_pl = pl.DataFrame(data_population)
+
+           # Let's define a dataframe-agnostic function in which we join over "date" column:
+
+            >>> @nw.narwhalify
+            ... def join_asof_date(df, other_any, strategy):
+            ...     return df.join_asof(
+            ...         other_any, left_on="date", right_on="date", strategy=strategy
+            ...     )
+            >>> # We can now pass either pandas or Polars to the function:
+            >>> join_asof_date(population_pd, gdp_pd, strategy="backward")
+                    date  population   gdp
+            0 2016-03-01       82.19  4164
+            1 2018-08-01       82.66  4566
+            2 2019-01-01       83.12  4696
+
+            >>> join_asof_date(population_pl, gdp_pl, strategy="backward")
+            shape: (3, 3)
+            ┌────────────┬────────────┬──────┐
+            │ date       ┆ population ┆ gdp  │
+            │ ---        ┆ ---        ┆ ---  │
+            │ date       ┆ f64        ┆ i64  │
+            ╞════════════╪════════════╪══════╡
+            │ 2016-03-01 ┆ 82.19      ┆ 4164 │
+            │ 2018-08-01 ┆ 82.66      ┆ 4566 │
+            │ 2019-01-01 ┆ 83.12      ┆ 4696 │
+            └────────────┴────────────┴──────┘
+        """
         return super().join_asof(
             other, left_on=left_on, right_on=right_on, strategy=strategy
         )
@@ -3421,6 +3500,85 @@ class LazyFrame(BaseFrame[FrameT]):
         right_on: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
+        """
+        Perform an asof join.
+
+        This is similar to a left-join except that we match on nearest key rather than equal keys.
+
+        Both DataFrames must be sorted by the asof_join key.
+
+        Arguments:
+            other: DataFrame to join with.
+
+            left_on: Name(s) of the left join column(s).
+
+            right_on: Name(s) of the right join column(s).
+
+            strategy: A “backward” search selects the last row in the right DataFrame whose "on" key is less than or equal to the left's key.
+
+            A “forward” search selects the first row in the right DataFrame whose "on" key is greater than or equal to the left's key.
+
+            A “nearest” search selects the last row in the right DataFrame whose value is nearest to the left's key.
+            String keys are not currently supported for a nearest search.
+
+            The default is “backward”.
+
+        Returns:
+            A new joined DataFrame
+
+        Examples:
+            >>> from datetime import date
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data_gdp = {
+            ...     "date": [
+            ...         date(2016, 1, 1),
+            ...         date(2017, 1, 1),
+            ...         date(2018, 1, 1),
+            ...         date(2019, 1, 1),
+            ...         date(2020, 1, 1),
+            ...     ],
+            ...     "gdp": [4164, 4411, 4566, 4696, 4827],
+            ... }
+            >>> data_population = {
+            ...     "date": [date(2016, 3, 1), date(2018, 8, 1), date(2019, 1, 1)],
+            ...     "population": [82.19, 82.66, 83.12],
+            ... }
+            >>> gdp_pd = pd.DataFrame(data_gdp).astype({"date": "datetime64[ns]"})
+            >>> population_pd = pd.DataFrame(data_population).astype(
+            ...     {"date": "datetime64[ns]"}
+            ... )
+
+            >>> gdp_pl = pl.DataFrame(data_gdp)
+            >>> population_pl = pl.DataFrame(data_population)
+
+           # Let's define a dataframe-agnostic function in which we join over "date" column:
+
+            >>> @nw.narwhalify
+            ... def join_asof_date(df, other_any, strategy):
+            ...     return df.join_asof(
+            ...         other_any, left_on="date", right_on="date", strategy=strategy
+            ...     )
+            >>> # We can now pass either pandas or Polars to the function:
+            >>> join_asof_date(population_pd, gdp_pd, strategy="backward")
+                    date  population   gdp
+            0 2016-03-01       82.19  4164
+            1 2018-08-01       82.66  4566
+            2 2019-01-01       83.12  4696
+
+            >>> join_asof_date(population_pl, gdp_pl, strategy="backward")
+            shape: (3, 3)
+            ┌────────────┬────────────┬──────┐
+            │ date       ┆ population ┆ gdp  │
+            │ ---        ┆ ---        ┆ ---  │
+            │ date       ┆ f64        ┆ i64  │
+            ╞════════════╪════════════╪══════╡
+            │ 2016-03-01 ┆ 82.19      ┆ 4164 │
+            │ 2018-08-01 ┆ 82.66      ┆ 4566 │
+            │ 2019-01-01 ┆ 83.12      ┆ 4696 │
+            └────────────┴────────────┴──────┘
+        """
         return super().join_asof(
             other, left_on=left_on, right_on=right_on, strategy=strategy
         )

@@ -315,6 +315,17 @@ class ArrowDataFrame:
             ),
         )
 
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        msg = "join_asof is not yet supported on PyArrow tables"
+        raise NotImplementedError(msg)
+
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
