@@ -25,7 +25,7 @@ jobs:
         if: runner.os == 'Windows'
         run: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
+        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt ibis-framework[duckdb] --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -78,6 +78,11 @@ jobs:
         run: uv pip install --upgrade modin[dask] --system
       - name: show-deps
         run: uv pip freeze
+      - name: install ibis
+        run: uv pip install ibis-framework[duckdb] --system
+        # Ibis puts upper bounds on dependencies, and requires Python3.10+,
+        # which messes with other dependencies on lower Python versions
+        if: matrix.python-version == '3.12'
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow
       - name: Run doctests

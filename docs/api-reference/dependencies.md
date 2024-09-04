@@ -5,6 +5,7 @@
     options:
       members:
         - get_cudf
+        - get_ibis
         - get_modin
         - get_pandas
         - get_polars
@@ -12,6 +13,7 @@
         - is_cudf_dataframe
         - is_cudf_series
         - is_dask_dataframe
+        - is_ibis_table
         - is_modin_dataframe
         - is_modin_series
         - is_numpy_array

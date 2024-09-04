@@ -1,4 +1,5 @@
 covdefaults
+duckdb
 pandas
 polars
 pre-commit
