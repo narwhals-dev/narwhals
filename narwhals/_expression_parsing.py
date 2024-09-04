@@ -169,6 +169,14 @@ def parse_into_exprs(
 ) -> list[PolarsExpr]: ...
 
 
+@overload
+def parse_into_exprs(
+    *exprs: IntoPySparkExpr,
+    namespace: PySparkNamespace,
+    **named_exprs: IntoPySparkExpr,
+) -> list[PySparkExpr]: ...
+
+
 def parse_into_exprs(
     *exprs: IntoCompliantExpr,
     namespace: CompliantNamespace,

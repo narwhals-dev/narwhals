@@ -46,7 +46,7 @@ class PySparkExpr:
     @classmethod
     def from_column_names(cls: type[Self], *column_names: str) -> Self:
         def func(df: PySparkLazyFrame) -> list[Column]:
-            from pyspark.sql import functions as F
+            from pyspark.sql import functions as F  # noqa: N812
 
             _ = df
             return [F.col(column_name) for column_name in column_names]

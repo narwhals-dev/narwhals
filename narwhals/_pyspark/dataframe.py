@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pyspark.utils import parse_exprs_and_named_exprs
+from narwhals._pyspark.utils import translate_sql_api_dtype
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.utils import Implementation
@@ -94,8 +94,8 @@ class PySparkLazyFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: translate_dtype(self._native_frame.loc[:, col])
-            for col in self._native_frame.columns
+            field.name: translate_sql_api_dtype(field.dataType)
+            for field in self._native_frame.schema
         }
 
     def collect_schema(self) -> dict[str, DType]:
