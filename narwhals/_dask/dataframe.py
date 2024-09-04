@@ -298,6 +298,25 @@ class DaskLazyFrame:
             ),
         )
 
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        plx = self.__native_namespace__()
+        return self._from_native_frame(
+            plx.merge_asof(
+                self._native_frame,
+                other._native_frame,
+                left_on=left_on,
+                right_on=right_on,
+                direction=strategy,
+            ),
+        )
+
     def group_by(self, *by: str) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 

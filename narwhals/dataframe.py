@@ -214,6 +214,29 @@ class BaseFrame(Generic[FrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        _supported_strategies = ("backward", "forward", "nearest")
+
+        if strategy not in _supported_strategies:
+            msg = f"Only the following strategies are supported: {_supported_strategies}; found '{strategy}'."
+            raise NotImplementedError(msg)
+
+        return self._from_compliant_dataframe(
+            self._compliant_frame.join_asof(
+                self._extract_compliant(other),
+                left_on=left_on,
+                right_on=right_on,
+                strategy=strategy,
+            )
+        )
+
 
 class DataFrame(BaseFrame[FrameT]):
     """
@@ -1839,6 +1862,18 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().join(other, how=how, left_on=left_on, right_on=right_on)
 
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        return super().join_asof(
+            other, left_on=left_on, right_on=right_on, strategy=strategy
+        )
+
     # --- descriptive ---
     def is_duplicated(self: Self) -> Series:
         r"""
@@ -3377,6 +3412,18 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────┴─────┴─────┴───────┘
         """
         return super().join(other, how=how, left_on=left_on, right_on=right_on)
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        return super().join_asof(
+            other, left_on=left_on, right_on=right_on, strategy=strategy
+        )
 
     def clone(self) -> Self:
         r"""
