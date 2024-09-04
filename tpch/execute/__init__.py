@@ -15,6 +15,8 @@ supplier = Path("data") / "supplier.parquet"
 part = Path("data") / "part.parquet"
 partsupp = Path("data") / "partsupp.parquet"
 orders = Path("data") / "orders.parquet"
+customer = Path("data") / "customer.parquet"
+line_item = Path("data") / "lineitem.parquet"
 
 IO_FUNCS = {
     "pandas": lambda x: pd.read_parquet(x, engine="pyarrow"),

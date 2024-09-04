@@ -1,26 +1,12 @@
-from pathlib import Path
-
-import pandas as pd
-import polars as pl
 from queries import q9
 
-pd.options.mode.copy_on_write = True
-pd.options.future.infer_string = True
-
-part = Path("data") / "part.parquet"
-partsupp = Path("data") / "partsupp.parquet"
-nation = Path("data") / "nation.parquet"
-lineitem = Path("data") / "lineitem.parquet"
-orders = Path("data") / "orders.parquet"
-supplier = Path("data") / "supplier.parquet"
-IO_FUNCS = {
-    "pandas": lambda x: pd.read_parquet(x, engine="pyarrow"),
-    "pandas[pyarrow]": lambda x: pd.read_parquet(
-        x, engine="pyarrow", dtype_backend="pyarrow"
-    ),
-    "polars[eager]": lambda x: pl.read_parquet(x),
-    "polars[lazy]": lambda x: pl.scan_parquet(x),
-}
+from . import IO_FUNCS
+from . import lineitem
+from . import nation
+from . import orders
+from . import part
+from . import partsupp
+from . import supplier
 
 tool = "pandas"
 fn = IO_FUNCS[tool]
