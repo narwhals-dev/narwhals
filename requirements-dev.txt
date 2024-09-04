@@ -1,3 +1,4 @@
+tqdm
 covdefaults
 duckdb
 pandas
@@ -10,4 +11,3 @@ pytest-env
 hypothesis
 scikit-learn
 dask[dataframe]; python_version >= '3.9'
-tqdm
