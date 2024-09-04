@@ -21,7 +21,9 @@ jobs:
       - name: Install uv 
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: install-reqs
-        run: uv pip install --upgrade -r tpch/requirements-tpch.txt --system
+        run: uv pip install --upgrade -r requirements-dev.txt --system
+      - name: local-install
+        run: uv pip install -e . --system
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 

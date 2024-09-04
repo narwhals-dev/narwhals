@@ -1,7 +1,0 @@
-duckdb
-pyarrow
-polars
-pandas
-dask[dataframe]
-tqdm
-narwhals
