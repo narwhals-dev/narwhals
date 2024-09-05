@@ -12,6 +12,7 @@ from narwhals import dtypes
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._dask.utils import reverse_translate_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import parse_into_exprs
 
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     import dask_expr
 
     from narwhals._dask.typing import IntoDaskExpr
+    from narwhals.dtypes import DType
 
 
 class DaskNamespace:
@@ -70,10 +72,17 @@ class DaskNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
-        # TODO @FBruzzesi: cast to dtype once `narwhals_to_native_dtype` is implemented.
-        # It should be enough to add `.astype(narwhals_to_native_dtype(dtype))`
+        def convert_if_dtype(
+            series: dask_expr.Series, dtype: DType | type[DType]
+        ) -> dask_expr.Series:
+            return series.astype(reverse_translate_dtype(dtype)) if dtype else series
+
         return DaskExpr(
-            lambda df: [df._native_frame.assign(lit=value).loc[:, "lit"]],
+            lambda df: [
+                df._native_frame.assign(lit=value)
+                .loc[:, "lit"]
+                .pipe(convert_if_dtype, dtype)
+            ],
             depth=0,
             function_name="lit",
             root_names=None,
