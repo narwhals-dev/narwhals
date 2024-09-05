@@ -208,8 +208,10 @@ def test_left_join_overlapping_column(constructor: Any) -> None:
 def test_joinasof_numeric(constructor: Any, request: Any) -> None:
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor({"a": [1, 5, 10], "val": ["a", "b", "c"]}))
-    df_right = nw.from_native(constructor({"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}))
+    df = nw.from_native(constructor({"a": [1, 5, 10], "val": ["a", "b", "c"]})).sort("a")
+    df_right = nw.from_native(
+        constructor({"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
+    ).sort("a")
     result_backward = df.join_asof(df_right, left_on="a", right_on="a")  # type: ignore[arg-type]
     result_forward = df.join_asof(df_right, left_on="a", right_on="a", strategy="forward")  # type: ignore[arg-type]
     result_nearest = df.join_asof(df_right, left_on="a", right_on="a", strategy="nearest")  # type: ignore[arg-type]
@@ -247,7 +249,7 @@ def test_joinasof_time(constructor: Any, request: Any) -> None:
                 "population": [82.19, 82.66, 83.12],
             }
         )
-    )
+    ).sort("datetime")
     df_right = nw.from_native(
         constructor(
             {
@@ -261,7 +263,7 @@ def test_joinasof_time(constructor: Any, request: Any) -> None:
                 "gdp": [4164, 4411, 4566, 4696, 4827],
             }
         )
-    )
+    ).sort("datetime")
     result_backward = df.join_asof(df_right, left_on="datetime", right_on="datetime")  # type: ignore[arg-type]
     result_forward = df.join_asof(
         df_right,  # type: ignore[arg-type]

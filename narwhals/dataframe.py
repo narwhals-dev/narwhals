@@ -1922,7 +1922,7 @@ class DataFrame(BaseFrame[FrameT]):
             >>> gdp_pl = pl.DataFrame(data_gdp)
             >>> population_pl = pl.DataFrame(data_population)
 
-           # Let's define a dataframe-agnostic function in which we join over "datetime" column:
+            Let's define a dataframe-agnostic function in which we join over "datetime" column:
 
             >>> @nw.narwhalify
             ... def join_asof_date(df, other_any, strategy):
@@ -3547,10 +3547,10 @@ class LazyFrame(BaseFrame[FrameT]):
             ... }
             >>> gdp_pd = pd.DataFrame(data_gdp)
             >>> population_pd = pd.DataFrame(data_population)
-            >>> gdp_pl = pl.DataFrame(data_gdp)
-            >>> population_pl = pl.DataFrame(data_population)
+            >>> gdp_pl = pl.LazyFrame(data_gdp)
+            >>> population_pl = pl.LazyFrame(data_population)
 
-           # Let's define a dataframe-agnostic function in which we join over "datetime" column:
+            Let's define a dataframe-agnostic function in which we join over "datetime" column:
 
             >>> @nw.narwhalify
             ... def join_asof_date(df, other_any, strategy):
@@ -3564,7 +3564,7 @@ class LazyFrame(BaseFrame[FrameT]):
             1 2018-08-01       82.66  4566
             2 2019-01-01       83.12  4696
 
-            >>> join_asof_date(population_pl, gdp_pl, strategy="backward")
+            >>> join_asof_date(population_pl, gdp_pl, strategy="backward").collect()
             shape: (3, 3)
             ┌─────────────────────┬────────────┬──────┐
             │ datetime            ┆ population ┆ gdp  │
