@@ -1897,57 +1897,59 @@ class DataFrame(BaseFrame[FrameT]):
             A new joined DataFrame
 
         Examples:
-            >>> from datetime import date
+            >>> from datetime import datetime
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
             >>> data_gdp = {
-            ...     "date": [
-            ...         date(2016, 1, 1),
-            ...         date(2017, 1, 1),
-            ...         date(2018, 1, 1),
-            ...         date(2019, 1, 1),
-            ...         date(2020, 1, 1),
+            ...     "datetime": [
+            ...         datetime(2016, 1, 1),
+            ...         datetime(2017, 1, 1),
+            ...         datetime(2018, 1, 1),
+            ...         datetime(2019, 1, 1),
+            ...         datetime(2020, 1, 1),
             ...     ],
             ...     "gdp": [4164, 4411, 4566, 4696, 4827],
             ... }
             >>> data_population = {
-            ...     "date": [date(2016, 3, 1), date(2018, 8, 1), date(2019, 1, 1)],
+            ...     "datetime": [
+            ...         datetime(2016, 3, 1),
+            ...         datetime(2018, 8, 1),
+            ...         datetime(2019, 1, 1),
+            ...     ],
             ...     "population": [82.19, 82.66, 83.12],
             ... }
-            >>> gdp_pd = pd.DataFrame(data_gdp).astype({"date": "datetime64[ns]"})
-            >>> population_pd = pd.DataFrame(data_population).astype(
-            ...     {"date": "datetime64[ns]"}
-            ... )
+            >>> gdp_pd = pd.DataFrame(data_gdp)
+            >>> population_pd = pd.DataFrame(data_population)
 
             >>> gdp_pl = pl.DataFrame(data_gdp)
             >>> population_pl = pl.DataFrame(data_population)
 
-           # Let's define a dataframe-agnostic function in which we join over "date" column:
+           # Let's define a dataframe-agnostic function in which we join over "datetime" column:
 
             >>> @nw.narwhalify
             ... def join_asof_date(df, other_any, strategy):
             ...     return df.join_asof(
-            ...         other_any, left_on="date", right_on="date", strategy=strategy
+            ...         other_any, left_on="datetime", right_on="datetime", strategy=strategy
             ...     )
             >>> # We can now pass either pandas or Polars to the function:
             >>> join_asof_date(population_pd, gdp_pd, strategy="backward")
-                    date  population   gdp
+                datetime  population   gdp
             0 2016-03-01       82.19  4164
             1 2018-08-01       82.66  4566
             2 2019-01-01       83.12  4696
 
             >>> join_asof_date(population_pl, gdp_pl, strategy="backward")
             shape: (3, 3)
-            ┌────────────┬────────────┬──────┐
-            │ date       ┆ population ┆ gdp  │
-            │ ---        ┆ ---        ┆ ---  │
-            │ date       ┆ f64        ┆ i64  │
-            ╞════════════╪════════════╪══════╡
-            │ 2016-03-01 ┆ 82.19      ┆ 4164 │
-            │ 2018-08-01 ┆ 82.66      ┆ 4566 │
-            │ 2019-01-01 ┆ 83.12      ┆ 4696 │
-            └────────────┴────────────┴──────┘
+            ┌─────────────────────┬────────────┬──────┐
+            │ datetime            ┆ population ┆ gdp  │
+            │ ---                 ┆ ---        ┆ ---  │
+            │ datetime[μs]        ┆ f64        ┆ i64  │
+            ╞═════════════════════╪════════════╪══════╡
+            │ 2016-03-01 00:00:00 ┆ 82.19      ┆ 4164 │
+            │ 2018-08-01 00:00:00 ┆ 82.66      ┆ 4566 │
+            │ 2019-01-01 00:00:00 ┆ 83.12      ┆ 4696 │
+            └─────────────────────┴────────────┴──────┘
         """
         return super().join_asof(
             other, left_on=left_on, right_on=right_on, strategy=strategy
@@ -3527,57 +3529,58 @@ class LazyFrame(BaseFrame[FrameT]):
             A new joined DataFrame
 
         Examples:
-            >>> from datetime import date
+            >>> from datetime import datetime
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
             >>> data_gdp = {
-            ...     "date": [
-            ...         date(2016, 1, 1),
-            ...         date(2017, 1, 1),
-            ...         date(2018, 1, 1),
-            ...         date(2019, 1, 1),
-            ...         date(2020, 1, 1),
+            ...     "datetime": [
+            ...         datetime(2016, 1, 1),
+            ...         datetime(2017, 1, 1),
+            ...         datetime(2018, 1, 1),
+            ...         datetime(2019, 1, 1),
+            ...         datetime(2020, 1, 1),
             ...     ],
             ...     "gdp": [4164, 4411, 4566, 4696, 4827],
             ... }
             >>> data_population = {
-            ...     "date": [date(2016, 3, 1), date(2018, 8, 1), date(2019, 1, 1)],
+            ...     "datetime": [
+            ...         datetime(2016, 3, 1),
+            ...         datetime(2018, 8, 1),
+            ...         datetime(2019, 1, 1),
+            ...     ],
             ...     "population": [82.19, 82.66, 83.12],
             ... }
-            >>> gdp_pd = pd.DataFrame(data_gdp).astype({"date": "datetime64[ns]"})
-            >>> population_pd = pd.DataFrame(data_population).astype(
-            ...     {"date": "datetime64[ns]"}
-            ... )
-
+            >>> gdp_pd = pd.DataFrame(data_gdp)
+            >>> population_pd = pd.DataFrame(data_population)
             >>> gdp_pl = pl.DataFrame(data_gdp)
             >>> population_pl = pl.DataFrame(data_population)
 
-           # Let's define a dataframe-agnostic function in which we join over "date" column:
+           # Let's define a dataframe-agnostic function in which we join over "datetime" column:
 
             >>> @nw.narwhalify
             ... def join_asof_date(df, other_any, strategy):
             ...     return df.join_asof(
-            ...         other_any, left_on="date", right_on="date", strategy=strategy
+            ...         other_any, left_on="datetime", right_on="datetime", strategy=strategy
             ...     )
             >>> # We can now pass either pandas or Polars to the function:
             >>> join_asof_date(population_pd, gdp_pd, strategy="backward")
-                    date  population   gdp
+                datetime  population   gdp
             0 2016-03-01       82.19  4164
             1 2018-08-01       82.66  4566
             2 2019-01-01       83.12  4696
 
             >>> join_asof_date(population_pl, gdp_pl, strategy="backward")
             shape: (3, 3)
-            ┌────────────┬────────────┬──────┐
-            │ date       ┆ population ┆ gdp  │
-            │ ---        ┆ ---        ┆ ---  │
-            │ date       ┆ f64        ┆ i64  │
-            ╞════════════╪════════════╪══════╡
-            │ 2016-03-01 ┆ 82.19      ┆ 4164 │
-            │ 2018-08-01 ┆ 82.66      ┆ 4566 │
-            │ 2019-01-01 ┆ 83.12      ┆ 4696 │
-            └────────────┴────────────┴──────┘
+            ┌─────────────────────┬────────────┬──────┐
+            │ datetime            ┆ population ┆ gdp  │
+            │ ---                 ┆ ---        ┆ ---  │
+            │ datetime[μs]        ┆ f64        ┆ i64  │
+            ╞═════════════════════╪════════════╪══════╡
+            │ 2016-03-01 00:00:00 ┆ 82.19      ┆ 4164 │
+            │ 2018-08-01 00:00:00 ┆ 82.66      ┆ 4566 │
+            │ 2019-01-01 00:00:00 ┆ 83.12      ┆ 4696 │
+            └─────────────────────┴────────────┴──────┘
         """
         return super().join_asof(
             other, left_on=left_on, right_on=right_on, strategy=strategy
