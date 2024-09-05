@@ -243,9 +243,7 @@ def test_joinasof_numeric(constructor: Any, request: Any) -> None:
 def test_joinasof_time(constructor: Any, request: Any) -> None:
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if parse_version(pd.__version__) < (2, 1) and (
-        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
-    ):
+    if parse_version(pd.__version__) < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor(
