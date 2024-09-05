@@ -1884,14 +1884,11 @@ class DataFrame(BaseFrame[FrameT]):
 
             right_on: Name(s) of the right join column(s).
 
-            strategy: A “backward” search selects the last row in the right DataFrame whose "on" key is less than or equal to the left's key.
+            strategy: Join strategy. The default is "backward".
 
-            A “forward” search selects the first row in the right DataFrame whose "on" key is greater than or equal to the left's key.
-
-            A “nearest” search selects the last row in the right DataFrame whose value is nearest to the left's key.
-            String keys are not currently supported for a nearest search.
-
-            The default is “backward”.
+                  * *backward*: selects the last row in the right DataFrame whose "on" key is less than or equal to the left's key.
+                  * *forward*: selects the first row in the right DataFrame whose "on" key is greater than or equal to the left's key.
+                  * *nearest*: search selects the last row in the right DataFrame whose value is nearest to the left's key.
 
         Returns:
             A new joined DataFrame
@@ -3516,14 +3513,11 @@ class LazyFrame(BaseFrame[FrameT]):
 
             right_on: Name(s) of the right join column(s).
 
-            strategy: A “backward” search selects the last row in the right DataFrame whose "on" key is less than or equal to the left's key.
+            strategy: Join strategy. The default is "backward".
 
-            A “forward” search selects the first row in the right DataFrame whose "on" key is greater than or equal to the left's key.
-
-            A “nearest” search selects the last row in the right DataFrame whose value is nearest to the left's key.
-            String keys are not currently supported for a nearest search.
-
-            The default is “backward”.
+                  * *backward*: selects the last row in the right DataFrame whose "on" key is less than or equal to the left's key.
+                  * *forward*: selects the first row in the right DataFrame whose "on" key is greater than or equal to the left's key.
+                  * *nearest*: search selects the last row in the right DataFrame whose value is nearest to the left's key.
 
         Returns:
             A new joined DataFrame
