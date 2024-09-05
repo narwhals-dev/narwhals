@@ -1919,8 +1919,8 @@ class DataFrame(BaseFrame[FrameT]):
             >>> gdp_pd = pd.DataFrame(data_gdp)
             >>> population_pd = pd.DataFrame(data_population)
 
-            >>> gdp_pl = pl.DataFrame(data_gdp)
-            >>> population_pl = pl.DataFrame(data_population)
+            >>> gdp_pl = pl.DataFrame(data_gdp).sort("datetime")
+            >>> population_pl = pl.DataFrame(data_population).sort("datetime")
 
             Let's define a dataframe-agnostic function in which we join over "datetime" column:
 
@@ -3547,8 +3547,8 @@ class LazyFrame(BaseFrame[FrameT]):
             ... }
             >>> gdp_pd = pd.DataFrame(data_gdp)
             >>> population_pd = pd.DataFrame(data_population)
-            >>> gdp_pl = pl.LazyFrame(data_gdp)
-            >>> population_pl = pl.LazyFrame(data_population)
+            >>> gdp_pl = pl.LazyFrame(data_gdp).sort("datetime")
+            >>> population_pl = pl.LazyFrame(data_population).sort("datetime")
 
             Let's define a dataframe-agnostic function in which we join over "datetime" column:
 
