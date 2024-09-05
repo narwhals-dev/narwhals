@@ -9,6 +9,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
@@ -208,6 +209,10 @@ def test_left_join_overlapping_column(constructor: Any) -> None:
 def test_joinasof_numeric(constructor: Any, request: Any) -> None:
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if parse_version(pd.__version__) < (2, 1) and (
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 5, 10], "val": ["a", "b", "c"]})).sort("a")
     df_right = nw.from_native(
         constructor({"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
@@ -237,6 +242,10 @@ def test_joinasof_numeric(constructor: Any, request: Any) -> None:
 
 def test_joinasof_time(constructor: Any, request: Any) -> None:
     if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if parse_version(pd.__version__) < (2, 1) and (
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor(
@@ -295,3 +304,15 @@ def test_joinasof_time(constructor: Any, request: Any) -> None:
     compare_dicts(result_backward, expected_backward)
     compare_dicts(result_forward, expected_forward)
     compare_dicts(result_nearest, expected_nearest)
+
+
+@pytest.mark.parametrize("strategy", ["back", "furthest"])
+def test_joinasof_not_implemented(constructor: Any, strategy: str) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises(
+        NotImplementedError,
+        match=rf"Only the following strategies are supported: \('backward', 'forward', 'nearest'\); found '{strategy}'.",
+    ):
+        df.join_asof(df, left_on="a", right_on="a", strategy=strategy)  # type: ignore[arg-type]
