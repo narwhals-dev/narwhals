@@ -113,6 +113,29 @@ def test_group_by_n_unique(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
+def test_group_by_n_unique_w_missing(constructor: Any) -> None:
+    data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("a")
+        .agg(
+            nw.col("b").n_unique(),
+            c_n_unique=nw.col("c").n_unique(),
+            c_n_unique_other=nw.col("c").n_unique(),
+            d_n_unique=nw.col("d").n_unique(),
+        )
+        .sort("a")
+    )
+    expected = {
+        "a": [1, 2],
+        "b": [2, 1],
+        "c_n_unique": [1, 1],
+        "c_n_unique_other": [1, 1],
+        "d_n_unique": [1, 1],
+    }
+    compare_dicts(result, expected)
+
+
 def test_group_by_empty_result_pandas() -> None:
     df_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 3, 2]})
     df = nw.from_native(df_any, eager_only=True)
