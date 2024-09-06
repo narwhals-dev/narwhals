@@ -14,4 +14,4 @@ fn = IO_FUNCS["polars[eager]"]
 print(q22.query(fn(customer), fn(orders)))
 
 fn = IO_FUNCS["polars[lazy]"]
-print(q22.query(fn(customer), fn(orders)))
+print(q22.query(fn(customer), fn(orders)).collect())
