@@ -182,8 +182,9 @@ class BaseFrame(Generic[FrameT]):
     def join(
         self,
         other: Self,
-        *,
+        on: str | list[str] | None = None,
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -193,13 +194,14 @@ class BaseFrame(Generic[FrameT]):
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
-        if how == "cross" and (left_on or right_on):
-            msg = "Can not pass left_on, right_on for cross join"
+        if how == "cross" and (left_on or right_on or on):
+            msg = "Can not pass 'on' or ('left_on', 'right_on') for cross join"
             raise ValueError(msg)
 
         return self._from_compliant_dataframe(
             self._compliant_frame.join(
                 self._extract_compliant(other),
+                on=on,
                 how=how,
                 left_on=left_on,
                 right_on=right_on,
@@ -1791,8 +1793,9 @@ class DataFrame(BaseFrame[FrameT]):
     def join(
         self,
         other: Self,
-        *,
+        on: str | list[str] | None = None,
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -1860,7 +1863,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 2   ┆ 7.0 ┆ b   ┆ y     │
             └─────┴─────┴─────┴───────┘
         """
-        return super().join(other, how=how, left_on=left_on, right_on=right_on)
+        return super().join(other, on=on, how=how, left_on=left_on, right_on=right_on)
 
     def join_asof(
         self,
@@ -3420,8 +3423,9 @@ class LazyFrame(BaseFrame[FrameT]):
     def join(
         self,
         other: Self,
-        *,
+        on: str | list[str] | None = None,
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
     ) -> Self:
@@ -3489,7 +3493,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2   ┆ 7.0 ┆ b   ┆ y     │
             └─────┴─────┴─────┴───────┘
         """
-        return super().join(other, how=how, left_on=left_on, right_on=right_on)
+        return super().join(other, on=on, how=how, left_on=left_on, right_on=right_on)
 
     def join_asof(
         self,

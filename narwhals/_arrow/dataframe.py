@@ -270,11 +270,14 @@ class ArrowDataFrame:
     def join(
         self,
         other: Self,
-        *,
+        on: str | list[str] | None = None,
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
+        *,
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
     ) -> Self:
+        if isinstance(on, str):
+            on = [on]
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
@@ -308,8 +311,8 @@ class ArrowDataFrame:
         return self._from_native_frame(
             self._native_frame.join(
                 other._native_frame,
-                keys=left_on,
-                right_keys=right_on,
+                keys=on or left_on,
+                right_keys=on or right_on,
                 join_type=how_to_join_map[how],
                 right_suffix="_right",
             ),

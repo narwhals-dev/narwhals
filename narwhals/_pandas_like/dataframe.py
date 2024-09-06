@@ -399,15 +399,21 @@ class PandasLikeDataFrame:
     def join(
         self,
         other: Self,
-        *,
+        on: str | list[str] | None = None,
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
+        *,
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
     ) -> Self:
+        if isinstance(on, str):
+            on = [on]
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
             right_on = [right_on]
+
+        left_on = on or left_on
+        right_on = on or right_on
 
         if how == "cross":
             if (
