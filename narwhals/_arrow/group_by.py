@@ -120,16 +120,24 @@ def agg_arrow(
             function_name = remove_prefix(expr._function_name, "col->")
             function_name = POLARS_TO_ARROW_AGGREGATIONS.get(function_name, function_name)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                if function_name != "len":
+                if function_name not in ("len", "count_distinct"):
                     simple_aggregations[output_name] = (
                         (root_name, function_name),
                         f"{root_name}_{function_name}",
                     )
-                else:
+                elif function_name == "len":
                     simple_aggregations[output_name] = (
                         (root_name, "count", pc.CountOptions(mode="all")),
                         f"{root_name}_count",
                     )
+                elif function_name == "count_distinct":
+                    simple_aggregations[output_name] = (
+                        (root_name, "count_distinct", pc.CountOptions(mode="all")),
+                        f"{root_name}_count_distinct",
+                    )
+                else:  # pragma: no cover
+                    msg = "unreachable code"
+                    raise RuntimeError(msg)
 
         aggs: list[Any] = []
         name_mapping = {}

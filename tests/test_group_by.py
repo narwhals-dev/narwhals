@@ -121,7 +121,7 @@ def test_group_by_n_unique_w_missing(constructor: Any) -> None:
         .agg(
             nw.col("b").n_unique(),
             c_n_unique=nw.col("c").n_unique(),
-            c_n_unique_other=nw.col("c").n_unique(),
+            c_n_min=nw.col("b").min(),
             d_n_unique=nw.col("d").n_unique(),
         )
         .sort("a")
@@ -130,7 +130,7 @@ def test_group_by_n_unique_w_missing(constructor: Any) -> None:
         "a": [1, 2],
         "b": [2, 1],
         "c_n_unique": [1, 1],
-        "c_n_unique_other": [1, 1],
+        "c_n_min": [4, 5],
         "d_n_unique": [1, 1],
     }
     compare_dicts(result, expected)
