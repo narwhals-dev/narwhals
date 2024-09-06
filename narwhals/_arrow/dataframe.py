@@ -283,6 +283,9 @@ class ArrowDataFrame:
         if isinstance(right_on, str):
             right_on = [right_on]
 
+        left_on = on or left_on
+        right_on = on or right_on
+
         how_to_join_map = {
             "anti": "left anti",
             "semi": "left semi",
@@ -311,8 +314,8 @@ class ArrowDataFrame:
         return self._from_native_frame(
             self._native_frame.join(
                 other._native_frame,
-                keys=on or left_on,
-                right_keys=on or right_on,
+                keys=left_on,
+                right_keys=right_on,
                 join_type=how_to_join_map[how],
                 right_suffix="_right",
             ),
