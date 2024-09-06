@@ -113,12 +113,7 @@ def test_group_by_n_unique(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_n_unique_w_missing(
-    constructor: Any, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor):
-        # temporary: let's fix this before merging
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_n_unique_w_missing(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))

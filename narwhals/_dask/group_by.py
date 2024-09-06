@@ -11,6 +11,7 @@ from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
+    import pandas as pd
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
@@ -20,11 +21,16 @@ if TYPE_CHECKING:
 def n_unique() -> dd.Aggregation:
     import dask.dataframe as dd  # ignore-banned-import
 
+    def chunk(s: pd.core.groupby.generic.SeriesGroupBy) -> int:
+        return s.nunique(dropna=False)  # type: ignore[no-any-return]
+
+    def agg(s0: pd.core.groupby.generic.SeriesGroupBy) -> int:
+        return s0.sum()  # type: ignore[no-any-return]
+
     return dd.Aggregation(
         name="nunique",
-        chunk=lambda s: s.apply(lambda x: list(set(x))),
-        agg=lambda s0: s0.obj.groupby(level=list(range(s0.obj.index.nlevels))).sum(),
-        finalize=lambda s1: s1.apply(lambda final: len(set(final))),
+        chunk=chunk,
+        agg=agg,
     )
 
 
