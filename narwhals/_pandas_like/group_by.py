@@ -121,16 +121,18 @@ def agg_pandas(  # noqa: PLR0915
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
     """
-    all_simple_aggs = True
+    all_aggs_are_simple = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
-            all_simple_aggs = False
+            all_aggs_are_simple = False
             break
 
-    # list of (output_name, root_name) that we count n_unique on
-    nunique: list[tuple[str, str]] = []
+    # dict of {output_name: root_name} that we count n_unique on
+    # We need to do this separately from the rest so that we
+    # can pass the `dropna` kwargs.
+    nunique_aggs: dict[str, str] = {}
 
-    if all_simple_aggs:
+    if all_aggs_are_simple:
         simple_aggregations: dict[str, tuple[str, str]] = {}
         for expr in exprs:
             if expr._depth == 0:
@@ -159,42 +161,53 @@ def agg_pandas(  # noqa: PLR0915
             )
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 if function_name == "nunique":
-                    nunique.append((output_name, root_name))
+                    nunique_aggs[output_name] = root_name
                 else:
                     simple_aggregations[output_name] = (root_name, function_name)
 
-        aggs = collections.defaultdict(list)
+        simple_aggs = collections.defaultdict(list)
         name_mapping = {}
         for output_name, named_agg in simple_aggregations.items():
-            aggs[named_agg[0]].append(named_agg[1])
+            simple_aggs[named_agg[0]].append(named_agg[1])
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
-        if aggs:
+        if simple_aggs:
             try:
-                result_simple = grouped.agg(aggs)
+                result_simple_aggs = grouped.agg(simple_aggs)
             except AttributeError as exc:
                 msg = "Failed to aggregated - does your aggregation function return a scalar?"
                 raise RuntimeError(msg) from exc
-            result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
-            result_simple = result_simple.rename(columns=name_mapping).reset_index()
-        if nunique:
-            nunique_aggs = grouped[[x[1] for x in nunique]].nunique(dropna=False)
-            nunique_aggs.columns = [x[0] for x in nunique]
-            nunique_aggs = nunique_aggs.reset_index()
-        if aggs and nunique:
+            result_simple_aggs.columns = [
+                f"{a}_{b}" for a, b in result_simple_aggs.columns
+            ]
+            result_simple_aggs = result_simple_aggs.rename(
+                columns=name_mapping
+            ).reset_index()
+        if nunique_aggs:
+            result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
+                dropna=False
+            )
+            result_nunique_aggs.columns = list(nunique_aggs.keys())
+            result_nunique_aggs = result_nunique_aggs.reset_index()
+        if simple_aggs and nunique_aggs:
             if (
-                set(result_simple.columns)
+                set(result_simple_aggs.columns)
                 .difference(keys)
-                .intersection(nunique_aggs.columns)
+                .intersection(result_nunique_aggs.columns)
             ):
                 msg = (
                     "Got two aggregations with the same output name. Please make sure "
                     "that aggregations have unique output names."
                 )
                 raise ValueError(msg)
-            result_simple = result_simple.merge(nunique_aggs, on=keys)
-        elif not aggs and nunique:
-            result_simple = nunique_aggs
-        return from_dataframe(result_simple.loc[:, output_names])
+            result_aggs = result_simple_aggs.merge(result_nunique_aggs, on=keys)
+        elif nunique_aggs and not simple_aggs:
+            result_aggs = result_nunique_aggs
+        elif simple_aggs and not nunique_aggs:
+            result_aggs = result_simple_aggs
+        else:  # pragma: no cover
+            msg = "Congrats, you entered unreachable code. Please report a bug to https://github.com/narwhals-dev/narwhals/issues."
+            raise RuntimeError(msg)
+        return from_dataframe(result_aggs.loc[:, output_names])
 
     if dataframe_is_empty:
         # Don't even attempt this, it's way too inconsistent across pandas versions.
