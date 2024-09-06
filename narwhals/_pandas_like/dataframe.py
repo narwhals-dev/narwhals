@@ -509,6 +509,26 @@ class PandasLikeDataFrame:
             ),
         )
 
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        plx = self.__native_namespace__()
+        return self._from_native_frame(
+            plx.merge_asof(
+                self._native_frame,
+                other._native_frame,
+                left_on=left_on,
+                right_on=right_on,
+                direction=strategy,
+                suffixes=("", "_right"),
+            ),
+        )
+
     # --- partial reduction ---
 
     def head(self, n: int) -> Self:

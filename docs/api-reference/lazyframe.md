@@ -15,6 +15,7 @@
         - group_by
         - head
         - join
+        - join_asof
         - lazy
         - pipe
         - rename
