@@ -136,6 +136,14 @@ def test_group_by_n_unique_w_missing(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
+def test_group_by_same_name_twice() -> None:
+    import pandas as pd
+
+    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
+    with pytest.raises(ValueError, match="two aggregations with the same"):
+        nw.from_native(df).group_by("a").agg(nw.col("b").sum(), nw.col("b").n_unique())
+
+
 def test_group_by_empty_result_pandas() -> None:
     df_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 3, 2]})
     df = nw.from_native(df_any, eager_only=True)
