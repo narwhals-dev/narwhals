@@ -3594,18 +3594,9 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2019-01-01 00:00:00 ┆ 83.12      ┆ 4696 │
             └─────────────────────┴────────────┴──────┘
         """
-        if left_on is not None and right_on is not None and on is not None:
-            msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
-            raise ValueError(msg)
-        if left_on is not None and right_on is not None:
-            return super().join_asof(
-                other, left_on=left_on, right_on=right_on, strategy=strategy
-            )
-        elif on is not None:
-            return super().join_asof(other, on=on, strategy=strategy)
-        else:
-            msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
-            raise ValueError(msg)
+        return super().join_asof(
+            other, left_on=left_on, right_on=right_on, on=on, strategy=strategy
+        )
 
     def clone(self) -> Self:
         r"""
