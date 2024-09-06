@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 POLARS_TO_PANDAS_AGGREGATIONS = {
     "len": "size",
+    "n_unique": "nunique",
 }
 
 

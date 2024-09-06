@@ -15,6 +15,12 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import IntoArrowExpr
 
+POLARS_TO_ARROW_AGGREGATIONS = {
+    "n_unique": "count_distinct",
+    "std": "stddev",
+    "var": "variance",
+}
+
 
 class ArrowGroupBy:
     def __init__(self, df: ArrowDataFrame, keys: list[str]) -> None:
@@ -112,6 +118,7 @@ def agg_arrow(
                 raise AssertionError(msg)
 
             function_name = remove_prefix(expr._function_name, "col->")
+            function_name = POLARS_TO_ARROW_AGGREGATIONS.get(function_name, function_name)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 if function_name != "len":
                     simple_aggregations[output_name] = (
