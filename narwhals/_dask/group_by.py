@@ -10,13 +10,27 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
+    import dask.dataframe as dd
+
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.typing import IntoDaskExpr
 
-POLARS_TO_PANDAS_AGGREGATIONS = {
+
+def n_unique() -> dd.Aggregation:
+    import dask.dataframe as dd  # ignore-banned-import
+
+    return dd.Aggregation(
+        name="nunique",
+        chunk=lambda s: s.apply(lambda x: list(set(x))),
+        agg=lambda s0: s0.obj.groupby(level=list(range(s0.obj.index.nlevels))).sum(),
+        finalize=lambda s1: s1.apply(lambda final: len(set(final))),
+    )
+
+
+POLARS_TO_DASK_AGGREGATIONS = {
     "len": "size",
-    "n_unique": "nunique",
+    "n_unique": n_unique(),
 }
 
 
@@ -94,7 +108,7 @@ def agg_dask(
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                     raise AssertionError(msg)
 
-                function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
+                function_name = POLARS_TO_DASK_AGGREGATIONS.get(
                     expr._function_name, expr._function_name
                 )
                 for output_name in expr._output_names:
@@ -109,9 +123,7 @@ def agg_dask(
                 raise AssertionError(msg)
 
             function_name = remove_prefix(expr._function_name, "col->")
-            function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
-                function_name, function_name
-            )
+            function_name = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (root_name, function_name)
         try:
