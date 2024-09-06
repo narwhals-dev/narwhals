@@ -218,8 +218,9 @@ class BaseFrame(Generic[FrameT]):
         self,
         other: Self,
         *,
-        left_on: str,
-        right_on: str,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
@@ -228,14 +229,29 @@ class BaseFrame(Generic[FrameT]):
             msg = f"Only the following strategies are supported: {_supported_strategies}; found '{strategy}'."
             raise NotImplementedError(msg)
 
-        return self._from_compliant_dataframe(
-            self._compliant_frame.join_asof(
-                self._extract_compliant(other),
-                left_on=left_on,
-                right_on=right_on,
-                strategy=strategy,
+        if left_on is not None and right_on is not None and on is not None:
+            msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
+            raise ValueError(msg)
+        if left_on is not None and right_on is not None:
+            return self._from_compliant_dataframe(
+                self._compliant_frame.join_asof(
+                    self._extract_compliant(other),
+                    left_on=left_on,
+                    right_on=right_on,
+                    strategy=strategy,
+                )
             )
-        )
+        elif on is not None:
+            return self._from_compliant_dataframe(
+                self._compliant_frame.join_asof(
+                    self._extract_compliant(other),
+                    on=on,
+                    strategy=strategy,
+                )
+            )
+        else:
+            msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
+            raise ValueError(msg)
 
 
 class DataFrame(BaseFrame[FrameT]):
@@ -1866,8 +1882,9 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        left_on: str,
-        right_on: str,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         """
@@ -1883,6 +1900,8 @@ class DataFrame(BaseFrame[FrameT]):
             left_on: Name(s) of the left join column(s).
 
             right_on: Name(s) of the right join column(s).
+
+            on: Join column of both DataFrames. If set, left_on and right_on should be None.
 
             strategy: Join strategy. The default is "backward".
 
@@ -1925,18 +1944,16 @@ class DataFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function in which we join over "datetime" column:
 
             >>> @nw.narwhalify
-            ... def join_asof_date(df, other_any, strategy):
-            ...     return df.join_asof(
-            ...         other_any, left_on="datetime", right_on="datetime", strategy=strategy
-            ...     )
+            ... def join_asof_datetime(df, other_any, strategy):
+            ...     return df.join_asof(other_any, on="datetime", strategy=strategy)
             >>> # We can now pass either pandas or Polars to the function:
-            >>> join_asof_date(population_pd, gdp_pd, strategy="backward")
+            >>> join_asof_datetime(population_pd, gdp_pd, strategy="backward")
                 datetime  population   gdp
             0 2016-03-01       82.19  4164
             1 2018-08-01       82.66  4566
             2 2019-01-01       83.12  4696
 
-            >>> join_asof_date(population_pl, gdp_pl, strategy="backward")
+            >>> join_asof_datetime(population_pl, gdp_pl, strategy="backward")
             shape: (3, 3)
             ┌─────────────────────┬────────────┬──────┐
             │ datetime            ┆ population ┆ gdp  │
@@ -1949,7 +1966,7 @@ class DataFrame(BaseFrame[FrameT]):
             └─────────────────────┴────────────┴──────┘
         """
         return super().join_asof(
-            other, left_on=left_on, right_on=right_on, strategy=strategy
+            other, left_on=left_on, right_on=right_on, on=on, strategy=strategy
         )
 
     # --- descriptive ---
@@ -3495,8 +3512,9 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        left_on: str,
-        right_on: str,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         """
@@ -3512,6 +3530,8 @@ class LazyFrame(BaseFrame[FrameT]):
             left_on: Name(s) of the left join column(s).
 
             right_on: Name(s) of the right join column(s).
+
+            on: Join column of both DataFrames. If set, left_on and right_on should be None.
 
             strategy: Join strategy. The default is "backward".
 
@@ -3553,18 +3573,16 @@ class LazyFrame(BaseFrame[FrameT]):
             Let's define a dataframe-agnostic function in which we join over "datetime" column:
 
             >>> @nw.narwhalify
-            ... def join_asof_date(df, other_any, strategy):
-            ...     return df.join_asof(
-            ...         other_any, left_on="datetime", right_on="datetime", strategy=strategy
-            ...     )
+            ... def join_asof_datetime(df, other_any, strategy):
+            ...     return df.join_asof(other_any, on="datetime", strategy=strategy)
             >>> # We can now pass either pandas or Polars to the function:
-            >>> join_asof_date(population_pd, gdp_pd, strategy="backward")
+            >>> join_asof_datetime(population_pd, gdp_pd, strategy="backward")
                 datetime  population   gdp
             0 2016-03-01       82.19  4164
             1 2018-08-01       82.66  4566
             2 2019-01-01       83.12  4696
 
-            >>> join_asof_date(population_pl, gdp_pl, strategy="backward").collect()
+            >>> join_asof_datetime(population_pl, gdp_pl, strategy="backward").collect()
             shape: (3, 3)
             ┌─────────────────────┬────────────┬──────┐
             │ datetime            ┆ population ┆ gdp  │
@@ -3577,7 +3595,7 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────────────────────┴────────────┴──────┘
         """
         return super().join_asof(
-            other, left_on=left_on, right_on=right_on, strategy=strategy
+            other, left_on=left_on, right_on=right_on, on=on, strategy=strategy
         )
 
     def clone(self) -> Self:
