@@ -42,6 +42,8 @@ def test_datetime_attributes(
         and "pyarrow" not in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
+    if attribute == "date" and "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a").dt, attribute)())
@@ -73,6 +75,8 @@ def test_datetime_attributes_series(
         and "pyarrow" not in str(constructor_eager)
     ):
         request.applymarker(pytest.mark.xfail)
+    if attribute == "date" and "cudf" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(getattr(df["a"].dt, attribute)())
@@ -81,6 +85,8 @@ def test_datetime_attributes_series(
 
 def test_datetime_chained_attributes(request: Any, constructor_eager: Any) -> None:
     if "pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
