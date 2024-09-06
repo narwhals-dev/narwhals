@@ -302,8 +302,8 @@ class DaskLazyFrame:
         self,
         other: Self,
         *,
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: str,
+        right_on: str,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         plx = self.__native_namespace__()

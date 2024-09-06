@@ -218,8 +218,8 @@ class BaseFrame(Generic[FrameT]):
         self,
         other: Self,
         *,
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
+        left_on: str,
+        right_on: str,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
@@ -1866,8 +1866,8 @@ class DataFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
+        left_on: str,
+        right_on: str,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         """
@@ -3495,8 +3495,8 @@ class LazyFrame(BaseFrame[FrameT]):
         self,
         other: Self,
         *,
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
+        left_on: str,
+        right_on: str,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         """
