@@ -113,6 +113,15 @@ def test_group_by_n_unique(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
+def test_group_by_std(constructor: Any) -> None:
+    data = {"a": [1, 1, 2, 2], "b": [5, 4, 3, 2]}
+    result = (
+        nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").std()).sort("a")
+    )
+    expected = {"a": [1, 2], "b": [0.707107] * 2}
+    compare_dicts(result, expected)
+
+
 def test_group_by_n_unique_w_missing(constructor: Any) -> None:
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
