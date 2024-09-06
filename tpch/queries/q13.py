@@ -13,8 +13,7 @@ def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
         .group_by("c_custkey")
         .agg(nw.col("o_orderkey").count().alias("c_count"))
         .group_by("c_count")
-        .agg(nw.len().alias("customer_count"))
-        # Not Done
-        # .select(nw.col("c_count"), nw.col("len").alias("custdist"))
-        # .sort(by=["custdist", "c_count"], descending=[True, True])
+        .agg(nw.len())
+        .select(nw.col("c_count"), nw.col("len").alias("custdist"))
+        .sort(by=["custdist", "c_count"], descending=[True, True])
     )
