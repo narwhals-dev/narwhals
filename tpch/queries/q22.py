@@ -26,7 +26,7 @@ def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
         .group_by("cntrycode")
         .agg(
             nw.col("c_acctbal").count().alias("numcust"),
-            nw.col("c_acctbal").sum().round(2).alias("totacctbal"),
+            nw.col("c_acctbal").sum().alias("totacctbal"),
         )
         .sort("cntrycode")
     )
