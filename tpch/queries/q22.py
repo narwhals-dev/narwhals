@@ -19,7 +19,7 @@ def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     )
 
     return (
-        q1.join(q3, on="c_custkey", how="left")  # using some instead of `on`
+        q1.join(q3, left_on="c_custkey", right_on="c_custkey", how="left")
         .filter(nw.col("o_custkey").is_null())
         .join(q2, how="cross")
         .filter(nw.col("c_acctbal") > nw.col("avg_acctbal"))
