@@ -30,7 +30,7 @@ def n_unique() -> dd.Aggregation:
 
 POLARS_TO_DASK_AGGREGATIONS = {
     "len": "size",
-    "n_unique": n_unique(),
+    "n_unique": n_unique,
 }
 
 
@@ -100,7 +100,7 @@ def agg_dask(
             break
 
     if all_simple_aggs:
-        simple_aggregations: dict[str, tuple[str, str]] = {}
+        simple_aggregations: dict[str, tuple[str, str | dd.Aggregation]] = {}
         for expr in exprs:
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
@@ -124,6 +124,10 @@ def agg_dask(
 
             function_name = remove_prefix(expr._function_name, "col->")
             function_name = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)
+
+            # deal with n_unique case in a "lazy" mode to not depend on dask globally
+            function_name = function_name() if callable(function_name) else function_name
+
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (root_name, function_name)
         try:
