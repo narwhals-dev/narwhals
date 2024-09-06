@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 POLARS_TO_ARROW_AGGREGATIONS = {
     "n_unique": "count_distinct",
     "std": "stddev",
-    "var": "variance",
+    "var": "variance",  # currently unused, we don't have `var` yet
 }
 
 
