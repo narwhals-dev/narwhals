@@ -104,7 +104,7 @@ class PandasLikeGroupBy:
         yield from ((key, self._from_native_frame(sub_df)) for (key, sub_df) in iterator)
 
 
-def agg_pandas(
+def agg_pandas(  # noqa: PLR0915
     grouped: Any,
     exprs: list[PandasLikeExpr],
     keys: list[str],
@@ -126,6 +126,9 @@ def agg_pandas(
         if not is_simple_aggregation(expr):
             all_simple_aggs = False
             break
+
+    # list of (output_name, root_name) that we count n_unique on
+    nunique: list[tuple[str, str]] = []
 
     if all_simple_aggs:
         simple_aggregations: dict[str, tuple[str, str]] = {}
@@ -155,20 +158,42 @@ def agg_pandas(
                 function_name, function_name
             )
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                simple_aggregations[output_name] = (root_name, function_name)
+                if function_name == "nunique":
+                    nunique.append((output_name, root_name))
+                else:
+                    simple_aggregations[output_name] = (root_name, function_name)
 
         aggs = collections.defaultdict(list)
         name_mapping = {}
         for output_name, named_agg in simple_aggregations.items():
             aggs[named_agg[0]].append(named_agg[1])
             name_mapping[f"{named_agg[0]}_{named_agg[1]}"] = output_name
-        try:
-            result_simple = grouped.agg(aggs)
-        except AttributeError as exc:
-            msg = "Failed to aggregated - does your aggregation function return a scalar?"
-            raise RuntimeError(msg) from exc
-        result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
-        result_simple = result_simple.rename(columns=name_mapping).reset_index()
+        if aggs:
+            try:
+                result_simple = grouped.agg(aggs)
+            except AttributeError as exc:
+                msg = "Failed to aggregated - does your aggregation function return a scalar?"
+                raise RuntimeError(msg) from exc
+            result_simple.columns = [f"{a}_{b}" for a, b in result_simple.columns]
+            result_simple = result_simple.rename(columns=name_mapping).reset_index()
+        if nunique:
+            nunique_aggs = grouped[[x[1] for x in nunique]].nunique(dropna=False)
+            nunique_aggs.columns = [x[0] for x in nunique]
+            nunique_aggs = nunique_aggs.reset_index()
+        if aggs and nunique:
+            if (
+                set(result_simple.columns)
+                .difference(keys)
+                .intersection(nunique_aggs.columns)
+            ):
+                msg = (
+                    "Got two aggregations with the same output name. Please make sure "
+                    "that aggregations have unique output names."
+                )
+                raise ValueError(msg)
+            result_simple = result_simple.merge(nunique_aggs, on=keys)
+        elif not aggs and nunique:
+            result_simple = nunique_aggs
         return from_dataframe(result_simple.loc[:, output_names])
 
     if dataframe_is_empty:
