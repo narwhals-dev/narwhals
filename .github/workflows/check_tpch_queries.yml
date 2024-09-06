@@ -27,4 +27,4 @@ jobs:
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 
-        run: python -m unittest discover -s 'tpch/tests'
+        run: cd tpch && pytest tests
