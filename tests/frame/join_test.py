@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -8,6 +9,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
@@ -202,3 +204,160 @@ def test_left_join_overlapping_column(constructor: Any) -> None:
         "index": [0, 1, 2],
     }
     compare_dicts(result, expected)
+
+
+def test_joinasof_numeric(constructor: Any, request: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if parse_version(pd.__version__) < (2, 1) and (
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 5, 10], "val": ["a", "b", "c"]})).sort("a")
+    df_right = nw.from_native(
+        constructor({"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
+    ).sort("a")
+    result_backward = df.join_asof(df_right, left_on="a", right_on="a")  # type: ignore[arg-type]
+    result_forward = df.join_asof(df_right, left_on="a", right_on="a", strategy="forward")  # type: ignore[arg-type]
+    result_nearest = df.join_asof(df_right, left_on="a", right_on="a", strategy="nearest")  # type: ignore[arg-type]
+    result_backward_on = df.join_asof(df_right, on="a")  # type: ignore[arg-type]
+    result_forward_on = df.join_asof(df_right, on="a", strategy="forward")  # type: ignore[arg-type]
+    result_nearest_on = df.join_asof(df_right, on="a", strategy="nearest")  # type: ignore[arg-type]
+    expected_backward = {
+        "a": [1, 5, 10],
+        "val": ["a", "b", "c"],
+        "val_right": [1, 3, 7],
+    }
+    expected_forward = {
+        "a": [1, 5, 10],
+        "val": ["a", "b", "c"],
+        "val_right": [1, 6, float("nan")],
+    }
+    expected_nearest = {
+        "a": [1, 5, 10],
+        "val": ["a", "b", "c"],
+        "val_right": [1, 6, 7],
+    }
+    compare_dicts(result_backward, expected_backward)
+    compare_dicts(result_forward, expected_forward)
+    compare_dicts(result_nearest, expected_nearest)
+    compare_dicts(result_backward_on, expected_backward)
+    compare_dicts(result_forward_on, expected_forward)
+    compare_dicts(result_nearest_on, expected_nearest)
+
+
+def test_joinasof_time(constructor: Any, request: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if parse_version(pd.__version__) < (2, 1) and ("pandas_pyarrow" in str(constructor)):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(
+        constructor(
+            {
+                "datetime": [
+                    datetime(2016, 3, 1),
+                    datetime(2018, 8, 1),
+                    datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+            }
+        )
+    ).sort("datetime")
+    df_right = nw.from_native(
+        constructor(
+            {
+                "datetime": [
+                    datetime(2016, 1, 1),
+                    datetime(2017, 1, 1),
+                    datetime(2018, 1, 1),
+                    datetime(2019, 1, 1),
+                    datetime(2020, 1, 1),
+                ],
+                "gdp": [4164, 4411, 4566, 4696, 4827],
+            }
+        )
+    ).sort("datetime")
+    result_backward = df.join_asof(df_right, left_on="datetime", right_on="datetime")  # type: ignore[arg-type]
+    result_forward = df.join_asof(
+        df_right,  # type: ignore[arg-type]
+        left_on="datetime",
+        right_on="datetime",
+        strategy="forward",
+    )
+    result_nearest = df.join_asof(
+        df_right,  # type: ignore[arg-type]
+        left_on="datetime",
+        right_on="datetime",
+        strategy="nearest",
+    )
+    result_backward_on = df.join_asof(df_right, on="datetime")  # type: ignore[arg-type]
+    result_forward_on = df.join_asof(
+        df_right,  # type: ignore[arg-type]
+        on="datetime",
+        strategy="forward",
+    )
+    result_nearest_on = df.join_asof(
+        df_right,  # type: ignore[arg-type]
+        on="datetime",
+        strategy="nearest",
+    )
+    expected_backward = {
+        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
+        "population": [82.19, 82.66, 83.12],
+        "gdp": [4164, 4566, 4696],
+    }
+    expected_forward = {
+        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
+        "population": [82.19, 82.66, 83.12],
+        "gdp": [4411, 4696, 4696],
+    }
+    expected_nearest = {
+        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
+        "population": [82.19, 82.66, 83.12],
+        "gdp": [4164, 4696, 4696],
+    }
+    compare_dicts(result_backward, expected_backward)
+    compare_dicts(result_forward, expected_forward)
+    compare_dicts(result_nearest, expected_nearest)
+    compare_dicts(result_backward_on, expected_backward)
+    compare_dicts(result_forward_on, expected_forward)
+    compare_dicts(result_nearest_on, expected_nearest)
+
+
+@pytest.mark.parametrize("strategy", ["back", "furthest"])
+def test_joinasof_not_implemented(constructor: Any, strategy: str) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises(
+        NotImplementedError,
+        match=rf"Only the following strategies are supported: \('backward', 'forward', 'nearest'\); found '{strategy}'.",
+    ):
+        df.join_asof(df, left_on="a", right_on="a", strategy=strategy)  # type: ignore[arg-type]
+
+
+def test_joinasof_no_keys(constructor: Any) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+
+    msg = r"Either \(`left_on` and `right_on`\) or `on` keys should be specified."
+    with pytest.raises(
+        ValueError,
+        match=msg,
+    ):
+        df.join_asof(df, left_on="a")  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match=msg,
+    ):
+        df.join_asof(df, right_on="a")  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match=msg,
+    ):
+        df.join_asof(df)  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match=msg,
+    ):
+        df.join_asof(df, left_on="a", right_on="a", on="a")  # type: ignore[arg-type]

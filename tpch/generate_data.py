@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path  # noqa: INP001
 
 import duckdb
 import pyarrow as pa

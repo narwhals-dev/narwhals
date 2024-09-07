@@ -8,19 +8,7 @@ from . import part
 from . import partsupp
 from . import supplier
 
-tool = "pandas"
-fn = IO_FUNCS[tool]
-print(
-    q9.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier))
-)
-
 tool = "pandas[pyarrow]"
-fn = IO_FUNCS[tool]
-print(
-    q9.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier))
-)
-
-tool = "polars[eager]"
 fn = IO_FUNCS[tool]
 print(
     q9.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier))

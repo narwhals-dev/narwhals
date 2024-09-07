@@ -8,23 +8,7 @@ from . import orders
 from . import region
 from . import supplier
 
-tool = "pandas"
-fn = IO_FUNCS[tool]
-print(
-    q5.query(
-        fn(region), fn(nation), fn(customer), fn(line_item), fn(orders), fn(supplier)
-    )
-)
-
 tool = "pandas[pyarrow]"
-fn = IO_FUNCS[tool]
-print(
-    q5.query(
-        fn(region), fn(nation), fn(customer), fn(line_item), fn(orders), fn(supplier)
-    )
-)
-
-tool = "polars[eager]"
 fn = IO_FUNCS[tool]
 print(
     q5.query(
