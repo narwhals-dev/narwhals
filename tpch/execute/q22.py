@@ -4,14 +4,10 @@ from . import IO_FUNCS
 from . import customer
 from . import orders
 
-fn = IO_FUNCS["pandas"]
+tool = "pandas[pyarrow]"
+fn = IO_FUNCS[tool]
 print(q22.query(fn(customer), fn(orders)))
 
-fn = IO_FUNCS["pandas[pyarrow]"]
-print(q22.query(fn(customer), fn(orders)))
-
-fn = IO_FUNCS["polars[eager]"]
-print(q22.query(fn(customer), fn(orders)))
-
-fn = IO_FUNCS["polars[lazy]"]
+tool = "polars[lazy]"
+fn = IO_FUNCS[tool]
 print(q22.query(fn(customer), fn(orders)).collect())
