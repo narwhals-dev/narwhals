@@ -324,6 +324,31 @@ def test_joinasof_time(constructor: Any, request: Any) -> None:
     compare_dicts(result_nearest_on, expected_nearest)
 
 
+def test_joinasof_by(constructor: Any, request: Any) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if parse_version(pd.__version__) < (2, 1) and (
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(
+        constructor({"a": [1, 5, 7, 10], "b": ["D", "D", "C", "A"], "c": [9, 2, 1, 1]})
+    ).sort("a")
+    df_right = nw.from_native(
+        constructor({"a": [1, 4, 5, 8], "b": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]})
+    ).sort("a")
+    result = df.join_asof(df_right, on="a", by_left="b", by_right="b")  # type: ignore[arg-type]
+    result_by = df.join_asof(df_right, on="a", by="b")  # type: ignore[arg-type]
+    expected = {
+        "a": [1, 5, 7, 10],
+        "b": ["D", "D", "C", "A"],
+        "c": [9, 2, 1, 1],
+        "d": [1, 3, float("nan"), 4],
+    }
+    compare_dicts(result, expected)
+    compare_dicts(result_by, expected)
+
+
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
 def test_joinasof_not_implemented(constructor: Any, strategy: str) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -361,3 +386,37 @@ def test_joinasof_no_keys(constructor: Any) -> None:
         match=msg,
     ):
         df.join_asof(df, left_on="a", right_on="a", on="a")  # type: ignore[arg-type]
+
+
+def test_joinasof_by_exceptions(constructor: Any) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+    with pytest.raises(
+        ValueError,
+        match=r"Can not specify `by_left`, `by_right`, and `by` keys at the same time.",
+    ):
+        df.join_asof(df, on="a", by_left="b", by_right="b", by="b")  # type: ignore[arg-type]
+
+    with pytest.raises(
+        ValueError,
+        match=r"`by_right` can not be None if `by_left` is specified.",
+    ):
+        df.join_asof(df, on="a", by_left="b")  # type: ignore[arg-type]
+
+    with pytest.raises(
+        ValueError,
+        match=r"`by_left` can not be None if `by_right` is specified.",
+    ):
+        df.join_asof(df, on="a", by_right="b")  # type: ignore[arg-type]
+
+    with pytest.raises(
+        ValueError,
+        match=r"Either \(`by_left` and `by_right_`\) or `by` keys should be specified.",
+    ):
+        df.join_asof(df, on="a", by_left="b", by="b")  # type: ignore[arg-type]
+
+    with pytest.raises(
+        ValueError,
+        match=r"Either \(`by_left` and `by_right_`\) or `by` keys should be specified.",
+    ):
+        df.join_asof(df, on="a", by_right="b", by="b")  # type: ignore[arg-type]
