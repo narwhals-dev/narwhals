@@ -79,6 +79,15 @@ lint.ignore = [
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
 "tpch/execute/*" = ["T201"]
+"tpch/notebooks/*" = [
+  "ANN001",
+  "ANN201",
+  "EM101",
+  "EXE002",
+  "PTH123",
+  "T203",
+  "TRY003",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

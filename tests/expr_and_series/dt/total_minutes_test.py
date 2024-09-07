@@ -22,7 +22,7 @@ from narwhals.utils import parse_version
     parse_version(pd.__version__) < parse_version("2.2.0"),
     reason="pyarrow dtype not available",
 )
-@pytest.mark.slow()
+@pytest.mark.slow
 def test_total_minutes(timedeltas: timedelta) -> None:
     result_pd = nw.from_native(
         pd.Series([timedeltas]), series_only=True

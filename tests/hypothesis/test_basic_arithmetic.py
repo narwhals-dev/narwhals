@@ -22,7 +22,7 @@ import narwhals.stable.v1 as nw
         max_size=3,
     ),
 )  # type: ignore[misc]
-@pytest.mark.slow()
+@pytest.mark.slow
 def test_mean(
     integer: st.SearchStrategy[list[int]],
     floats: st.SearchStrategy[float],

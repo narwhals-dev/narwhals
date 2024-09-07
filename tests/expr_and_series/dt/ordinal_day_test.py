@@ -17,7 +17,7 @@ from narwhals.utils import parse_version
     parse_version(pd.__version__) < parse_version("2.0.0"),
     reason="pyarrow dtype not available",
 )
-@pytest.mark.slow()
+@pytest.mark.slow
 def test_ordinal_day(dates: datetime) -> None:
     result_pd = nw.from_native(pd.Series([dates]), series_only=True).dt.ordinal_day()[0]
     result_pdms = nw.from_native(
