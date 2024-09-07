@@ -221,6 +221,9 @@ class BaseFrame(Generic[FrameT]):
         left_on: str | None = None,
         right_on: str | None = None,
         on: str | None = None,
+        by_left: str | list[str] | None = None,
+        by_right: str | list[str] | None = None,
+        by: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
@@ -232,12 +235,30 @@ class BaseFrame(Generic[FrameT]):
         if left_on is not None and right_on is not None and on is not None:
             msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
             raise ValueError(msg)
+        if by_left is not None and by_right is not None and by is not None:
+            msg = "Can not specify `by_left`, `by_right`, and `by` keys at the same time."
+            raise ValueError(msg)
+        if by_left is not None and by_right is None and by is None:
+            msg = "`by_right` can not be None if `by_left` is specified."
+            raise ValueError(msg)
+        if by_left is None and by_right is not None and by is None:
+            msg = "`by_left` can not be None if `by_right` is specified."
+            raise ValueError(msg)
+        if (
+            (by_left is None and by_right is not None)
+            or (by_left is not None and by_right is None)
+        ) and by is not None:
+            msg = "Either (`by_left` and `by_right_`) or `by` keys should be specified."
+            raise ValueError(msg)
         if left_on is not None and right_on is not None:
             return self._from_compliant_dataframe(
                 self._compliant_frame.join_asof(
                     self._extract_compliant(other),
                     left_on=left_on,
                     right_on=right_on,
+                    by_left=by_left,
+                    by_right=by_right,
+                    by=by,
                     strategy=strategy,
                 )
             )
@@ -246,6 +267,9 @@ class BaseFrame(Generic[FrameT]):
                 self._compliant_frame.join_asof(
                     self._extract_compliant(other),
                     on=on,
+                    by_left=by_left,
+                    by_right=by_right,
+                    by=by,
                     strategy=strategy,
                 )
             )
@@ -1885,6 +1909,9 @@ class DataFrame(BaseFrame[FrameT]):
         left_on: str | None = None,
         right_on: str | None = None,
         on: str | None = None,
+        by_left: str | list[str] | None = None,
+        by_right: str | list[str] | None = None,
+        by: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         """
@@ -1902,6 +1929,12 @@ class DataFrame(BaseFrame[FrameT]):
             right_on: Name(s) of the right join column(s).
 
             on: Join column of both DataFrames. If set, left_on and right_on should be None.
+
+            by_left: join on these columns before doing asof join
+
+            by_right: join on these columns before doing asof join
+
+            by: join on these columns before doing asof join
 
             strategy: Join strategy. The default is "backward".
 
@@ -1946,7 +1979,9 @@ class DataFrame(BaseFrame[FrameT]):
             >>> @nw.narwhalify
             ... def join_asof_datetime(df, other_any, strategy):
             ...     return df.join_asof(other_any, on="datetime", strategy=strategy)
-            >>> # We can now pass either pandas or Polars to the function:
+
+            We can now pass either pandas or Polars to the function:
+
             >>> join_asof_datetime(population_pd, gdp_pd, strategy="backward")
                 datetime  population   gdp
             0 2016-03-01       82.19  4164
@@ -1964,9 +1999,93 @@ class DataFrame(BaseFrame[FrameT]):
             │ 2018-08-01 00:00:00 ┆ 82.66      ┆ 4566 │
             │ 2019-01-01 00:00:00 ┆ 83.12      ┆ 4696 │
             └─────────────────────┴────────────┴──────┘
+
+            Here is a real-world times-series example that uses `by` argument.
+
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data_quotes = {
+            ...     "datetime": [
+            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 30),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 41),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 49),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 72),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 75),
+            ...     ],
+            ...     "ticker": [
+            ...         "GOOG",
+            ...         "MSFT",
+            ...         "MSFT",
+            ...         "MSFT",
+            ...         "GOOG",
+            ...         "AAPL",
+            ...         "GOOG",
+            ...         "MSFT",
+            ...     ],
+            ...     "bid": [720.50, 51.95, 51.97, 51.99, 720.50, 97.99, 720.50, 52.01],
+            ...     "ask": [720.93, 51.96, 51.98, 52.00, 720.93, 98.01, 720.88, 52.03],
+            ... }
+            >>> data_trades = {
+            ...     "datetime": [
+            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 38),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
+            ...     ],
+            ...     "ticker": ["MSFT", "MSFT", "GOOG", "GOOG", "AAPL"],
+            ...     "price": [51.95, 51.95, 720.77, 720.92, 98.0],
+            ...     "quantity": [75, 155, 100, 100, 100],
+            ... }
+            >>> quotes_pd = pd.DataFrame(data_quotes)
+            >>> trades_pd = pd.DataFrame(data_trades)
+            >>> quotes_pl = pl.DataFrame(data_quotes).sort("datetime")
+            >>> trades_pl = pl.DataFrame(data_trades).sort("datetime")
+
+            Let's define a dataframe-agnostic function in which we join over "datetime" and by "ticker" columns:
+
+            >>> @nw.narwhalify
+            ... def join_asof_datetime_by_ticker(df, other_any):
+            ...     return df.join_asof(other_any, on="datetime", by="ticker")
+
+            We can now pass either pandas or Polars to the function:
+
+            >>> join_asof_datetime_by_ticker(trades_pd, quotes_pd)
+                                datetime ticker   price  quantity     bid     ask
+            0 2016-05-25 13:30:00.000023   MSFT   51.95        75   51.95   51.96
+            1 2016-05-25 13:30:00.000038   MSFT   51.95       155   51.97   51.98
+            2 2016-05-25 13:30:00.000048   GOOG  720.77       100  720.50  720.93
+            3 2016-05-25 13:30:00.000048   GOOG  720.92       100  720.50  720.93
+            4 2016-05-25 13:30:00.000048   AAPL   98.00       100     NaN     NaN
+
+            >>> join_asof_datetime_by_ticker(trades_pl, quotes_pl)
+            shape: (5, 6)
+            ┌────────────────────────────┬────────┬────────┬──────────┬───────┬────────┐
+            │ datetime                   ┆ ticker ┆ price  ┆ quantity ┆ bid   ┆ ask    │
+            │ ---                        ┆ ---    ┆ ---    ┆ ---      ┆ ---   ┆ ---    │
+            │ datetime[μs]               ┆ str    ┆ f64    ┆ i64      ┆ f64   ┆ f64    │
+            ╞════════════════════════════╪════════╪════════╪══════════╪═══════╪════════╡
+            │ 2016-05-25 13:30:00.000023 ┆ MSFT   ┆ 51.95  ┆ 75       ┆ 51.95 ┆ 51.96  │
+            │ 2016-05-25 13:30:00.000038 ┆ MSFT   ┆ 51.95  ┆ 155      ┆ 51.97 ┆ 51.98  │
+            │ 2016-05-25 13:30:00.000048 ┆ GOOG   ┆ 720.77 ┆ 100      ┆ 720.5 ┆ 720.93 │
+            │ 2016-05-25 13:30:00.000048 ┆ GOOG   ┆ 720.92 ┆ 100      ┆ 720.5 ┆ 720.93 │
+            │ 2016-05-25 13:30:00.000048 ┆ AAPL   ┆ 98.0   ┆ 100      ┆ null  ┆ null   │
+            └────────────────────────────┴────────┴────────┴──────────┴───────┴────────┘
         """
         return super().join_asof(
-            other, left_on=left_on, right_on=right_on, on=on, strategy=strategy
+            other,
+            left_on=left_on,
+            right_on=right_on,
+            on=on,
+            by_left=by_left,
+            by_right=by_right,
+            by=by,
+            strategy=strategy,
         )
 
     # --- descriptive ---
@@ -3515,6 +3634,9 @@ class LazyFrame(BaseFrame[FrameT]):
         left_on: str | None = None,
         right_on: str | None = None,
         on: str | None = None,
+        by_left: str | list[str] | None = None,
+        by_right: str | list[str] | None = None,
+        by: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         """
@@ -3532,6 +3654,12 @@ class LazyFrame(BaseFrame[FrameT]):
             right_on: Name(s) of the right join column(s).
 
             on: Join column of both DataFrames. If set, left_on and right_on should be None.
+
+            by_left: join on these columns before doing asof join
+
+            by_right: join on these columns before doing asof join
+
+            by: join on these columns before doing asof join
 
             strategy: Join strategy. The default is "backward".
 
@@ -3575,7 +3703,9 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> @nw.narwhalify
             ... def join_asof_datetime(df, other_any, strategy):
             ...     return df.join_asof(other_any, on="datetime", strategy=strategy)
-            >>> # We can now pass either pandas or Polars to the function:
+
+            We can now pass either pandas or Polars to the function:
+
             >>> join_asof_datetime(population_pd, gdp_pd, strategy="backward")
                 datetime  population   gdp
             0 2016-03-01       82.19  4164
@@ -3593,9 +3723,93 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2018-08-01 00:00:00 ┆ 82.66      ┆ 4566 │
             │ 2019-01-01 00:00:00 ┆ 83.12      ┆ 4696 │
             └─────────────────────┴────────────┴──────┘
+
+            Here is a real-world times-series example that uses `by` argument.
+
+            >>> from datetime import datetime
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data_quotes = {
+            ...     "datetime": [
+            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 30),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 41),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 49),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 72),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 75),
+            ...     ],
+            ...     "ticker": [
+            ...         "GOOG",
+            ...         "MSFT",
+            ...         "MSFT",
+            ...         "MSFT",
+            ...         "GOOG",
+            ...         "AAPL",
+            ...         "GOOG",
+            ...         "MSFT",
+            ...     ],
+            ...     "bid": [720.50, 51.95, 51.97, 51.99, 720.50, 97.99, 720.50, 52.01],
+            ...     "ask": [720.93, 51.96, 51.98, 52.00, 720.93, 98.01, 720.88, 52.03],
+            ... }
+            >>> data_trades = {
+            ...     "datetime": [
+            ...         datetime(2016, 5, 25, 13, 30, 0, 23),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 38),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
+            ...         datetime(2016, 5, 25, 13, 30, 0, 48),
+            ...     ],
+            ...     "ticker": ["MSFT", "MSFT", "GOOG", "GOOG", "AAPL"],
+            ...     "price": [51.95, 51.95, 720.77, 720.92, 98.0],
+            ...     "quantity": [75, 155, 100, 100, 100],
+            ... }
+            >>> quotes_pd = pd.DataFrame(data_quotes)
+            >>> trades_pd = pd.DataFrame(data_trades)
+            >>> quotes_pl = pl.LazyFrame(data_quotes).sort("datetime")
+            >>> trades_pl = pl.LazyFrame(data_trades).sort("datetime")
+
+            Let's define a dataframe-agnostic function in which we join over "datetime" and by "ticker" columns:
+
+            >>> @nw.narwhalify
+            ... def join_asof_datetime_by_ticker(df, other_any):
+            ...     return df.join_asof(other_any, on="datetime", by="ticker")
+
+            We can now pass either pandas or Polars to the function:
+
+            >>> join_asof_datetime_by_ticker(trades_pd, quotes_pd)
+                                datetime ticker   price  quantity     bid     ask
+            0 2016-05-25 13:30:00.000023   MSFT   51.95        75   51.95   51.96
+            1 2016-05-25 13:30:00.000038   MSFT   51.95       155   51.97   51.98
+            2 2016-05-25 13:30:00.000048   GOOG  720.77       100  720.50  720.93
+            3 2016-05-25 13:30:00.000048   GOOG  720.92       100  720.50  720.93
+            4 2016-05-25 13:30:00.000048   AAPL   98.00       100     NaN     NaN
+
+            >>> join_asof_datetime_by_ticker(trades_pl, quotes_pl).collect()
+            shape: (5, 6)
+            ┌────────────────────────────┬────────┬────────┬──────────┬───────┬────────┐
+            │ datetime                   ┆ ticker ┆ price  ┆ quantity ┆ bid   ┆ ask    │
+            │ ---                        ┆ ---    ┆ ---    ┆ ---      ┆ ---   ┆ ---    │
+            │ datetime[μs]               ┆ str    ┆ f64    ┆ i64      ┆ f64   ┆ f64    │
+            ╞════════════════════════════╪════════╪════════╪══════════╪═══════╪════════╡
+            │ 2016-05-25 13:30:00.000023 ┆ MSFT   ┆ 51.95  ┆ 75       ┆ 51.95 ┆ 51.96  │
+            │ 2016-05-25 13:30:00.000038 ┆ MSFT   ┆ 51.95  ┆ 155      ┆ 51.97 ┆ 51.98  │
+            │ 2016-05-25 13:30:00.000048 ┆ GOOG   ┆ 720.77 ┆ 100      ┆ 720.5 ┆ 720.93 │
+            │ 2016-05-25 13:30:00.000048 ┆ GOOG   ┆ 720.92 ┆ 100      ┆ 720.5 ┆ 720.93 │
+            │ 2016-05-25 13:30:00.000048 ┆ AAPL   ┆ 98.0   ┆ 100      ┆ null  ┆ null   │
+            └────────────────────────────┴────────┴────────┴──────────┴───────┴────────┘
         """
         return super().join_asof(
-            other, left_on=left_on, right_on=right_on, on=on, strategy=strategy
+            other,
+            left_on=left_on,
+            right_on=right_on,
+            on=on,
+            by_left=by_left,
+            by_right=by_right,
+            by=by,
+            strategy=strategy,
         )
 
     def clone(self) -> Self:

@@ -322,6 +322,9 @@ class ArrowDataFrame:
         left_on: str | None = None,
         right_on: str | None = None,
         on: str | None = None,
+        by_left: str | list[str] | None = None,
+        by_right: str | list[str] | None = None,
+        by: str | list[str] | None = None,
         strategy: Literal["backward", "forward", "nearest"] = "backward",
     ) -> Self:
         msg = "join_asof is not yet supported on PyArrow tables"
