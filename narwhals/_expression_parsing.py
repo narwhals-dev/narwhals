@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     from narwhals._pyspark.dataframe import PySparkLazyFrame
     from narwhals._pyspark.expr import PySparkExpr
     from narwhals._pyspark.namespace import PySparkNamespace
-    from narwhals._pyspark.series import PySparkSeries
     from narwhals._pyspark.typing import IntoPySparkExpr
 
     CompliantNamespace = Union[
@@ -52,13 +51,12 @@ if TYPE_CHECKING:
     ]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
-    CompliantSeries = Union[PandasLikeSeries, ArrowSeries, PolarsSeries, PySparkSeries]
+    CompliantSeries = Union[PandasLikeSeries, ArrowSeries, PolarsSeries]
     ListOfCompliantSeries = Union[
         list[PandasLikeSeries],
         list[ArrowSeries],
         list[DaskExpr],
         list[PolarsSeries],
-        list[PySparkSeries],
     ]
     ListOfCompliantExpr = Union[
         list[PandasLikeExpr],

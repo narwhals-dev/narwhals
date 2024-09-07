@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 from narwhals import dtypes
 from narwhals._pandas_like.utils import translate_dtype
@@ -81,3 +82,18 @@ def parse_exprs_and_named_exprs(
             raise AssertionError(msg)
         columns_list.extend([pyspark_cols[0].alias(col_alias)])
     return columns_list
+
+
+def maybe_evaluate(df: PySparkLazyFrame, obj: Any) -> Any:
+    from narwhals._pyspark.expr import PySparkExpr
+
+    if isinstance(obj, PySparkExpr):
+        columns_result = obj._call(df)
+        if len(columns_result) != 1:  # pragma: no cover
+            msg = "Multi-output expressions not supported in this context"
+            raise NotImplementedError(msg)
+        column = columns_result[0]
+        if obj._returns_scalar:
+            raise NotImplementedError
+        return column
+    return obj

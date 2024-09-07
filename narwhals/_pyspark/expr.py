@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import operator
 from copy import copy
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Callable
 
-from narwhals._expression_parsing import maybe_evaluate_expr
+from narwhals._pyspark.utils import maybe_evaluate
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -60,22 +60,23 @@ class PySparkExpr:
             returns_scalar=False,
         )
 
-    def _from_function(
+    def _from_call(
         self,
-        function: Callable[..., Column],
+        call: Callable[..., Column],
         expr_name: str,
-        *args: Any,
-        **kwargs: Any,
+        *args: PySparkExpr,
+        returns_scalar: bool,
+        **kwargs: PySparkExpr,
     ) -> Self:
         def func(df: PySparkLazyFrame) -> list[Column]:
             col_results = []
             inputs = self._call(df)
-            _args = [maybe_evaluate_expr(df, x) for x in args]
-            _kwargs = {
-                key: maybe_evaluate_expr(df, value) for key, value in kwargs.items()
-            }
+            _args = [maybe_evaluate(df, arg) for arg in args]
+            _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
-                col_result = function(_input, *_args, **_kwargs)
+                col_result = call(_input, *_args, **_kwargs)
+                if returns_scalar:
+                    raise NotImplementedError
                 col_results.append(col_result)
             return col_results
 
@@ -112,18 +113,14 @@ class PySparkExpr:
             function_name=f"{self._function_name}->{expr_name}",
             root_names=root_names,
             output_names=output_names,
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar or returns_scalar,
         )
 
     def __and__(self, other: PySparkExpr) -> Self:
-        return self._from_function(
-            lambda _input, other: _input.__and__(other), "__and__", other
-        )
+        return self._from_call(operator.and_, "__and__", other, returns_scalar=False)
 
     def __gt__(self, other: PySparkExpr) -> Self:
-        return self._from_function(
-            lambda _input, other: _input.__gt__(other), "__gt__", other
-        )
+        return self._from_call(operator.gt, "__gt__", other, returns_scalar=False)
 
     def alias(self, name: str) -> Self:
         def func(df: PySparkLazyFrame) -> list[Column]:
@@ -137,5 +134,5 @@ class PySparkExpr:
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=[name],
-            returns_scalar=False,
+            returns_scalar=self._returns_scalar,
         )
