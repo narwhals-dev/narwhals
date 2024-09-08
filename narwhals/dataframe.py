@@ -194,16 +194,18 @@ class BaseFrame(Generic[FrameT]):
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
-        if how == "cross" and (left_on or right_on or on):
+        if how == "cross" and (
+            left_on is not None or right_on is not None or on is not None
+        ):
             msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
             raise ValueError(msg)
 
-        if (how != "cross" and on is None) and (left_on is None or right_on is None):
+        if how != "cross" and (on is None and (left_on is None or right_on is None)):
             msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
             raise ValueError(msg)
 
-        if (how != "cross" and on is not None) and (
-            left_on is not None or right_on is not None
+        if how != "cross" and (
+            on is not None and (left_on is not None or right_on is not None)
         ):
             msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
             raise ValueError(msg)
