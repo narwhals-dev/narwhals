@@ -9,10 +9,7 @@ import pytest
 import narwhals.stable.v1 as nw
 
 
-def test_to_arrow(constructor_eager: Any, request: Any) -> None:
-    if "cudf" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
+def test_to_arrow(constructor_eager: Any) -> None:
     data = [1, 2, 3]
     result = nw.from_native(constructor_eager({"a": data}), eager_only=True)[
         "a"
@@ -23,10 +20,8 @@ def test_to_arrow(constructor_eager: Any, request: Any) -> None:
 
 
 def test_to_arrow_with_nulls(constructor_eager: Any, request: Any) -> None:
-    if (
-        "pandas_constructor" in str(constructor_eager)
-        or "modin_constructor" in str(constructor_eager)
-        or "cudf" in str(constructor_eager)
+    if "pandas_constructor" in str(constructor_eager) or "modin_constructor" in str(
+        constructor_eager
     ):
         request.applymarker(pytest.mark.xfail)
 

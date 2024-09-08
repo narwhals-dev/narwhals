@@ -14,8 +14,6 @@ def test_to_arrow(request: Any, constructor_eager: Any) -> None:
     if "pandas" in str(constructor_eager) and parse_version(pd.__version__) < (1, 0, 0):
         # pyarrow requires pandas>=1.0.0
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
     df_raw = constructor_eager(data)
