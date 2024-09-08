@@ -18,9 +18,14 @@ if TYPE_CHECKING:
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
 def test_lit(
-    constructor: Any, dtype: DType | None, expected_lit: list[Any], request: Any
+    constructor: Any,
+    dtype: DType | None,
+    expected_lit: list[Any],
+    request: pytest.FixtureRequest,
 ) -> None:
     if "dask" in str(constructor) and dtype == nw.String:
+        request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
@@ -35,7 +40,9 @@ def test_lit(
     compare_dicts(result, expected)
 
 
-def test_lit_error(constructor: Any) -> None:
+def test_lit_error(request: pytest.FixtureRequest, constructor: Any) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()

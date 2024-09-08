@@ -11,7 +11,9 @@ from narwhals.utils import Implementation
 from tests.utils import compare_dicts
 
 
-def test_inner_join_two_keys(constructor: Any) -> None:
+def test_inner_join_two_keys(request: pytest.FixtureRequest, constructor: Any) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "index": [0, 1, 2]}
     df = nw.from_native(constructor(data))
     df_right = df
@@ -28,7 +30,9 @@ def test_inner_join_two_keys(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_inner_join_single_key(constructor: Any) -> None:
+def test_inner_join_single_key(request: pytest.FixtureRequest, constructor: Any) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "index": [0, 1, 2]}
     df = nw.from_native(constructor(data))
     df_right = df
@@ -45,7 +49,9 @@ def test_inner_join_single_key(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_cross_join(constructor: Any) -> None:
+def test_cross_join(request: pytest.FixtureRequest, constructor: Any) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross").sort("a", "a_right")  # type: ignore[arg-type]
@@ -81,11 +87,14 @@ def test_cross_join_non_pandas() -> None:
     ],
 )
 def test_anti_join(
+    request: pytest.FixtureRequest,
     constructor: Any,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)

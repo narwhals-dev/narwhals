@@ -8,6 +8,7 @@ from narwhals._pyspark.utils import translate_sql_api_dtype
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.utils import Implementation
+from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -72,7 +73,8 @@ class PySparkLazyFrame:
 
             return self._from_native_frame(ps.DataFrame().to_spark())
 
-        return self._from_native_frame(self._native_frame.select(*new_columns))
+        new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
+        return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def filter(self, *predicates: PySparkExpr) -> Self:
         from narwhals._pyspark.namespace import PySparkNamespace
@@ -87,7 +89,7 @@ class PySparkLazyFrame:
         plx = PySparkNamespace()
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
-        condition = expr._call(self)[0]
+        condition = expr._call(self)[0]._native_column
         spark_df = self._native_frame.where(condition)
         return self._from_native_frame(spark_df)
 
@@ -100,3 +102,20 @@ class PySparkLazyFrame:
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
+
+    def with_columns(
+        self: Self,
+        *exprs: IntoPySparkExpr,
+        **named_exprs: IntoPySparkExpr,
+    ) -> Self:
+        new_series_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
+        new_columns_map = {
+            col_name: series.spark.column for col_name, series in new_series_map.items()
+        }
+        return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
+
+    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+        columns_to_drop = parse_columns_to_drop(
+            compliant_frame=self, columns=columns, strict=strict
+        )
+        return self._from_native_frame(self._native_frame.drop(*columns_to_drop))

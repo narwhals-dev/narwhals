@@ -5,10 +5,11 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Callable
 
+from narwhals._pyspark.series import PySparkSeries
 from narwhals._pyspark.utils import maybe_evaluate
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
+    from pyspark.pandas import Series
     from typing_extensions import Self
 
     from narwhals._pyspark.dataframe import PySparkLazyFrame
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 class PySparkExpr:
     def __init__(
         self,
-        call: Callable[[PySparkLazyFrame], list[Column]],
+        call: Callable[[PySparkLazyFrame], list[PySparkSeries]],
         *,
         depth: int,
         function_name: str,
@@ -45,11 +46,13 @@ class PySparkExpr:
 
     @classmethod
     def from_column_names(cls: type[Self], *column_names: str) -> Self:
-        def func(df: PySparkLazyFrame) -> list[Column]:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            _ = df
-            return [F.col(column_name) for column_name in column_names]
+        def func(df: PySparkLazyFrame) -> list[PySparkSeries]:
+            return [
+                PySparkSeries(
+                    native_series=df._native_frame.select(col_name), name=col_name
+                )
+                for col_name in column_names
+            ]
 
         return cls(
             func,
@@ -62,23 +65,23 @@ class PySparkExpr:
 
     def _from_call(
         self,
-        call: Callable[..., Column],
+        call: Callable[..., Series],
         expr_name: str,
         *args: PySparkExpr,
         returns_scalar: bool,
         **kwargs: PySparkExpr,
     ) -> Self:
-        def func(df: PySparkLazyFrame) -> list[Column]:
-            col_results = []
+        def func(df: PySparkLazyFrame) -> list[Series]:
+            results = []
             inputs = self._call(df)
             _args = [maybe_evaluate(df, arg) for arg in args]
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
-                col_result = call(_input, *_args, **_kwargs)
+                series_result = call(_input, *_args, **_kwargs)
                 if returns_scalar:
                     raise NotImplementedError
-                col_results.append(col_result)
-            return col_results
+                results.append(series_result)
+            return results
 
         # Try tracking root and output names by combining them from all
         # expressions appearing in args and kwargs. If any anonymous
@@ -119,12 +122,37 @@ class PySparkExpr:
     def __and__(self, other: PySparkExpr) -> Self:
         return self._from_call(operator.and_, "__and__", other, returns_scalar=False)
 
+    def __add__(self, other: PySparkExpr) -> Self:
+        return self._from_call(operator.add, "__add__", other, returns_scalar=False)
+
+    def __radd__(self, other: PySparkExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__radd__(other),
+            "__radd__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __sub__(self, other: PySparkExpr) -> Self:
+        return self._from_call(operator.sub, "__sub__", other, returns_scalar=False)
+
+    def __rsub__(self, other: PySparkExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rsub__(other),
+            "__rsub__",
+            other,
+            returns_scalar=False,
+        )
+
+    def __lt__(self, other: PySparkExpr) -> Self:
+        return self._from_call(operator.lt, "__lt__", other, returns_scalar=False)
+
     def __gt__(self, other: PySparkExpr) -> Self:
         return self._from_call(operator.gt, "__gt__", other, returns_scalar=False)
 
     def alias(self, name: str) -> Self:
-        def func(df: PySparkLazyFrame) -> list[Column]:
-            return [col_.alias(name) for col_ in self._call(df)]
+        def func(df: PySparkLazyFrame) -> list[PySparkSeries]:
+            return [series.alias(name) for series in self._call(df)]
 
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
