@@ -677,8 +677,7 @@ class PandasLikeDataFrame:
 
     def to_arrow(self: Self) -> Any:
         if self._implementation is Implementation.CUDF:  # pragma: no cover
-            msg = "`to_arrow` is not implemented for CuDF backend."
-            raise NotImplementedError(msg)
+            return self._native_frame.to_arrow(preserve_index=False)
 
         import pyarrow as pa  # ignore-banned-import()
 
