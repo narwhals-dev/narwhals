@@ -195,7 +195,7 @@ class BaseFrame(Generic[FrameT]):
             raise NotImplementedError(msg)
 
         if how == "cross" and (left_on or right_on or on):
-            msg = "Can not pass left_on, right_on, on for cross join"
+            msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
             raise ValueError(msg)
 
         if (how != "cross" and on is None) and (left_on is None or right_on is None):

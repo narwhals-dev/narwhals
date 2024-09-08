@@ -63,7 +63,7 @@ def test_cross_join(constructor: Any) -> None:
     compare_dicts(result, expected)
 
     with pytest.raises(
-        ValueError, match="Can not pass left_on, right_on, on for cross join"
+        ValueError, match="Can not pass `left_on`, `right_on` or `on` keys for cross join"
     ):
         df.join(df, how="cross", left_on="a")  # type: ignore[arg-type]
 
