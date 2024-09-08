@@ -18,8 +18,9 @@ def test_inner_join_two_keys(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     df_right = df
     result = df.join(df_right, left_on=["a", "b"], right_on=["a", "b"], how="inner")  # type: ignore[arg-type]
-    result = result.sort("index")
-    result = result.drop("index_right")
+    result_on = df.join(df_right, on=["a", "b"], how="inner")  # type: ignore[arg-type]
+    result = result.sort("index").drop("index_right")
+    result_on = result_on.sort("index").drop("index_right")
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -28,6 +29,7 @@ def test_inner_join_two_keys(constructor: Any) -> None:
         "index": [0, 1, 2],
     }
     compare_dicts(result, expected)
+    compare_dicts(result_on, expected)
 
 
 def test_inner_join_single_key(constructor: Any) -> None:
@@ -35,7 +37,9 @@ def test_inner_join_single_key(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     df_right = df
     result = df.join(df_right, left_on="a", right_on="a", how="inner").sort("index")  # type: ignore[arg-type]
+    result_on = df.join(df_right, on="a", how="inner").sort("index")  # type: ignore[arg-type]
     result = result.drop("index_right")
+    result_on = result_on.drop("index_right")
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -45,6 +49,7 @@ def test_inner_join_single_key(constructor: Any) -> None:
         "index": [0, 1, 2],
     }
     compare_dicts(result, expected)
+    compare_dicts(result_on, expected)
 
 
 def test_cross_join(constructor: Any) -> None:
@@ -57,7 +62,9 @@ def test_cross_join(constructor: Any) -> None:
     }
     compare_dicts(result, expected)
 
-    with pytest.raises(ValueError, match="Can not pass left_on, right_on for cross join"):
+    with pytest.raises(
+        ValueError, match="Can not pass `left_on`, `right_on` or `on` keys for cross join"
+    ):
         df.join(df, how="cross", left_on="a")  # type: ignore[arg-type]
 
 
@@ -204,6 +211,33 @@ def test_left_join_overlapping_column(constructor: Any) -> None:
         "index": [0, 1, 2],
     }
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
+def test_join_keys_exceptions(constructor: Any, how: str) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises(
+        ValueError,
+        match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
+    ):
+        df.join(df, how=how)  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
+    ):
+        df.join(df, how=how, left_on="a")  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
+    ):
+        df.join(df, how=how, right_on="a")  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match=f"If `on` is specified, `left_on` and `right_on` should be None for {how}.",
+    ):
+        df.join(df, how=how, on="a", right_on="a")  # type: ignore[arg-type]
 
 
 def test_joinasof_numeric(constructor: Any, request: Any) -> None:
@@ -361,31 +395,40 @@ def test_joinasof_not_implemented(constructor: Any, strategy: str) -> None:
         df.join_asof(df, left_on="a", right_on="a", strategy=strategy)  # type: ignore[arg-type]
 
 
-def test_joinasof_no_keys(constructor: Any) -> None:
+def test_joinasof_keys_exceptions(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
-    msg = r"Either \(`left_on` and `right_on`\) or `on` keys should be specified."
     with pytest.raises(
         ValueError,
-        match=msg,
+        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
     ):
         df.join_asof(df, left_on="a")  # type: ignore[arg-type]
     with pytest.raises(
         ValueError,
-        match=msg,
+        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
     ):
         df.join_asof(df, right_on="a")  # type: ignore[arg-type]
     with pytest.raises(
         ValueError,
-        match=msg,
+        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
     ):
         df.join_asof(df)  # type: ignore[arg-type]
     with pytest.raises(
         ValueError,
-        match=msg,
+        match="If `on` is specified, `left_on` and `right_on` should be None.",
     ):
         df.join_asof(df, left_on="a", right_on="a", on="a")  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match="If `on` is specified, `left_on` and `right_on` should be None.",
+    ):
+        df.join_asof(df, left_on="a", on="a")  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match="If `on` is specified, `left_on` and `right_on` should be None.",
+    ):
+        df.join_asof(df, right_on="a", on="a")  # type: ignore[arg-type]
 
 
 def test_joinasof_by_exceptions(constructor: Any) -> None:
@@ -393,30 +436,30 @@ def test_joinasof_by_exceptions(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     with pytest.raises(
         ValueError,
-        match=r"Can not specify `by_left`, `by_right`, and `by` keys at the same time.",
+        match="If `by` is specified, `by_left` and `by_right` should be None.",
     ):
         df.join_asof(df, on="a", by_left="b", by_right="b", by="b")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError,
-        match=r"`by_right` can not be None if `by_left` is specified.",
+        match="Can not specify only `by_left` or `by_right`, you need to specify both.",
     ):
         df.join_asof(df, on="a", by_left="b")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError,
-        match=r"`by_left` can not be None if `by_right` is specified.",
+        match="Can not specify only `by_left` or `by_right`, you need to specify both.",
     ):
         df.join_asof(df, on="a", by_right="b")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError,
-        match=r"Either \(`by_left` and `by_right_`\) or `by` keys should be specified.",
+        match="If `by` is specified, `by_left` and `by_right` should be None.",
     ):
         df.join_asof(df, on="a", by_left="b", by="b")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError,
-        match=r"Either \(`by_left` and `by_right_`\) or `by` keys should be specified.",
+        match="If `by` is specified, `by_left` and `by_right` should be None.",
     ):
         df.join_asof(df, on="a", by_right="b", by="b")  # type: ignore[arg-type]

@@ -186,6 +186,7 @@ class BaseFrame(Generic[FrameT]):
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
+        on: str | list[str] | None = None,
     ) -> Self:
         _supported_joins = ("inner", "left", "cross", "anti", "semi")
 
@@ -193,9 +194,24 @@ class BaseFrame(Generic[FrameT]):
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
-        if how == "cross" and (left_on or right_on):
-            msg = "Can not pass left_on, right_on for cross join"
+        if how == "cross" and (
+            left_on is not None or right_on is not None or on is not None
+        ):
+            msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
             raise ValueError(msg)
+
+        if how != "cross" and (on is None and (left_on is None or right_on is None)):
+            msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
+            raise ValueError(msg)
+
+        if how != "cross" and (
+            on is not None and (left_on is not None or right_on is not None)
+        ):
+            msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
+            raise ValueError(msg)
+
+        if on is not None:
+            left_on = right_on = on
 
         return self._from_compliant_dataframe(
             self._compliant_frame.join(
@@ -232,37 +248,24 @@ class BaseFrame(Generic[FrameT]):
             msg = f"Only the following strategies are supported: {_supported_strategies}; found '{strategy}'."
             raise NotImplementedError(msg)
 
-        if left_on is not None and right_on is not None and on is not None:
+        if (on is None) and (left_on is None or right_on is None):
             msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
             raise ValueError(msg)
-        if by_left is not None and by_right is not None and by is not None:
-            msg = "Can not specify `by_left`, `by_right`, and `by` keys at the same time."
+        if (on is not None) and (left_on is not None or right_on is not None):
+            msg = "If `on` is specified, `left_on` and `right_on` should be None."
             raise ValueError(msg)
-        if by_left is not None and by_right is None and by is None:
-            msg = "`by_right` can not be None if `by_left` is specified."
-            raise ValueError(msg)
-        if by_left is None and by_right is not None and by is None:
-            msg = "`by_left` can not be None if `by_right` is specified."
-            raise ValueError(msg)
-        if (
+        if (by is None) and (
             (by_left is None and by_right is not None)
             or (by_left is not None and by_right is None)
-        ) and by is not None:
-            msg = "Either (`by_left` and `by_right_`) or `by` keys should be specified."
-            raise ValueError(msg)
-        if left_on is not None and right_on is not None:
-            return self._from_compliant_dataframe(
-                self._compliant_frame.join_asof(
-                    self._extract_compliant(other),
-                    left_on=left_on,
-                    right_on=right_on,
-                    by_left=by_left,
-                    by_right=by_right,
-                    by=by,
-                    strategy=strategy,
-                )
+        ):
+            msg = (
+                "Can not specify only `by_left` or `by_right`, you need to specify both."
             )
-        elif on is not None:
+            raise ValueError(msg)
+        if (by is not None) and (by_left is not None or by_right is not None):
+            msg = "If `by` is specified, `by_left` and `by_right` should be None."
+            raise ValueError(msg)
+        if on is not None:
             return self._from_compliant_dataframe(
                 self._compliant_frame.join_asof(
                     self._extract_compliant(other),
@@ -273,9 +276,17 @@ class BaseFrame(Generic[FrameT]):
                     strategy=strategy,
                 )
             )
-        else:
-            msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
-            raise ValueError(msg)
+        return self._from_compliant_dataframe(
+            self._compliant_frame.join_asof(
+                self._extract_compliant(other),
+                left_on=left_on,
+                right_on=right_on,
+                by_left=by_left,
+                by_right=by_right,
+                by=by,
+                strategy=strategy,
+            )
+        )
 
 
 class DataFrame(BaseFrame[FrameT]):
@@ -1843,6 +1854,7 @@ class DataFrame(BaseFrame[FrameT]):
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
+        on: str | list[str] | None = None,
     ) -> Self:
         r"""
         Join in SQL-like fashion.
@@ -1860,6 +1872,8 @@ class DataFrame(BaseFrame[FrameT]):
             left_on: Name(s) of the left join column(s).
 
             right_on: Name(s) of the right join column(s).
+
+            on: Join column of both DataFrames. If set, left_on and right_on should be None.
 
         Returns:
             A new joined DataFrame
@@ -1908,7 +1922,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 2   ┆ 7.0 ┆ b   ┆ y     │
             └─────┴─────┴─────┴───────┘
         """
-        return super().join(other, how=how, left_on=left_on, right_on=right_on)
+        return super().join(other, how=how, left_on=left_on, right_on=right_on, on=on)
 
     def join_asof(
         self,
@@ -3568,6 +3582,7 @@ class LazyFrame(BaseFrame[FrameT]):
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
+        on: str | list[str] | None = None,
     ) -> Self:
         r"""
         Add a join operation to the Logical Plan.
@@ -3585,6 +3600,8 @@ class LazyFrame(BaseFrame[FrameT]):
             left_on: Join column of the left DataFrame.
 
             right_on: Join column of the right DataFrame.
+
+            on: Join column of both DataFrames. If set, left_on and right_on should be None.
 
         Returns:
             A new joined LazyFrame
@@ -3633,7 +3650,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2   ┆ 7.0 ┆ b   ┆ y     │
             └─────┴─────┴─────┴───────┘
         """
-        return super().join(other, how=how, left_on=left_on, right_on=right_on)
+        return super().join(other, how=how, left_on=left_on, right_on=right_on, on=on)
 
     def join_asof(
         self,

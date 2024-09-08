@@ -278,11 +278,6 @@ class ArrowDataFrame:
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
     ) -> Self:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
-
         how_to_join_map = {
             "anti": "left anti",
             "semi": "left semi",
