@@ -585,9 +585,13 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
     @overload
+    def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
+    @overload
+    def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
 
@@ -606,7 +610,7 @@ class DataFrame(BaseFrame[FrameT]):
         | slice
         | Sequence[int]
         | tuple[Sequence[int], str | int]
-        | tuple[Sequence[int], Sequence[int] | Sequence[str] | slice],
+        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -623,6 +627,10 @@ class DataFrame(BaseFrame[FrameT]):
                     a `Series`.
                 - `df[[0, 1], [0, 1, 2]]` extracts the first two rows and the first three columns
                     and returns a `DataFrame`
+                - `df[:, [0, 1, 2]]` extracts all rows from the first three columns and returns a
+                  `DataFrame`.
+                - `df[:, ['a', 'c']]` extracts all rows and columns `'a'` and `'c'` and returns a
+                  `DataFrame`.
                 - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
                     returns a `DataFrame`
                 - `df[:, 0: 2]` extracts all rows from the first two columns and returns a `DataFrame`

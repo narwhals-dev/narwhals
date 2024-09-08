@@ -136,9 +136,12 @@ class ArrowDataFrame:
             and len(item) == 2
             and isinstance(item[1], (list, tuple))
         ):
-            return self._from_native_frame(
-                self._native_frame.take(item[0]).select(item[1])
-            )
+            if item[0] == slice(None):
+                selected_rows = self._native_frame
+            else:
+                selected_rows = self._native_frame.take(item[0])
+
+            return self._from_native_frame(selected_rows.select(item[1]))
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], slice):
