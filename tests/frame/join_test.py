@@ -18,8 +18,9 @@ def test_inner_join_two_keys(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     df_right = df
     result = df.join(df_right, left_on=["a", "b"], right_on=["a", "b"], how="inner")  # type: ignore[arg-type]
-    result = result.sort("index")
-    result = result.drop("index_right")
+    result_on = df.join(df_right, on=["a", "b"], how="inner")  # type: ignore[arg-type]
+    result = result.sort("index").drop("index_right")
+    result_on = result_on.sort("index").drop("index_right")
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -28,6 +29,7 @@ def test_inner_join_two_keys(constructor: Any) -> None:
         "index": [0, 1, 2],
     }
     compare_dicts(result, expected)
+    compare_dicts(result_on, expected)
 
 
 def test_inner_join_single_key(constructor: Any) -> None:
@@ -35,7 +37,9 @@ def test_inner_join_single_key(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     df_right = df
     result = df.join(df_right, left_on="a", right_on="a", how="inner").sort("index")  # type: ignore[arg-type]
+    result_on = df.join(df_right, on="a", how="inner").sort("index")  # type: ignore[arg-type]
     result = result.drop("index_right")
+    result_on = result_on.drop("index_right")
     expected = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -45,6 +49,7 @@ def test_inner_join_single_key(constructor: Any) -> None:
         "index": [0, 1, 2],
     }
     compare_dicts(result, expected)
+    compare_dicts(result_on, expected)
 
 
 def test_cross_join(constructor: Any) -> None:
@@ -57,7 +62,9 @@ def test_cross_join(constructor: Any) -> None:
     }
     compare_dicts(result, expected)
 
-    with pytest.raises(ValueError, match="Can not pass left_on, right_on for cross join"):
+    with pytest.raises(
+        ValueError, match="Can not pass left_on, right_on, on for cross join"
+    ):
         df.join(df, how="cross", left_on="a")  # type: ignore[arg-type]
 
 
@@ -204,6 +211,33 @@ def test_left_join_overlapping_column(constructor: Any) -> None:
         "index": [0, 1, 2],
     }
     compare_dicts(result, expected)
+
+
+@pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
+def test_join_keys_exceptions(constructor: Any, how: str) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises(
+        ValueError,
+        match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
+    ):
+        df.join(df, how=how)  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match="Can not specify `left_on`, `right_on`, and `on` keys at the same time.",
+    ):
+        df.join(df, how=how, left_on="a", right_on="a", on="a")  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match=rf"`right_on` can not be None if `left_on` is specified for {how}.",
+    ):
+        df.join(df, how=how, left_on="a")  # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError,
+        match=rf"`left_on` can not be None if `right_on` is specified for {how}.",
+    ):
+        df.join(df, how=how, right_on="a")  # type: ignore[arg-type]
 
 
 def test_joinasof_numeric(constructor: Any, request: Any) -> None:

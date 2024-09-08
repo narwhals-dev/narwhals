@@ -401,8 +401,8 @@ class PandasLikeDataFrame:
         other: Self,
         *,
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
-        left_on: str | list[str] | None,
-        right_on: str | list[str] | None,
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
     ) -> Self:
         if isinstance(left_on, str):
             left_on = [left_on]
