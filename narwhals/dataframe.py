@@ -198,22 +198,14 @@ class BaseFrame(Generic[FrameT]):
             msg = "Can not pass left_on, right_on, on for cross join"
             raise ValueError(msg)
 
-        if (how != "cross") and (left_on is None and right_on is None and on is None):
+        if (how != "cross" and on is None) and (left_on is None or right_on is None):
             msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
             raise ValueError(msg)
 
-        if (how != "cross") and (
-            left_on is not None and right_on is not None and on is not None
+        if (how != "cross" and on is not None) and (
+            left_on is not None or right_on is not None
         ):
-            msg = "Can not specify `left_on`, `right_on`, and `on` keys at the same time."
-            raise ValueError(msg)
-
-        if (how != "cross") and (left_on is not None and right_on is None and on is None):
-            msg = f"`right_on` can not be None if `left_on` is specified for {how}."
-            raise ValueError(msg)
-
-        if (how != "cross") and (left_on is None and right_on is not None and on is None):
-            msg = f"`left_on` can not be None if `right_on` is specified for {how}."
+            msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
             raise ValueError(msg)
 
         if on is not None:
@@ -254,37 +246,24 @@ class BaseFrame(Generic[FrameT]):
             msg = f"Only the following strategies are supported: {_supported_strategies}; found '{strategy}'."
             raise NotImplementedError(msg)
 
-        if left_on is not None and right_on is not None and on is not None:
+        if (on is None) and (left_on is None or right_on is None):
             msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
             raise ValueError(msg)
-        if by_left is not None and by_right is not None and by is not None:
-            msg = "Can not specify `by_left`, `by_right`, and `by` keys at the same time."
+        if (on is not None) and (left_on is not None or right_on is not None):
+            msg = "If `on` is specified, `left_on` and `right_on` should be None."
             raise ValueError(msg)
-        if by_left is not None and by_right is None and by is None:
-            msg = "`by_right` can not be None if `by_left` is specified."
-            raise ValueError(msg)
-        if by_left is None and by_right is not None and by is None:
-            msg = "`by_left` can not be None if `by_right` is specified."
-            raise ValueError(msg)
-        if (
+        if (by is None) and (
             (by_left is None and by_right is not None)
             or (by_left is not None and by_right is None)
-        ) and by is not None:
-            msg = "Either (`by_left` and `by_right_`) or `by` keys should be specified."
-            raise ValueError(msg)
-        if left_on is not None and right_on is not None:
-            return self._from_compliant_dataframe(
-                self._compliant_frame.join_asof(
-                    self._extract_compliant(other),
-                    left_on=left_on,
-                    right_on=right_on,
-                    by_left=by_left,
-                    by_right=by_right,
-                    by=by,
-                    strategy=strategy,
-                )
+        ):
+            msg = (
+                "Can not specify only `by_left` or `by_right`, you need to specify both."
             )
-        elif on is not None:
+            raise ValueError(msg)
+        if (by is not None) and (by_left is not None or by_right is not None):
+            msg = "If `by` is specified, `by_left` and `by_right` should be None."
+            raise ValueError(msg)
+        if on is not None:
             return self._from_compliant_dataframe(
                 self._compliant_frame.join_asof(
                     self._extract_compliant(other),
@@ -295,9 +274,17 @@ class BaseFrame(Generic[FrameT]):
                     strategy=strategy,
                 )
             )
-        else:
-            msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
-            raise ValueError(msg)
+        return self._from_compliant_dataframe(
+            self._compliant_frame.join_asof(
+                self._extract_compliant(other),
+                left_on=left_on,
+                right_on=right_on,
+                by_left=by_left,
+                by_right=by_right,
+                by=by,
+                strategy=strategy,
+            )
+        )
 
 
 class DataFrame(BaseFrame[FrameT]):
