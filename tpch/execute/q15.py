@@ -11,3 +11,7 @@ print(q15.query(fn(lineitem), fn(supplier)))
 tool = "polars[lazy]"
 fn = IO_FUNCS[tool]
 print(q15.query(fn(lineitem), fn(supplier)).collect())
+
+tool = "pyarrow"
+fn = IO_FUNCS[tool]
+print(q15.query(fn(lineitem), fn(supplier)))

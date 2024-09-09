@@ -13,3 +13,7 @@ print(q10.query(fn(customer), fn(nation), fn(lineitem), fn(orders)))
 tool = "polars[lazy]"
 fn = IO_FUNCS[tool]
 print(q10.query(fn(customer), fn(nation), fn(lineitem), fn(orders)).collect())
+
+tool = "pyarrow"
+fn = IO_FUNCS[tool]
+print(q10.query(fn(customer), fn(nation), fn(lineitem), fn(orders)))

@@ -16,3 +16,7 @@ fn = IO_FUNCS[tool]
 print(
     q7.query(fn(nation), fn(customer), fn(lineitem), fn(orders), fn(supplier)).collect()
 )
+
+tool = "pyarrow"
+fn = IO_FUNCS[tool]
+print(q7.query(fn(nation), fn(customer), fn(lineitem), fn(orders), fn(supplier)))
