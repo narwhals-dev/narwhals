@@ -15,4 +15,4 @@ print(q3.query(fn(customer), fn(lineitem), fn(orders)).collect())
 
 tool = "pyarrow"
 fn = IO_FUNCS[tool]
-print(q3.query(fn(customer), fn(lineitem), fn(orders)).collect())
+print(q3.query(fn(customer), fn(lineitem), fn(orders)))
