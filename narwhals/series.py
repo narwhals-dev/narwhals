@@ -783,12 +783,9 @@ class Series:
         """
         Drop all null values.
 
-        See Also:
-          drop_nans
-
         Notes:
-          A null value is not the same as a NaN value.
-          To drop NaN values, use :func:`drop_nans`.
+          pandas and Polars handle null values differently. Polars distinguishes
+          between NaN and Null, whereas pandas doesn't.
 
         Examples:
           >>> import pandas as pd
