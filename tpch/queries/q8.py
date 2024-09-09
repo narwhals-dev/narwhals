@@ -46,6 +46,7 @@ def query(
             .alias("_tmp")
         )
         .group_by("o_year")
-        .agg((nw.sum("_tmp") / nw.sum("volume")).round(2).alias("mkt_share"))
+        .agg(_tmp_sum=nw.sum("_tmp"), volume_sum=nw.sum("volume"))
+        .select("o_year", mkt_share=nw.col("_tmp_sum") / nw.col("volume_sum"))
         .sort("o_year")
     )
