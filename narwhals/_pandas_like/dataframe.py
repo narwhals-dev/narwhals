@@ -105,19 +105,30 @@ class PandasLikeDataFrame:
         return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
+    def __getitem__(  # type: ignore[overload-overlap]
+        self, item: tuple[Sequence[int], Sequence[str], str | int]
+    ) -> PandasLikeSeries: ...
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> PandasLikeDataFrame: ...
 
     @overload
-    def __getitem__(self, item: str) -> PandasLikeSeries: ...
+    def __getitem__(self, item: str) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[str]) -> PandasLikeDataFrame: ...
 
     @overload
     def __getitem__(self, item: slice) -> PandasLikeDataFrame: ...
 
     def __getitem__(
-        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+        self,
+        item: str
+        | int
+        | slice
+        | Sequence[int]
+        | Sequence[str]
+        | tuple[Sequence[int], Sequence[str], str | int],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
@@ -191,6 +202,8 @@ class PandasLikeDataFrame:
         elif isinstance(item, (slice, Sequence)) or (
             is_numpy_array(item) and item.ndim == 1
         ):
+            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+                return self._from_native_frame(self._native_frame[item])
             return self._from_native_frame(self._native_frame.iloc[item])
 
         else:  # pragma: no cover
