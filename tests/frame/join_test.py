@@ -89,6 +89,41 @@ def test_cross_join(constructor: Any) -> None:
         df.join(df, how="cross", left_on="antananarivo")  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("how", ["inner", "left"])
+@pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
+def test_suffix(constructor: Any, how: str, suffix: str) -> None:
+    data = {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "zorro": [7.0, 8, 9],
+    }
+    df = nw.from_native(constructor(data))
+    df_right = df
+    result = df.join(
+        df_right,  # type: ignore[arg-type]
+        left_on=["antananarivo", "bob"],
+        right_on=["antananarivo", "bob"],
+        how=how,  # type: ignore[arg-type]
+        suffix=suffix,
+    )
+    result_cols = result.collect_schema().names()
+    assert result_cols == ["antananarivo", "bob", "zorro", f"zorro{suffix}"]
+
+
+@pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
+def test_cross_join_suffix(constructor: Any, suffix: str) -> None:
+    data = {"antananarivo": [1, 3, 2]}
+    df = nw.from_native(constructor(data))
+    result = df.join(df, how="cross", suffix=suffix).sort(  # type: ignore[arg-type]
+        "antananarivo", f"antananarivo{suffix}"
+    )
+    expected = {
+        "antananarivo": [1, 1, 1, 2, 2, 2, 3, 3, 3],
+        f"antananarivo{suffix}": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+    }
+    compare_dicts(result, expected)
+
+
 def test_cross_join_non_pandas() -> None:
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(pd.DataFrame(data))

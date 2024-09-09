@@ -208,6 +208,7 @@ class DaskLazyFrame:
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
+        suffix: str,
     ) -> Self:
         if how == "cross":
             key_token = generate_unique_token(
@@ -221,7 +222,7 @@ class DaskLazyFrame:
                     how="inner",
                     left_on=key_token,
                     right_on=key_token,
-                    suffixes=("", "_right"),
+                    suffixes=("", suffix),
                 )
                 .drop(columns=key_token),
             )
@@ -273,7 +274,7 @@ class DaskLazyFrame:
                 how="left",
                 left_on=left_on,
                 right_on=right_on,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             )
             extra = []
             for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
@@ -289,7 +290,7 @@ class DaskLazyFrame:
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             ),
         )
 

@@ -182,11 +182,12 @@ class BaseFrame(Generic[FrameT]):
     def join(
         self,
         other: Self,
-        *,
+        on: str | list[str] | None = None,
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
-        on: str | list[str] | None = None,
+        suffix: str = "_right",
     ) -> Self:
         _supported_joins = ("inner", "left", "cross", "anti", "semi")
 
@@ -219,6 +220,7 @@ class BaseFrame(Generic[FrameT]):
                 how=how,
                 left_on=left_on,
                 right_on=right_on,
+                suffix=suffix,
             )
         )
 
@@ -1850,30 +1852,29 @@ class DataFrame(BaseFrame[FrameT]):
     def join(
         self,
         other: Self,
-        *,
+        on: str | list[str] | None = None,
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
-        on: str | list[str] | None = None,
+        suffix: str = "_right",
     ) -> Self:
         r"""
         Join in SQL-like fashion.
 
         Arguments:
-            other: DataFrame to join with.
-
+            other: Lazy DataFrame to join with.
+            on: Name(s) of the join columns in both DataFrames. If set, `left_on` and
+                `right_on` should be None.
             how: Join strategy.
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
-
-            left_on: Name(s) of the left join column(s).
-
-            right_on: Name(s) of the right join column(s).
-
-            on: Join column of both DataFrames. If set, left_on and right_on should be None.
+            left_on: Join column of the left DataFrame.
+            right_on: Join column of the right DataFrame.
+            suffix: Suffix to append to columns with a duplicate name.
 
         Returns:
             A new joined DataFrame
@@ -1922,7 +1923,9 @@ class DataFrame(BaseFrame[FrameT]):
             │ 2   ┆ 7.0 ┆ b   ┆ y     │
             └─────┴─────┴─────┴───────┘
         """
-        return super().join(other, how=how, left_on=left_on, right_on=right_on, on=on)
+        return super().join(
+            other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
+        )
 
     def join_asof(
         self,
@@ -3578,30 +3581,29 @@ class LazyFrame(BaseFrame[FrameT]):
     def join(
         self,
         other: Self,
-        *,
+        on: str | list[str] | None = None,
         how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
-        on: str | list[str] | None = None,
+        suffix: str = "_right",
     ) -> Self:
         r"""
         Add a join operation to the Logical Plan.
 
         Arguments:
             other: Lazy DataFrame to join with.
-
+            on: Name(s) of the join columns in both DataFrames. If set, `left_on` and
+                `right_on` should be None.
             how: Join strategy.
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
-
             left_on: Join column of the left DataFrame.
-
             right_on: Join column of the right DataFrame.
-
-            on: Join column of both DataFrames. If set, left_on and right_on should be None.
+            suffix: Suffix to append to columns with a duplicate name.
 
         Returns:
             A new joined LazyFrame
@@ -3650,7 +3652,9 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2   ┆ 7.0 ┆ b   ┆ y     │
             └─────┴─────┴─────┴───────┘
         """
-        return super().join(other, how=how, left_on=left_on, right_on=right_on, on=on)
+        return super().join(
+            other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
+        )
 
     def join_asof(
         self,
