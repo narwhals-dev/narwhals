@@ -21,3 +21,9 @@ print(
         fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier)
     ).collect()
 )
+
+tool = "pyarrow"
+fn = IO_FUNCS[tool]
+print(
+    q9.query(fn(part), fn(partsupp), fn(nation), fn(lineitem), fn(orders), fn(supplier))
+)

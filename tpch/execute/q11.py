@@ -12,3 +12,7 @@ print(q11.query(fn(nation), fn(partsupp), fn(supplier)))
 tool = "polars[lazy]"
 fn = IO_FUNCS[tool]
 print(q11.query(fn(nation), fn(partsupp), fn(supplier)).collect())
+
+tool = "pyarrow"
+fn = IO_FUNCS[tool]
+print(q11.query(fn(nation), fn(partsupp), fn(supplier)))

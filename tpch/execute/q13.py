@@ -11,3 +11,7 @@ print(q13.query(fn(customer), fn(orders)))
 tool = "polars[lazy]"
 fn = IO_FUNCS[tool]
 print(q13.query(fn(customer), fn(orders)).collect())
+
+tool = "pyarrow"
+fn = IO_FUNCS[tool]
+print(q13.query(fn(customer), fn(orders)))

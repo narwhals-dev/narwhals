@@ -37,3 +37,17 @@ print(
         fn(region),
     ).collect()
 )
+
+tool = "pyarrow"
+fn = IO_FUNCS[tool]
+print(
+    q8.query(
+        fn(part),
+        fn(supplier),
+        fn(lineitem),
+        fn(orders),
+        fn(customer),
+        fn(nation),
+        fn(region),
+    )
+)
