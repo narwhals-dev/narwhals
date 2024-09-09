@@ -1541,7 +1541,7 @@ def is_ordered_categorical(series: Series) -> bool:
 
 def maybe_align_index(lhs: T, rhs: Series | DataFrame[Any] | LazyFrame[Any]) -> T:
     """
-    Align `lhs` to the Index of `rhs, if they're both pandas-like.
+    Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
