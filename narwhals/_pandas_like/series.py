@@ -473,7 +473,7 @@ class PandasLikeSeries:
     def to_numpy(self, dtype: Any = None, copy: bool | None = None) -> Any:
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
-        copy = copy or False
+        copy = copy or self._implementation is Implementation.CUDF
 
         has_missing = self._native_series.isna().any()
         if (
