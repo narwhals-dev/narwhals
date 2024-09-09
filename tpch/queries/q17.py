@@ -14,8 +14,9 @@ def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
     )
 
     return (
-        query1.group_by("p_partkey")
-        .agg((0.2 * nw.col("l_quantity").mean()).alias("avg_quantity"))
+        query1.with_columns(l_quantity_times_point_2=nw.col("l_quantity") * 0.2)
+        .group_by("p_partkey")
+        .agg(nw.col("l_quantity_times_point_2").mean().alias("avg_quantity"))
         .select(nw.col("p_partkey").alias("key"), nw.col("avg_quantity"))
         .join(query1, left_on="key", right_on="p_partkey")
         .filter(nw.col("l_quantity") < nw.col("avg_quantity"))
