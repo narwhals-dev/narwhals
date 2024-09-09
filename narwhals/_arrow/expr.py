@@ -309,7 +309,9 @@ class ArrowExpr:
                 )
                 raise ValueError(msg)
             tmp = df.group_by(*keys).agg(self)
-            tmp = df.select(*keys).join(tmp, how="left", left_on=keys, right_on=keys)
+            tmp = df.select(*keys).join(
+                tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+            )
             return [tmp[name] for name in self._output_names]
 
         return self.__class__(

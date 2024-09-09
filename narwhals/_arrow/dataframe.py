@@ -277,6 +277,7 @@ class ArrowDataFrame:
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
+        suffix: str,
     ) -> Self:
         how_to_join_map = {
             "anti": "left anti",
@@ -298,7 +299,7 @@ class ArrowDataFrame:
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
-                    right_suffix="_right",
+                    right_suffix=suffix,
                 )
                 .drop([key_token]),
             )
@@ -309,7 +310,7 @@ class ArrowDataFrame:
                 keys=left_on,
                 right_keys=right_on,
                 join_type=how_to_join_map[how],
-                right_suffix="_right",
+                right_suffix=suffix,
             ),
         )
 

@@ -403,6 +403,7 @@ class PandasLikeDataFrame:
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
+        suffix: str,
     ) -> Self:
         if isinstance(left_on, str):
             left_on = [left_on]
@@ -427,7 +428,7 @@ class PandasLikeDataFrame:
                         how="inner",
                         left_on=key_token,
                         right_on=key_token,
-                        suffixes=("", "_right"),
+                        suffixes=("", suffix),
                     )
                     .drop(columns=key_token),
                 )
@@ -436,7 +437,7 @@ class PandasLikeDataFrame:
                     self._native_frame.merge(
                         other._native_frame,
                         how="cross",
-                        suffixes=("", "_right"),
+                        suffixes=("", suffix),
                     ),
                 )
 
@@ -488,14 +489,14 @@ class PandasLikeDataFrame:
                 how="left",
                 left_on=left_on,
                 right_on=right_on,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             )
             extra = []
             for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
                 if right_key != left_key and right_key not in self.columns:
                     extra.append(right_key)
                 elif right_key != left_key:
-                    extra.append(f"{right_key}_right")
+                    extra.append(f"{right_key}{suffix}")
             return self._from_native_frame(result_native.drop(columns=extra))
 
         return self._from_native_frame(
@@ -504,7 +505,7 @@ class PandasLikeDataFrame:
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             ),
         )
 
