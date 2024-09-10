@@ -201,7 +201,7 @@ class PandasLikeDataFrame:
             is_numpy_array(item) and item.ndim == 1
         ):
             if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
-                return self._from_native_frame(self._native_frame[item])
+                return self._from_native_frame(self._native_frame.loc[:, item])
             return self._from_native_frame(self._native_frame.iloc[item])
 
         else:  # pragma: no cover
