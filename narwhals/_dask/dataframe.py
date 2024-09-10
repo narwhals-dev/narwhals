@@ -79,7 +79,9 @@ class DaskLazyFrame:
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            msg = "Filtering with boolean mask is not supported for `DaskLazyFrame`"
+            msg = (
+                "`LazyFrame.filter` is not supported for Dask backend with boolean masks."
+            )
             raise NotImplementedError(msg)
 
         from narwhals._dask.namespace import DaskNamespace
