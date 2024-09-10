@@ -644,6 +644,10 @@ class DaskExpr:
             backend_version=self._backend_version,
         )
 
+    def mode(self: Self) -> Self:
+        msg = "`Expr.mode` is not supported for the Dask backend."
+        raise NotImplementedError(msg)
+
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)

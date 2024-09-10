@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
 
 
@@ -64,6 +65,11 @@ class ArrowSeries:
             name=name,
             backend_version=backend_version,
         )
+
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(backend_version=self._backend_version)
 
     def __len__(self) -> int:
         return len(self._native_series)
@@ -666,6 +672,13 @@ class ArrowSeries:
 
     def to_arrow(self: Self) -> pa.Array:
         return self._native_series.combine_chunks()
+
+    def mode(self: Self) -> ArrowSeries:
+        plx = self.__narwhals_namespace__()
+        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        return self.value_counts(name=col_token, normalize=False).filter(
+            plx.col(col_token) == plx.col(col_token).max()
+        )[self.name]
 
     @property
     def shape(self) -> tuple[int]:

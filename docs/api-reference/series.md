@@ -36,6 +36,7 @@
         - max
         - mean
         - min
+        - mode
         - name
         - null_count
         - n_unique
