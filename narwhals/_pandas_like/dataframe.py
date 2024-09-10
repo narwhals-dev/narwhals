@@ -105,9 +105,7 @@ class PandasLikeDataFrame:
         return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
-    def __getitem__(  # type: ignore[overload-overlap]
-        self, item: tuple[Sequence[int], Sequence[str], str | int]
-    ) -> PandasLikeSeries: ...
+    def __getitem__(self, item: tuple[Sequence[int], str | int]) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> PandasLikeDataFrame: ...
