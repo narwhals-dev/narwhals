@@ -118,7 +118,7 @@ to this list!
 Narwhals has been featured in several talks, podcasts, and blog posts:
 
 - [Talk Python to me Podcast](https://youtu.be/FSH7BZ0tuE0)
-   Ahoy, Narwhals are bridging the data science APIs
+  Ahoy, Narwhals are bridging the data science APIs
 
 - [Super Data Science: ML & AI Podcast](https://www.youtube.com/watch?v=TeG4U8R0U8U)  
   Narwhals: For Pandas-to-Polars DataFrame Compatibility
