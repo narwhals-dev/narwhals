@@ -121,7 +121,12 @@ class ArrowDataFrame:
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
     def __getitem__(
-        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+        self,
+        item: str
+        | slice
+        | Sequence[int]
+        | Sequence[str]
+        | tuple[Sequence[int], str | int],
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
@@ -191,6 +196,8 @@ class ArrowDataFrame:
             )
 
         elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
+            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+                return self._from_native_frame(self._native_frame.select(item))
             return self._from_native_frame(self._native_frame.take(item))
 
         else:  # pragma: no cover

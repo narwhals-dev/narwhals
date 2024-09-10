@@ -612,7 +612,10 @@ class DataFrame(BaseFrame[FrameT]):
     def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: str) -> Series: ...
+    def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[str]) -> Self: ...
 
     @overload
     def __getitem__(self, item: slice) -> Self: ...
@@ -622,6 +625,7 @@ class DataFrame(BaseFrame[FrameT]):
         item: str
         | slice
         | Sequence[int]
+        | Sequence[str]
         | tuple[Sequence[int], str | int]
         | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice],
     ) -> Series | Self:
@@ -643,6 +647,8 @@ class DataFrame(BaseFrame[FrameT]):
                 - `df[:, [0, 1, 2]]` extracts all rows from the first three columns and returns a
                   `DataFrame`.
                 - `df[:, ['a', 'c']]` extracts all rows and columns `'a'` and `'c'` and returns a
+                  `DataFrame`.
+                - `df[['a', 'c']]` extracts all rows and columns `'a'` and `'c'` and returns a
                   `DataFrame`.
                 - `df[0: 2, ['a', 'c']]` extracts the first two rows and columns `'a'` and `'c'` and
                     returns a `DataFrame`

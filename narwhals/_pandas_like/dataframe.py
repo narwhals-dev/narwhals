@@ -111,13 +111,22 @@ class PandasLikeDataFrame:
     def __getitem__(self, item: Sequence[int]) -> PandasLikeDataFrame: ...
 
     @overload
-    def __getitem__(self, item: str) -> PandasLikeSeries: ...
+    def __getitem__(self, item: str) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[str]) -> PandasLikeDataFrame: ...
 
     @overload
     def __getitem__(self, item: slice) -> PandasLikeDataFrame: ...
 
     def __getitem__(
-        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+        self,
+        item: str
+        | int
+        | slice
+        | Sequence[int]
+        | Sequence[str]
+        | tuple[Sequence[int], str | int],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
@@ -174,7 +183,7 @@ class PandasLikeDataFrame:
             from narwhals._pandas_like.series import PandasLikeSeries
 
             if isinstance(item[1], str):
-                item = (item[0], self._native_frame.columns.get_loc(item[1]))
+                item = (item[0], self._native_frame.columns.get_loc(item[1]))  # type: ignore[assignment]
                 native_series = self._native_frame.iloc[item]
             elif isinstance(item[1], int):
                 native_series = self._native_frame.iloc[item]
@@ -191,6 +200,8 @@ class PandasLikeDataFrame:
         elif isinstance(item, (slice, Sequence)) or (
             is_numpy_array(item) and item.ndim == 1
         ):
+            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+                return self._from_native_frame(self._native_frame.loc[:, item])
             return self._from_native_frame(self._native_frame.iloc[item])
 
         else:  # pragma: no cover
