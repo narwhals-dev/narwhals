@@ -1916,7 +1916,7 @@ class Expr:
     def mode(self: Self) -> Self:
         r"""Compute the most occurring value(s).
 
-        Can return multiple Values.
+        Can return multiple values.
 
         Examples:
             >>> import pandas as pd
