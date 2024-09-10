@@ -183,7 +183,7 @@ class PandasLikeDataFrame:
             from narwhals._pandas_like.series import PandasLikeSeries
 
             if isinstance(item[1], str):
-                item = (item[0], self._native_frame.columns.get_loc(item[1]))
+                item = (item[0], self._native_frame.columns.get_loc(item[1]))  # type: ignore[assignment]
                 native_series = self._native_frame.iloc[item]
             elif isinstance(item[1], int):
                 native_series = self._native_frame.iloc[item]
