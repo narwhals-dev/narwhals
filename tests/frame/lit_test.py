@@ -23,8 +23,6 @@ def test_lit(
     expected_lit: list[Any],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(constructor) and dtype == nw.String:
-        request.applymarker(pytest.mark.xfail)
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}

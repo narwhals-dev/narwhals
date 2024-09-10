@@ -22,6 +22,7 @@
         - item
         - iter_rows
         - join
+        - join_asof
         - lazy
         - null_count
         - pipe

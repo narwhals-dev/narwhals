@@ -1,3 +1,4 @@
+from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
@@ -18,12 +19,16 @@ def test_filter(constructor: Any) -> None:
 def test_filter_with_boolean_list(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
-    if "pyspark" in str(constructor):
-        with pytest.raises(
-            ValueError, match="Filtering by a list of booleans is not supported"
-        ):
-            result = df.filter([False, True, True])
-    else:
+
+    context = (
+        pytest.raises(
+            NotImplementedError, match="Filtering with boolean mask is not supported"
+        )
+        if "dask" in str(constructor) or "pyspark" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
         result = df.filter([False, True, True])
         expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
         compare_dicts(result, expected)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.6.2"
+version = "1.6.4"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -81,8 +81,18 @@ lint.ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
+"tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
 "tpch/execute/*" = ["T201"]
+"tpch/notebooks/*" = [
+  "ANN001",
+  "ANN201",
+  "EM101",
+  "EXE002",
+  "PTH123",
+  "T203",
+  "TRY003",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

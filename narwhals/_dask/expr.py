@@ -629,7 +629,7 @@ class DaskExpr:
             tmp = df.group_by(*keys).agg(self)
             tmp_native = (
                 df.select(*keys)
-                .join(tmp, how="left", left_on=keys, right_on=keys)
+                .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
                 ._native_frame
             )
             return [tmp_native[name] for name in self._output_names]

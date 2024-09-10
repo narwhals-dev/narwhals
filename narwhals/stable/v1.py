@@ -76,20 +76,25 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
+    @overload
+    def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
+    @overload
+    def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
-
     @overload
-    def __getitem__(self, item: str) -> Series: ...
+    def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
+    def __getitem__(self, item: Sequence[str]) -> Self: ...
 
     @overload
     def __getitem__(self, item: slice) -> Self: ...
@@ -1537,7 +1542,7 @@ def is_ordered_categorical(series: Series) -> bool:
 
 def maybe_align_index(lhs: T, rhs: Series | DataFrame[Any] | LazyFrame[Any]) -> T:
     """
-    Align `lhs` to the Index of `rhs, if they're both pandas-like.
+    Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,

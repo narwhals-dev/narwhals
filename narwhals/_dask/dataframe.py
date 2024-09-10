@@ -79,14 +79,15 @@ class DaskLazyFrame:
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            mask = predicates[0]
-        else:
-            from narwhals._dask.namespace import DaskNamespace
+            msg = "Filtering with boolean mask is not supported for `DaskLazyFrame`"
+            raise NotImplementedError(msg)
 
-            plx = DaskNamespace(backend_version=self._backend_version)
-            expr = plx.all_horizontal(*predicates)
-            # Safety: all_horizontal's expression only returns a single column.
-            mask = expr._call(self)[0]
+        from narwhals._dask.namespace import DaskNamespace
+
+        plx = DaskNamespace(backend_version=self._backend_version)
+        expr = plx.all_horizontal(*predicates)
+        # Safety: all_horizontal's expression only returns a single column.
+        mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
 
     def lazy(self) -> Self:
@@ -208,12 +209,8 @@ class DaskLazyFrame:
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
+        suffix: str,
     ) -> Self:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
-
         if how == "cross":
             key_token = generate_unique_token(
                 n_bytes=8, columns=[*self.columns, *other.columns]
@@ -226,7 +223,7 @@ class DaskLazyFrame:
                     how="inner",
                     left_on=key_token,
                     right_on=key_token,
-                    suffixes=("", "_right"),
+                    suffixes=("", suffix),
                 )
                 .drop(columns=key_token),
             )
@@ -278,7 +275,7 @@ class DaskLazyFrame:
                 how="left",
                 left_on=left_on,
                 right_on=right_on,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             )
             extra = []
             for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
@@ -294,6 +291,34 @@ class DaskLazyFrame:
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
+                suffixes=("", suffix),
+            ),
+        )
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | list[str] | None = None,
+        by_right: str | list[str] | None = None,
+        by: str | list[str] | None = None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        plx = self.__native_namespace__()
+        return self._from_native_frame(
+            plx.merge_asof(
+                self._native_frame,
+                other._native_frame,
+                left_on=left_on,
+                right_on=right_on,
+                on=on,
+                left_by=by_left,
+                right_by=by_right,
+                by=by,
+                direction=strategy,
                 suffixes=("", "_right"),
             ),
         )
