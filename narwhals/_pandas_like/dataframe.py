@@ -126,7 +126,7 @@ class PandasLikeDataFrame:
         | slice
         | Sequence[int]
         | Sequence[str]
-        | tuple[Sequence[int], Sequence[str], str | int],
+        | tuple[Sequence[int], str | int],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
