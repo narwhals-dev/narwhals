@@ -1585,9 +1585,8 @@ class Expr:
         r"""
         Get the first `n` rows.
 
-        Arguments
-            n : int
-                Number of rows to return.
+        Arguments:
+            n: Number of rows to return.
 
         Examples:
             >>> import narwhals as nw
@@ -1628,9 +1627,8 @@ class Expr:
         r"""
         Get the last `n` rows.
 
-        Arguments
-            n : int
-                Number of rows to return.
+        Arguments:
+            n: Number of rows to return.
 
         Examples:
             >>> import narwhals as nw
