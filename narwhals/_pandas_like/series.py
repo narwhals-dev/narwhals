@@ -169,7 +169,9 @@ class PandasLikeSeries:
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
-            values = validate_column_comparand(self._native_series.index, values)
+            # .copy() is necessary in some pre-2.2 versions of pandas to avoid
+            # `values` also getting modified (!)
+            values = validate_column_comparand(self._native_series.index, values).copy()
         s = self._native_series
         s.iloc[indices] = values
         s.name = self.name
