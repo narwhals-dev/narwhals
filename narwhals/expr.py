@@ -3995,16 +3995,17 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
+def _extract_predicates(plx: Any, predicates: IntoExpr | Iterable[IntoExpr]) -> Any:
+    return [extract_compliant(plx, v) for v in flatten([predicates])]
+
+
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicates = flatten([predicates])
 
-    def _extract_predicates(self, plx: Any) -> Any:
-        return [extract_compliant(plx, v) for v in self._predicates]
-
     def then(self, value: Any) -> Then:
         return Then(
-            lambda plx: plx.when(*self._extract_predicates(plx)).then(
+            lambda plx: plx.when(*_extract_predicates(plx, self._predicates)).then(
                 extract_compliant(plx, value)
             )
         )
@@ -4017,36 +4018,39 @@ class Then(Expr):
     def otherwise(self, value: Any) -> Expr:
         return Expr(lambda plx: self._call(plx).otherwise(extract_compliant(plx, value)))
 
-
-# class ChainedWhen:
-#     def __init__(
-#         self,
-#         above_then: Then | ChainedThen,
-#         *predicates: IntoExpr | Iterable[IntoExpr],
-#     ) -> None:
-#         self._above_then = above_then
-#         self._predicates = predicates
-
-#     def then(self, value: Any) -> ChainedThen:
-#         return ChainedThen(
-#             lambda plx: self._above_then._call(plx)
-#             .when(*_extract_predicates(plx, flatten([self._predicates])))
-#             .then(value)
-#         )
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
+        return ChainedWhen(self, *predicates)
 
 
-# class ChainedThen(Expr):
-#     def __init__(self, call: Callable[[Any], Any]) -> None:
-#         self._call = call
+class ChainedWhen:
+    def __init__(
+        self,
+        above_then: Then | ChainedThen,
+        *predicates: IntoExpr | Iterable[IntoExpr],
+    ) -> None:
+        self._above_then = above_then
+        self._predicates = flatten([predicates])
 
-#     def when(
-#         self,
-#         *predicates: IntoExpr | Iterable[IntoExpr],
-#     ) -> ChainedWhen:
-#         return ChainedWhen(self, *predicates)
+    def then(self, value: Any) -> ChainedThen:
+        return ChainedThen(
+            lambda plx: self._above_then._call(plx)
+            .when(*_extract_predicates(plx, self._predicates))
+            .then(value)
+        )
 
-#     def otherwise(self, value: Any) -> Expr:
-#         return Expr(lambda plx: self._call(plx).otherwise(value))
+
+class ChainedThen(Expr):
+    def __init__(self, call: Callable[[Any], Any]) -> None:
+        self._call = call
+
+    def when(
+        self,
+        *predicates: IntoExpr | Iterable[IntoExpr],
+    ) -> ChainedWhen:
+        return ChainedWhen(self, *predicates)
+
+    def otherwise(self, value: Any) -> Expr:
+        return Expr(lambda plx: self._call(plx).otherwise(value))
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
