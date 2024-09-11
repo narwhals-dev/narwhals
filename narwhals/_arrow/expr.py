@@ -323,6 +323,9 @@ class ArrowExpr:
             backend_version=self._backend_version,
         )
 
+    def mode(self: Self) -> Self:
+        return reuse_series_implementation(self, "mode")
+
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
         return ArrowExprDateTimeNamespace(self)

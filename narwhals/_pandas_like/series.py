@@ -641,6 +641,12 @@ class PandasLikeSeries:
 
         return pa.Array.from_pandas(self._native_series)
 
+    def mode(self: Self) -> Self:
+        native_series = self._native_series
+        result = native_series.mode()
+        result.name = native_series.name
+        return self._from_native_series(result)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)

@@ -2276,6 +2276,44 @@ class Series:
         """
         return self._compliant_series.to_arrow()
 
+    def mode(self: Self) -> Self:
+        r"""
+        Compute the most occurring value(s).
+
+        Can return multiple values.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+
+            >>> data = [1, 1, 2, 2, 3]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.mode().sort()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            Name: a, dtype: int64
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [i64]
+            [
+               1
+               2
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.mode())
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
