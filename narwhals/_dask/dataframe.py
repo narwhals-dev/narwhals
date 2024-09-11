@@ -79,7 +79,9 @@ class DaskLazyFrame:
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            msg = "Filtering with boolean mask is not supported for `DaskLazyFrame`"
+            msg = (
+                "`LazyFrame.filter` is not supported for Dask backend with boolean masks."
+            )
             raise NotImplementedError(msg)
 
         from narwhals._dask.namespace import DaskNamespace
@@ -329,7 +331,14 @@ class DaskLazyFrame:
         return DaskLazyGroupBy(self, list(by))
 
     def tail(self: Self, n: int) -> Self:
-        return self._from_native_frame(self._native_frame.tail(n=n, compute=False))
+        native_frame = self._native_frame
+        n_partitions = native_frame.npartitions
+
+        if n_partitions == 1:
+            return self._from_native_frame(self._native_frame.tail(n=n, compute=False))
+        else:
+            msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."
+            raise NotImplementedError(msg)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         row_index_token = generate_unique_token(n_bytes=8, columns=self.columns)
