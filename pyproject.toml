@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.5.5"
+version = "1.7.0"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -23,6 +23,12 @@ exclude = [
   "/docs",
   "/tests",
   "/tpch",
+  "/utils",
+  ".gitignore",
+  "CONTRIBUTING.md",
+  "mkdocs.yml",
+  "noxfile.py",
+  "requirements-dev.txt",
 ]
 
 [project.optional-dependencies]
@@ -70,7 +76,18 @@ lint.ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
+"tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
+"tpch/execute/*" = ["T201"]
+"tpch/notebooks/*" = [
+  "ANN001",
+  "ANN201",
+  "EM101",
+  "EXE002",
+  "PTH123",
+  "T203",
+  "TRY003",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -108,7 +125,11 @@ env = [
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
-omit = ['narwhals/typing.py']
+omit = [
+  'narwhals/typing.py',
+  # we can run this in every environment that we measure coverage on due to upper-bound constraits
+  'narwhals/_ibis/*',
+]
 exclude_also = [
   "> POLARS_VERSION",
   "if sys.version_info() <",

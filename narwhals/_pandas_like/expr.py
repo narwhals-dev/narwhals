@@ -287,7 +287,9 @@ class PandasLikeExpr:
                 )
                 raise ValueError(msg)
             tmp = df.group_by(*keys).agg(self)
-            tmp = df.select(*keys).join(tmp, how="left", left_on=keys, right_on=keys)
+            tmp = df.select(*keys).join(
+                tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+            )
             return [tmp[name] for name in self._output_names]
 
         return self.__class__(
@@ -335,6 +337,9 @@ class PandasLikeExpr:
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return reuse_series_implementation(self, "gather_every", n=n, offset=offset)
+
+    def mode(self: Self) -> Self:
+        return reuse_series_implementation(self, "mode")
 
     @property
     def str(self: Self) -> PandasLikeExprStringNamespace:

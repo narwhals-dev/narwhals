@@ -15,6 +15,26 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import IntoArrowExpr
 
+POLARS_TO_ARROW_AGGREGATIONS = {
+    "len": "count",
+    "n_unique": "count_distinct",
+    "std": "stddev",
+    "var": "variance",  # currently unused, we don't have `var` yet
+}
+
+
+def get_function_name_option(function_name: str) -> Any | None:
+    """Map specific pyarrow compute function to respective option to match polars behaviour."""
+    import pyarrow.compute as pc  # ignore-banned-import
+
+    function_name_to_options = {
+        "count": pc.CountOptions(mode="all"),
+        "count_distinct": pc.CountOptions(mode="all"),
+        "stddev": pc.VarianceOptions(ddof=1),
+        "variance": pc.VarianceOptions(ddof=1),
+    }
+    return function_name_to_options.get(function_name)
+
 
 class ArrowGroupBy:
     def __init__(self, df: ArrowDataFrame, keys: list[str]) -> None:
@@ -112,17 +132,14 @@ def agg_arrow(
                 raise AssertionError(msg)
 
             function_name = remove_prefix(expr._function_name, "col->")
+            function_name = POLARS_TO_ARROW_AGGREGATIONS.get(function_name, function_name)
+
+            option = get_function_name_option(function_name)
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                if function_name != "len":
-                    simple_aggregations[output_name] = (
-                        (root_name, function_name),
-                        f"{root_name}_{function_name}",
-                    )
-                else:
-                    simple_aggregations[output_name] = (
-                        (root_name, "count", pc.CountOptions(mode="all")),
-                        f"{root_name}_count",
-                    )
+                simple_aggregations[output_name] = (
+                    (root_name, function_name, option),
+                    f"{root_name}_{function_name}",
+                )
 
         aggs: list[Any] = []
         name_mapping = {}

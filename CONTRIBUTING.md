@@ -47,21 +47,40 @@ git clone git@github.com:YOUR-USERNAME/narwhals.git
 
 ### 4. Setting up your environment
 
-Here's how you can set up your local development environment to contribute:
+Here's how you can set up your local development environment to contribute.
 
-1. Make sure you have Python3.8+ installed (for example, Python 3.11)
-2. Create a new virtual environment with `python3.11 -m venv .venv` (or whichever version of Python3.9+ you prefer)
-3. Activate it: `. .venv/bin/activate`
-4. Install Narwhals: `pip install -e .`
-5. Install test requirements: `pip install -r requirements-dev.txt`
-6. Install docs requirements: `pip install -r docs/requirements-docs.txt`
+#### Option 1: Use UV (recommended)
+
+1. Make sure you have Python3.8+ installed (for example, Python 3.11), create a virtual environment,
+   and activate it. If you're new to this, here's one way that we recommend:
+   1. Install uv: https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started
+   2. Install some version of Python greater than Python3.8. For example, to install
+      Python3.11:
+      ```
+      uv python install 3.11
+      ```
+   3. Create a virtual environment:
+      ```
+      uv venv -p 3.11 --seed
+      ```
+   4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
+2. Install Narwhals: `uv pip install -e .`
+3. Install test requirements: `uv pip install -r requirements-dev.txt`
+4. Install docs requirements: `uv pip install -r docs/requirements-docs.txt`
 
 You should also install pre-commit:
 ```
-pip install pre-commit
+uv pip install pre-commit
 pre-commit install
 ```
 This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
+
+#### Option 2: use python3-venv
+
+1. Make sure you have Python 3.8+ installed. If you don't, you can check [install Python](https://realpython.com/installing-python/)
+   to learn how. Then, [create and activate](https://realpython.com/python-virtual-environments-a-primer/)
+   a virtual environment.
+2. Then, follow steps 2-4 from above but using `pip install` instead of `uv pip install`.
 
 ### 5. Working on your issue
 

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from typing import Any
+
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
@@ -13,14 +16,24 @@ def test_tail(constructor: Any) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
 
-    result = df.tail(2)
-    compare_dicts(result, expected)
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`LazyFrame.tail` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
 
-    result = df.collect().tail(2)  # type: ignore[assignment]
-    compare_dicts(result, expected)
+    with context:
+        result = df.tail(2)
+        compare_dicts(result, expected)
 
-    result = df.collect().tail(-1)  # type: ignore[assignment]
-    compare_dicts(result, expected)
+        result = df.collect().tail(2)  # type: ignore[assignment]
+        compare_dicts(result, expected)
 
-    result = df.collect().select(nw.col("a").tail(2))  # type: ignore[assignment]
-    compare_dicts(result, {"a": expected["a"]})
+        result = df.collect().tail(-1)  # type: ignore[assignment]
+        compare_dicts(result, expected)
+
+        result = df.collect().select(nw.col("a").tail(2))  # type: ignore[assignment]
+        compare_dicts(result, {"a": expected["a"]})

@@ -10,6 +10,7 @@ from typing import overload
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
@@ -166,6 +167,22 @@ class PandasLikeSeries:
     @property
     def dtype(self) -> DType:
         return translate_dtype(self._native_series)
+
+    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+        if isinstance(values, self.__class__):
+            # .copy() is necessary in some pre-2.2 versions of pandas to avoid
+            # `values` also getting modified (!)
+            values = validate_column_comparand(self._native_series.index, values).copy()
+            values = set_axis(
+                values,
+                self._native_series.index[indices],
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
+        s = self._native_series
+        s.iloc[indices] = values
+        s.name = self.name
+        return self._from_native_series(s)
 
     def cast(
         self,
@@ -473,7 +490,7 @@ class PandasLikeSeries:
     def to_numpy(self, dtype: Any = None, copy: bool | None = None) -> Any:
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
-        copy = copy or False
+        copy = copy or self._implementation is Implementation.CUDF
 
         has_missing = self._native_series.isna().any()
         if (
@@ -635,12 +652,17 @@ class PandasLikeSeries:
 
     def to_arrow(self: Self) -> Any:
         if self._implementation is Implementation.CUDF:  # pragma: no cover
-            msg = "`to_arrow` is not implemented for CuDF backend."
-            raise NotImplementedError(msg)
+            return self._native_series.to_arrow()
 
         import pyarrow as pa  # ignore-banned-import()
 
         return pa.Array.from_pandas(self._native_series)
+
+    def mode(self: Self) -> Self:
+        native_series = self._native_series
+        result = native_series.mode()
+        result.name = native_series.name
+        return self._from_native_series(result)
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

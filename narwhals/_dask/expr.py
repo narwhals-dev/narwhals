@@ -14,6 +14,7 @@ from narwhals.dependencies import get_dask
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
+    import dask_expr
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -24,8 +25,7 @@ if TYPE_CHECKING:
 class DaskExpr:
     def __init__(
         self,
-        # callable from DaskLazyFrame to list of (native) Dask Series
-        call: Callable[[DaskLazyFrame], Any],
+        call: Callable[[DaskLazyFrame], list[dask_expr.Series]],
         *,
         depth: int,
         function_name: str,
@@ -60,7 +60,7 @@ class DaskExpr:
         *column_names: str,
         backend_version: tuple[int, ...],
     ) -> Self:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             return [df._native_frame.loc[:, column_name] for column_name in column_names]
 
         return cls(
@@ -76,15 +76,15 @@ class DaskExpr:
 
     def _from_call(
         self,
-        # callable from DaskLazyFrame to list of (native) Dask Series
-        call: Any,
+        # First argument to `call` should be `dask_expr.Series`
+        call: Callable[..., dask_expr.Series],
         expr_name: str,
         *args: Any,
         returns_scalar: bool,
         modifies_index: bool,
         **kwargs: Any,
     ) -> Self:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             results = []
             inputs = self._call(df)
             _args = [maybe_evaluate(df, x) for x in args]
@@ -137,7 +137,7 @@ class DaskExpr:
         )
 
     def alias(self, name: str) -> Self:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             inputs = self._call(df)
             return [_input.rename(name) for _input in inputs]
 
@@ -560,8 +560,15 @@ class DaskExpr:
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
         if interpolation == "linear":
+
+            def func(_input: dask_expr.Series, _quantile: float) -> dask_expr.Series:
+                if _input.npartitions > 1:
+                    msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
+                    raise NotImplementedError(msg)
+                return _input.quantile(q=_quantile, method="dask")
+
             return self._from_call(
-                lambda _input, quantile: _input.quantile(q=quantile, method="dask"),
+                func,
                 "quantile",
                 quantile,
                 returns_scalar=True,
@@ -572,7 +579,7 @@ class DaskExpr:
             raise NotImplementedError(msg)
 
     def is_first_distinct(self: Self) -> Self:
-        def func(_input: Any) -> Any:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_unique_token(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
@@ -590,7 +597,7 @@ class DaskExpr:
         )
 
     def is_last_distinct(self: Self) -> Self:
-        def func(_input: Any) -> Any:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             col_token = generate_unique_token(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
@@ -606,7 +613,7 @@ class DaskExpr:
         )
 
     def is_duplicated(self: Self) -> Self:
-        def func(_input: Any) -> Any:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             return (
                 _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) > 1
@@ -620,7 +627,7 @@ class DaskExpr:
         )
 
     def is_unique(self: Self) -> Self:
-        def func(_input: Any) -> Any:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
             return (
                 _input.to_frame().groupby(_name).transform("size", meta=(_name, int)) == 1
@@ -659,13 +666,18 @@ class DaskExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
+
+            if df._native_frame.npartitions > 1:
+                msg = "`Expr.over` is not supported for Dask backend with multiple partitions."
+                raise NotImplementedError(msg)
+
             tmp = df.group_by(*keys).agg(self)
-            tmp = (
+            tmp_native = (
                 df.select(*keys)
-                .join(tmp, how="left", left_on=keys, right_on=keys)
+                .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
                 ._native_frame
             )
-            return [tmp[name] for name in self._output_names]
+            return [tmp_native[name] for name in self._output_names]
 
         return self.__class__(
             func,
@@ -678,18 +690,19 @@ class DaskExpr:
             backend_version=self._backend_version,
         )
 
+    def mode(self: Self) -> Self:
+        msg = "`Expr.mode` is not supported for the Dask backend."
+        raise NotImplementedError(msg)
+
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         na_position = "last" if nulls_last else "first"
 
         def func(_input: Any, ascending: bool, na_position: bool) -> Any:  # noqa: FBT001
-            import dask_expr as de  # ignore-banned-import
-
             name = _input.name
 
-            result = _input.to_frame(name=name).sort_values(
+            return _input.to_frame(name=name).sort_values(
                 by=name, ascending=ascending, na_position=na_position
             )[name]
-            return de._collection.Series(de._expr.AssignIndex(result, _input.index))
 
         return self._from_call(
             func,
@@ -697,7 +710,7 @@ class DaskExpr:
             not descending,
             na_position,
             returns_scalar=False,
-            modifies_index=False,
+            modifies_index=True,
         )
 
     # Index modifiers
@@ -720,8 +733,14 @@ class DaskExpr:
         )
 
     def tail(self: Self, n: int) -> Self:
+        def func(_input: dask_expr.Series, _n: int) -> dask_expr.Series:
+            if _input.npartitions > 1:
+                msg = "`Expr.tail` is not supported for Dask backend with multiple partitions."
+                raise NotImplementedError(msg)
+            return _input.tail(_n, compute=False)
+
         return self._from_call(
-            lambda _input, _n: _input.tail(_n, compute=False),
+            func,
             "tail",
             n,
             returns_scalar=False,

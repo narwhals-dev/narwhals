@@ -85,6 +85,58 @@ class Series:
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
+    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+        """
+        Set value(s) at given position(s).
+
+        Arguments:
+           indices: Position(s) to set items at.
+           values: Values to set.
+
+        Warning:
+            For some libraries (pandas, Polars), this method operates in-place,
+            whereas for others (PyArrow) it doesn't!
+            We recommend being careful with it, and not relying on the
+            in-placeness. For example, a valid use case is when updating
+            a column in an eager dataframe, see the example below.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(df["a"].scatter([0, 1], [999, 888]))
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                 a  b
+            0  999  4
+            1  888  5
+            2    3  6
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 999 ┆ 4   │
+            │ 888 ┆ 5   │
+            │ 3   ┆ 6   │
+            └─────┴─────┘
+        """
+        return self._from_compliant_series(
+            self._compliant_series.scatter(indices, self._extract_native(values))
+        )
+
     @property
     def shape(self) -> tuple[int]:
         """
@@ -783,12 +835,9 @@ class Series:
         """
         Drop all null values.
 
-        See Also:
-          drop_nans
-
         Notes:
-          A null value is not the same as a NaN value.
-          To drop NaN values, use :func:`drop_nans`.
+          pandas and Polars handle null values differently. Polars distinguishes
+          between NaN and Null, whereas pandas doesn't.
 
         Examples:
           >>> import pandas as pd
@@ -2006,9 +2055,8 @@ class Series:
         r"""
         Get the first `n` rows.
 
-        Arguments
-            n : int
-                Number of rows to return.
+        Arguments:
+            n: Number of rows to return.
 
         Examples:
             >>> import narwhals as nw
@@ -2047,9 +2095,8 @@ class Series:
         r"""
         Get the last `n` rows.
 
-        Arguments
-            n : int
-                Number of rows to return.
+        Arguments:
+            n: Number of rows to return.
 
         Examples:
             >>> import narwhals as nw
@@ -2087,7 +2134,7 @@ class Series:
         r"""
         Round underlying floating point data by `decimals` digits.
 
-        Arguments
+        Arguments:
             decimals: Number of decimals to round by.
 
         Notes:
@@ -2137,7 +2184,7 @@ class Series:
         r"""
         Get dummy/indicator variables.
 
-        Arguments
+        Arguments:
             separator: Separator/delimiter used when generating column names.
             drop_first: Remove the first category from the variable being encoded.
 
@@ -2280,6 +2327,44 @@ class Series:
             ]
         """
         return self._compliant_series.to_arrow()
+
+    def mode(self: Self) -> Self:
+        r"""
+        Compute the most occurring value(s).
+
+        Can return multiple values.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+
+            >>> data = [1, 1, 2, 2, 3]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.mode().sort()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            Name: a, dtype: int64
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: 'a' [i64]
+            [
+               1
+               2
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.mode())
 
     @property
     def str(self) -> SeriesStringNamespace:

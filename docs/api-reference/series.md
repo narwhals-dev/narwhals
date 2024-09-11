@@ -12,6 +12,7 @@
         - any
         - arg_true
         - cast
+        - clip
         - count
         - cum_sum
         - diff
@@ -22,7 +23,6 @@
         - gather_every
         - head
         - is_between
-        - clip
         - is_duplicated
         - is_empty
         - is_first_distinct
@@ -36,13 +36,15 @@
         - max
         - mean
         - min
+        - mode
         - name
-        - null_count
         - n_unique
+        - null_count
         - pipe
         - quantile
         - round
         - sample
+        - scatter
         - shape
         - shift
         - sort
