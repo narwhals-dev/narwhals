@@ -10,6 +10,7 @@ from typing import overload
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
@@ -172,6 +173,12 @@ class PandasLikeSeries:
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
             # `values` also getting modified (!)
             values = validate_column_comparand(self._native_series.index, values).copy()
+            values = set_axis(
+                values,
+                self._native_series.index[indices],
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
         s = self._native_series.copy()
         s.iloc[indices] = values
         s.name = self.name
