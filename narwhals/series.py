@@ -93,10 +93,12 @@ class Series:
            indices: Position(s) to set items at.
            values: Values to set.
 
-        Notes:
-            This method is in-place! We recommend being careful
-            with it. One valid use-case is when updating a column
-            on an eager dataframe.
+        Warning:
+            For some libraries (pandas, Polars), this method operates in-place,
+            whereas for others (PyArrow) it doesn't!
+            We recommend being careful with it, and not relying on the
+            in-placeness. For example, a valid use case is when updating
+            a column in an eager dataframe, see the example below.
 
         Examples:
             >>> import pandas as pd
