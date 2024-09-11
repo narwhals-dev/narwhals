@@ -33,9 +33,8 @@ from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import Unknown
-
-# from narwhals.expr import ChainedThen as NwChainedThen
-# from narwhals.expr import ChainedWhen as NwChainedWhen
+from narwhals.expr import ChainedThen as NwChainedThen
+from narwhals.expr import ChainedWhen as NwChainedWhen
 from narwhals.expr import Expr as NwExpr
 from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
@@ -490,13 +489,9 @@ def _stableify(obj: NwSeries) -> Series: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
 @overload
-def _stableify(when_then: NwWhen) -> When: ...
-# @overload
-# def _stableify(when_then: NwChainedWhen) -> ChainedWhen: ...
+def _stableify(obj: NwWhen) -> When: ...
 @overload
-def _stableify(when_then: NwThen) -> Then: ...
-# @overload
-# def _stableify(when_then: NwChainedThen) -> ChainedThen: ...
+def _stableify(obj: NwChainedWhen) -> ChainedWhen: ...
 @overload
 def _stableify(obj: Any) -> Any: ...
 
@@ -507,9 +502,9 @@ def _stableify(
     | NwSeries
     | NwExpr
     | NwWhen
-    # | NwChainedWhen
+    | NwChainedWhen
     | NwThen
-    # | NwChainedThen
+    | NwChainedThen
     | Any,
 ) -> (
     DataFrame[IntoFrameT]
@@ -517,9 +512,9 @@ def _stableify(
     | Series
     | Expr
     | When
-    # | ChainedWhen
+    | ChainedWhen
     | Then
-    # | ChainedThen
+    | ChainedThen
     | Any
 ):
     if isinstance(obj, NwDataFrame):
@@ -537,12 +532,12 @@ def _stableify(
             obj._compliant_series,
             level=obj._level,
         )
-    # elif isinstance(obj, NwChainedWhen):
-    # return ChainedWhen.from_base(obj)
+    elif isinstance(obj, NwChainedWhen):
+        return ChainedWhen.from_base(obj)
     if isinstance(obj, NwWhen):
         return When.from_when(obj)
-    # elif isinstance(obj, NwChainedThen):
-    # return ChainedThen.from_base(obj)
+    elif isinstance(obj, NwChainedThen):
+        return ChainedThen.from_base(obj)
     elif isinstance(obj, NwThen):
         return Then.from_then(obj)
     if isinstance(obj, NwExpr):
@@ -1741,6 +1736,27 @@ class Then(NwThen, Expr):
         return _stableify(super().otherwise(value))
 
 
+class ChainedWhen(NwChainedWhen):
+    @classmethod
+    def from_base(cls, chained_when: NwChainedWhen) -> Self:
+        return cls(_stableify(chained_when._above_then), *chained_when._predicates)  # type: ignore[arg-type]
+
+    def then(self, value: Any) -> ChainedThen:
+        return _stableify(super().then(value))  # type: ignore[return-value]
+
+
+class ChainedThen(NwChainedThen, Expr):
+    @classmethod
+    def from_base(cls, chained_then: NwChainedThen) -> Self:
+        return cls(chained_then._call)
+
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
+        return _stableify(super().when(*predicates))
+
+    def otherwise(self, value: Any) -> Expr:
+        return _stableify(super().otherwise(value))
+
+
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """
     Start a `when-then-otherwise` expression.
@@ -1839,27 +1855,6 @@ def new_series(
     return _stableify(
         nw.new_series(name, values, dtype, native_namespace=native_namespace)
     )
-
-
-# class ChainedWhen(NwChainedWhen):
-#     @classmethod
-#     def from_base(cls, chained_when: NwChainedWhen) -> Self:
-#         return cls(_stableify(chained_when._above_then), *chained_when._predicates)
-
-#     def then(self, value: Any) -> ChainedThen:
-#         return _stableify(super().then(value))
-
-
-# class ChainedThen(NwChainedThen, Expr):
-#     @classmethod
-#     def from_base(cls, chained_then: NwChainedThen) -> Self:
-#         return cls(chained_then._call)
-
-#     def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
-#         return _stableify(super().when(*predicates))
-
-#     def otherwise(self, value: Any) -> Expr:
-#         return _stableify(super().otherwise(value))
 
 
 def from_dict(
