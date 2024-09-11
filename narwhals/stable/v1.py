@@ -1735,6 +1735,9 @@ class Then(NwThen, Expr):
     def otherwise(self, value: Any) -> Expr:
         return _stableify(super().otherwise(value))
 
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> ChainedWhen:
+        return _stableify(super().when(*predicates))
+
 
 class ChainedWhen(NwChainedWhen):
     @classmethod
