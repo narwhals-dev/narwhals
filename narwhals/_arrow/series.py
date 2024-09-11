@@ -323,6 +323,23 @@ class ArrowSeries:
             return self._native_series[idx]
         return self._from_native_series(self._native_series[idx])
 
+    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        ca = self._native_series
+        mask = np.zeros(len(ca), dtype=bool)
+        mask[indices] = True
+        if isinstance(values, self.__class__):
+            values = validate_column_comparand(values)
+        if isinstance(values, pa.ChunkedArray):
+            values = values.combine_chunks()
+        if not isinstance(values, pa.Array):
+            values = pa.array(values)
+        result = pc.replace_with_mask(ca, mask, values.take(indices))
+        return self._from_native_series(result)
+
     def to_list(self) -> Any:
         return self._native_series.to_pylist()
 

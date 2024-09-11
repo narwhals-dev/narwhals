@@ -162,6 +162,7 @@ if (
             "value_counts",
             "zip_with",
             "item",
+            "scatter",
         }
     )
 ):

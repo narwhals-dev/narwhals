@@ -167,6 +167,14 @@ class PandasLikeSeries:
     def dtype(self) -> DType:
         return translate_dtype(self._native_series)
 
+    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+        if isinstance(values, self.__class__):
+            values = validate_column_comparand(self._native_series.index, values)
+        s = self._native_series
+        s.iloc[indices] = values
+        s.name = self.name
+        return self._from_native_series(s)
+
     def cast(
         self,
         dtype: Any,
