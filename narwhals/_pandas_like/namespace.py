@@ -86,17 +86,6 @@ class PandasLikeNamespace:
             backend_version=self._backend_version,
         )
 
-    def _create_broadcast_series_from_scalar(
-        self, value: Any, series: PandasLikeSeries
-    ) -> PandasLikeSeries:
-        return PandasLikeSeries._from_iterable(
-            [value] * len(series._native_series),
-            name=series._native_series.name,
-            index=series._native_series.index,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-        )
-
     def _create_expr_from_series(self, series: PandasLikeSeries) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda _df: [series],
