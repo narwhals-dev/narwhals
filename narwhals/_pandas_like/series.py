@@ -172,7 +172,7 @@ class PandasLikeSeries:
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
             # `values` also getting modified (!)
             values = validate_column_comparand(self._native_series.index, values).copy()
-        s = self._native_series
+        s = self._native_series.copy()
         s.iloc[indices] = values
         s.name = self.name
         return self._from_native_series(s)
