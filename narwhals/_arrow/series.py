@@ -321,6 +321,8 @@ class ArrowSeries:
     def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._native_series[idx]
+        if isinstance(idx, Sequence):
+            return self._from_native_series(self._native_series.take(idx))
         return self._from_native_series(self._native_series[idx])
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
