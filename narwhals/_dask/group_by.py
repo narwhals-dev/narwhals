@@ -72,6 +72,7 @@ class DaskLazyGroupBy:
             output_names.extend(expr._output_names)
 
         return agg_dask(
+            self._df,
             self._grouped,
             exprs,
             self._keys,
@@ -88,6 +89,7 @@ class DaskLazyGroupBy:
 
 
 def agg_dask(
+    df: DaskLazyFrame,
     grouped: Any,
     exprs: list[DaskExpr],
     keys: list[str],
@@ -99,6 +101,10 @@ def agg_dask(
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
     """
+    if not exprs:
+        # No aggregation provided
+        return df.select(*keys).unique(subset=keys)
+
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
