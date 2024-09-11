@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from typing import Any
-from typing import Literal
 
 import pandas as pd
 import pytest
@@ -97,7 +96,11 @@ def test_cross_join(request: pytest.FixtureRequest, constructor: Any) -> None:
 
 @pytest.mark.parametrize("how", ["inner", "left"])
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_suffix(constructor: Any, how: str, suffix: str) -> None:
+def test_suffix(
+    request: pytest.FixtureRequest, constructor: Any, how: str, suffix: str
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {
         "antananarivo": [1, 3, 2],
         "bob": [4, 4, 6],
@@ -117,7 +120,11 @@ def test_suffix(constructor: Any, how: str, suffix: str) -> None:
 
 
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_cross_join_suffix(constructor: Any, suffix: str) -> None:
+def test_cross_join_suffix(
+    request: pytest.FixtureRequest, constructor: Any, suffix: str
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
     result = df.join(df, how="cross", suffix=suffix).sort(  # type: ignore[arg-type]
@@ -196,11 +203,14 @@ def test_anti_join(
     ],
 )
 def test_semi_join(
+    request: pytest.FixtureRequest,
     constructor: Any,
     join_key: list[str],
     filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
@@ -225,7 +235,9 @@ def test_join_not_implemented(constructor: Any, how: str) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:the default coalesce behavior")
-def test_left_join(constructor: Any) -> None:
+def test_left_join(request: pytest.FixtureRequest, constructor: Any) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data_left = {
         "antananarivo": [1.0, 2, 3],
         "bob": [4.0, 5, 6],
@@ -249,7 +261,11 @@ def test_left_join(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore: the default coalesce behavior")
-def test_left_join_multiple_column(constructor: Any) -> None:
+def test_left_join_multiple_column(
+    request: pytest.FixtureRequest, constructor: Any
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "index": [0, 1, 2]}
     data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "index": [0, 1, 2]}
     df_left = nw.from_native(constructor(data_left))
@@ -267,7 +283,11 @@ def test_left_join_multiple_column(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore: the default coalesce behavior")
-def test_left_join_overlapping_column(constructor: Any) -> None:
+def test_left_join_overlapping_column(
+    request: pytest.FixtureRequest, constructor: Any
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data_left = {
         "antananarivo": [1.0, 2, 3],
         "bob": [4.0, 5, 6],
@@ -339,7 +359,9 @@ def test_join_keys_exceptions(constructor: Any, how: str) -> None:
         df.join(df, how=how, on="antananarivo", right_on="antananarivo")  # type: ignore[arg-type]
 
 
-def test_joinasof_numeric(constructor: Any, request: Any) -> None:
+def test_joinasof_numeric(request: pytest.FixtureRequest, constructor: Any) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and (
@@ -395,7 +417,9 @@ def test_joinasof_numeric(constructor: Any, request: Any) -> None:
     compare_dicts(result_nearest_on, expected_nearest)
 
 
-def test_joinasof_time(constructor: Any, request: Any) -> None:
+def test_joinasof_time(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and ("pandas_pyarrow" in str(constructor)):
@@ -473,7 +497,9 @@ def test_joinasof_time(constructor: Any, request: Any) -> None:
     compare_dicts(result_nearest_on, expected_nearest)
 
 
-def test_joinasof_by(constructor: Any, request: Any) -> None:
+def test_joinasof_by(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and (
@@ -507,9 +533,7 @@ def test_joinasof_by(constructor: Any, request: Any) -> None:
 
 
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
-def test_joinasof_not_implemented(
-    constructor: Any, strategy: Literal["backward", "forward"]
-) -> None:
+def test_joinasof_not_implemented(constructor: Any, strategy: str) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 

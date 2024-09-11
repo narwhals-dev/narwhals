@@ -38,9 +38,7 @@ def test_lit(
     compare_dicts(result, expected)
 
 
-def test_lit_error(request: pytest.FixtureRequest, constructor: Any) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_lit_error(constructor: Any) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()

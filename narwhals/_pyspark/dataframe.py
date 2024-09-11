@@ -84,12 +84,12 @@ class PySparkLazyFrame:
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            msg = "Filtering by a list of booleans is not supported."
-            raise ValueError(msg)
+            msg = "Filtering with boolean mask is not supported for `PySparkLazyFrame`"
+            raise NotImplementedError(msg)
         plx = PySparkNamespace()
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
-        condition = expr._call(self)[0]._native_column
+        condition = expr._call(self)[0]
         spark_df = self._native_frame.where(condition)
         return self._from_native_frame(spark_df)
 
@@ -108,10 +108,7 @@ class PySparkLazyFrame:
         *exprs: IntoPySparkExpr,
         **named_exprs: IntoPySparkExpr,
     ) -> Self:
-        new_series_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
-        new_columns_map = {
-            col_name: series.spark.column for col_name, series in new_series_map.items()
-        }
+        new_columns_map = parse_exprs_and_named_exprs(self, *exprs, **named_exprs)
         return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
@@ -119,3 +116,10 @@ class PySparkLazyFrame:
             compliant_frame=self, columns=columns, strict=strict
         )
         return self._from_native_frame(self._native_frame.drop(*columns_to_drop))
+
+    def head(self: Self, n: int) -> Self:
+        spark_session = self._native_frame.sparkSession
+
+        return self._from_native_frame(
+            spark_session.createDataFrame(self._native_frame.take(num=n))
+        )

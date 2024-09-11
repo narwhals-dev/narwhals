@@ -8,10 +8,10 @@ from narwhals._pandas_like.utils import translate_dtype
 
 if TYPE_CHECKING:
     from pyspark.pandas import Series
+    from pyspark.sql import Column
     from pyspark.sql import types as pyspark_types
 
     from narwhals._pyspark.dataframe import PySparkLazyFrame
-    from narwhals._pyspark.series import PySparkSeries
     from narwhals._pyspark.typing import IntoPySparkExpr
 
 
@@ -56,73 +56,56 @@ def translate_sql_api_dtype(dtype: pyspark_types.DataType) -> dtypes.DType:
     return dtypes.Unknown()
 
 
+def get_column_name(df: PySparkLazyFrame, column: Column) -> str:
+    return str(df._native_frame.select(column).columns[0])
+
+
 def parse_exprs_and_named_exprs(
     df: PySparkLazyFrame, *exprs: IntoPySparkExpr, **named_exprs: IntoPySparkExpr
-) -> dict[str, PySparkSeries]:
-    def _series_from_expr(expr: IntoPySparkExpr) -> list[PySparkSeries]:
+) -> dict[str, Column]:
+    def _columns_from_expr(expr: IntoPySparkExpr) -> list[Column]:
         if isinstance(expr, str):
-            from narwhals._pyspark.series import PySparkSeries
+            from pyspark.sql import functions as F  # noqa: N812
 
-            return [PySparkSeries(native_series=df._native_frame.select(expr), name=expr)]
+            return [F.col(expr)]
         elif hasattr(expr, "__narwhals_expr__"):
-            return expr._call(df)
+            col_output_list = expr._call(df)
+            if expr._output_names is not None:
+                if len(col_output_list) != len(expr._output_names):  # pragma: no cover
+                    msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+                    raise AssertionError(msg)
+                return [
+                    col.alias(name)
+                    for col, name in zip(col_output_list, expr._output_names)
+                ]
+            return col_output_list
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
 
-    result_series = {}
+    result_columns = {}
     for expr in exprs:
-        series_list = _series_from_expr(expr)
-        for series in series_list:
-            result_series[series.name] = series
+        column_list = _columns_from_expr(expr)
+        for col in column_list:
+            col_name = get_column_name(df, col)
+            result_columns[col_name] = col
 
     for col_alias, expr in named_exprs.items():
-        series_list = _series_from_expr(expr)
-        if len(series_list) != 1:  # pragma: no cover
+        columns_list = _columns_from_expr(expr)
+        if len(columns_list) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
-        result_series[col_alias] = series_list[0]
-    return result_series
+        result_columns[col_alias] = columns_list[0]
+    return result_columns
 
 
 def maybe_evaluate(df: PySparkLazyFrame, obj: Any) -> Any:
     from narwhals._pyspark.expr import PySparkExpr
 
     if isinstance(obj, PySparkExpr):
-        series_result = obj._call(df)
-        if len(series_result) != 1:  # pragma: no cover
+        column_result = obj._call(df)
+        if len(column_result) != 1:  # pragma: no cover
             msg = "Multi-output expressions not supported in this context"
             raise NotImplementedError(msg)
-        series = series_result[0]
-        if obj._returns_scalar:
-            raise NotImplementedError
-        return series
+        return column_result[0]
     return obj
-
-
-def validate_column_comparand(other: Any) -> Any:
-    """Validate RHS of binary operation.
-
-    If the comparison isn't supported, return `NotImplemented` so that the
-    "right-hand-side" operation (e.g. `__radd__`) can be tried.
-
-    If RHS is length 1, return the scalar value, so that the underlying
-    library can broadcast it.
-    """
-    from narwhals._pyspark.dataframe import PySparkLazyFrame
-    from narwhals._pyspark.series import PySparkSeries
-
-    if isinstance(other, list):
-        if len(other) > 1:
-            # e.g. `plx.all() + plx.all()`
-            msg = "Multi-output expressions are not supported in this context"
-            raise ValueError(msg)
-        other = other[0]
-    if isinstance(other, PySparkLazyFrame):
-        return NotImplemented
-    if isinstance(other, PySparkSeries):
-        if len(other) == 1:
-            # broadcast
-            return other[0]
-        return other._native_column
-    return other

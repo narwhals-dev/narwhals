@@ -20,14 +20,7 @@ from narwhals.utils import parse_version
         (["abc", "b"], ["z"]),
     ],
 )
-def test_drop(
-    request: pytest.FixtureRequest,
-    constructor: Any,
-    to_drop: list[str],
-    expected: list[str],
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_drop(constructor: Any, to_drop: list[str], expected: list[str]) -> None:
     data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     assert df.drop(to_drop).collect_schema().names() == expected
@@ -56,8 +49,6 @@ def test_drop_strict(
         and parse_version(pl.__version__) < (1, 0, 0)
         and strict
     ):
-        request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
