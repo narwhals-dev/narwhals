@@ -2003,9 +2003,8 @@ class Series:
         r"""
         Get the first `n` rows.
 
-        Arguments
-            n : int
-                Number of rows to return.
+        Arguments:
+            n: Number of rows to return.
 
         Examples:
             >>> import narwhals as nw
@@ -2044,9 +2043,8 @@ class Series:
         r"""
         Get the last `n` rows.
 
-        Arguments
-            n : int
-                Number of rows to return.
+        Arguments:
+            n: Number of rows to return.
 
         Examples:
             >>> import narwhals as nw
@@ -2084,7 +2082,7 @@ class Series:
         r"""
         Round underlying floating point data by `decimals` digits.
 
-        Arguments
+        Arguments:
             decimals: Number of decimals to round by.
 
         Notes:
@@ -2134,7 +2132,7 @@ class Series:
         r"""
         Get dummy/indicator variables.
 
-        Arguments
+        Arguments:
             separator: Separator/delimiter used when generating column names.
             drop_first: Remove the first category from the variable being encoded.
 
