@@ -111,13 +111,22 @@ class PandasLikeDataFrame:
     def __getitem__(self, item: Sequence[int]) -> PandasLikeDataFrame: ...
 
     @overload
-    def __getitem__(self, item: str) -> PandasLikeSeries: ...
+    def __getitem__(self, item: str) -> PandasLikeSeries: ...  # type: ignore[overload-overlap]
+
+    @overload
+    def __getitem__(self, item: Sequence[str]) -> PandasLikeDataFrame: ...
 
     @overload
     def __getitem__(self, item: slice) -> PandasLikeDataFrame: ...
 
     def __getitem__(
-        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+        self,
+        item: str
+        | int
+        | slice
+        | Sequence[int]
+        | Sequence[str]
+        | tuple[Sequence[int], str | int],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
@@ -174,7 +183,7 @@ class PandasLikeDataFrame:
             from narwhals._pandas_like.series import PandasLikeSeries
 
             if isinstance(item[1], str):
-                item = (item[0], self._native_frame.columns.get_loc(item[1]))
+                item = (item[0], self._native_frame.columns.get_loc(item[1]))  # type: ignore[assignment]
                 native_series = self._native_frame.iloc[item]
             elif isinstance(item[1], int):
                 native_series = self._native_frame.iloc[item]
@@ -191,6 +200,8 @@ class PandasLikeDataFrame:
         elif isinstance(item, (slice, Sequence)) or (
             is_numpy_array(item) and item.ndim == 1
         ):
+            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+                return self._from_native_frame(self._native_frame.loc[:, item])
             return self._from_native_frame(self._native_frame.iloc[item])
 
         else:  # pragma: no cover
@@ -403,12 +414,12 @@ class PandasLikeDataFrame:
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
+        suffix: str,
     ) -> Self:
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
             right_on = [right_on]
-
         if how == "cross":
             if (
                 self._implementation is Implementation.MODIN
@@ -428,7 +439,7 @@ class PandasLikeDataFrame:
                         how="inner",
                         left_on=key_token,
                         right_on=key_token,
-                        suffixes=("", "_right"),
+                        suffixes=("", suffix),
                     )
                     .drop(columns=key_token),
                 )
@@ -437,7 +448,7 @@ class PandasLikeDataFrame:
                     self._native_frame.merge(
                         other._native_frame,
                         how="cross",
-                        suffixes=("", "_right"),
+                        suffixes=("", suffix),
                     ),
                 )
 
@@ -489,14 +500,14 @@ class PandasLikeDataFrame:
                 how="left",
                 left_on=left_on,
                 right_on=right_on,
-                suffixes=("", "_right"),
+                suffixes=("", suffix),
             )
             extra = []
             for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
                 if right_key != left_key and right_key not in self.columns:
                     extra.append(right_key)
                 elif right_key != left_key:
-                    extra.append(f"{right_key}_right")
+                    extra.append(f"{right_key}{suffix}")
             return self._from_native_frame(result_native.drop(columns=extra))
 
         return self._from_native_frame(
@@ -505,6 +516,34 @@ class PandasLikeDataFrame:
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
+                suffixes=("", suffix),
+            ),
+        )
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | list[str] | None = None,
+        by_right: str | list[str] | None = None,
+        by: str | list[str] | None = None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        plx = self.__native_namespace__()
+        return self._from_native_frame(
+            plx.merge_asof(
+                self._native_frame,
+                other._native_frame,
+                left_on=left_on,
+                right_on=right_on,
+                on=on,
+                left_by=by_left,
+                right_by=by_right,
+                by=by,
+                direction=strategy,
                 suffixes=("", "_right"),
             ),
         )
@@ -562,8 +601,8 @@ class PandasLikeDataFrame:
         from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 
         if copy is None:
-            # pandas default differs from Polars
-            copy = False
+            # pandas default differs from Polars, but cuDF default is True
+            copy = self._implementation is Implementation.CUDF
 
         if dtype is not None:
             return self._native_frame.to_numpy(dtype=dtype, copy=copy)
@@ -649,8 +688,7 @@ class PandasLikeDataFrame:
 
     def to_arrow(self: Self) -> Any:
         if self._implementation is Implementation.CUDF:  # pragma: no cover
-            msg = "`to_arrow` is not implemented for CuDF backend."
-            raise NotImplementedError(msg)
+            return self._native_frame.to_arrow(preserve_index=False)
 
         import pyarrow as pa  # ignore-banned-import()
 

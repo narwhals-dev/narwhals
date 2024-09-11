@@ -70,6 +70,7 @@ def map_interchange_dtype_to_narwhals_dtype(
 class InterchangeFrame:
     def __init__(self, df: Any) -> None:
         self._native_frame = df
+        self._interchange_frame = df.__dataframe__()
 
     def __narwhals_dataframe__(self) -> Any:
         return self
@@ -77,15 +78,15 @@ class InterchangeFrame:
     def __getitem__(self, item: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
 
-        return InterchangeSeries(self._native_frame.get_column_by_name(item))
+        return InterchangeSeries(self._interchange_frame.get_column_by_name(item))
 
     @property
     def schema(self) -> dict[str, dtypes.DType]:
         return {
             column_name: map_interchange_dtype_to_narwhals_dtype(
-                self._native_frame.get_column_by_name(column_name).dtype
+                self._interchange_frame.get_column_by_name(column_name).dtype
             )
-            for column_name in self._native_frame.column_names()
+            for column_name in self._interchange_frame.column_names()
         }
 
     def __getattr__(self, attr: str) -> NoReturn:

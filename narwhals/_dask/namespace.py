@@ -4,20 +4,23 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterable
 from typing import NoReturn
 from typing import cast
 
 from narwhals import dtypes
+from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._dask.utils import reverse_translate_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
     import dask_expr
 
-    from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.typing import IntoDaskExpr
+    from narwhals.dtypes import DType
 
 
 class DaskNamespace:
@@ -69,10 +72,17 @@ class DaskNamespace:
         )
 
     def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
-        # TODO @FBruzzesi: cast to dtype once `narwhals_to_native_dtype` is implemented.
-        # It should be enough to add `.astype(narwhals_to_native_dtype(dtype))`
+        def convert_if_dtype(
+            series: dask_expr.Series, dtype: DType | type[DType]
+        ) -> dask_expr.Series:
+            return series.astype(reverse_translate_dtype(dtype)) if dtype else series
+
         return DaskExpr(
-            lambda df: [df._native_frame.assign(lit=value).loc[:, "lit"]],
+            lambda df: [
+                df._native_frame.assign(lit=value)
+                .loc[:, "lit"]
+                .pipe(convert_if_dtype, dtype)
+            ],
             depth=0,
             function_name="lit",
             root_names=None,
@@ -141,6 +151,47 @@ class DaskNamespace:
             lambda x, y: x + y,
             [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
         )
+
+    def concat(
+        self,
+        items: Iterable[DaskLazyFrame],
+        *,
+        how: str = "vertical",
+    ) -> DaskLazyFrame:
+        import dask.dataframe as dd  # ignore-banned-import
+
+        if len(list(items)) == 0:
+            msg = "No items to concatenate"  # pragma: no cover
+            raise AssertionError(msg)
+        native_frames = [i._native_frame for i in items]
+        if how == "vertical":
+            if not all(
+                tuple(i.columns) == tuple(native_frames[0].columns) for i in native_frames
+            ):  # pragma: no cover
+                msg = "unable to vstack with non-matching columns"
+                raise AssertionError(msg)
+            return DaskLazyFrame(
+                dd.concat(native_frames, axis=0, join="inner"),
+                backend_version=self._backend_version,
+            )
+        if how == "horizontal":
+            all_column_names: list[str] = [
+                column for frame in native_frames for column in frame.columns
+            ]
+            if len(all_column_names) != len(set(all_column_names)):  # pragma: no cover
+                duplicates = [
+                    i for i in all_column_names if all_column_names.count(i) > 1
+                ]
+                msg = (
+                    f"Columns with name(s): {', '.join(duplicates)} "
+                    "have more than one occurrence"
+                )
+                raise AssertionError(msg)
+            return DaskLazyFrame(
+                dd.concat(native_frames, axis=1, join="outer"),
+                backend_version=self._backend_version,
+            )
+        raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> IntoDaskExpr:
         dask_exprs = parse_into_exprs(*exprs, namespace=self)

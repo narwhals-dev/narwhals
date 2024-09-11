@@ -10,6 +10,9 @@ from narwhals.utils import parse_version
 @pytest.mark.skipif(
     parse_version(pl.__version__) < (1, 3), reason="too old for pycapsule in Polars"
 )
+@pytest.mark.skipif(
+    parse_version(pa.__version__) < (16, 0, 0), reason="too old for pycapsule in PyArrow"
+)
 def test_arrow_c_stream_test() -> None:
     df = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)
     result = pa.table(df)
@@ -19,6 +22,9 @@ def test_arrow_c_stream_test() -> None:
 
 @pytest.mark.skipif(
     parse_version(pl.__version__) < (1, 3), reason="too old for pycapsule in Polars"
+)
+@pytest.mark.skipif(
+    parse_version(pa.__version__) < (16, 0, 0), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     # "poison" the dunder method to make sure it actually got called above
@@ -32,6 +38,9 @@ def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.skipif(
     parse_version(pl.__version__) < (1, 3), reason="too old for pycapsule in Polars"
+)
+@pytest.mark.skipif(
+    parse_version(pa.__version__) < (16, 0, 0), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     # Check that fallback to PyArrow works

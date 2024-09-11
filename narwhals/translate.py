@@ -18,6 +18,8 @@ from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_dask_dataframe
+from narwhals.dependencies import is_duckdb_relation
+from narwhals.dependencies import is_ibis_table
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -107,26 +109,50 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | T,
+    native_object: IntoDataFrameT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT] | T: ...
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | T,
+    native_object: T,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    eager_or_interchange_only: Literal[True],
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> T: ...
+
+
+@overload
+def from_native(
+    native_object: IntoDataFrameT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT] | T: ...
+) -> DataFrame[IntoDataFrameT]: ...
+
+
+@overload
+def from_native(
+    native_object: T,
+    *,
+    strict: Literal[False],
+    eager_only: Literal[True],
+    eager_or_interchange_only: None = ...,
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> T: ...
 
 
 @overload
@@ -155,14 +181,26 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | T,
+    native_object: IntoFrameT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | T: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+
+
+@overload
+def from_native(
+    native_object: T,
+    *,
+    strict: Literal[False],
+    eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
+    series_only: None = ...,
+    allow_series: None = ...,
+) -> T: ...
 
 
 @overload
@@ -176,8 +214,8 @@ def from_native(
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_or_interchange_only=True, allow_series=True)
-    from_native(df, eager_or_interchange_only=True, allow_series=True)
+    from_native(df, strict=True, eager_or_interchange_only=True)
+    from_native(df, eager_or_interchange_only=True)
     """
 
 
@@ -192,8 +230,8 @@ def from_native(
     allow_series: None = ...,
 ) -> DataFrame[IntoDataFrameT]:
     """
-    from_native(df, strict=True, eager_only=True, allow_series=True)
-    from_native(df, eager_only=True, allow_series=True)
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
     """
 
 
@@ -208,8 +246,8 @@ def from_native(
     allow_series: Literal[True],
 ) -> DataFrame[Any] | LazyFrame[Any] | Series:
     """
-    from_native(df, strict=True, eager_only=True)
-    from_native(df, eager_only=True)
+    from_native(df, strict=True, allow_series=True)
+    from_native(df, allow_series=True)
     """
 
 
@@ -295,6 +333,8 @@ def from_native(  # noqa: PLR0915
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._duckdb.dataframe import DuckDBInterchangeFrame
+    from narwhals._ibis.dataframe import IbisInterchangeFrame
     from narwhals._interchange.dataframe import InterchangeFrame
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -510,6 +550,32 @@ def from_native(  # noqa: PLR0915
             level="full",
         )
 
+    # DuckDB
+    elif is_duckdb_relation(native_object):
+        if eager_only or series_only:  # pragma: no cover
+            msg = (
+                "Cannot only use `series_only=True` or `eager_only=False` "
+                "with DuckDB Relation"
+            )
+            raise TypeError(msg)
+        return DataFrame(
+            DuckDBInterchangeFrame(native_object),
+            level="interchange",
+        )
+
+    # Ibis
+    elif is_ibis_table(native_object):  # pragma: no cover
+        if eager_only or series_only:
+            msg = (
+                "Cannot only use `series_only=True` or `eager_only=False` "
+                "with Ibis table"
+            )
+            raise TypeError(msg)
+        return DataFrame(
+            IbisInterchangeFrame(native_object),
+            level="interchange",
+        )
+
     # Interchange protocol
     elif hasattr(native_object, "__dataframe__"):
         if eager_only or series_only:
@@ -519,7 +585,7 @@ def from_native(  # noqa: PLR0915
             )
             raise TypeError(msg)
         return DataFrame(
-            InterchangeFrame(native_object.__dataframe__()),
+            InterchangeFrame(native_object),
             level="interchange",
         )
 

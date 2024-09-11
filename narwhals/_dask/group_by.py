@@ -10,12 +10,33 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals.utils import remove_prefix
 
 if TYPE_CHECKING:
+    import dask.dataframe as dd
+    import pandas as pd
+
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.typing import IntoDaskExpr
 
-POLARS_TO_PANDAS_AGGREGATIONS = {
+
+def n_unique() -> dd.Aggregation:
+    import dask.dataframe as dd  # ignore-banned-import
+
+    def chunk(s: pd.core.groupby.generic.SeriesGroupBy) -> int:
+        return s.nunique(dropna=False)  # type: ignore[no-any-return]
+
+    def agg(s0: pd.core.groupby.generic.SeriesGroupBy) -> int:
+        return s0.sum()  # type: ignore[no-any-return]
+
+    return dd.Aggregation(
+        name="nunique",
+        chunk=chunk,
+        agg=agg,
+    )
+
+
+POLARS_TO_DASK_AGGREGATIONS = {
     "len": "size",
+    "n_unique": n_unique,
 }
 
 
@@ -51,6 +72,7 @@ class DaskLazyGroupBy:
             output_names.extend(expr._output_names)
 
         return agg_dask(
+            self._df,
             self._grouped,
             exprs,
             self._keys,
@@ -67,6 +89,7 @@ class DaskLazyGroupBy:
 
 
 def agg_dask(
+    df: DaskLazyFrame,
     grouped: Any,
     exprs: list[DaskExpr],
     keys: list[str],
@@ -78,6 +101,10 @@ def agg_dask(
     - https://github.com/rapidsai/cudf/issues/15118
     - https://github.com/rapidsai/cudf/issues/15084
     """
+    if not exprs:
+        # No aggregation provided
+        return df.select(*keys).unique(subset=keys)
+
     all_simple_aggs = True
     for expr in exprs:
         if not is_simple_aggregation(expr):
@@ -85,7 +112,7 @@ def agg_dask(
             break
 
     if all_simple_aggs:
-        simple_aggregations: dict[str, tuple[str, str]] = {}
+        simple_aggregations: dict[str, tuple[str, str | dd.Aggregation]] = {}
         for expr in exprs:
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
@@ -93,7 +120,7 @@ def agg_dask(
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                     raise AssertionError(msg)
 
-                function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
+                function_name = POLARS_TO_DASK_AGGREGATIONS.get(
                     expr._function_name, expr._function_name
                 )
                 for output_name in expr._output_names:
@@ -108,9 +135,11 @@ def agg_dask(
                 raise AssertionError(msg)
 
             function_name = remove_prefix(expr._function_name, "col->")
-            function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
-                function_name, function_name
-            )
+            function_name = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)
+
+            # deal with n_unique case in a "lazy" mode to not depend on dask globally
+            function_name = function_name() if callable(function_name) else function_name
+
             for root_name, output_name in zip(expr._root_names, expr._output_names):
                 simple_aggregations[output_name] = (root_name, function_name)
         try:

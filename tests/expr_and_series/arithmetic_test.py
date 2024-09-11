@@ -149,7 +149,7 @@ def test_truediv_same_dims(constructor_eager: Any, request: Any) -> None:
     compare_dicts({"a": result}, {"a": [2, 1, 1 / 3]})
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 @given(  # type: ignore[misc]
     left=st.integers(-100, 100),
     right=st.integers(-100, 100),
@@ -189,7 +189,7 @@ def test_floordiv(left: int, right: int) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 @given(  # type: ignore[misc]
     left=st.integers(-100, 100),
     right=st.integers(-100, 100),

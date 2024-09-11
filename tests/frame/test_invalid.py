@@ -24,7 +24,7 @@ def test_validate_laziness() -> None:
         NotImplementedError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
-        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])
+        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]
 
 
 @pytest.mark.skipif(

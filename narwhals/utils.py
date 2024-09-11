@@ -153,7 +153,7 @@ def validate_laziness(items: Iterable[Any]) -> None:
 
 def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
     """
-    Align `lhs` to the Index of `rhs, if they're both pandas-like.
+    Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,

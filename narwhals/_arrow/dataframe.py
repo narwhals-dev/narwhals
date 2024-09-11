@@ -21,6 +21,7 @@ from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     import numpy as np
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 class ArrowDataFrame:
     # --- not in the spec ---
     def __init__(
-        self, native_dataframe: Any, *, backend_version: tuple[int, ...]
+        self, native_dataframe: pa.Table, *, backend_version: tuple[int, ...]
     ) -> None:
         self._native_frame = native_dataframe
         self._implementation = Implementation.PYARROW
@@ -120,7 +121,12 @@ class ArrowDataFrame:
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
     def __getitem__(
-        self, item: str | slice | Sequence[int] | tuple[Sequence[int], str | int]
+        self,
+        item: str
+        | slice
+        | Sequence[int]
+        | Sequence[str]
+        | tuple[Sequence[int], str | int],
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
@@ -135,9 +141,12 @@ class ArrowDataFrame:
             and len(item) == 2
             and isinstance(item[1], (list, tuple))
         ):
-            return self._from_native_frame(
-                self._native_frame.take(item[0]).select(item[1])
-            )
+            if item[0] == slice(None):
+                selected_rows = self._native_frame
+            else:
+                selected_rows = self._native_frame.take(item[0])
+
+            return self._from_native_frame(selected_rows.select(item[1]))
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], slice):
@@ -187,6 +196,8 @@ class ArrowDataFrame:
             )
 
         elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
+            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+                return self._from_native_frame(self._native_frame.select(item))
             return self._from_native_frame(self._native_frame.take(item))
 
         else:  # pragma: no cover
@@ -273,12 +284,8 @@ class ArrowDataFrame:
         how: Literal["left", "inner", "outer", "cross", "anti", "semi"] = "inner",
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
+        suffix: str,
     ) -> Self:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
-
         how_to_join_map = {
             "anti": "left anti",
             "semi": "left semi",
@@ -299,7 +306,7 @@ class ArrowDataFrame:
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
-                    right_suffix="_right",
+                    right_suffix=suffix,
                 )
                 .drop([key_token]),
             )
@@ -310,9 +317,24 @@ class ArrowDataFrame:
                 keys=left_on,
                 right_keys=right_on,
                 join_type=how_to_join_map[how],
-                right_suffix="_right",
+                right_suffix=suffix,
             ),
         )
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str | None = None,
+        right_on: str | None = None,
+        on: str | None = None,
+        by_left: str | list[str] | None = None,
+        by_right: str | list[str] | None = None,
+        by: str | list[str] | None = None,
+        strategy: Literal["backward", "forward", "nearest"] = "backward",
+    ) -> Self:
+        msg = "join_asof is not yet supported on PyArrow tables"
+        raise NotImplementedError(msg)
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         to_drop = parse_columns_to_drop(

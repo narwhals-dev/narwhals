@@ -18,15 +18,21 @@ from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
 
 
 class ArrowSeries:
     def __init__(
-        self, native_series: Any, *, name: str, backend_version: tuple[int, ...]
+        self,
+        native_series: pa.ChunkedArray,
+        *,
+        name: str,
+        backend_version: tuple[int, ...],
     ) -> None:
         self._name = name
         self._native_series = native_series
@@ -59,6 +65,11 @@ class ArrowSeries:
             name=name,
             backend_version=backend_version,
         )
+
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(backend_version=self._backend_version)
 
     def __len__(self) -> int:
         return len(self._native_series)
@@ -310,7 +321,26 @@ class ArrowSeries:
     def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._native_series[idx]
+        if isinstance(idx, Sequence):
+            return self._from_native_series(self._native_series.take(idx))
         return self._from_native_series(self._native_series[idx])
+
+    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
+        import numpy as np  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        ca = self._native_series
+        mask = np.zeros(len(ca), dtype=bool)
+        mask[indices] = True
+        if isinstance(values, self.__class__):
+            values = validate_column_comparand(values)
+        if isinstance(values, pa.ChunkedArray):
+            values = values.combine_chunks()
+        if not isinstance(values, pa.Array):
+            values = pa.array(values)
+        result = pc.replace_with_mask(ca, mask, values.take(indices))
+        return self._from_native_series(result)
 
     def to_list(self) -> Any:
         return self._native_series.to_pylist()
@@ -366,7 +396,9 @@ class ArrowSeries:
 
         return pc.all(self._native_series)  # type: ignore[no-any-return]
 
-    def is_between(self, lower_bound: Any, upper_bound: Any, closed: str = "both") -> Any:
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: str = "both"
+    ) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series
@@ -657,8 +689,15 @@ class ArrowSeries:
 
         return self._from_native_series(arr)
 
-    def to_arrow(self: Self) -> Any:
+    def to_arrow(self: Self) -> pa.Array:
         return self._native_series.combine_chunks()
+
+    def mode(self: Self) -> ArrowSeries:
+        plx = self.__narwhals_namespace__()
+        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        return self.value_counts(name=col_token, normalize=False).filter(
+            plx.col(col_token) == plx.col(col_token).max()
+        )[self.name]
 
     @property
     def shape(self) -> tuple[int]:

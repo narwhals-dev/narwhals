@@ -31,7 +31,7 @@ from tests.utils import is_windows
     ),
     how=st.sampled_from(["horizontal", "vertical"]),
 )  # type: ignore[misc]
-@pytest.mark.slow()
+@pytest.mark.slow
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_concat(  # pragma: no cover
     integers: list[int],
