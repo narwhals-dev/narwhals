@@ -200,7 +200,7 @@ def test_multi_chained_when(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_multi_chained_when_otherewise(request: Any, constructor: Any) -> None:
+def test_multi_chained_when_otherwise(request: Any, constructor: Any) -> None:
     if "dask" in str(constructor) or "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
