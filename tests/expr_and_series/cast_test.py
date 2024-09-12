@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from typing import Any
 
 import pandas as pd
@@ -6,6 +11,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import compare_dicts
 
 data = {
     "a": [1],
@@ -179,3 +185,27 @@ def test_cast_raises_for_unknown_dtype(constructor: Any, request: Any) -> None:
 
     with pytest.raises(AssertionError, match=r"Unknown dtype"):
         df.select(nw.col("a").cast(Banana))
+
+
+def test_cast_datetime_tz_aware(constructor: Any, request: Any) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {
+        "date": [
+            datetime(2024, 1, 1, tzinfo=timezone.utc) + timedelta(days=i)
+            for i in range(3)
+        ]
+    }
+    expected = {
+        "date": ["2024-01-01 01:00:00", "2024-01-02 01:00:00", "2024-01-03 01:00:00"]
+    }
+
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("date")
+        .cast(nw.Datetime("ms", time_zone="Europe/Rome"))
+        .cast(nw.String())
+        .str.slice(offset=0, length=19)
+    )
+    compare_dicts(result, expected)

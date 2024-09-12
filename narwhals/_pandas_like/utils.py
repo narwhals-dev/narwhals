@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import TypeVar
 
 from narwhals.dependencies import get_cudf
@@ -221,6 +223,12 @@ def translate_dtype(column: Any) -> DType:
     from narwhals import dtypes
 
     dtype = column.dtype
+
+    pd_datetime_rgx = (
+        r"^datetime64\[(?P<time_unit>ms|us|ns)(?:, (?P<time_zone>[a-zA-Z\/]+))?\]$"
+    )
+    pa_datetime_rgx = r"^timestamp\[(?P<time_unit>ms|us|ns)(?:, tz=(?P<time_zone>[a-zA-Z\/]+))?\]\[pyarrow\]$"
+
     if str(dtype) in ("int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"):
         return dtypes.Int64()
     if str(dtype) in ("int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"):
@@ -264,16 +272,15 @@ def translate_dtype(column: Any) -> DType:
         return dtypes.Boolean()
     if str(dtype) in ("category",) or str(dtype).startswith("dictionary<"):
         return dtypes.Categorical()
-    if str(dtype).startswith("datetime64"):
-        # TODO(Unassigned): different time units and time zones
-        return dtypes.Datetime()
+    if (match_ := re.match(pd_datetime_rgx, str(dtype))) or (
+        match_ := re.match(pa_datetime_rgx, str(dtype))
+    ):
+        time_unit: Literal["us", "ns", "ms"] = match_.group("time_unit")  # type: ignore[assignment]
+        time_zone: str | None = match_.group("time_zone")
+        return dtypes.Datetime(time_unit, time_zone)
     if str(dtype).startswith("timedelta64") or str(dtype).startswith("duration"):
         # TODO(Unassigned): different time units
         return dtypes.Duration()
-    if str(dtype).startswith("timestamp["):
-        # pyarrow-backed datetime
-        # TODO(Unassigned): different time units and time zones
-        return dtypes.Datetime()
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
     if str(dtype) == "object":
@@ -425,10 +432,16 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         # convert to it?
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # TODO(Unassigned): different time units and time zones
+        time_unit = getattr(dtype, "time_unit", "us")
+        time_zone = getattr(dtype, "time_zone", None)
+
         if dtype_backend == "pyarrow-nullable":
-            return "timestamp[ns][pyarrow]"
-        return "datetime64[ns]"
+            tz_part = f", tz={time_zone}" if time_zone else ""
+            return f"timestamp[{time_unit}{tz_part}][pyarrow]"
+        else:
+            tz_part = f", {time_zone}" if time_zone else ""
+            return f"datetime64[{time_unit}{tz_part}]"
+
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         # TODO(Unassigned): different time units and time zones
         if dtype_backend == "pyarrow-nullable":

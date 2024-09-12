@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import timezone
 from typing import TYPE_CHECKING
+from typing import Literal
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -71,7 +73,39 @@ class Object(DType): ...
 class Unknown(DType): ...
 
 
-class Datetime(TemporalType): ...
+class Datetime(TemporalType):
+    """
+    Data type representing a calendar date and time of day.
+
+    Arguments:
+        time_unit: Unit of time. Defaults to `'us'` (microseconds).
+        time_zone: Time zone string, as defined in zoneinfo (to see valid strings run
+            `import zoneinfo; zoneinfo.available_timezones()` for a full list).
+            When used to match dtypes, can set this to "*" to check for Datetime
+            columns that have any (non-null) timezone.
+
+    Notes:
+        Adapted from Polars implementation at:
+        https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457
+    """
+
+    def __init__(
+        self: Self,
+        time_unit: Literal["us", "ns", "ms"] = "us",
+        time_zone: str | timezone | None = None,
+    ) -> None:
+        if time_unit not in {"ms", "us", "ns"}:
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns','us','ms'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+
+        if isinstance(time_zone, timezone):
+            time_zone = str(time_zone)
+
+        self.time_unit = time_unit
+        self.time_zone = time_zone
 
 
 class Duration(TemporalType): ...
