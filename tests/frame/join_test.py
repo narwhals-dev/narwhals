@@ -353,7 +353,7 @@ def test_join_keys_exceptions(constructor: Any, how: str) -> None:
 
 
 def test_joinasof_numeric(constructor: Any, request: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -409,7 +409,7 @@ def test_joinasof_numeric(constructor: Any, request: Any) -> None:
 
 
 def test_joinasof_time(constructor: Any, request: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -487,7 +487,7 @@ def test_joinasof_time(constructor: Any, request: Any) -> None:
 
 
 def test_joinasof_by(constructor: Any, request: Any) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
