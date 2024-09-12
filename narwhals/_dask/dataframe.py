@@ -254,13 +254,20 @@ class DaskLazyFrame:
             )
 
         if how == "semi":
-            other_native = (
-                other._native_frame.loc[:, right_on]
-                .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+            if isinstance(left_on, str) and isinstance(right_on, str):
+                other_native = (
+                    other._native_frame.loc[:, right_on]
+                    .to_frame(name=left_on)
+                    .drop_duplicates()  # avoids potential rows duplication from inner join
                 )
-                .drop_duplicates()  # avoids potential rows duplication from inner join
-            )
+            else:
+                other_native = (
+                    other._native_frame.loc[:, right_on]
+                    .rename(  # rename to avoid creating extra columns in join
+                        columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                    )
+                    .drop_duplicates()  # avoids potential rows duplication from inner join
+                )
             return self._from_native_frame(
                 self._native_frame.merge(
                     other_native,
