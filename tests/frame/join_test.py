@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from typing import Any
+from typing import Literal
 
 import pandas as pd
 import pytest
@@ -533,7 +534,9 @@ def test_joinasof_by(constructor: Any, request: pytest.FixtureRequest) -> None:
 
 
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
-def test_joinasof_not_implemented(constructor: Any, strategy: str) -> None:
+def test_joinasof_not_implemented(
+    constructor: Any, strategy: Literal["backward", "forward"]
+) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zorro": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 
