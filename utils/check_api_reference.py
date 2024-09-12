@@ -9,15 +9,30 @@ from narwhals.utils import remove_suffix
 
 ret = 0
 
+NAMESPACES = {"dt", "str", "cat", "name"}
+EXPR_ONLY_METHODS = {"over"}
+SERIES_ONLY_METHODS = {
+    "to_arrow",
+    "to_dummies",
+    "to_pandas",
+    "to_list",
+    "to_numpy",
+    "dtype",
+    "name",
+    "shape",
+    "to_frame",
+    "is_empty",
+    "is_sorted",
+    "value_counts",
+    "zip_with",
+    "item",
+    "scatter",
+}
+
 # TODO(Unassigned): make dtypes reference page as well
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions = [
-    i
-    for i in nw.__dir__()
-    if not i[0].isupper()
-    and i[0] != "_"
-    and i not in files
-    and i not in {"annotations", "DataFrame", "LazyFrame", "Series"}
+    i for i in nw.__dir__() if not i[0].isupper() and i[0] != "_" and i not in files
 ]
 with open("docs/api-reference/narwhals.md") as fd:
     content = fd.read()
@@ -89,11 +104,7 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ") and not i.startswith("        - _")
 ]
-if (
-    missing := set(top_level_functions)
-    .difference(documented)
-    .difference({"dt", "str", "cat", "name"})
-):
+if missing := set(top_level_functions).difference(documented).difference(NAMESPACES):
     print("Series: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
@@ -112,11 +123,7 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if (
-    missing := set(top_level_functions)
-    .difference(documented)
-    .difference({"cat", "str", "dt", "name"})
-):
+if missing := set(top_level_functions).difference(documented).difference(NAMESPACES):
     print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
@@ -139,33 +146,11 @@ series = [
     if not i[0].isupper() and i[0] != "_"
 ]
 
-if missing := set(expr).difference(series).difference({"over"}):
+if missing := set(expr).difference(series).difference(EXPR_ONLY_METHODS):
     print("In expr but not in series")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if (
-    extra := set(series)
-    .difference(expr)
-    .difference(
-        {
-            "to_arrow",
-            "to_dummies",
-            "to_pandas",
-            "to_list",
-            "to_numpy",
-            "dtype",
-            "name",
-            "shape",
-            "to_frame",
-            "is_empty",
-            "is_sorted",
-            "value_counts",
-            "zip_with",
-            "item",
-            "scatter",
-        }
-    )
-):
+if extra := set(series).difference(expr).difference(SERIES_ONLY_METHODS):
     print("in series but not in expr")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
