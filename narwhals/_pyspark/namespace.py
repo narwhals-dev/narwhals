@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
 
     from narwhals._pyspark.dataframe import PySparkLazyFrame
+    from narwhals._pyspark.group_by import PySparkLazyGroupBy
     from narwhals._pyspark.typing import IntoPySparkExpr
 
 
@@ -80,3 +81,8 @@ class PySparkNamespace:
 
     def col(self, *column_names: str) -> PySparkExpr:
         return PySparkExpr.from_column_names(*column_names)
+
+    def group_by(self, *by: str) -> PySparkLazyGroupBy:
+        from narwhals._pyspark.group_by import PySparkLazyGroupBy
+
+        return PySparkLazyGroupBy(self, list(by))

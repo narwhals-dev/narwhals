@@ -5,6 +5,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Callable
 
+from narwhals._pyspark.utils import get_column_name
 from narwhals._pyspark.utils import maybe_evaluate
 
 if TYPE_CHECKING:
@@ -68,7 +69,9 @@ class PySparkExpr:
             _args = [maybe_evaluate(df, arg) for arg in args]
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
-                column_result = call(_input, *_args, **_kwargs)
+                # For safety, _from_call should not change the name of the column
+                input_col_name = get_column_name(df, _input)
+                column_result = call(_input, *_args, **_kwargs).alias(input_col_name)
                 results.append(column_result)
             return results
 
@@ -134,6 +137,38 @@ class PySparkExpr:
             lambda _input, other: _input.__rmul__(other), "__rmul__", other
         )
 
+    def __truediv__(self, other: PySparkExpr) -> Self:
+        return self._from_call(operator.truediv, "__truediv__", other)
+
+    def __rtruediv__(self, other: PySparkExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rtruediv__(other), "__rtruediv__", other
+        )
+
+    def __floordiv__(self, other: PySparkExpr) -> Self:
+        return self._from_call(operator.floordiv, "__floordiv__", other)
+
+    def __rfloordiv__(self, other: PySparkExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rfloordiv__(other), "__rfloordiv__", other
+        )
+
+    def __mod__(self, other: PySparkExpr) -> Self:
+        return self._from_call(operator.mod, "__mod__", other)
+
+    def __rmod__(self, other: PySparkExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rmod__(other), "__rmod__", other
+        )
+
+    def __pow__(self, other: PySparkExpr) -> Self:
+        return self._from_call(operator.pow, "__pow__", other)
+
+    def __rpow__(self, other: PySparkExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rpow__(other), "__rpow__", other
+        )
+
     def __lt__(self, other: PySparkExpr) -> Self:
         return self._from_call(operator.lt, "__lt__", other)
 
@@ -141,27 +176,63 @@ class PySparkExpr:
         return self._from_call(operator.gt, "__gt__", other)
 
     def alias(self, name: str) -> Self:
-        def func(df: PySparkLazyFrame) -> list[Column]:
+        def _alias(df: PySparkLazyFrame) -> list[Column]:
             return [col.alias(name) for col in self._call(df)]
 
         # Define this one manually, so that we can
         # override `output_names` and not increase depth
         return self.__class__(
-            func,
+            _alias,
             depth=self._depth,
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=[name],
         )
 
+    def count(self) -> Self:
+        def _count(_input: Column) -> Column:
+            from pyspark.sql import functions as F
+            from pyspark.sql.window import Window
+
+            return F.count(_input).over(Window.partitionBy())
+
+        return self._from_call(_count, "count")
+
+    def len(self) -> Self:
+        def _len(_input: Column) -> Column:
+            from pyspark.sql import functions as F
+            from pyspark.sql.window import Window
+
+            return F.size(_input).over(Window.partitionBy())
+
+        return self._from_call(_len, "len")
+
+    def max(self) -> Self:
+        def _max(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+            from pyspark.sql.window import Window
+
+            return F.max(_input).over(Window.partitionBy())
+
+        return self._from_call(_max, "max")
+
     def mean(self) -> Self:
-        def mean(_input: Column) -> Column:
+        def _mean(_input: Column) -> Column:
             from pyspark.sql import functions as F  # noqa: N812
             from pyspark.sql.window import Window
 
             return F.mean(_input).over(Window.partitionBy())
 
-        return self._from_call(mean, "mean")
+        return self._from_call(_mean, "mean")
+
+    def min(self) -> Self:
+        def _min(_input: Column) -> Column:
+            from pyspark.sql import functions as F  # noqa: N812
+            from pyspark.sql.window import Window
+
+            return F.min(_input).over(Window.partitionBy())
+
+        return self._from_call(_min, "min")
 
     def std(self, ddof: int = 1) -> Self:
         def std(_input: Column) -> Column:

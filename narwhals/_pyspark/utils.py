@@ -4,19 +4,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
-from narwhals._pandas_like.utils import translate_dtype
 
 if TYPE_CHECKING:
-    from pyspark.pandas import Series
     from pyspark.sql import Column
     from pyspark.sql import types as pyspark_types
 
     from narwhals._pyspark.dataframe import PySparkLazyFrame
     from narwhals._pyspark.typing import IntoPySparkExpr
-
-
-def translate_pandas_api_dtype(series: Series) -> dtypes.DType:
-    return translate_dtype(series)
 
 
 def translate_sql_api_dtype(dtype: pyspark_types.DataType) -> dtypes.DType:
@@ -70,15 +64,12 @@ def parse_exprs_and_named_exprs(
             return [F.col(expr)]
         elif hasattr(expr, "__narwhals_expr__"):
             col_output_list = expr._call(df)
-            if expr._output_names is not None:
-                if len(col_output_list) != len(expr._output_names):  # pragma: no cover
-                    msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-                    raise AssertionError(msg)
-                return [
-                    col.alias(name)
-                    for col, name in zip(col_output_list, expr._output_names)
-                ]
-            return col_output_list
+            if expr._output_names is not None and (
+                len(col_output_list) != len(expr._output_names)
+            ):  # pragma: no cover
+                msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+                raise AssertionError(msg)
+            return expr._call(df)
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)

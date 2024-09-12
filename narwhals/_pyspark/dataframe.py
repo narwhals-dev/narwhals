@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import Sequence
 
 from narwhals._pyspark.utils import parse_exprs_and_named_exprs
 from narwhals._pyspark.utils import translate_sql_api_dtype
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.utils import Implementation
+from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
@@ -16,6 +19,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pyspark.expr import PySparkExpr
+    from narwhals._pyspark.group_by import PySparkLazyGroupBy
     from narwhals._pyspark.namespace import PySparkNamespace
     from narwhals._pyspark.typing import IntoPySparkExpr
     from narwhals.dtypes import DType
@@ -123,3 +127,22 @@ class PySparkLazyFrame:
         return self._from_native_frame(
             spark_session.createDataFrame(self._native_frame.take(num=n))
         )
+
+    def group_by(self: Self, *by: str) -> PySparkLazyGroupBy:
+        from narwhals._pyspark.group_by import PySparkLazyGroupBy
+
+        return PySparkLazyGroupBy(df=self, keys=list(by))
+
+    def sort(
+        self: Self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Sequence[bool] = False,
+    ) -> Self:
+        flat_by = flatten([*flatten([by]), *more_by])
+        if isinstance(descending, bool):
+            ascending: bool | list[bool] = not descending
+        else:
+            ascending = [not d for d in descending]
+        sorted_df = self._native_frame.sort(*flat_by, ascending=ascending)
+        return self._from_native_frame(sorted_df)
