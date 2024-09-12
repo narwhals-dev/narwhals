@@ -3851,34 +3851,35 @@ class LazyFrame(BaseFrame[FrameT]):
         r"""
         Create a copy of this DataFrame.
 
-        >>> import narwhals as nw
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> data = {"a": [1, 2], "b": [3, 4]}
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.LazyFrame(data)
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2], "b": [3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
 
-        Let's define a dataframe-agnostic function in which we copy the DataFrame:
+            Let's define a dataframe-agnostic function in which we copy the DataFrame:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.clone()
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.clone()
 
-        >>> func(df_pd)
-           a  b
-        0  1  3
-        1  2  4
+            >>> func(df_pd)
+            a  b
+            0  1  3
+            1  2  4
 
-        >>> func(df_pl).collect()
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
+            >>> func(df_pl).collect()
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            │ 2   ┆ 4   │
+            └─────┴─────┘
         """
         return super().clone()
 
