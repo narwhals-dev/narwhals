@@ -1932,25 +1932,23 @@ class Expr:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col("a", "b").mode()).sort("a", "b")
+            ...     return df.select(nw.col("a").mode()).sort("a")
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-               a  b
-            0  1  1
-            1  1  2
+               a
+            0  1
 
             >>> func(df_pl)
-            shape: (2, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 1   │
-            │ 1   ┆ 2   │
-            └─────┴─────┘
+            shape: (1, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            └─────┘
         """
         return self.__class__(lambda plx: self._call(plx).mode())
 
