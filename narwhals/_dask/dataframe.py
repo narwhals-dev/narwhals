@@ -213,6 +213,10 @@ class DaskLazyFrame:
         right_on: str | list[str] | None,
         suffix: str,
     ) -> Self:
+        if isinstance(left_on, str):
+            left_on = [left_on]
+        if isinstance(right_on, str):
+            right_on = [right_on]
         if how == "cross":
             key_token = generate_unique_token(
                 n_bytes=8, columns=[*self.columns, *other.columns]
@@ -254,20 +258,13 @@ class DaskLazyFrame:
             )
 
         if how == "semi":
-            if isinstance(left_on, str) and isinstance(right_on, str):
-                other_native = (
-                    other._native_frame.loc[:, right_on]
-                    .to_frame(name=left_on)
-                    .drop_duplicates()  # avoids potential rows duplication from inner join
+            other_native = (
+                other._native_frame.loc[:, right_on]
+                .rename(  # rename to avoid creating extra columns in join
+                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
-            else:
-                other_native = (
-                    other._native_frame.loc[:, right_on]
-                    .rename(  # rename to avoid creating extra columns in join
-                        columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
-                    )
-                    .drop_duplicates()  # avoids potential rows duplication from inner join
-                )
+                .drop_duplicates()  # avoids potential rows duplication from inner join
+            )
             return self._from_native_frame(
                 self._native_frame.merge(
                     other_native,
@@ -287,9 +284,6 @@ class DaskLazyFrame:
                 suffixes=("", suffix),
             )
             extra = []
-            if isinstance(left_on, str) and isinstance(right_on, str):
-                left_on = [left_on]
-                right_on = [right_on]
             for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
                 if right_key != left_key and right_key not in self.columns:
                     extra.append(right_key)
