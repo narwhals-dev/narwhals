@@ -120,7 +120,7 @@ jobs:
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-        run: kaggle kernels output marcogorelli/polars-nightly
+        run: kaggle kernels output marcogorelli/variable-brink-glacier
       - name: install-polars-nightly
         run: python -m pip install *.whl
       - name: show-deps
