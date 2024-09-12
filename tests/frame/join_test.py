@@ -170,6 +170,11 @@ def test_anti_join(
     ("join_key", "filter_expr", "expected"),
     [
         (
+            "antananarivo",
+            (nw.col("bob") > 5),
+            {"antananarivo": [2], "bob": [6], "zorro": [9]},
+        ),
+        (
             ["antananarivo"],
             (nw.col("bob") > 5),
             {"antananarivo": [2], "bob": [6], "zorro": [9]},

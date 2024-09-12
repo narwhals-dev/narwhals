@@ -431,6 +431,11 @@ class DaskExpr:
             returns_scalar=False,
         )
 
+    def unique(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.unique` is not supported for the Dask backend. Please use `LazyFrame.unique` instead."
+        raise NotImplementedError(msg)
+
     def drop_nulls(self) -> NoReturn:
         # We can't (yet?) allow methods which modify the index
         msg = "`Expr.drop_nulls` is not supported for the Dask backend. Please use `LazyFrame.drop_nulls` instead."
@@ -502,13 +507,6 @@ class DaskExpr:
             lambda _input: _input.nunique(dropna=False),
             "n_unique",
             returns_scalar=True,
-        )
-
-    def unique(self: Self) -> Self:
-        return self._from_call(
-            lambda _input: _input.unique(),
-            "unique",
-            returns_scalar=False,
         )
 
     def is_null(self: Self) -> Self:
