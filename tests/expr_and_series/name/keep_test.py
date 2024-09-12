@@ -12,21 +12,27 @@ from tests.utils import compare_dicts
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 
 
-def test_keep(constructor: Any) -> None:
+def test_keep(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.keep())
     expected = {k: [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_keep_after_alias(constructor: Any) -> None:
+def test_keep_after_alias(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.keep())
     expected = {"foo": data["foo"]}
     compare_dicts(result, expected)
 
 
-def test_keep_raise_anonymous(constructor: Any) -> None:
+def test_keep_raise_anonymous(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 

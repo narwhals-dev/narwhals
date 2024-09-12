@@ -5,8 +5,10 @@ import pytest
 import narwhals.stable.v1 as nw
 
 
-def test_expr_sample(constructor: Any, request: Any) -> None:
+def test_expr_sample(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy()
 
@@ -19,8 +21,10 @@ def test_expr_sample(constructor: Any, request: Any) -> None:
     assert result_series == expected_series
 
 
-def test_expr_sample_fraction(constructor: Any, request: Any) -> None:
+def test_expr_sample_fraction(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3] * 10, "b": [4, 5, 6] * 10})).lazy()
 

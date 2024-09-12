@@ -9,7 +9,9 @@ from tests.utils import compare_dicts
 
 
 @pytest.mark.parametrize("n", [2, -1])
-def test_head(constructor: Any, n: int, request: Any) -> None:
+def test_head(constructor: Any, n: int, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and n < 0:

@@ -2,6 +2,7 @@ from typing import Any
 
 import pandas as pd
 import polars as pl
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
@@ -12,7 +13,9 @@ df_pandas = pd.DataFrame(data)
 df_polars = pl.DataFrame(data)
 
 
-def test_contains(constructor: Any) -> None:
+def test_contains(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(
         nw.col("pets").str.contains("(?i)parrot|Dove").alias("result")

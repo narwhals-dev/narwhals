@@ -6,7 +6,9 @@ import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_len_no_filter(constructor: Any) -> None:
+def test_len_no_filter(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": list("xyz"), "b": [1, 2, 1]}
     expected = {"l": [3], "l2": [6]}
     df = nw.from_native(constructor(data)).select(
@@ -17,7 +19,9 @@ def test_len_no_filter(constructor: Any) -> None:
     compare_dicts(df, expected)
 
 
-def test_len_chaining(constructor: Any, request: Any) -> None:
+def test_len_chaining(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": list("xyz"), "b": [1, 2, 1]}
     expected = {"a1": [2], "a2": [1]}
     if "dask" in str(constructor):
@@ -30,7 +34,9 @@ def test_len_chaining(constructor: Any, request: Any) -> None:
     compare_dicts(df, expected)
 
 
-def test_namespace_len(constructor: Any) -> None:
+def test_namespace_len(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).select(
         nw.len(), a=nw.len()
     )

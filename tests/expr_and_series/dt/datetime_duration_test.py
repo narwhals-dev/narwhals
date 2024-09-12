@@ -37,13 +37,15 @@ data = {
     ],
 )
 def test_duration_attributes(
-    request: Any,
+    request: pytest.FixtureRequest,
     constructor: Any,
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],
     expected_c: list[int],
 ) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

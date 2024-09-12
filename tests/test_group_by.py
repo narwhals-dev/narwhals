@@ -102,7 +102,9 @@ def test_group_by_len(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_n_unique(constructor: Any) -> None:
+def test_group_by_n_unique(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     result = (
         nw.from_native(constructor(data))
         .group_by("a")
@@ -122,7 +124,11 @@ def test_group_by_std(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_n_unique_w_missing(constructor: Any) -> None:
+def test_group_by_n_unique_w_missing(
+    constructor: Any, request: pytest.FixtureRequest
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -223,10 +229,12 @@ def test_group_by_multiple_keys(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_key_with_nulls(constructor: Any, request: Any) -> None:
+def test_key_with_nulls(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     context = (
         pytest.raises(NotImplementedError, match="null values")
         if (

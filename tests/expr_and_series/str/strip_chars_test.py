@@ -17,7 +17,14 @@ data = {"a": ["foobar", "bar\n", " baz"]}
         ("foo", {"a": ["bar", "bar\n", " baz"]}),
     ],
 )
-def test_str_strip_chars(constructor: Any, characters: str | None, expected: Any) -> None:
+def test_str_strip_chars(
+    constructor: Any,
+    characters: str | None,
+    expected: Any,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.strip_chars(characters))
     compare_dicts(result_frame, expected)

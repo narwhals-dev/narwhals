@@ -1,7 +1,7 @@
 from typing import Any
 
 import pyarrow as pa
-
+import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
@@ -13,7 +13,9 @@ data = {
 }
 
 
-def test_shift(constructor: Any) -> None:
+def test_shift(constructor: Any, request: pytest.FixtureRequest) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {
