@@ -1,3 +1,4 @@
+from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
@@ -16,28 +17,50 @@ def test_over_single(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
-    result = df.with_columns(c_max=nw.col("c").max().over("a"))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
         "c_max": [5, 5, 3, 3, 3],
     }
-    compare_dicts(result, expected)
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.with_columns(c_max=nw.col("c").max().over("a"))
+        compare_dicts(result, expected)
 
 
 def test_over_multiple(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
-    result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
         "c_min": [5, 4, 1, 2, 1],
     }
-    compare_dicts(result, expected)
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.over` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
+        compare_dicts(result, expected)
 
 
 def test_over_invalid(constructor: Any, request: pytest.FixtureRequest) -> None:

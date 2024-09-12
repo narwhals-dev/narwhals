@@ -524,8 +524,15 @@ class DaskExpr:
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
         if interpolation == "linear":
+
+            def func(_input: dask_expr.Series, _quantile: float) -> dask_expr.Series:
+                if _input.npartitions > 1:
+                    msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
+                    raise NotImplementedError(msg)
+                return _input.quantile(q=_quantile, method="dask")
+
             return self._from_call(
-                lambda _input, quantile: _input.quantile(q=quantile, method="dask"),
+                func,
                 "quantile",
                 quantile,
                 returns_scalar=True,
@@ -626,6 +633,11 @@ class DaskExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
+
+            if df._native_frame.npartitions > 1:
+                msg = "`Expr.over` is not supported for Dask backend with multiple partitions."
+                raise NotImplementedError(msg)
+
             tmp = df.group_by(*keys).agg(self)
             tmp_native = (
                 df.select(*keys)
@@ -643,6 +655,10 @@ class DaskExpr:
             returns_scalar=False,
             backend_version=self._backend_version,
         )
+
+    def mode(self: Self) -> Self:
+        msg = "`Expr.mode` is not supported for the Dask backend."
+        raise NotImplementedError(msg)
 
     @property
     def str(self: Self) -> DaskExprStringNamespace:

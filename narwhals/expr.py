@@ -1585,9 +1585,8 @@ class Expr:
         r"""
         Get the first `n` rows.
 
-        Arguments
-            n : int
-                Number of rows to return.
+        Arguments:
+            n: Number of rows to return.
 
         Examples:
             >>> import narwhals as nw
@@ -1628,9 +1627,8 @@ class Expr:
         r"""
         Get the last `n` rows.
 
-        Arguments
-            n : int
-                Number of rows to return.
+        Arguments:
+            n: Number of rows to return.
 
         Examples:
             >>> import narwhals as nw
@@ -1819,7 +1817,7 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>>
+
             >>> s = [1, 2, 3]
             >>> df_pd = pd.DataFrame({"s": s})
             >>> df_pl = pl.DataFrame({"s": s})
@@ -1912,6 +1910,49 @@ class Expr:
             └─────┘
         """
         return self.__class__(lambda plx: self._call(plx).clip(lower_bound, upper_bound))
+
+    def mode(self: Self) -> Self:
+        r"""Compute the most occurring value(s).
+
+        Can return multiple values.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+
+            >>> data = {
+            ...     "a": [1, 1, 2, 3],
+            ...     "b": [1, 1, 2, 2],
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a", "b").mode()).sort("a", "b")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+               a  b
+            0  1  1
+            1  1  2
+
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 1   │
+            │ 1   ┆ 2   │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).mode())
 
     @property
     def str(self: Self) -> ExprStringNamespace:

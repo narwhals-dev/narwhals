@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from typing import Any
 from typing import Literal
 
@@ -30,12 +31,24 @@ def test_quantile_expr(
         request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor) and interpolation != "linear":
         request.applymarker(pytest.mark.xfail)
+
     q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-    result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
-    compare_dicts(result, expected)
+
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="`Expr.quantile` is not supported for Dask backend with multiple partitions.",
+        )
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+
+    with context:
+        result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
+        compare_dicts(result, expected)
 
 
 @pytest.mark.parametrize(

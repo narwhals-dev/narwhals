@@ -80,6 +80,7 @@ class PandasLikeGroupBy:
             dataframe_is_empty=self._df._native_frame.empty,
             implementation=implementation,
             backend_version=self._df._backend_version,
+            native_namespace=self._df.__native_namespace__(),
         )
 
     def _from_native_frame(self, df: PandasLikeDataFrame) -> PandasLikeDataFrame:
@@ -114,6 +115,7 @@ def agg_pandas(  # noqa: PLR0915
     implementation: Any,
     backend_version: tuple[int, ...],
     dataframe_is_empty: bool,
+    native_namespace: Any,
 ) -> PandasLikeDataFrame:
     """
     This should be the fastpath, but cuDF is too far behind to use it.
@@ -204,9 +206,9 @@ def agg_pandas(  # noqa: PLR0915
             result_aggs = result_nunique_aggs
         elif simple_aggs and not nunique_aggs:
             result_aggs = result_simple_aggs
-        else:  # pragma: no cover
-            msg = "Congrats, you entered unreachable code. Please report a bug to https://github.com/narwhals-dev/narwhals/issues."
-            raise RuntimeError(msg)
+        else:
+            # No aggregation provided
+            result_aggs = native_namespace.DataFrame(grouped.groups.keys(), columns=keys)
         return from_dataframe(result_aggs.loc[:, output_names])
 
     if dataframe_is_empty:

@@ -254,3 +254,10 @@ def test_key_with_nulls(constructor: Any, request: pytest.FixtureRequest) -> Non
         )
         expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
         compare_dicts(result, expected)
+
+
+def test_no_agg(constructor: Any) -> None:
+    result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
+
+    expected = {"a": [1, 3], "b": [4, 6]}
+    compare_dicts(result, expected)

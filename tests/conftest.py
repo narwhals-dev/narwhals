@@ -22,11 +22,11 @@ with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
 with contextlib.suppress(ImportError):
     import cudf  # noqa: F401
-with contextlib.suppress(ImportError):
-    from pyspark.sql import SparkSession
 
 
 if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
+
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
 
@@ -81,9 +81,14 @@ def polars_lazy_constructor(obj: Any) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
-def dask_lazy_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p1_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
     dd = get_dask_dataframe()
-    return dd.from_pandas(pd.DataFrame(obj))  # type: ignore[no-any-return]
+    return dd.from_dict(obj, npartitions=1)  # type: ignore[no-any-return]
+
+
+def dask_lazy_p2_constructor(obj: Any) -> IntoFrame:  # pragma: no cover
+    dd = get_dask_dataframe()
+    return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
 def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
@@ -127,7 +132,7 @@ if get_modin() is not None:  # pragma: no cover
 if get_cudf() is not None:
     eager_constructors.append(cudf_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover
-    lazy_constructors.append(dask_lazy_constructor)  # type: ignore  # noqa: PGH003
+    lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # type: ignore  # noqa: PGH003
 if get_pyspark_sql() is not None:  # pragma: no cover
     lazy_constructors.append(pyspark_constructor_with_session)  # type: ignore  # noqa: PGH003
 
