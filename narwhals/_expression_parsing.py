@@ -53,10 +53,7 @@ if TYPE_CHECKING:
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
     CompliantSeries = Union[PandasLikeSeries, ArrowSeries, PolarsSeries]
     ListOfCompliantSeries = Union[
-        list[PandasLikeSeries],
-        list[ArrowSeries],
-        list[DaskExpr],
-        list[PolarsSeries],
+        list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr], list[PolarsSeries]
     ]
     ListOfCompliantExpr = Union[
         list[PandasLikeExpr],
