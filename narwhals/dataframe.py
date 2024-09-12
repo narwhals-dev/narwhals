@@ -3866,7 +3866,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     return df.clone()
 
             >>> func(df_pd)
-            a  b
+               a  b
             0  1  3
             1  2  4
 
