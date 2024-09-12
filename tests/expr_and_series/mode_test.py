@@ -1,5 +1,6 @@
 from typing import Any
 
+import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -22,7 +23,9 @@ def test_mode_single_expr(constructor: Any, request: Any) -> None:
 
 
 def test_mode_multi_expr(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or (
+        "polars" in str(constructor) and pl.__version__ >= "1.7.0"
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b").mode()).sort("a", "b")
