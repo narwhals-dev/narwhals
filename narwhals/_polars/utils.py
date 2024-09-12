@@ -61,14 +61,14 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Categorical()
     if dtype == pl.Enum:
         return dtypes.Enum()
-    if isinstance_or_issubclass(dtype, pl.Datetime):
-        time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
-        time_zone = getattr(dtype, "time_zone", None)
-        return dtypes.Datetime(time_unit=time_unit, time_zone=time_zone)
     if dtype == pl.Duration:
         return dtypes.Duration()
     if dtype == pl.Date:
         return dtypes.Date()
+    if isinstance_or_issubclass(dtype, pl.Datetime):
+        time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        time_zone = getattr(dtype, "time_zone", None)
+        return dtypes.Datetime(time_unit=time_unit, time_zone=time_zone)
     return dtypes.Unknown()
 
 
@@ -107,12 +107,13 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     if dtype == dtypes.Enum:
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        time_unit = getattr(dtype, "time_unit", "us")
-        time_zone = getattr(dtype, "time_zone", None)
-        return pl.Datetime(time_unit, time_zone)
     if dtype == dtypes.Duration:
         return pl.Duration()
     if dtype == dtypes.Date:
         return pl.Date()
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        time_unit = getattr(dtype, "time_unit", "us")
+        time_zone = getattr(dtype, "time_zone", None)
+        return pl.Datetime(time_unit, time_zone)
+
     return pl.Unknown()  # pragma: no cover
