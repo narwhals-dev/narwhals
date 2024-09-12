@@ -118,9 +118,7 @@ def agg_pyspark(
         for root_name, output_name in zip(expr._root_names, expr._output_names):
             agg_func = get_spark_function(function_name)
             simple_aggregations[output_name] = agg_func(root_name)
-    print(simple_aggregations)
     agg_columns = [col_.alias(name) for name, col_ in simple_aggregations.items()]
-    print(agg_columns)
     try:
         result_simple = grouped.agg(*agg_columns)
     except ValueError as exc:
