@@ -38,12 +38,7 @@ def test_drop(constructor: Any, to_drop: list[str], expected: list[str]) -> None
         (False, does_not_raise()),
     ],
 )
-def test_drop_strict(
-    request: pytest.FixtureRequest,
-    constructor: Any,
-    strict: bool,  # noqa: FBT001
-    context: Any,
-) -> None:
+def test_drop_strict(request: Any, constructor: Any, strict: bool, context: Any) -> None:  # noqa: FBT001
     if (
         "polars_lazy" in str(request)
         and parse_version(pl.__version__) < (1, 0, 0)
