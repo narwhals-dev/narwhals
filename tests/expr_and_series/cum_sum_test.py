@@ -1,5 +1,7 @@
 from typing import Any
+
 import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 

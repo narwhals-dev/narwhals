@@ -21,7 +21,9 @@ def test_to_uppercase(constructor: Any, request: pytest.FixtureRequest) -> None:
     compare_dicts(result, expected)
 
 
-def test_to_uppercase_after_alias(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_to_uppercase_after_alias(
+    constructor: Any, request: pytest.FixtureRequest
+) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -30,7 +32,9 @@ def test_to_uppercase_after_alias(constructor: Any, request: pytest.FixtureReque
     compare_dicts(result, expected)
 
 
-def test_to_uppercase_raise_anonymous(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_to_uppercase_raise_anonymous(
+    constructor: Any, request: pytest.FixtureRequest
+) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)

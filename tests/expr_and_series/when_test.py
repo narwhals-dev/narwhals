@@ -147,7 +147,9 @@ def test_otherwise_expression(constructor: Any, request: pytest.FixtureRequest) 
     compare_dicts(result, expected)
 
 
-def test_when_then_otherwise_into_expr(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_when_then_otherwise_into_expr(
+    constructor: Any, request: pytest.FixtureRequest
+) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):

@@ -2,6 +2,7 @@ from typing import Any
 
 import pyarrow as pa
 import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 

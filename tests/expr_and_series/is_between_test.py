@@ -21,7 +21,9 @@ data = {
         ("none", [False, True, True, False]),
     ],
 )
-def test_is_between(constructor: Any, closed: str, expected: list[bool], request: pytest.FixtureRequest) -> None:
+def test_is_between(
+    constructor: Any, closed: str, expected: list[bool], request: pytest.FixtureRequest
+) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

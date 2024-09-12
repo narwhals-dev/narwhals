@@ -166,7 +166,9 @@ def test_cast_string() -> None:
     assert str(result.dtype) in ("string", "object", "dtype('O')")
 
 
-def test_cast_raises_for_unknown_dtype(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_cast_raises_for_unknown_dtype(
+    constructor: Any, request: pytest.FixtureRequest
+) -> None:
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
