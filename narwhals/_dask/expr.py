@@ -504,6 +504,13 @@ class DaskExpr:
             returns_scalar=True,
         )
 
+    def unique(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.unique(),
+            "unique",
+            returns_scalar=False,
+        )
+
     def is_null(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.isna(),
