@@ -170,6 +170,11 @@ def test_anti_join(
     ("join_key", "filter_expr", "expected"),
     [
         (
+            "antananarivo",
+            (nw.col("bob") > 5),
+            {"antananarivo": [2], "bob": [6], "zorro": [9]},
+        ),
+        (
             ["antananarivo"],
             (nw.col("bob") > 5),
             {"antananarivo": [2], "bob": [6], "zorro": [9]},
@@ -222,10 +227,14 @@ def test_left_join(constructor: Any) -> None:
         "bob": [4.0, 5, 6],
         "index": [0.0, 1.0, 2.0],
     }
-    data_right = {"antananarivo": [1.0, 2, 3], "c": [4.0, 5, 7], "index": [0.0, 1.0, 2.0]}
+    data_right = {
+        "antananarivo": [1.0, 2, 3],
+        "co": [4.0, 5, 7],
+        "index": [0.0, 1.0, 2.0],
+    }
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
-    result = df_left.join(df_right, left_on="bob", right_on="c", how="left").select(  # type: ignore[arg-type]
+    result = df_left.join(df_right, left_on="bob", right_on="co", how="left").select(  # type: ignore[arg-type]
         nw.all().fill_null(float("nan"))
     )
     result = result.sort("index")
@@ -236,7 +245,20 @@ def test_left_join(constructor: Any) -> None:
         "antananarivo_right": [1, 2, float("nan")],
         "index": [0, 1, 2],
     }
+    result_on_list = df_left.join(
+        df_right,  # type: ignore[arg-type]
+        on=["antananarivo", "index"],
+        how="left",
+    ).select(nw.all().fill_null(float("nan")))
+    result_on_list = result_on_list.sort("index")
+    expected_on_list = {
+        "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
+        "index": [0, 1, 2],
+        "co": [4, 5, 7],
+    }
     compare_dicts(result, expected)
+    compare_dicts(result_on_list, expected_on_list)
 
 
 @pytest.mark.filterwarnings("ignore: the default coalesce behavior")
