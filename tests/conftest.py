@@ -22,7 +22,8 @@ with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
 with contextlib.suppress(ImportError):
     import cudf  # noqa: F401
-
+with contextlib.suppress(ImportError):
+    from pyspark.sql import SparkSession
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
