@@ -32,12 +32,7 @@ SERIES_ONLY_METHODS = {
 # TODO(Unassigned): make dtypes reference page as well
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 top_level_functions = [
-    i
-    for i in nw.__dir__()
-    if not i[0].isupper()
-    and i[0] != "_"
-    and i not in files
-    and i not in {"annotations", "DataFrame", "LazyFrame", "Series"}
+    i for i in nw.__dir__() if not i[0].isupper() and i[0] != "_" and i not in files
 ]
 with open("docs/api-reference/narwhals.md") as fd:
     content = fd.read()
