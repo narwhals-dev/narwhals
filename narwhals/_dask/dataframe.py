@@ -280,6 +280,9 @@ class DaskLazyFrame:
                 suffixes=("", suffix),
             )
             extra = []
+            if isinstance(left_on, str) and isinstance(right_on, str):
+                left_on = [left_on]
+                right_on = [right_on]
             for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
                 if right_key != left_key and right_key not in self.columns:
                     extra.append(right_key)

@@ -7,10 +7,14 @@ tool = "pandas[pyarrow]"
 fn = IO_FUNCS[tool]
 print(q6.query(fn(lineitem)))
 
-tool = "polars[lazy]"
+tool = "polars[eager]"
 fn = IO_FUNCS[tool]
-print(q6.query(fn(lineitem)).collect())
+print(q6.query(fn(lineitem)))
 
 tool = "pyarrow"
 fn = IO_FUNCS[tool]
 print(q6.query(fn(lineitem)))
+
+tool = "dask"
+fn = IO_FUNCS[tool]
+print(q6.query(fn(lineitem)).compute())
