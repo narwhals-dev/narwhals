@@ -29,7 +29,7 @@ def test_str_to_uppercase(
     constructor: Any,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
-    request: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_uppercase())
@@ -70,7 +70,7 @@ def test_str_to_uppercase_series(
     constructor_eager: Any,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
-    request: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 

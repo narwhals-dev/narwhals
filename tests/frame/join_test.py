@@ -352,7 +352,7 @@ def test_join_keys_exceptions(constructor: Any, how: str) -> None:
         df.join(df, how=how, on="antananarivo", right_on="antananarivo")  # type: ignore[arg-type]
 
 
-def test_joinasof_numeric(constructor: Any, request: Any) -> None:
+def test_joinasof_numeric(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and (
@@ -408,7 +408,7 @@ def test_joinasof_numeric(constructor: Any, request: Any) -> None:
     compare_dicts(result_nearest_on, expected_nearest)
 
 
-def test_joinasof_time(constructor: Any, request: Any) -> None:
+def test_joinasof_time(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and ("pandas_pyarrow" in str(constructor)):
@@ -486,7 +486,7 @@ def test_joinasof_time(constructor: Any, request: Any) -> None:
     compare_dicts(result_nearest_on, expected_nearest)
 
 
-def test_joinasof_by(constructor: Any, request: Any) -> None:
+def test_joinasof_by(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if parse_version(pd.__version__) < (2, 1) and (

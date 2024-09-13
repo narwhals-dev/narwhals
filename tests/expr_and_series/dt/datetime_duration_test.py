@@ -37,7 +37,7 @@ data = {
     ],
 )
 def test_duration_attributes(
-    request: Any,
+    request: pytest.FixtureRequest,
     constructor: Any,
     attribute: str,
     expected_a: list[int],
@@ -72,7 +72,7 @@ def test_duration_attributes(
     ],
 )
 def test_duration_attributes_series(
-    request: Any,
+    request: pytest.FixtureRequest,
     constructor_eager: Any,
     attribute: str,
     expected_a: list[int],

@@ -46,7 +46,7 @@ schema = {
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(constructor: Any, request: Any) -> None:
+def test_cast(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
@@ -96,7 +96,7 @@ def test_cast(constructor: Any, request: Any) -> None:
     assert dict(result.collect_schema()) == expected
 
 
-def test_cast_series(constructor: Any, request: Any) -> None:
+def test_cast_series(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
@@ -162,7 +162,9 @@ def test_cast_string() -> None:
     assert str(result.dtype) in ("string", "object", "dtype('O')")
 
 
-def test_cast_raises_for_unknown_dtype(constructor: Any, request: Any) -> None:
+def test_cast_raises_for_unknown_dtype(
+    constructor: Any, request: pytest.FixtureRequest
+) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover

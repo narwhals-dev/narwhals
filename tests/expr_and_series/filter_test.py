@@ -13,7 +13,7 @@ data = {
 }
 
 
-def test_filter(constructor: Any, request: Any) -> None:
+def test_filter(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

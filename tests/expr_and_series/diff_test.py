@@ -14,7 +14,7 @@ data = {
 }
 
 
-def test_diff(constructor: Any, request: Any) -> None:
+def test_diff(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) < (13,):
@@ -31,7 +31,7 @@ def test_diff(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_diff_series(constructor_eager: Any, request: Any) -> None:
+def test_diff_series(constructor_eager: Any, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < (13,):

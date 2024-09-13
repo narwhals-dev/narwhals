@@ -59,7 +59,7 @@ def test_over_multiple(constructor: Any) -> None:
         compare_dicts(result, expected)
 
 
-def test_over_invalid(request: Any, constructor: Any) -> None:
+def test_over_invalid(request: pytest.FixtureRequest, constructor: Any) -> None:
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

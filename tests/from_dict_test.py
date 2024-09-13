@@ -6,7 +6,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_from_dict(constructor: Any, request: Any) -> None:
+def test_from_dict(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
@@ -17,7 +17,7 @@ def test_from_dict(constructor: Any, request: Any) -> None:
     assert isinstance(result, nw.DataFrame)
 
 
-def test_from_dict_schema(constructor: Any, request: Any) -> None:
+def test_from_dict_schema(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     schema = {"c": nw.Int16(), "d": nw.Float32()}
