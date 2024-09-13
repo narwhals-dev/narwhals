@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import timezone
-from types import NoneType
 from typing import Literal
 
 import pytest
@@ -17,7 +16,7 @@ def test_datetime_valid(
     dtype = nw.Datetime(time_unit=time_unit, time_zone=time_zone)
 
     assert dtype.time_unit == time_unit
-    assert isinstance(dtype.time_zone, (str, NoneType))
+    assert isinstance(dtype.time_zone, str) or dtype.time_zone is None
 
 
 @pytest.mark.parametrize("time_unit", ["abc", "s"])
