@@ -118,7 +118,7 @@ jobs:
         run: |
           kaggle kernels output "marcogorelli/variable-brink-glacier"
       - name: install-polars
-        run: uv pip install *.whl --system
+        run: pip install *.whl --system
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
       - name: uninstall pyarrow
