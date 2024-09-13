@@ -112,5 +112,5 @@ def constructor_eager(request: pytest.FixtureRequest) -> Callable[[Any], IntoDat
 
 
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor(request: pytest.FixtureRequest) -> Callable[[Any], Any]:
+def constructor(request: pytest.FixtureRequest) -> Callable[[Any], IntoFrame]:
     return request.param  # type: ignore[no-any-return]

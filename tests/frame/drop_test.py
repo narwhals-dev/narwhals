@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 
 import polars as pl
 import pytest
@@ -10,6 +12,9 @@ from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.utils import parse_version
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoFrame
 
 
 @pytest.mark.parametrize(
@@ -20,7 +25,9 @@ from narwhals.utils import parse_version
         (["abc", "b"], ["z"]),
     ],
 )
-def test_drop(constructor: Any, to_drop: list[str], expected: list[str]) -> None:
+def test_drop(
+    constructor: Callable[[Any], IntoFrame], to_drop: list[str], expected: list[str]
+) -> None:
     data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     assert df.drop(to_drop).collect_schema().names() == expected
