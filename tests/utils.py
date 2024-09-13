@@ -3,20 +3,17 @@ from __future__ import annotations
 import math
 import sys
 import warnings
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
 from typing import Sequence
 from typing import TypeAlias
 
-if TYPE_CHECKING:
-    from narwhals.typing import IntoFrame
-
-    Constructor: TypeAlias = Callable[[Any], IntoFrame]
-
-
 import pandas as pd
+
+from narwhals.typing import IntoFrame
+
+Constructor: TypeAlias = Callable[[Any], IntoFrame]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
