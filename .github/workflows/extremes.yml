@@ -91,7 +91,8 @@ jobs:
       - name: Run doctests
         run: pytest narwhals --doctest-modules
 
-  pandas-nightly-and-dask:
+  nightlies:
+    if: github.event_name == 'push'
     strategy:
       matrix:
         python-version: ["3.11"]
