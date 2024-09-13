@@ -440,7 +440,11 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
 
         # Pandas does not support "ms" or "us" time units before version 1.5.0
         # Let's overwrite with "ns"
-        if implementation is Implementation.PANDAS and backend_version < (1, 5, 0):
+        if implementation is Implementation.PANDAS and backend_version < (
+            1,
+            5,
+            0,
+        ):  # pragma: no cover
             time_unit = "ns"
 
         if dtype_backend == "pyarrow-nullable":
