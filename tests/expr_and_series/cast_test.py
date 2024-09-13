@@ -12,6 +12,7 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import compare_dicts
+from tests.utils import is_windows
 
 data = {
     "a": [1],
@@ -192,7 +193,9 @@ def test_cast_raises_for_unknown_dtype(
 def test_cast_datetime_tz_aware(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or (
+        "pyarrow_table" in str(constructor) and is_windows()
+    ):
         request.applymarker(pytest.mark.xfail)
 
     data = {
