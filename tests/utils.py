@@ -7,11 +7,15 @@ from typing import Any
 from typing import Callable
 from typing import Iterator
 from typing import Sequence
-from typing import TypeAlias
 
 import pandas as pd
 
 from narwhals.typing import IntoFrame
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 Constructor: TypeAlias = Callable[[Any], IntoFrame]
 
