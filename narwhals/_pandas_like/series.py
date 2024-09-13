@@ -189,7 +189,9 @@ class PandasLikeSeries:
         dtype: Any,
     ) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation)
+        dtype = narwhals_to_native_dtype(
+            dtype, ser.dtype, self._implementation, self._backend_version
+        )
         return self._from_native_series(ser.astype(dtype))
 
     def item(self: Self, index: int | None = None) -> Any:

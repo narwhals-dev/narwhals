@@ -328,7 +328,10 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0915
-    dtype: DType | type[DType], starting_dtype: Any, implementation: Implementation
+    dtype: DType | type[DType],
+    starting_dtype: Any,
+    implementation: Implementation,
+    backend_version: tuple[int, ...],
 ) -> Any:
     from narwhals import dtypes
 
@@ -434,6 +437,11 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         time_unit = getattr(dtype, "time_unit", "us")
         time_zone = getattr(dtype, "time_zone", None)
+
+        # Pandas does not support "ms" or "us" time units before version 1.5.0
+        # Let's overwrite with "ns"
+        if implementation is Implementation.PANDAS and backend_version < (1, 5, 0):
+            time_unit = "ns"
 
         if dtype_backend == "pyarrow-nullable":
             tz_part = f", tz={time_zone}" if time_zone else ""

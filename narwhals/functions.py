@@ -13,6 +13,7 @@ from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
 from narwhals.utils import Implementation
+from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 
 # Missing type parameters for generic type "DataFrame"
@@ -215,7 +216,10 @@ def new_series(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            dtype = pandas_like_narwhals_to_native_dtype(dtype, None, implementation)
+            backend_version = parse_version(native_namespace.__version__)
+            dtype = pandas_like_narwhals_to_native_dtype(
+                dtype, None, implementation, backend_version
+            )
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
     elif implementation is Implementation.PYARROW:
@@ -332,9 +336,10 @@ def from_dict(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
+            backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation
+                    schema[name], native_type, implementation, backend_version
                 )
                 for name, native_type in native_frame.dtypes.items()
             }
