@@ -45,7 +45,7 @@ def test_boolean(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_string(constructor: Any, request: Any) -> None:
+def test_string(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor) and parse_version(pa.__version__) < (12,):
         # Dask doesn't infer `'b'` as String for old PyArrow versions
         request.applymarker(pytest.mark.xfail)
@@ -55,7 +55,7 @@ def test_string(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_categorical(request: Any, constructor: Any) -> None:
+def test_categorical(request: pytest.FixtureRequest, constructor: Any) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover

@@ -52,7 +52,7 @@ def test_no_arg_when_fail(constructor: Any) -> None:
         df.select(nw.when().then(value=3).alias("a_when"))
 
 
-def test_value_numpy_array(request: Any, constructor: Any) -> None:
+def test_value_numpy_array(request: pytest.FixtureRequest, constructor: Any) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -89,7 +89,7 @@ def test_value_expression(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_otherwise_numpy_array(request: Any, constructor: Any) -> None:
+def test_otherwise_numpy_array(request: pytest.FixtureRequest, constructor: Any) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -117,7 +117,7 @@ def test_otherwise_series(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_otherwise_expression(request: Any, constructor: Any) -> None:
+def test_otherwise_expression(request: pytest.FixtureRequest, constructor: Any) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -131,7 +131,9 @@ def test_otherwise_expression(request: Any, constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_when_then_otherwise_into_expr(request: Any, constructor: Any) -> None:
+def test_when_then_otherwise_into_expr(
+    request: pytest.FixtureRequest, constructor: Any
+) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

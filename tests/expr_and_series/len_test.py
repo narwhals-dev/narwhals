@@ -17,7 +17,7 @@ def test_len_no_filter(constructor: Any) -> None:
     compare_dicts(df, expected)
 
 
-def test_len_chaining(constructor: Any, request: Any) -> None:
+def test_len_chaining(constructor: Any, request: pytest.FixtureRequest) -> None:
     data = {"a": list("xyz"), "b": [1, 2, 1]}
     expected = {"a1": [2], "a2": [1]}
     if "dask" in str(constructor):

@@ -8,7 +8,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import compare_dicts
 
 
-def test_drop_nulls(constructor: Any, request: Any) -> None:
+def test_drop_nulls(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {

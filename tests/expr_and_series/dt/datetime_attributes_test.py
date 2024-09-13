@@ -34,7 +34,7 @@ data = {
     ],
 )
 def test_datetime_attributes(
-    request: Any, constructor: Any, attribute: str, expected: list[int]
+    request: pytest.FixtureRequest, constructor: Any, attribute: str, expected: list[int]
 ) -> None:
     if (
         attribute == "date"
@@ -67,7 +67,10 @@ def test_datetime_attributes(
     ],
 )
 def test_datetime_attributes_series(
-    request: Any, constructor_eager: Any, attribute: str, expected: list[int]
+    request: pytest.FixtureRequest,
+    constructor_eager: Any,
+    attribute: str,
+    expected: list[int],
 ) -> None:
     if (
         attribute == "date"
@@ -83,7 +86,9 @@ def test_datetime_attributes_series(
     compare_dicts(result, {"a": expected})
 
 
-def test_datetime_chained_attributes(request: Any, constructor_eager: Any) -> None:
+def test_datetime_chained_attributes(
+    request: pytest.FixtureRequest, constructor_eager: Any
+) -> None:
     if "pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):

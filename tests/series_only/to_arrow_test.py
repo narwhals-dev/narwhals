@@ -19,7 +19,9 @@ def test_to_arrow(constructor_eager: Any) -> None:
     assert pc.all(pc.equal(result, pa.array(data, type=pa.int64())))
 
 
-def test_to_arrow_with_nulls(constructor_eager: Any, request: Any) -> None:
+def test_to_arrow_with_nulls(
+    constructor_eager: Any, request: pytest.FixtureRequest
+) -> None:
     if "pandas_constructor" in str(constructor_eager) or "modin_constructor" in str(
         constructor_eager
     ):

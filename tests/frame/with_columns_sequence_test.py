@@ -12,7 +12,7 @@ data = {
 }
 
 
-def test_with_columns(constructor: Any, request: Any) -> None:
+def test_with_columns(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = (

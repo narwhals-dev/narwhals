@@ -58,7 +58,7 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-def test_actual_object(request: Any, constructor_eager: Any) -> None:
+def test_actual_object(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
     if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
 

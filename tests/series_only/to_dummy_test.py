@@ -18,7 +18,9 @@ def test_to_dummies(constructor_eager: Any, sep: str) -> None:
 
 
 @pytest.mark.parametrize("sep", ["_", "-"])
-def test_to_dummies_drop_first(request: Any, constructor_eager: Any, sep: str) -> None:
+def test_to_dummies_drop_first(
+    request: pytest.FixtureRequest, constructor_eager: Any, sep: str
+) -> None:
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"].alias("a")

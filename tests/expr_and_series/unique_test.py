@@ -8,7 +8,7 @@ from tests.utils import compare_dicts
 data = {"a": [1, 1, 2]}
 
 
-def test_unique_expr(constructor: Any, request: Any) -> None:
+def test_unique_expr(constructor: Any, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
