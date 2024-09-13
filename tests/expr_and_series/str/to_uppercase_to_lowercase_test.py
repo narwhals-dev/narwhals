@@ -7,6 +7,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
@@ -26,7 +27,7 @@ from tests.utils import compare_dicts
     ],
 )
 def test_str_to_uppercase(
-    constructor: Any,
+    constructor: Constructor,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
@@ -107,7 +108,7 @@ def test_str_to_uppercase_series(
     ],
 )
 def test_str_to_lowercase(
-    constructor: Any,
+    constructor: Constructor,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:

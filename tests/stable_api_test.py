@@ -1,14 +1,13 @@
-from typing import Any
-
 import polars as pl
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_renamed_taxicab_norm(constructor: Any) -> None:
+def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method

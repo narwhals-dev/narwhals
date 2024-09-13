@@ -12,6 +12,7 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
@@ -32,7 +33,7 @@ def test_arithmetic_expr(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor: Any,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
@@ -62,7 +63,7 @@ def test_right_arithmetic_expr(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor: Any,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__rmod__" and any(

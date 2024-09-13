@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {"a": ["foobar", "bar\n", " baz"]}
@@ -17,7 +18,9 @@ data = {"a": ["foobar", "bar\n", " baz"]}
         ("foo", {"a": ["bar", "bar\n", " baz"]}),
     ],
 )
-def test_str_strip_chars(constructor: Any, characters: str | None, expected: Any) -> None:
+def test_str_strip_chars(
+    constructor: Constructor, characters: str | None, expected: Any
+) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.strip_chars(characters))
     compare_dicts(result_frame, expected)

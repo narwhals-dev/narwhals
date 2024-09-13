@@ -10,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 
 data = {
     "a": [datetime(2020, 1, 1)],
@@ -18,7 +19,7 @@ data = {
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(constructor: Any) -> None:
+def test_schema(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
@@ -29,7 +30,7 @@ def test_schema(constructor: Any) -> None:
     assert result == expected
 
 
-def test_collect_schema(constructor: Any) -> None:
+def test_collect_schema(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
