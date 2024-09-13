@@ -5,7 +5,6 @@ from typing import Literal
 
 from narwhals import dtypes
 from narwhals.dependencies import get_polars
-from narwhals.utils import isinstance_or_issubclass
 
 
 def extract_native(obj: Any) -> Any:
@@ -65,7 +64,7 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Duration()
     if dtype == pl.Date:
         return dtypes.Date()
-    if isinstance_or_issubclass(dtype, pl.Datetime):
+    if dtype == pl.Datetime or isinstance(dtype, pl.Datetime):
         time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         time_zone = getattr(dtype, "time_zone", None)
         return dtypes.Datetime(time_unit=time_unit, time_zone=time_zone)
@@ -111,7 +110,7 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         return pl.Duration()
     if dtype == dtypes.Date:
         return pl.Date()
-    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+    if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
         time_unit = getattr(dtype, "time_unit", "us")
         time_zone = getattr(dtype, "time_zone", None)
         return pl.Datetime(time_unit, time_zone)
