@@ -13,9 +13,9 @@ import pandas as pd
 from narwhals.typing import IntoFrame
 
 if sys.version_info >= (3, 10):
-    from typing import TypeAlias
+    from typing import TypeAlias  # pragma: no cover
 else:
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias  # pragma: no cover
 
 Constructor: TypeAlias = Callable[[Any], IntoFrame]
 
