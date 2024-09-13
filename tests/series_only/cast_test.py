@@ -79,7 +79,7 @@ def test_cast_date_datetime_pandas() -> None:
     )
     pd.testing.assert_frame_equal(result, expected)
 
-    # # pandas: pyarrow datetime to date
+    # pandas: pyarrow datetime to date
     dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype(
         {"a": "timestamp[us][pyarrow]"}
     )
