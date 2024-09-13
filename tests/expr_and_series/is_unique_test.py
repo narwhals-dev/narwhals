@@ -1,6 +1,7 @@
 from typing import Any
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -10,7 +11,7 @@ data = {
 }
 
 
-def test_is_unique_expr(constructor: Any) -> None:
+def test_is_unique_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b").is_unique(), "index").sort("index")
     expected = {

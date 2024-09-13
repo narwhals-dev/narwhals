@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 
 import polars as pl
 import pytest
@@ -14,7 +13,7 @@ from narwhals._exceptions import ColumnNotFoundError
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoFrame
+    from tests.utils import Constructor
 
 
 @pytest.mark.parametrize(
@@ -25,9 +24,7 @@ if TYPE_CHECKING:
         (["abc", "b"], ["z"]),
     ],
 )
-def test_drop(
-    constructor: Callable[[Any], IntoFrame], to_drop: list[str], expected: list[str]
-) -> None:
+def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str]) -> None:
     data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     assert df.drop(to_drop).collect_schema().names() == expected
@@ -46,7 +43,11 @@ def test_drop(
     ],
 )
 def test_drop_strict(
-    request: pytest.FixtureRequest, constructor: Any, context: Any, *, strict: bool
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    context: Any,
+    *,
+    strict: bool,
 ) -> None:
     if (
         "polars_lazy" in str(request)

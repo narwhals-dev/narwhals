@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
-
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_head(constructor: Any) -> None:
+def test_head(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
 

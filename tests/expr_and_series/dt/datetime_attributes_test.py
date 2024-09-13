@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -34,7 +35,10 @@ data = {
     ],
 )
 def test_datetime_attributes(
-    request: pytest.FixtureRequest, constructor: Any, attribute: str, expected: list[int]
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    attribute: str,
+    expected: list[int],
 ) -> None:
     if (
         attribute == "date"

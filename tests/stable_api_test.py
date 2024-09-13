@@ -1,14 +1,13 @@
-from typing import Any
-
 import polars as pl
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_renamed_taxicab_norm(constructor: Any) -> None:
+def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method
@@ -60,8 +59,7 @@ def test_stable_api_docstrings() -> None:
             == nw_doc
         )
         assert (
-            nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1 as nw")
-            == v1_doc
+            nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1") == v1_doc
         )
 
 

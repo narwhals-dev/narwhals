@@ -10,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
@@ -94,7 +95,7 @@ def test_group_by_iter(constructor_eager: Any) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
-def test_group_by_len(constructor: Any) -> None:
+def test_group_by_len(constructor: Constructor) -> None:
     result = (
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
     )
@@ -102,7 +103,7 @@ def test_group_by_len(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_n_unique(constructor: Any) -> None:
+def test_group_by_n_unique(constructor: Constructor) -> None:
     result = (
         nw.from_native(constructor(data))
         .group_by("a")
@@ -113,7 +114,7 @@ def test_group_by_n_unique(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_std(constructor: Any) -> None:
+def test_group_by_std(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2, 2], "b": [5, 4, 3, 2]}
     result = (
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").std()).sort("a")
@@ -122,7 +123,7 @@ def test_group_by_std(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_n_unique_w_missing(constructor: Any) -> None:
+def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -162,7 +163,7 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(constructor: Any) -> None:
+def test_group_by_simple_named(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
@@ -182,7 +183,7 @@ def test_group_by_simple_named(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_simple_unnamed(constructor: Any) -> None:
+def test_group_by_simple_unnamed(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
@@ -202,7 +203,7 @@ def test_group_by_simple_unnamed(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_multiple_keys(constructor: Any) -> None:
+def test_group_by_multiple_keys(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
     df = nw.from_native(constructor(data)).lazy()
     result = (
@@ -223,7 +224,7 @@ def test_group_by_multiple_keys(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_key_with_nulls(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
@@ -248,7 +249,7 @@ def test_key_with_nulls(constructor: Any, request: pytest.FixtureRequest) -> Non
         compare_dicts(result, expected)
 
 
-def test_no_agg(constructor: Any) -> None:
+def test_no_agg(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
 
     expected = {"a": [1, 3], "b": [4, 6]}

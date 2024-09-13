@@ -3,6 +3,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -13,7 +14,7 @@ data = {
 }
 
 
-def test_filter(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_filter(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

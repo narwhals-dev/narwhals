@@ -1,6 +1,7 @@
 from typing import Any
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -9,7 +10,7 @@ data = {
 }
 
 
-def test_null_count_expr(constructor: Any) -> None:
+def test_null_count_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().null_count())
     expected = {

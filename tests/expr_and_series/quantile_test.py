@@ -7,6 +7,7 @@ from typing import Literal
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
@@ -22,7 +23,7 @@ from tests.utils import compare_dicts
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile_expr(
-    constructor: Any,
+    constructor: Constructor,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
     request: pytest.FixtureRequest,

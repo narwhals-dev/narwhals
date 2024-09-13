@@ -3,6 +3,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {"a": list(range(10))}
@@ -11,7 +12,7 @@ data = {"a": list(range(10))}
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [1, 2, 3])
 def test_gather_every_expr(
-    constructor: Any, n: int, offset: int, request: pytest.FixtureRequest
+    constructor: Constructor, n: int, offset: int, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)

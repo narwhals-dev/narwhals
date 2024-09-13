@@ -5,11 +5,12 @@ from typing import Any
 import pytest
 
 import narwhals as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
 @pytest.mark.parametrize("n", [2, -1])
-def test_head(constructor: Any, n: int, request: pytest.FixtureRequest) -> None:
+def test_head(constructor: Constructor, n: int, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and n < 0:

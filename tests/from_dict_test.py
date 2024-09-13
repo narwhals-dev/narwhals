@@ -1,10 +1,6 @@
-from typing import Any
-from typing import Callable
-
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.typing import IntoFrame
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 
@@ -21,7 +17,7 @@ def test_from_dict(constructor: Constructor, request: pytest.FixtureRequest) -> 
 
 
 def test_from_dict_schema(
-    constructor: Callable[[Any], IntoFrame], request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -36,14 +32,14 @@ def test_from_dict_schema(
     assert result.collect_schema() == schema
 
 
-def test_from_dict_without_namespace(constructor: Callable[[Any], IntoFrame]) -> None:
+def test_from_dict_without_namespace(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": df["a"], "d": df["b"]})
     compare_dicts(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
 
 def test_from_dict_without_namespace_invalid(
-    constructor: Callable[[Any], IntoFrame],
+    constructor: Constructor,
 ) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     with pytest.raises(TypeError, match="namespace"):
@@ -51,7 +47,7 @@ def test_from_dict_without_namespace_invalid(
 
 
 def test_from_dict_one_native_one_narwhals(
-    constructor: Callable[[Any], IntoFrame],
+    constructor: Constructor,
 ) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})

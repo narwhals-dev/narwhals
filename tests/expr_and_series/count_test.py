@@ -1,10 +1,11 @@
 from typing import Any
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_count(constructor: Any) -> None:
+def test_count(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b", "z").count())

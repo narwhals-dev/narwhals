@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 from tests.utils import is_windows
 
@@ -57,7 +58,7 @@ def test_dt_to_string_series(constructor_eager: Any, fmt: str) -> None:
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string_expr(constructor: Any, fmt: str) -> None:
+def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data))
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
@@ -130,7 +131,7 @@ def test_dt_to_string_iso_local_datetime_series(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_datetime_expr(
-    constructor: Any, data: datetime, expected: str
+    constructor: Constructor, data: datetime, expected: str
 ) -> None:
     df = constructor({"a": [data]})
 
@@ -164,7 +165,7 @@ def test_dt_to_string_iso_local_date_series(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_expr(
-    constructor: Any, data: datetime, expected: str
+    constructor: Constructor, data: datetime, expected: str
 ) -> None:
     df = constructor({"a": [data]})
     result = nw.from_native(df).with_columns(
