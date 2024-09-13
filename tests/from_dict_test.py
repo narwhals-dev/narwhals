@@ -1,12 +1,15 @@
 from typing import Any
+from typing import Callable
 
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.typing import IntoFrame
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_from_dict(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_from_dict(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
@@ -17,7 +20,9 @@ def test_from_dict(constructor: Any, request: pytest.FixtureRequest) -> None:
     assert isinstance(result, nw.DataFrame)
 
 
-def test_from_dict_schema(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_from_dict_schema(
+    constructor: Callable[[Any], IntoFrame], request: pytest.FixtureRequest
+) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     schema = {"c": nw.Int16(), "d": nw.Float32()}
@@ -31,19 +36,23 @@ def test_from_dict_schema(constructor: Any, request: pytest.FixtureRequest) -> N
     assert result.collect_schema() == schema
 
 
-def test_from_dict_without_namespace(constructor: Any) -> None:
+def test_from_dict_without_namespace(constructor: Callable[[Any], IntoFrame]) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": df["a"], "d": df["b"]})
     compare_dicts(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
 
-def test_from_dict_without_namespace_invalid(constructor: Any) -> None:
+def test_from_dict_without_namespace_invalid(
+    constructor: Callable[[Any], IntoFrame],
+) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     with pytest.raises(TypeError, match="namespace"):
         nw.from_dict({"c": nw.to_native(df["a"]), "d": nw.to_native(df["b"])})
 
 
-def test_from_dict_one_native_one_narwhals(constructor: Any) -> None:
+def test_from_dict_one_native_one_narwhals(
+    constructor: Callable[[Any], IntoFrame],
+) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})
     expected = {"c": [1, 2, 3], "d": [4, 5, 6]}
