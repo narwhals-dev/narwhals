@@ -59,7 +59,8 @@ def test_stable_api_docstrings() -> None:
             == nw_doc
         )
         assert (
-            nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1") == v1_doc
+            nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1 as nw")
+            == v1_doc
         )
 
 
