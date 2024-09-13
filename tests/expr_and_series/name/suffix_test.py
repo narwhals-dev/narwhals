@@ -1,33 +1,33 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any
 
 import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 suffix = "_with_suffix"
 
 
-def test_suffix(constructor: Any) -> None:
+def test_suffix(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo", "BAR") * 2).name.suffix(suffix))
     expected = {str(k) + suffix: [e * 2 for e in v] for k, v in data.items()}
     compare_dicts(result, expected)
 
 
-def test_suffix_after_alias(constructor: Any) -> None:
+def test_suffix_after_alias(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.suffix(suffix))
     expected = {"foo" + suffix: data["foo"]}
     compare_dicts(result, expected)
 
 
-def test_suffix_raise_anonymous(constructor: Any) -> None:
+def test_suffix_raise_anonymous(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 

@@ -15,7 +15,7 @@ data = [1, 3, 2]
 @pytest.mark.skipif(
     parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old for pyarrow"
 )
-def test_convert(request: Any, constructor_eager: Any) -> None:
+def test_convert(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
     if any(
         cname in str(constructor_eager)
         for cname in ("pandas_nullable", "pandas_pyarrow", "modin")

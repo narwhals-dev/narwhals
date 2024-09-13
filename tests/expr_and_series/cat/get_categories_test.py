@@ -12,7 +12,7 @@ from tests.utils import compare_dicts
 data = {"a": ["one", "two", "two"]}
 
 
-def test_get_categories(request: Any, constructor_eager: Any) -> None:
+def test_get_categories(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < parse_version("15.0.0"):

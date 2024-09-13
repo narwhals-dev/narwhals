@@ -10,7 +10,7 @@ from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 
-def test_array_dunder(request: Any, constructor_eager: Any) -> None:
+def test_array_dunder(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < parse_version("16.0.0"):  # pragma: no cover
@@ -21,7 +21,9 @@ def test_array_dunder(request: Any, constructor_eager: Any) -> None:
     np.testing.assert_array_equal(result, np.array([1, 2, 3], dtype="int64"))
 
 
-def test_array_dunder_with_dtype(request: Any, constructor_eager: Any) -> None:
+def test_array_dunder_with_dtype(
+    request: pytest.FixtureRequest, constructor_eager: Any
+) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < parse_version("16.0.0"):  # pragma: no cover
@@ -32,7 +34,9 @@ def test_array_dunder_with_dtype(request: Any, constructor_eager: Any) -> None:
     np.testing.assert_array_equal(result, np.array([1, 2, 3], dtype=object))
 
 
-def test_array_dunder_with_copy(request: Any, constructor_eager: Any) -> None:
+def test_array_dunder_with_copy(
+    request: pytest.FixtureRequest, constructor_eager: Any
+) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < parse_version("16.0.0"):  # pragma: no cover

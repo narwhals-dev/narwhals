@@ -10,7 +10,7 @@ if not Path("data").exists():
 
 con = duckdb.connect(database=":memory:")
 con.execute("INSTALL tpch; LOAD tpch")
-con.execute("CALL dbgen(sf=1)")
+con.execute("CALL dbgen(sf=.5)")
 tables = [
     "lineitem",
     "customer",

@@ -12,3 +12,6 @@ print(q19.query(fn(lineitem), fn(part)).collect())
 
 fn = IO_FUNCS["pyarrow"]
 print(q19.query(fn(lineitem), fn(part)))
+
+fn = IO_FUNCS["dask"]
+print(q19.query(fn(lineitem), fn(part)).compute())

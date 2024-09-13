@@ -12,6 +12,7 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
@@ -32,8 +33,8 @@ def test_arithmetic_expr(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor: Any,
-    request: Any,
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin"]
@@ -62,8 +63,8 @@ def test_right_arithmetic_expr(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor: Any,
-    request: Any,
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin"]
@@ -94,7 +95,7 @@ def test_arithmetic_series(
     rhs: Any,
     expected: list[Any],
     constructor_eager: Any,
-    request: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "modin"]
@@ -124,7 +125,7 @@ def test_right_arithmetic_series(
     rhs: Any,
     expected: list[Any],
     constructor_eager: Any,
-    request: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__rmod__" and any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "modin"]
@@ -137,7 +138,9 @@ def test_right_arithmetic_series(
     compare_dicts(result, {"a": expected})
 
 
-def test_truediv_same_dims(constructor_eager: Any, request: Any) -> None:
+def test_truediv_same_dims(
+    constructor_eager: Any, request: pytest.FixtureRequest
+) -> None:
     if "polars" in str(constructor_eager):
         # https://github.com/pola-rs/polars/issues/17760
         request.applymarker(pytest.mark.xfail)

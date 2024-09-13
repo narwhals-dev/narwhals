@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
-from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -11,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -52,7 +52,7 @@ schema = {
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(constructor: Any, request: Any) -> None:
+def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
@@ -102,7 +102,7 @@ def test_cast(constructor: Any, request: Any) -> None:
     assert dict(result.collect_schema()) == expected
 
 
-def test_cast_series(constructor: Any, request: Any) -> None:
+def test_cast_series(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
@@ -168,7 +168,9 @@ def test_cast_string() -> None:
     assert str(result.dtype) in ("string", "object", "dtype('O')")
 
 
-def test_cast_raises_for_unknown_dtype(constructor: Any, request: Any) -> None:
+def test_cast_raises_for_unknown_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
@@ -187,7 +189,9 @@ def test_cast_raises_for_unknown_dtype(constructor: Any, request: Any) -> None:
         df.select(nw.col("a").cast(Banana))
 
 
-def test_cast_datetime_tz_aware(constructor: Any, request: Any) -> None:
+def test_cast_datetime_tz_aware(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

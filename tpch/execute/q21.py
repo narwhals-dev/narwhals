@@ -14,3 +14,6 @@ print(q21.query(fn(lineitem), fn(nation), fn(orders), fn(supplier)).collect())
 
 fn = IO_FUNCS["pyarrow"]
 print(q21.query(fn(lineitem), fn(nation), fn(orders), fn(supplier)))
+
+fn = IO_FUNCS["dask"]
+print(q21.query(fn(lineitem), fn(nation), fn(orders), fn(supplier)).compute())

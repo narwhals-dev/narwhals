@@ -27,4 +27,4 @@ jobs:
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 
-        run: cd tpch #&& pytest tests
+        run: cd tpch && pytest tests

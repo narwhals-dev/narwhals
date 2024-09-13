@@ -5,6 +5,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -13,7 +14,9 @@ data = {
 }
 
 
-def test_mode_single_expr(constructor: Any, request: Any) -> None:
+def test_mode_single_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -23,7 +26,9 @@ def test_mode_single_expr(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_mode_multi_expr(constructor: Any, request: Any) -> None:
+def test_mode_multi_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if "dask" in str(constructor) or (
         "polars" in str(constructor) and parse_version(pl.__version__) >= (1, 7, 0)
     ):

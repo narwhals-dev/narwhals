@@ -1,12 +1,13 @@
 from typing import Any
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {"a": ["foo", "bars"]}
 
 
-def test_str_head(constructor: Any) -> None:
+def test_str_head(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.head(3))
     expected = {
