@@ -117,7 +117,7 @@ class Datetime(TemporalType):
             return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
-        return hash((self.__class__, self.time_unit, self.time_zone))
+        return hash(self.__class__)
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         class_name = self.__class__.__name__
@@ -159,7 +159,7 @@ class Duration(TemporalType):
             return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
-        return hash((self.__class__, self.time_unit))
+        return hash(self.__class__)
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         class_name = self.__class__.__name__
