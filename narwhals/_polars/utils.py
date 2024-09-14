@@ -60,14 +60,15 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Categorical()
     if dtype == pl.Enum:
         return dtypes.Enum()
-    if dtype == pl.Duration:
-        return dtypes.Duration()
     if dtype == pl.Date:
         return dtypes.Date()
     if dtype == pl.Datetime or isinstance(dtype, pl.Datetime):
-        time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
-        time_zone = getattr(dtype, "time_zone", None)
-        return dtypes.Datetime(time_unit=time_unit, time_zone=time_zone)
+        dt_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        dt_time_zone = getattr(dtype, "time_zone", None)
+        return dtypes.Datetime(time_unit=dt_time_unit, time_zone=dt_time_zone)
+    if dtype == pl.Duration or isinstance(dtype, pl.Duration):
+        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        return dtypes.Duration(time_unit=du_time_unit)
     return dtypes.Unknown()
 
 
@@ -106,13 +107,14 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     if dtype == dtypes.Enum:
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
-    if dtype == dtypes.Duration:
-        return pl.Duration()
     if dtype == dtypes.Date:
         return pl.Date()
     if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
-        time_unit = getattr(dtype, "time_unit", "us")
-        time_zone = getattr(dtype, "time_zone", None)
-        return pl.Datetime(time_unit, time_zone)
+        dt_time_unit = getattr(dtype, "time_unit", "us")
+        dt_time_zone = getattr(dtype, "time_zone", None)
+        return pl.Datetime(dt_time_unit, dt_time_zone)
+    if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
+        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        return pl.Duration(time_unit=du_time_unit)
 
     return pl.Unknown()  # pragma: no cover

@@ -48,7 +48,7 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     if pa.types.is_timestamp(dtype):
         return dtypes.Datetime(time_unit=dtype.unit, time_zone=dtype.tz)
     if pa.types.is_duration(dtype):
-        return dtypes.Duration()
+        return dtypes.Duration(time_unit=dtype.unit)
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
     return dtypes.Unknown()  # pragma: no cover
@@ -91,10 +91,9 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         time_unit = getattr(dtype, "time_unit", "us")
         time_zone = getattr(dtype, "time_zone", None)
         return pa.timestamp(time_unit, tz=time_zone)
-
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # Use Polars' default
-        return pa.duration("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        return pa.duration(time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover

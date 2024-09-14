@@ -23,3 +23,16 @@ def test_datetime_valid(
 def test_datetime_invalid(time_unit: str) -> None:
     with pytest.raises(ValueError, match="invalid `time_unit`"):
         nw.Datetime(time_unit=time_unit)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
+def test_duration_valid(time_unit: Literal["us", "ns", "ms"]) -> None:
+    dtype = nw.Duration(time_unit=time_unit)
+
+    assert dtype.time_unit == time_unit
+
+
+@pytest.mark.parametrize("time_unit", ["abc", "s"])
+def test_duration_invalid(time_unit: str) -> None:
+    with pytest.raises(ValueError, match="invalid `time_unit`"):
+        nw.Duration(time_unit=time_unit)  # type: ignore[arg-type]

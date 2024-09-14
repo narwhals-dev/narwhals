@@ -229,6 +229,9 @@ def translate_dtype(column: Any) -> DType:
     )
     pa_datetime_rgx = r"^timestamp\[(?P<time_unit>ms|us|ns)(?:, tz=(?P<time_zone>[a-zA-Z\/]+))?\]\[pyarrow\]$"
 
+    pd_duration_rgx = r"^timedelta64\[(?P<time_unit>ms|us|ns)\]$"
+    pa_duration_rgx = r"^duration\[(?P<time_unit>ms|us|ns)\]\[pyarrow\]$"
+
     if str(dtype) in ("int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"):
         return dtypes.Int64()
     if str(dtype) in ("int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"):
@@ -275,12 +278,14 @@ def translate_dtype(column: Any) -> DType:
     if (match_ := re.match(pd_datetime_rgx, str(dtype))) or (
         match_ := re.match(pa_datetime_rgx, str(dtype))
     ):
-        time_unit: Literal["us", "ns", "ms"] = match_.group("time_unit")  # type: ignore[assignment]
-        time_zone: str | None = match_.group("time_zone")
-        return dtypes.Datetime(time_unit, time_zone)
-    if str(dtype).startswith("timedelta64") or str(dtype).startswith("duration"):
-        # TODO(Unassigned): different time units
-        return dtypes.Duration()
+        dt_time_unit: Literal["us", "ns", "ms"] = match_.group("time_unit")  # type: ignore[assignment]
+        dt_time_zone: str | None = match_.group("time_zone")
+        return dtypes.Datetime(dt_time_unit, dt_time_zone)
+    if (match_ := re.match(pd_duration_rgx, str(dtype))) or (
+        match_ := re.match(pa_duration_rgx, str(dtype))
+    ):
+        du_time_unit: Literal["us", "ns", "ms"] = match_.group("time_unit")  # type: ignore[assignment]
+        return dtypes.Duration(du_time_unit)
     if str(dtype) == "date32[day][pyarrow]":
         return dtypes.Date()
     if str(dtype) == "object":
@@ -435,8 +440,8 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         # convert to it?
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        time_unit = getattr(dtype, "time_unit", "us")
-        time_zone = getattr(dtype, "time_zone", None)
+        dt_time_unit = getattr(dtype, "time_unit", "us")
+        dt_time_zone = getattr(dtype, "time_zone", None)
 
         # Pandas does not support "ms" or "us" time units before version 1.5.0
         # Let's overwrite with "ns"
@@ -445,20 +450,22 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             5,
             0,
         ):  # pragma: no cover
-            time_unit = "ns"
+            dt_time_unit = "ns"
 
         if dtype_backend == "pyarrow-nullable":
-            tz_part = f", tz={time_zone}" if time_zone else ""
-            return f"timestamp[{time_unit}{tz_part}][pyarrow]"
+            tz_part = f", tz={dt_time_zone}" if dt_time_zone else ""
+            return f"timestamp[{dt_time_unit}{tz_part}][pyarrow]"
         else:
-            tz_part = f", {time_zone}" if time_zone else ""
-            return f"datetime64[{time_unit}{tz_part}]"
-
+            tz_part = f", {dt_time_zone}" if dt_time_zone else ""
+            return f"datetime64[{dt_time_unit}{tz_part}]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # TODO(Unassigned): different time units and time zones
-        if dtype_backend == "pyarrow-nullable":
-            return "duration[ns][pyarrow]"
-        return "timedelta64[ns]"
+        du_time_unit = getattr(dtype, "time_unit", "us")
+        return (
+            f"duration[{du_time_unit}][pyarrow]"
+            if dtype_backend == "pyarrow-nullable"
+            else f"timedelta64[{du_time_unit}]"
+        )
+
     if isinstance_or_issubclass(dtype, dtypes.Date):
         if dtype_backend == "pyarrow-nullable":
             return "date32[pyarrow]"
