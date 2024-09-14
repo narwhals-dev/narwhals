@@ -693,3 +693,17 @@ class PandasLikeDataFrame:
         import pyarrow as pa  # ignore-banned-import()
 
         return pa.Table.from_pandas(self._native_frame)
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        return self._from_native_frame(
+            self._native_frame.sample(
+                n=n, frac=fraction, replace=with_replacement, random_state=seed
+            )
+        )

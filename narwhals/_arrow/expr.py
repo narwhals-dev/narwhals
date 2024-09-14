@@ -249,12 +249,18 @@ class ArrowExpr:
     def sample(
         self: Self,
         n: int | None = None,
-        fraction: float | None = None,
         *,
+        fraction: float | None = None,
         with_replacement: bool = False,
+        seed: int | None = None,
     ) -> Self:
         return reuse_series_implementation(
-            self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
+            self,
+            "sample",
+            n=n,
+            fraction=fraction,
+            with_replacement=with_replacement,
+            seed=seed,
         )
 
     def fill_null(self: Self, value: Any) -> Self:

@@ -2459,6 +2459,66 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return self._compliant_frame.to_arrow()
 
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        r"""
+        Sample from this DataFrame.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+            fraction: Fraction of items to return. Cannot be used with n.
+            with_replacement: Allow values to be sampled more than once.
+            seed: Seed for the random number generator. If set to None (default), a random
+                seed is generated for each sample operation.
+
+        Notes:
+            The results may not be consistent across libraries.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.sample(n=2, seed=123)
+
+            We can then pass either pandas or Polars to `func`:
+            >>> func(df_pd)
+               a  b
+            3  4  y
+            0  1  x
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ str │
+            ╞═════╪═════╡
+            │ 2   ┆ y   │
+            │ 3   ┆ x   │
+            └─────┴─────┘
+
+            As you can see, by using the same seed, the result will be consistent within
+            the same backend, but not necessarely across different backends.
+        """
+        return self._from_compliant_dataframe(
+            self._compliant_frame.sample(
+                n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
+            )
+        )
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """
