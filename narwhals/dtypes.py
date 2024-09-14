@@ -108,11 +108,13 @@ class Datetime(TemporalType):
         self.time_zone = time_zone
 
     def __eq__(self: Self, other: object) -> bool:
-        return (
-            isinstance(other, Datetime)
-            and self.time_unit == other.time_unit
-            and self.time_zone == other.time_zone
-        )
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, Datetime):
+            return True
+        elif isinstance(other, Datetime):
+            return self.time_unit == other.time_unit and self.time_zone == other.time_zone
+        else:
+            return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit, self.time_zone))
@@ -148,7 +150,13 @@ class Duration(TemporalType):
         self.time_unit = time_unit
 
     def __eq__(self: Self, other: object) -> bool:
-        return isinstance(other, Duration) and self.time_unit == other.time_unit
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, Duration):
+            return True
+        elif isinstance(other, Duration):
+            return self.time_unit == other.time_unit
+        else:
+            return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit))

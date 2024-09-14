@@ -16,6 +16,7 @@ def test_datetime_valid(
     dtype = nw.Datetime(time_unit=time_unit, time_zone=time_zone)
 
     assert dtype == nw.Datetime(time_unit=time_unit, time_zone=time_zone)
+    assert dtype == nw.Datetime
 
     if time_zone:
         assert dtype != nw.Datetime(time_unit=time_unit)
@@ -34,6 +35,7 @@ def test_duration_valid(time_unit: Literal["us", "ns", "ms"]) -> None:
     dtype = nw.Duration(time_unit=time_unit)
 
     assert dtype == nw.Duration(time_unit=time_unit)
+    assert dtype == nw.Duration
 
     if time_unit != "ms":
         assert dtype != nw.Duration(time_unit="ms")
