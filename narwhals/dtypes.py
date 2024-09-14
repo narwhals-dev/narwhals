@@ -107,6 +107,22 @@ class Datetime(TemporalType):
         self.time_unit = time_unit
         self.time_zone = time_zone
 
+    def __eq__(self: Self, other: type[DType] | DType) -> bool:  # type: ignore[override]
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, Datetime):
+            return True
+        elif isinstance(other, Datetime):
+            return self.time_unit == other.time_unit and self.time_zone == other.time_zone
+        else:
+            return False
+
+    def __hash__(self: Self) -> int:  # pragma: no cover
+        return hash((self.__class__, self.time_unit, self.time_zone))
+
+    def __repr__(self: Self) -> str:  # pragma: no cover
+        class_name = self.__class__.__name__
+        return f"{class_name}(time_unit={self.time_unit!r}, time_zone={self.time_zone!r})"
+
 
 class Duration(TemporalType):
     """
@@ -132,6 +148,22 @@ class Duration(TemporalType):
             raise ValueError(msg)
 
         self.time_unit = time_unit
+
+    def __eq__(self: Self, other: type[DType] | DType) -> bool:  # type: ignore[override]
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, Duration):
+            return True
+        elif isinstance(other, Duration):
+            return self.time_unit == other.time_unit
+        else:
+            return False
+
+    def __hash__(self: Self) -> int:  # pragma: no cover
+        return hash((self.__class__, self.time_unit))
+
+    def __repr__(self: Self) -> str:  # pragma: no cover
+        class_name = self.__class__.__name__
+        return f"{class_name}(time_unit={self.time_unit!r})"
 
 
 class Categorical(DType): ...
