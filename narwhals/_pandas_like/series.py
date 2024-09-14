@@ -436,15 +436,16 @@ class PandasLikeSeries:
         return ser.nunique(dropna=False)  # type: ignore[no-any-return]
 
     def sample(
-        self,
+        self: Self,
         n: int | None = None,
-        fraction: float | None = None,
         *,
+        fraction: float | None = None,
         with_replacement: bool = False,
-    ) -> PandasLikeSeries:
+        seed: int | None = None,
+    ) -> Self:
         ser = self._native_series
         return self._from_native_series(
-            ser.sample(n=n, frac=fraction, replace=with_replacement)
+            ser.sample(n=n, frac=fraction, replace=with_replacement, random_state=seed)
         )
 
     def abs(self) -> PandasLikeSeries:

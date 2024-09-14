@@ -254,14 +254,20 @@ class PandasLikeExpr:
         return reuse_series_implementation(self, "shift", n=n)
 
     def sample(
-        self,
+        self: Self,
         n: int | None = None,
-        fraction: float | None = None,
         *,
+        fraction: float | None = None,
         with_replacement: bool = False,
+        seed: int | None = None,
     ) -> Self:
         return reuse_series_implementation(
-            self, "sample", n=n, fraction=fraction, with_replacement=with_replacement
+            self,
+            "sample",
+            n=n,
+            fraction=fraction,
+            with_replacement=with_replacement,
+            seed=seed,
         )
 
     def alias(self, name: str) -> Self:

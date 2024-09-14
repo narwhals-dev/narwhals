@@ -1228,21 +1228,22 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).drop_nulls())
 
     def sample(
-        self,
+        self: Self,
         n: int | None = None,
-        fraction: float | None = None,
         *,
+        fraction: float | None = None,
         with_replacement: bool = False,
+        seed: int | None = None,
     ) -> Self:
         """
         Sample randomly from this expression.
 
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
-
             fraction: Fraction of items to return. Cannot be used with n.
-
             with_replacement: Allow values to be sampled more than once.
+            seed: Seed for the random number generator. If set to None (default), a random
+                seed is generated for each sample operation.
 
         Examples:
             >>> import narwhals as nw
@@ -1279,7 +1280,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._call(plx).sample(
-                n, fraction=fraction, with_replacement=with_replacement
+                n, fraction=fraction, with_replacement=with_replacement, seed=seed
             )
         )
 
