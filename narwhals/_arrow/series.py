@@ -928,6 +928,7 @@ class ArrowSeriesCatNamespace:
 
         ca = self._arrow_series._native_series
         # TODO(Unassigned): this looks potentially expensive - is there no better way?
+        # https://github.com/narwhals-dev/narwhals/issues/464
         out = pa.chunked_array(
             [pa.concat_arrays([x.dictionary for x in ca.chunks]).unique()]
         )
