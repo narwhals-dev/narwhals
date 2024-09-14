@@ -572,3 +572,25 @@ class ArrowDataFrame:
 
     def to_arrow(self: Self) -> Any:
         return self._native_frame
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        import numpy as np  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        frame = self._native_frame
+        num_rows = len(self)
+        if n is None and fraction is not None:
+            n = int(num_rows * fraction)
+
+        rng = np.random.default_rng(seed=seed)
+        idx = np.arange(0, num_rows)
+        mask = rng.choice(idx, size=n, replace=with_replacement)
+
+        return self._from_native_frame(pc.take(frame, mask))
