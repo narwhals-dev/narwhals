@@ -801,6 +801,9 @@ class DataFrame(BaseFrame[FrameT]):
         Arguments:
             index: Row number.
 
+        Notes:
+            cuDF doesn't support this method.
+
         Examples:
             >>> import narwhals as nw
             >>> import pandas as pd
@@ -1136,6 +1139,9 @@ class DataFrame(BaseFrame[FrameT]):
             buffer_size: Determines the number of rows that are buffered
                 internally while iterating over the data.
                 See https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
+
+        Notes:
+            cuDF doesn't support this method.
 
         Examples:
             >>> import pandas as pd
