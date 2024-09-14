@@ -3,7 +3,8 @@
 To write a dataframe-agnostic function, the steps you'll want to follow are:
 
 1. Initialise a Narwhals DataFrame or LazyFrame by passing your dataframe to `nw.from_native`.
-    All the calculations stay lazy if we start with a lazy dataframe - Narwhals will never automatically trigger computation without you asking it to.
+    All the calculations stay lazy if we start with a lazy dataframe - Narwhals will never
+    automatically trigger computation without you asking it to.
    
     Note: if you need eager execution, make sure to pass `eager_only=True` to `nw.from_native`.
 
@@ -23,11 +24,11 @@ Just like in Polars, we can pass expressions to
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex1"
 import narwhals as nw
-from narwhals.typing import FrameT
+from narwhals.typing import IntoDataFrameT
 
 
 @nw.narwhalify
-def func(df: FrameT) -> FrameT:
+def func(df: IntoDataFrameT) -> IntoDataFrameT:
     return df.select(
         a_sum=nw.col("a").sum(),
         a_mean=nw.col("a").mean(),
@@ -63,10 +64,10 @@ Let's try it out:
 Alternatively, we could have opted for the more explicit version:
 ```python
 import narwhals as nw
-from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoDataFrameT
 
 
-def func(df_native: IntoFrameT) -> IntoFrameT:
+def func(df_native: IntoDataFrameT) -> IntoDataFrameT:
     df = nw.from_native(df_native)
     df = df.select(
         a_sum=nw.col("a").sum(),
@@ -86,11 +87,11 @@ Just like in Polars, we can pass expressions to `GroupBy.agg`.
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex2"
 import narwhals as nw
-from narwhals.typing import FrameT
+from narwhals.typing import IntoDataFrameT
 
 
 @nw.narwhalify
-def func(df: FrameT) -> FrameT:
+def func(df: IntoDataFrameT) -> IntoDataFrameT:
     return df.group_by("a").agg(nw.col("b").mean()).sort("a")
 ```
 Let's try it out:
@@ -127,11 +128,11 @@ For example, we can compute a horizontal sum using `nw.sum_horizontal`.
 Make a Python file with the following content:
 ```python exec="1" source="above" session="df_ex3"
 import narwhals as nw
-from narwhals.typing import FrameT
+from narwhals.typing import IntoDataFrameT
 
 
 @nw.narwhalify
-def func(df: FrameT) -> FrameT:
+def func(df: IntoDataFrameT) -> IntoDataFrameT:
     return df.with_columns(a_plus_b=nw.sum_horizontal("a", "b"))
 ```
 Let's try it out:
