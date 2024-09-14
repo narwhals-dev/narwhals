@@ -534,9 +534,10 @@ class ArrowSeries:
     def sample(
         self: Self,
         n: int | None = None,
-        fraction: float | None = None,
         *,
+        fraction: float | None = None,
         with_replacement: bool = False,
+        seed: int | None = None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -547,8 +548,10 @@ class ArrowSeries:
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
 
+        np.random.seed(seed)
         idx = np.arange(0, num_rows)
         mask = np.random.choice(idx, size=n, replace=with_replacement)
+
         return self._from_native_series(pc.take(ser, mask))
 
     def fill_null(self: Self, value: Any) -> Self:

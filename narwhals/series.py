@@ -1076,21 +1076,22 @@ class Series:
         return self._from_compliant_series(self._compliant_series.shift(n))
 
     def sample(
-        self,
+        self: Self,
         n: int | None = None,
-        fraction: float | None = None,
         *,
+        fraction: float | None = None,
         with_replacement: bool = False,
+        seed: int | None = None,
     ) -> Self:
         """
         Sample randomly from this Series.
 
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
-
             fraction: Fraction of items to return. Cannot be used with n.
-
             with_replacement: Allow values to be sampled more than once.
+            seed: Seed for the random number generator. If set to None (default), a random
+                seed is generated for each sample operation.
 
         Notes:
             The `sample` method returns a Series with a specified number of
@@ -1131,7 +1132,7 @@ class Series:
         """
         return self._from_compliant_series(
             self._compliant_series.sample(
-                n=n, fraction=fraction, with_replacement=with_replacement
+                n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
             )
         )
 
