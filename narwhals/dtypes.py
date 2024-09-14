@@ -113,7 +113,7 @@ class Datetime(TemporalType):
             return True
         elif isinstance(other, Datetime):
             return self.time_unit == other.time_unit and self.time_zone == other.time_zone
-        else:
+        else:  # pragma: no cover
             return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
@@ -155,7 +155,7 @@ class Duration(TemporalType):
             return True
         elif isinstance(other, Duration):
             return self.time_unit == other.time_unit
-        else:
+        else:  # pragma: no cover
             return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
