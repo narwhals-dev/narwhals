@@ -548,9 +548,9 @@ class ArrowSeries:
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
 
-        np.random.seed(seed)
+        rng = np.random.default_rng(seed=seed)
         idx = np.arange(0, num_rows)
-        mask = np.random.choice(idx, size=n, replace=with_replacement)
+        mask = rng.choice(idx, size=n, replace=with_replacement)
 
         return self._from_native_series(pc.take(ser, mask))
 
