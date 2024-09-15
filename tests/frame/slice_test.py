@@ -149,6 +149,9 @@ def test_slice_slice_columns(constructor_eager: Any) -> None:
     result = df[:, [0, 2]]
     expected = {"a": [1, 2, 3], "c": [7, 8, 9]}
     compare_dicts(result, expected)
+    result = df[:2, [0, 2]]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)
     result = df[["b", "c"]]
     expected = {"b": [4, 5, 6], "c": [7, 8, 9]}
     compare_dicts(result, expected)
