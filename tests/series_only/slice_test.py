@@ -16,6 +16,9 @@ def test_slice(constructor_eager: Any) -> None:
     result = {"b": df[:, 1]}
     expected = {"b": [4, 5, 6]}
     compare_dicts(result, expected)
+    result = {"b": df[:, "b"]}
+    expected = {"b": [4, 5, 6]}
+    compare_dicts(result, expected)
     result = {"b": df[:2, "b"]}
     expected = {"b": [4, 5]}
     compare_dicts(result, expected)

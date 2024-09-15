@@ -143,7 +143,7 @@ class ArrowDataFrame:
             and len(item) == 2
             and isinstance(item[1], (list, tuple))
         ):
-            if item[0] is slice(None):
+            if item[0] == slice(None):
                 selected_rows = self._native_frame
             else:
                 range_ = convert_slice_to_nparray(
@@ -184,12 +184,15 @@ class ArrowDataFrame:
             # PyArrow columns are always strings
             col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
             assert not isinstance(item[0], str)  # help mypy  # noqa: S101
-            if item[0] is slice(None):
-                range_ = item[0]
-            else:
-                range_ = convert_slice_to_nparray(
-                    num_rows=len(self._native_frame), rows_slice=item[0]
+            if (isinstance(item[0], slice)) and (item[0] == slice(None)):
+                return ArrowSeries(
+                    self._native_frame[col_name],
+                    name=col_name,
+                    backend_version=self._backend_version,
                 )
+            range_ = convert_slice_to_nparray(
+                num_rows=len(self._native_frame), rows_slice=item[0]
+            )
             return ArrowSeries(
                 self._native_frame[col_name].take(range_),
                 name=col_name,
