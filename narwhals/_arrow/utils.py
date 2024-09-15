@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from narwhals import dtypes
 from narwhals.utils import isinstance_or_issubclass
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
-    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
 
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
@@ -55,7 +56,7 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
 
 
 def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
-    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
 
     from narwhals import dtypes
 
@@ -141,7 +142,7 @@ def validate_dataframe_comparand(
         return NotImplemented
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
-            import pyarrow as pa  # ignore-banned-import()
+            import pyarrow as pa  # ignore-banned-import
 
             value = other.item()
             if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
@@ -158,7 +159,7 @@ def horizontal_concat(dfs: list[Any]) -> Any:
 
     Should be in namespace.
     """
-    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
 
     if not dfs:
         msg = "No dataframes to concatenate"  # pragma: no cover
@@ -191,7 +192,7 @@ def vertical_concat(dfs: list[Any]) -> Any:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
 
-    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
 
     return pa.concat_tables(dfs).combine_chunks()
 
@@ -199,8 +200,8 @@ def vertical_concat(dfs: list[Any]) -> Any:
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    import pyarrow as pa  # ignore-banned-import()
-    import pyarrow.compute as pc  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
 
     if isinstance(left, (int, float)):
         left = pa.scalar(left)
@@ -238,8 +239,8 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
-    import pyarrow as pa  # ignore-banned-import()
-    import pyarrow.compute as pc  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
 
     # Ensure int / int -> float mirroring Python/Numpy behavior
     # as pc.divide_checked(int, int) -> int
@@ -261,7 +262,7 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
     if fast_path:
         return [s._native_series for s in series]
 
-    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
 
     reshaped = []
     for s, length in zip(series, lengths):
@@ -275,3 +276,14 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
             reshaped.append(s_native)
 
     return reshaped
+
+
+def convert_slice_to_nparray(
+    num_rows: int, rows_slice: slice | int | Sequence[int]
+) -> Any:
+    import numpy as np  # ignore-banned-import
+
+    if isinstance(rows_slice, slice):
+        return np.arange(num_rows)[rows_slice]
+    else:
+        return rows_slice

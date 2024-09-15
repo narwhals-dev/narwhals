@@ -602,11 +602,15 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
+    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
+    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
@@ -627,6 +631,7 @@ class DataFrame(BaseFrame[FrameT]):
         | Sequence[int]
         | Sequence[str]
         | tuple[Sequence[int], str | int]
+        | tuple[slice, str | int]
         | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice],
     ) -> Series | Self:
         """
