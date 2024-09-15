@@ -183,7 +183,9 @@ class ArrowDataFrame:
 
             # PyArrow columns are always strings
             col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
-            assert not isinstance(item[0], str)  # help mypy  # noqa: S101
+            if isinstance(item[0], str):  # pragma: no cover
+                msg = "Can not slice with tuple with the first element as a str"
+                raise TypeError(msg)
             if (isinstance(item[0], slice)) and (item[0] == slice(None)):
                 return ArrowSeries(
                     self._native_frame[col_name],
