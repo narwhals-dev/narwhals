@@ -81,6 +81,7 @@ def test_str_to_uppercase_series(
             "pandas_constructor",
             "pandas_nullable_constructor",
             "polars_eager_constructor",
+            "cudf_constructor",
         )
     ):
         # We are marking it xfail for these conditions above
