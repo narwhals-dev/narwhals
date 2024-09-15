@@ -9,6 +9,7 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import broadcast_series
+from narwhals._arrow.utils import convert_slice_to_nparray
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
@@ -126,7 +127,8 @@ class ArrowDataFrame:
         | slice
         | Sequence[int]
         | Sequence[str]
-        | tuple[Sequence[int], str | int],
+        | tuple[Sequence[int], str | int]
+        | tuple[slice, str | int],
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
@@ -141,10 +143,13 @@ class ArrowDataFrame:
             and len(item) == 2
             and isinstance(item[1], (list, tuple))
         ):
-            if item[0] == slice(None):
+            if item[0] is slice(None):
                 selected_rows = self._native_frame
             else:
-                selected_rows = self._native_frame.take(item[0])
+                range_ = convert_slice_to_nparray(
+                    num_rows=len(self._native_frame), rows_slice=item[0]
+                )
+                selected_rows = self._native_frame.take(range_)
 
             return self._from_native_frame(selected_rows.select(item[1]))
 
@@ -174,13 +179,19 @@ class ArrowDataFrame:
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-
             from narwhals._arrow.series import ArrowSeries
 
             # PyArrow columns are always strings
             col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
+            assert not isinstance(item[0], str)  # help mypy  # noqa: S101
+            if item[0] is slice(None):
+                range_ = item[0]
+            else:
+                range_ = convert_slice_to_nparray(
+                    num_rows=len(self._native_frame), rows_slice=item[0]
+                )
             return ArrowSeries(
-                self._native_frame[col_name].take(item[0]),
+                self._native_frame[col_name].take(range_),
                 name=col_name,
                 backend_version=self._backend_version,
             )
