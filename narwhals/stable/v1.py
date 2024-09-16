@@ -539,11 +539,11 @@ def _stableify(
     elif isinstance(obj, NwChainedWhen):
         return ChainedWhen.from_base(obj)
     if isinstance(obj, NwWhen):
-        return When.from_when(obj)
+        return When.from_base(obj)
     elif isinstance(obj, NwChainedThen):
         return ChainedThen.from_base(obj)
     elif isinstance(obj, NwThen):
-        return Then.from_then(obj)
+        return Then.from_base(obj)
     if isinstance(obj, NwExpr):
         return Expr(obj._call)
     return obj
@@ -1724,16 +1724,16 @@ def get_level(
 
 class When(NwWhen):
     @classmethod
-    def from_when(cls, when: NwWhen) -> Self:
+    def from_base(cls, when: NwWhen) -> Self:
         return cls(*when._predicates)
 
     def then(self, value: Any) -> Then:
-        return Then.from_then(super().then(value))
+        return Then.from_base(super().then(value))
 
 
 class Then(NwThen, Expr):
     @classmethod
-    def from_then(cls, then: NwThen) -> Self:
+    def from_base(cls, then: NwThen) -> Self:
         return cls(then._call)
 
     def otherwise(self, value: Any) -> Expr:
@@ -1809,7 +1809,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
     """
-    return When.from_when(nw_when(*predicates))
+    return _stableify(nw_when(*predicates))
 
 
 def new_series(
