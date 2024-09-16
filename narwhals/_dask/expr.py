@@ -688,30 +688,54 @@ class DaskExpr:
             backend_version=self._backend_version,
         )
 
-    def mode(self: Self) -> Self:
-        msg = "`Expr.mode` is not supported for the Dask backend."
-        raise NotImplementedError(msg)
-
-    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        na_position = "last" if nulls_last else "first"
-
-        def func(_input: Any, ascending: bool, na_position: bool) -> Any:  # noqa: FBT001
-            name = _input.name
-
-            return _input.to_frame(name=name).sort_values(
-                by=name, ascending=ascending, na_position=na_position
-            )[name]
+    def cast(
+        self: Self,
+        dtype: DType | type[DType],
+    ) -> Self:
+        def func(_input: Any, dtype: DType | type[DType]) -> Any:
+            dtype = reverse_translate_dtype(dtype)
+            return _input.astype(dtype)
 
         return self._from_call(
             func,
-            "sort",
-            not descending,
-            na_position,
+            "cast",
+            dtype,
             returns_scalar=False,
-            modifies_index=True,
+            modifies_index=False,
         )
 
     # Index modifiers
+
+    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        msg = "`Expr.sort` is not supported for the Dask backend. Please use `LazyFrame.sort` instead."
+        raise NotImplementedError(msg)
+
+    def gather_every(self: Self, n: int, offset: int = 0) -> NoReturn:
+        msg = "`Expr.gather_every` is not supported for the Dask backend. Please use `LazyFrame.gather_every` instead."
+        raise NotImplementedError(msg)
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> NoReturn:
+        msg = "`Expr.sample` is not supported for the Dask backend."
+        raise NotImplementedError(msg)
+
+    def mode(self: Self) -> Self:
+        def func(_input: Any) -> Any:
+            name = _input.name
+            return _input.to_frame(name=name).mode()[name]
+
+        return self._from_call(
+            func,
+            "mode",
+            returns_scalar=False,
+            modifies_index=True,
+        )
 
     def drop_nulls(self: Self) -> Self:
         return self._from_call(
@@ -753,10 +777,45 @@ class DaskExpr:
             modifies_index=True,
         )
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> NoReturn:
-        # We can't (yet?) allow methods which modify the index
-        msg = "`Expr.gather_every` is not supported for the Dask backend. Please use `LazyFrame.gather_every` instead."
-        raise NotImplementedError(msg)
+    def filter(self: Self, *predicates: Any) -> Self:
+        plx = self.__narwhals_namespace__()
+        expr = plx.all_horizontal(*predicates)
+
+        def func(df: DaskLazyFrame) -> list[Any]:
+            if self._output_names is None:
+                msg = (
+                    "Anonymous expressions are not supported in filter.\n"
+                    "Instead of `nw.all()`, try using a named expression, such as "
+                    "`nw.col('a', 'b')`\n"
+                )
+                raise ValueError(msg)
+            mask = expr._call(df)[0]
+            return [df._native_frame[name].loc[mask] for name in self._output_names]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->filter",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            returns_scalar=False,
+            modifies_index=True,
+            backend_version=self._backend_version,
+        )
+
+    def arg_true(self: Self) -> Self:
+        def func(_input: dask_expr.Series) -> dask_expr.Series:
+            name = _input.name
+            return add_row_index(_input.to_frame(name=name), name).loc[_input, name]
+
+        return self._from_call(
+            func,
+            "arg_true",
+            returns_scalar=False,
+            modifies_index=True,
+        )
+
+    # Namespaces
 
     @property
     def str(self: Self) -> DaskExprStringNamespace:
@@ -769,22 +828,6 @@ class DaskExpr:
     @property
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
-
-    def cast(
-        self: Self,
-        dtype: DType | type[DType],
-    ) -> Self:
-        def func(_input: Any, dtype: DType | type[DType]) -> Any:
-            dtype = reverse_translate_dtype(dtype)
-            return _input.astype(dtype)
-
-        return self._from_call(
-            func,
-            "cast",
-            dtype,
-            returns_scalar=False,
-            modifies_index=False,
-        )
 
 
 class DaskExprStringNamespace:

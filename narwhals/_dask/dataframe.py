@@ -139,12 +139,17 @@ class DaskLazyFrame:
 
         col_order = list(new_series.keys())
 
-        left_most_series = next(  # pragma: no cover
-            s for s in new_series.values() if not isinstance(s, de._collection.Scalar)
+        left_most_name, left_most_series = next(  # pragma: no cover
+            (name, s)
+            for name, s in new_series.items()
+            if not isinstance(s, de._collection.Scalar)
         )
+        new_series.pop(left_most_name)
 
         return self._from_native_frame(
-            left_most_series.to_frame().assign(**new_series).loc[:, col_order]
+            left_most_series.to_frame(name=left_most_name)
+            .assign(**new_series)
+            .loc[:, col_order]
         )
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:

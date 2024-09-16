@@ -14,10 +14,8 @@ def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
         nw.col("c_acctbal").mean().alias("avg_acctbal")
     )
 
-    q3 = (
-        orders_ds.select("o_custkey")
-        .unique("o_custkey")
-        .with_columns(nw.col("o_custkey").alias("c_custkey"))
+    q3 = orders_ds.select(nw.col("o_custkey").unique()).with_columns(
+        nw.col("o_custkey").alias("c_custkey")
     )
 
     return (
