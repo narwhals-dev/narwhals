@@ -782,7 +782,7 @@ class DaskExpr:
         expr = plx.all_horizontal(*predicates)
 
         def func(df: DaskLazyFrame) -> list[Any]:
-            if self._output_names is None:
+            if self._output_names is None:  # pragma: no cover
                 msg = (
                     "Anonymous expressions are not supported in filter.\n"
                     "Instead of `nw.all()`, try using a named expression, such as "
