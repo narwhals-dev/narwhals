@@ -602,11 +602,15 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
+    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
+    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
@@ -627,6 +631,7 @@ class DataFrame(BaseFrame[FrameT]):
         | Sequence[int]
         | Sequence[str]
         | tuple[Sequence[int], str | int]
+        | tuple[slice, str | int]
         | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice],
     ) -> Series | Self:
         """
@@ -800,6 +805,9 @@ class DataFrame(BaseFrame[FrameT]):
 
         Arguments:
             index: Row number.
+
+        Notes:
+            cuDF doesn't support this method.
 
         Examples:
             >>> import narwhals as nw
@@ -1136,6 +1144,9 @@ class DataFrame(BaseFrame[FrameT]):
             buffer_size: Determines the number of rows that are buffered
                 internally while iterating over the data.
                 See https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_rows.html
+
+        Notes:
+            cuDF doesn't support this method.
 
         Examples:
             >>> import pandas as pd
@@ -2452,6 +2463,66 @@ class DataFrame(BaseFrame[FrameT]):
             bar: [["a","b","c"]]
         """
         return self._compliant_frame.to_arrow()
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        r"""
+        Sample from this DataFrame.
+
+        Arguments:
+            n: Number of items to return. Cannot be used with fraction.
+            fraction: Fraction of items to return. Cannot be used with n.
+            with_replacement: Allow values to be sampled more than once.
+            seed: Seed for the random number generator. If set to None (default), a random
+                seed is generated for each sample operation.
+
+        Notes:
+            The results may not be consistent across libraries.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.sample(n=2, seed=123)
+
+            We can then pass either pandas or Polars to `func`:
+            >>> func(df_pd)
+               a  b
+            3  4  y
+            0  1  x
+            >>> func(df_pl)
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ str │
+            ╞═════╪═════╡
+            │ 2   ┆ y   │
+            │ 3   ┆ x   │
+            └─────┴─────┘
+
+            As you can see, by using the same seed, the result will be consistent within
+            the same backend, but not necessarely across different backends.
+        """
+        return self._from_compliant_dataframe(
+            self._compliant_frame.sample(
+                n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
+            )
+        )
 
 
 class LazyFrame(BaseFrame[FrameT]):
@@ -3851,34 +3922,35 @@ class LazyFrame(BaseFrame[FrameT]):
         r"""
         Create a copy of this DataFrame.
 
-        >>> import narwhals as nw
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> data = {"a": [1, 2], "b": [3, 4]}
-        >>> df_pd = pd.DataFrame(data)
-        >>> df_pl = pl.LazyFrame(data)
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> data = {"a": [1, 2], "b": [3, 4]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
 
-        Let's define a dataframe-agnostic function in which we copy the DataFrame:
+            Let's define a dataframe-agnostic function in which we copy the DataFrame:
 
-        >>> @nw.narwhalify
-        ... def func(df):
-        ...     return df.clone()
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.clone()
 
-        >>> func(df_pd)
-           a  b
-        0  1  3
-        1  2  4
+            >>> func(df_pd)
+               a  b
+            0  1  3
+            1  2  4
 
-        >>> func(df_pl).collect()
-        shape: (2, 2)
-        ┌─────┬─────┐
-        │ a   ┆ b   │
-        │ --- ┆ --- │
-        │ i64 ┆ i64 │
-        ╞═════╪═════╡
-        │ 1   ┆ 3   │
-        │ 2   ┆ 4   │
-        └─────┴─────┘
+            >>> func(df_pl).collect()
+            shape: (2, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ i64 ┆ i64 │
+            ╞═════╪═════╡
+            │ 1   ┆ 3   │
+            │ 2   ┆ 4   │
+            └─────┴─────┘
         """
         return super().clone()
 

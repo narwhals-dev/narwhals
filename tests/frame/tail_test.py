@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_tail(constructor: Any) -> None:
+def test_tail(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9]}
 

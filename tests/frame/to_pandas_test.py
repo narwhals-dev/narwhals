@@ -14,7 +14,7 @@ from narwhals.utils import parse_version
     parse_version(pd.__version__) < parse_version("2.0.0"),
     reason="too old for pandas-pyarrow",
 )
-def test_convert_pandas(constructor_eager: Any, request: Any) -> None:
+def test_convert_pandas(constructor_eager: Any, request: pytest.FixtureRequest) -> None:
     if "modin" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}

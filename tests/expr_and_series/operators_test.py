@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
@@ -20,7 +21,7 @@ from tests.utils import compare_dicts
     ],
 )
 def test_comparand_operators_scalar_expr(
-    constructor: Any, operator: str, expected: list[bool]
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 2]}
     df = nw.from_native(constructor(data))
@@ -40,7 +41,7 @@ def test_comparand_operators_scalar_expr(
     ],
 )
 def test_comparand_operators_expr(
-    constructor: Any, operator: str, expected: list[bool]
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 1], "b": [0, 0, 2]}
     df = nw.from_native(constructor(data))
@@ -56,7 +57,7 @@ def test_comparand_operators_expr(
     ],
 )
 def test_logic_operators_expr(
-    constructor: Any, operator: str, expected: list[bool]
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
     df = nw.from_native(constructor(data))

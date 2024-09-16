@@ -80,21 +80,25 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self, item: tuple[Sequence[int], Sequence[int]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
-
     @overload
     def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
+    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
-
     @overload
     def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
+    @overload
+    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
+
     @overload
     def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
+
     @overload
     def __getitem__(self, item: Sequence[str]) -> Self: ...
 

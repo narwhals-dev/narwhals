@@ -4,10 +4,20 @@ import math
 import sys
 import warnings
 from typing import Any
+from typing import Callable
 from typing import Iterator
 from typing import Sequence
 
 import pandas as pd
+
+from narwhals.typing import IntoFrame
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias  # pragma: no cover
+else:
+    from typing_extensions import TypeAlias  # pragma: no cover
+
+Constructor: TypeAlias = Callable[[Any], IntoFrame]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:

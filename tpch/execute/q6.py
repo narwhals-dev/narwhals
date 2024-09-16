@@ -14,3 +14,7 @@ print(q6.query(fn(lineitem)).collect())
 tool = "pyarrow"
 fn = IO_FUNCS[tool]
 print(q6.query(fn(lineitem)))
+
+tool = "dask"
+fn = IO_FUNCS[tool]
+print(q6.query(fn(lineitem)).compute())

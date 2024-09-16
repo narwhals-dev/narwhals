@@ -1,12 +1,11 @@
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_clone(request: Any, constructor: Any) -> None:
+def test_clone(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):

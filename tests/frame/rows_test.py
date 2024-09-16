@@ -55,10 +55,14 @@ df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
     ],
 )
 def test_iter_rows(
+    request: Any,
     constructor_eager: Any,
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
+    if "cudf" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2], "_b": [4, 4, 6], "z": [7.0, 8, 9], "1": [5, 6, 7]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = list(df.iter_rows(named=named))

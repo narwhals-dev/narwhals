@@ -10,4 +10,5 @@ pytest-cov
 pytest-env
 hypothesis
 scikit-learn
+typing_extensions
 dask[dataframe]; python_version >= '3.9'

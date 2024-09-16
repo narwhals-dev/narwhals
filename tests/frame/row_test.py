@@ -1,9 +1,14 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 
 
-def test_row_column(constructor_eager: Any) -> None:
+def test_row_column(request: Any, constructor_eager: Any) -> None:
+    if "cudf" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
     data = {
         "a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
         "b": [11, 12, 13, 14, 15, 16],

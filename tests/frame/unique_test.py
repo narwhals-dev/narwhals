@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -21,7 +20,7 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     ],
 )
 def test_unique(
-    constructor: Any,
+    constructor: Constructor,
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
@@ -33,7 +32,7 @@ def test_unique(
     compare_dicts(result, expected)
 
 
-def test_unique_none(constructor: Any) -> None:
+def test_unique_none(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 

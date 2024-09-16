@@ -8,7 +8,7 @@ from tests.utils import compare_dicts
 data = [1, 2, 3]
 
 
-def test_to_list(constructor_eager: Any, request: Any) -> None:
+def test_to_list(constructor_eager: Any, request: pytest.FixtureRequest) -> None:
     if "cudf" in str(constructor_eager):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]

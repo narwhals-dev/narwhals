@@ -95,9 +95,6 @@ See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) fo
 
 If you said yes to both, we'd love to hear from you!
 
-**Note**: You might suspect that this is a secret ploy to infiltrate the Polars API everywhere.
-Indeed, you may suspect that.
-
 ## Sponsors and institutional partners
 
 Narwhals is 100% independent, community-driven, and community-owned.

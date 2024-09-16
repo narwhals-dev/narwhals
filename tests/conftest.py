@@ -13,6 +13,7 @@ from narwhals.dependencies import get_modin
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 
 with contextlib.suppress(ImportError):
     import modin.pandas  # noqa: F401
@@ -107,10 +108,10 @@ if get_dask_dataframe() is not None:  # pragma: no cover
 
 
 @pytest.fixture(params=eager_constructors)
-def constructor_eager(request: Any) -> Callable[[Any], IntoDataFrame]:
+def constructor_eager(request: pytest.FixtureRequest) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor(request: Any) -> Callable[[Any], Any]:
+def constructor(request: pytest.FixtureRequest) -> Constructor:
     return request.param  # type: ignore[no-any-return]

@@ -103,13 +103,11 @@ class DaskExpr:
             if root_names is not None and isinstance(arg, self.__class__):
                 if arg._root_names is not None:
                     root_names.extend(arg._root_names)
-                else:  # pragma: no cover
-                    # TODO(unassigned): increase coverage
+                else:
                     root_names = None
                     output_names = None
                     break
-            elif root_names is None:  # pragma: no cover
-                # TODO(unassigned): increase coverage
+            elif root_names is None:
                 output_names = None
                 break
 
@@ -430,6 +428,11 @@ class DaskExpr:
             decimals,
             returns_scalar=False,
         )
+
+    def unique(self) -> NoReturn:
+        # We can't (yet?) allow methods which modify the index
+        msg = "`Expr.unique` is not supported for the Dask backend. Please use `LazyFrame.unique` instead."
+        raise NotImplementedError(msg)
 
     def drop_nulls(self) -> NoReturn:
         # We can't (yet?) allow methods which modify the index

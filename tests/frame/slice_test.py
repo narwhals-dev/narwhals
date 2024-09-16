@@ -29,7 +29,9 @@ def test_slice_rows(constructor_eager: Any) -> None:
     compare_dicts(result, {"a": [3.0, 4.0], "b": [13, 14]})
 
 
-def test_slice_rows_with_step(request: Any, constructor_eager: Any) -> None:
+def test_slice_rows_with_step(
+    request: pytest.FixtureRequest, constructor_eager: Any
+) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor_eager(data))[1::2]
@@ -146,6 +148,9 @@ def test_slice_slice_columns(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
     result = df[:, [0, 2]]
     expected = {"a": [1, 2, 3], "c": [7, 8, 9]}
+    compare_dicts(result, expected)
+    result = df[:2, [0, 2]]
+    expected = {"a": [1, 2], "c": [7, 8]}
     compare_dicts(result, expected)
     result = df[["b", "c"]]
     expected = {"b": [4, 5, 6], "c": [7, 8, 9]}

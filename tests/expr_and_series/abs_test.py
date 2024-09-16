@@ -1,10 +1,11 @@
 from typing import Any
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_abs(constructor: Any) -> None:
+def test_abs(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.select(b=nw.col("a").abs())
     expected = {"b": [1, 2, 3, 4, 5]}
