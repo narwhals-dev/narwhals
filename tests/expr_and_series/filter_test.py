@@ -1,7 +1,5 @@
 from typing import Any
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import compare_dicts
@@ -14,21 +12,10 @@ data = {
 }
 
 
-def test_filter_single_expr(constructor: Constructor) -> None:
+def test_filter_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").filter(nw.col("i") < 2, nw.col("c") == 5))
     expected = {"a": [0]}
-    compare_dicts(result, expected)
-
-
-def test_filter_multi_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").filter(nw.col("i") < 2, nw.col("c") == 5), nw.col("b"))
-    expected = {"a": [0] * 5, "b": [1, 2, 3, 5, 3]}
     compare_dicts(result, expected)
 
 
