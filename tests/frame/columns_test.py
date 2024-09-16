@@ -1,12 +1,11 @@
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_columns(constructor: Any) -> None:
+def test_columns(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.columns

@@ -107,13 +107,11 @@ class DaskExpr:
             if root_names is not None and isinstance(arg, self.__class__):
                 if arg._root_names is not None:
                     root_names.extend(arg._root_names)
-                else:  # pragma: no cover
-                    # TODO(unassigned): increase coverage
+                else:
                     root_names = None
                     output_names = None
                     break
-            elif root_names is None:  # pragma: no cover
-                # TODO(unassigned): increase coverage
+            elif root_names is None:
                 output_names = None
                 break
 
@@ -743,6 +741,14 @@ class DaskExpr:
             func,
             "tail",
             n,
+            returns_scalar=False,
+            modifies_index=True,
+        )
+
+    def unique(self: Self) -> Self:
+        return self._from_call(
+            lambda _input: _input.unique(),
+            "unique",
             returns_scalar=False,
             modifies_index=True,
         )

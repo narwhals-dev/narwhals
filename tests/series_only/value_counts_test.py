@@ -15,7 +15,10 @@ data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
 @pytest.mark.parametrize("normalize", [True, False])
 @pytest.mark.parametrize("name", [None, "count_name"])
 def test_value_counts(
-    request: Any, constructor_eager: Any, normalize: Any, name: str | None
+    request: pytest.FixtureRequest,
+    constructor_eager: Any,
+    normalize: Any,
+    name: str | None,
 ) -> None:
     if "pandas_nullable_constructor" in str(constructor_eager) and parse_version(
         pd.__version__

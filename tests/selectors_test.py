@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pandas as pd
 import pyarrow as pa
 import pytest
@@ -14,6 +12,7 @@ from narwhals.selectors import categorical
 from narwhals.selectors import numeric
 from narwhals.selectors import string
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -24,28 +23,28 @@ data = {
 }
 
 
-def test_selectors(constructor: Any) -> None:
+def test_selectors(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(by_dtype([nw.Int64, nw.Float64]) + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
     compare_dicts(result, expected)
 
 
-def test_numeric(constructor: Any) -> None:
+def test_numeric(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(numeric() + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
     compare_dicts(result, expected)
 
 
-def test_boolean(constructor: Any) -> None:
+def test_boolean(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(boolean())
     expected = {"d": [True, False, True]}
     compare_dicts(result, expected)
 
 
-def test_string(constructor: Any, request: Any) -> None:
+def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor) and parse_version(pa.__version__) < (12,):
         # Dask doesn't infer `'b'` as String for old PyArrow versions
         request.applymarker(pytest.mark.xfail)
@@ -55,7 +54,7 @@ def test_string(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_categorical(request: Any, constructor: Any) -> None:
+def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyarrow_table_constructor" in str(constructor) and parse_version(
         pa.__version__
     ) <= (15,):  # pragma: no cover
@@ -82,7 +81,7 @@ def test_categorical(request: Any, constructor: Any) -> None:
     ],
 )
 def test_set_ops(
-    constructor: Any, selector: nw.selectors.Selector, expected: list[str]
+    constructor: Constructor, selector: nw.selectors.Selector, expected: list[str]
 ) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
@@ -90,7 +89,7 @@ def test_set_ops(
 
 
 @pytest.mark.parametrize("invalid_constructor", [pd.DataFrame, pa.table])
-def test_set_ops_invalid(invalid_constructor: Any) -> None:
+def test_set_ops_invalid(invalid_constructor: Constructor) -> None:
     df = nw.from_native(invalid_constructor(data))
     with pytest.raises(NotImplementedError):
         df.select(1 - numeric())

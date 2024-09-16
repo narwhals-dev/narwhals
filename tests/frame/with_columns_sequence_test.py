@@ -1,9 +1,8 @@
-from typing import Any
-
 import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -12,7 +11,7 @@ data = {
 }
 
 
-def test_with_columns(constructor: Any, request: Any) -> None:
+def test_with_columns(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = (

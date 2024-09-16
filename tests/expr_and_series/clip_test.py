@@ -1,10 +1,11 @@
 from typing import Any
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_clip(constructor: Any) -> None:
+def test_clip(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     result = df.select(
         lower_only=nw.col("a").clip(lower_bound=3),

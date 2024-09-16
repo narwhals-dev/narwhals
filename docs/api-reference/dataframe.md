@@ -29,6 +29,7 @@
         - rename
         - row
         - rows
+        - sample
         - schema
         - select
         - shape

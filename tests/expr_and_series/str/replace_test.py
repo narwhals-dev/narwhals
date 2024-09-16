@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 replace_data = [
@@ -92,7 +93,7 @@ def test_str_replace_all_series(
     replace_data,
 )
 def test_str_replace_expr(
-    constructor: Any,
+    constructor: Constructor,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -113,7 +114,7 @@ def test_str_replace_expr(
     replace_all_data,
 )
 def test_str_replace_all_expr(
-    constructor: Any,
+    constructor: Constructor,
     data: dict[str, list[str]],
     pattern: str,
     value: str,

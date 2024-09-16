@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
+import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -15,7 +18,7 @@ data = {
 }
 
 
-def test_drop_nulls(constructor: Any) -> None:
+def test_drop_nulls(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
 
     result_a = df.select(nw.col("a").drop_nulls())
@@ -35,7 +38,9 @@ def test_drop_nulls(constructor: Any) -> None:
 
 
 def test_drop_nulls_broadcast(constructor: Any, request: Any) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or (
+        "polars" in str(constructor) and parse_version(pl.__version__) >= (1, 7, 0)
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").drop_nulls(), nw.col("d").drop_nulls())

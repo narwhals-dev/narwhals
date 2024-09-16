@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Any
 from unittest import mock
 
 import pandas as pd
@@ -20,7 +19,7 @@ from tests.utils import compare_dicts
     ["pandas", "polars", "pyarrow", "dask"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-def test_q1(library: str, request: Any) -> None:
+def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     if library == "pandas" and parse_version(pd.__version__) < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
@@ -99,7 +98,7 @@ def test_q1(library: str, request: Any) -> None:
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
     "ignore:.*Complex.*:UserWarning",
 )
-def test_q1_w_generic_funcs(library: str, request: Any) -> None:
+def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> None:
     if library == "pandas" and parse_version(pd.__version__) < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":

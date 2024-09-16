@@ -9,6 +9,7 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import broadcast_series
+from narwhals._arrow.utils import convert_slice_to_nparray
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
@@ -126,7 +127,8 @@ class ArrowDataFrame:
         | slice
         | Sequence[int]
         | Sequence[str]
-        | tuple[Sequence[int], str | int],
+        | tuple[Sequence[int], str | int]
+        | tuple[slice, str | int],
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
@@ -144,7 +146,10 @@ class ArrowDataFrame:
             if item[0] == slice(None):
                 selected_rows = self._native_frame
             else:
-                selected_rows = self._native_frame.take(item[0])
+                range_ = convert_slice_to_nparray(
+                    num_rows=len(self._native_frame), rows_slice=item[0]
+                )
+                selected_rows = self._native_frame.take(range_)
 
             return self._from_native_frame(selected_rows.select(item[1]))
 
@@ -174,13 +179,24 @@ class ArrowDataFrame:
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-
             from narwhals._arrow.series import ArrowSeries
 
             # PyArrow columns are always strings
             col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
+            if isinstance(item[0], str):  # pragma: no cover
+                msg = "Can not slice with tuple with the first element as a str"
+                raise TypeError(msg)
+            if (isinstance(item[0], slice)) and (item[0] == slice(None)):
+                return ArrowSeries(
+                    self._native_frame[col_name],
+                    name=col_name,
+                    backend_version=self._backend_version,
+                )
+            range_ = convert_slice_to_nparray(
+                num_rows=len(self._native_frame), rows_slice=item[0]
+            )
             return ArrowSeries(
-                self._native_frame[col_name].take(item[0]),
+                self._native_frame[col_name].take(range_),
                 name=col_name,
                 backend_version=self._backend_version,
             )
@@ -572,3 +588,25 @@ class ArrowDataFrame:
 
     def to_arrow(self: Self) -> Any:
         return self._native_frame
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        import numpy as np  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        frame = self._native_frame
+        num_rows = len(self)
+        if n is None and fraction is not None:
+            n = int(num_rows * fraction)
+
+        rng = np.random.default_rng(seed=seed)
+        idx = np.arange(0, num_rows)
+        mask = rng.choice(idx, size=n, replace=with_replacement)
+
+        return self._from_native_frame(pc.take(frame, mask))

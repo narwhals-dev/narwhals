@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
@@ -26,7 +27,7 @@ from tests.utils import compare_dicts
     ids=range(5),
 )
 def test_scalar_reduction_select(
-    constructor: Any, expr: list[Any], expected: dict[str, list[Any]]
+    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
@@ -52,7 +53,7 @@ def test_scalar_reduction_select(
     ids=range(5),
 )
 def test_scalar_reduction_with_columns(
-    constructor: Any, expr: list[Any], expected: dict[str, list[Any]]
+    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))

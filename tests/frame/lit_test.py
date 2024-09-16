@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 if TYPE_CHECKING:
@@ -17,7 +18,9 @@ if TYPE_CHECKING:
     ("dtype", "expected_lit"),
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
-def test_lit(constructor: Any, dtype: DType | None, expected_lit: list[Any]) -> None:
+def test_lit(
+    constructor: Constructor, dtype: DType | None, expected_lit: list[Any]
+) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -31,7 +34,7 @@ def test_lit(constructor: Any, dtype: DType | None, expected_lit: list[Any]) -> 
     compare_dicts(result, expected)
 
 
-def test_lit_error(constructor: Any) -> None:
+def test_lit_error(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()

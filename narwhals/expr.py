@@ -1228,21 +1228,22 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).drop_nulls())
 
     def sample(
-        self,
+        self: Self,
         n: int | None = None,
-        fraction: float | None = None,
         *,
+        fraction: float | None = None,
         with_replacement: bool = False,
+        seed: int | None = None,
     ) -> Self:
         """
         Sample randomly from this expression.
 
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
-
             fraction: Fraction of items to return. Cannot be used with n.
-
             with_replacement: Allow values to be sampled more than once.
+            seed: Seed for the random number generator. If set to None (default), a random
+                seed is generated for each sample operation.
 
         Examples:
             >>> import narwhals as nw
@@ -1279,7 +1280,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._call(plx).sample(
-                n, fraction=fraction, with_replacement=with_replacement
+                n, fraction=fraction, with_replacement=with_replacement, seed=seed
             )
         )
 
@@ -1932,25 +1933,23 @@ class Expr:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col("a", "b").mode()).sort("a", "b")
+            ...     return df.select(nw.col("a").mode()).sort("a")
 
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-               a  b
-            0  1  1
-            1  1  2
+               a
+            0  1
 
             >>> func(df_pl)
-            shape: (2, 2)
-            ┌─────┬─────┐
-            │ a   ┆ b   │
-            │ --- ┆ --- │
-            │ i64 ┆ i64 │
-            ╞═════╪═════╡
-            │ 1   ┆ 1   │
-            │ 1   ┆ 2   │
-            └─────┴─────┘
+            shape: (1, 1)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ i64 │
+            ╞═════╡
+            │ 1   │
+            └─────┘
         """
         return self.__class__(lambda plx: self._call(plx).mode())
 

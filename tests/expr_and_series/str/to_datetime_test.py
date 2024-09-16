@@ -1,11 +1,10 @@
-from typing import Any
-
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 
 data = {"a": ["2020-01-01T12:34:56"]}
 
 
-def test_to_datetime(constructor: Any) -> None:
+def test_to_datetime(constructor: Constructor) -> None:
     result = (
         nw.from_native(constructor(data))
         .lazy()

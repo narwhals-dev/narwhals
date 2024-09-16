@@ -11,6 +11,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -37,14 +38,16 @@ data = {
     ],
 )
 def test_duration_attributes(
-    request: Any,
-    constructor: Any,
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],
     expected_c: list[int],
 ) -> None:
     if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -70,7 +73,7 @@ def test_duration_attributes(
     ],
 )
 def test_duration_attributes_series(
-    request: Any,
+    request: pytest.FixtureRequest,
     constructor_eager: Any,
     attribute: str,
     expected_a: list[int],
@@ -80,6 +83,8 @@ def test_duration_attributes_series(
     if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(
         constructor_eager
     ):
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)

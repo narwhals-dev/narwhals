@@ -1,10 +1,9 @@
-from typing import Any
-
 import numpy as np
 import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
@@ -19,7 +18,7 @@ def test_with_columns_int_col_name_pandas() -> None:
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_with_columns_order(constructor: Any) -> None:
+def test_with_columns_order(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
@@ -28,14 +27,14 @@ def test_with_columns_order(constructor: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_with_columns_empty(constructor: Any) -> None:
+def test_with_columns_empty(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.select().with_columns()
     compare_dicts(result, {})
 
 
-def test_with_columns_order_single_row(constructor: Any) -> None:
+def test_with_columns_order_single_row(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data)).filter(nw.col("i") < 1).drop("i")
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)

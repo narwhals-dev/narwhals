@@ -391,9 +391,6 @@ def from_native(  # noqa: PLR0915
             level="full",
         )
 
-    # TODO(marco): write all of these in terms of `is_` rather
-    # than `get_` + walrus
-
     # Polars
     elif is_polars_dataframe(native_object):
         if series_only:

@@ -3,12 +3,13 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
 @pytest.mark.parametrize("expr2", ["b", nw.col("b")])
-def test_allh(constructor: Any, expr1: Any, expr2: Any) -> None:
+def test_allh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],
