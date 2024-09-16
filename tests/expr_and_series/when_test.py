@@ -228,3 +228,30 @@ def test_multi_chained_when_otherwise(request: Any, constructor: Any) -> None:
         "a_when": [3, 5, 7, 9, 9, 9],
     }
     compare_dicts(result, expected)
+
+
+def test_then_when_no_condition(request: Any, constructor: Any) -> None:
+    if "dask" in str(constructor) or "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises((TypeError, ValueError)):
+        df.select(nw.when(nw.col("a") == 1).then(value=3).when().then(value=7))
+
+
+def test_then_chained_when_no_condition(request: Any, constructor: Any) -> None:
+    if "dask" in str(constructor) or "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises((TypeError, ValueError)):
+        df.select(
+            nw.when(nw.col("a") == 1)
+            .then(value=3)
+            .when(nw.col("a") == 3)
+            .then(value=7)
+            .when()
+            .then(value=9)
+        )
