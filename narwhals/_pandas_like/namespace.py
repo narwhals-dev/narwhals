@@ -419,7 +419,7 @@ class PandasChainedWhen:
         try:
             value_series = parse_into_expr(self._then_value, namespace=plx)._call(df)[0]  # type: ignore[arg-type]
         except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            # `self._then_value` is a scalar and can't be converted to an expression
             value_series = condition.__class__._from_iterable(  # type: ignore[call-arg]
                 [self._then_value] * len(condition),
                 name="literal",
