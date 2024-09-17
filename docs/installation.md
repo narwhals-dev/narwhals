@@ -1,4 +1,6 @@
-# Installation
+# Installation and quick start
+
+## Installation
 
 First, make sure you have [created and activated](https://docs.python.org/3/library/venv.html) a Python3.8+ virtual environment.
 
@@ -15,9 +17,9 @@ Then, if you start the Python REPL and see the following:
 ```
 then installation worked correctly!
 
-# Quick start
+## Quick start
 
-## Prerequisites
+### Prerequisites
 
 Please start by following the [installation instructions](installation.md).
 
@@ -27,7 +29,7 @@ they are not required dependencies - Narwhals only ever uses what the user passe
 - [pandas](https://pandas.pydata.org/docs/getting_started/install.html)
 - [Polars](https://pola-rs.github.io/polars/user-guide/installation/)
 
-## Simple example
+### Simple example
 
 Create a Python file `t.py` with the following content:
 

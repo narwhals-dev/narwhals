@@ -11,10 +11,10 @@ nav:
     - basics/column.md
     - basics/complete_example.md
   - Coming from pandas:
-    - other/pandas_index.md
-    - other/user_warning.md
-    - other/column_names.md
-    - other/overhead.md
+    - coming_from_pandas/pandas_index.md
+    - coming_from_pandas/user_warning.md
+    - coming_from_pandas/column_names.md
+    - coming_from_pandas/overhead.md
   - backcompat.md
   - how_it_works.md
   - Roadmap and related projects: roadmap.md
