@@ -60,11 +60,9 @@ def test_contains_case_sensitive(constructor: Constructor) -> None:
 
 def test_contains_series_case_sensitive(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df.with_columns(
-        case_insensitive_match=df["pets"].str.contains("parrot|Dove")
-    )
+    result = df.with_columns(case_sensitive_match=df["pets"].str.contains("parrot|Dove"))
     expected = {
         "pets": ["cat", "dog", "rabbit and parrot", "dove"],
-        "case_insensitive_match": [False, False, True, False],
+        "case_sensitive_match": [False, False, True, False],
     }
     compare_dicts(result, expected)
