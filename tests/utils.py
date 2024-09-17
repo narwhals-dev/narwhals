@@ -39,9 +39,9 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
                 lhs = lhs.as_py()  # noqa: PLW2901
             if hasattr(rhs, "as_py"):  # pragma: no cover
                 rhs = rhs.as_py()  # noqa: PLW2901
-            if hasattr(lhs, "item"):
+            if hasattr(lhs, "item"):  # pragma: no cover
                 lhs = lhs.item()  # noqa: PLW2901
-            if hasattr(rhs, "item"):
+            if hasattr(rhs, "item"):  # pragma: no cover
                 rhs = rhs.item()  # noqa: PLW2901
             if isinstance(lhs, float) and not math.isnan(lhs):
                 assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
