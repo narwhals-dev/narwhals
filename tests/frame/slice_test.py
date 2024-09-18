@@ -162,3 +162,13 @@ def test_slice_invalid(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises(TypeError, match="Hint:"):
         df[0, 0]
+
+
+def test_slice_edge_cases(constructor_eager: Any) -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    assert df[[]].shape == (0, 4)
+    assert df[[], :].shape == (0, 4)
+    assert df[:, []].shape == (0, 0)
+    assert df[:, :].shape == (3, 4)
+    assert df[[], []].shape == (0, 0)

@@ -121,6 +121,9 @@ class ArrowDataFrame:
     @overload
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> ArrowDataFrame: ...
+
     def __getitem__(
         self,
         item: str
@@ -128,7 +131,8 @@ class ArrowDataFrame:
         | Sequence[int]
         | Sequence[str]
         | tuple[Sequence[int], str | int]
-        | tuple[slice, str | int],
+        | tuple[slice, str | int]
+        | tuple[slice, slice],
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
@@ -149,8 +153,12 @@ class ArrowDataFrame:
                 range_ = convert_slice_to_nparray(
                     num_rows=len(self._native_frame), rows_slice=item[0]
                 )
-                selected_rows = self._native_frame.take(range_)
-
+                if len(range_) == 0:
+                    selected_rows = self._native_frame.slice(0, 0)
+                else:
+                    selected_rows = self._native_frame.take(range_)
+            if len(item[1]) == 0:
+                selected_rows = self._native_frame.slice(0, 0)
             return self._from_native_frame(selected_rows.select(item[1]))
 
         elif isinstance(item, tuple) and len(item) == 2:
@@ -212,8 +220,14 @@ class ArrowDataFrame:
             )
 
         elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
-            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+            if (
+                isinstance(item, Sequence)
+                and all(isinstance(x, str) for x in item)
+                and len(item) > 0
+            ):
                 return self._from_native_frame(self._native_frame.select(item))
+            if isinstance(item, Sequence) and len(item) == 0:
+                return self._from_native_frame(self._native_frame.slice(0, 0))
             return self._from_native_frame(self._native_frame.take(item))
 
         else:  # pragma: no cover

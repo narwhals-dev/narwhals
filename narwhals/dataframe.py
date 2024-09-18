@@ -624,6 +624,9 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: slice) -> Self: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+
     def __getitem__(
         self,
         item: str
@@ -632,7 +635,8 @@ class DataFrame(BaseFrame[FrameT]):
         | Sequence[str]
         | tuple[Sequence[int], str | int]
         | tuple[slice, str | int]
-        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice],
+        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
+        | tuple[slice, slice],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -717,6 +721,10 @@ class DataFrame(BaseFrame[FrameT]):
             and len(item) == 2
             and isinstance(item[1], (list, tuple, slice))
         ):
+            if item[1] == slice(None):
+                if item[0] == slice(None):
+                    return self._from_compliant_dataframe(self._compliant_frame)
+                return self._from_compliant_dataframe(self._compliant_frame[item[0]])
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             from narwhals.series import Series

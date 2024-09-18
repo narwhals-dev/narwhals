@@ -119,6 +119,9 @@ class PandasLikeDataFrame:
     @overload
     def __getitem__(self, item: slice) -> PandasLikeDataFrame: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+
     def __getitem__(
         self,
         item: str
@@ -126,7 +129,8 @@ class PandasLikeDataFrame:
         | slice
         | Sequence[int]
         | Sequence[str]
-        | tuple[Sequence[int], str | int],
+        | tuple[Sequence[int], str | int]
+        | tuple[slice, slice],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
@@ -142,6 +146,8 @@ class PandasLikeDataFrame:
             and len(item) == 2
             and isinstance(item[1], (tuple, list))
         ):
+            if len(item[1]) == 0:
+                return self._from_native_frame(self._native_frame.iloc[[], []])
             if all(isinstance(x, int) for x in item[1]):
                 return self._from_native_frame(self._native_frame.iloc[item])
             if all(isinstance(x, str) for x in item[1]):
@@ -176,6 +182,8 @@ class PandasLikeDataFrame:
                         item[0], slice(item[1].start, item[1].stop, item[1].step)
                     ]
                 )
+            if item[1] == slice(None):
+                return self._from_native_frame(self._native_frame.iloc[item[0], item[1]])
             msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
             raise TypeError(msg)  # pragma: no cover
 
@@ -200,7 +208,11 @@ class PandasLikeDataFrame:
         elif isinstance(item, (slice, Sequence)) or (
             is_numpy_array(item) and item.ndim == 1
         ):
-            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+            if (
+                isinstance(item, Sequence)
+                and all(isinstance(x, str) for x in item)
+                and len(item) > 0
+            ):
                 return self._from_native_frame(self._native_frame.loc[:, item])
             return self._from_native_frame(self._native_frame.iloc[item])
 
