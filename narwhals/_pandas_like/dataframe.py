@@ -182,8 +182,6 @@ class PandasLikeDataFrame:
                         item[0], slice(item[1].start, item[1].stop, item[1].step)
                     ]
                 )
-            if item[1] == slice(None):
-                return self._from_native_frame(self._native_frame.iloc[item[0], item[1]])
             msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
             raise TypeError(msg)  # pragma: no cover
 
