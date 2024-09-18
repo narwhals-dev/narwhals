@@ -110,7 +110,10 @@ class PolarsDataFrame:
             msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
             raise TypeError(msg)  # pragma: no cover
         pl = get_polars()
-        result = self._native_frame.__getitem__(item)
+        if isinstance(item, list) and (len(item) == 0):
+            result = self._native_frame.slice(0, 0)
+        else:
+            result = self._native_frame.__getitem__(item)
         if isinstance(result, pl.Series):
             from narwhals._polars.series import PolarsSeries
 
