@@ -7,6 +7,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 data = {
@@ -164,10 +165,13 @@ def test_slice_invalid(constructor_eager: Any) -> None:
         df[0, 0]
 
 
-def test_slice_edge_cases(constructor_eager: Any) -> None:
+def test_slice_edge_cases(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    assert df[[]].shape == (0, 4)
+    if "polars_eager_constructor" in str(constructor_eager) and parse_version(
+        pl.__version__
+    ) <= (0, 20, 30):
+        request.applymarker(pytest.mark.xfail)
     assert df[[], :].shape == (0, 4)
     assert df[:, []].shape == (0, 0)
     assert df[:, :].shape == (3, 4)
