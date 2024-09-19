@@ -8,6 +8,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import translate_dtype
 from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
@@ -113,11 +114,11 @@ class PolarsDataFrame:
         if (
             isinstance(item, tuple)
             and (len(item) == 2)
-            and isinstance(item[1], list)
+            and is_sequence_but_not_str(item[1])
             and (len(item[1]) == 0)
         ):
             result = self._native_frame.select(item[1])
-        elif isinstance(item, list) and (len(item) == 0):
+        elif is_sequence_but_not_str(item) and (len(item) == 0):
             result = self._native_frame.slice(0, 0)
         else:
             result = self._native_frame.__getitem__(item)

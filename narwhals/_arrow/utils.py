@@ -8,6 +8,8 @@ from narwhals import dtypes
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    import pyarrow as pa
+
     from narwhals._arrow.series import ArrowSeries
 
 
@@ -286,3 +288,23 @@ def convert_slice_to_nparray(
         return np.arange(num_rows)[rows_slice]
     else:
         return rows_slice
+
+
+def select_rows(table: pa.Table, rows: Any) -> pa.Table:
+    if isinstance(rows, slice) and rows == slice(None):
+        selected_rows = table
+    elif isinstance(rows, Sequence) and not rows:
+        selected_rows = table.slice(0, 0)
+    else:
+        range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
+        selected_rows = table.take(range_)
+    return selected_rows
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: slice, columns: list[str]
+) -> tuple[int | None, int | None, int | None]:
+    start = columns.index(str_slice.start) if str_slice.start is not None else None
+    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
+    step = str_slice.step
+    return (start, stop, step)
