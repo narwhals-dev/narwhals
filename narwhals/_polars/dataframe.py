@@ -110,7 +110,14 @@ class PolarsDataFrame:
             msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
             raise TypeError(msg)  # pragma: no cover
         pl = get_polars()
-        if isinstance(item, list) and (len(item) == 0):
+        if (
+            isinstance(item, tuple)
+            and (len(item) == 2)
+            and isinstance(item[1], list)
+            and (len(item[1]) == 0)
+        ):
+            result = self._native_frame.select(item[1])
+        elif isinstance(item, list) and (len(item) == 0):
             result = self._native_frame.slice(0, 0)
         else:
             result = self._native_frame.__getitem__(item)
