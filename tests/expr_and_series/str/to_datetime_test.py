@@ -5,6 +5,11 @@ data = {"a": ["2020-01-01T12:34:56"]}
 
 
 def test_to_datetime(constructor: Constructor) -> None:
+    if "cudf" in str(constructor):
+        expected = "2020-01-01T12:34:56.000000000"
+    else:
+        expected = "2020-01-01 12:34:56"
+
     result = (
         nw.from_native(constructor(data))
         .lazy()
@@ -12,4 +17,4 @@ def test_to_datetime(constructor: Constructor) -> None:
         .collect()
         .item(row=0, column="b")
     )
-    assert str(result) == "2020-01-01 12:34:56"
+    assert str(result) == expected
