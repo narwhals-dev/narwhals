@@ -5,7 +5,7 @@ data = {"a": ["2020-01-01T12:34:56"]}
 
 
 def test_to_datetime(constructor: Constructor) -> None:
-    if "cudf" in str(constructor):
+    if "cudf" in str(constructor):  # pragma: no cover
         expected = "2020-01-01T12:34:56.000000000"
     else:
         expected = "2020-01-01 12:34:56"
