@@ -259,7 +259,7 @@ class PandasLikeDataFrame:
     ) -> Self:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
-            return self._from_native_frame(self._native_frame.loc[:, list(exprs)])
+            return self._from_native_frame(self._native_frame[list(exprs)])
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -349,7 +349,7 @@ class PandasLikeDataFrame:
                         )
                     )
                 else:
-                    to_concat.append(self._native_frame.loc[:, name])
+                    to_concat.append(self._native_frame[name])
             to_concat.extend(
                 validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
                 for s in new_column_name_to_new_column_map
