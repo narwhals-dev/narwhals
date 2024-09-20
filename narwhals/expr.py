@@ -2021,6 +2021,50 @@ class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
+    def len_chars(self, n: int = 5) -> Expr:
+        r"""
+        Return the length of each string as the number of characters.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"words": ["foo", "Café", "345", "東京", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(words_len=nw.col("words").str.len_chars())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+              words  words_len
+            0   foo        3.0
+            1  Café        4.0
+            2   345        3.0
+            3    東京        2.0
+            4  None        NaN
+
+            >>> func(df_pl)
+            shape: (5, 2)
+            ┌───────┬───────────┐
+            │ words ┆ words_len │
+            │ ---   ┆ ---       │
+            │ str   ┆ u32       │
+            ╞═══════╪═══════════╡
+            │ foo   ┆ 3         │
+            │ Café  ┆ 4         │
+            │ 345   ┆ 3         │
+            │ 東京  ┆ 2         │
+            │ null  ┆ null      │
+            └───────┴───────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).str.len_chars())
+
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> Expr:
