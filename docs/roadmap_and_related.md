@@ -23,3 +23,7 @@ this includes Ibis and Vaex. See [extending](extending.md) for details.
 ### Array API
 
 Array counterpart to the DataFrame API, see [here](https://data-apis.org/array-api/2022.12/index.html).
+
+### PyCapsule Interface
+
+
