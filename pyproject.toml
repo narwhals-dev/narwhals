@@ -99,6 +99,7 @@ force-single-line = true
 docstring-code-format = true
 
 [tool.pytest.ini_options]
+addopts = "-n auto"
 filterwarnings = [
   "error",
   'ignore:distutils Version classes are deprecated:DeprecationWarning',
