@@ -1,30 +1,20 @@
 # API Reference
 
-Anything documented in the API reference is intended to work consistently among
-supported backends.
-
-For example:
-```python
-import narwhals as nw
-
-df.with_columns(
-    a_mean=nw.col("a").mean(),
-    a_std=nw.col("a").std(),
-)
-```
-is supported, as `DataFrame.with_columns`, `narwhals.col`, `Expr.mean`, and `Expr.std` are
-all documented in the API reference.
-
-However,
-```python
-import narwhals as nw
-
-df.with_columns(
-    a_ewm_mean=nw.col("a").ewm_mean(alpha=0.7),
-)
-```
-is not - `Expr.ewm_mean` only appears in the Polars API reference, but not in the Narwhals
-one.
-
-In general, you should expect any fundamental dataframe operation to be supported - if
-one that you need is not, please do open a feature request!
+- [Top-level functions](narwhals.md)
+- [narwhals.DataFrame](dataframe.md)
+- [narwhals.Expr](expr.md)
+- [narwhals.Expr.cat](expr_cat.md)
+- [narwhals.Expr.dt](expr_dt.md)
+- [narwhals.Expr.name](expr_name.md)
+- [narwhals.Expr.str](expr_str.md)
+- [narwhals.GroupBy](group_by.md)
+- [narwhals.LazyFrame](lazyframe.md)
+- [narwhals.Schema](schema.md)
+- [narwhals.Series](series.md)
+- [narwhals.Series.cat](series_cat.md)
+- [narwhals.Series.dt](series_dt.md)
+- [narwhals.Series.str](series_str.md)
+- [narwhals.dependencies](dependencies.md)
+- [narwhals.dtypes](dtypes.md)
+- [narwhals.selectors](selectors.md)
+- [narwhals.typing](typing.md)
