@@ -395,14 +395,16 @@ class DataFrame(BaseFrame[FrameT]):
         Convert this DataFrame to a pandas DataFrame.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars (eager) and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -410,7 +412,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_pandas()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars (eager), or PyArrow to `func`:
 
             >>> func(df_pd)
                foo  bar ham
@@ -422,6 +424,13 @@ class DataFrame(BaseFrame[FrameT]):
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
+            >>> func(df_pa)
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+
+
         """
         return self._compliant_frame.to_pandas()
 
