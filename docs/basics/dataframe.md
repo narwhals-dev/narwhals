@@ -62,6 +62,14 @@ Let's try it out:
     print(func(df).collect())
     ```
 
+=== "PyArrow"
+    ```python exec="true" source="material-block" result="python" session="df_ex1"
+    import pyarrow as pa
+
+    df = pa.Table({"a": [1, 1, 2]})
+    print(func(df).collect())
+    ```
+
 Alternatively, we could have opted for the more explicit version:
 
 ```python
