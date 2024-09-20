@@ -1,5 +1,6 @@
 from contextlib import nullcontext as does_not_raise
 from typing import Any
+from narwhals.dataframe import LazyFrame
 
 import pytest
 
@@ -31,3 +32,17 @@ def test_to_native(
 
     with context:
         nw.to_native(getattr(s, method)(), strict=strict)
+
+def test_to_native_method(
+    constructor: Any
+) -> None:
+    df_raw = constructor({"a": [1, 2, 3]})
+
+    df = nw.from_native(df_raw)
+
+    if 'lazy' not in str(constructor):
+        pytest.skip()
+
+    native_df = df.to_native()
+
+    assert isinstance(native_df, df_raw.__class__)

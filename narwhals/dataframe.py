@@ -17,6 +17,7 @@ from narwhals.schema import Schema
 from narwhals.utils import flatten
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
+from narwhals.translate import to_native
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoExpr
 
 FrameT = TypeVar("FrameT", bound="IntoDataFrame")
@@ -326,7 +328,7 @@ class DataFrame(BaseFrame[FrameT]):
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `narwhals.to_native` to see native output |\n"
+            + "| Use `df.to_native` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -2571,7 +2573,7 @@ class LazyFrame(BaseFrame[FrameT]):
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `narwhals.to_native` to see native output |\n"
+            + "| Use `df.to_native` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -2621,6 +2623,43 @@ class LazyFrame(BaseFrame[FrameT]):
             self._compliant_frame.collect(),
             level=self._level,
         )
+
+    def to_native(self,
+                  ) -> IntoFrameT:
+        """
+        Converts LazyFrame to Native one.
+
+        Returns:
+            Object of class that user started with.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> lf_pl = pl.LazyFrame(
+            ...     {
+            ...         "a": ["a", "b"],
+            ...         "b": [1, 2],
+            ...         "c": [6, 5],
+            ...     }
+            ... )
+            >>> lf = nw.from_native(lf_pl)
+            >>> lf.to_native().collect()
+            shape: (2, 3)
+            ┌─────┬─────┬─────┐
+            │ a   ┆ b   ┆ c   │
+            │ --- ┆ --- ┆ --- │
+            │ str ┆ i64 ┆ i64 │
+            ╞═════╪═════╪═════╡
+            │ a   ┆ 1   ┆ 6   │
+            │ b   ┆ 2   ┆ 5   │
+            └─────┴─────┴─────┘
+        """
+
+        return to_native(
+            narwhals_object=self,
+            strict=True
+        )
+
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
