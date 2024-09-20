@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
@@ -212,7 +214,7 @@ def test_get_item_works_with_tuple_and_list_indexing(
     row_idx: list[int] | tuple[int] | range,
     col_idx: list[int] | tuple[int] | range,
 ) -> None:
-    nw_df = nw.from_native(constructor_eager(data))
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col_idx]
 
 
@@ -229,8 +231,7 @@ def test_get_item_works_with_tuple_and_list_indexing_and_slice(
     row_idx: list[int] | tuple[int] | range,
     col: slice,
 ) -> None:
-    nw_df = nw.from_native(constructor_eager(data))
-
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col]
 
 
@@ -247,5 +248,5 @@ def test_get_item_works_with_tuple_and_list_indexing_and_str(
     row_idx: list[int] | tuple[int] | range,
     col: str,
 ) -> None:
-    nw_df = nw.from_native(constructor_eager(data))
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col]
