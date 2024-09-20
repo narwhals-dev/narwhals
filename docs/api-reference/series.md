@@ -57,6 +57,7 @@
         - to_list
         - to_numpy
         - to_pandas
+        - to_native
         - unique
         - value_counts
         - zip_with
