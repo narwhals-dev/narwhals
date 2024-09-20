@@ -2626,7 +2626,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def to_native(
         self,
-    ) -> IntoFrameT:
+    ) -> FrameT:
         """
         Converts LazyFrame to Native one.
 
