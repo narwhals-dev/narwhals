@@ -27,13 +27,16 @@ class TestGetItemWorksForTupleIndexing:
             ((0, 2), [0]),
             ([0, 2], (0,)),
             ((0, 2), (0,)),
+            ([0, 2], range(1)),
+            (range(2), [0]),
+            (range(2), range(1)),
         ],
     )
     def test_get_item_works_with_tuple_and_list_indexing(
         self,
         pd_df: nw.DataFrame[Any],
-        row_idx: list[int] | tuple[int],
-        col_idx: list[int] | tuple[int],
+        row_idx: list[int] | tuple[int] | range,
+        col_idx: list[int] | tuple[int] | range,
     ) -> None:
         pd_df = nw.from_native(pd_df, eager_only=True)
         pd_df[row_idx, col_idx]
@@ -41,14 +44,32 @@ class TestGetItemWorksForTupleIndexing:
     @pytest.mark.parametrize(
         ("row_idx", "col"),
         [
+            ([0, 2], slice(1)),
+            ((0, 2), slice(1)),
+            (range(2), slice(1)),
+        ],
+    )
+    def test_get_item_works_with_tuple_and_list_indexing_and_slice(
+        self,
+        pd_df: nw.DataFrame[Any],
+        row_idx: list[int] | tuple[int] | range,
+        col: slice,
+    ) -> None:
+        pd_df = nw.from_native(pd_df, eager_only=True)
+        pd_df[row_idx, col]
+
+    @pytest.mark.parametrize(
+        ("row_idx", "col"),
+        [
             ([0, 2], "x"),
             ((0, 2), "x"),
+            (range(2), "x"),
         ],
     )
     def test_get_item_works_with_tuple_and_list_indexing_and_str(
         self,
         pd_df: nw.DataFrame[Any],
-        row_idx: list[int] | tuple[int],
+        row_idx: list[int] | tuple[int] | range,
         col: str,
     ) -> None:
         pd_df = nw.from_native(pd_df, eager_only=True)
