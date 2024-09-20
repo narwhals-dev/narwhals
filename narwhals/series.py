@@ -93,6 +93,36 @@ class Series:
 
         Returns:
             Series of class that user started with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.to_native()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            2    3
+            dtype: int64
+            >>> func(s_pl)
+            shape: (3,)
+            Series: '' [i64]
+            [
+                1
+                2
+                3
+            ]
         """
         return self._compliant_series._native_series
 
