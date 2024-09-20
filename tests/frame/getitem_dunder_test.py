@@ -20,5 +20,21 @@ class TestGetItemWorksForTupleIndexing:
         # TODO(mikeweltevrede): We would want to apply this on the base DF or param it over all supported DFs
         return nw.from_native(pd.DataFrame(data), eager_only=True)
 
-    def test_get_item_list_row_list_col(self, pd_df: nw.DataFrame[Any]) -> None:
-        assert pd_df[[0, 2], [0]].shape == (2, 1)
+    @pytest.mark.parametrize(
+        ("row_idx", "col_idx"),
+        [
+            ([0, 2], [0]),
+            ((0, 2), [0]),
+            ([0, 2], (0,)),
+            ((0, 2), (0,)),
+        ],
+    )
+    def test_get_item(
+        self,
+        pd_df: nw.DataFrame[Any],
+        row_idx: list[int] | tuple[int],
+        col_idx: list[int] | tuple[int],
+    ) -> None:
+        data = {"x": [1, 2, 3]}
+        pd_df = nw.from_native(pd.DataFrame(data), eager_only=True)
+        pd_df[row_idx, col_idx]
