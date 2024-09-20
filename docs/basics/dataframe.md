@@ -133,6 +133,14 @@ Let's try it out:
     print(func(df).collect())
     ```
 
+=== "PyArrow"
+    ```python exec="true" source="material-block" result="python" session="df_ex2"
+    import pyarrow as pa
+
+    df = pa.Table({"a": [1, 1, 2], "b": [4, 5, 6]})
+    print(func(df).collect())
+    ```
+
 ## Example 3: horizontal sum
 
 Expressions can be free-standing functions which accept other expressions as inputs.
