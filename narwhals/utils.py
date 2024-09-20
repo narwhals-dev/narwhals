@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from typing_extensions import Self
+    from typing_extensions import TypeGuard
 
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
@@ -461,3 +462,7 @@ def parse_columns_to_drop(
     else:
         to_drop = list(cols.intersection(set(to_drop)))
     return to_drop
+
+
+def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
+    return isinstance(sequence, Sequence) and not isinstance(sequence, str)

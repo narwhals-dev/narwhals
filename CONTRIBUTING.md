@@ -153,7 +153,7 @@ listed above in [Working with local development environment](#working-with-local
 ## How it works
 
 If Narwhals looks like underwater unicorn magic to you, then please read
-[how it works](https://narwhals-dev.github.io/narwhals/how-it-works/).
+[how it works](https://narwhals-dev.github.io/narwhals/how_it_works/).
 
 ## Imports
 

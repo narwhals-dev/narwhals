@@ -110,3 +110,12 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     if dtype == dtypes.Date:
         return pl.Date()
     return pl.Unknown()  # pragma: no cover
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: slice, columns: list[str]
+) -> tuple[int | None, int | None, int | None]:  # pragma: no cover
+    start = columns.index(str_slice.start) if str_slice.start is not None else None
+    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
+    step = str_slice.step
+    return (start, stop, step)

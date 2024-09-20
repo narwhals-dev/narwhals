@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
+    import pandas as pd
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:
@@ -497,3 +498,12 @@ def int_dtype_mapper(dtype: Any) -> str:
     if str(dtype).lower() != str(dtype):  # pragma: no cover
         return "Int64"
     return "int64"
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: slice, columns: pd.Index
+) -> tuple[int | None, int | None, int | None]:
+    start = columns.get_loc(str_slice.start) if str_slice.start is not None else None
+    stop = columns.get_loc(str_slice.stop) + 1 if str_slice.stop is not None else None
+    step = str_slice.step
+    return (start, stop, step)
