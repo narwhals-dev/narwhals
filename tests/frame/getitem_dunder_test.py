@@ -18,6 +18,7 @@ class TestGetItemWorksForTupleIndexing:
     @pytest.fixture
     def pd_df(self, data: dict[str, list[int]]) -> nw.DataFrame[Any]:
         # TODO(mikeweltevrede): We would want to apply this on the base DF or param it over all supported DFs
+        # TODO(mikeweltevrede): Use constructor with eager
         return nw.from_native(pd.DataFrame(data), eager_only=True)
 
     @pytest.mark.parametrize(
@@ -35,6 +36,5 @@ class TestGetItemWorksForTupleIndexing:
         row_idx: list[int] | tuple[int],
         col_idx: list[int] | tuple[int],
     ) -> None:
-        data = {"x": [1, 2, 3]}
-        pd_df = nw.from_native(pd.DataFrame(data), eager_only=True)
+        pd_df = nw.from_native(pd_df, eager_only=True)
         pd_df[row_idx, col_idx]
