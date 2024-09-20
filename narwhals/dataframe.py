@@ -15,6 +15,7 @@ from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
 from narwhals.utils import flatten
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -624,6 +625,9 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: slice) -> Self: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+
     def __getitem__(
         self,
         item: str
@@ -632,7 +636,8 @@ class DataFrame(BaseFrame[FrameT]):
         | Sequence[str]
         | tuple[Sequence[int], str | int]
         | tuple[slice, str | int]
-        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice],
+        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
+        | tuple[slice, slice],
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -715,8 +720,12 @@ class DataFrame(BaseFrame[FrameT]):
         if (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[1], (list, tuple, slice))
+            and (is_sequence_but_not_str(item[1]) or isinstance(item[1], slice))
         ):
+            if item[1] == slice(None) and item[0] == slice(None):
+                return self
+            if item[1] == slice(None):
+                return self._from_compliant_dataframe(self._compliant_frame[item[0]])
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             from narwhals.series import Series
@@ -726,8 +735,10 @@ class DataFrame(BaseFrame[FrameT]):
                 level=self._level,
             )
 
-        elif isinstance(item, (Sequence, slice)) or (
-            is_numpy_array(item) and item.ndim == 1
+        elif (
+            is_sequence_but_not_str(item)
+            or isinstance(item, slice)
+            or (is_numpy_array(item) and item.ndim == 1)
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
 

@@ -103,6 +103,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     @overload
     def __getitem__(self, item: slice) -> Self: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+
     def __getitem__(self, item: Any) -> Any:
         return _stableify(super().__getitem__(item))
 

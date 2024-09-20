@@ -11,6 +11,7 @@ from typing import overload
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.utils import broadcast_series
+from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
@@ -22,6 +23,7 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
@@ -119,6 +121,9 @@ class PandasLikeDataFrame:
     @overload
     def __getitem__(self, item: slice) -> PandasLikeDataFrame: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+
     def __getitem__(
         self,
         item: str
@@ -126,7 +131,8 @@ class PandasLikeDataFrame:
         | slice
         | Sequence[int]
         | Sequence[str]
-        | tuple[Sequence[int], str | int],
+        | tuple[Sequence[int], str | int]
+        | tuple[slice, slice],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
@@ -140,16 +146,19 @@ class PandasLikeDataFrame:
         elif (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[1], (tuple, list))
+            and is_sequence_but_not_str(item[1])
         ):
+            if len(item[1]) == 0:
+                # Return empty dataframe
+                return self._from_native_frame(self._native_frame.__class__())
             if all(isinstance(x, int) for x in item[1]):
                 return self._from_native_frame(self._native_frame.iloc[item])
             if all(isinstance(x, str) for x in item[1]):
-                item = (
+                indexer = (
                     item[0],
                     self._native_frame.columns.get_indexer(item[1]),
                 )
-                return self._from_native_frame(self._native_frame.iloc[item])
+                return self._from_native_frame(self._native_frame.iloc[indexer])
             msg = (
                 f"Expected sequence str or int, got: {type(item[1])}"  # pragma: no cover
             )
@@ -158,15 +167,7 @@ class PandasLikeDataFrame:
         elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
             columns = self._native_frame.columns
             if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                start = (
-                    columns.get_loc(item[1].start) if item[1].start is not None else None
-                )
-                stop = (
-                    columns.get_loc(item[1].stop) + 1
-                    if item[1].stop is not None
-                    else None
-                )
-                step = item[1].step
+                start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                 return self._from_native_frame(
                     self._native_frame.iloc[item[0], slice(start, stop, step)]
                 )
@@ -197,11 +198,19 @@ class PandasLikeDataFrame:
                 backend_version=self._backend_version,
             )
 
-        elif isinstance(item, (slice, Sequence)) or (
-            is_numpy_array(item) and item.ndim == 1
-        ):
-            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+        elif is_sequence_but_not_str(item) or (is_numpy_array(item) and item.ndim == 1):
+            if all(isinstance(x, str) for x in item) and len(item) > 0:
                 return self._from_native_frame(self._native_frame.loc[:, item])
+            return self._from_native_frame(self._native_frame.iloc[item])
+
+        elif isinstance(item, slice):
+            if isinstance(item.start, str) or isinstance(item.stop, str):
+                start, stop, step = convert_str_slice_to_int_slice(
+                    item, self._native_frame.columns
+                )
+                return self._from_native_frame(
+                    self._native_frame.iloc[:, slice(start, stop, step)]
+                )
             return self._from_native_frame(self._native_frame.iloc[item])
 
         else:  # pragma: no cover
