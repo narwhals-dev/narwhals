@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoFrameT
 
 FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
@@ -389,6 +390,19 @@ class DataFrame(BaseFrame[FrameT]):
             <LazyFrame ...>
         """
         return super().lazy()
+
+    def to_native(self) -> IntoFrameT | Any:
+        """
+        Convert Narwhals DataFrame to native one.
+
+        Arguments:
+            narwhals_object: Narwhals object.
+
+        Returns:
+            Object of class that user started with.
+        """
+
+        return self._compliant_frame._native_frame
 
     def to_pandas(self) -> pd.DataFrame:
         """
