@@ -4,7 +4,7 @@ To write a dataframe-agnostic function, the steps you'll want to follow are:
 
 1. Initialise a Narwhals DataFrame or LazyFrame by passing your dataframe to `nw.from_native`.
     All the calculations stay lazy if we start with a lazy dataframe - Narwhals will never automatically trigger computation without you asking it to.
-   
+
     Note: if you need eager execution, make sure to pass `eager_only=True` to `nw.from_native`.
 
 2. Express your logic using the subset of the Polars API supported by Narwhals.
@@ -21,6 +21,7 @@ Just like in Polars, we can pass expressions to
 `DataFrame.select` or `LazyFrame.select`.
 
 Make a Python file with the following content:
+
 ```python exec="1" source="above" session="df_ex1"
 import narwhals as nw
 from narwhals.typing import FrameT
@@ -34,6 +35,7 @@ def func(df: FrameT) -> FrameT:
         a_std=nw.col("a").std(),
     )
 ```
+
 Let's try it out:
 
 === "pandas"
