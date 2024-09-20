@@ -17,7 +17,6 @@ class TestGetItemWorksForTupleIndexing:
 
     @pytest.fixture
     def pd_df(self, data: dict[str, list[int]]) -> nw.DataFrame[Any]:
-        # TODO(mikeweltevrede): We would want to apply this on the base DF or param it over all supported DFs
         # TODO(mikeweltevrede): Use constructor with eager
         return nw.from_native(pd.DataFrame(data), eager_only=True)
 
@@ -30,7 +29,7 @@ class TestGetItemWorksForTupleIndexing:
             ((0, 2), (0,)),
         ],
     )
-    def test_get_item(
+    def test_get_item_works_with_tuple_and_list_indexing(
         self,
         pd_df: nw.DataFrame[Any],
         row_idx: list[int] | tuple[int],
