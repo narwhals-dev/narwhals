@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
-    from narwhals.typing import IntoFrameT
 
 FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
