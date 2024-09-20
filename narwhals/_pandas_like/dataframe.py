@@ -144,7 +144,7 @@ class PandasLikeDataFrame:
         | tuple[slice, slice],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, tuple):
-            item = tuple(list(i) if isinstance(i, tuple) else i for i in item)
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
 
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
