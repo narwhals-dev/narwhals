@@ -448,7 +448,7 @@ class DataFrame(BaseFrame[FrameT]):
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
-            >>> df_pa = pa.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
