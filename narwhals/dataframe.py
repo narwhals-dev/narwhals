@@ -14,10 +14,10 @@ from typing import overload
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
+from narwhals.translate import to_native
 from narwhals.utils import flatten
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
-from narwhals.translate import to_native
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -32,8 +32,8 @@ if TYPE_CHECKING:
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrame
-    from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoFrameT
 
 FrameT = TypeVar("FrameT", bound="IntoDataFrame")
 
@@ -2624,8 +2624,9 @@ class LazyFrame(BaseFrame[FrameT]):
             level=self._level,
         )
 
-    def to_native(self,
-                  ) -> IntoFrameT:
+    def to_native(
+        self,
+    ) -> IntoFrameT:
         """
         Converts LazyFrame to Native one.
 
@@ -2655,11 +2656,7 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────┴─────┴─────┘
         """
 
-        return to_native(
-            narwhals_object=self,
-            strict=True
-        )
-
+        return to_native(narwhals_object=self, strict=True)
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
