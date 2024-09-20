@@ -37,3 +37,19 @@ class TestGetItemWorksForTupleIndexing:
     ) -> None:
         pd_df = nw.from_native(pd_df, eager_only=True)
         pd_df[row_idx, col_idx]
+
+    @pytest.mark.parametrize(
+        ("row_idx", "col_idx"),
+        [
+            ([0, 2], "x"),
+            ((0, 2), "x"),
+        ],
+    )
+    def test_get_item_works_with_tuple_and_list_indexing_and_str(
+        self,
+        pd_df: nw.DataFrame[Any],
+        row_idx: list[int] | tuple[int],
+        col_idx: list[int] | tuple[int],
+    ) -> None:
+        pd_df = nw.from_native(pd_df, eager_only=True)
+        pd_df[row_idx, col_idx]
