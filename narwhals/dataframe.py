@@ -395,9 +395,6 @@ class DataFrame(BaseFrame[FrameT]):
         """
         Convert Narwhals DataFrame to native one.
 
-        Arguments:
-            narwhals_object: Narwhals object.
-
         Returns:
             Object of class that user started with.
 
