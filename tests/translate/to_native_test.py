@@ -36,7 +36,7 @@ def test_to_native(
 def test_to_native_method(constructor: Any) -> None:
     df_raw = constructor({"a": [1, 2, 3]})
 
-    df = nw.from_native(df_raw)
+    df = nw.from_native(df_raw).lazy()
 
     if "lazy" not in str(constructor):
         pytest.skip()
