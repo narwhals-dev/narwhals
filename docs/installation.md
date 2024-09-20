@@ -50,9 +50,10 @@ def my_function(df_native: IntoFrame) -> list[str]:
     return column_names
 
 
-df_pandas = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-df_polars = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-table_pa = pa.table([pa.array([1, 2, 3]), pa.array([4, 5, 6])], names=["a", "b"])
+data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+df_pandas = pd.DataFrame(data)
+df_polars = pl.DataFrame(data)
+table_pa = pa.table(data)
 
 print("pandas output")
 print(my_function(df_pandas))
