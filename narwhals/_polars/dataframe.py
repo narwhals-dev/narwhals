@@ -4,10 +4,12 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals._polars.namespace import PolarsNamespace
+from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import translate_dtype
 from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
@@ -84,38 +86,52 @@ class PolarsDataFrame:
         return self._native_frame.shape  # type: ignore[no-any-return]
 
     def __getitem__(self, item: Any) -> Any:
-        if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
+        if self._backend_version >= (0, 20, 30):
+            return self._from_native_object(self._native_frame.__getitem__(item))
+        else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
             columns = self.columns
-            if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                start = (
-                    columns.index(item[1].start) if item[1].start is not None else None
-                )
-                stop = (
-                    columns.index(item[1].stop) + 1 if item[1].stop is not None else None
-                )
-                step = item[1].step
-                return self._from_native_frame(
-                    self._native_frame.select(columns[start:stop:step]).__getitem__(
-                        item[0]
+            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
+                if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
+                    start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
+                    return self._from_native_frame(
+                        self._native_frame.select(columns[start:stop:step]).__getitem__(
+                            item[0]
+                        )
                     )
-                )
-            if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
+                if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
+                    return self._from_native_frame(
+                        self._native_frame.select(
+                            columns[item[1].start : item[1].stop : item[1].step]
+                        ).__getitem__(item[0])
+                    )
+                msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
+                raise TypeError(msg)  # pragma: no cover
+            pl = get_polars()
+            if (
+                isinstance(item, tuple)
+                and (len(item) == 2)
+                and is_sequence_but_not_str(item[1])
+                and (len(item[1]) == 0)
+            ):
+                result = self._native_frame.select(item[1])
+            elif isinstance(item, slice) and (
+                isinstance(item.start, str) or isinstance(item.stop, str)
+            ):
+                start, stop, step = convert_str_slice_to_int_slice(item, columns)
                 return self._from_native_frame(
-                    self._native_frame.select(
-                        columns[item[1].start : item[1].stop : item[1].step]
-                    ).__getitem__(item[0])
+                    self._native_frame.select(columns[start:stop:step])
                 )
-            msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
-            raise TypeError(msg)  # pragma: no cover
-        pl = get_polars()
-        result = self._native_frame.__getitem__(item)
-        if isinstance(result, pl.Series):
-            from narwhals._polars.series import PolarsSeries
+            elif is_sequence_but_not_str(item) and (len(item) == 0):
+                result = self._native_frame.slice(0, 0)
+            else:
+                result = self._native_frame.__getitem__(item)
+            if isinstance(result, pl.Series):
+                from narwhals._polars.series import PolarsSeries
 
-            return PolarsSeries(result, backend_version=self._backend_version)
-        return self._from_native_object(result)
+                return PolarsSeries(result, backend_version=self._backend_version)
+            return self._from_native_object(result)
 
     def get_column(self, name: str) -> Any:
         from narwhals._polars.series import PolarsSeries
