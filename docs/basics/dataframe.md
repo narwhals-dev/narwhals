@@ -66,8 +66,8 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex1"
     import pyarrow as pa
 
-    df = pa.table({"a": [1, 1, 2]})
-    print(func(df))
+    table = pa.table({"a": [1, 1, 2]})
+    print(func(table))
     ```
 
 Alternatively, we could have opted for the more explicit version:
@@ -137,8 +137,8 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex2"
     import pyarrow as pa
 
-    df = pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})
-    print(func(df))
+    table = pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})
+    print(func(table))
     ```
 
 ## Example 3: horizontal sum
@@ -182,6 +182,14 @@ Let's try it out:
 
     df = pl.LazyFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     print(func(df).collect())
+    ```
+
+=== "PyArrow"
+    ```python exec="true" source="material-block" result="python" session="df_ex3"
+    import pyarrow as pa
+
+    table = pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})
+    print(func(table))
     ```
 
 ## Example 4: multiple inputs
@@ -231,7 +239,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex4"
     import pyarrow as pa
 
-    df = pa.table({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
-    s = pa.array([1, 3])
-    print(func(df, s.to_numpy(), "a"))
+    table = pa.table({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
+    a = pa.array([1, 3])
+    print(func(table, a.to_numpy(), "a"))
     ```
