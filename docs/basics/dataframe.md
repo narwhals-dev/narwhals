@@ -137,8 +137,8 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex2"
     import pyarrow as pa
 
-    df = pa.Table({"a": [1, 1, 2], "b": [4, 5, 6]})
-    print(func(df).collect())
+    df = pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})
+    print(func(df))
     ```
 
 ## Example 3: horizontal sum
@@ -231,7 +231,7 @@ Let's try it out:
     ```python exec="true" source="material-block" result="python" session="df_ex4"
     import pyarrow as pa
 
-    df = pa.Table({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
+    df = pa.table({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
     s = pa.array([1, 3])
     print(func(df, s.to_numpy(), "a"))
     ```
