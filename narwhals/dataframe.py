@@ -2604,10 +2604,10 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> lf
             ┌───────────────────────────────────────────────┐
             | Narwhals LazyFrame                            |
-            | Use `narwhals.to_native` to see native output |
+            | Use `df.to_native` to see native output |
             └───────────────────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
-            >>> nw.to_native(df).sort("a")
+            >>> df.to_native().sort("a")
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
