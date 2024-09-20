@@ -39,7 +39,7 @@ class TestGetItemWorksForTupleIndexing:
         pd_df[row_idx, col_idx]
 
     @pytest.mark.parametrize(
-        ("row_idx", "col_idx"),
+        ("row_idx", "col"),
         [
             ([0, 2], "x"),
             ((0, 2), "x"),
@@ -49,7 +49,7 @@ class TestGetItemWorksForTupleIndexing:
         self,
         pd_df: nw.DataFrame[Any],
         row_idx: list[int] | tuple[int],
-        col_idx: list[int] | tuple[int],
+        col: str,
     ) -> None:
         pd_df = nw.from_native(pd_df, eager_only=True)
-        pd_df[row_idx, col_idx]
+        pd_df[row_idx, col]
