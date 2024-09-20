@@ -38,6 +38,8 @@ BACKENDS = [
 
 EXCLUDE_CLASSES = {"BaseFrame", "Then", "When"}
 
+DIRECTLY_IMPLEMENTED_CLASS_METHODS = {"DataFrame": ["pipe"]}
+
 
 def get_class_methods(kls: type[Any]) -> list[str]:
     return [m[0] for m in inspect.getmembers(kls) if not m[0].startswith("_")]
@@ -51,6 +53,7 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
             predicate=lambda c: inspect.isclass(c) and c.__name__.endswith(nw_class_name),
         )
         methods_ = get_class_methods(class_[0][1]) if class_ else []
+        methods_ += DIRECTLY_IMPLEMENTED_CLASS_METHODS.get(nw_class_name, [])
 
     except ModuleNotFoundError:
         methods_ = []
