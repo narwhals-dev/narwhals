@@ -63,6 +63,7 @@ Let's try it out:
     ```
 
 Alternatively, we could have opted for the more explicit version:
+
 ```python
 import narwhals as nw
 from narwhals.typing import IntoFrameT
@@ -77,6 +78,7 @@ def func(df_native: IntoFrameT) -> IntoFrameT:
     )
     return nw.to_native(df)
 ```
+
 Despite being more verbose, it has the advantage of preserving the type annotation of the native
 object - see [typing](../api-reference/typing.md) for more details.
 
@@ -86,6 +88,7 @@ In general, in this tutorial, we'll use the former.
 
 Just like in Polars, we can pass expressions to `GroupBy.agg`.
 Make a Python file with the following content:
+
 ```python exec="1" source="above" session="df_ex2"
 import narwhals as nw
 from narwhals.typing import FrameT
@@ -95,6 +98,7 @@ from narwhals.typing import FrameT
 def func(df: FrameT) -> FrameT:
     return df.group_by("a").agg(nw.col("b").mean()).sort("a")
 ```
+
 Let's try it out:
 
 === "pandas"
@@ -127,6 +131,7 @@ Expressions can be free-standing functions which accept other expressions as inp
 For example, we can compute a horizontal sum using `nw.sum_horizontal`.
 
 Make a Python file with the following content:
+
 ```python exec="1" source="above" session="df_ex3"
 import narwhals as nw
 from narwhals.typing import FrameT
@@ -136,6 +141,7 @@ from narwhals.typing import FrameT
 def func(df: FrameT) -> FrameT:
     return df.with_columns(a_plus_b=nw.sum_horizontal("a", "b"))
 ```
+
 Let's try it out:
 
 === "pandas"
@@ -171,6 +177,7 @@ For example, let's compute how many rows are left in a dataframe after filtering
 on a series.
 
 Make a Python file with the following content:
+
 ```python exec="1" source="above" session="df_ex4"
 from typing import Any
 
