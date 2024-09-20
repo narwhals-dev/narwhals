@@ -412,7 +412,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_pandas()
 
-            We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
+            We can then pass any supported library such as pandas, Polars (eager), or PyArrow to `func`:
 
             >>> func(df_pd)
                foo  bar ham
