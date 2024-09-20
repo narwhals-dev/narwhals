@@ -89,8 +89,6 @@ class Series:
         """
         Convert Narwhals series to native series.
 
-        Arguments:
-
         Returns:
             Series of class that user started with.
 
