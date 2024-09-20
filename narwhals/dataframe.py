@@ -1035,10 +1035,12 @@ class DataFrame(BaseFrame[FrameT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.DataFrame(df)
 
             We define a library agnostic function:
 
@@ -1051,6 +1053,8 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pd)
             ['foo', 'bar', 'ham']
             >>> func(df_pl)
+            ['foo', 'bar', 'ham']
+            >>> func(df_pa)
             ['foo', 'bar', 'ham']
         """
         return super().columns
