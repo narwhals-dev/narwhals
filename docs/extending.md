@@ -4,11 +4,13 @@
 
 Currently, Narwhals supports the following libraries as inputs:
 
-- pandas
-- Polars
-- cuDF
-- Modin
-- PyArrow
+| Library  | 🔗 Link 🔗 |
+| ------------- | ------------- |
+| ️Polars 🐻‍❄️ | [github.com/pola-rs/polars](https://github.com/pola-rs/polars) |
+| pandas 🐼 |  [github.com/pandas-dev/pandas](https://github.com/pandas-dev/pandas) |
+| cuDF | [github.com/rapidsai/cudf](https://github.com/rapidsai/cudf) |
+| Modin | [github.com/modin-project/modin](https://github.com/modin-project/modin) |
+| PyArrow ⇶ | [arrow.apache.org/docs/python](https://arrow.apache.org/docs/python/index.html) |
 
 If you want your own library to be recognised too, you're welcome open a PR (with tests)!
 Alternatively, if you can't do that (for example, if you library is closed-source), see

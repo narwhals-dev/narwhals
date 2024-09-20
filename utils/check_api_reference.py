@@ -27,6 +27,7 @@ SERIES_ONLY_METHODS = {
     "zip_with",
     "item",
     "scatter",
+    "to_native",
 }
 
 # TODO(Unassigned): make dtypes reference page as well
