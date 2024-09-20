@@ -28,6 +28,7 @@ they are not required dependencies - Narwhals only ever uses what the user passe
 
 - [pandas](https://pandas.pydata.org/docs/getting_started/install.html)
 - [Polars](https://pola-rs.github.io/polars/user-guide/installation/)
+- [PyArrow](https://arrow.apache.org/docs/python/install.html)
 
 ### Simple example
 
@@ -38,6 +39,7 @@ from __future__ import annotations
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import narwhals as nw
 from narwhals.typing import IntoFrame
 
@@ -50,11 +52,16 @@ def my_function(df_native: IntoFrame) -> list[str]:
 
 df_pandas = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 df_polars = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+table_pa = pa.table([pa.array([1, 2, 3]), pa.array([4, 5, 6])], names=["a", "b"])
 
 print("pandas output")
 print(my_function(df_pandas))
+
 print("Polars output")
 print(my_function(df_polars))
+
+print("PyArrow output")
+print(my_function(table_pa))
 ```
 
 If you run `python t.py` then your output should look like the above. This is the simplest possible example of a dataframe-agnostic
