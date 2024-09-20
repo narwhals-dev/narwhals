@@ -22,7 +22,7 @@ class Series:
     """
     Narwhals Series, backed by a native series.
 
-    The native dataframe might be pandas.Series, polars.Series, ...
+    The native series might be pandas.Series, polars.Series, ...
 
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`, making sure to pass `allow_series=True` or
@@ -84,6 +84,17 @@ class Series:
             raise ModuleNotFoundError(msg)
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
+
+    def to_native(self) -> Any:
+        """
+        Convert Narwhals series to native series.
+
+        Arguments:
+
+        Returns:
+            Series of class that user started with.
+        """
+        return self._compliant_series._native_series
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         """
@@ -224,7 +235,7 @@ class Series:
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `narwhals.to_native()` to see native output |\n"
+            + "| Use `series.to_native()` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
