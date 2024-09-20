@@ -404,14 +404,17 @@ class DataFrame(BaseFrame[FrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> # read csv to pandas data frame
-            >>> df_pd = pd.read_csv("mydata.csv")
+            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(df)
             >>> # convert to nw dataframe
-            >>> df = nw.from_native(df_native)
-            >>> # process nw dataframe
-            >>> df = my_func(df)
+            >>> df = nw.from_native(df_pd)
             >>> # get back pandas dataframe
             >>> df_native = df.to_native()
+            >>> df_native
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
         """
 
         return self._compliant_frame._native_frame
