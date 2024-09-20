@@ -124,6 +124,14 @@ class PandasLikeDataFrame:
     @overload
     def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
 
+    @overload
+    def __getitem__(
+        self, item: tuple[Sequence[int], Sequence[int] | slice]
+    ) -> PandasLikeDataFrame: ...
+
+    @overload
+    def __getitem__(self, item: tuple[slice, Sequence[int]]) -> PandasLikeDataFrame: ...
+
     def __getitem__(
         self,
         item: str
@@ -132,6 +140,7 @@ class PandasLikeDataFrame:
         | Sequence[int]
         | Sequence[str]
         | tuple[Sequence[int], str | int]
+        | tuple[slice | Sequence[int], Sequence[int] | slice]
         | tuple[slice, slice],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, tuple):
@@ -168,7 +177,6 @@ class PandasLikeDataFrame:
             raise TypeError(msg)  # pragma: no cover
 
         elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
-            item = tuple(list(i) if isinstance(i, tuple) else i for i in item)
             columns = self._native_frame.columns
             if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
