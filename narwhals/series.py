@@ -113,7 +113,7 @@ class Series:
             1    2
             2    3
             dtype: int64
-            >>> func(s_pl)
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
