@@ -1048,7 +1048,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.columns
 
-            We can then pass either pandas or Polars to `func`:
+            We can pass any supported library such as pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
             ['foo', 'bar', 'ham']
