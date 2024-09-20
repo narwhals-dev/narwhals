@@ -8,6 +8,7 @@ pyarrow
 pytest
 pytest-cov
 pytest-env
+pytest-xdist
 hypothesis
 scikit-learn
 typing_extensions
