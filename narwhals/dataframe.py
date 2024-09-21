@@ -2699,35 +2699,40 @@ class LazyFrame(BaseFrame[FrameT]):
             level=self._level,
         )
 
-    def to_native(
-        self,
-    ) -> FrameT:
+    def to_native(self) -> FrameT:
         """
-        Converts LazyFrame to Native one.
+        Convert Narwhals LazyFrame to native one.
 
         Returns:
             Object of class that user started with.
 
         Examples:
-            >>> import narwhals as nw
+            >>> import pandas as pd
             >>> import polars as pl
-            >>> lf_pl = pl.LazyFrame(
-            ...     {
-            ...         "a": ["a", "b"],
-            ...         "b": [1, 2],
-            ...         "c": [6, 5],
-            ...     }
-            ... )
-            >>> lf = nw.from_native(lf_pl)
-            >>> lf.to_native().collect()
-            shape: (2, 3)
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Calling `to_native` on a Narwhals DataFrame returns the native object:
+
+            >>> nw.from_native(df_pd).lazy().to_native()
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+            >>> nw.from_native(df_pl).to_native().collect()
+            shape: (3, 3)
             ┌─────┬─────┬─────┐
-            │ a   ┆ b   ┆ c   │
+            │ foo ┆ bar ┆ ham │
             │ --- ┆ --- ┆ --- │
-            │ str ┆ i64 ┆ i64 │
+            │ i64 ┆ f64 ┆ str │
             ╞═════╪═════╪═════╡
-            │ a   ┆ 1   ┆ 6   │
-            │ b   ┆ 2   ┆ 5   │
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
             └─────┴─────┴─────┘
         """
 
