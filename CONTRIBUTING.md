@@ -91,7 +91,8 @@ If you add code that should be tested, please add tests.
 ### 6. Running tests
 
 To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`.
-To run tests on the docset-module, use `pytest narwhals --doctest-modules`.
+To run tests on the doctests, use `pytest narwhals --doctest-modules`.
+To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=narwhals --doctest-modules`.
 
 If you want to have less surprises when opening a PR, you can take advantage of [nox](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
 
@@ -153,7 +154,7 @@ listed above in [Working with local development environment](#working-with-local
 ## How it works
 
 If Narwhals looks like underwater unicorn magic to you, then please read
-[how it works](https://narwhals-dev.github.io/narwhals/how-it-works/).
+[how it works](https://narwhals-dev.github.io/narwhals/how_it_works/).
 
 ## Imports
 

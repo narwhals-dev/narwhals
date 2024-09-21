@@ -27,10 +27,13 @@ SERIES_ONLY_METHODS = {
     "zip_with",
     "item",
     "scatter",
+    "to_native",
 }
+BASE_DTYPES = {"NumericType", "DType", "TemporalType", "Literal"}
 
-# TODO(Unassigned): make dtypes reference page as well
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
+
+# Top level functions
 top_level_functions = [
     i for i in nw.__dir__() if not i[0].isupper() and i[0] != "_" and i not in files
 ]
@@ -50,7 +53,8 @@ if extra := set(documented).difference(top_level_functions):
     print(extra)  # noqa: T201
     ret = 1
 
-top_level_functions = [
+# DataFrame methods
+dataframe_methods = [
     i
     for i in nw.from_native(pl.DataFrame()).__dir__()
     if not i[0].isupper() and i[0] != "_"
@@ -62,16 +66,17 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ") and not i.startswith("        - _")
 ]
-if missing := set(top_level_functions).difference(documented):
+if missing := set(dataframe_methods).difference(documented):
     print("DataFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(dataframe_methods):
     print("DataFrame: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
 
-top_level_functions = [
+# LazyFrame methods
+lazyframe_methods = [
     i
     for i in nw.from_native(pl.LazyFrame()).__dir__()
     if not i[0].isupper() and i[0] != "_"
@@ -83,16 +88,17 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if missing := set(top_level_functions).difference(documented):
+if missing := set(lazyframe_methods).difference(documented):
     print("LazyFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(lazyframe_methods):
     print("LazyFrame: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
 
-top_level_functions = [
+# Series methods
+series_methods = [
     i
     for i in nw.from_native(pl.Series(), series_only=True).__dir__()
     if not i[0].isupper() and i[0] != "_"
@@ -104,16 +110,17 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ") and not i.startswith("        - _")
 ]
-if missing := set(top_level_functions).difference(documented).difference(NAMESPACES):
+if missing := set(series_methods).difference(documented).difference(NAMESPACES):
     print("Series: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(series_methods):
     print("Series: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
 
-top_level_functions = [
+# Expr methods
+expr_methods = [
     i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/expr.md") as fd:
@@ -123,16 +130,30 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if missing := set(top_level_functions).difference(documented).difference(NAMESPACES):
+if missing := set(expr_methods).difference(documented).difference(NAMESPACES):
     print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(documented).difference(top_level_functions):
+if extra := set(documented).difference(expr_methods):
     print("Expr: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
 
 # DTypes
+dtypes = [
+    i for i in nw.dtypes.__dir__() if i[0].isupper() and not i.isupper() and i[0] != "_"
+]
+with open("docs/api-reference/dtypes.md") as fd:
+    content = fd.read()
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ") and not i.startswith("        - _")
+]
+if missing := set(dtypes).difference(documented).difference(BASE_DTYPES):
+    print("Dtype: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
 
 # dt
 

@@ -8,6 +8,8 @@ from narwhals import dtypes
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    import pyarrow as pa
+
     from narwhals._arrow.series import ArrowSeries
 
 
@@ -264,10 +266,11 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
 
     import pyarrow as pa  # ignore-banned-import
 
+    is_max_length_gt_1 = max_length > 1
     reshaped = []
     for s, length in zip(series, lengths):
         s_native = s._native_series
-        if max_length > 1 and length == 1:
+        if is_max_length_gt_1 and length == 1:
             value = s_native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
@@ -287,3 +290,23 @@ def convert_slice_to_nparray(
         return np.arange(num_rows)[rows_slice]
     else:
         return rows_slice
+
+
+def select_rows(table: pa.Table, rows: Any) -> pa.Table:
+    if isinstance(rows, slice) and rows == slice(None):
+        selected_rows = table
+    elif isinstance(rows, Sequence) and not rows:
+        selected_rows = table.slice(0, 0)
+    else:
+        range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
+        selected_rows = table.take(range_)
+    return selected_rows
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: slice, columns: list[str]
+) -> tuple[int | None, int | None, int | None]:
+    start = columns.index(str_slice.start) if str_slice.start is not None else None
+    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
+    step = str_slice.step
+    return (start, stop, step)

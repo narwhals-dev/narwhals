@@ -9,7 +9,8 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import broadcast_series
-from narwhals._arrow.utils import convert_slice_to_nparray
+from narwhals._arrow.utils import convert_str_slice_to_int_slice
+from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
@@ -18,6 +19,7 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
@@ -121,6 +123,9 @@ class ArrowDataFrame:
     @overload
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> ArrowDataFrame: ...
+
     def __getitem__(
         self,
         item: str
@@ -128,7 +133,8 @@ class ArrowDataFrame:
         | Sequence[int]
         | Sequence[str]
         | tuple[Sequence[int], str | int]
-        | tuple[slice, str | int],
+        | tuple[slice, str | int]
+        | tuple[slice, slice],
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
@@ -141,33 +147,19 @@ class ArrowDataFrame:
         elif (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[1], (list, tuple))
+            and is_sequence_but_not_str(item[1])
         ):
-            if item[0] == slice(None):
-                selected_rows = self._native_frame
-            else:
-                range_ = convert_slice_to_nparray(
-                    num_rows=len(self._native_frame), rows_slice=item[0]
-                )
-                selected_rows = self._native_frame.take(range_)
-
+            if len(item[1]) == 0:
+                # Return empty dataframe
+                return self._from_native_frame(self._native_frame.slice(0, 0).select([]))
+            selected_rows = select_rows(self._native_frame, item[0])
             return self._from_native_frame(selected_rows.select(item[1]))
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], slice):
                 columns = self.columns
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                    start = (
-                        columns.index(item[1].start)
-                        if item[1].start is not None
-                        else None
-                    )
-                    stop = (
-                        columns.index(item[1].stop) + 1
-                        if item[1].stop is not None
-                        else None
-                    )
-                    step = item[1].step
+                    start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                     return self._from_native_frame(
                         self._native_frame.take(item[0]).select(columns[start:stop:step])
                     )
@@ -183,18 +175,18 @@ class ArrowDataFrame:
 
             # PyArrow columns are always strings
             col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
-            assert not isinstance(item[0], str)  # help mypy  # noqa: S101
+            if isinstance(item[0], str):  # pragma: no cover
+                msg = "Can not slice with tuple with the first element as a str"
+                raise TypeError(msg)
             if (isinstance(item[0], slice)) and (item[0] == slice(None)):
                 return ArrowSeries(
                     self._native_frame[col_name],
                     name=col_name,
                     backend_version=self._backend_version,
                 )
-            range_ = convert_slice_to_nparray(
-                num_rows=len(self._native_frame), rows_slice=item[0]
-            )
+            selected_rows = select_rows(self._native_frame, item[0])
             return ArrowSeries(
-                self._native_frame[col_name].take(range_),
+                selected_rows[col_name],
                 name=col_name,
                 backend_version=self._backend_version,
             )
@@ -203,15 +195,27 @@ class ArrowDataFrame:
             if item.step is not None and item.step != 1:
                 msg = "Slicing with step is not supported on PyArrow tables"
                 raise NotImplementedError(msg)
+            columns = self.columns
+            if isinstance(item.start, str) or isinstance(item.stop, str):
+                start, stop, step = convert_str_slice_to_int_slice(item, columns)
+                return self._from_native_frame(
+                    self._native_frame.select(columns[start:stop:step])
+                )
             start = item.start or 0
-            stop = item.stop or len(self._native_frame)
+            stop = item.stop if item.stop is not None else len(self._native_frame)
             return self._from_native_frame(
-                self._native_frame.slice(item.start, stop - start),
+                self._native_frame.slice(start, stop - start),
             )
 
         elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
-            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+            if (
+                isinstance(item, Sequence)
+                and all(isinstance(x, str) for x in item)
+                and len(item) > 0
+            ):
                 return self._from_native_frame(self._native_frame.select(item))
+            if isinstance(item, Sequence) and len(item) == 0:
+                return self._from_native_frame(self._native_frame.slice(0, 0))
             return self._from_native_frame(self._native_frame.take(item))
 
         else:  # pragma: no cover

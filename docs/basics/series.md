@@ -47,6 +47,14 @@ def my_func(df: FrameT) -> FrameT:
     print(my_func(df).collect())
     ```
 
+=== "PyArrow"
+    ```python exec="true" source="material-block" result="python" session="ex1"
+    import pyarrow as pa
+
+    table = pa.table({"a": [-1, 1, 3], "b": [3, 5, -3]})
+    print(my_func(table))
+    ```
+
 ## Example 2: multiply a column's values by a constant
 
 Let's write a dataframe-agnostic function which multiplies the values in column
@@ -86,6 +94,14 @@ def my_func(df: FrameT) -> FrameT:
     print(my_func(df).collect())
     ```
 
+=== "PyArrow"
+    ```python exec="true" source="material-block" result="python" session="ex2"
+    import pyarrow as pa
+
+    table = pa.table({"a": [-1, 1, 3], "b": [3, 5, -3]})
+    print(my_func(table))
+    ```
+
 Note that column `'a'` was overwritten. If we had wanted to add a new column called `'c'` containing column `'a'`'s
 values multiplied by 2, we could have used `Expr.alias`:
 
@@ -123,6 +139,14 @@ def my_func(df: FrameT) -> FrameT:
     print(my_func(df).collect())
     ```
 
+=== "PyArrow"
+    ```python exec="true" source="material-block" result="python" session="ex2.1"
+    import pyarrow as pa
+
+    table = pa.table({"a": [-1, 1, 3], "b": [3, 5, -3]})
+    print(my_func(table))
+    ```
+
 ## Example 3: finding the mean of a column as a scalar
 
 Now, we want to find the mean of column `'a'`, and we need it as a Python scalar.
@@ -154,6 +178,14 @@ def my_func(df: nw.DataFrame) -> float | None:
 
     df = pl.DataFrame({"a": [-1, 1, 3], "b": [3, 5, -3]})
     print(my_func(df))
+    ```
+
+=== "PyArrow"
+    ```python exec="true" source="material-block" result="python" session="ex2"
+    import pyarrow as pa
+
+    table = pa.table({"a": [-1, 1, 3], "b": [3, 5, -3]})
+    print(my_func(table))
     ```
 
 Note that, even though the output of our function is not a dataframe nor a series, we can

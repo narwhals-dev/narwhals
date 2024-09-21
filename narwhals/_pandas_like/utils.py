@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
+    import pandas as pd
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:
@@ -222,7 +223,7 @@ def set_axis(
 def translate_dtype(column: Any) -> DType:
     from narwhals import dtypes
 
-    dtype = column.dtype
+    dtype = str(column.dtype)
 
     pd_datetime_rgx = (
         r"^datetime64\[(?P<time_unit>ms|us|ns)(?:, (?P<time_zone>[a-zA-Z\/]+))?\]$"
@@ -232,63 +233,58 @@ def translate_dtype(column: Any) -> DType:
     pd_duration_rgx = r"^timedelta64\[(?P<time_unit>ms|us|ns)\]$"
     pa_duration_rgx = r"^duration\[(?P<time_unit>ms|us|ns)\]\[pyarrow\]$"
 
-    if str(dtype) in ("int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"):
+    if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
-    if str(dtype) in ("int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"):
+    if dtype in {"int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"}:
         return dtypes.Int32()
-    if str(dtype) in ("int16", "Int16", "Int16[pyarrow]", "int16[pyarrow]"):
+    if dtype in {"int16", "Int16", "Int16[pyarrow]", "int16[pyarrow]"}:
         return dtypes.Int16()
-    if str(dtype) in ("int8", "Int8", "Int8[pyarrow]", "int8[pyarrow]"):
+    if dtype in {"int8", "Int8", "Int8[pyarrow]", "int8[pyarrow]"}:
         return dtypes.Int8()
-    if str(dtype) in ("uint64", "UInt64", "UInt64[pyarrow]", "uint64[pyarrow]"):
+    if dtype in {"uint64", "UInt64", "UInt64[pyarrow]", "uint64[pyarrow]"}:
         return dtypes.UInt64()
-    if str(dtype) in ("uint32", "UInt32", "UInt32[pyarrow]", "uint32[pyarrow]"):
+    if dtype in {"uint32", "UInt32", "UInt32[pyarrow]", "uint32[pyarrow]"}:
         return dtypes.UInt32()
-    if str(dtype) in ("uint16", "UInt16", "UInt16[pyarrow]", "uint16[pyarrow]"):
+    if dtype in {"uint16", "UInt16", "UInt16[pyarrow]", "uint16[pyarrow]"}:
         return dtypes.UInt16()
-    if str(dtype) in ("uint8", "UInt8", "UInt8[pyarrow]", "uint8[pyarrow]"):
+    if dtype in {"uint8", "UInt8", "UInt8[pyarrow]", "uint8[pyarrow]"}:
         return dtypes.UInt8()
-    if str(dtype) in (
+    if dtype in {
         "float64",
         "Float64",
         "Float64[pyarrow]",
         "float64[pyarrow]",
         "double[pyarrow]",
-    ):
+    }:
         return dtypes.Float64()
-    if str(dtype) in (
+    if dtype in {
         "float32",
         "Float32",
         "Float32[pyarrow]",
         "float32[pyarrow]",
         "float[pyarrow]",
-    ):
+    }:
         return dtypes.Float32()
-    if str(dtype) in (
-        "string",
-        "string[python]",
-        "string[pyarrow]",
-        "large_string[pyarrow]",
-    ):
+    if dtype in {"string", "string[python]", "string[pyarrow]", "large_string[pyarrow]"}:
         return dtypes.String()
-    if str(dtype) in ("bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"):
+    if dtype in {"bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"}:
         return dtypes.Boolean()
-    if str(dtype) in ("category",) or str(dtype).startswith("dictionary<"):
+    if dtype == "category" or dtype.startswith("dictionary<"):
         return dtypes.Categorical()
-    if (match_ := re.match(pd_datetime_rgx, str(dtype))) or (
-        match_ := re.match(pa_datetime_rgx, str(dtype))
+    if (match_ := re.match(pd_datetime_rgx, dtype)) or (
+        match_ := re.match(pa_datetime_rgx, dtype)
     ):
         dt_time_unit: Literal["us", "ns", "ms"] = match_.group("time_unit")  # type: ignore[assignment]
         dt_time_zone: str | None = match_.group("time_zone")
         return dtypes.Datetime(dt_time_unit, dt_time_zone)
-    if (match_ := re.match(pd_duration_rgx, str(dtype))) or (
-        match_ := re.match(pa_duration_rgx, str(dtype))
+    if (match_ := re.match(pd_duration_rgx, dtype)) or (
+        match_ := re.match(pa_duration_rgx, dtype)
     ):
         du_time_unit: Literal["us", "ns", "ms"] = match_.group("time_unit")  # type: ignore[assignment]
         return dtypes.Duration(du_time_unit)
-    if str(dtype) == "date32[day][pyarrow]":
+    if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
-    if str(dtype) == "object":
+    if dtype == "object":
         if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
             idx := getattr(column, "first_valid_index", lambda: None)()
         ) is not None and isinstance(column.loc[idx], str):
@@ -486,10 +482,10 @@ def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
 
     idx = series[lengths.index(max_length)]._native_series.index
     reindexed = []
-
+    max_length_gt_1 = max_length > 1
     for s, length in zip(series, lengths):
         s_native = s._native_series
-        if max_length > 1 and length == 1:
+        if max_length_gt_1 and length == 1:
             reindexed.append(
                 native_namespace.Series(
                     [s_native.iloc[0]] * max_length,
@@ -529,3 +525,12 @@ def int_dtype_mapper(dtype: Any) -> str:
     if str(dtype).lower() != str(dtype):  # pragma: no cover
         return "Int64"
     return "int64"
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: slice, columns: pd.Index
+) -> tuple[int | None, int | None, int | None]:
+    start = columns.get_loc(str_slice.start) if str_slice.start is not None else None
+    stop = columns.get_loc(str_slice.stop) + 1 if str_slice.stop is not None else None
+    step = str_slice.step
+    return (start, stop, step)

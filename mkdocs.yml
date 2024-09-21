@@ -5,28 +5,25 @@ watch:
 nav:
   - Home: index.md
   - Why: why.md
-  - Installation: installation.md
-  - Quick start: quick_start.md
+  - Installation and quick start: installation.md
   - Tutorial:
     - basics/dataframe.md
-    - basics/column.md
+    - basics/series.md
     - basics/complete_example.md
   - Pandas-like concepts:
     - other/pandas_index.md
     - other/user_warning.md
     - other/column_names.md
-  - levels.md
   - overhead.md
   - backcompat.md
   - extending.md
   - how_it_works.md
-  - Roadmap: roadmap.md
-  - Related projects: related.md
+  - Roadmap and related projects: roadmap_and_related.md
   - API Completeness:
     - api-completeness/index.md
-    - api-completeness/dataframe.md
-    - api-completeness/expr.md
-    - api-completeness/series.md
+    - Supported DataFrame methods: api-completeness/dataframe.md
+    - Supporteda Expr methods: api-completeness/expr.md
+    - Supported Series methods: api-completeness/series.md
   - API Reference:
     - api-reference/narwhals.md
     - api-reference/dataframe.md

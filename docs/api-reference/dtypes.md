@@ -18,6 +18,7 @@
         - Categorical
         - Enum
         - String
+        - Date
         - Datetime
         - Duration
         - Object

@@ -116,7 +116,7 @@ def test_slice_int_rows_str_columns(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_slice_slice_columns(constructor_eager: Any) -> None:
+def test_slice_slice_columns(constructor_eager: Any) -> None:  # noqa: PLR0915
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 1], "b":"c"]  # type: ignore[misc]
@@ -152,8 +152,28 @@ def test_slice_slice_columns(constructor_eager: Any) -> None:
     result = df[:2, [0, 2]]
     expected = {"a": [1, 2], "c": [7, 8]}
     compare_dicts(result, expected)
+    result = df[:2, ["a", "c"]]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[1:, [0, 2]]
+    expected = {"a": [2, 3], "c": [8, 9]}
+    compare_dicts(result, expected)
+    result = df[1:, ["a", "c"]]
+    expected = {"a": [2, 3], "c": [8, 9]}
+    compare_dicts(result, expected)
     result = df[["b", "c"]]
     expected = {"b": [4, 5, 6], "c": [7, 8, 9]}
+    compare_dicts(result, expected)
+    result = df[:2]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
+    result = df[2:]
+    expected = {"a": [3], "b": [6], "c": [9], "d": [2]}
+    compare_dicts(result, expected)
+    # mypy says "Slice index must be an integer", but we do in fact support
+    # using string slices
+    result = df["a":"b"]  # type: ignore[misc]
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
     compare_dicts(result, expected)
 
 
@@ -162,3 +182,14 @@ def test_slice_invalid(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises(TypeError, match="Hint:"):
         df[0, 0]
+
+
+def test_slice_edge_cases(constructor_eager: Any) -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    assert df[[], :].shape == (0, 4)
+    assert df[:, []].shape == (0, 0)
+    assert df[[]].shape == (0, 4)
+    assert df[[], ["a"]].shape == (0, 1)
+    assert df[:, :].shape == (3, 4)
+    assert df[[], []].shape == (0, 0)
