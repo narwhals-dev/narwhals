@@ -693,6 +693,11 @@ class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
 
+    def len_chars(self) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.len()
+        )
+
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> PandasLikeSeries:

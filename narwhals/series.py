@@ -2467,6 +2467,49 @@ class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
 
+    def len_chars(self) -> Series:
+        r"""
+        Return the length of each string as the number of characters.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["foo", "Café", "345", "東京", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.str.len_chars()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    3.0
+            1    4.0
+            2    3.0
+            3    2.0
+            4    NaN
+            dtype: float64
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [u32]
+            [
+               3
+               4
+               3
+               2
+               null
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.len_chars()
+        )
+
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> Series:

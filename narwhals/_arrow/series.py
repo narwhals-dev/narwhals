@@ -942,6 +942,13 @@ class ArrowSeriesStringNamespace:
     def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
 
+    def len_chars(self) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        return self._arrow_series._from_native_series(
+            pc.utf8_length(self._arrow_series._native_series)
+        )
+
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> ArrowSeries:
