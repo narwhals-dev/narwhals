@@ -8,7 +8,7 @@ nav:
   - Installation and quick start: installation.md
   - Tutorial:
     - basics/dataframe.md
-    - basics/column.md
+    - basics/series.md
     - basics/complete_example.md
   - Pandas-like concepts:
     - other/pandas_index.md
