@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import re
-import secrets
 from enum import Enum
 from enum import auto
+from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -433,7 +433,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
     """
     counter = 0
     while True:
-        token = secrets.token_hex(n_bytes)
+        token = token_hex(n_bytes)
         if token not in columns:
             return token
 
