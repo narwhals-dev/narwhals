@@ -2021,7 +2021,7 @@ class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
-    def len_chars(self, n: int = 5) -> Expr:
+    def len_chars(self) -> Expr:
         r"""
         Return the length of each string as the number of characters.
 
