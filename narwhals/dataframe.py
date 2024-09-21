@@ -399,18 +399,41 @@ class DataFrame(BaseFrame[FrameT]):
 
         Examples:
             >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(df)
-            >>> # convert to nw dataframe
-            >>> df = nw.from_native(df_pd)
-            >>> # get back pandas dataframe
-            >>> df_native = df.to_native()
-            >>> df_native
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Calling `to_native` on a Narwhals DataFrame returns the native object:
+
+            >>> nw.from_native(df_pd).to_native()
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
+            >>> nw.from_native(df_pl).to_native()
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+            >>> nw.from_native(df_pa).to_native()
+            pyarrow.Table
+            foo: int64
+            bar: double
+            ham: string
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
+            ham: [["a","b","c"]]
         """
 
         return self._compliant_frame._native_frame  # type: ignore[no-any-return]
