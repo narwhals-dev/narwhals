@@ -165,7 +165,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
-            >>> import narwhals as nw
+            >>> import narwhals.stable.v1 as nw
             >>> df = {
             ...     "A": [1, 2, 3, 4, 5],
             ...     "fruits": ["banana", "banana", "apple", "apple", "banana"],
