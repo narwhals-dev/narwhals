@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
@@ -209,7 +210,7 @@ def test_slice_edge_cases(constructor_eager: Any) -> None:
         (range(2), range(1)),
     ],
 )
-def test_get_item_works_with_tuple_and_list_indexing(
+def test_get_item_works_with_tuple_and_list_and_range_row_and_col_indexing(
     constructor_eager: Any,
     row_idx: list[int] | tuple[int] | range,
     col_idx: list[int] | tuple[int] | range,
@@ -226,7 +227,7 @@ def test_get_item_works_with_tuple_and_list_indexing(
         (range(2), slice(1)),
     ],
 )
-def test_get_item_works_with_tuple_and_list_indexing_and_slice(
+def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col_indexing(
     constructor_eager: Any,
     row_idx: list[int] | tuple[int] | range,
     col: slice,
