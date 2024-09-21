@@ -99,7 +99,6 @@ force-single-line = true
 docstring-code-format = true
 
 [tool.pytest.ini_options]
-addopts = "-n auto"
 testpaths = ["tests"]
 filterwarnings = [
   "error",

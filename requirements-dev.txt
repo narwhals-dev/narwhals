@@ -7,8 +7,8 @@ pre-commit
 pyarrow
 pytest
 pytest-cov
+pytest-randomly
 pytest-env
-pytest-xdist
 hypothesis
 scikit-learn
 typing_extensions
