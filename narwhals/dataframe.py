@@ -30,10 +30,10 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
-    from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoFrame
 
-FrameT = TypeVar("FrameT", bound="IntoDataFrame")
+FrameT = TypeVar("FrameT", bound="IntoFrame")
 
 
 class BaseFrame(Generic[FrameT]):
@@ -389,6 +389,54 @@ class DataFrame(BaseFrame[FrameT]):
             <LazyFrame ...>
         """
         return super().lazy()
+
+    def to_native(self) -> FrameT:
+        """
+        Convert Narwhals DataFrame to native one.
+
+        Returns:
+            Object of class that user started with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Calling `to_native` on a Narwhals DataFrame returns the native object:
+
+            >>> nw.from_native(df_pd).to_native()
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+            >>> nw.from_native(df_pl).to_native()
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+            >>> nw.from_native(df_pa).to_native()
+            pyarrow.Table
+            foo: int64
+            bar: double
+            ham: string
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
+            ham: [["a","b","c"]]
+        """
+
+        return self._compliant_frame._native_frame  # type: ignore[no-any-return]
 
     def to_pandas(self) -> pd.DataFrame:
         """
