@@ -14,6 +14,7 @@ from typing import overload
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
+from narwhals.translate import to_native
 from narwhals.utils import flatten
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
@@ -319,14 +320,14 @@ class DataFrame(BaseFrame[FrameT]):
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals DataFrame                            "
+        header = " Narwhals DataFrame                    "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `narwhals.to_native` to see native output |\n"
+            + "| Use `.to_native` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -2640,14 +2641,14 @@ class LazyFrame(BaseFrame[FrameT]):
             raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals LazyFrame                            "
+        header = " Narwhals LazyFrame                    "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `narwhals.to_native` to see native output |\n"
+            + "| Use `.to_native` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -2676,12 +2677,12 @@ class LazyFrame(BaseFrame[FrameT]):
             ... )
             >>> lf = nw.from_native(lf_pl)
             >>> lf
-            ┌───────────────────────────────────────────────┐
-            | Narwhals LazyFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
+            ┌───────────────────────────────────────┐
+            | Narwhals LazyFrame                    |
+            | Use `.to_native` to see native output |
+            └───────────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
-            >>> nw.to_native(df).sort("a")
+            >>> df.to_native().sort("a")
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
@@ -2697,6 +2698,45 @@ class LazyFrame(BaseFrame[FrameT]):
             self._compliant_frame.collect(),
             level=self._level,
         )
+
+    def to_native(self) -> FrameT:
+        """
+        Convert Narwhals LazyFrame to native one.
+
+        Returns:
+            Object of class that user started with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Calling `to_native` on a Narwhals DataFrame returns the native object:
+
+            >>> nw.from_native(df_pd).lazy().to_native()
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+            >>> nw.from_native(df_pl).to_native().collect()
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+        """
+
+        return to_native(narwhals_object=self, strict=True)
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
