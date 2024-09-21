@@ -33,10 +33,10 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
 
-FrameT = TypeVar("FrameT", bound="IntoDataFrame")
+IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
 
 
-class BaseFrame(Generic[FrameT]):
+class BaseFrame(Generic[IntoDataFrameT]):
     _compliant_frame: Any
     _level: Literal["full", "interchange"]
 
@@ -292,7 +292,7 @@ class BaseFrame(Generic[FrameT]):
         )
 
 
-class DataFrame(BaseFrame[FrameT]):
+class DataFrame(BaseFrame[IntoDataFrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
@@ -2549,7 +2549,7 @@ class DataFrame(BaseFrame[FrameT]):
         )
 
 
-class LazyFrame(BaseFrame[FrameT]):
+class LazyFrame(BaseFrame[IntoDataFrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
