@@ -30,13 +30,17 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
+    from narwhals.typing import Frame
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoFrame
 
 IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
+IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
+FrameT = TypeVar("FrameT", bound="Frame")
 
 
-class BaseFrame(Generic[IntoDataFrameT]):
+class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "interchange"]
 
@@ -2549,7 +2553,7 @@ class DataFrame(BaseFrame[IntoDataFrameT]):
         )
 
 
-class LazyFrame(BaseFrame[IntoDataFrameT]):
+class LazyFrame(BaseFrame[IntoFrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
