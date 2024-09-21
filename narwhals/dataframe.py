@@ -320,14 +320,14 @@ class DataFrame(BaseFrame[FrameT]):
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals DataFrame                            "
+        header = " Narwhals DataFrame                    "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `df.to_native` to see native output |\n"
+            + "| Use `.to_native` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -2641,14 +2641,14 @@ class LazyFrame(BaseFrame[FrameT]):
             raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals LazyFrame                            "
+        header = " Narwhals LazyFrame                    "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `df.to_native` to see native output |\n"
+            + "| Use `.to_native` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -2677,10 +2677,10 @@ class LazyFrame(BaseFrame[FrameT]):
             ... )
             >>> lf = nw.from_native(lf_pl)
             >>> lf
-            ┌───────────────────────────────────────────────┐
-            | Narwhals LazyFrame                            |
-            | Use `df.to_native` to see native output |
-            └───────────────────────────────────────────────┘
+            ┌───────────────────────────────────────┐
+            | Narwhals LazyFrame                    |
+            | Use `.to_native` to see native output |
+            └───────────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
             >>> df.to_native().sort("a")
             shape: (3, 3)
@@ -2713,7 +2713,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import narwhals as nw
             >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
             >>> df_pa = pa.table(data)
 
             Calling `to_native` on a Narwhals DataFrame returns the native object:
