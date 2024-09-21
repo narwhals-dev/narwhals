@@ -630,13 +630,27 @@ class PandasLikeSeries:
         plx = self.__native_namespace__()
         series = self._native_series
         name = str(self._name) if self._name else ""
+
+        null_col_pl = f"{name}{separator}null"
+
+        result = plx.get_dummies(
+            series,
+            prefix=name,
+            prefix_sep=separator,
+            drop_first=drop_first,
+            dummy_na=True,  # Adds a null column at the end, even if there aren't any.
+            dtype=int,
+        )
+
+        *cols, null_col_pd = result.columns
+        # if there are no nulls, we drop such column, as polars would not add it
+        drop_null_col = result[null_col_pd].sum() == 0
+        output_order = [null_col_pd, *cols] if not drop_null_col else cols
+
         return PandasLikeDataFrame(
-            plx.get_dummies(
-                series,
-                prefix=name,
-                prefix_sep=separator,
-                drop_first=drop_first,
-            ).astype(int),
+            result.loc[:, output_order].rename(
+                columns={null_col_pd: null_col_pl}, errors="ignore"
+            ),
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
