@@ -45,21 +45,18 @@ def parse_exprs_and_named_exprs(
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
+        return_scalar = getattr(expr, "_returns_scalar", False)
         for _result in _results:
-            if getattr(expr, "_returns_scalar", False):
-                results[_result.name] = _result[0]
-            else:
-                results[_result.name] = _result
+            results[_result.name] = _result[0] if return_scalar else _result
+
     for name, value in named_exprs.items():
         _results = value._call(df)
         if len(_results) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
+        return_scalar = getattr(value, "_returns_scalar", False)
         for _result in _results:
-            if getattr(value, "_returns_scalar", False):
-                results[name] = _result[0]
-            else:
-                results[name] = _result
+            results[name] = _result[0] if return_scalar else _result
     return results
 
 
