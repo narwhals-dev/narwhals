@@ -265,10 +265,11 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
 
     import pyarrow as pa  # ignore-banned-import
 
+    is_max_length_gt_1 = max_length > 1
     reshaped = []
     for s, length in zip(series, lengths):
         s_native = s._native_series
-        if max_length > 1 and length == 1:
+        if is_max_length_gt_1 and length == 1:
             value = s_native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()

@@ -23,6 +23,7 @@
         - select
         - sort
         - tail
+        - to_native
         - unique
         - with_columns
         - with_row_index

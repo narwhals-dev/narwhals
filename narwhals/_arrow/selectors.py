@@ -99,7 +99,7 @@ class ArrowSelector(ArrowExpr):
             def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name not in [x.name for x in rhs]]
+                return [x for x in lhs if x.name not in {x.name for x in rhs}]
 
             return ArrowSelector(
                 call,
@@ -118,7 +118,7 @@ class ArrowSelector(ArrowExpr):
             def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name not in [x.name for x in rhs]] + rhs
+                return [x for x in lhs if x.name not in {x.name for x in rhs}] + rhs
 
             return ArrowSelector(
                 call,
@@ -137,7 +137,7 @@ class ArrowSelector(ArrowExpr):
             def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name in [x.name for x in rhs]]
+                return [x for x in lhs if x.name in {x.name for x in rhs}]
 
             return ArrowSelector(
                 call,
