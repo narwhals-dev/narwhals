@@ -124,6 +124,14 @@ class PandasLikeDataFrame:
     @overload
     def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
 
+    @overload
+    def __getitem__(
+        self, item: tuple[Sequence[int], Sequence[int] | slice]
+    ) -> PandasLikeDataFrame: ...
+
+    @overload
+    def __getitem__(self, item: tuple[slice, Sequence[int]]) -> PandasLikeDataFrame: ...
+
     def __getitem__(
         self,
         item: str
@@ -132,8 +140,12 @@ class PandasLikeDataFrame:
         | Sequence[int]
         | Sequence[str]
         | tuple[Sequence[int], str | int]
+        | tuple[slice | Sequence[int], Sequence[int] | slice]
         | tuple[slice, slice],
     ) -> PandasLikeSeries | PandasLikeDataFrame:
+        if isinstance(item, tuple):
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
 
