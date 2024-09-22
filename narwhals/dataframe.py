@@ -4297,7 +4297,6 @@ class LazyFrame(BaseFrame[FrameT]):
         Examples:
             >>> import narwhals as nw
             >>> import polars as pl
-            >>> import dask.dataframe as dd
             >>> data = {
             ...     "a": ["x", "y", "z"],
             ...     "b": [1, 3, 5],
@@ -4307,12 +4306,10 @@ class LazyFrame(BaseFrame[FrameT]):
             We define a library agnostic function:
 
             >>> @nw.narwhalify
-            ... def func(df):
+            ... def func(lf):
             ...     return (
-            ...         df.unpivot(on=["b", "c"], index="a").sort(["variable", "a"]).collect()
+            ...         lf.unpivot(on=["b", "c"], index="a").sort(["variable", "a"]).collect()
             ...     )
-
-            We can pass any supported library such as Polars or Dask to `func`:
 
             >>> func(pl.LazyFrame(data))
             shape: (6, 3)
@@ -4328,15 +4325,6 @@ class LazyFrame(BaseFrame[FrameT]):
             │ y   ┆ c        ┆ 4     │
             │ z   ┆ c        ┆ 6     │
             └─────┴──────────┴───────┘
-
-            >>> func(dd.from_dict(data, npartitions=1))
-               a variable  value
-            0  x        b      1
-            1  y        b      3
-            2  z        b      5
-            3  x        c      2
-            4  y        c      4
-            5  z        c      6
         """
         return super().unpivot(
             on=on, index=index, variable_name=variable_name, value_name=value_name
