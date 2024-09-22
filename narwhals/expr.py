@@ -3760,14 +3760,14 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.select(nw.col("a") * nw.col("b"))
+        ...     return df.select(nw.nth(0))
 
         We can then pass either pandas or polars to `func`:
 
         >>> func(df_pd)
            a
-        0  3
-        1  8
+        0  1
+        1  2
         >>> func(df_pl)
         shape: (2, 1)
         ┌─────┐
@@ -3775,8 +3775,8 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         │ --- │
         │ i64 │
         ╞═════╡
-        │ 3   │
-        │ 8   │
+        │ 1   │
+        │ 2   │
         └─────┘
     """
 
