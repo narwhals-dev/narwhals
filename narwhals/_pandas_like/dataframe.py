@@ -485,7 +485,7 @@ class PandasLikeDataFrame:
                 )
                 .drop_duplicates()
             )
-            if self._implementation is Implementation.CUDF:
+            if self._implementation is Implementation.CUDF:  # pragma: no cover
                 return self._from_native_frame(
                     self._native_frame.merge(
                         other_native,
