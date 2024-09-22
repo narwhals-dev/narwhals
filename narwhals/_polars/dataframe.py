@@ -186,6 +186,28 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.drop(to_drop))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
 
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            return self._from_native_frame(
+                self._native_frame.melt(
+                    id_vars=index,
+                    value_vars=on,
+                    variable_name=variable_name,
+                    value_name=value_name,
+                )
+            )
+        return self._from_native_frame(
+            self._native_frame.unpivot(
+                on=on, index=index, variable_name=variable_name, value_name=value_name
+            )
+        )
+
 
 class PolarsLazyFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
@@ -251,3 +273,25 @@ class PolarsLazyFrame:
         if self._backend_version < (1, 0, 0):  # pragma: no cover
             return self._from_native_frame(self._native_frame.drop(columns))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            return self._from_native_frame(
+                self._native_frame.melt(
+                    id_vars=index,
+                    value_vars=on,
+                    variable_name=variable_name,
+                    value_name=value_name,
+                )
+            )
+        return self._from_native_frame(
+            self._native_frame.unpivot(
+                on=on, index=index, variable_name=variable_name, value_name=value_name
+            )
+        )
