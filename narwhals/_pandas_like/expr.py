@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals.dtypes import DType
     from narwhals.utils import Implementation
 
 
@@ -81,11 +82,8 @@ class PandasLikeExpr:
             backend_version=backend_version,
         )
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
-        return reuse_series_implementation(self, "cast", dtype=dtype)
+    def cast(self: Self, dtype: DType, *, strict: bool) -> Self:
+        return reuse_series_implementation(self, "cast", dtype=dtype, strict=strict)
 
     def __eq__(self, other: PandasLikeExpr | Any) -> Self:  # type: ignore[override]
         return reuse_series_implementation(self, "__eq__", other=other)

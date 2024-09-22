@@ -6,6 +6,7 @@ from typing import Any
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
+from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import translate_dtype
 from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
@@ -15,6 +16,8 @@ from narwhals.utils import parse_columns_to_drop
 if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
+
+    from narwhals.dtypes import DType
 
 
 class PolarsDataFrame:
@@ -186,6 +189,14 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.drop(to_drop))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
 
+    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+        native_frame = self._native_frame
+        if isinstance(dtypes, dict):
+            dtypes = {k: narwhals_to_native_dtype(v) for k, v in dtypes.items()}
+        else:
+            dtypes = narwhals_to_native_dtype(dtypes)
+        return self._from_native_frame(native_frame.cast(dtypes, strict=strict))
+
 
 class PolarsLazyFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
@@ -251,3 +262,11 @@ class PolarsLazyFrame:
         if self._backend_version < (1, 0, 0):  # pragma: no cover
             return self._from_native_frame(self._native_frame.drop(columns))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+
+    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+        native_frame = self._native_frame
+        if isinstance(dtypes, dict):
+            dtypes = {k: narwhals_to_native_dtype(v) for k, v in dtypes.items()}
+        else:
+            dtypes = narwhals_to_native_dtype(dtypes)
+        return self._from_native_frame(native_frame.cast(dtypes, strict=strict))

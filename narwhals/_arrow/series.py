@@ -429,12 +429,12 @@ class ArrowSeries:
         ser = self._native_series
         return self._from_native_series(ser.is_null())
 
-    def cast(self, dtype: DType) -> Self:
+    def cast(self, dtype: DType, *, strict: bool) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series
         dtype = narwhals_to_native_dtype(dtype)
-        return self._from_native_series(pc.cast(ser, dtype))
+        return self._from_native_series(pc.cast(ser, dtype, safe=strict))
 
     def null_count(self: Self) -> int:
         return self._native_series.null_count  # type: ignore[no-any-return]

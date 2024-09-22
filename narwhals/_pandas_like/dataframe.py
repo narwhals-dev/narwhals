@@ -14,6 +14,7 @@ from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
+from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import get_cudf
@@ -728,3 +729,27 @@ class PandasLikeDataFrame:
                 n=n, frac=fraction, replace=with_replacement, random_state=seed
             )
         )
+
+    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+        native_frame = self._native_frame
+        implementation = self._implementation
+        if isinstance(dtypes, dict):
+            dtypes = {
+                col: narwhals_to_native_dtype(
+                    dtype,
+                    starting_dtype=native_frame[col].dtype,
+                    implementation=implementation,
+                )
+                for col, dtype in dtypes.items()
+            }
+        else:
+            dtypes = {
+                col: narwhals_to_native_dtype(
+                    dtypes,
+                    starting_dtype=native_frame[col].dtype,
+                    implementation=implementation,
+                )
+                for col in self.columns
+            }
+        errors = "raise" if strict else "ignore"
+        return self._from_native_frame(native_frame.astype(dtypes, errors=errors))

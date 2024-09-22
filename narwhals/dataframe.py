@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
@@ -290,6 +291,13 @@ class BaseFrame(Generic[FrameT]):
                 by=by,
                 strategy=strategy,
             )
+        )
+
+    def cast(
+        self: Self, dtypes: dict[str, DType] | DType, *, strict: bool = True
+    ) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.cast(dtypes=dtypes, strict=strict)
         )
 
 
@@ -2616,6 +2624,11 @@ class DataFrame(BaseFrame[FrameT]):
             )
         )
 
+    def cast(
+        self: Self, dtypes: dict[str, DType] | DType, *, strict: bool = True
+    ) -> Self:
+        return super().cast(dtypes=dtypes, strict=strict)
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """
@@ -4159,3 +4172,46 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────┴─────┘
         """
         return super().gather_every(n=n, offset=offset)
+
+    def cast(
+        self: Self, dtypes: dict[str, DType] | DType, *, strict: bool = True
+    ) -> Self:
+        r"""
+        Cast LazyFrame column(s) to the specified dtype(s).
+
+        Arguments:
+            dtypes: Mapping of column names to dtypes, or a single dtype to
+                which all columns will be cast.
+            strict: Throw an error if a cast could not be done (for instance,
+                due to an overflow). Remark that not all backends support this
+                feature.
+
+        Examples:
+
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ... }
+
+            Let's define a dataframe-agnostic function that casts specific frame
+            columns to the specified dtypes
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.cast({"foo": nw.Float32, "bar": nw.UInt8}).collect()
+
+            >>> func(pl.LazyFrame(data))
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ f32 ┆ u8  │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 6   │
+            │ 2.0 ┆ 7   │
+            │ 3.0 ┆ 8   │
+            └─────┴─────┘
+        """
+        return super().cast(dtypes=dtypes, strict=strict)

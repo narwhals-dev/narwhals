@@ -7,6 +7,8 @@ from typing import overload
 
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
+from narwhals._polars.utils import narwhals_to_native_dtype
+from narwhals._polars.utils import translate_dtype
 from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 
@@ -17,8 +19,6 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
 
-from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals._polars.utils import translate_dtype
 
 PL = get_polars()
 
@@ -88,10 +88,10 @@ class PolarsSeries:
     def __getitem__(self, item: int | slice | Sequence[int]) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
 
-    def cast(self, dtype: DType) -> Self:
+    def cast(self, dtype: DType, *, strict: bool) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(dtype)
-        return self._from_native_series(ser.cast(dtype))
+        return self._from_native_series(ser.cast(dtype, strict=strict))
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         if self._backend_version < (0, 20, 29):  # pragma: no cover

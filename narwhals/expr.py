@@ -117,15 +117,13 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self, dtype: DType, *, strict: bool = True) -> Self:
         """
         Redefine an object's data type.
 
         Arguments:
             dtype: Data type that the object will be cast into.
+            strict: If True invalid casts generate exceptions instead of nulls.
 
         Examples:
             >>> import pandas as pd
@@ -163,7 +161,7 @@ class Expr:
             └─────┴─────┘
         """
         return self.__class__(
-            lambda plx: self._call(plx).cast(dtype),
+            lambda plx: self._call(plx).cast(dtype, strict=strict),
         )
 
     # --- binary ---

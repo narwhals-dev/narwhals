@@ -184,13 +184,11 @@ class PandasLikeSeries:
         s.name = self.name
         return self._from_native_series(s)
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self, dtype: DType, *, strict: bool) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation)
-        return self._from_native_series(ser.astype(dtype))
+        errors = "raise" if strict else "ignore"
+        return self._from_native_series(ser.astype(dtype, errors=errors))
 
     def item(self: Self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().

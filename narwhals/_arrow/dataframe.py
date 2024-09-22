@@ -615,3 +615,14 @@ class ArrowDataFrame:
         mask = rng.choice(idx, size=n, replace=with_replacement)
 
         return self._from_native_frame(pc.take(frame, mask))
+
+    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+        plx = self.__narwhals_namespace__()
+        if isinstance(dtypes, dict):
+            return self.with_columns(
+                **{c: plx.col(c).cast(v, strict=strict) for c, v in dtypes.items()}
+            )
+        else:
+            return self.with_columns(
+                **{c: plx.col(c).cast(dtypes, strict=strict) for c in self.columns}
+            )

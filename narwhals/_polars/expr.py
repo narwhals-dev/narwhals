@@ -34,10 +34,10 @@ class PolarsExpr:
 
         return func
 
-    def cast(self, dtype: DType) -> Self:
+    def cast(self: Self, dtype: DType, *, strict: bool) -> Self:
         expr = self._native_expr
         dtype = narwhals_to_native_dtype(dtype)
-        return self._from_native_expr(expr.cast(dtype))
+        return self._from_native_expr(expr.cast(dtype, strict=strict))
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._from_native_expr(self._native_expr.__eq__(extract_native(other)))

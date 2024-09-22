@@ -7,6 +7,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
+from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals.dependencies import get_dask_dataframe
@@ -355,3 +356,14 @@ class DaskLazyFrame:
             )
             .drop([row_index_token], strict=False)
         )
+
+    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+        """`strict` exists for compatibility as dask `astype` does not support
+        `errors` argument as pandas does.
+        """
+        native_frame = self._native_frame
+        if isinstance(dtypes, dict):
+            dtypes = {k: narwhals_to_native_dtype(v) for k, v in dtypes.items()}
+        else:
+            dtypes = narwhals_to_native_dtype(dtypes)
+        return self._from_native_frame(native_frame.astype(dtypes))
