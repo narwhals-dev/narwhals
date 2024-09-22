@@ -2627,6 +2627,62 @@ class DataFrame(BaseFrame[FrameT]):
     def cast(
         self: Self, dtypes: dict[str, DType] | DType, *, strict: bool = True
     ) -> Self:
+        r"""
+        Cast DataFrame column(s) to the specified dtype(s).
+
+        Arguments:
+            dtypes: Mapping of column names to dtypes, or a single dtype to
+                which all columns will be cast.
+            strict: Throw an error if a cast could not be done (for instance,
+                due to an overflow). Remark that not all backends support this
+                feature.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ... }
+
+            Let's define a dataframe-agnostic function that casts specific frame
+            columns to the specified dtypes:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.cast({"foo": nw.Float32, "bar": nw.UInt8})
+
+            We can then pass any supported library such as pandas, Polars
+            (eager), or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+               foo  bar
+            0  1.0    6
+            1  2.0    7
+            2  3.0    8
+
+            >>> func(pl.DataFrame(data))
+            shape: (3, 2)
+            ┌─────┬─────┐
+            │ foo ┆ bar │
+            │ --- ┆ --- │
+            │ f32 ┆ u8  │
+            ╞═════╪═════╡
+            │ 1.0 ┆ 6   │
+            │ 2.0 ┆ 7   │
+            │ 3.0 ┆ 8   │
+            └─────┴─────┘
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            foo: float
+            bar: uint8
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
+        """
         return super().cast(dtypes=dtypes, strict=strict)
 
 
