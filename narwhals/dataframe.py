@@ -293,7 +293,7 @@ class BaseFrame(Generic[FrameT]):
         )
 
 
-class DataFrame(BaseFrame[IntoDataFrameT]):
+class DataFrame(BaseFrame[FrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
@@ -2617,7 +2617,7 @@ class DataFrame(BaseFrame[IntoDataFrameT]):
         )
 
 
-class LazyFrame(BaseFrame[IntoFrameT]):
+class LazyFrame(BaseFrame[FrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 

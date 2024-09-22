@@ -43,8 +43,8 @@ IntoFrame: TypeAlias = Union[
 ]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame."""
 
-Frame: TypeAlias = Union["IntoFrame", "IntoDataFrame"]
-"""DataFrame or LazyFrame"""
+Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
+"""Narwhals DataFrame or Narwhals LazyFrame"""
 
 # TypeVars for some of the above
 IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
