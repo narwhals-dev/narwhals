@@ -703,7 +703,7 @@ def narwhalify(
 
             backends = {
                 b()
-                for v in [*args, *kwargs.values()]
+                for v in (*args, *kwargs.values())
                 if (b := getattr(v, "__native_namespace__", None))
             }
 
