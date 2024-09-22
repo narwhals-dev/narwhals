@@ -485,17 +485,27 @@ class PandasLikeDataFrame:
                 )
                 .drop_duplicates()
             )
-            return self._from_native_frame(
-                self._native_frame.merge(
-                    other_native,
-                    how="outer",
-                    indicator=indicator_token,
-                    left_on=left_on,
-                    right_on=left_on,
+            if self._implementation is Implementation.CUDF:
+                return self._from_native_frame(
+                    self._native_frame.merge(
+                        other_native,
+                        how="leftanti",
+                        left_on=left_on,
+                        right_on=left_on,
+                    )
                 )
-                .loc[lambda t: t[indicator_token] == "left_only"]
-                .drop(columns=indicator_token)
-            )
+            else:
+                return self._from_native_frame(
+                    self._native_frame.merge(
+                        other_native,
+                        how="outer",
+                        indicator=indicator_token,
+                        left_on=left_on,
+                        right_on=left_on,
+                    )
+                    .loc[lambda t: t[indicator_token] == "left_only"]
+                    .drop(columns=indicator_token)
+                )
 
         if how == "semi":
             other_native = (
