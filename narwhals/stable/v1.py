@@ -940,6 +940,46 @@ def col(*names: str | Iterable[str]) -> Expr:
     return _stableify(nw.col(*names))
 
 
+def nth(*indices: int | Sequence[int]) -> Expr:
+    """
+    Creates an expression that references one or more columns by their index(es).
+
+    Arguments:
+        indices: One or more indices representing the columns to retrieve.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.col("a") * nw.col("b"))
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  3
+        1  8
+        >>> func(df_pl)
+        shape: (2, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 3   │
+        │ 8   │
+        └─────┘
+    """
+    return _stableify(nw.nth(*indices))
+
+
 def len() -> Expr:
     """
     Return the number of rows.

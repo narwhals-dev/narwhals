@@ -10,6 +10,7 @@ Here are the top-level functions available in Narwhals.
         - all_horizontal
         - any_horizontal
         - col
+        - nth
         - concat
         - from_dict
         - from_native

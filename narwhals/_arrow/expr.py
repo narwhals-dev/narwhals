@@ -73,6 +73,31 @@ class ArrowExpr:
             backend_version=backend_version,
         )
 
+    @classmethod
+    def from_column_indices(
+        cls: type[Self], *column_indices: int, backend_version: tuple[int, ...]
+    ) -> Self:
+        from narwhals._arrow.series import ArrowSeries
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            return [
+                ArrowSeries(
+                    df._native_frame[column_index],
+                    name=df._native_frame.column_names[column_index],
+                    backend_version=df._backend_version,
+                )
+                for column_index in column_indices
+            ]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=list(map(str, column_indices)),
+            output_names=list(map(str, column_indices)),
+            backend_version=backend_version,
+        )
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
