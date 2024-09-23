@@ -8,7 +8,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 
-data = {"a": [-1, 0, 1, 10, 100.0]}
+data = {"a": [-1.0, 0, 1, 10, 100]}
 
 
 def test_log_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
