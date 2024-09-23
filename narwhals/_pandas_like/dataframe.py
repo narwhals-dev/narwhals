@@ -474,28 +474,38 @@ class PandasLikeDataFrame:
                 )
 
         if how == "anti":
-            indicator_token = generate_unique_token(
-                n_bytes=8, columns=[*self.columns, *other.columns]
-            )
+            if self._implementation is Implementation.CUDF:  # pragma: no cover
+                return self._from_native_frame(
+                    self._native_frame.merge(
+                        other,
+                        how="leftanti",
+                        left_on=left_on,
+                        right_on=left_on,
+                    )
+                )
+            else:
+                indicator_token = generate_unique_token(
+                    n_bytes=8, columns=[*self.columns, *other.columns]
+                )
 
-            other_native = (
-                other._native_frame.loc[:, right_on]
-                .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                other_native = (
+                    other._native_frame.loc[:, right_on]
+                    .rename(  # rename to avoid creating extra columns in join
+                        columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                    )
+                    .drop_duplicates()
                 )
-                .drop_duplicates()
-            )
-            return self._from_native_frame(
-                self._native_frame.merge(
-                    other_native,
-                    how="outer",
-                    indicator=indicator_token,
-                    left_on=left_on,
-                    right_on=left_on,
+                return self._from_native_frame(
+                    self._native_frame.merge(
+                        other_native,
+                        how="outer",
+                        indicator=indicator_token,
+                        left_on=left_on,
+                        right_on=left_on,
+                    )
+                    .loc[lambda t: t[indicator_token] == "left_only"]
+                    .drop(columns=indicator_token)
                 )
-                .loc[lambda t: t[indicator_token] == "left_only"]
-                .drop(columns=indicator_token)
-            )
 
         if how == "semi":
             other_native = (
