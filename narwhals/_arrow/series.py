@@ -429,7 +429,7 @@ class ArrowSeries:
         ser = self._native_series
         return self._from_native_series(ser.is_null())
 
-    def cast(self, dtype: DType, *, strict: bool) -> Self:
+    def cast(self, dtype: DType | type[DType], *, strict: bool) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series

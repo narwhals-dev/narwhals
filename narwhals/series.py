@@ -358,7 +358,7 @@ class Series:
         """
         return self._compliant_series.name  # type: ignore[no-any-return]
 
-    def cast(self: Self, dtype: DType, *, strict: bool = True) -> Self:
+    def cast(self: Self, dtype: DType | type[DType], *, strict: bool = True) -> Self:
         """
         Cast between data types.
 

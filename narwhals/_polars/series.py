@@ -88,7 +88,7 @@ class PolarsSeries:
     def __getitem__(self, item: int | slice | Sequence[int]) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
 
-    def cast(self, dtype: DType, *, strict: bool) -> Self:
+    def cast(self, dtype: DType | type[DType], *, strict: bool) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(dtype)
         return self._from_native_series(ser.cast(dtype, strict=strict))

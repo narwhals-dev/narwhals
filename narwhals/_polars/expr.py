@@ -34,7 +34,7 @@ class PolarsExpr:
 
         return func
 
-    def cast(self: Self, dtype: DType, *, strict: bool) -> Self:
+    def cast(self: Self, dtype: DType | type[DType], *, strict: bool) -> Self:
         expr = self._native_expr
         dtype = narwhals_to_native_dtype(dtype)
         return self._from_native_expr(expr.cast(dtype, strict=strict))

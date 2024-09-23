@@ -175,7 +175,7 @@ class ArrowExpr:
     def std(self, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
-    def cast(self, dtype: DType, *, strict: bool) -> Self:
+    def cast(self, dtype: DType | type[DType], *, strict: bool) -> Self:
         return reuse_series_implementation(self, "cast", dtype=dtype, strict=strict)
 
     def abs(self) -> Self:

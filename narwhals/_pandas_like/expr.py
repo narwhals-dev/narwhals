@@ -82,7 +82,7 @@ class PandasLikeExpr:
             backend_version=backend_version,
         )
 
-    def cast(self: Self, dtype: DType, *, strict: bool) -> Self:
+    def cast(self: Self, dtype: DType | type[DType], *, strict: bool) -> Self:
         return reuse_series_implementation(self, "cast", dtype=dtype, strict=strict)
 
     def __eq__(self, other: PandasLikeExpr | Any) -> Self:  # type: ignore[override]
