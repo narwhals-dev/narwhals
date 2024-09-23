@@ -359,7 +359,7 @@ class ArrowSeries:
         )
 
     @property
-    def dtype(self) -> DType:
+    def dtype(self: Self) -> DType:
         return translate_dtype(self._native_series.type)
 
     def abs(self) -> Self:
