@@ -477,7 +477,7 @@ class PandasLikeDataFrame:
             if self._implementation is Implementation.CUDF:  # pragma: no cover
                 return self._from_native_frame(
                     self._native_frame.merge(
-                        other,
+                        other._native_frame,
                         how="leftanti",
                         left_on=left_on,
                         right_on=left_on,
