@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dataframe import DataFrame
+    from narwhals.dtypes import DType
 
 
 class Series:
@@ -302,7 +303,7 @@ class Series:
         return len(self._compliant_series)
 
     @property
-    def dtype(self) -> Any:
+    def dtype(self: Self) -> DType:
         """
         Get the data type of the Series.
 
@@ -327,7 +328,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return self._compliant_series.dtype
+        return self._compliant_series.dtype  # type: ignore[no-any-return]
 
     @property
     def name(self) -> str:
