@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -1952,6 +1953,104 @@ class Expr:
             └─────┘
         """
         return self.__class__(lambda plx: self._call(plx).mode())
+
+    def log(self: Self, base: float = math.e) -> Self:
+        r"""
+        Compute the logarithm to a given base.
+
+        Arguments:
+            base: Given base, defaults to `e`
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"values": [1, 2, 3]}
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(values_log_2=nw.col("values").log(base=2))
+
+            We can then pass any supported library such as pandas, Polars (eager),
+            or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+               values  values_log_2
+            0       1      0.000000
+            1       2      1.000000
+            2       3      1.584963
+
+            >>> func(pl.DataFrame(data))
+            shape: (3, 2)
+            ┌────────┬──────────────┐
+            │ values ┆ values_log_2 │
+            │ ---    ┆ ---          │
+            │ i64    ┆ f64          │
+            ╞════════╪══════════════╡
+            │ 1      ┆ 0.0          │
+            │ 2      ┆ 1.0          │
+            │ 3      ┆ 1.584963     │
+            └────────┴──────────────┘
+            >>> func(pa.table(data))
+            pyarrow.Table
+            values: int64
+            values_log_2: double
+            ----
+            values: [[1,2,3]]
+            values_log_2: [[0,1,1.5849625007211563]]
+        """
+        return self.__class__(lambda plx: self._call(plx).log(base=base))
+
+    def log10(self: Self) -> Self:
+        r"""
+        Compute the base 10 logarithm of the input array, element-wise.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"values": [1.0, 2.0, 4.0]}
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(values_log_10=nw.col("values").log10())
+
+            We can then pass any supported library such as pandas, Polars (eager),
+            or PyArrow to `func`:
+
+            >>> func(pd.DataFrame(data))
+               values  values_log_10
+            0     1.0        0.00000
+            1     2.0        0.30103
+            2     4.0        0.60206
+
+            >>> func(pl.DataFrame(data))
+            shape: (3, 2)
+            ┌────────┬───────────────┐
+            │ values ┆ values_log_10 │
+            │ ---    ┆ ---           │
+            │ f64    ┆ f64           │
+            ╞════════╪═══════════════╡
+            │ 1.0    ┆ 0.0           │
+            │ 2.0    ┆ 0.30103       │
+            │ 4.0    ┆ 0.60206       │
+            └────────┴───────────────┘
+            >>> func(pa.table(data))
+            pyarrow.Table
+            values: double
+            values_log_10: double
+            ----
+            values: [[1,2,4]]
+            values_log_10: [[0,0.3010299956639812,0.6020599913279624]]
+
+        """
+        return self.__class__(lambda plx: self._call(plx).log10())
 
     @property
     def str(self: Self) -> ExprStringNamespace:

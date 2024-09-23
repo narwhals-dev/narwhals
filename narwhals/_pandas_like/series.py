@@ -665,6 +665,16 @@ class PandasLikeSeries:
         result.name = native_series.name
         return self._from_native_series(result)
 
+    def log(self: Self, base: float) -> Self:
+        import numpy as np  # ignore-banned-import()
+
+        return self._from_native_series(np.log(self._native_series) / np.log(base))
+
+    def log10(self: Self) -> Self:
+        import numpy as np  # ignore-banned-import()
+
+        return self._from_native_series(np.log10(self._native_series))
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)

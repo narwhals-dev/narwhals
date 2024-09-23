@@ -27,6 +27,8 @@
         - is_null
         - is_unique
         - len
+        - log
+        - log10
         - max
         - mean
         - min

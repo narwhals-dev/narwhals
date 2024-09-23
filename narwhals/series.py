@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -2405,6 +2406,102 @@ class Series:
             ]
         """
         return self._from_compliant_series(self._compliant_series.mode())
+
+    def log(self: Self, base: float = math.e) -> Self:
+        r"""
+        Compute the logarithm to a given base.
+
+        Arguments:
+            base: Given base, defaults to `e`
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1, 2, 3]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.log(base=2)
+
+            We can then pass any supported library such as pandas, Polars (eager),
+            or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    0.000000
+            1    1.000000
+            2    1.584963
+            dtype: float64
+
+            >>> func(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [f64]
+            [
+               0.0
+               1.0
+               1.584963
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest: +NORMALIZE_WHITESPACE
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+                [
+                    0,
+                    1,
+                    1.5849625007211563
+                ]
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.log(base=base))
+
+    def log10(self: Self) -> Self:
+        r"""
+        Compute the base 10 logarithm of the input array, element-wise.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [1.0, 2.0, 4.0]
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.log10()
+
+            We can then pass any supported library such as pandas, Polars (eager),
+            or PyArrow to `func`:
+
+            >>> func(pd.Series(data))
+            0    0.00000
+            1    0.30103
+            2    0.60206
+            dtype: float64
+
+            >>> func(pl.Series(data))  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [f64]
+            [
+               0.0
+               0.30103
+               0.60206
+            ]
+            >>> func(pa.chunked_array([data]))  # doctest: +NORMALIZE_WHITESPACE
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+                [
+                    0,
+                    0.3010299956639812,
+                    0.6020599913279624
+                ]
+            ]
+
+        """
+        return self._from_compliant_series(self._compliant_series.log10())
 
     @property
     def str(self) -> SeriesStringNamespace:

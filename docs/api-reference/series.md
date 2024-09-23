@@ -33,6 +33,8 @@
         - is_unique
         - item
         - len
+        - log
+        - log10
         - max
         - mean
         - min

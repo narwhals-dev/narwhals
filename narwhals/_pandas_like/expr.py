@@ -347,6 +347,12 @@ class PandasLikeExpr:
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
 
+    def log(self: Self, base: float) -> Self:
+        return reuse_series_implementation(self, "log", base)
+
+    def log10(self: Self) -> Self:
+        return reuse_series_implementation(self, "log10")
+
     @property
     def str(self: Self) -> PandasLikeExprStringNamespace:
         return PandasLikeExprStringNamespace(self)
