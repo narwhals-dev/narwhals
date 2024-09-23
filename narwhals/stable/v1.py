@@ -116,14 +116,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         If a library does not support lazy execution, then this is a no-op.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals.stable.v1 as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -140,6 +142,15 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             2    3  8.0   c
             >>> func(df_pl)
             <LazyFrame ...>
+            >>> func(df_pa)
+            pyarrow.Table
+            foo: int64
+            bar: double
+            ham: string
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
+            ham: [["a","b","c"]]
         """
         return _stableify(super().lazy())  # type: ignore[no-any-return]
 
