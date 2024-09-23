@@ -102,8 +102,8 @@ class PandasLikeExpr:
             func,
             depth=0,
             function_name="nth",
-            root_names=list(map(str, column_indices)),
-            output_names=list(map(str, column_indices)),
+            root_names=None,
+            output_names=None,
             implementation=implementation,
             backend_version=backend_version,
         )
