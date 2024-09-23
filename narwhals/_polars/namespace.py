@@ -56,6 +56,15 @@ class PolarsNamespace:
 
         return func
 
+    def nth(self, *indices: int | Sequence[int]) -> PolarsExpr:
+        from narwhals._polars.expr import PolarsExpr
+
+        pl = get_polars()
+        if self._backend_version < (0, 20, 26):  # pragma: no cover
+            msg = "`nth` is only supported for Polars>=0.20.26. Please use `col` for columns selection instead."
+            raise AttributeError(msg)
+        return PolarsExpr(pl.nth(*indices))
+
     def len(self) -> PolarsExpr:
         from narwhals._polars.expr import PolarsExpr
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.dependencies import get_polars
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 
@@ -21,5 +22,13 @@ def test_nth(
     constructor: Constructor, idx: int | list[int], expected: dict[str, list[int]]
 ) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.nth(idx))
-    compare_dicts(result, expected)
+    pl = get_polars()
+    pl_version = tuple(int(i) for i in pl.build_info().get("version").split("."))
+    if pl_version < (0, 20, 26):
+        with pytest.raises(
+            AttributeError, match="`nth` is only supported for Polars>=0.20.26."
+        ):
+            result = df.select(nw.nth(idx))
+    else:
+        result = df.select(nw.nth(idx))
+        compare_dicts(result, expected)

@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.dependencies import get_polars
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrameT
@@ -27,5 +28,13 @@ def test_nth(idx: int | list[int], expected: dict[str, list[int]]) -> None:
         return df.select(nw.nth(idx))
 
     df = pd.DataFrame(data)
-    result = func(df)
-    pd.testing.assert_frame_equal(result, pd.DataFrame(expected))
+    pl = get_polars()
+    pl_version = tuple(int(i) for i in pl.build_info().get("version").split("."))
+    if pl_version < (0, 20, 26):
+        with pytest.raises(
+            AttributeError, match="`nth` is only supported for Polars>=0.20.26."
+        ):
+            result = func(df)
+    else:
+        result = func(df)
+        pd.testing.assert_frame_equal(result, pd.DataFrame(expected))
