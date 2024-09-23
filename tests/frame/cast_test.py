@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import Constructor
+
+if TYPE_CHECKING:
+    from narwhals.dtypes import DType
+    from tests.utils import Constructor
 
 data = {
     "a": [1],
@@ -23,7 +30,7 @@ data = {
     "o": ["a"],
     "p": [1],
 }
-schema = {
+schema: dict[str, type[DType] | DType] | type[DType] | DType = {
     "a": nw.Int64,
     "b": nw.Int32,
     "c": nw.Int16,
@@ -54,7 +61,7 @@ def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data)).cast(schema)
 
-    expected = {
+    expected: dict[str, type[DType] | DType] | type[DType] | DType = {
         "a": nw.Int32,
         "b": nw.Int16,
         "c": nw.Int8,
@@ -88,7 +95,7 @@ def test_cast_all_str(constructor: Constructor, request: pytest.FixtureRequest) 
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data)).cast(schema)
 
-    expected = {
+    expected: dict[str, type[DType] | DType] | type[DType] | DType = {
         "a": nw.String,
         "b": nw.String,
         "c": nw.String,

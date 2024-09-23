@@ -189,7 +189,12 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.drop(to_drop))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
 
-    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+    def cast(
+        self: Self,
+        dtypes: dict[str, type[DType] | DType] | type[DType] | DType,
+        *,
+        strict: bool,
+    ) -> Self:
         native_frame = self._native_frame
         if isinstance(dtypes, dict):
             dtypes = {k: narwhals_to_native_dtype(v) for k, v in dtypes.items()}
@@ -263,7 +268,12 @@ class PolarsLazyFrame:
             return self._from_native_frame(self._native_frame.drop(columns))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
 
-    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+    def cast(
+        self: Self,
+        dtypes: dict[str, type[DType] | DType] | type[DType] | DType,
+        *,
+        strict: bool,
+    ) -> Self:
         native_frame = self._native_frame
         if isinstance(dtypes, dict):
             dtypes = {k: narwhals_to_native_dtype(v) for k, v in dtypes.items()}

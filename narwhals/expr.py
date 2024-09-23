@@ -117,7 +117,7 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(self, dtype: DType, *, strict: bool = True) -> Self:
+    def cast(self, dtype: DType | type[DType], *, strict: bool = True) -> Self:
         """
         Redefine an object's data type.
 

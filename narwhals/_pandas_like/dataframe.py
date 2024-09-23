@@ -730,7 +730,12 @@ class PandasLikeDataFrame:
             )
         )
 
-    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+    def cast(
+        self: Self,
+        dtypes: dict[str, type[DType] | DType] | type[DType] | DType,
+        *,
+        strict: bool,
+    ) -> Self:
         native_frame = self._native_frame
         implementation = self._implementation
         if isinstance(dtypes, dict):

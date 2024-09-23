@@ -294,7 +294,10 @@ class BaseFrame(Generic[FrameT]):
         )
 
     def cast(
-        self: Self, dtypes: dict[str, DType] | DType, *, strict: bool = True
+        self: Self,
+        dtypes: dict[str, type[DType] | DType] | type[DType] | DType,
+        *,
+        strict: bool = True,
     ) -> Self:
         return self._from_compliant_dataframe(
             self._compliant_frame.cast(dtypes=dtypes, strict=strict)
@@ -2625,7 +2628,10 @@ class DataFrame(BaseFrame[FrameT]):
         )
 
     def cast(
-        self: Self, dtypes: dict[str, DType] | DType, *, strict: bool = True
+        self: Self,
+        dtypes: dict[str, type[DType] | DType] | type[DType] | DType,
+        *,
+        strict: bool = True,
     ) -> Self:
         r"""
         Cast DataFrame column(s) to the specified dtype(s).
@@ -4230,7 +4236,10 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().gather_every(n=n, offset=offset)
 
     def cast(
-        self: Self, dtypes: dict[str, DType] | DType, *, strict: bool = True
+        self: Self,
+        dtypes: dict[str, type[DType] | DType] | type[DType] | DType,
+        *,
+        strict: bool = True,
     ) -> Self:
         r"""
         Cast LazyFrame column(s) to the specified dtype(s).

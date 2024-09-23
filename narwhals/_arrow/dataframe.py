@@ -616,7 +616,12 @@ class ArrowDataFrame:
 
         return self._from_native_frame(pc.take(frame, mask))
 
-    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+    def cast(
+        self: Self,
+        dtypes: dict[str, type[DType] | DType] | type[DType] | DType,
+        *,
+        strict: bool,
+    ) -> Self:
         plx = self.__narwhals_namespace__()
         if isinstance(dtypes, dict):
             return self.with_columns(

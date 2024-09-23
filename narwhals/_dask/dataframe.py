@@ -357,7 +357,12 @@ class DaskLazyFrame:
             .drop([row_index_token], strict=False)
         )
 
-    def cast(self: Self, dtypes: dict[str, DType] | DType, *, strict: bool) -> Self:
+    def cast(
+        self: Self,
+        dtypes: dict[str, type[DType] | DType] | type[DType] | DType,
+        *,
+        strict: bool,
+    ) -> Self:
         """`strict` exists for compatibility as dask `astype` does not support
         `errors` argument as pandas does.
         """
