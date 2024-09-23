@@ -23,12 +23,16 @@ def test_nth(
 ) -> None:
     df = nw.from_native(constructor(data))
     pl = get_polars()
-    pl_version = tuple(int(i) for i in pl.build_info().get("version").split("."))
-    if pl_version < (0, 20, 26):
+    is_polars = isinstance(df.to_native(), (pl.DataFrame, pl.LazyFrame))
+    if pl.build_info().get("version") is not None:
+        pl_version = tuple(int(i) for i in pl.build_info()["version"].split("."))
+    else:
+        pl_version = (0, 0, 0)
+    if is_polars and pl_version < (0, 20, 26):
         with pytest.raises(
             AttributeError, match="`nth` is only supported for Polars>=0.20.26."
         ):
-            result = df.select(nw.nth(idx))
+            df.select(nw.nth(idx))
     else:
         result = df.select(nw.nth(idx))
         compare_dicts(result, expected)
