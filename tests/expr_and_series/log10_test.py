@@ -11,6 +11,7 @@ from tests.utils import compare_dicts
 data = {"a": [-1.0, 0, 1, 10, 100]}
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_log_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -21,6 +22,7 @@ def test_log_expr(constructor: Constructor, request: pytest.FixtureRequest) -> N
     compare_dicts(result, expected)
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_log_series(constructor_eager: Any) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.log10()
