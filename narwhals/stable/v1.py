@@ -1927,6 +1927,7 @@ __all__ = [
     "all_horizontal",
     "any_horizontal",
     "col",
+    "nth",
     "len",
     "lit",
     "min",
