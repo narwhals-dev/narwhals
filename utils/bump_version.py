@@ -4,7 +4,13 @@ import re
 import subprocess
 import sys
 
-subprocess.run(["git", "fetch", "upstream"])
+out = subprocess.run(["git", "fetch", "upstream"])
+if out.returncode != 0:
+    print(
+        "Something went wrong with the release process, please check the Narwhals Wiki and try again."
+    )
+    print(out)
+    sys.exit(1)
 subprocess.run(["git", "reset", "--hard", "upstream/main"])
 
 how = sys.argv[1]
