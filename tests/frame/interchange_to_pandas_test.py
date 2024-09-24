@@ -36,9 +36,7 @@ def test_interchange_ibis_to_pandas(
     assert df.to_pandas().equals(df_pl.to_pandas())
 
 
-def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
-    if parse_version(pd.__version__) < parse_version("2.0.2"):
-        request.applymarker(pytest.mark.xfail)
+def test_interchange_duckdb_to_pandas() -> None:
     df_pl = pl.DataFrame(data)
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)
