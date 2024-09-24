@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -664,6 +665,9 @@ class PandasLikeSeries:
         result = native_series.mode()
         result.name = native_series.name
         return self._from_native_series(result)
+
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._native_series.__iter__()
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

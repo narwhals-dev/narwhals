@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -2406,6 +2407,9 @@ class Series:
             ]
         """
         return self._from_compliant_series(self._compliant_series.mode())
+
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._compliant_series.__iter__()
 
     @property
     def str(self) -> SeriesStringNamespace:
