@@ -49,7 +49,7 @@ Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
 # TypeVars for some of the above
 IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
 IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
-FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
+FrameT = TypeVar("FrameT", bound="Frame")
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
 
 __all__ = [
