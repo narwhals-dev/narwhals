@@ -63,12 +63,12 @@ class IbisInterchangeFrame:
     def to_pandas(self: Self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
 
-        if parse_version(pd.__version__) >= parse_version("2.0.2"):
+        if parse_version(pd.__version__) >= parse_version("1.5.0"):
             return pd.api.interchange.from_dataframe(self._native_frame)
         else:  # pragma: no cover
             msg = (
                 "Conversion to pandas is achieved via interchange protocol which requires"
-                f"pandas>=2.0.2 to be installed, found {pd.__version__}"
+                f" pandas>=1.5.0 to be installed, found {pd.__version__}"
             )
             raise NotImplementedError(msg)
 

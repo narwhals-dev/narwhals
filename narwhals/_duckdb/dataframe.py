@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -79,7 +80,13 @@ class DuckDBInterchangeFrame:
         raise NotImplementedError(msg)  # pragma: no cover
 
     def to_pandas(self: Self) -> pd.DataFrame:
-        return self._native_frame.df()
+        import pandas as pd  # ignore-banned-import()
+
+        if parse_version(pd.__version__) >= parse_version("1.0.0"):
+            return self._native_frame.df()
+        else:  # pragma: no cover
+            msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
+            raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.arrow()
