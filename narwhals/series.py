@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dataframe import DataFrame
+    from narwhals.dtypes import DType
 
 
 class Series:
@@ -256,14 +257,14 @@ class Series:
         return function(self, *args, **kwargs)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals Series                                 "
+        header = " Narwhals Series                         "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `series.to_native()` to see native output |\n"
+            + "| Use `.to_native()` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -302,7 +303,7 @@ class Series:
         return len(self._compliant_series)
 
     @property
-    def dtype(self) -> Any:
+    def dtype(self: Self) -> DType:
         """
         Get the data type of the Series.
 
@@ -327,7 +328,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return self._compliant_series.dtype
+        return self._compliant_series.dtype  # type: ignore[no-any-return]
 
     @property
     def name(self) -> str:
@@ -2466,6 +2467,49 @@ class SeriesCatNamespace:
 class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
+
+    def len_chars(self) -> Series:
+        r"""
+        Return the length of each string as the number of characters.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["foo", "Café", "345", "東京", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.str.len_chars()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    3.0
+            1    4.0
+            2    3.0
+            3    2.0
+            4    NaN
+            dtype: float64
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [u32]
+            [
+               3
+               4
+               3
+               2
+               null
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.len_chars()
+        )
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1

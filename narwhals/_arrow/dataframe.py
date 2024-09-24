@@ -136,6 +136,9 @@ class ArrowDataFrame:
         | tuple[slice, str | int]
         | tuple[slice, slice],
     ) -> ArrowSeries | ArrowDataFrame:
+        if isinstance(item, tuple):
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 

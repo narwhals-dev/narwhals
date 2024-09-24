@@ -165,7 +165,7 @@ class PandasLikeSeries:
         return self._native_series.shape  # type: ignore[no-any-return]
 
     @property
-    def dtype(self) -> DType:
+    def dtype(self: Self) -> DType:
         return translate_dtype(self._native_series)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
@@ -692,6 +692,11 @@ class PandasLikeSeriesCatNamespace:
 class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
+
+    def len_chars(self) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.len()
+        )
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1

@@ -695,6 +695,11 @@ class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:
         self._expr = expr
 
+    def len_chars(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.str.len(), "len", returns_scalar=False
+        )
+
     def replace(
         self,
         pattern: str,

@@ -86,11 +86,14 @@ class PolarsDataFrame:
         return self._native_frame.shape  # type: ignore[no-any-return]
 
     def __getitem__(self, item: Any) -> Any:
-        if self._backend_version >= (0, 20, 30):
+        if self._backend_version > (0, 20, 30):
             return self._from_native_object(self._native_frame.__getitem__(item))
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
+            if isinstance(item, tuple):
+                item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+
             columns = self.columns
             if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
