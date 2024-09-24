@@ -115,18 +115,3 @@ def constructor_eager(request: pytest.FixtureRequest) -> Callable[[Any], IntoDat
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
 def constructor(request: pytest.FixtureRequest) -> Constructor:
     return request.param  # type: ignore[no-any-return]
-
-
-@pytest.fixture(params=[polars_eager_constructor, polars_lazy_constructor])
-def polars_constructor(request: pytest.FixtureRequest) -> Constructor:
-    return request.param  # type: ignore[no-any-return]
-
-
-not_polars = [*eager_constructors, *lazy_constructors]
-not_polars.remove(polars_eager_constructor)
-not_polars.remove(polars_lazy_constructor)
-
-
-@pytest.fixture(params=[*not_polars])
-def not_polars_constructor(request: pytest.FixtureRequest) -> Constructor:
-    return request.param  # type: ignore[no-any-return]
