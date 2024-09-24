@@ -6,6 +6,10 @@ from typing import Any
 from narwhals import dtypes
 
 if TYPE_CHECKING:
+    import pandas as pd
+    import pyarrow as pa
+    from typing_extensions import Self
+
     from narwhals._duckdb.series import DuckDBInterchangeSeries
 
 
@@ -73,3 +77,9 @@ class DuckDBInterchangeFrame:
             "at https://github.com/narwhals-dev/narwhals/issues."
         )
         raise NotImplementedError(msg)  # pragma: no cover
+
+    def to_pandas(self: Self) -> pd.DataFrame:
+        return self._native_frame.df()
+
+    def to_arrow(self: Self) -> pa.Table:
+        return self._native_frame.arrow()

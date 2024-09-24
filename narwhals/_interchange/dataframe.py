@@ -8,6 +8,10 @@ from typing import NoReturn
 from narwhals import dtypes
 
 if TYPE_CHECKING:
+    import pandas as pd
+    import pyarrow as pa
+    from typing_extensions import Self
+
     from narwhals._interchange.series import InterchangeSeries
 
 
@@ -88,6 +92,16 @@ class InterchangeFrame:
             )
             for column_name in self._interchange_frame.column_names()
         }
+
+    def to_pandas(self: Self) -> pd.DataFrame:
+        import pandas as pd  # ignore-banned-import()
+
+        return pd.api.interchange.from_dataframe(self._native_frame)
+
+    def to_arrow(self: Self) -> pa.Table:
+        from pyarrow.interchange import from_dataframe  # ignore-banned-import()
+
+        return from_dataframe(self._native_frame)
 
     def __getattr__(self, attr: str) -> NoReturn:
         msg = (
