@@ -123,7 +123,13 @@ def test_group_by_std(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
+def test_group_by_n_unique_w_missing(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        # Issue in cuDF https://github.com/rapidsai/cudf/issues/16861
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))

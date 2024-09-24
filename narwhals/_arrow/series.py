@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -359,7 +360,7 @@ class ArrowSeries:
         )
 
     @property
-    def dtype(self) -> DType:
+    def dtype(self: Self) -> DType:
         return translate_dtype(self._native_series.type)
 
     def abs(self) -> Self:
@@ -702,6 +703,9 @@ class ArrowSeries:
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
 
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._native_series.__iter__()
+
     @property
     def shape(self) -> tuple[int]:
         return (len(self._native_series),)
@@ -941,6 +945,13 @@ class ArrowSeriesCatNamespace:
 class ArrowSeriesStringNamespace:
     def __init__(self: Self, series: ArrowSeries) -> None:
         self._arrow_series = series
+
+    def len_chars(self) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        return self._arrow_series._from_native_series(
+            pc.utf8_length(self._arrow_series._native_series)
+        )
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1

@@ -37,6 +37,7 @@
         - tail
         - to_arrow
         - to_dict
+        - to_native
         - to_numpy
         - to_pandas
         - unique

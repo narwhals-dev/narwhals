@@ -6,6 +6,7 @@
       members:
         - __arrow_c_stream__
         - __getitem__
+        - __iter__
         - abs
         - alias
         - all
@@ -57,6 +58,7 @@
         - to_list
         - to_numpy
         - to_pandas
+        - to_native
         - unique
         - value_counts
         - zip_with

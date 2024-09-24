@@ -161,8 +161,9 @@ def agg_pandas(  # noqa: PLR0915
             function_name = POLARS_TO_PANDAS_AGGREGATIONS.get(
                 function_name, function_name
             )
+            is_n_unique = function_name == "nunique"
             for root_name, output_name in zip(expr._root_names, expr._output_names):
-                if function_name == "nunique":
+                if is_n_unique:
                     nunique_aggs[output_name] = root_name
                 else:
                     simple_aggregations[output_name] = (root_name, function_name)
