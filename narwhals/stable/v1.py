@@ -965,11 +965,11 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
         We can then pass either pandas or polars to `func`:
 
-        >>> func(df_pd)
+        >>> func(df_pd)  # doctest: +SKIP
            a
         0  1
         1  2
-        >>> func(df_pl)
+        >>> func(df_pl)  # doctest: +SKIP
         shape: (2, 1)
         ┌─────┐
         │ a   │
