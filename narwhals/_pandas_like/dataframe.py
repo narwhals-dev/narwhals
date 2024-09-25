@@ -98,7 +98,7 @@ class PandasLikeDataFrame:
         from narwhals._pandas_like.series import PandasLikeSeries
 
         return PandasLikeSeries(
-            self._native_frame.loc[:, name],
+            self._native_frame[name],
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
