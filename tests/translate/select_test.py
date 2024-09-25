@@ -37,7 +37,7 @@ def test_nth(idx: int | list[int], expected: dict[str, list[int]]) -> None:
     parse_version(pl.__version__) >= parse_version("0.20.26"),
     reason="only riase error for Polars versions < 0.20.26",
 )
-def test_nth_old_polars() -> None:
+def test_nth_old_polars() -> None:  # pragma: no cover
     @nw.narwhalify
     def func(df: nw.DataFrame[IntoDataFrameT]) -> nw.DataFrame[IntoDataFrameT]:
         return df.select(nw.nth(0))
