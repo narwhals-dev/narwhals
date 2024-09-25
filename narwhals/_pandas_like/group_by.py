@@ -256,4 +256,4 @@ def agg_pandas(  # noqa: PLR0915
 
     result = result_complex.reset_index()
 
-    return from_dataframe(result.loc[:, output_names])
+    return from_dataframe(result[output_names])

@@ -265,7 +265,7 @@ class PandasLikeDataFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: translate_dtype(self._native_frame.loc[:, col])
+            col: translate_dtype(self._native_frame[col])
             for col in self._native_frame.columns
         }
 
@@ -479,7 +479,7 @@ class PandasLikeDataFrame:
             )
 
             other_native = (
-                other._native_frame.loc[:, right_on]
+                other._native_frame[right_on]
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
@@ -499,7 +499,7 @@ class PandasLikeDataFrame:
 
         if how == "semi":
             other_native = (
-                other._native_frame.loc[:, right_on]
+                other._native_frame[right_on]
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
@@ -610,7 +610,7 @@ class PandasLikeDataFrame:
             # TODO(Unassigned): should this return narwhals series?
             return {
                 col: PandasLikeSeries(
-                    self._native_frame.loc[:, col],
+                    self._native_frame[col],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                 )
