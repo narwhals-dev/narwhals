@@ -109,15 +109,15 @@ class Datetime(TemporalType):
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
-        if type(other) is type and issubclass(other, Datetime):
+        if type(other) is type and issubclass(other, self.__class__):
             return True
-        elif isinstance(other, Datetime):
+        elif isinstance(other, self.__class__):
             return self.time_unit == other.time_unit and self.time_zone == other.time_zone
         else:  # pragma: no cover
             return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
-        return hash(self.__class__)
+        return hash((self.__class__, self.time_unit, self.time_zone))
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         class_name = self.__class__.__name__
@@ -151,15 +151,15 @@ class Duration(TemporalType):
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
-        if type(other) is type and issubclass(other, Duration):
+        if type(other) is type and issubclass(other, self.__class__):
             return True
-        elif isinstance(other, Duration):
+        elif isinstance(other, self.__class__):
             return self.time_unit == other.time_unit
         else:  # pragma: no cover
             return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
-        return hash(self.__class__)
+        return hash((self.__class__, self.time_unit))
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         class_name = self.__class__.__name__

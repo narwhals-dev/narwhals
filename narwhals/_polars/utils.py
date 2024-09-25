@@ -109,11 +109,19 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         raise NotImplementedError(msg)
     if dtype == dtypes.Date:
         return pl.Date()
-    if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
+    if (
+        dtype == dtypes.Datetime
+        or isinstance(dtype, dtypes.Datetime)
+        or (isinstance(dtype, type) and issubclass(dtype, dtypes.Datetime))
+    ):
         dt_time_unit = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
         return pl.Datetime(dt_time_unit, dt_time_zone)
-    if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
+    if (
+        dtype == dtypes.Duration
+        or isinstance(dtype, dtypes.Duration)
+        or (isinstance(dtype, type) and issubclass(dtype, dtypes.Duration))
+    ):
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return pl.Duration(time_unit=du_time_unit)
 
