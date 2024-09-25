@@ -28,6 +28,7 @@ SERIES_ONLY_METHODS = {
     "item",
     "scatter",
     "to_native",
+    "rename",
     "__iter__",
 }
 BASE_DTYPES = {"NumericType", "DType", "TemporalType"}

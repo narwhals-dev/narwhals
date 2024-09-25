@@ -1216,6 +1216,47 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.alias(name=name))
 
+    def rename(self, name: str) -> Self:
+        """
+        Rename the Series.
+
+        Alias for `Series.alias()`.
+
+        Arguments:
+            name: The new name.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name="foo")
+            >>> s_pl = pl.Series("foo", s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.rename("bar")
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            2    3
+            Name: bar, dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'bar' [i64]
+            [
+               1
+               2
+               3
+            ]
+        """
+        return self._from_compliant_series(self._compliant_series.alias(name=name))
+
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
         Sort this Series. Place null values first.
