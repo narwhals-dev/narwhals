@@ -40,7 +40,7 @@ def test_nth(
     parse_version(pl.__version__) >= parse_version("0.20.26"),
     reason="only riase error for Polars versions < 0.20.26",
 )
-def test_nth_not_supported() -> None:
+def test_nth_not_supported() -> None:  # pragma: no cover
     df = nw.from_native(pl.DataFrame(data))
     with pytest.raises(
         AttributeError, match="`nth` is only supported for Polars>=0.20.26."
