@@ -480,7 +480,7 @@ class PandasLikeDataFrame:
                         other._native_frame,
                         how="leftanti",
                         left_on=left_on,
-                        right_on=left_on,
+                        right_on=right_on,
                     )
                 )
             else:
