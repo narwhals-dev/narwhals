@@ -6,6 +6,7 @@ from typing import Iterable
 from typing import TypeVar
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_fireducks
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
@@ -102,6 +103,9 @@ def create_native_series(
     elif implementation is Implementation.CUDF:
         cudf = get_cudf()
         series = cudf.Series(iterable, index=index, name="")
+    elif implementation is Implementation.FIREDUCKS:  # pragma: no cover
+        fpd = get_fireducks()
+        series = fpd.Series(iterable, index=index, name="")
     return PandasLikeSeries(
         series, implementation=implementation, backend_version=backend_version
     )
@@ -129,6 +133,10 @@ def horizontal_concat(
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=1)
+    if implementation is Implementation.FIREDUCKS:  # pragma: no cover
+        fpd = get_fireducks()
+
+        return fpd.concat(dfs, axis=1)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -164,6 +172,10 @@ def vertical_concat(
         mpd = get_modin()
 
         return mpd.concat(dfs, axis=0)
+    if implementation is Implementation.FIREDUCKS:  # pragma: no cover
+        fpd = get_fireducks()
+
+        return fpd.concat(dfs, axis=0)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -187,6 +199,11 @@ def native_series_from_iterable(
         mpd = get_modin()
 
         return mpd.Series(data, name=name, index=index)
+
+    if implementation is Implementation.FIREDUCKS:  # pragma: no cover
+        fpd = get_fireducks()
+
+        return fpd.Series(data, name=name, index=index)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 

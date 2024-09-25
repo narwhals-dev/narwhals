@@ -16,6 +16,7 @@ from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_fireducks
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
@@ -104,6 +105,8 @@ class PandasLikeSeries:
             return get_modin()
         if self._implementation is Implementation.CUDF:  # pragma: no cover
             return get_cudf()
+        if self._implementation is Implementation.FIREDUCKS:  # pragma: no cover
+            return get_fireducks()
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -525,7 +528,10 @@ class PandasLikeSeries:
     def to_pandas(self) -> Any:
         if self._implementation is Implementation.PANDAS:
             return self._native_series
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+        elif self._implementation in {
+            Implementation.CUDF,
+            Implementation.FIREDUCKS,
+        }:  # pragma: no cover
             return self._native_series.to_pandas()
         elif self._implementation is Implementation.MODIN:  # pragma: no cover
             return self._native_series._to_pandas()

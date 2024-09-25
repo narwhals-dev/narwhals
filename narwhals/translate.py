@@ -11,6 +11,7 @@ from typing import overload
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_expr
+from narwhals.dependencies import get_fireducks
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -19,6 +20,8 @@ from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_dask_dataframe
 from narwhals.dependencies import is_duckdb_relation
+from narwhals.dependencies import is_fireducks_dataframe
+from narwhals.dependencies import is_fireducks_series
 from narwhals.dependencies import is_ibis_table
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
@@ -503,6 +506,34 @@ def from_native(  # noqa: PLR0915
                 native_object,
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
+            ),
+            level="full",
+        )
+
+    # fireducks.pandas
+    elif is_fireducks_dataframe(native_object):
+        if series_only:
+            msg = "Cannot only use `series_only` with dataframe"
+            raise TypeError(msg)
+        fpd = get_fireducks()
+        return DataFrame(
+            PandasLikeDataFrame(
+                native_object,
+                backend_version=parse_version(fpd.__version__),
+                implementation=Implementation.FIREDUCKS,
+            ),
+            level="full",
+        )
+    elif is_fireducks_series(native_object):
+        if not allow_series:
+            msg = "Please set `allow_series=True`"
+            raise TypeError(msg)
+        fpd = get_fireducks()
+        return Series(
+            PandasLikeSeries(
+                native_object,
+                implementation=Implementation.FIREDUCKS,
+                backend_version=parse_version(fpd.__version__),
             ),
             level="full",
         )

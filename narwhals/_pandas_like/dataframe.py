@@ -17,6 +17,7 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_fireducks
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import is_numpy_array
@@ -70,6 +71,8 @@ class PandasLikeDataFrame:
             return get_modin()
         if self._implementation is Implementation.CUDF:  # pragma: no cover
             return get_cudf()
+        if self._implementation is Implementation.FIREDUCKS:  # pragma: no cover
+            return get_fireducks()
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 

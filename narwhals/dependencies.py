@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     import cudf
     import dask.dataframe as dd
     import duckdb
+    import fireducks.pandas as fpd
     import ibis
     import modin.pandas as mpd
     import pandas as pd
@@ -44,6 +45,11 @@ def get_modin() -> Any:  # pragma: no cover
 def get_cudf() -> Any:
     """Get cudf module (if already imported - else return None)."""
     return sys.modules.get("cudf", None)
+
+
+def get_fireducks() -> Any:  # pragma: no cover
+    """Get fireducks.pandas module (if already imported - else return None)."""
+    return sys.modules.get("fireducks.pandas", None)
 
 
 def get_pyarrow() -> Any:  # pragma: no cover
@@ -93,22 +99,32 @@ def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
 
 def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
     """Check whether `df` is a modin DataFrame without importing modin."""
-    return (pd := get_modin()) is not None and isinstance(df, pd.DataFrame)
+    return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
 
 
 def is_modin_series(ser: Any) -> TypeGuard[mpd.Series]:
     """Check whether `ser` is a modin Series without importing modin."""
-    return (pd := get_modin()) is not None and isinstance(ser, pd.Series)
+    return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
 def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
     """Check whether `df` is a cudf DataFrame without importing cudf."""
-    return (pd := get_cudf()) is not None and isinstance(df, pd.DataFrame)
+    return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
 
 
-def is_cudf_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
+def is_cudf_series(ser: Any) -> TypeGuard[cudf.Series[Any]]:
     """Check whether `ser` is a cudf Series without importing cudf."""
-    return (pd := get_cudf()) is not None and isinstance(ser, pd.Series)
+    return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
+
+
+def is_fireducks_dataframe(df: Any) -> TypeGuard[fpd.DataFrame]:
+    """Check whether `df` is a fireducks DataFrame without importing fireducks."""
+    return (fpd := get_fireducks()) is not None and isinstance(df, fpd.DataFrame)
+
+
+def is_fireducks_series(ser: Any) -> TypeGuard[fpd.Series[Any]]:
+    """Check whether `ser` is a fireducks Series without importing fireducks."""
+    return (fpd := get_fireducks()) is not None and isinstance(ser, fpd.Series)
 
 
 def is_dask_dataframe(df: Any) -> TypeGuard[dd.DataFrame]:
@@ -162,18 +178,28 @@ def is_pandas_like_dataframe(df: Any) -> bool:
     """
     Check whether `df` is a pandas-like DataFrame without doing any imports
 
-    By "pandas-like", we mean: pandas, Modin, cuDF.
+    By "pandas-like", we mean: pandas, Modin, cuDF or fireducks.
     """
-    return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df)
+    return (
+        is_pandas_dataframe(df)
+        or is_modin_dataframe(df)
+        or is_cudf_dataframe(df)
+        or is_fireducks_dataframe(df)
+    )
 
 
 def is_pandas_like_series(arr: Any) -> bool:
     """
     Check whether `arr` is a pandas-like Series without doing any imports
 
-    By "pandas-like", we mean: pandas, Modin, cuDF.
+    By "pandas-like", we mean: pandas, Modin, cuDF or fireducks.
     """
-    return is_pandas_series(arr) or is_modin_series(arr) or is_cudf_series(arr)
+    return (
+        is_pandas_series(arr)
+        or is_modin_series(arr)
+        or is_cudf_series(arr)
+        or is_fireducks_series(arr)
+    )
 
 
 __all__ = [

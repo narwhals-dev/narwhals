@@ -9,6 +9,7 @@ import pytest
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_fireducks
 from narwhals.dependencies import get_modin
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
@@ -21,6 +22,8 @@ with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
 with contextlib.suppress(ImportError):
     import cudf  # noqa: F401
+with contextlib.suppress(ImportError):
+    import fireducks.pandas  # noqa: F401
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -87,6 +90,11 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
+def fireducks_constructor(obj: Any) -> IntoDataFrame:
+    fpd = get_fireducks()
+    return fpd.DataFrame(obj)  # type: ignore[no-any-return]
+
+
 if parse_version(pd.__version__) >= parse_version("2.0.0"):
     eager_constructors = [
         pandas_constructor,
@@ -103,6 +111,8 @@ if get_modin() is not None:  # pragma: no cover
     eager_constructors.append(modin_constructor)
 if get_cudf() is not None:
     eager_constructors.append(cudf_constructor)  # pragma: no cover
+if get_fireducks() is not None:
+    eager_constructors.append(fireducks_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover
     lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # type: ignore  # noqa: PGH003
 

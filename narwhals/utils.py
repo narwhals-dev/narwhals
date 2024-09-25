@@ -15,6 +15,7 @@ from narwhals import dtypes
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_fireducks
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
@@ -48,8 +49,8 @@ class Implementation(Enum):
     PYARROW = auto()
     POLARS = auto()
     DASK = auto()
-
     UNKNOWN = auto()
+    FIREDUCKS = auto()
 
     @classmethod
     def from_native_namespace(
@@ -63,6 +64,7 @@ class Implementation(Enum):
             get_pyarrow(): Implementation.PYARROW,
             get_polars(): Implementation.POLARS,
             get_dask_dataframe(): Implementation.DASK,
+            get_fireducks(): Implementation.FIREDUCKS,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -74,6 +76,7 @@ class Implementation(Enum):
             Implementation.CUDF: get_cudf(),
             Implementation.PYARROW: get_pyarrow(),
             Implementation.POLARS: get_polars(),
+            Implementation.FIREDUCKS: get_fireducks(),
         }
         return mapping[self]  # type: ignore[no-any-return]
 
