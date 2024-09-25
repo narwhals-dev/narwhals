@@ -17,4 +17,4 @@ def test_invalid() -> None:
     with pytest.raises(TypeError, match="Perhaps you:"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Perhaps you:"):
-        df.select([nw.col("a").cast(pl.Int64)])
+        df.select([nw.col("a").cast(pl.Int64)])  # type: ignore[arg-type]

@@ -179,4 +179,4 @@ def test_cast_raises_for_unknown_dtype(
         pass
 
     with pytest.raises(AssertionError, match=r"Unknown dtype"):
-        df.select(nw.col("a").cast(Banana))
+        df.select(nw.col("a").cast(Banana))  # type: ignore[arg-type]

@@ -140,7 +140,7 @@ class PandasLikeNamespace:
                 backend_version=self._backend_version,
             )
             if dtype:
-                return pandas_series.cast(dtype)
+                return pandas_series.cast(dtype, strict=True)
             return pandas_series
 
         return PandasLikeExpr(

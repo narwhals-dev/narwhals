@@ -155,7 +155,7 @@ class ArrowNamespace:
                 backend_version=self._backend_version,
             )
             if dtype:
-                return arrow_series.cast(dtype)
+                return arrow_series.cast(dtype, strict=True)
             return arrow_series
 
         return ArrowExpr(
@@ -184,7 +184,7 @@ class ArrowNamespace:
         total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in arrow_exprs))
         n_non_zero = reduce(
             lambda x, y: x + y,
-            ((1 - e.is_null().cast(self.Int64())) for e in arrow_exprs),
+            ((1 - e.is_null().cast(self.Int64(), strict=True)) for e in arrow_exprs),
         )
         return total / n_non_zero
 

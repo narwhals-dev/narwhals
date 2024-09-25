@@ -6,6 +6,7 @@
       members:
         - __arrow_c_stream__
         - __getitem__
+        - cast
         - clone
         - collect_schema
         - columns

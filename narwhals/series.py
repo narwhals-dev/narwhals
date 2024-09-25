@@ -359,15 +359,13 @@ class Series:
         """
         return self._compliant_series.name  # type: ignore[no-any-return]
 
-    def cast(
-        self,
-        dtype: Any,
-    ) -> Self:
+    def cast(self: Self, dtype: DType | type[DType], *, strict: bool = True) -> Self:
         """
         Cast between data types.
 
         Arguments:
             dtype: Data type that the object will be cast into.
+            strict: If True invalid casts generate exceptions instead of nulls.
 
         Examples:
             >>> import pandas as pd
@@ -399,7 +397,9 @@ class Series:
                1
             ]
         """
-        return self._from_compliant_series(self._compliant_series.cast(dtype))
+        return self._from_compliant_series(
+            self._compliant_series.cast(dtype, strict=strict)
+        )
 
     def to_frame(self) -> DataFrame[Any]:
         """
