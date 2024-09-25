@@ -47,8 +47,8 @@ nav:
 theme:
   name: material
   font: false
-  favicon: assets/image.png
-  logo: assets/image.png
+  favicon: assets/logo.png
+  logo: assets/logo.png
   features:
     - content.code.copy
     - content.code.annotate
