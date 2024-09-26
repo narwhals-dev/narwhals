@@ -1187,10 +1187,12 @@ class Series:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="foo")
             >>> s_pl = pl.Series("foo", s)
+            >>> s_pa = pa.chunked_array([s])
 
             We define a library agnostic function:
 
@@ -1198,7 +1200,7 @@ class Series:
             ... def func(s):
             ...     return s.alias("bar")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(s_pd)
             0    1
@@ -1212,6 +1214,15 @@ class Series:
                1
                2
                3
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                1,
+                2,
+                3
+              ]
             ]
         """
         return self._from_compliant_series(self._compliant_series.alias(name=name))
@@ -1228,10 +1239,12 @@ class Series:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="foo")
             >>> s_pl = pl.Series("foo", s)
+            >>> s_pa = pa.chunked_array([s])
 
             We define a library agnostic function:
 
@@ -1239,7 +1252,7 @@ class Series:
             ... def func(s):
             ...     return s.rename("bar")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(s_pd)
             0    1
@@ -1253,6 +1266,15 @@ class Series:
                1
                2
                3
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                1,
+                2,
+                3
+              ]
             ]
         """
         return self._from_compliant_series(self._compliant_series.alias(name=name))
