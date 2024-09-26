@@ -1,6 +1,7 @@
 exclude-labels:
-  - skip changelog
+  - ignore
   - release
+  - dependencies
 name-template: 'Narwhals v$RESOLVED_VERSION'
 
 change-template: '- $TITLE (#$NUMBER)' 
@@ -34,6 +35,9 @@ autolabeler:
   - label: release
     title:
       - '/^([Rr]elease)/'
+  - label: ignore
+    title:
+      - '/^\[pre-commit.ci\]/'
       
 version-resolver:
   major:
