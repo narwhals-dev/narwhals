@@ -56,7 +56,7 @@ class PolarsNamespace:
 
         return func
 
-    def nth(self, *indices: int | Sequence[int]) -> PolarsExpr:
+    def nth(self, *indices: int) -> PolarsExpr:
         from narwhals._polars.expr import PolarsExpr
 
         pl = get_polars()
