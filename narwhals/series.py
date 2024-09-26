@@ -1277,7 +1277,7 @@ class Series:
               ]
             ]
         """
-        return self._from_compliant_series(self._compliant_series.alias(name=name))
+        return self.alias(name=name)
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
