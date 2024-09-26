@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -359,7 +360,7 @@ class ArrowSeries:
         )
 
     @property
-    def dtype(self) -> DType:
+    def dtype(self: Self) -> DType:
         return translate_dtype(self._native_series.type)
 
     def abs(self) -> Self:
@@ -701,6 +702,9 @@ class ArrowSeries:
         return self.value_counts(name=col_token, normalize=False).filter(
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
+
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._native_series.__iter__()
 
     @property
     def shape(self) -> tuple[int]:

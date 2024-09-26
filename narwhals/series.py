@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dataframe import DataFrame
+    from narwhals.dtypes import DType
 
 
 class Series:
@@ -302,7 +304,7 @@ class Series:
         return len(self._compliant_series)
 
     @property
-    def dtype(self) -> Any:
+    def dtype(self: Self) -> DType:
         """
         Get the data type of the Series.
 
@@ -327,7 +329,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return self._compliant_series.dtype
+        return self._compliant_series.dtype  # type: ignore[no-any-return]
 
     @property
     def name(self) -> str:
@@ -2405,6 +2407,9 @@ class Series:
             ]
         """
         return self._from_compliant_series(self._compliant_series.mode())
+
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._compliant_series.__iter__()
 
     @property
     def str(self) -> SeriesStringNamespace:

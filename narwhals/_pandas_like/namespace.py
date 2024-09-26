@@ -112,6 +112,13 @@ class PandasLikeNamespace:
             backend_version=self._backend_version,
         )
 
+    def nth(self, *column_indices: int) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_indices(
+            *column_indices,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+
     def all(self) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda df: [
