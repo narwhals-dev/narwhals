@@ -4,6 +4,7 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import cast
 
 from narwhals import dtypes
@@ -199,7 +200,7 @@ class ArrowNamespace:
         self,
         items: Iterable[ArrowDataFrame],
         *,
-        how: str = "vertical",
+        how: Literal["horizontal", "vertical"],
     ) -> ArrowDataFrame:
         dfs: list[Any] = [item._native_frame for item in items]
 

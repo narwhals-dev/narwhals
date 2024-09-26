@@ -15,9 +15,6 @@ from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -98,12 +95,13 @@ class PandasLikeSeries:
             self._use_copy_false = False
 
     def __native_namespace__(self) -> Any:
-        if self._implementation is Implementation.PANDAS:
-            return get_pandas()
-        if self._implementation is Implementation.MODIN:  # pragma: no cover
-            return get_modin()
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
-            return get_cudf()
+        if self._implementation in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+            Implementation.CUDF,
+        }:
+            return self._implementation.to_native_namespace()
+
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 

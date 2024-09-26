@@ -5,9 +5,6 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
@@ -94,13 +91,16 @@ def create_native_series(
     from narwhals._pandas_like.series import PandasLikeSeries
 
     if implementation is Implementation.PANDAS:
-        pd = get_pandas()
+        import pandas as pd  # ignore-banned-import()
+
         series = pd.Series(iterable, index=index, name="")
     elif implementation is Implementation.MODIN:
-        mpd = get_modin()
+        import modin.pandas as mpd  # ignore-banned-import()
+
         series = mpd.Series(iterable, index=index, name="")
     elif implementation is Implementation.CUDF:
-        cudf = get_cudf()
+        import cudf  # ignore-banned-import()
+
         series = cudf.Series(iterable, index=index, name="")
     return PandasLikeSeries(
         series, implementation=implementation, backend_version=backend_version
@@ -116,17 +116,17 @@ def horizontal_concat(
     Should be in namespace.
     """
     if implementation is Implementation.PANDAS:
-        pd = get_pandas()
+        import pandas as pd  # ignore-banned-import()
 
         if backend_version < (3,):
             return pd.concat(dfs, axis=1, copy=False)
         return pd.concat(dfs, axis=1)  # pragma: no cover
     if implementation is Implementation.CUDF:  # pragma: no cover
-        cudf = get_cudf()
+        import cudf  # ignore-banned-import()
 
         return cudf.concat(dfs, axis=1)
     if implementation is Implementation.MODIN:  # pragma: no cover
-        mpd = get_modin()
+        import modin.pandas as mpd  # ignore-banned-import()
 
         return mpd.concat(dfs, axis=1)
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
@@ -151,19 +151,20 @@ def vertical_concat(
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
     if implementation is Implementation.PANDAS:
-        pd = get_pandas()
+        import pandas as pd  # ignore-banned-import()
 
         if backend_version < (3,):
             return pd.concat(dfs, axis=0, copy=False)
         return pd.concat(dfs, axis=0)  # pragma: no cover
     if implementation is Implementation.CUDF:  # pragma: no cover
-        cudf = get_cudf()
+        import cudf  # ignore-banned-import()
 
         return cudf.concat(dfs, axis=0)
     if implementation is Implementation.MODIN:  # pragma: no cover
-        mpd = get_modin()
+        import modin.pandas as mpd  # ignore-banned-import()
 
         return mpd.concat(dfs, axis=0)
+
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -176,17 +177,18 @@ def native_series_from_iterable(
 ) -> Any:
     """Return native series."""
     if implementation is Implementation.PANDAS:
-        pd = get_pandas()
+        import pandas as pd  # ignore-banned-import()
 
         return pd.Series(data, name=name, index=index, copy=False)
     if implementation is Implementation.CUDF:  # pragma: no cover
-        cudf = get_cudf()
+        import cudf  # ignore-banned-import()
 
         return cudf.Series(data, name=name, index=index)
     if implementation is Implementation.MODIN:  # pragma: no cover
-        mpd = get_modin()
+        import modin.pandas as mpd  # ignore-banned-import()
 
         return mpd.Series(data, name=name, index=index)
+
     msg = f"Unknown implementation: {implementation}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
 
@@ -297,7 +299,8 @@ def translate_dtype(column: Any) -> DType:
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
     if implementation is Implementation.PANDAS:
-        pd = get_pandas()
+        import pandas as pd  # ignore-banned-import()
+
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
 
@@ -474,13 +477,15 @@ def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
 
 
 def to_datetime(implementation: Implementation) -> Any:
-    if implementation is Implementation.PANDAS:
-        return get_pandas().to_datetime
-    if implementation is Implementation.MODIN:
-        return get_modin().to_datetime
-    if implementation is Implementation.CUDF:
-        return get_cudf().to_datetime
-    raise AssertionError
+    if implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    }:
+        return implementation.to_native_namespace().to_datetime
+
+    msg = f"Expected pandas/modin/cudf, got: {type(implementation)}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def int_dtype_mapper(dtype: Any) -> str:

@@ -74,6 +74,7 @@ class Implementation(Enum):
             Implementation.CUDF: get_cudf(),
             Implementation.PYARROW: get_pyarrow(),
             Implementation.POLARS: get_polars(),
+            Implementation.DASK: get_dask_dataframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
 
