@@ -19,6 +19,13 @@ if TYPE_CHECKING:
     import pandas as pd
 
 
+PANDAS_LIKE_IMPLEMENTATION = {
+    Implementation.PANDAS,
+    Implementation.CUDF,
+    Implementation.MODIN,
+}
+
+
 def validate_column_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
@@ -90,21 +97,16 @@ def create_native_series(
 ) -> PandasLikeSeries:
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    if implementation is Implementation.PANDAS:
-        import pandas as pd  # ignore-banned-import()
-
-        series = pd.Series(iterable, index=index, name="")
-    elif implementation is Implementation.MODIN:
-        import modin.pandas as mpd  # ignore-banned-import()
-
-        series = mpd.Series(iterable, index=index, name="")
-    elif implementation is Implementation.CUDF:
-        import cudf  # ignore-banned-import()
-
-        series = cudf.Series(iterable, index=index, name="")
-    return PandasLikeSeries(
-        series, implementation=implementation, backend_version=backend_version
-    )
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        series = implementation.to_native_namespace().Series(
+            iterable, index=index, name=""
+        )
+        return PandasLikeSeries(
+            series, implementation=implementation, backend_version=backend_version
+        )
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def horizontal_concat(
@@ -115,22 +117,17 @@ def horizontal_concat(
 
     Should be in namespace.
     """
-    if implementation is Implementation.PANDAS:
-        import pandas as pd  # ignore-banned-import()
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        extra_kwargs = (
+            {"copy": False}
+            if implementation is Implementation.PANDAS and backend_version < (3,)
+            else {}
+        )
+        return implementation.to_native_namespace().concat(dfs, axis=1, **extra_kwargs)
 
-        if backend_version < (3,):
-            return pd.concat(dfs, axis=1, copy=False)
-        return pd.concat(dfs, axis=1)  # pragma: no cover
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        import cudf  # ignore-banned-import()
-
-        return cudf.concat(dfs, axis=1)
-    if implementation is Implementation.MODIN:  # pragma: no cover
-        import modin.pandas as mpd  # ignore-banned-import()
-
-        return mpd.concat(dfs, axis=1)
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def vertical_concat(
@@ -150,23 +147,18 @@ def vertical_concat(
         if cols_current != cols:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
-    if implementation is Implementation.PANDAS:
-        import pandas as pd  # ignore-banned-import()
 
-        if backend_version < (3,):
-            return pd.concat(dfs, axis=0, copy=False)
-        return pd.concat(dfs, axis=0)  # pragma: no cover
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        import cudf  # ignore-banned-import()
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        extra_kwargs = (
+            {"copy": False}
+            if implementation is Implementation.PANDAS and backend_version < (3,)
+            else {}
+        )
+        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
 
-        return cudf.concat(dfs, axis=0)
-    if implementation is Implementation.MODIN:  # pragma: no cover
-        import modin.pandas as mpd  # ignore-banned-import()
-
-        return mpd.concat(dfs, axis=0)
-
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def native_series_from_iterable(
@@ -176,21 +168,15 @@ def native_series_from_iterable(
     implementation: Implementation,
 ) -> Any:
     """Return native series."""
-    if implementation is Implementation.PANDAS:
-        import pandas as pd  # ignore-banned-import()
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        extra_kwargs = {"copy": False} if implementation is Implementation.PANDAS else {}
+        return implementation.to_native_namespace().Series(
+            data, name=name, index=index, **extra_kwargs
+        )
 
-        return pd.Series(data, name=name, index=index, copy=False)
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        import cudf  # ignore-banned-import()
-
-        return cudf.Series(data, name=name, index=index)
-    if implementation is Implementation.MODIN:  # pragma: no cover
-        import modin.pandas as mpd  # ignore-banned-import()
-
-        return mpd.Series(data, name=name, index=index)
-
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def set_axis(
@@ -477,15 +463,12 @@ def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
 
 
 def to_datetime(implementation: Implementation) -> Any:
-    if implementation in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-    }:
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
         return implementation.to_native_namespace().to_datetime
 
-    msg = f"Expected pandas/modin/cudf, got: {type(implementation)}"  # pragma: no cover
-    raise AssertionError(msg)
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def int_dtype_mapper(dtype: Any) -> str:

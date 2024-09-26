@@ -10,6 +10,8 @@ from narwhals._polars.utils import extract_native
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     from typing_extensions import Self
 
@@ -32,7 +34,7 @@ class PolarsSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __native_namespace__(self) -> Any:
+    def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
             return self._implementation.to_native_namespace()
 

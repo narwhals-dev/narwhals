@@ -16,6 +16,8 @@ from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import dask.dataframe as dd
     from typing_extensions import Self
 
@@ -34,7 +36,7 @@ class DaskLazyFrame:
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
 
-    def __native_namespace__(self) -> Any:  # pragma: no cover
+    def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.DASK:
             return self._implementation.to_native_namespace()
 

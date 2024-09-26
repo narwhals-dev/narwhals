@@ -22,6 +22,8 @@ from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     import pyarrow as pa
     from typing_extensions import Self
@@ -47,7 +49,7 @@ class ArrowDataFrame:
 
         return ArrowNamespace(backend_version=self._backend_version)
 
-    def __native_namespace__(self) -> Any:
+    def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.PYARROW:
             return self._implementation.to_native_namespace()
 

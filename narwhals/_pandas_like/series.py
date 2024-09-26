@@ -18,6 +18,8 @@ from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -94,7 +96,7 @@ class PandasLikeSeries:
         else:
             self._use_copy_false = False
 
-    def __native_namespace__(self) -> Any:
+    def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
             Implementation.PANDAS,
             Implementation.MODIN,
