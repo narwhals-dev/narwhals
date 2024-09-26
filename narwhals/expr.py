@@ -3756,7 +3756,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa
-        >>> import narwhals.stable.v1 as nw
+        >>> import narwhals as nw
         >>> data = {"a": [1, 2], "b": [3, 4]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
