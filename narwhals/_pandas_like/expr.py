@@ -81,6 +81,33 @@ class PandasLikeExpr:
             backend_version=backend_version,
         )
 
+    @classmethod
+    def from_column_indices(
+        cls: type[Self],
+        *column_indices: int,
+        implementation: Implementation,
+        backend_version: tuple[int, ...],
+    ) -> Self:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            return [
+                PandasLikeSeries(
+                    df._native_frame.iloc[:, column_index],
+                    implementation=df._implementation,
+                    backend_version=df._backend_version,
+                )
+                for column_index in column_indices
+            ]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=None,
+            output_names=None,
+            implementation=implementation,
+            backend_version=backend_version,
+        )
+
     def cast(
         self,
         dtype: Any,

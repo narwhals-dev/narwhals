@@ -71,6 +71,27 @@ class DaskExpr:
             backend_version=backend_version,
         )
 
+    @classmethod
+    def from_column_indices(
+        cls: type[Self],
+        *column_indices: int,
+        backend_version: tuple[int, ...],
+    ) -> Self:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            return [
+                df._native_frame.iloc[:, column_index] for column_index in column_indices
+            ]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=None,
+            output_names=None,
+            returns_scalar=False,
+            backend_version=backend_version,
+        )
+
     def _from_call(
         self,
         # First argument to `call` should be `dask_expr.Series`

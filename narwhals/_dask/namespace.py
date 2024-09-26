@@ -71,6 +71,12 @@ class DaskNamespace:
             backend_version=self._backend_version,
         )
 
+    def nth(self, *column_indices: int) -> DaskExpr:
+        return DaskExpr.from_column_indices(
+            *column_indices,
+            backend_version=self._backend_version,
+        )
+
     def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
         def convert_if_dtype(
             series: dask_expr.Series, dtype: DType | type[DType]
