@@ -944,7 +944,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     """
     Creates an expression that references one or more columns by their index(es).
 
-    Warning:
+    Notes:
         `nth` is not supported for Polars version<0.20.26. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
 
     Arguments:
