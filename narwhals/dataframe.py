@@ -41,9 +41,6 @@ class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "interchange"]
 
-    def __len__(self) -> Any:
-        return self._compliant_frame.__len__()
-
     def __native_namespace__(self) -> Any:
         return self._compliant_frame.__native_namespace__()
 
@@ -315,6 +312,9 @@ class DataFrame(BaseFrame[FrameT]):
         else:  # pragma: no cover
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
+
+    def __len__(self) -> Any:
+        return self._compliant_frame.__len__()
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._compliant_frame.__array__(dtype, copy=copy)

@@ -6,6 +6,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
@@ -3836,6 +3837,61 @@ def col(*names: str | Iterable[str]) -> Expr:
 
     def func(plx: Any) -> Any:
         return plx.col(*flatten(names))
+
+    return Expr(func)
+
+
+def nth(*indices: int | Sequence[int]) -> Expr:
+    """
+    Creates an expression that references one or more columns by their index(es).
+
+    Notes:
+        `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
+
+    Arguments:
+        indices: One or more indices representing the columns to retrieve.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.nth(0) * 2)
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  2
+        1  4
+        >>> func(df_pl)  # doctest: +SKIP
+        shape: (2, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 2   │
+        │ 4   │
+        └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[2,4]]
+    """
+
+    def func(plx: Any) -> Any:
+        return plx.nth(*flatten(indices))
 
     return Expr(func)
 

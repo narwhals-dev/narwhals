@@ -12,7 +12,6 @@ from typing import cast
 from typing import overload
 
 from narwhals.dependencies import is_numpy_array
-from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -95,7 +94,7 @@ def evaluate_into_exprs(
     """Evaluate each expr into Series."""
     series: ListOfCompliantSeries = [  # type: ignore[assignment]
         item
-        for sublist in (evaluate_into_expr(df, into_expr) for into_expr in flatten(exprs))
+        for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)
         for item in sublist
     ]
     for name, expr in named_exprs.items():
@@ -157,9 +156,7 @@ def parse_into_exprs(
 ) -> ListOfCompliantExpr:
     """Parse each input as an expression (if it's not already one). See `parse_into_expr` for
     more details."""
-    return [
-        parse_into_expr(into_expr, namespace=namespace) for into_expr in flatten(exprs)
-    ] + [
+    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [
         parse_into_expr(expr, namespace=namespace).alias(name)
         for name, expr in named_exprs.items()
     ]
@@ -181,7 +178,6 @@ def parse_into_expr(
     - if it's a string, then convert it to an expression
     - else, raise
     """
-
     if hasattr(into_expr, "__narwhals_expr__"):
         return into_expr  # type: ignore[return-value]
     if hasattr(into_expr, "__narwhals_series__"):

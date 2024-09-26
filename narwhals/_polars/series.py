@@ -76,7 +76,7 @@ class PolarsSeries:
         return self._native_series.name  # type: ignore[no-any-return]
 
     @property
-    def dtype(self) -> DType:
+    def dtype(self: Self) -> DType:
         return translate_dtype(self._native_series.dtype)
 
     @overload
