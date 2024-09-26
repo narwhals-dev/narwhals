@@ -28,7 +28,7 @@ def test_nth(
     request: Any,
 ) -> None:
     if "polars" in str(constructor) and parse_version(pl.__version__) < parse_version(
-        "0.20.26"
+        "1.0.0"
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -37,12 +37,12 @@ def test_nth(
 
 
 @pytest.mark.skipif(
-    parse_version(pl.__version__) >= parse_version("0.20.26"),
-    reason="only riase error for Polars versions < 0.20.26",
+    parse_version(pl.__version__) >= parse_version("1.0.0"),
+    reason="1.0.0",
 )
 def test_nth_not_supported() -> None:  # pragma: no cover
     df = nw.from_native(pl.DataFrame(data))
     with pytest.raises(
-        AttributeError, match="`nth` is only supported for Polars>=0.20.26."
+        AttributeError, match="`nth` is only supported for Polars>=1.0.0."
     ):
         df.select(nw.nth(0))
