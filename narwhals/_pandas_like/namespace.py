@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import copy
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -210,9 +211,29 @@ class PandasLikeNamespace:
 
     # --- horizontal ---
     def sum_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        return reduce(
-            lambda x, y: x + y,
-            [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend([_series.fill_null(0) for _series in _expr._call(df)])
+            return [reduce(lambda x, y: x + y, series)]
+
+        root_names = copy(parsed_exprs[0]._root_names)
+        for arg in parsed_exprs[1:]:
+            if root_names is not None and isinstance(arg, PandasLikeExpr):
+                if arg._root_names is not None:
+                    root_names.extend(arg._root_names)
+                else:
+                    root_names = None
+                    break
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="sum_horizontal",
+            root_names=root_names,
+            output_names=parsed_exprs[0]._output_names,
         )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
