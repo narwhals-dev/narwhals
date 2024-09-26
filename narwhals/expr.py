@@ -3755,22 +3755,25 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import narwhals as nw
-        >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
-        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        >>> import pyarrow as pa
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return df.select(nw.nth(0))
+        ...     return df.select(nw.nth(0) * 2)
 
         We can then pass either pandas or polars to `func`:
 
-        >>> func(df_pd)  # doctest: +SKIP
+        >>> func(df_pd)
            a
-        0  1
-        1  2
+        0  2
+        1  4
         >>> func(df_pl)  # doctest: +SKIP
         shape: (2, 1)
         ┌─────┐
@@ -3778,9 +3781,14 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         │ --- │
         │ i64 │
         ╞═════╡
-        │ 1   │
         │ 2   │
+        │ 4   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[2,4]]
     """
 
     def func(plx: Any) -> Any:
