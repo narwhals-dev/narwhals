@@ -110,6 +110,13 @@ class ArrowNamespace:
             *column_names, backend_version=self._backend_version
         )
 
+    def nth(self, *column_indices: int) -> ArrowExpr:
+        from narwhals._arrow.expr import ArrowExpr
+
+        return ArrowExpr.from_column_indices(
+            *column_indices, backend_version=self._backend_version
+        )
+
     def len(self) -> ArrowExpr:
         # coverage bug? this is definitely hit
         return ArrowExpr(  # pragma: no cover

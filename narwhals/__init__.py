@@ -33,6 +33,7 @@ from narwhals.expr import max
 from narwhals.expr import mean
 from narwhals.expr import mean_horizontal
 from narwhals.expr import min
+from narwhals.expr import nth
 from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
 from narwhals.expr import when
@@ -80,6 +81,7 @@ __all__ = [
     "max",
     "mean",
     "mean_horizontal",
+    "nth",
     "sum",
     "sum_horizontal",
     "when",
