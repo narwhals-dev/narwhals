@@ -28,6 +28,7 @@ Here are the top-level functions available in Narwhals.
         - min
         - narwhalify
         - new_series
+        - nth
         - sum
         - sum_horizontal
         - when
