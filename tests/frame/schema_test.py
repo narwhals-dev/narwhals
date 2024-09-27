@@ -239,7 +239,7 @@ def test_nested_dtypes_ibis() -> None:  # pragma: no cover
     )
     tbl = ibis.memtable(df[["a", "c"]])
     nwdf = nw.from_native(tbl)
-    assert nwdf.schema == {"a": nw.Array, "c": nw.Struct}
+    assert nwdf.schema == {"a": nw.List, "c": nw.Struct}
 
 
 @pytest.mark.skipif(
