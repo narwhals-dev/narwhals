@@ -63,3 +63,27 @@ def test_allh_nth(constructor: Constructor, request: pytest.FixtureRequest) -> N
     result = df.select(nw.all_horizontal(nw.col("a"), nw.nth(0)))
     expected = {"a": [False, False, True]}
     compare_dicts(result, expected)
+
+
+def test_horizontal_expressions_emtpy(constructor: Constructor) -> None:
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    df = nw.from_native(constructor(data))
+    with pytest.raises(
+        ValueError, match=r"At least one expression must be passed.*all_horizontal"
+    ):
+        df.select(nw.all_horizontal())
+    with pytest.raises(
+        ValueError, match=r"At least one expression must be passed.*any_horizontal"
+    ):
+        df.select(nw.any_horizontal())
+    with pytest.raises(
+        ValueError, match=r"At least one expression must be passed.*mean_horizontal"
+    ):
+        df.select(nw.mean_horizontal())
+    with pytest.raises(
+        ValueError, match=r"At least one expression must be passed.*sum_horizontal"
+    ):
+        df.select(nw.sum_horizontal())
