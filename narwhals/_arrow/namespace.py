@@ -176,10 +176,38 @@ class ArrowNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend(list(_expr._call(df)))
+            return [reduce(lambda x, y: x & y, series)]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="all_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+        )
 
     def any_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend(list(_expr._call(df)))
+            return [reduce(lambda x, y: x | y, series)]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="any_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+        )
 
     def sum_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
