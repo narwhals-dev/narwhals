@@ -265,8 +265,10 @@ def test_no_agg(constructor: Constructor) -> None:
 def test_group_by_categorical(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor) and parse_version(pa.__version__) <= (
-        14,
+    if "pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (
+        15,
+        0,
+        0,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
