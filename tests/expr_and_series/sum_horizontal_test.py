@@ -33,8 +33,13 @@ def test_sumh_nullable(constructor: Constructor) -> None:
 def test_sumh_all(constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))
-    result = nw.to_native(df.select(nw.sum_horizontal(nw.all())))
+    result = df.select(nw.sum_horizontal(nw.all()))
     expected = {
         "a": [11, 22, 33],
+    }
+    compare_dicts(result, expected)
+    result = df.select(c=nw.sum_horizontal(nw.all()))
+    expected = {
+        "c": [11, 22, 33],
     }
     compare_dicts(result, expected)
