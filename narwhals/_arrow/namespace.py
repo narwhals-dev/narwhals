@@ -228,13 +228,31 @@ class ArrowNamespace:
         )
 
     def mean_horizontal(self, *exprs: IntoArrowExpr) -> IntoArrowExpr:
-        arrow_exprs = parse_into_exprs(*exprs, namespace=self)
-        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in arrow_exprs))
-        n_non_zero = reduce(
-            lambda x, y: x + y,
-            ((1 - e.is_null().cast(self.Int64())) for e in arrow_exprs),
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend([_series.fill_null(0) for _series in _expr._call(df)])
+            non_na = []
+            for _expr in parsed_exprs:
+                non_na.extend(
+                    [
+                        1 - _series.is_null().cast(self.Int64())
+                        for _series in _expr._call(df)
+                    ]
+                )
+            return [
+                reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="mean_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
         )
-        return total / n_non_zero
 
     def concat(
         self,

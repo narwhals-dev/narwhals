@@ -247,10 +247,29 @@ class DaskNamespace:
         raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> IntoDaskExpr:
-        dask_exprs = parse_into_exprs(*exprs, namespace=self)
-        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in dask_exprs))
-        n_non_zero = reduce(lambda x, y: x + y, ((1 - e.is_null()) for e in dask_exprs))
-        return total / n_non_zero
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend([_series.fillna(0) for _series in _expr._call(df)])
+            non_na = []
+            for _expr in parsed_exprs:
+                non_na.extend([1 - _series.isna() for _series in _expr._call(df)])
+            return [
+                reduce(lambda x, y: x + y, series).rename(series[0].name)
+                / reduce(lambda x, y: x + y, non_na).rename(series[0].name)
+            ]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="mean_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"
