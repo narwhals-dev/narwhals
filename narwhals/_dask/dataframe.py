@@ -9,8 +9,6 @@ from typing import Sequence
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
 from narwhals._pandas_like.utils import translate_dtype
-from narwhals.dependencies import get_dask_dataframe
-from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
@@ -18,6 +16,8 @@ from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import dask.dataframe as dd
     from typing_extensions import Self
 
@@ -36,8 +36,12 @@ class DaskLazyFrame:
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
 
-    def __native_namespace__(self) -> Any:  # pragma: no cover
-        return get_dask_dataframe()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.DASK:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected dask, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def __narwhals_namespace__(self) -> DaskNamespace:
         from narwhals._dask.namespace import DaskNamespace
@@ -57,13 +61,15 @@ class DaskLazyFrame:
         return self._from_native_frame(df)
 
     def collect(self) -> Any:
+        import pandas as pd  # ignore-banned-import()
+
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         result = self._native_frame.compute()
         return PandasLikeDataFrame(
             result,
             implementation=Implementation.PANDAS,
-            backend_version=parse_version(get_pandas().__version__),
+            backend_version=parse_version(pd.__version__),
         )
 
     @property

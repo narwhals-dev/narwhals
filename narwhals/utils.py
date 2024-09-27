@@ -66,7 +66,7 @@ class Implementation(Enum):
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
-    def to_native_namespace(self: Self) -> ModuleType:  # pragma: no cover
+    def to_native_namespace(self: Self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation."""
         mapping = {
             Implementation.PANDAS: get_pandas(),
@@ -74,6 +74,7 @@ class Implementation(Enum):
             Implementation.CUDF: get_cudf(),
             Implementation.PYARROW: get_pyarrow(),
             Implementation.POLARS: get_polars(),
+            Implementation.DASK: get_dask_dataframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
 

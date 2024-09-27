@@ -43,6 +43,7 @@
         - null_count
         - pipe
         - quantile
+        - rename
         - round
         - sample
         - scatter

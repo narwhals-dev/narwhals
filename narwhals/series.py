@@ -11,6 +11,8 @@ from typing import overload
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     import pandas as pd
     import pyarrow as pa
@@ -58,8 +60,8 @@ class Series:
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
 
-    def __native_namespace__(self) -> Any:
-        return self._compliant_series.__native_namespace__()
+    def __native_namespace__(self: Self) -> ModuleType:
+        return self._compliant_series.__native_namespace__()  # type: ignore[no-any-return]
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """
@@ -1187,10 +1189,12 @@ class Series:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="foo")
             >>> s_pl = pl.Series("foo", s)
+            >>> s_pa = pa.chunked_array([s])
 
             We define a library agnostic function:
 
@@ -1198,7 +1202,7 @@ class Series:
             ... def func(s):
             ...     return s.alias("bar")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(s_pd)
             0    1
@@ -1213,8 +1217,69 @@ class Series:
                2
                3
             ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
         """
         return self._from_compliant_series(self._compliant_series.alias(name=name))
+
+    def rename(self, name: str) -> Self:
+        """
+        Rename the Series.
+
+        Alias for `Series.alias()`.
+
+        Arguments:
+            name: The new name.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name="foo")
+            >>> s_pl = pl.Series("foo", s)
+            >>> s_pa = pa.chunked_array([s])
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.rename("bar")
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            2    3
+            Name: bar, dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'bar' [i64]
+            [
+               1
+               2
+               3
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
+        """
+        return self.alias(name=name)
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """

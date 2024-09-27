@@ -22,6 +22,7 @@ from narwhals.utils import parse_version
 if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
+    from types import ModuleType
 
     import numpy as np
     import pandas as pd
@@ -41,8 +42,8 @@ class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "interchange"]
 
-    def __native_namespace__(self) -> Any:
-        return self._compliant_frame.__native_namespace__()
+    def __native_namespace__(self: Self) -> ModuleType:
+        return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> Any:
         return self._compliant_frame.__narwhals_namespace__()

@@ -47,6 +47,7 @@ class DaskLazyGroupBy:
         self._grouped = self._df._native_frame.groupby(
             list(self._keys),
             dropna=False,
+            observed=True,
         )
 
     def agg(
