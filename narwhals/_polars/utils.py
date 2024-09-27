@@ -65,6 +65,12 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Duration()
     if dtype == pl.Date:
         return dtypes.Date()
+    if dtype == pl.Struct:
+        return dtypes.Struct()
+    if dtype == pl.List:
+        return dtypes.List()
+    if dtype == pl.Array:
+        return dtypes.Array()
     return dtypes.Unknown()
 
 
@@ -110,6 +116,15 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         return pl.Duration()
     if dtype == dtypes.Date:
         return pl.Date()
+    if dtype == dtypes.List:  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if dtype == dtypes.Struct:  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if dtype == dtypes.Array:  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 
 

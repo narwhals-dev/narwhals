@@ -256,6 +256,12 @@ def translate_dtype(column: Any) -> DType:
         return dtypes.Duration()
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
+    if dtype.startswith(("large_list", "list")):
+        return dtypes.List()
+    if dtype.startswith("fixed_size_list"):
+        return dtypes.Array()
+    if dtype.startswith("struct"):
+        return dtypes.Struct()
     if dtype == "object":
         if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
             idx := getattr(column, "first_valid_index", lambda: None)()
@@ -423,6 +429,15 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
