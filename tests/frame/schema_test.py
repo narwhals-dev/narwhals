@@ -207,7 +207,7 @@ def test_from_non_hashable_column_name() -> None:
 
 
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
+    parse_version(pd.__version__) < parse_version("2.2.0"),
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes() -> None:
