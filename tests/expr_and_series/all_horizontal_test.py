@@ -1,8 +1,10 @@
 from typing import Any
 
+import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 
@@ -43,5 +45,21 @@ def test_allh_all(constructor: Constructor) -> None:
     expected = {"all": [False, False, True]}
     compare_dicts(result, expected)
     result = df.select(nw.all_horizontal(nw.all()))
+    expected = {"a": [False, False, True]}
+    compare_dicts(result, expected)
+
+
+def test_allh_nth(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "polars" in str(constructor) and parse_version(pl.__version__) < (1, 0):
+        request.applymarker(pytest.mark.xfail)
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.all_horizontal(nw.nth(0, 1)))
+    expected = {"a": [False, False, True]}
+    compare_dicts(result, expected)
+    result = df.select(nw.all_horizontal(nw.col("a"), nw.nth(0)))
     expected = {"a": [False, False, True]}
     compare_dicts(result, expected)
