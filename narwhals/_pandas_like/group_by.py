@@ -40,6 +40,7 @@ class PandasLikeGroupBy:
                 list(self._keys),
                 sort=False,
                 as_index=True,
+                observed=True,
             )
         else:
             self._grouped = self._df._native_frame.groupby(
@@ -47,6 +48,7 @@ class PandasLikeGroupBy:
                 sort=False,
                 as_index=True,
                 dropna=False,
+                observed=True,
             )
 
     def agg(

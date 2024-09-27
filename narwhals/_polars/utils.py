@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from narwhals import dtypes
-from narwhals.dependencies import get_polars
 
 
 def extract_native(obj: Any) -> Any:
@@ -28,7 +27,8 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
-    pl = get_polars()
+    import polars as pl  # ignore-banned-import()
+
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -69,7 +69,8 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
 
 
 def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
-    pl = get_polars()
+    import polars as pl  # ignore-banned-import()
+
     from narwhals import dtypes
 
     if dtype == dtypes.Float64:

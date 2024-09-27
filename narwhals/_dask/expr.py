@@ -10,7 +10,6 @@ from typing import NoReturn
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import reverse_translate_dtype
-from narwhals.dependencies import get_dask
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -67,6 +66,27 @@ class DaskExpr:
             function_name="col",
             root_names=list(column_names),
             output_names=list(column_names),
+            returns_scalar=False,
+            backend_version=backend_version,
+        )
+
+    @classmethod
+    def from_column_indices(
+        cls: type[Self],
+        *column_indices: int,
+        backend_version: tuple[int, ...],
+    ) -> Self:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            return [
+                df._native_frame.iloc[:, column_index] for column_index in column_indices
+            ]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=None,
+            output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
         )
@@ -782,8 +802,10 @@ class DaskExprStringNamespace:
         )
 
     def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
+        import dask.dataframe as dd  # ignore-banned-import()
+
         return self._expr._from_call(
-            lambda _input, fmt: get_dask().dataframe.to_datetime(_input, format=fmt),
+            lambda _input, fmt: dd.to_datetime(_input, format=fmt),
             "to_datetime",
             format,
             returns_scalar=False,
