@@ -13,7 +13,7 @@ from narwhals import dtypes
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
-from narwhals._dask.utils import reverse_translate_dtype
+from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
@@ -86,7 +86,7 @@ class DaskNamespace:
         def convert_if_dtype(
             series: dask_expr.Series, dtype: DType | type[DType]
         ) -> dask_expr.Series:
-            return series.astype(reverse_translate_dtype(dtype)) if dtype else series
+            return series.astype(narwhals_to_native_dtype(dtype)) if dtype else series
 
         return DaskExpr(
             lambda df: [

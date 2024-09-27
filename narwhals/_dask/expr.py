@@ -9,7 +9,7 @@ from typing import NoReturn
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
-from narwhals._dask.utils import reverse_translate_dtype
+from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -700,7 +700,7 @@ class DaskExpr:
         dtype: DType | type[DType],
     ) -> Self:
         def func(_input: Any, dtype: DType | type[DType]) -> Any:
-            dtype = reverse_translate_dtype(dtype)
+            dtype = narwhals_to_native_dtype(dtype)
             return _input.astype(dtype)
 
         return self._from_call(

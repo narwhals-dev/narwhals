@@ -239,3 +239,18 @@ def test_nested_dtypes_ibis() -> None:
     tbl = ibis.memtable(df[["a", "c"]])
     nwdf = nw.from_native(tbl)
     assert nwdf.schema == {"a": nw.List, "c": nw.Struct}
+
+
+def test_nested_dtypes_dask() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr")
+    import dask.dataframe as dd
+
+    df = dd.from_pandas(
+        pl.DataFrame(
+            {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
+            schema_overrides={"b": pl.Array(pl.Int64, 2)},
+        ).to_pandas(use_pyarrow_extension_array=True)
+    )
+    nwdf = nw.from_native(df)
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}

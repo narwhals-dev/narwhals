@@ -83,7 +83,7 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
         raise RuntimeError(msg)
 
 
-def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
+def narwhals_to_native_dtype(dtype: DType | type[DType]) -> Any:
     from narwhals import dtypes
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
