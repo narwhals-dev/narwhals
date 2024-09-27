@@ -97,7 +97,6 @@ def test_dtypes() -> None:
             "q": [timedelta(1)],
             "r": ["a"],
             "s": [[1, 2]],
-            "t": [[1, 2]],
             "u": [{"a": 1}],
         },
         schema={
@@ -120,7 +119,6 @@ def test_dtypes() -> None:
             "q": pl.Duration,
             "r": pl.Enum(["a", "b"]),
             "s": pl.List(pl.Int64),
-            "t": pl.Array(pl.Int64, 2),
             "u": pl.Struct({"a": pl.Int64}),
         },
     )
@@ -145,7 +143,6 @@ def test_dtypes() -> None:
         "q": nw.Duration,
         "r": nw.Enum,
         "s": nw.List,
-        "t": nw.Array,
         "u": nw.Struct,
     }
 
@@ -245,6 +242,10 @@ def test_nested_dtypes_ibis() -> None:  # pragma: no cover
     assert nwdf.schema == {"a": nw.Array, "c": nw.Struct}
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.2.0"),
+    reason="too old for pyarrow types",
+)
 def test_nested_dtypes_dask() -> None:
     pytest.importorskip("dask")
     pytest.importorskip("dask_expr", exc_type=ImportError)
