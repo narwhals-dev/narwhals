@@ -262,7 +262,14 @@ def test_no_agg(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_categorical(constructor: Constructor) -> None:
+def test_group_by_categorical(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor) and parse_version(pa.__version__) <= (
+        14,
+    ):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
+
     data = {"g1": ["a", "a", "b", "b"], "g2": ["x", "y", "x", "z"], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
