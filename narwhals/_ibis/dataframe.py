@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -61,21 +60,10 @@ class IbisInterchangeFrame:
         return IbisInterchangeSeries(self._native_frame[item])
 
     def to_pandas(self: Self) -> pd.DataFrame:
-        import pandas as pd  # ignore-banned-import()
-
-        if parse_version(pd.__version__) >= parse_version("1.5.0"):
-            return pd.api.interchange.from_dataframe(self._native_frame)
-        else:  # pragma: no cover
-            msg = (
-                "Conversion to pandas is achieved via interchange protocol which requires"
-                f" pandas>=1.5.0 to be installed, found {pd.__version__}"
-            )
-            raise NotImplementedError(msg)
+        return self._native_frame.to_pandas()
 
     def to_arrow(self: Self) -> pa.Table:
-        from pyarrow.interchange import from_dataframe  # ignore-banned-import()
-
-        return from_dataframe(self._native_frame)
+        return self._native_frame.to_pyarrow()
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
