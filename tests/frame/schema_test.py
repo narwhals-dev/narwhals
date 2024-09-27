@@ -234,7 +234,7 @@ def test_nested_dtypes() -> None:
     assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}
 
 
-def test_nested_dtypes_ibis() -> None:
+def test_nested_dtypes_ibis() -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
