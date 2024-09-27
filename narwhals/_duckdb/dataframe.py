@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 def map_duckdb_dtype_to_narwhals_dtype(
     duckdb_dtype: Any,
 ) -> dtypes.DType:
+    duckdb_dtype = str(duckdb_dtype)
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
     if duckdb_dtype == "INTEGER":
@@ -47,6 +49,12 @@ def map_duckdb_dtype_to_narwhals_dtype(
         return dtypes.Boolean()
     if duckdb_dtype == "INTERVAL":
         return dtypes.Duration()
+    if duckdb_dtype.startswith("STRUCT"):
+        return dtypes.Struct()
+    if re.match(r"\w+\[\]", duckdb_dtype):
+        return dtypes.List()
+    if re.match(r"\w+\[\d+\]", duckdb_dtype):
+        return dtypes.Array()
     return dtypes.Unknown()
 
 

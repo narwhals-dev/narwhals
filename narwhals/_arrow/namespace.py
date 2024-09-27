@@ -44,6 +44,9 @@ class ArrowNamespace:
     Datetime = dtypes.Datetime
     Duration = dtypes.Duration
     Date = dtypes.Date
+    List = dtypes.List
+    Struct = dtypes.Struct
+    Array = dtypes.Array
 
     def _create_expr_from_callable(
         self,
