@@ -39,8 +39,8 @@ def test_unpivot_on(
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("variable_name", ["", "custom_var_name", None])
-@pytest.mark.parametrize("value_name", ["", "custom_value_name", None])
+@pytest.mark.parametrize("variable_name", ["", "custom_var_name"])
+@pytest.mark.parametrize("value_name", ["", "custom_value_name"])
 def test_unpivot_var_value_names(
     constructor: Constructor,
     variable_name: str | None,
@@ -54,6 +54,11 @@ def test_unpivot_var_value_names(
         on=["b", "c"], index=["a"], variable_name=variable_name, value_name=value_name
     )
 
-    out_variable_name = variable_name if variable_name is not None else "variable"
-    out_value_name = value_name if value_name is not None else "value"
-    assert result.collect_schema().names()[-2:] == [out_variable_name, out_value_name]
+    assert result.collect_schema().names()[-2:] == [variable_name, value_name]
+
+
+def test_unpivot_default_var_value_names(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.unpivot(on=["b", "c"], index=["a"])
+
+    assert result.collect_schema().names()[-2:] == ["variable", "value"]
