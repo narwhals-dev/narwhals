@@ -206,6 +206,10 @@ def test_from_non_hashable_column_name() -> None:
     assert df["pizza"].dtype == nw.Int64
 
 
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.0.0"),
+    reason="too old for pyarrow types",
+)
 def test_nested_dtypes() -> None:
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
