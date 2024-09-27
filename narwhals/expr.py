@@ -4087,6 +4087,9 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 3   │
         └─────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `sum_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.sum_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
@@ -4218,6 +4221,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `all_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.all_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
@@ -4331,6 +4337,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `any_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.any_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
@@ -4384,6 +4393,9 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 3.0 │
         └─────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `mean_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.mean_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
