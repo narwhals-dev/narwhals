@@ -6,6 +6,10 @@ from typing import Any
 from narwhals import dtypes
 
 if TYPE_CHECKING:
+    import pandas as pd
+    import pyarrow as pa
+    from typing_extensions import Self
+
     from narwhals._ibis.series import IbisInterchangeSeries
 
 
@@ -54,6 +58,12 @@ class IbisInterchangeFrame:
         from narwhals._ibis.series import IbisInterchangeSeries
 
         return IbisInterchangeSeries(self._native_frame[item])
+
+    def to_pandas(self: Self) -> pd.DataFrame:
+        return self._native_frame.to_pandas()
+
+    def to_arrow(self: Self) -> pa.Table:
+        return self._native_frame.to_pyarrow()
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
