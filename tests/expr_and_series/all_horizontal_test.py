@@ -31,3 +31,17 @@ def test_allh_series(constructor_eager: Any) -> None:
 
     expected = {"all": [False, False, True]}
     compare_dicts(result, expected)
+
+
+def test_allh_all(constructor: Constructor) -> None:
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.select(all=nw.all_horizontal(nw.all()))
+    expected = {"all": [False, False, True]}
+    compare_dicts(result, expected)
+    result = df.select(nw.all_horizontal(nw.all()))
+    expected = {"a": [False, False, True]}
+    compare_dicts(result, expected)
