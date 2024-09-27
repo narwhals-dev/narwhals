@@ -4,6 +4,7 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import cast
 
 from narwhals import dtypes
@@ -13,6 +14,7 @@ from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
+from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals.utils import Implementation
 
@@ -42,6 +44,9 @@ class ArrowNamespace:
     Datetime = dtypes.Datetime
     Duration = dtypes.Duration
     Date = dtypes.Date
+    List = dtypes.List
+    Struct = dtypes.Struct
+    Array = dtypes.Array
 
     def _create_expr_from_callable(
         self,
@@ -110,6 +115,13 @@ class ArrowNamespace:
             *column_names, backend_version=self._backend_version
         )
 
+    def nth(self, *column_indices: int) -> ArrowExpr:
+        from narwhals._arrow.expr import ArrowExpr
+
+        return ArrowExpr.from_column_indices(
+            *column_indices, backend_version=self._backend_version
+        )
+
     def len(self) -> ArrowExpr:
         # coverage bug? this is definitely hit
         return ArrowExpr(  # pragma: no cover
@@ -168,15 +180,54 @@ class ArrowNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend(list(_expr._call(df)))
+            return [reduce(lambda x, y: x & y, series)]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="all_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+        )
 
     def any_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend(list(_expr._call(df)))
+            return [reduce(lambda x, y: x | y, series)]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="any_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+        )
 
     def sum_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
-        return reduce(
-            lambda x, y: x + y,
-            [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend([_series.fill_null(0) for _series in _expr._call(df)])
+            return [reduce(lambda x, y: x + y, series)]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="sum_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
         )
 
     def mean_horizontal(self, *exprs: IntoArrowExpr) -> IntoArrowExpr:
@@ -192,7 +243,7 @@ class ArrowNamespace:
         self,
         items: Iterable[ArrowDataFrame],
         *,
-        how: str = "vertical",
+        how: Literal["horizontal", "vertical"],
     ) -> ArrowDataFrame:
         dfs: list[Any] = [item._native_frame for item in items]
 
