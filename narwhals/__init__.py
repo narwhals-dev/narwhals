@@ -57,7 +57,7 @@ from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.8.3"
+__version__ = "1.8.4"
 
 __all__ = [
     "dependencies",
