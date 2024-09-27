@@ -13,12 +13,12 @@ from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_column_comparand
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -303,8 +303,12 @@ class ArrowSeries:
         unique_values = pc.unique(self._native_series)
         return pc.count(unique_values, mode="all")  # type: ignore[no-any-return]
 
-    def __native_namespace__(self) -> Any:  # pragma: no cover
-        return get_pyarrow()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.PYARROW:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected pyarrow, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     @property
     def name(self) -> str:
@@ -573,7 +577,8 @@ class ArrowSeries:
         return ArrowDataFrame(df, backend_version=self._backend_version)
 
     def to_pandas(self: Self) -> Any:
-        pd = get_pandas()
+        import pandas as pd  # ignore-banned-import()
+
         return pd.Series(self._native_series, name=self.name)
 
     def is_duplicated(self: Self) -> ArrowSeries:

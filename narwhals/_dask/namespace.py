@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Literal
 from typing import NoReturn
 from typing import cast
 
@@ -208,7 +209,7 @@ class DaskNamespace:
         self,
         items: Iterable[DaskLazyFrame],
         *,
-        how: str = "vertical",
+        how: Literal["horizontal", "vertical"],
     ) -> DaskLazyFrame:
         import dask.dataframe as dd  # ignore-banned-import
 

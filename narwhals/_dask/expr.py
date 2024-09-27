@@ -10,7 +10,6 @@ from typing import NoReturn
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import reverse_translate_dtype
-from narwhals.dependencies import get_dask
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -803,8 +802,10 @@ class DaskExprStringNamespace:
         )
 
     def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
+        import dask.dataframe as dd  # ignore-banned-import()
+
         return self._expr._from_call(
-            lambda _input, fmt: get_dask().dataframe.to_datetime(_input, format=fmt),
+            lambda _input, fmt: dd.to_datetime(_input, format=fmt),
             "to_datetime",
             format,
             returns_scalar=False,

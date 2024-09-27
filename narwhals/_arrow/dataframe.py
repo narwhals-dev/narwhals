@@ -14,7 +14,6 @@ from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
@@ -23,6 +22,8 @@ from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     import pyarrow as pa
     from typing_extensions import Self
@@ -48,8 +49,12 @@ class ArrowDataFrame:
 
         return ArrowNamespace(backend_version=self._backend_version)
 
-    def __native_namespace__(self) -> Any:
-        return get_pyarrow()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.PYARROW:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected pyarrow, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def __narwhals_dataframe__(self) -> Self:
         return self

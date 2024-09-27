@@ -7,12 +7,13 @@ from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import translate_dtype
-from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     from typing_extensions import Self
 
@@ -20,8 +21,8 @@ if TYPE_CHECKING:
 class PolarsDataFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_frame = df
-        self._implementation = Implementation.POLARS
         self._backend_version = backend_version
+        self._implementation = Implementation.POLARS
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsDataFrame"
@@ -32,14 +33,19 @@ class PolarsDataFrame:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace(backend_version=self._backend_version)
 
-    def __native_namespace__(self) -> Any:
-        return get_polars()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.POLARS:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(df, backend_version=self._backend_version)
 
     def _from_native_object(self, obj: Any) -> Any:
-        pl = get_polars()
+        import polars as pl  # ignore-banned-import()
+
         if isinstance(obj, pl.Series):
             from narwhals._polars.series import PolarsSeries
 
@@ -111,7 +117,8 @@ class PolarsDataFrame:
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-            pl = get_polars()
+            import polars as pl  # ignore-banned-import()
+
             if (
                 isinstance(item, tuple)
                 and (len(item) == 2)
@@ -191,6 +198,7 @@ class PolarsLazyFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_frame = df
         self._backend_version = backend_version
+        self._implementation = Implementation.POLARS
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
@@ -201,8 +209,12 @@ class PolarsLazyFrame:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace(backend_version=self._backend_version)
 
-    def __native_namespace__(self) -> Any:  # pragma: no cover
-        return get_polars()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.POLARS:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(df, backend_version=self._backend_version)

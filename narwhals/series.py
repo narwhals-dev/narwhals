@@ -11,6 +11,8 @@ from typing import overload
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     import pandas as pd
     import pyarrow as pa
@@ -58,8 +60,8 @@ class Series:
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
 
-    def __native_namespace__(self) -> Any:
-        return self._compliant_series.__native_namespace__()
+    def __native_namespace__(self: Self) -> ModuleType:
+        return self._compliant_series.__native_namespace__()  # type: ignore[no-any-return]
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """
