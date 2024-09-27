@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import copy
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -9,6 +8,7 @@ from typing import Iterable
 from typing import cast
 
 from narwhals import dtypes
+from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
@@ -219,20 +219,11 @@ class PandasLikeNamespace:
                 series.extend([_series.fill_null(0) for _series in _expr._call(df)])
             return [reduce(lambda x, y: x + y, series)]
 
-        root_names = copy(parsed_exprs[0]._root_names)
-        for arg in parsed_exprs[1:]:
-            if root_names is not None and isinstance(arg, PandasLikeExpr):
-                if arg._root_names is not None:
-                    root_names.extend(arg._root_names)
-                else:
-                    root_names = None
-                    break
-
         return self._create_expr_from_callable(
             func=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="sum_horizontal",
-            root_names=root_names,
+            root_names=combine_root_names(parsed_exprs),
             output_names=parsed_exprs[0]._output_names,
         )
 
