@@ -45,6 +45,9 @@ class DaskNamespace:
     Datetime = dtypes.Datetime
     Duration = dtypes.Duration
     Date = dtypes.Date
+    List = dtypes.List
+    Struct = dtypes.Struct
+    Array = dtypes.Array
 
     @property
     def selectors(self) -> DaskSelectorNamespace:

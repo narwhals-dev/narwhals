@@ -40,6 +40,9 @@ class PolarsNamespace:
     Datetime = dtypes.Datetime
     Duration = dtypes.Duration
     Date = dtypes.Date
+    List = dtypes.List
+    Struct = dtypes.Struct
+    Array = dtypes.Array
 
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version

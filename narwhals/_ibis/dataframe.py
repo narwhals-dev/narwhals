@@ -44,6 +44,10 @@ def map_ibis_dtype_to_narwhals_dtype(
         return dtypes.Date()
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
+    if ibis_dtype.is_array():
+        return dtypes.Array()
+    if ibis_dtype.is_struct():
+        return dtypes.Struct()
     return dtypes.Unknown()  # pragma: no cover
 
 
