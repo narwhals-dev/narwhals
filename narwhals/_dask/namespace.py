@@ -148,10 +148,42 @@ class DaskNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend(list(_expr._call(df)))
+            return [reduce(lambda x, y: x & y, series).rename(series[0].name)]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="all_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
 
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend(list(_expr._call(df)))
+            return [reduce(lambda x, y: x | y, series).rename(series[0].name)]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="any_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)

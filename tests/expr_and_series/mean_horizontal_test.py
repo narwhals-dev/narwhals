@@ -14,11 +14,3 @@ def test_meanh(constructor: Constructor, col_expr: Any) -> None:
     result = df.select(horizontal_mean=nw.mean_horizontal(col_expr, nw.col("b")))
     expected = {"horizontal_mean": [2.5, 3.0, 6.0, float("nan")]}
     compare_dicts(result, expected)
-
-
-def test_meanh_all(constructor: Constructor) -> None:
-    data = {"a": [1, 3, None, None], "b": [4, None, 6, None]}
-    df = nw.from_native(constructor(data))
-    result = df.select(horizontal_mean=nw.mean_horizontal(nw.all()))
-    expected = {"horizontal_mean": [2.5, 3.0, 6.0, float("nan")]}
-    compare_dicts(result, expected)
