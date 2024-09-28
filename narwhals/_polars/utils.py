@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals import dtypes
+if TYPE_CHECKING:
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 def extract_native(obj: Any) -> Any:
@@ -26,7 +29,7 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
     return args, kwargs
 
 
-def native_to_narwhals_dtype(dtype: Any) -> dtypes.DType:
+def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     import polars as pl  # ignore-banned-import()
 
     if dtype == pl.Float64:
@@ -74,7 +77,7 @@ def native_to_narwhals_dtype(dtype: Any) -> dtypes.DType:
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
+def narwhals_to_native_dtype(dtype: DType | type[DType]) -> Any:
     import polars as pl  # ignore-banned-import()
 
     from narwhals import dtypes

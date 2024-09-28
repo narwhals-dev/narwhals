@@ -232,9 +232,11 @@ class ArrowDataFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
+        from narwhals import dtypes
+
         schema = self._native_frame.schema
         return {
-            name: native_to_narwhals_dtype(dtype)
+            name: native_to_narwhals_dtype(dtype, dtypes)  # type: ignore[arg-type]
             for name, dtype in zip(schema.names, schema.types)
         }
 

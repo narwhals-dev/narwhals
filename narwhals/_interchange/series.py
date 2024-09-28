@@ -8,6 +8,7 @@ from narwhals._interchange.dataframe import map_interchange_dtype_to_narwhals_dt
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class InterchangeSeries:
@@ -17,9 +18,8 @@ class InterchangeSeries:
     def __narwhals_series__(self) -> Any:
         return self
 
-    @property
-    def dtype(self) -> DType:
-        return map_interchange_dtype_to_narwhals_dtype(self._native_series.dtype)
+    def dtype(self, dtypes: DTypes) -> DType:
+        return map_interchange_dtype_to_narwhals_dtype(self._native_series.dtype, dtypes)
 
     def __getattr__(self, attr: str) -> NoReturn:
         msg = (

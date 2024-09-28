@@ -217,7 +217,10 @@ def new_series(
             )
 
             dtype = pandas_like_narwhals_to_native_dtype(
-                dtype, None, implementation, dtypes
+                dtype,
+                None,
+                implementation,
+                dtypes,  # type: ignore[arg-type]
             )
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
@@ -337,7 +340,10 @@ def from_dict(
 
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation, dtypes
+                    schema[name],
+                    native_type,
+                    implementation,
+                    dtypes,  # type: ignore[arg-type]
                 )
                 for name, native_type in native_frame.dtypes.items()
             }

@@ -11,11 +11,10 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
-    from types import ModuleType
-
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     import pandas as pd
@@ -208,9 +207,7 @@ def set_axis(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
-def native_to_narwhals_dtype(column: Any) -> DType:
-    from narwhals import dtypes
-
+def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
     dtype = str(column.dtype)
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -282,7 +279,7 @@ def native_to_narwhals_dtype(column: Any) -> DType:
 
                 try:
                     return map_interchange_dtype_to_narwhals_dtype(
-                        df.__dataframe__().get_column(0).dtype
+                        df.__dataframe__().get_column(0).dtype, dtypes
                     )
                 except Exception:  # noqa: BLE001
                     return dtypes.Object()
@@ -313,7 +310,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     dtype: DType | type[DType],
     starting_dtype: Any,
     implementation: Implementation,
-    dtypes: ModuleType,
+    dtypes: DTypes,
 ) -> Any:
     if "polars" in str(type(dtype)):
         msg = (

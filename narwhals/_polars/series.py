@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
@@ -79,9 +80,8 @@ class PolarsSeries:
     def name(self) -> str:
         return self._native_series.name  # type: ignore[no-any-return]
 
-    @property
-    def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.dtype)
+    def dtype(self: Self, dtypes: DTypes) -> DType:
+        return native_to_narwhals_dtype(self._native_series.dtype, dtypes)
 
     @overload
     def __getitem__(self, item: int) -> Any: ...

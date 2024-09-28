@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -166,9 +167,8 @@ class PandasLikeSeries:
     def shape(self) -> tuple[int]:
         return self._native_series.shape  # type: ignore[no-any-return]
 
-    @property
-    def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series)
+    def dtype(self: Self, dtypes: DTypes) -> DType:
+        return native_to_narwhals_dtype(self._native_series, dtypes)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
@@ -191,7 +191,7 @@ class PandasLikeSeries:
         dtype: Any,
     ) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation, dtypes)
+        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation, dtypes)  # type: ignore[arg-type]
         return self._from_native_series(ser.astype(dtype))
 
     def item(self: Self, index: int | None = None) -> Any:

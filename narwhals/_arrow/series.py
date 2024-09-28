@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowSeries:
@@ -363,9 +364,8 @@ class ArrowSeries:
             backend_version=self._backend_version,
         )
 
-    @property
-    def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.type)
+    def dtype(self: Self, dtypes: DTypes) -> DType:
+        return native_to_narwhals_dtype(self._native_series.type, dtypes)
 
     def abs(self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()

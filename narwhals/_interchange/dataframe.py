@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
-from narwhals import dtypes
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -14,6 +13,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._interchange.series import InterchangeSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class DtypeKind(enum.IntEnum):
@@ -28,8 +29,8 @@ class DtypeKind(enum.IntEnum):
 
 
 def map_interchange_dtype_to_narwhals_dtype(
-    interchange_dtype: tuple[DtypeKind, int, Any, Any],
-) -> dtypes.DType:
+    interchange_dtype: tuple[DtypeKind, int, Any, Any], dtypes: DTypes
+) -> DType:
     if interchange_dtype[0] == DtypeKind.INT:
         if interchange_dtype[1] == 64:
             return dtypes.Int64()
@@ -86,10 +87,13 @@ class InterchangeFrame:
         return InterchangeSeries(self._interchange_frame.get_column_by_name(item))
 
     @property
-    def schema(self) -> dict[str, dtypes.DType]:
+    def schema(self) -> dict[str, DType]:
+        from narwhals import dtypes  # TODO(marco): make this an argument
+
         return {
             column_name: map_interchange_dtype_to_narwhals_dtype(
-                self._interchange_frame.get_column_by_name(column_name).dtype
+                self._interchange_frame.get_column_by_name(column_name).dtype,
+                dtypes,  # type: ignore[arg-type]
             )
             for column_name in self._interchange_frame.column_names()
         }
