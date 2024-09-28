@@ -18,7 +18,7 @@ class IbisInterchangeSeries:
         return self
 
     def dtype(self, dtypes: DTypes) -> DType:
-        return map_ibis_dtype_to_narwhals_dtype(self._native_series.types[0], dtypes)
+        return map_ibis_dtype_to_narwhals_dtype(self._native_series.type(), dtypes)
 
     def __getattr__(self, attr: str) -> Any:
         msg = (
