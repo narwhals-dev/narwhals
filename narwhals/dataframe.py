@@ -107,12 +107,6 @@ class BaseFrame(Generic[FrameT]):
     def columns(self) -> list[str]:
         return self._compliant_frame.columns  # type: ignore[no-any-return]
 
-    def lazy(self) -> LazyFrame[Any]:
-        return LazyFrame(
-            self._compliant_frame.lazy(),
-            level=self._level,
-        )
-
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -324,6 +318,10 @@ class DataFrame(BaseFrame[FrameT]):
 
         return Series
 
+    @property
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
+        return LazyFrame
+
     def __init__(
         self,
         df: Any,
@@ -413,7 +411,7 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pl)
             <LazyFrame ...>
         """
-        return super().lazy()
+        return self._lazyframe(self._compliant_frame.lazy(), level=self._level)
 
     def to_native(self) -> FrameT:
         """
@@ -2728,6 +2726,14 @@ class LazyFrame(BaseFrame[FrameT]):
     `narwhals.from_native`.
     """
 
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
+
+    @property
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
+        return LazyFrame
+
     def __init__(
         self,
         df: Any,
@@ -2795,7 +2801,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        return DataFrame(
+        return self._dataframe(
             self._compliant_frame.collect(),
             level=self._level,
         )
@@ -4218,7 +4224,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> func(df_pl)
             <LazyFrame ...>
         """
-        return super().lazy()  # type: ignore[return-value]
+        return self
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""
