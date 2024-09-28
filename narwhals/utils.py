@@ -11,7 +11,6 @@ from typing import Sequence
 from typing import TypeVar
 from typing import cast
 
-from narwhals import dtypes
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
@@ -395,14 +394,14 @@ def is_ordered_categorical(series: Series) -> bool:
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)
-        and series.dtype == dtypes.Categorical
+        and series.dtype == series._dtypes.Categorical
     ):
         return series._compliant_series._native_series.describe_categorical[  # type: ignore[no-any-return]
             "is_ordered"
         ]
-    if series.dtype == dtypes.Enum:
+    if series.dtype == series._dtypes.Enum:
         return True
-    if series.dtype != dtypes.Categorical:
+    if series.dtype != series._dtypes.Categorical:
         return False
     native_series = to_native(series)
     if is_polars_series(native_series):
