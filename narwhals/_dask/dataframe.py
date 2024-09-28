@@ -98,9 +98,6 @@ class DaskLazyFrame:
         mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
 
-    def lazy(self) -> Self:
-        return self
-
     def select(
         self: Self,
         *exprs: IntoDaskExpr,

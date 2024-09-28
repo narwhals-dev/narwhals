@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -44,7 +45,6 @@ from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
-from narwhals.translate import narwhalify as nw_narwhalify
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
@@ -74,6 +74,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    # We need to override any method which don't return Self so that type
+    # annotations are correct.
+
+    @property
+    def _series(self) -> type[Series]:
+        return Series
+
+    @property
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
+        return LazyFrame
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
@@ -110,7 +121,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
 
     def __getitem__(self, item: Any) -> Any:
-        return _stableify(super().__getitem__(item))
+        return super().__getitem__(item)
 
     def lazy(self) -> LazyFrame[Any]:
         """
@@ -155,7 +166,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             bar: [[6,7,8]]
             ham: [["a","b","c"]]
         """
-        return _stableify(super().lazy())  # type: ignore[no-any-return]
+        return super().lazy()  # type: ignore[return-value]
 
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
@@ -206,9 +217,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> func(df_pa)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
-        if as_series:
-            return {key: _stableify(value) for key, value in super().to_dict().items()}
-        return super().to_dict(as_series=False)
+        return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self: Self) -> Series:
         r"""
@@ -256,7 +265,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                 true
             ]
         """
-        return _stableify(super().is_duplicated())
+        return super().is_duplicated()  # type: ignore[return-value]
 
     def is_unique(self: Self) -> Series:
         r"""
@@ -304,7 +313,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                 false
             ]
         """
-        return _stableify(super().is_unique())
+        return super().is_unique()  # type: ignore[return-value]
+
+    def _l1_norm(self: Self) -> Self:
+        """Private, just used to test the stable API."""
+        return self.select(all()._l1_norm())
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
@@ -316,6 +329,10 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
 
     def collect(self) -> DataFrame[Any]:
         r"""
@@ -353,7 +370,11 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        return _stableify(super().collect())  # type: ignore[no-any-return]
+        return super().collect()  # type: ignore[return-value]
+
+    def _l1_norm(self: Self) -> Self:
+        """Private, just used to test the stable API."""
+        return self.select(all()._l1_norm())
 
 
 class Series(NwSeries):
@@ -366,6 +387,13 @@ class Series(NwSeries):
     `narwhals.from_native`, making sure to pass `allow_series=True` or
     `series_only=True`.
     """
+
+    # We need to override any method which don't return Self so that type
+    # annotations are correct.
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
 
     def to_frame(self) -> DataFrame[Any]:
         """
@@ -404,7 +432,7 @@ class Series(NwSeries):
             │ 3   │
             └─────┘
         """
-        return _stableify(super().to_frame())  # type: ignore[no-any-return]
+        return super().to_frame()  # type: ignore[return-value]
 
     def value_counts(
         self: Self,
@@ -458,10 +486,8 @@ class Series(NwSeries):
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        return _stableify(  # type: ignore[no-any-return]
-            super().value_counts(
-                sort=sort, parallel=parallel, name=name, normalize=normalize
-            )
+        return super().value_counts(  # type: ignore[return-value]
+            sort=sort, parallel=parallel, name=name, normalize=normalize
         )
 
 
@@ -865,14 +891,54 @@ def narwhalify(
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
     """
 
-    return nw_narwhalify(
-        func=func,
-        strict=strict,
-        eager_only=eager_only,
-        eager_or_interchange_only=eager_or_interchange_only,
-        series_only=series_only,
-        allow_series=allow_series,
-    )
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            args = [
+                from_native(
+                    arg,
+                    strict=strict,
+                    eager_only=eager_only,
+                    eager_or_interchange_only=eager_or_interchange_only,
+                    series_only=series_only,
+                    allow_series=allow_series,
+                )
+                for arg in args
+            ]  # type: ignore[assignment]
+
+            kwargs = {
+                name: from_native(
+                    value,
+                    strict=strict,
+                    eager_only=eager_only,
+                    eager_or_interchange_only=eager_or_interchange_only,
+                    series_only=series_only,
+                    allow_series=allow_series,
+                )
+                for name, value in kwargs.items()
+            }
+
+            backends = {
+                b()
+                for v in (*args, *kwargs.values())
+                if (b := getattr(v, "__native_namespace__", None))
+            }
+
+            if backends.__len__() > 1:
+                msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+                raise ValueError(msg)
+
+            result = func(*args, **kwargs)
+
+            return to_native(result, strict=strict)
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        # If func is not None, it means the decorator is used without arguments
+        return decorator(func)
 
 
 def all() -> Expr:
