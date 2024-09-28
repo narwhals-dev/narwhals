@@ -318,6 +318,12 @@ class DataFrame(BaseFrame[FrameT]):
     `narwhals.from_native`.
     """
 
+    @property
+    def _series(self) -> type[Series]:
+        from narwhals.series import Series
+
+        return Series
+
     def __init__(
         self,
         df: Any,
@@ -667,9 +673,7 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.get_column(name),
             level=self._level,
         )
@@ -819,9 +823,7 @@ class DataFrame(BaseFrame[FrameT]):
                 return self._from_compliant_dataframe(self._compliant_frame[item[0]])
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
-            from narwhals.series import Series
-
-            return Series(
+            return self._series(
                 self._compliant_frame[item],
                 level=self._level,
             )
@@ -887,11 +889,9 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pa)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
-        from narwhals.series import Series
-
         if as_series:
             return {
-                key: Series(
+                key: self._series(
                     value,
                     level=self._level,
                 )
@@ -2287,9 +2287,7 @@ class DataFrame(BaseFrame[FrameT]):
                 true
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.is_duplicated(),
             level=self._level,
         )
@@ -2370,9 +2368,7 @@ class DataFrame(BaseFrame[FrameT]):
                 false
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.is_unique(),
             level=self._level,
         )

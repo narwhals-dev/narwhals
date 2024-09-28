@@ -75,6 +75,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     `narwhals.from_native`.
     """
 
+    @property
+    def _series(self) -> type[Series]:
+        return Series
+
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
     @overload
@@ -364,6 +368,10 @@ class Series(NwSeries):
     `series_only=True`.
     """
 
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
+
     def to_frame(self) -> DataFrame[Any]:
         """
         Convert to dataframe.
@@ -401,7 +409,7 @@ class Series(NwSeries):
             │ 3   │
             └─────┘
         """
-        return _stableify(super().to_frame())  # type: ignore[no-any-return]
+        return self.to_frame()
 
     def value_counts(
         self: Self,
