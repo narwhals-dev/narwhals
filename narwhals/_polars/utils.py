@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from narwhals import dtypes
-from narwhals.dependencies import get_polars
 
 
 def extract_native(obj: Any) -> Any:
@@ -27,8 +26,9 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
     return args, kwargs
 
 
-def translate_dtype(dtype: Any) -> dtypes.DType:
-    pl = get_polars()
+def native_to_narwhals_dtype(dtype: Any) -> dtypes.DType:
+    import polars as pl  # ignore-banned-import()
+
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -65,11 +65,18 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Duration()
     if dtype == pl.Date:
         return dtypes.Date()
+    if dtype == pl.Struct:
+        return dtypes.Struct()
+    if dtype == pl.List:
+        return dtypes.List()
+    if dtype == pl.Array:
+        return dtypes.Array()
     return dtypes.Unknown()
 
 
 def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
-    pl = get_polars()
+    import polars as pl  # ignore-banned-import()
+
     from narwhals import dtypes
 
     if dtype == dtypes.Float64:
@@ -109,6 +116,15 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         return pl.Duration()
     if dtype == dtypes.Date:
         return pl.Date()
+    if dtype == dtypes.List:  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if dtype == dtypes.Struct:  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if dtype == dtypes.Array:  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 
 

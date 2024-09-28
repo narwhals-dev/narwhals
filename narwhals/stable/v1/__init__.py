@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -14,6 +15,7 @@ from narwhals import dependencies
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
+from narwhals.dtypes import Array
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
@@ -26,8 +28,10 @@ from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
+from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
+from narwhals.dtypes import Struct
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
@@ -41,7 +45,6 @@ from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
-from narwhals.translate import narwhalify as nw_narwhalify
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
@@ -71,6 +74,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    # We need to override any method which don't return Self so that type
+    # annotations are correct.
+
+    @property
+    def _series(self) -> type[Series]:
+        return Series
+
+    @property
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
+        return LazyFrame
 
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
@@ -107,7 +121,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
 
     def __getitem__(self, item: Any) -> Any:
-        return _stableify(super().__getitem__(item))
+        return super().__getitem__(item)
 
     def lazy(self) -> LazyFrame[Any]:
         """
@@ -116,14 +130,16 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         If a library does not support lazy execution, then this is a no-op.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals.stable.v1 as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -131,7 +147,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             ... def func(df):
             ...     return df.lazy()
 
-            Note that then, pandas dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
+            Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
             >>> func(df_pd)
                foo  bar ham
@@ -140,8 +156,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             2    3  8.0   c
             >>> func(df_pl)
             <LazyFrame ...>
+            >>> func(df_pa)
+            pyarrow.Table
+            foo: int64
+            bar: double
+            ham: string
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
+            ham: [["a","b","c"]]
         """
-        return _stableify(super().lazy())  # type: ignore[no-any-return]
+        return super().lazy()  # type: ignore[return-value]
 
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
@@ -192,9 +217,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> func(df_pa)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
-        if as_series:
-            return {key: _stableify(value) for key, value in super().to_dict().items()}
-        return super().to_dict(as_series=False)
+        return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self: Self) -> Series:
         r"""
@@ -242,7 +265,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                 true
             ]
         """
-        return _stableify(super().is_duplicated())
+        return super().is_duplicated()  # type: ignore[return-value]
 
     def is_unique(self: Self) -> Series:
         r"""
@@ -290,7 +313,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                 false
             ]
         """
-        return _stableify(super().is_unique())
+        return super().is_unique()  # type: ignore[return-value]
+
+    def _l1_norm(self: Self) -> Self:
+        """Private, just used to test the stable API."""
+        return self.select(all()._l1_norm())
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
@@ -302,6 +329,10 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
 
     def collect(self) -> DataFrame[Any]:
         r"""
@@ -339,7 +370,11 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        return _stableify(super().collect())  # type: ignore[no-any-return]
+        return super().collect()  # type: ignore[return-value]
+
+    def _l1_norm(self: Self) -> Self:
+        """Private, just used to test the stable API."""
+        return self.select(all()._l1_norm())
 
 
 class Series(NwSeries):
@@ -352,6 +387,13 @@ class Series(NwSeries):
     `narwhals.from_native`, making sure to pass `allow_series=True` or
     `series_only=True`.
     """
+
+    # We need to override any method which don't return Self so that type
+    # annotations are correct.
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
 
     def to_frame(self) -> DataFrame[Any]:
         """
@@ -390,7 +432,7 @@ class Series(NwSeries):
             │ 3   │
             └─────┘
         """
-        return _stableify(super().to_frame())  # type: ignore[no-any-return]
+        return super().to_frame()  # type: ignore[return-value]
 
     def value_counts(
         self: Self,
@@ -444,10 +486,8 @@ class Series(NwSeries):
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        return _stableify(  # type: ignore[no-any-return]
-            super().value_counts(
-                sort=sort, parallel=parallel, name=name, normalize=normalize
-            )
+        return super().value_counts(  # type: ignore[return-value]
+            sort=sort, parallel=parallel, name=name, normalize=normalize
         )
 
 
@@ -851,14 +891,54 @@ def narwhalify(
         allow_series: Whether to allow series (default is only dataframe / lazyframe).
     """
 
-    return nw_narwhalify(
-        func=func,
-        strict=strict,
-        eager_only=eager_only,
-        eager_or_interchange_only=eager_or_interchange_only,
-        series_only=series_only,
-        allow_series=allow_series,
-    )
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            args = [
+                from_native(
+                    arg,
+                    strict=strict,
+                    eager_only=eager_only,
+                    eager_or_interchange_only=eager_or_interchange_only,
+                    series_only=series_only,
+                    allow_series=allow_series,
+                )
+                for arg in args
+            ]  # type: ignore[assignment]
+
+            kwargs = {
+                name: from_native(
+                    value,
+                    strict=strict,
+                    eager_only=eager_only,
+                    eager_or_interchange_only=eager_or_interchange_only,
+                    series_only=series_only,
+                    allow_series=allow_series,
+                )
+                for name, value in kwargs.items()
+            }
+
+            backends = {
+                b()
+                for v in (*args, *kwargs.values())
+                if (b := getattr(v, "__native_namespace__", None))
+            }
+
+            if backends.__len__() > 1:
+                msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+                raise ValueError(msg)
+
+            result = func(*args, **kwargs)
+
+            return to_native(result, strict=strict)
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        # If func is not None, it means the decorator is used without arguments
+        return decorator(func)
 
 
 def all() -> Expr:
@@ -938,6 +1018,57 @@ def col(*names: str | Iterable[str]) -> Expr:
         └─────┘
     """
     return _stableify(nw.col(*names))
+
+
+def nth(*indices: int | Sequence[int]) -> Expr:
+    """
+    Creates an expression that references one or more columns by their index(es).
+
+    Notes:
+        `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
+
+    Arguments:
+        indices: One or more indices representing the columns to retrieve.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.nth(0) * 2)
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  2
+        1  4
+        >>> func(df_pl)  # doctest: +SKIP
+        shape: (2, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 2   │
+        │ 4   │
+        └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[2,4]]
+    """
+    return _stableify(nw.nth(*indices))
 
 
 def len() -> Expr:
@@ -1887,6 +2018,7 @@ __all__ = [
     "all_horizontal",
     "any_horizontal",
     "col",
+    "nth",
     "len",
     "lit",
     "min",
@@ -1918,6 +2050,9 @@ __all__ = [
     "String",
     "Datetime",
     "Duration",
+    "Struct",
+    "Array",
+    "List",
     "Date",
     "narwhalify",
     "show_versions",

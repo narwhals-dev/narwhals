@@ -6,13 +6,14 @@ from typing import Any
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
-from narwhals._polars.utils import translate_dtype
-from narwhals.dependencies import get_polars
+from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     from typing_extensions import Self
 
@@ -20,8 +21,8 @@ if TYPE_CHECKING:
 class PolarsDataFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_frame = df
-        self._implementation = Implementation.POLARS
         self._backend_version = backend_version
+        self._implementation = Implementation.POLARS
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsDataFrame"
@@ -32,14 +33,19 @@ class PolarsDataFrame:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace(backend_version=self._backend_version)
 
-    def __native_namespace__(self) -> Any:
-        return get_polars()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.POLARS:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(df, backend_version=self._backend_version)
 
     def _from_native_object(self, obj: Any) -> Any:
-        pl = get_polars()
+        import polars as pl  # ignore-banned-import()
+
         if isinstance(obj, pl.Series):
             from narwhals._polars.series import PolarsSeries
 
@@ -72,14 +78,14 @@ class PolarsDataFrame:
     @property
     def schema(self) -> dict[str, Any]:
         schema = self._native_frame.schema
-        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+        return {name: native_to_narwhals_dtype(dtype) for name, dtype in schema.items()}
 
     def collect_schema(self) -> dict[str, Any]:
         if self._backend_version < (1,):  # pragma: no cover
             schema = self._native_frame.schema
         else:
             schema = dict(self._native_frame.collect_schema())
-        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+        return {name: native_to_narwhals_dtype(dtype) for name, dtype in schema.items()}
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -111,7 +117,8 @@ class PolarsDataFrame:
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-            pl = get_polars()
+            import polars as pl  # ignore-banned-import()
+
             if (
                 isinstance(item, tuple)
                 and (len(item) == 2)
@@ -186,11 +193,34 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.drop(to_drop))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
 
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            return self._from_native_frame(
+                self._native_frame.melt(
+                    id_vars=index,
+                    value_vars=on,
+                    variable_name=variable_name,
+                    value_name=value_name,
+                )
+            )
+        return self._from_native_frame(
+            self._native_frame.unpivot(
+                on=on, index=index, variable_name=variable_name, value_name=value_name
+            )
+        )
+
 
 class PolarsLazyFrame:
     def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
         self._native_frame = df
         self._backend_version = backend_version
+        self._implementation = Implementation.POLARS
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
@@ -201,8 +231,12 @@ class PolarsLazyFrame:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace(backend_version=self._backend_version)
 
-    def __native_namespace__(self) -> Any:  # pragma: no cover
-        return get_polars()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.POLARS:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
         return self.__class__(df, backend_version=self._backend_version)
@@ -223,14 +257,14 @@ class PolarsLazyFrame:
     @property
     def schema(self) -> dict[str, Any]:
         schema = self._native_frame.schema
-        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+        return {name: native_to_narwhals_dtype(dtype) for name, dtype in schema.items()}
 
     def collect_schema(self) -> dict[str, Any]:
         if self._backend_version < (1,):  # pragma: no cover
             schema = self._native_frame.schema
         else:
             schema = dict(self._native_frame.collect_schema())
-        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+        return {name: native_to_narwhals_dtype(dtype) for name, dtype in schema.items()}
 
     def collect(self) -> PolarsDataFrame:
         return PolarsDataFrame(
@@ -251,3 +285,25 @@ class PolarsLazyFrame:
         if self._backend_version < (1, 0, 0):  # pragma: no cover
             return self._from_native_frame(self._native_frame.drop(columns))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):  # pragma: no cover
+            return self._from_native_frame(
+                self._native_frame.melt(
+                    id_vars=index,
+                    value_vars=on,
+                    variable_name=variable_name,
+                    value_name=value_name,
+                )
+            )
+        return self._from_native_frame(
+            self._native_frame.unpivot(
+                on=on, index=index, variable_name=variable_name, value_name=value_name
+            )
+        )

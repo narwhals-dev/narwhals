@@ -25,7 +25,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "**requirements*.txt"
       - name: install-reqs
-        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt ibis-framework[duckdb] --system
+        run: uv pip install --upgrade tox virtualenv setuptools -r requirements-dev.txt --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -87,7 +87,7 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: install ibis
-        run: uv pip install ibis-framework[duckdb] --system
+        run: uv pip install ibis-framework[duckdb]>=6.0.0 --system
         # Ibis puts upper bounds on dependencies, and requires Python3.10+,
         # which messes with other dependencies on lower Python versions
         if: matrix.python-version == '3.12'
