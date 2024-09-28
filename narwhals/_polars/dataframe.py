@@ -6,7 +6,7 @@ from typing import Any
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
-from narwhals._polars.utils import translate_dtype
+from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
@@ -78,14 +78,14 @@ class PolarsDataFrame:
     @property
     def schema(self) -> dict[str, Any]:
         schema = self._native_frame.schema
-        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+        return {name: native_to_narwhals_dtype(dtype) for name, dtype in schema.items()}
 
     def collect_schema(self) -> dict[str, Any]:
         if self._backend_version < (1,):  # pragma: no cover
             schema = self._native_frame.schema
         else:
             schema = dict(self._native_frame.collect_schema())
-        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+        return {name: native_to_narwhals_dtype(dtype) for name, dtype in schema.items()}
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -257,14 +257,14 @@ class PolarsLazyFrame:
     @property
     def schema(self) -> dict[str, Any]:
         schema = self._native_frame.schema
-        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+        return {name: native_to_narwhals_dtype(dtype) for name, dtype in schema.items()}
 
     def collect_schema(self) -> dict[str, Any]:
         if self._backend_version < (1,):  # pragma: no cover
             schema = self._native_frame.schema
         else:
             schema = dict(self._native_frame.collect_schema())
-        return {name: translate_dtype(dtype) for name, dtype in schema.items()}
+        return {name: native_to_narwhals_dtype(dtype) for name, dtype in schema.items()}
 
     def collect(self) -> PolarsDataFrame:
         return PolarsDataFrame(

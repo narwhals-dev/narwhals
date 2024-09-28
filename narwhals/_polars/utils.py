@@ -26,7 +26,7 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
     return args, kwargs
 
 
-def translate_dtype(dtype: Any) -> dtypes.DType:
+def native_to_narwhals_dtype(dtype: Any) -> dtypes.DType:
     import polars as pl  # ignore-banned-import()
 
     if dtype == pl.Float64:

@@ -206,7 +206,7 @@ def set_axis(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
-def translate_dtype(column: Any) -> DType:
+def native_to_narwhals_dtype(column: Any) -> DType:
     from narwhals import dtypes
 
     dtype = str(column.dtype)
