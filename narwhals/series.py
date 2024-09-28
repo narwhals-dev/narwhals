@@ -9,6 +9,7 @@ from typing import Sequence
 from typing import overload
 
 from narwhals.utils import parse_version
+from narwhals import dtypes
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -32,6 +33,7 @@ class Series:
     `narwhals.from_native`, making sure to pass `allow_series=True` or
     `series_only=True`.
     """
+    _dtypes = dtypes
 
     def __init__(
         self,
@@ -331,7 +333,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return self._compliant_series.dtype  # type: ignore[no-any-return]
+        return self._compliant_series.dtype(self._dtypes)  # type: ignore[no-any-return]
 
     @property
     def name(self) -> str:

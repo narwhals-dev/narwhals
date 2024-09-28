@@ -108,6 +108,7 @@ class Datetime(TemporalType):
         self.time_zone = time_zone
 
     def __eq__(self: Self, other: object) -> bool:
+        breakpoint()
         # allow comparing object instances to class
         if type(other) is type and issubclass(other, self.__class__):
             return True
@@ -117,6 +118,7 @@ class Datetime(TemporalType):
             return False
 
     def __hash__(self: Self) -> int:  # pragma: no cover
+        breakpoint()
         return hash((self.__class__, self.time_unit, self.time_zone))
 
     def __repr__(self: Self) -> str:  # pragma: no cover

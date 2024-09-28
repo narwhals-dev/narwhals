@@ -165,9 +165,8 @@ class PandasLikeSeries:
     def shape(self) -> tuple[int]:
         return self._native_series.shape  # type: ignore[no-any-return]
 
-    @property
-    def dtype(self: Self) -> DType:
-        return translate_dtype(self._native_series)
+    def dtype(self: Self, dtypes) -> DType:
+        return translate_dtype(self._native_series, dtypes)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
