@@ -16,6 +16,7 @@ from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals._expression_parsing import reduce_output_names
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -191,7 +192,7 @@ class ArrowNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def any_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
@@ -206,7 +207,7 @@ class ArrowNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="any_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def sum_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
@@ -221,7 +222,7 @@ class ArrowNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="sum_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def mean_horizontal(self, *exprs: IntoArrowExpr) -> IntoArrowExpr:

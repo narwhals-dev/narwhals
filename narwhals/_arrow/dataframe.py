@@ -373,7 +373,7 @@ class ArrowDataFrame:
             return self._from_native_frame(self._native_frame.drop_null())
         subset = [subset] if isinstance(subset, str) else subset
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(*[plx.col(s).is_null() for s in subset]))
+        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def sort(
         self,

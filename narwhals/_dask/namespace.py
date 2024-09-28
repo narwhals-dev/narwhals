@@ -17,6 +17,7 @@ from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals._expression_parsing import reduce_output_names
 
 if TYPE_CHECKING:
     import dask_expr
@@ -163,7 +164,7 @@ class DaskNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
         )
@@ -180,7 +181,7 @@ class DaskNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="any_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
         )
@@ -197,7 +198,7 @@ class DaskNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="sum_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
         )

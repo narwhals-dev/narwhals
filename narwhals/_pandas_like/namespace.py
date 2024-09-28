@@ -11,6 +11,7 @@ from typing import cast
 from narwhals import dtypes
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals._expression_parsing import reduce_output_names
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
@@ -226,7 +227,7 @@ class PandasLikeNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="sum_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -241,7 +242,7 @@ class PandasLikeNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
@@ -256,7 +257,7 @@ class PandasLikeNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="any_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
