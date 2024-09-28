@@ -155,9 +155,7 @@ class DaskNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend(list(_expr._call(df)))
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
             return [reduce(lambda x, y: x & y, series).rename(series[0].name)]
 
         return DaskExpr(
@@ -174,9 +172,7 @@ class DaskNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend(list(_expr._call(df)))
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
             return [reduce(lambda x, y: x | y, series).rename(series[0].name)]
 
         return DaskExpr(
@@ -193,9 +189,7 @@ class DaskNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend([_series.fillna(0) for _series in _expr._call(df)])
+            series = [s.fillna(0) for _expr in parsed_exprs for s in _expr._call(df)]
             return [reduce(lambda x, y: x + y, series).rename(series[0].name)]
 
         return DaskExpr(

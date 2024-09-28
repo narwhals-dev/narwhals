@@ -183,9 +183,7 @@ class ArrowNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend(list(_expr._call(df)))
+            series = (s for _expr in parsed_exprs for s in _expr._call(df))
             return [reduce(lambda x, y: x & y, series)]
 
         return self._create_expr_from_callable(
@@ -200,9 +198,7 @@ class ArrowNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend(list(_expr._call(df)))
+            series = (s for _expr in parsed_exprs for s in _expr._call(df))
             return [reduce(lambda x, y: x | y, series)]
 
         return self._create_expr_from_callable(
@@ -217,9 +213,7 @@ class ArrowNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend([_series.fill_null(0) for _series in _expr._call(df)])
+            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr._call(df))
             return [reduce(lambda x, y: x + y, series)]
 
         return self._create_expr_from_callable(
