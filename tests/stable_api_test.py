@@ -1,3 +1,5 @@
+from typing import Any
+
 import polars as pl
 import pytest
 
@@ -33,6 +35,43 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
 
     # The older `_l1_norm` still works in the stable api
     result = df.with_columns(b=nw_v1.col("a")._l1_norm())
+    compare_dicts(result, expected)
+
+
+def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
+    # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
+    # We need `narwhals.stable.v1` to stay stable. So, we
+    # make the change in `narwhals`, and then add the new method
+    # to the subclass of `Expr` in `narwhals.stable.v1`.
+    # Here, we check that anyone who wrote code using the old
+    # API will still be able to use it, without the main namespace
+    # getting cluttered by the new name.
+
+    def func(df_any: Any) -> Any:
+        df = nw_v1.from_native(df_any)
+        df = df._l1_norm()
+        return df.to_native()
+
+    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    expected = {"a": [15]}
+    compare_dicts(result, expected)
+
+
+def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
+    # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
+    # We need `narwhals.stable.v1` to stay stable. So, we
+    # make the change in `narwhals`, and then add the new method
+    # to the subclass of `Expr` in `narwhals.stable.v1`.
+    # Here, we check that anyone who wrote code using the old
+    # API will still be able to use it, without the main namespace
+    # getting cluttered by the new name.
+
+    @nw_v1.narwhalify
+    def func(df: Any) -> Any:
+        return df._l1_norm()
+
+    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    expected = {"a": [15]}
     compare_dicts(result, expected)
 
 
