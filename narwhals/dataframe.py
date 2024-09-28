@@ -2730,10 +2730,6 @@ class LazyFrame(BaseFrame[FrameT]):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    @property
-    def _lazyframe(self) -> type[LazyFrame[Any]]:
-        return LazyFrame
-
     def __init__(
         self,
         df: Any,
