@@ -75,6 +75,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     `narwhals.from_native`.
     """
 
+    # We need to override any method which don't return Self so that type
+    # annotations are correct.
+
     @property
     def _series(self) -> type[Series]:
         return Series
@@ -114,7 +117,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
 
     def __getitem__(self, item: Any) -> Any:
-        return _stableify(super().__getitem__(item))
+        return super().__getitem__(item)
 
     def lazy(self) -> LazyFrame[Any]:
         """
@@ -148,7 +151,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> func(df_pl)
             <LazyFrame ...>
         """
-        return _stableify(super().lazy())  # type: ignore[no-any-return]
+        return super().lazy()  # type: ignore[return-value]
 
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
@@ -199,9 +202,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> func(df_pa)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
-        if as_series:
-            return {key: _stableify(value) for key, value in super().to_dict().items()}
-        return super().to_dict(as_series=False)
+        return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self: Self) -> Series:
         r"""
@@ -249,7 +250,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                 true
             ]
         """
-        return _stableify(super().is_duplicated())
+        return super().is_duplicated()  # type: ignore[return-value]
 
     def is_unique(self: Self) -> Series:
         r"""
@@ -367,6 +368,9 @@ class Series(NwSeries):
     `narwhals.from_native`, making sure to pass `allow_series=True` or
     `series_only=True`.
     """
+
+    # We need to override any method which don't return Self so that type
+    # annotations are correct.
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
