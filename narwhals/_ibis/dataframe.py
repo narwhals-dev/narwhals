@@ -3,19 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals import dtypes
-
 if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._ibis.series import IbisInterchangeSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
-def map_ibis_dtype_to_narwhals_dtype(
-    ibis_dtype: Any,
-) -> dtypes.DType:
+def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
@@ -71,8 +69,10 @@ class IbisInterchangeFrame:
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
+            from narwhals import dtypes
+
             return {
-                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype)
+                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, dtypes)  # type: ignore[arg-type]
                 for column_name, ibis_dtype in self._native_frame.schema().items()
             }
         msg = (
