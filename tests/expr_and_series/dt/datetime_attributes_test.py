@@ -40,12 +40,6 @@ def test_datetime_attributes(
     attribute: str,
     expected: list[int],
 ) -> None:
-    if (
-        attribute == "date"
-        and "pandas" in str(constructor)
-        and "pyarrow" not in str(constructor)
-    ):
-        request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -76,12 +70,6 @@ def test_datetime_attributes_series(
     attribute: str,
     expected: list[int],
 ) -> None:
-    if (
-        attribute == "date"
-        and "pandas" in str(constructor_eager)
-        and "pyarrow" not in str(constructor_eager)
-    ):
-        request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 

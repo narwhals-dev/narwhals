@@ -4,7 +4,6 @@ import re
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals import dtypes
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -13,11 +12,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
-def map_duckdb_dtype_to_narwhals_dtype(
-    duckdb_dtype: Any,
-) -> dtypes.DType:
+def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DType:
     duckdb_dtype = str(duckdb_dtype)
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
@@ -72,8 +71,10 @@ class DuckDBInterchangeFrame:
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
+            from narwhals import dtypes
+
             return {
-                column_name: map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype)
+                column_name: map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype, dtypes)  # type: ignore[arg-type]
                 for column_name, duckdb_dtype in zip(
                     self._native_frame.columns, self._native_frame.types
                 )
