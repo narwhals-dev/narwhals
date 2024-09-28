@@ -5,9 +5,6 @@ from typing import Any
 from typing import Iterable
 from typing import TypeVar
 
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
@@ -20,6 +17,13 @@ if TYPE_CHECKING:
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     import pandas as pd
+
+
+PANDAS_LIKE_IMPLEMENTATION = {
+    Implementation.PANDAS,
+    Implementation.CUDF,
+    Implementation.MODIN,
+}
 
 
 def validate_column_comparand(index: Any, other: Any) -> Any:
@@ -93,18 +97,16 @@ def create_native_series(
 ) -> PandasLikeSeries:
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    if implementation is Implementation.PANDAS:
-        pd = get_pandas()
-        series = pd.Series(iterable, index=index, name="")
-    elif implementation is Implementation.MODIN:
-        mpd = get_modin()
-        series = mpd.Series(iterable, index=index, name="")
-    elif implementation is Implementation.CUDF:
-        cudf = get_cudf()
-        series = cudf.Series(iterable, index=index, name="")
-    return PandasLikeSeries(
-        series, implementation=implementation, backend_version=backend_version
-    )
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        series = implementation.to_native_namespace().Series(
+            iterable, index=index, name=""
+        )
+        return PandasLikeSeries(
+            series, implementation=implementation, backend_version=backend_version
+        )
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def horizontal_concat(
@@ -115,22 +117,17 @@ def horizontal_concat(
 
     Should be in namespace.
     """
-    if implementation is Implementation.PANDAS:
-        pd = get_pandas()
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        extra_kwargs = (
+            {"copy": False}
+            if implementation is Implementation.PANDAS and backend_version < (3,)
+            else {}
+        )
+        return implementation.to_native_namespace().concat(dfs, axis=1, **extra_kwargs)
 
-        if backend_version < (3,):
-            return pd.concat(dfs, axis=1, copy=False)
-        return pd.concat(dfs, axis=1)  # pragma: no cover
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        cudf = get_cudf()
-
-        return cudf.concat(dfs, axis=1)
-    if implementation is Implementation.MODIN:  # pragma: no cover
-        mpd = get_modin()
-
-        return mpd.concat(dfs, axis=1)
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def vertical_concat(
@@ -150,22 +147,18 @@ def vertical_concat(
         if cols_current != cols:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
-    if implementation is Implementation.PANDAS:
-        pd = get_pandas()
 
-        if backend_version < (3,):
-            return pd.concat(dfs, axis=0, copy=False)
-        return pd.concat(dfs, axis=0)  # pragma: no cover
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        cudf = get_cudf()
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        extra_kwargs = (
+            {"copy": False}
+            if implementation is Implementation.PANDAS and backend_version < (3,)
+            else {}
+        )
+        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
 
-        return cudf.concat(dfs, axis=0)
-    if implementation is Implementation.MODIN:  # pragma: no cover
-        mpd = get_modin()
-
-        return mpd.concat(dfs, axis=0)
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def native_series_from_iterable(
@@ -175,20 +168,15 @@ def native_series_from_iterable(
     implementation: Implementation,
 ) -> Any:
     """Return native series."""
-    if implementation is Implementation.PANDAS:
-        pd = get_pandas()
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        extra_kwargs = {"copy": False} if implementation is Implementation.PANDAS else {}
+        return implementation.to_native_namespace().Series(
+            data, name=name, index=index, **extra_kwargs
+        )
 
-        return pd.Series(data, name=name, index=index, copy=False)
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        cudf = get_cudf()
-
-        return cudf.Series(data, name=name, index=index)
-    if implementation is Implementation.MODIN:  # pragma: no cover
-        mpd = get_modin()
-
-        return mpd.Series(data, name=name, index=index)
-    msg = f"Unknown implementation: {implementation}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def set_axis(
@@ -268,6 +256,12 @@ def translate_dtype(column: Any) -> DType:
         return dtypes.Duration()
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
+    if dtype.startswith(("large_list", "list")):
+        return dtypes.List()
+    if dtype.startswith("fixed_size_list"):
+        return dtypes.Array()
+    if dtype.startswith("struct"):
+        return dtypes.Struct()
     if dtype == "object":
         if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
             idx := getattr(column, "first_valid_index", lambda: None)()
@@ -297,7 +291,8 @@ def translate_dtype(column: Any) -> DType:
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
     if implementation is Implementation.PANDAS:
-        pd = get_pandas()
+        import pandas as pd  # ignore-banned-import()
+
         if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
             return "pyarrow-nullable"
 
@@ -434,6 +429,15 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -474,13 +478,12 @@ def broadcast_series(series: list[PandasLikeSeries]) -> list[Any]:
 
 
 def to_datetime(implementation: Implementation) -> Any:
-    if implementation is Implementation.PANDAS:
-        return get_pandas().to_datetime
-    if implementation is Implementation.MODIN:
-        return get_modin().to_datetime
-    if implementation is Implementation.CUDF:
-        return get_cudf().to_datetime
-    raise AssertionError
+    if implementation in PANDAS_LIKE_IMPLEMENTATION:
+        return implementation.to_native_namespace().to_datetime
+
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def int_dtype_mapper(dtype: Any) -> str:

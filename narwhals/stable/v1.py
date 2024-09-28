@@ -14,6 +14,7 @@ from narwhals import dependencies
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
+from narwhals.dtypes import Array
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
@@ -26,8 +27,10 @@ from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
+from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
+from narwhals.dtypes import Struct
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
@@ -1970,6 +1973,9 @@ __all__ = [
     "String",
     "Datetime",
     "Duration",
+    "Struct",
+    "Array",
+    "List",
     "Date",
     "narwhalify",
     "show_versions",

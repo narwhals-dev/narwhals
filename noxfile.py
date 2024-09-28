@@ -10,6 +10,9 @@ PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 def run_common(session: Session, coverage_threshold: float) -> None:
     session.install("-e.", "-r", "requirements-dev.txt")
 
+    if session.python != "3.8":
+        session.install("ibis-framework[duckdb]>=6.0.0")
+
     session.run(
         "pytest",
         "tests",
@@ -73,5 +76,4 @@ def nightly_versions(session: Session) -> None:
         "git+https://github.com/dask/dask",
         "git+https://github.com/dask/dask-expr",
     )
-
     run_common(session, coverage_threshold=50)

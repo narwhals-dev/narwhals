@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Literal
 from typing import NoReturn
 from typing import cast
 
@@ -12,8 +13,9 @@ from narwhals import dtypes
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
-from narwhals._dask.utils import reverse_translate_dtype
+from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
+from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 
 if TYPE_CHECKING:
@@ -43,6 +45,9 @@ class DaskNamespace:
     Datetime = dtypes.Datetime
     Duration = dtypes.Duration
     Date = dtypes.Date
+    List = dtypes.List
+    Struct = dtypes.Struct
+    Array = dtypes.Array
 
     @property
     def selectors(self) -> DaskSelectorNamespace:
@@ -52,7 +57,7 @@ class DaskNamespace:
         self._backend_version = backend_version
 
     def all(self) -> DaskExpr:
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             return [df._native_frame.loc[:, column_name] for column_name in df.columns]
 
         return DaskExpr(
@@ -81,7 +86,7 @@ class DaskNamespace:
         def convert_if_dtype(
             series: dask_expr.Series, dtype: DType | type[DType]
         ) -> dask_expr.Series:
-            return series.astype(reverse_translate_dtype(dtype)) if dtype else series
+            return series.astype(narwhals_to_native_dtype(dtype)) if dtype else series
 
         return DaskExpr(
             lambda df: [
@@ -125,7 +130,7 @@ class DaskNamespace:
         import dask.dataframe as dd  # ignore-banned-import
         import pandas as pd  # ignore-banned-import
 
-        def func(df: DaskLazyFrame) -> list[Any]:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             if not df.columns:
                 return [
                     dd.from_pandas(
@@ -147,22 +152,67 @@ class DaskNamespace:
         )
 
     def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend(list(_expr._call(df)))
+            return [reduce(lambda x, y: x & y, series).rename(series[0].name)]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="all_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
 
     def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        return reduce(lambda x, y: x | y, parse_into_exprs(*exprs, namespace=self))
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend(list(_expr._call(df)))
+            return [reduce(lambda x, y: x | y, series).rename(series[0].name)]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="any_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+            returns_scalar=False,
+            backend_version=self._backend_version,
+        )
 
     def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        return reduce(
-            lambda x, y: x + y,
-            [expr.fill_null(0) for expr in parse_into_exprs(*exprs, namespace=self)],
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = []
+            for _expr in parsed_exprs:
+                series.extend([_series.fillna(0) for _series in _expr._call(df)])
+            return [reduce(lambda x, y: x + y, series).rename(series[0].name)]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="sum_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=parsed_exprs[0]._output_names,
+            returns_scalar=False,
+            backend_version=self._backend_version,
         )
 
     def concat(
         self,
         items: Iterable[DaskLazyFrame],
         *,
-        how: str = "vertical",
+        how: Literal["horizontal", "vertical"],
     ) -> DaskLazyFrame:
         import dask.dataframe as dd  # ignore-banned-import
 
@@ -263,7 +313,7 @@ class DaskWhen:
         self._otherwise_value = otherwise_value
         self._returns_scalar = returns_scalar
 
-    def __call__(self, df: DaskLazyFrame) -> list[Any]:
+    def __call__(self, df: DaskLazyFrame) -> list[dask_expr.Series]:
         from narwhals._dask.namespace import DaskNamespace
         from narwhals._expression_parsing import parse_into_expr
 
