@@ -50,3 +50,4 @@ repos:
   rev: v4.6.0
   hooks:
   -   id: name-tests-test
+      exclude: ^tests/utils\.py
