@@ -381,7 +381,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.lazy()
 
-            Note that then, pandas dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
+            Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
             >>> func(df_pd)
                foo  bar ham
