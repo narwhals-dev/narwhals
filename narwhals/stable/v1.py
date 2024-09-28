@@ -463,10 +463,8 @@ class Series(NwSeries):
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        return _stableify(  # type: ignore[no-any-return]
-            super().value_counts(
-                sort=sort, parallel=parallel, name=name, normalize=normalize
-            )
+        return super().value_counts(  # type: ignore[return-value]
+            sort=sort, parallel=parallel, name=name, normalize=normalize
         )
 
 
