@@ -313,7 +313,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                 false
             ]
         """
-        return _stableify(super().is_unique())
+        return super().is_unique()  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
         """Private, just used to test the stable API."""
@@ -370,7 +370,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        return _stableify(super().collect())  # type: ignore[no-any-return]
+        return super().collect()  # type: ignore[return-value]
 
     def _l1_norm(self: Self) -> Self:
         """Private, just used to test the stable API."""
