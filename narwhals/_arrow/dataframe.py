@@ -14,7 +14,6 @@ from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
@@ -23,6 +22,8 @@ from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     import pyarrow as pa
     from typing_extensions import Self
@@ -48,8 +49,12 @@ class ArrowDataFrame:
 
         return ArrowNamespace(backend_version=self._backend_version)
 
-    def __native_namespace__(self) -> Any:
-        return get_pyarrow()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.PYARROW:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected pyarrow, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -136,6 +141,9 @@ class ArrowDataFrame:
         | tuple[slice, str | int]
         | tuple[slice, slice],
     ) -> ArrowSeries | ArrowDataFrame:
+        if isinstance(item, tuple):
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
@@ -612,3 +620,45 @@ class ArrowDataFrame:
         mask = rng.choice(idx, size=n, replace=with_replacement)
 
         return self._from_native_frame(pc.take(frame, mask))
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+
+        native_frame = self._native_frame
+        variable_name = variable_name if variable_name is not None else "variable"
+        value_name = value_name if value_name is not None else "value"
+
+        index_: list[str] = (
+            [] if index is None else [index] if isinstance(index, str) else index
+        )
+        on_: list[str] = (
+            [c for c in self.columns if c not in index_]
+            if on is None
+            else [on]
+            if isinstance(on, str)
+            else on
+        )
+
+        n_rows = len(self)
+
+        return self._from_native_frame(
+            pa.concat_tables(
+                [
+                    pa.Table.from_arrays(
+                        [
+                            *[native_frame.column(idx_col) for idx_col in index_],
+                            pa.array([on_col] * n_rows, pa.string()),
+                            native_frame.column(on_col),
+                        ],
+                        names=[*index_, variable_name, value_name],
+                    )
+                    for on_col in on_
+                ]
+            )
+        )

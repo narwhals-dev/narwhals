@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
@@ -193,3 +195,58 @@ def test_slice_edge_cases(constructor_eager: Any) -> None:
     assert df[[], ["a"]].shape == (0, 1)
     assert df[:, :].shape == (3, 4)
     assert df[[], []].shape == (0, 0)
+
+
+@pytest.mark.parametrize(
+    ("row_idx", "col_idx"),
+    [
+        ([0, 2], [0]),
+        ((0, 2), [0]),
+        ([0, 2], (0,)),
+        ((0, 2), (0,)),
+        ([0, 2], range(1)),
+        (range(2), [0]),
+        (range(2), range(1)),
+    ],
+)
+def test_get_item_works_with_tuple_and_list_and_range_row_and_col_indexing(
+    constructor_eager: Any,
+    row_idx: list[int] | tuple[int] | range,
+    col_idx: list[int] | tuple[int] | range,
+) -> None:
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    nw_df[row_idx, col_idx]
+
+
+@pytest.mark.parametrize(
+    ("row_idx", "col"),
+    [
+        ([0, 2], slice(1)),
+        ((0, 2), slice(1)),
+        (range(2), slice(1)),
+    ],
+)
+def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col_indexing(
+    constructor_eager: Any,
+    row_idx: list[int] | tuple[int] | range,
+    col: slice,
+) -> None:
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    nw_df[row_idx, col]
+
+
+@pytest.mark.parametrize(
+    ("row_idx", "col"),
+    [
+        ([0, 2], "a"),
+        ((0, 2), "a"),
+        (range(2), "a"),
+    ],
+)
+def test_get_item_works_with_tuple_and_list_indexing_and_str(
+    constructor_eager: Any,
+    row_idx: list[int] | tuple[int] | range,
+    col: str,
+) -> None:
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    nw_df[row_idx, col]

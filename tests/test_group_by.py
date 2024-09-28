@@ -123,7 +123,13 @@ def test_group_by_std(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
+def test_group_by_n_unique_w_missing(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        # Issue in cuDF https://github.com/rapidsai/cudf/issues/16861
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
         nw.from_native(constructor(data))
@@ -254,3 +260,27 @@ def test_no_agg(constructor: Constructor) -> None:
 
     expected = {"a": [1, 3], "b": [4, 6]}
     compare_dicts(result, expected)
+
+
+def test_group_by_categorical(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (
+        15,
+        0,
+        0,
+    ):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"g1": ["a", "a", "b", "b"], "g2": ["x", "y", "x", "z"], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(
+            g1=nw.col("g1").cast(nw.Categorical()),
+            g2=nw.col("g2").cast(nw.Categorical()),
+        )
+        .group_by(["g1", "g2"])
+        .agg(nw.col("x").sum())
+        .sort("x")
+    )
+    compare_dicts(result, data)

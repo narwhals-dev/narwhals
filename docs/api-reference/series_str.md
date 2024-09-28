@@ -7,6 +7,7 @@
         - contains
         - ends_with
         - head
+        - len_chars
         - replace
         - replace_all
         - slice

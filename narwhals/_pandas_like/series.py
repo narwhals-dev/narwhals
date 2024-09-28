@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -14,12 +15,11 @@ from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -96,13 +96,14 @@ class PandasLikeSeries:
         else:
             self._use_copy_false = False
 
-    def __native_namespace__(self) -> Any:
-        if self._implementation is Implementation.PANDAS:
-            return get_pandas()
-        if self._implementation is Implementation.MODIN:  # pragma: no cover
-            return get_modin()
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
-            return get_cudf()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+            Implementation.CUDF,
+        }:
+            return self._implementation.to_native_namespace()
+
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -165,7 +166,7 @@ class PandasLikeSeries:
         return self._native_series.shape  # type: ignore[no-any-return]
 
     @property
-    def dtype(self) -> DType:
+    def dtype(self: Self) -> DType:
         return translate_dtype(self._native_series)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
@@ -667,6 +668,9 @@ class PandasLikeSeries:
         result.name = native_series.name
         return self._from_native_series(result)
 
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._native_series.__iter__()
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
@@ -694,6 +698,11 @@ class PandasLikeSeriesCatNamespace:
 class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
+
+    def len_chars(self) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.len()
+        )
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1

@@ -4,7 +4,6 @@ from typing import Any
 from typing import Literal
 
 from narwhals import dtypes
-from narwhals.dependencies import get_polars
 
 
 def extract_native(obj: Any) -> Any:
@@ -29,7 +28,8 @@ def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, An
 
 
 def translate_dtype(dtype: Any) -> dtypes.DType:
-    pl = get_polars()
+    import polars as pl  # ignore-banned-import()
+
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -69,11 +69,18 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     if dtype == pl.Duration or isinstance(dtype, pl.Duration):
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return dtypes.Duration(time_unit=du_time_unit)
+    if dtype == pl.Struct:
+        return dtypes.Struct()
+    if dtype == pl.List:
+        return dtypes.List()
+    if dtype == pl.Array:
+        return dtypes.Array()
     return dtypes.Unknown()
 
 
 def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
-    pl = get_polars()
+    import polars as pl  # ignore-banned-import()
+
     from narwhals import dtypes
 
     if dtype == dtypes.Float64:
@@ -116,7 +123,7 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     ):
         dt_time_unit = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
-        return pl.Datetime(dt_time_unit, dt_time_zone)
+        return pl.Datetime(dt_time_unit, dt_time_zone)  # type: ignore[arg-type]
     if (
         dtype == dtypes.Duration
         or isinstance(dtype, dtypes.Duration)
@@ -125,6 +132,15 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return pl.Duration(time_unit=du_time_unit)
 
+    if dtype == dtypes.List:  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if dtype == dtypes.Struct:  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if dtype == dtypes.Array:  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 
 

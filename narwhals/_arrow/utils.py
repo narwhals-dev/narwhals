@@ -54,6 +54,12 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
         return dtypes.Duration(time_unit=dtype.unit)
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
+    if pa.types.is_struct(dtype):
+        return dtypes.Struct()
+    if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
+        return dtypes.List()
+    if pa.types.is_fixed_size_list(dtype):
+        return dtypes.Array()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -97,6 +103,15 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
         return pa.duration(time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

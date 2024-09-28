@@ -22,6 +22,7 @@ from narwhals.utils import parse_version
 if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
+    from types import ModuleType
 
     import numpy as np
     import pandas as pd
@@ -41,11 +42,8 @@ class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "interchange"]
 
-    def __len__(self) -> Any:
-        return self._compliant_frame.__len__()
-
-    def __native_namespace__(self) -> Any:
-        return self._compliant_frame.__native_namespace__()
+    def __native_namespace__(self: Self) -> ModuleType:
+        return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> Any:
         return self._compliant_frame.__narwhals_namespace__()
@@ -292,6 +290,23 @@ class BaseFrame(Generic[FrameT]):
             )
         )
 
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        *,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.unpivot(
+                on=on,
+                index=index,
+                variable_name=variable_name,
+                value_name=value_name,
+            )
+        )
+
 
 class DataFrame(BaseFrame[FrameT]):
     """
@@ -315,6 +330,9 @@ class DataFrame(BaseFrame[FrameT]):
         else:  # pragma: no cover
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
+
+    def __len__(self) -> Any:
+        return self._compliant_frame.__len__()
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._compliant_frame.__array__(dtype, copy=copy)
@@ -2616,6 +2634,93 @@ class DataFrame(BaseFrame[FrameT]):
             )
         )
 
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None = None,
+        *,
+        index: str | list[str] | None = None,
+        variable_name: str | None = None,
+        value_name: str | None = None,
+    ) -> Self:
+        r"""
+        Unpivot a DataFrame from wide to long format.
+
+        Optionally leaves identifiers set.
+
+        This function is useful to massage a DataFrame into a format where one or more
+        columns are identifier variables (index) while all other columns, considered
+        measured variables (on), are "unpivoted" to the row axis leaving just
+        two non-identifier columns, 'variable' and 'value'.
+
+        Arguments:
+            on: Column(s) to use as values variables; if `on` is empty all columns that
+                are not in `index` will be used.
+            index: Column(s) to use as identifier variables.
+            variable_name: Name to give to the `variable` column. Defaults to "variable".
+            value_name: Name to give to the `value` column. Defaults to "value".
+
+        Notes:
+            If you're coming from pandas, this is similar to `pandas.DataFrame.melt`,
+            but with `index` replacing `id_vars` and `on` replacing `value_vars`.
+            In other frameworks, you might know this operation as `pivot_longer`.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": ["x", "y", "z"],
+            ...     "b": [1, 3, 5],
+            ...     "c": [2, 4, 6],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.unpivot(on=["b", "c"], index="a")
+
+            We can pass any supported library such as pandas, Polars or PyArrow to `func`:
+
+            >>> func(pl.DataFrame(data))
+            shape: (6, 3)
+            ┌─────┬──────────┬───────┐
+            │ a   ┆ variable ┆ value │
+            │ --- ┆ ---      ┆ ---   │
+            │ str ┆ str      ┆ i64   │
+            ╞═════╪══════════╪═══════╡
+            │ x   ┆ b        ┆ 1     │
+            │ y   ┆ b        ┆ 3     │
+            │ z   ┆ b        ┆ 5     │
+            │ x   ┆ c        ┆ 2     │
+            │ y   ┆ c        ┆ 4     │
+            │ z   ┆ c        ┆ 6     │
+            └─────┴──────────┴───────┘
+
+            >>> func(pd.DataFrame(data))
+               a variable  value
+            0  x        b      1
+            1  y        b      3
+            2  z        b      5
+            3  x        c      2
+            4  y        c      4
+            5  z        c      6
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: string
+            variable: string
+            value: int64
+            ----
+            a: [["x","y","z"],["x","y","z"]]
+            variable: [["b","b","b"],["c","c","c"]]
+            value: [[1,3,5],[2,4,6]]
+        """
+        return super().unpivot(
+            on=on, index=index, variable_name=variable_name, value_name=value_name
+        )
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """
@@ -4159,3 +4264,69 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────┴─────┘
         """
         return super().gather_every(n=n, offset=offset)
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None = None,
+        *,
+        index: str | list[str] | None = None,
+        variable_name: str | None = None,
+        value_name: str | None = None,
+    ) -> Self:
+        r"""
+        Unpivot a DataFrame from wide to long format.
+
+        Optionally leaves identifiers set.
+
+        This function is useful to massage a DataFrame into a format where one or more
+        columns are identifier variables (index) while all other columns, considered
+        measured variables (on), are "unpivoted" to the row axis leaving just
+        two non-identifier columns, 'variable' and 'value'.
+
+        Arguments:
+            on: Column(s) to use as values variables; if `on` is empty all columns that
+                are not in `index` will be used.
+            index: Column(s) to use as identifier variables.
+            variable_name: Name to give to the `variable` column. Defaults to "variable".
+            value_name: Name to give to the `value` column. Defaults to "value".
+
+        Notes:
+            If you're coming from pandas, this is similar to `pandas.DataFrame.melt`,
+            but with `index` replacing `id_vars` and `on` replacing `value_vars`.
+            In other frameworks, you might know this operation as `pivot_longer`.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": ["x", "y", "z"],
+            ...     "b": [1, 3, 5],
+            ...     "c": [2, 4, 6],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(lf):
+            ...     return (
+            ...         lf.unpivot(on=["b", "c"], index="a").sort(["variable", "a"]).collect()
+            ...     )
+
+            >>> func(pl.LazyFrame(data))
+            shape: (6, 3)
+            ┌─────┬──────────┬───────┐
+            │ a   ┆ variable ┆ value │
+            │ --- ┆ ---      ┆ ---   │
+            │ str ┆ str      ┆ i64   │
+            ╞═════╪══════════╪═══════╡
+            │ x   ┆ b        ┆ 1     │
+            │ y   ┆ b        ┆ 3     │
+            │ z   ┆ b        ┆ 5     │
+            │ x   ┆ c        ┆ 2     │
+            │ y   ┆ c        ┆ 4     │
+            │ z   ┆ c        ┆ 6     │
+            └─────┴──────────┴───────┘
+        """
+        return super().unpivot(
+            on=on, index=index, variable_name=variable_name, value_name=value_name
+        )
