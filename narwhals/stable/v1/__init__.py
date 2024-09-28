@@ -82,6 +82,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def _series(self) -> type[Series]:
         return Series
 
+    @property
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
+        return LazyFrame
+
     @overload
     def __getitem__(self, item: tuple[Sequence[int], slice]) -> Self: ...
     @overload
@@ -314,6 +318,10 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
 
     def collect(self) -> DataFrame[Any]:
         r"""
