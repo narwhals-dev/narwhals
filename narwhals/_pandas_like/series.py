@@ -8,6 +8,7 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals import dtypes
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
@@ -190,7 +191,7 @@ class PandasLikeSeries:
         dtype: Any,
     ) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation)
+        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation, dtypes)
         return self._from_native_series(ser.astype(dtype))
 
     def item(self: Self, index: int | None = None) -> Any:

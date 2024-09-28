@@ -11,6 +11,8 @@ from narwhals.utils import isinstance_or_issubclass
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
@@ -308,10 +310,11 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0915
-    dtype: DType | type[DType], starting_dtype: Any, implementation: Implementation
+    dtype: DType | type[DType],
+    starting_dtype: Any,
+    implementation: Implementation,
+    dtypes: ModuleType,
 ) -> Any:
-    from narwhals import dtypes
-
     if "polars" in str(type(dtype)):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"

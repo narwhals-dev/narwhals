@@ -9,6 +9,7 @@ from typing import Literal
 from typing import TypeVar
 from typing import Union
 
+from narwhals import dtypes
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
@@ -215,7 +216,9 @@ def new_series(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            dtype = pandas_like_narwhals_to_native_dtype(dtype, None, implementation)
+            dtype = pandas_like_narwhals_to_native_dtype(
+                dtype, None, implementation, dtypes
+            )
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
     elif implementation is Implementation.PYARROW:
@@ -334,7 +337,7 @@ def from_dict(
 
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation
+                    schema[name], native_type, implementation, dtypes
                 )
                 for name, native_type in native_frame.dtypes.items()
             }
