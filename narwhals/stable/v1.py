@@ -409,7 +409,7 @@ class Series(NwSeries):
             │ 3   │
             └─────┘
         """
-        return self.to_frame()
+        return super().to_frame()  # type: ignore[return-value]
 
     def value_counts(
         self: Self,
