@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals._polars.utils import translate_dtype
+from narwhals._polars.utils import native_to_narwhals_dtype
 
 
 class PolarsSeries:
@@ -81,7 +81,7 @@ class PolarsSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return translate_dtype(self._native_series.dtype)
+        return native_to_narwhals_dtype(self._native_series.dtype)
 
     @overload
     def __getitem__(self, item: int) -> Any: ...

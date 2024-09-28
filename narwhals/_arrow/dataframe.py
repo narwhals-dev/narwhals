@@ -10,8 +10,8 @@ from typing import overload
 
 from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
+from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
-from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
@@ -234,7 +234,7 @@ class ArrowDataFrame:
     def schema(self) -> dict[str, DType]:
         schema = self._native_frame.schema
         return {
-            name: translate_dtype(dtype)
+            name: native_to_narwhals_dtype(dtype)
             for name, dtype in zip(schema.names, schema.types)
         }
 

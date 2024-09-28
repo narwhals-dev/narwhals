@@ -47,8 +47,8 @@ nav:
 theme:
   name: material
   font: false
-  favicon: assets/image.png
-  logo: assets/image.png
+  favicon: assets/logo.svg
+  logo: assets/logo.svg
   features:
     - content.code.copy
     - content.code.annotate
@@ -75,6 +75,9 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
+  - css/mkdocstrings.css
 
 plugins:
 - search
