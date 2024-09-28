@@ -21,11 +21,16 @@ def test_drop_nulls(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.parametrize("subset", ["a", ["a"]])
-def test_drop_nulls_subset(constructor: Constructor, subset: str | list[str]) -> None:
+@pytest.mark.parametrize(
+    ("subset", "expected"),
+    [
+        ("a", {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
+        (["a"], {"a": [1, 2.0, 4.0], "b": [float("nan"), 3.0, 5.0]}),
+        (["a", "b"], {"a": [2.0, 4.0], "b": [3.0, 5.0]}),
+    ],
+)
+def test_drop_nulls_subset(
+    constructor: Constructor, subset: str | list[str], expected: dict[str, float]
+) -> None:
     result = nw.from_native(constructor(data)).drop_nulls(subset=subset)
-    expected = {
-        "a": [1, 2.0, 4.0],
-        "b": [float("nan"), 3.0, 5.0],
-    }
     compare_dicts(result, expected)
