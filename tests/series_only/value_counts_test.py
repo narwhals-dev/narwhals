@@ -7,6 +7,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
@@ -16,7 +17,7 @@ data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
 @pytest.mark.parametrize("name", [None, "count_name"])
 def test_value_counts(
     request: pytest.FixtureRequest,
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     normalize: Any,
     name: str | None,
 ) -> None:

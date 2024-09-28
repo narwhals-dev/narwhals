@@ -13,6 +13,7 @@ from hypothesis import given
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 
@@ -94,7 +95,7 @@ def test_arithmetic_series(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
@@ -124,7 +125,7 @@ def test_right_arithmetic_series(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__rmod__" and any(
@@ -139,7 +140,7 @@ def test_right_arithmetic_series(
 
 
 def test_truediv_same_dims(
-    constructor_eager: Any, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor_eager):
         # https://github.com/pola-rs/polars/issues/17760

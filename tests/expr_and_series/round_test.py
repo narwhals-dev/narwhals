@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 
@@ -21,7 +20,7 @@ def test_round(constructor: Constructor, decimals: int) -> None:
 
 
 @pytest.mark.parametrize("decimals", [0, 1, 2])
-def test_round_series(constructor_eager: Any, decimals: int) -> None:
+def test_round_series(constructor_eager: ConstructorEager, decimals: int) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234]}
     df_raw = constructor_eager(data)
     df = nw.from_native(df_raw, eager_only=True)

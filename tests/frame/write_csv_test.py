@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Any
 
 import narwhals.stable.v1 as nw
+from tests.utils import ConstructorEager
 from tests.utils import is_windows
 
 if TYPE_CHECKING:
     import pytest
 
 
-def test_write_csv(constructor_eager: Any, tmpdir: pytest.TempdirFactory) -> None:
+def test_write_csv(
+    constructor_eager: ConstructorEager, tmpdir: pytest.TempdirFactory
+) -> None:
     data = {"a": [1, 2, 3]}
     path = tmpdir / "foo.csv"  # type: ignore[operator]
     result = nw.from_native(constructor_eager(data), eager_only=True).write_csv(str(path))

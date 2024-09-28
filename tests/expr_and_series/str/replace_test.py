@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 replace_data = [
@@ -54,7 +53,7 @@ replace_all_data = [
     replace_data,
 )
 def test_str_replace_series(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -75,7 +74,7 @@ def test_str_replace_series(
     replace_all_data,
 )
 def test_str_replace_all_series(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
