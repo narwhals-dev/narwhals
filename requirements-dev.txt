@@ -9,7 +9,6 @@ pytest
 pytest-cov
 pytest-randomly
 pytest-env
-pytz
 hypothesis
 scikit-learn
 typing_extensions
