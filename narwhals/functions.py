@@ -249,7 +249,7 @@ def _new_series_impl(
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            dtype = arrow_narwhals_to_native_dtype(dtype)
+            dtype = arrow_narwhals_to_native_dtype(dtype, dtypes=dtypes)
         native_series = native_namespace.chunked_array([values], type=dtype)
 
     elif implementation is Implementation.DASK:
@@ -393,7 +393,7 @@ def _from_dict_impl(
 
             schema = native_namespace.schema(
                 [
-                    (name, arrow_narwhals_to_native_dtype(dtype))
+                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
                     for name, dtype in schema.items()
                 ]
             )
