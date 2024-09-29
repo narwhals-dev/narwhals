@@ -33,6 +33,12 @@ class Series:
     `series_only=True`.
     """
 
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame
+
     def __init__(
         self,
         series: Any,
@@ -440,9 +446,7 @@ class Series:
             │ 3   │
             └─────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.to_frame(),
             level=self._level,
         )
@@ -2021,9 +2025,7 @@ class Series:
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             ),
@@ -2350,9 +2352,7 @@ class Series:
             │ 0   ┆ 1   │
             └─────┴─────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.to_dummies(separator=separator, drop_first=drop_first),
             level=self._level,
         )

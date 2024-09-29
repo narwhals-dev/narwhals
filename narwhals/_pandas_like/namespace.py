@@ -11,6 +11,7 @@ from typing import cast
 from narwhals import dtypes
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals._expression_parsing import reduce_output_names
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
@@ -218,9 +219,7 @@ class PandasLikeNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend([_series.fill_null(0) for _series in _expr._call(df)])
+            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr._call(df))
             return [reduce(lambda x, y: x + y, series)]
 
         return self._create_expr_from_callable(
@@ -228,16 +227,14 @@ class PandasLikeNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="sum_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def all_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend(list(_expr._call(df)))
+            series = (s for _expr in parsed_exprs for s in _expr._call(df))
             return [reduce(lambda x, y: x & y, series)]
 
         return self._create_expr_from_callable(
@@ -245,16 +242,14 @@ class PandasLikeNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def any_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend(list(_expr._call(df)))
+            series = (s for _expr in parsed_exprs for s in _expr._call(df))
             return [reduce(lambda x, y: x | y, series)]
 
         return self._create_expr_from_callable(
@@ -262,7 +257,7 @@ class PandasLikeNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="any_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:

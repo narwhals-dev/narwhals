@@ -8,7 +8,7 @@ from typing import Sequence
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import parse_exprs_and_named_exprs
-from narwhals._pandas_like.utils import translate_dtype
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
@@ -98,9 +98,6 @@ class DaskLazyFrame:
         mask = expr._call(self)[0]
         return self._from_native_frame(self._native_frame.loc[mask])
 
-    def lazy(self) -> Self:
-        return self
-
     def select(
         self: Self,
         *exprs: IntoDaskExpr,
@@ -143,7 +140,7 @@ class DaskLazyFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: translate_dtype(self._native_frame.loc[:, col])
+            col: native_to_narwhals_dtype(self._native_frame.loc[:, col])
             for col in self._native_frame.columns
         }
 

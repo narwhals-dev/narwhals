@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
 
 
-def translate_dtype(dtype: Any) -> dtypes.DType:
+def native_to_narwhals_dtype(dtype: Any) -> dtypes.DType:
     import pyarrow as pa  # ignore-banned-import
 
     if pa.types.is_int64(dtype):

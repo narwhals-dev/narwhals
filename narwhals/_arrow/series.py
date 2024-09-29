@@ -11,7 +11,7 @@ from typing import overload
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
-from narwhals._arrow.utils import translate_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
@@ -365,7 +365,7 @@ class ArrowSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return translate_dtype(self._native_series.type)
+        return native_to_narwhals_dtype(self._native_series.type)
 
     def abs(self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()

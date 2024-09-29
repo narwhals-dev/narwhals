@@ -11,9 +11,9 @@ from typing import overload
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
-from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import Implementation
 
@@ -167,7 +167,7 @@ class PandasLikeSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return translate_dtype(self._native_series)
+        return native_to_narwhals_dtype(self._native_series)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
