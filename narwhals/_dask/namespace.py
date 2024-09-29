@@ -9,7 +9,6 @@ from typing import Literal
 from typing import NoReturn
 from typing import cast
 
-from narwhals import dtypes
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
@@ -28,29 +27,6 @@ if TYPE_CHECKING:
 
 
 class DaskNamespace:
-    Int64 = dtypes.Int64
-    Int32 = dtypes.Int32
-    Int16 = dtypes.Int16
-    Int8 = dtypes.Int8
-    UInt64 = dtypes.UInt64
-    UInt32 = dtypes.UInt32
-    UInt16 = dtypes.UInt16
-    UInt8 = dtypes.UInt8
-    Float64 = dtypes.Float64
-    Float32 = dtypes.Float32
-    Boolean = dtypes.Boolean
-    Object = dtypes.Object
-    Unknown = dtypes.Unknown
-    Categorical = dtypes.Categorical
-    Enum = dtypes.Enum
-    String = dtypes.String
-    Datetime = dtypes.Datetime
-    Duration = dtypes.Duration
-    Date = dtypes.Date
-    List = dtypes.List
-    Struct = dtypes.Struct
-    Array = dtypes.Array
-
     @property
     def selectors(self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(
@@ -86,7 +62,7 @@ class DaskNamespace:
             *column_indices, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
-    def lit(self, value: Any, dtype: dtypes.DType | None) -> DaskExpr:
+    def lit(self, value: Any, dtype: DType | None) -> DaskExpr:
         def convert_if_dtype(
             series: dask_expr.Series, dtype: DType | type[DType]
         ) -> dask_expr.Series:
