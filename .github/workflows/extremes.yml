@@ -121,6 +121,9 @@ jobs:
         run: python -m pip install *.whl
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
+      - name: install cython
+        # needed for pandas nightly, else it'll install cython nightly which isn't compatible with pandas nightly
+        run: uv pip install --upgrade cython --system
       - name: uninstall pyarrow
         run: uv pip uninstall pyarrow --system
       # - name: install pyarrow nightly
