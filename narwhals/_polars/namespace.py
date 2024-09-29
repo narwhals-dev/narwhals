@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -118,11 +117,10 @@ class PolarsNamespace:
         polars_exprs = parse_into_exprs(*exprs, namespace=self)
 
         if self._backend_version < (0, 20, 8):  # pragma: no cover
-            total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in polars_exprs))
-            n_non_zero = reduce(
-                lambda x, y: x + y, ((1 - e.is_null()) for e in polars_exprs)
+            return PolarsExpr(
+                pl.sum_horizontal([e._native_expr for e in polars_exprs])
+                / pl.sum_horizontal([1 - e.is_null()._native_expr for e in polars_exprs])
             )
-            return PolarsExpr(total._native_expr / n_non_zero._native_expr)
 
         return PolarsExpr(pl.mean_horizontal([e._native_expr for e in polars_exprs]))
 
