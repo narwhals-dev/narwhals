@@ -370,8 +370,9 @@ class ArrowSeries:
             dtypes=self._dtypes,
         )
 
-    def dtype(self: Self, dtypes: DTypes) -> DType:
-        return native_to_narwhals_dtype(self._native_series.type, dtypes)
+    @property
+    def dtype(self: Self) -> DType:
+        return native_to_narwhals_dtype(self._native_series.type, self._dtypes)
 
     def abs(self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()

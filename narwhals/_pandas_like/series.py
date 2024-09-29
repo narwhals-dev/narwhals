@@ -172,8 +172,9 @@ class PandasLikeSeries:
     def shape(self) -> tuple[int]:
         return self._native_series.shape  # type: ignore[no-any-return]
 
-    def dtype(self: Self, dtypes: DTypes) -> DType:
-        return native_to_narwhals_dtype(self._native_series, dtypes)
+    @property
+    def dtype(self: Self) -> DType:
+        return native_to_narwhals_dtype(self._native_series, self._dtypes)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
@@ -776,12 +777,10 @@ class PandasLikeSeriesDateTimeNamespace:
         self._pandas_series = series
 
     def date(self) -> PandasLikeSeries:
-        from narwhals import dtypes
-
         result = self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.date,
         )
-        if str(result.dtype(dtypes)).lower() == "object":  # type: ignore[arg-type]
+        if str(result.dtype).lower() == "object":
             msg = (
                 "Accessing `date` on the default pandas backend "
                 "will return a Series of type `object`."

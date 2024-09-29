@@ -7,7 +7,6 @@ from narwhals._duckdb.dataframe import map_duckdb_dtype_to_narwhals_dtype
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
 
 
 class DuckDBInterchangeSeries:
@@ -17,8 +16,11 @@ class DuckDBInterchangeSeries:
     def __narwhals_series__(self) -> Any:
         return self
 
-    def dtype(self, dtypes: DTypes) -> DType:
-        return map_duckdb_dtype_to_narwhals_dtype(self._native_series.types[0], dtypes)
+    @property
+    def dtype(self) -> DType:
+        return map_duckdb_dtype_to_narwhals_dtype(
+            self._native_series.types[0], self._dtypes
+        )
 
     def __getattr__(self, attr: str) -> Any:
         msg = (  # pragma: no cover

@@ -7,7 +7,6 @@ from narwhals._ibis.dataframe import map_ibis_dtype_to_narwhals_dtype
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypes
 
 
 class IbisInterchangeSeries:
@@ -17,8 +16,9 @@ class IbisInterchangeSeries:
     def __narwhals_series__(self) -> Any:
         return self
 
-    def dtype(self, dtypes: DTypes) -> DType:
-        return map_ibis_dtype_to_narwhals_dtype(self._native_series.type(), dtypes)
+    @property
+    def dtype(self) -> DType:
+        return map_ibis_dtype_to_narwhals_dtype(self._native_series.type(), self._dtypes)
 
     def __getattr__(self, attr: str) -> Any:
         msg = (

@@ -87,8 +87,9 @@ class PolarsSeries:
     def name(self) -> str:
         return self._native_series.name  # type: ignore[no-any-return]
 
-    def dtype(self: Self, dtypes: DTypes) -> DType:
-        return native_to_narwhals_dtype(self._native_series.dtype, dtypes)
+    @property
+    def dtype(self: Self) -> DType:
+        return native_to_narwhals_dtype(self._native_series.dtype, self._dtypes)
 
     @overload
     def __getitem__(self, item: int) -> Any: ...
