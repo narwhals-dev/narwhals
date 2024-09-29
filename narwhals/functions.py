@@ -316,6 +316,23 @@ def from_dict(
         │ 2   ┆ 4   │
         └─────┴─────┘
     """
+    from narwhals import dtypes
+
+    return _from_dict_impl(
+        data,
+        schema,
+        native_namespace=native_namespace,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _from_dict_impl(
+    data: dict[str, Any],
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: ModuleType | None = None,
+    dtypes: DTypes,
+) -> DataFrame[Any]:
     from narwhals.series import Series
     from narwhals.translate import to_native
 
@@ -353,7 +370,6 @@ def from_dict(
         native_frame = native_namespace.DataFrame.from_dict(data)
 
         if schema:
-            from narwhals import dtypes
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
@@ -363,7 +379,7 @@ def from_dict(
                     schema[name],
                     native_type,
                     implementation,
-                    dtypes,  # type: ignore[arg-type]
+                    dtypes,
                 )
                 for name, native_type in native_frame.dtypes.items()
             }

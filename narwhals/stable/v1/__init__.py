@@ -19,6 +19,7 @@ from narwhals.expr import Expr as NwExpr
 from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
 from narwhals.expr import when as nw_when
+from narwhals.functions import _from_dict_impl
 from narwhals.functions import _new_series_impl
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
@@ -2011,8 +2012,15 @@ def from_dict(
         │ 2   ┆ 4   │
         └─────┴─────┘
     """
-    return _stableify(  # type: ignore[no-any-return]
-        nw.from_dict(data, schema=schema, native_namespace=native_namespace)
+    from narwhals.stable.v1 import dtypes
+
+    return _stableify(
+        _from_dict_impl(
+            data,
+            schema,
+            native_namespace=native_namespace,
+            dtypes=dtypes,  # type: ignore[arg-type]
+        )
     )
 
 
