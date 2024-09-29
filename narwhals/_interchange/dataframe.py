@@ -91,12 +91,10 @@ class InterchangeFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
-        from narwhals import dtypes  # TODO(marco): make this an argument
-
         return {
             column_name: map_interchange_dtype_to_narwhals_dtype(
                 self._interchange_frame.get_column_by_name(column_name).dtype,
-                dtypes,  # type: ignore[arg-type]
+                self._dtypes,
             )
             for column_name in self._interchange_frame.column_names()
         }

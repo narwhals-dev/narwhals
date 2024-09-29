@@ -86,23 +86,19 @@ class PolarsDataFrame:
 
     @property
     def schema(self) -> dict[str, Any]:
-        from narwhals import dtypes
-
         schema = self._native_frame.schema
         return {
-            name: native_to_narwhals_dtype(dtype, dtypes)  # type: ignore[arg-type]
+            name: native_to_narwhals_dtype(dtype, self._dtypes)
             for name, dtype in schema.items()
         }
 
     def collect_schema(self) -> dict[str, Any]:
-        from narwhals import dtypes
-
         if self._backend_version < (1,):  # pragma: no cover
             schema = self._native_frame.schema
         else:
             schema = dict(self._native_frame.collect_schema())
         return {
-            name: native_to_narwhals_dtype(dtype, dtypes)  # type: ignore[arg-type]
+            name: native_to_narwhals_dtype(dtype, self._dtypes)
             for name, dtype in schema.items()
         }
 
@@ -288,23 +284,19 @@ class PolarsLazyFrame:
 
     @property
     def schema(self) -> dict[str, Any]:
-        from narwhals import dtypes
-
         schema = self._native_frame.schema
         return {
-            name: native_to_narwhals_dtype(dtype, dtypes)  # type: ignore[arg-type]
+            name: native_to_narwhals_dtype(dtype, self._dtypes)
             for name, dtype in schema.items()
         }
 
     def collect_schema(self) -> dict[str, Any]:
-        from narwhals import dtypes
-
         if self._backend_version < (1,):  # pragma: no cover
             schema = self._native_frame.schema
         else:
             schema = dict(self._native_frame.collect_schema())
         return {
-            name: native_to_narwhals_dtype(dtype, dtypes)  # type: ignore[arg-type]
+            name: native_to_narwhals_dtype(dtype, self._dtypes)
             for name, dtype in schema.items()
         }
 

@@ -7,7 +7,6 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
-from narwhals import dtypes
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
@@ -18,32 +17,10 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.typing import IntoPolarsExpr
+    from narwhals.dtypes import DType
 
 
 class PolarsNamespace:
-    Int64 = dtypes.Int64
-    Int32 = dtypes.Int32
-    Int16 = dtypes.Int16
-    Int8 = dtypes.Int8
-    UInt64 = dtypes.UInt64
-    UInt32 = dtypes.UInt32
-    UInt16 = dtypes.UInt16
-    UInt8 = dtypes.UInt8
-    Float64 = dtypes.Float64
-    Float32 = dtypes.Float32
-    Boolean = dtypes.Boolean
-    Object = dtypes.Object
-    Unknown = dtypes.Unknown
-    Categorical = dtypes.Categorical
-    Enum = dtypes.Enum
-    String = dtypes.String
-    Datetime = dtypes.Datetime
-    Duration = dtypes.Duration
-    Date = dtypes.Date
-    List = dtypes.List
-    Struct = dtypes.Struct
-    Array = dtypes.Array
-
     def __init__(self, *, backend_version: tuple[int, ...]) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
@@ -99,7 +76,7 @@ class PolarsNamespace:
             result, backend_version=items[0]._backend_version, dtypes=items[0]._dtypes
         )
 
-    def lit(self, value: Any, dtype: dtypes.DType | None = None) -> PolarsExpr:
+    def lit(self, value: Any, dtype: DType | None = None) -> PolarsExpr:
         import polars as pl  # ignore-banned-import()
 
         from narwhals._polars.expr import PolarsExpr
@@ -139,7 +116,7 @@ class PolarsNamespace:
 
 
 class PolarsSelectors:
-    def by_dtype(self, dtypes: Iterable[dtypes.DType]) -> PolarsExpr:
+    def by_dtype(self, dtypes: Iterable[DType]) -> PolarsExpr:
         import polars as pl  # ignore-banned-import()
 
         from narwhals._polars.expr import PolarsExpr
