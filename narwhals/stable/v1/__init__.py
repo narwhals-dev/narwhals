@@ -46,6 +46,7 @@ from narwhals.stable.v1.dtypes import UInt16
 from narwhals.stable.v1.dtypes import UInt32
 from narwhals.stable.v1.dtypes import UInt64
 from narwhals.stable.v1.dtypes import Unknown
+from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
@@ -813,18 +814,21 @@ def from_native(
     Returns:
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
     """
+    from narwhals.stable.v1 import dtypes
+
     # Early returns
     if isinstance(native_dataframe, (DataFrame, LazyFrame)) and not series_only:
         return native_dataframe
     if isinstance(native_dataframe, Series) and (series_only or allow_series):
         return native_dataframe
-    result = nw.from_native(
+    result = _from_native_impl(
         native_dataframe,
         strict=strict,
         eager_only=eager_only,
         eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
+        dtypes=dtypes,  # type: ignore[arg-type]
     )
     return _stableify(result)
 
