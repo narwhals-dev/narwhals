@@ -9,7 +9,6 @@ from typing import Literal
 from typing import TypeVar
 from typing import Union
 
-from narwhals import dtypes
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
@@ -27,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
+    from narwhals.typing import DTypes
 
 
 def concat(
@@ -195,6 +195,25 @@ def new_series(
            2
         ]
     """
+    from narwhals import dtypes
+
+    return _new_series_impl(
+        name,
+        values,
+        dtype,
+        native_namespace=native_namespace,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _new_series_impl(
+    name: str,
+    values: Any,
+    dtype: DType | type[DType] | None = None,
+    *,
+    native_namespace: ModuleType,
+    dtypes: DTypes,
+) -> Series:
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
@@ -220,7 +239,7 @@ def new_series(
                 dtype,
                 None,
                 implementation,
-                dtypes,  # type: ignore[arg-type]
+                dtypes,
             )
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
@@ -334,6 +353,7 @@ def from_dict(
         native_frame = native_namespace.DataFrame.from_dict(data)
 
         if schema:
+            from narwhals import dtypes
             from narwhals._pandas_like.utils import (
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )

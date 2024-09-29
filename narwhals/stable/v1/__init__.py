@@ -19,6 +19,7 @@ from narwhals.expr import Expr as NwExpr
 from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
 from narwhals.expr import when as nw_when
+from narwhals.functions import _new_series_impl
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
@@ -1947,8 +1948,16 @@ def new_series(
            2
         ]
     """
+    from narwhals.stable.v1 import dtypes
+
     return _stableify(
-        nw.new_series(name, values, dtype, native_namespace=native_namespace)
+        _new_series_impl(
+            name,
+            values,
+            dtype,
+            native_namespace=native_namespace,
+            dtypes=dtypes,  # type: ignore[arg-type]
+        )
     )
 
 
