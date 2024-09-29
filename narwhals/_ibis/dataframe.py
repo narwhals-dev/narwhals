@@ -60,7 +60,7 @@ class IbisInterchangeFrame:
     def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
-        return IbisInterchangeSeries(self._native_frame[item])
+        return IbisInterchangeSeries(self._native_frame[item], dtypes=self._dtypes)
 
     def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
