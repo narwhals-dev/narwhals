@@ -27,6 +27,7 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.translate import from_native
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
@@ -324,7 +325,7 @@ def maybe_reset_index(obj: T) -> Any:
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]}, index=([6, 7]))
         >>> df = nw.from_native(df_pd)
-        >>> nw.maybe_reset_index(df)
+        >>> nw.to_native(nw.maybe_reset_index(df))
            a  b
         0  1  4
         1  2  5

@@ -1814,7 +1814,7 @@ def maybe_reset_index(obj: T) -> Any:
         >>> import narwhals.stable.v1 as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]}, index=([6, 7]))
         >>> df = nw.from_native(df_pd)
-        >>> nw.maybe_reset_index(df)
+        >>> nw.to_native(nw.maybe_reset_index(df))
            a  b
         0  1  4
         1  2  5
