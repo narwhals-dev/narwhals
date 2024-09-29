@@ -273,10 +273,8 @@ class PandasLikeDataFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
-        from narwhals import dtypes
-
         return {
-            col: native_to_narwhals_dtype(self._native_frame.loc[:, col], dtypes)  # type: ignore[arg-type]
+            col: native_to_narwhals_dtype(self._native_frame.loc[:, col], self._dtypes)
             for col in self._native_frame.columns
         }
 
