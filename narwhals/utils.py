@@ -308,7 +308,7 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     return df_any  # type: ignore[no-any-return]
 
 
-def maybe_reset_index(obj: T) -> Any:
+def maybe_reset_index(obj: T) -> T:
     """
     Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
 
@@ -337,11 +337,11 @@ def maybe_reset_index(obj: T) -> Any:
     obj_any = cast(Any, obj)
     native_obj = to_native(obj_any)
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
-        return from_native(
+        return from_native(  # type: ignore[return-value]
             native_obj.reset_index(drop=True),
             allow_series=True,
         )
-    return obj_any
+    return obj_any  # type: ignore[no-any-return]
 
 
 def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:

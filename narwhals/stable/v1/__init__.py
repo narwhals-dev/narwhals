@@ -1797,7 +1797,7 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     return nw_maybe_set_index(df, column_names)
 
 
-def maybe_reset_index(obj: T) -> Any:
+def maybe_reset_index(obj: T) -> T:
     """
     Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
 
