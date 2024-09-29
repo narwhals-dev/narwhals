@@ -36,7 +36,7 @@ class PolarsDataFrame:
         return self
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace(backend_version=self._backend_version)
+        return PolarsNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
@@ -255,7 +255,7 @@ class PolarsLazyFrame:
         return self
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace(backend_version=self._backend_version)
+        return PolarsNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
