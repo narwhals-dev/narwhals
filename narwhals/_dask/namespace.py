@@ -359,6 +359,7 @@ class DaskWhen:
             output_names=None,
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
 
@@ -373,9 +374,10 @@ class DaskThen(DaskExpr):
         output_names: list[str] | None,
         returns_scalar: bool,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._backend_version = backend_version
-
+        self._dtypes = dtypes
         self._call = call
         self._depth = depth
         self._function_name = function_name
