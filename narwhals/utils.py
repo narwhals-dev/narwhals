@@ -336,7 +336,9 @@ def maybe_reset_index(obj: T) -> Any:
     obj_any = cast(Any, obj)
     native_obj = to_native(obj_any)
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
-        return native_obj.reset_index(drop=True)
+        return from_native(
+            native_obj.reset_index(drop=True), allow_series=True,
+        )
     return obj_any
 
 
