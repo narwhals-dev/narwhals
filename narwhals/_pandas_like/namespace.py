@@ -8,7 +8,6 @@ from typing import Iterable
 from typing import Literal
 from typing import cast
 
-from narwhals import dtypes
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
@@ -22,34 +21,12 @@ from narwhals._pandas_like.utils import vertical_concat
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
+    from narwhals.dtypes import DType
     from narwhals.typing import DTypes
     from narwhals.utils import Implementation
 
 
 class PandasLikeNamespace:
-    Int64 = dtypes.Int64
-    Int32 = dtypes.Int32
-    Int16 = dtypes.Int16
-    Int8 = dtypes.Int8
-    UInt64 = dtypes.UInt64
-    UInt32 = dtypes.UInt32
-    UInt16 = dtypes.UInt16
-    UInt8 = dtypes.UInt8
-    Float64 = dtypes.Float64
-    Float32 = dtypes.Float32
-    Boolean = dtypes.Boolean
-    Object = dtypes.Object
-    Unknown = dtypes.Unknown
-    Categorical = dtypes.Categorical
-    Enum = dtypes.Enum
-    String = dtypes.String
-    Datetime = dtypes.Datetime
-    Duration = dtypes.Duration
-    Date = dtypes.Date
-    List = dtypes.List
-    Struct = dtypes.Struct
-    Array = dtypes.Array
-
     @property
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace(
@@ -158,7 +135,7 @@ class PandasLikeNamespace:
             dtypes=self._dtypes,
         )
 
-    def lit(self, value: Any, dtype: dtypes.DType | None) -> PandasLikeExpr:
+    def lit(self, value: Any, dtype: DType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = PandasLikeSeries._from_iterable(
                 data=[value],
