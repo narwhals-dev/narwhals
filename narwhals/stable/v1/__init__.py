@@ -52,6 +52,7 @@ from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
 from narwhals.utils import maybe_get_index as nw_maybe_get_index
+from narwhals.utils import maybe_reset_index as nw_maybe_reset_index
 from narwhals.utils import maybe_set_index as nw_maybe_set_index
 
 if TYPE_CHECKING:
@@ -1796,6 +1797,35 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     return nw_maybe_set_index(df, column_names)
 
 
+def maybe_reset_index(obj: T) -> Any:
+    """
+    Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already aligns indices for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this is a no-op.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]}, index=([6, 7]))
+        >>> df = nw.from_native(df_pd)
+        >>> nw.maybe_reset_index(df)
+           a  b
+        0  1  4
+        1  2  5
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    return nw_maybe_reset_index(obj)
+
+
 def get_native_namespace(obj: Any) -> Any:
     """
     Get native namespace from object.
@@ -2011,6 +2041,7 @@ __all__ = [
     "maybe_align_index",
     "maybe_convert_dtypes",
     "maybe_get_index",
+    "maybe_reset_index",
     "maybe_set_index",
     "get_native_namespace",
     "get_level",
