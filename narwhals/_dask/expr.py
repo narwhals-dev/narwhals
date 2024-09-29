@@ -710,7 +710,7 @@ class DaskExpr:
         dtype: DType | type[DType],
     ) -> Self:
         def func(_input: Any, dtype: DType | type[DType]) -> Any:
-            dtype = narwhals_to_native_dtype(dtype)
+            dtype = narwhals_to_native_dtype(dtype, self._dtypes)
             return _input.astype(dtype)
 
         return self._from_call(

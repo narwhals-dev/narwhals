@@ -66,7 +66,11 @@ class DaskNamespace:
         def convert_if_dtype(
             series: dask_expr.Series, dtype: DType | type[DType]
         ) -> dask_expr.Series:
-            return series.astype(narwhals_to_native_dtype(dtype)) if dtype else series
+            return (
+                series.astype(narwhals_to_native_dtype(dtype, self._dtypes))
+                if dtype
+                else series
+            )
 
         return DaskExpr(
             lambda df: [
