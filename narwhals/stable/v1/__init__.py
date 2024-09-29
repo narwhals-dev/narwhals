@@ -1687,9 +1687,7 @@ def is_ordered_categorical(series: Series) -> bool:
         >>> func(s_pl)
         True
     """
-    from narwhals.stable.v1 import dtypes
-
-    return nw_is_ordered_categorical(series, dtypes)  # type: ignore[arg-type]
+    return nw_is_ordered_categorical(series)
 
 
 def maybe_align_index(lhs: T, rhs: Series | DataFrame[Any] | LazyFrame[Any]) -> T:
