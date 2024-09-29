@@ -133,7 +133,7 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: install-pandas-nightly
-        run: uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas --system
+        run: pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
       - name: uninstall numpy
         run: uv pip uninstall numpy --system
       - name: install numpy nightly
