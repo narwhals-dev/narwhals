@@ -131,7 +131,7 @@ jobs:
       - name: uninstall pandas
         run: uv pip uninstall pandas --system
       - name: install-pandas-nightly
-        run: uv pip install --prerelease=allow --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas --system
+        run: uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas --system
       - name: uninstall numpy
         run: uv pip uninstall numpy --system
       - name: install numpy nightly
