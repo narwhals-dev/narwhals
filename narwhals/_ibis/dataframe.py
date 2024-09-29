@@ -70,10 +70,8 @@ class IbisInterchangeFrame:
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
-            from narwhals import dtypes
-
             return {
-                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, dtypes)  # type: ignore[arg-type]
+                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, self._dtypes)
                 for column_name, ibis_dtype in self._native_frame.schema().items()
             }
         msg = (
