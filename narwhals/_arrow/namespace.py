@@ -7,7 +7,6 @@ from typing import Iterable
 from typing import Literal
 from typing import cast
 
-from narwhals import dtypes
 from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
@@ -23,33 +22,11 @@ if TYPE_CHECKING:
     from typing import Callable
 
     from narwhals._arrow.typing import IntoArrowExpr
+    from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
 
 class ArrowNamespace:
-    Int64 = dtypes.Int64
-    Int32 = dtypes.Int32
-    Int16 = dtypes.Int16
-    Int8 = dtypes.Int8
-    UInt64 = dtypes.UInt64
-    UInt32 = dtypes.UInt32
-    UInt16 = dtypes.UInt16
-    UInt8 = dtypes.UInt8
-    Float64 = dtypes.Float64
-    Float32 = dtypes.Float32
-    Boolean = dtypes.Boolean
-    Object = dtypes.Object
-    Unknown = dtypes.Unknown
-    Categorical = dtypes.Categorical
-    Enum = dtypes.Enum
-    String = dtypes.String
-    Datetime = dtypes.Datetime
-    Duration = dtypes.Duration
-    Date = dtypes.Date
-    List = dtypes.List
-    Struct = dtypes.Struct
-    Array = dtypes.Array
-
     def _create_expr_from_callable(
         self,
         func: Callable[[ArrowDataFrame], list[ArrowSeries]],
@@ -170,7 +147,7 @@ class ArrowNamespace:
             dtypes=self._dtypes,
         )
 
-    def lit(self, value: Any, dtype: dtypes.DType | None) -> ArrowExpr:
+    def lit(self, value: Any, dtype: DType | None) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries._from_iterable(
                 data=[value],
@@ -242,7 +219,7 @@ class ArrowNamespace:
         total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in arrow_exprs))
         n_non_zero = reduce(
             lambda x, y: x + y,
-            ((1 - e.is_null().cast(self.Int64())) for e in arrow_exprs),
+            ((1 - e.is_null().cast(self._dtypes.Int64())) for e in arrow_exprs),
         )
         return total / n_non_zero
 
