@@ -121,15 +121,17 @@ jobs:
         run: python -m pip install *.whl
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
-      - name: install cython
-        # needed for pandas nightly, else it'll install cython nightly which isn't compatible with pandas nightly
-        run: uv pip install --upgrade cython --system
       - name: uninstall pyarrow
         run: uv pip uninstall pyarrow --system
       # - name: install pyarrow nightly
       #   run: uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow --system
       - name: uninstall pandas
         run: uv pip uninstall pandas --system
+      - name: install cython
+        # needed for pandas nightly, else it'll install cython nightly which isn't compatible with pandas nightly
+        run: uv pip install --upgrade cython --system
+      - name: show-deps
+        run: uv pip freeze
       - name: install-pandas-nightly
         run: uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas --system
       - name: uninstall numpy
