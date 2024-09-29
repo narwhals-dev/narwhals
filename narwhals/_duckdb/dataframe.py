@@ -74,10 +74,10 @@ class DuckDBInterchangeFrame:
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
-            from narwhals import dtypes
-
             return {
-                column_name: map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype, dtypes)  # type: ignore[arg-type]
+                column_name: map_duckdb_dtype_to_narwhals_dtype(
+                    duckdb_dtype, self._dtypes
+                )
                 for column_name, duckdb_dtype in zip(
                     self._native_frame.columns, self._native_frame.types
                 )
