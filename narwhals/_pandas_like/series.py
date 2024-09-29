@@ -80,11 +80,13 @@ class PandasLikeSeries:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._name = native_series.name
         self._native_series = native_series
         self._implementation = implementation
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary
@@ -133,6 +135,7 @@ class PandasLikeSeries:
             series,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @classmethod
@@ -144,6 +147,7 @@ class PandasLikeSeries:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         return cls(
             native_series_from_iterable(
@@ -154,6 +158,7 @@ class PandasLikeSeries:
             ),
             implementation=implementation,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     def __len__(self) -> int:
@@ -213,6 +218,7 @@ class PandasLikeSeries:
             self._native_series.to_frame(),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def to_list(self) -> Any:
@@ -599,6 +605,7 @@ class PandasLikeSeries:
             val_count,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def quantile(
@@ -641,6 +648,7 @@ class PandasLikeSeries:
             ).astype(int),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:

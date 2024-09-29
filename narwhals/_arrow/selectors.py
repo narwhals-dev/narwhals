@@ -14,12 +14,14 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowSelectorNamespace:
-    def __init__(self: Self, *, backend_version: tuple[int, ...]) -> None:
+    def __init__(self: Self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.PYARROW
+        self._dtypes = dtypes
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> ArrowSelector:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -32,6 +34,7 @@ class ArrowSelectorNamespace:
             root_names=None,
             output_names=None,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def numeric(self: Self) -> ArrowSelector:
@@ -70,6 +73,7 @@ class ArrowSelectorNamespace:
             root_names=None,
             output_names=None,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
 
@@ -91,6 +95,7 @@ class ArrowSelector(ArrowExpr):
             root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def __sub__(self: Self, other: Self | Any) -> ArrowSelector | Any:
@@ -108,6 +113,7 @@ class ArrowSelector(ArrowExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() - other
@@ -127,6 +133,7 @@ class ArrowSelector(ArrowExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() | other
@@ -146,12 +153,18 @@ class ArrowSelector(ArrowExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() & other
 
     def __invert__(self: Self) -> ArrowSelector:
-        return ArrowSelectorNamespace(backend_version=self._backend_version).all() - self
+        return (
+            ArrowSelectorNamespace(
+                backend_version=self._backend_version, dtypes=self._dtypes
+            ).all()
+            - self
+        )
 
     def __rsub__(self: Self, other: Any) -> NoReturn:
         raise NotImplementedError

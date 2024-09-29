@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class PandasLikeDataFrame:
@@ -45,11 +46,13 @@ class PandasLikeDataFrame:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._validate_columns(native_dataframe.columns)
         self._native_frame = native_dataframe
         self._implementation = implementation
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -60,7 +63,9 @@ class PandasLikeDataFrame:
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasLikeNamespace(self._implementation, self._backend_version)
+        return PandasLikeNamespace(
+            self._implementation, self._backend_version, dtypes=self._dtypes
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
@@ -92,6 +97,7 @@ class PandasLikeDataFrame:
             df,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def get_column(self, name: str) -> PandasLikeSeries:
@@ -101,6 +107,7 @@ class PandasLikeDataFrame:
             self._native_frame.loc[:, name],
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
@@ -153,6 +160,7 @@ class PandasLikeDataFrame:
                 self._native_frame.loc[:, item],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
 
         elif (
@@ -208,6 +216,7 @@ class PandasLikeDataFrame:
                 native_series,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
 
         elif is_sequence_but_not_str(item) or (is_numpy_array(item) and item.ndim == 1):
@@ -308,6 +317,7 @@ class PandasLikeDataFrame:
             index=self._native_frame.index,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         ).alias(name)
         return self._from_native_frame(
             horizontal_concat(
@@ -419,6 +429,7 @@ class PandasLikeDataFrame:
             self._native_frame,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     # --- actions ---
@@ -625,6 +636,7 @@ class PandasLikeDataFrame:
                     self._native_frame.loc[:, col],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
+                    dtypes=self._dtypes,
                 )
                 for col in self.columns
             }
@@ -674,6 +686,7 @@ class PandasLikeDataFrame:
             self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def is_empty(self: Self) -> bool:
@@ -686,6 +699,7 @@ class PandasLikeDataFrame:
             ~self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def null_count(self: Self) -> PandasLikeDataFrame:
@@ -693,6 +707,7 @@ class PandasLikeDataFrame:
             self._native_frame.isna().sum(axis=0).to_frame().transpose(),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:

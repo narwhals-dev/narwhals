@@ -92,8 +92,12 @@ class PolarsNamespace:
         dfs: list[Any] = [item._native_frame for item in items]
         result = pl.concat(dfs, how=how)
         if isinstance(result, pl.DataFrame):
-            return PolarsDataFrame(result, backend_version=items[0]._backend_version)
-        return PolarsLazyFrame(result, backend_version=items[0]._backend_version)
+            return PolarsDataFrame(
+                result, backend_version=items[0]._backend_version, dtypes=items[0]._dtypes
+            )
+        return PolarsLazyFrame(
+            result, backend_version=items[0]._backend_version, dtypes=items[0]._dtypes
+        )
 
     def lit(self, value: Any, dtype: dtypes.DType | None = None) -> PolarsExpr:
         import polars as pl  # ignore-banned-import()

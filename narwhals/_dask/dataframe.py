@@ -26,15 +26,21 @@ if TYPE_CHECKING:
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class DaskLazyFrame:
     def __init__(
-        self, native_dataframe: dd.DataFrame, *, backend_version: tuple[int, ...]
+        self,
+        native_dataframe: dd.DataFrame,
+        *,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._native_frame = native_dataframe
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
+        self._dtypes = dtypes
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.DASK:
@@ -46,13 +52,15 @@ class DaskLazyFrame:
     def __narwhals_namespace__(self) -> DaskNamespace:
         from narwhals._dask.namespace import DaskNamespace
 
-        return DaskNamespace(backend_version=self._backend_version)
+        return DaskNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
     def _from_native_frame(self, df: Any) -> Self:
-        return self.__class__(df, backend_version=self._backend_version)
+        return self.__class__(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def with_columns(self, *exprs: DaskExpr, **named_exprs: DaskExpr) -> Self:
         df = self._native_frame
@@ -70,6 +78,7 @@ class DaskLazyFrame:
             result,
             implementation=Implementation.PANDAS,
             backend_version=parse_version(pd.__version__),
+            dtypes=self._dtypes,
         )
 
     @property
@@ -92,7 +101,7 @@ class DaskLazyFrame:
 
         from narwhals._dask.namespace import DaskNamespace
 
-        plx = DaskNamespace(backend_version=self._backend_version)
+        plx = DaskNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         mask = expr._call(self)[0]

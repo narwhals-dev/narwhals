@@ -24,10 +24,13 @@ from narwhals._polars.utils import native_to_narwhals_dtype
 
 
 class PolarsSeries:
-    def __init__(self, series: Any, *, backend_version: tuple[int, ...]) -> None:
+    def __init__(
+        self, series: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+    ) -> None:
         self._native_series = series
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
+        self._dtypes = dtypes
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsSeries"
@@ -43,7 +46,9 @@ class PolarsSeries:
         raise AssertionError(msg)
 
     def _from_native_series(self, series: Any) -> Self:
-        return self.__class__(series, backend_version=self._backend_version)
+        return self.__class__(
+            series, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def _from_native_object(self, series: Any) -> Any:
         import polars as pl  # ignore-banned-import()
@@ -53,7 +58,9 @@ class PolarsSeries:
         if isinstance(series, pl.DataFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
-            return PolarsDataFrame(series, backend_version=self._backend_version)
+            return PolarsDataFrame(
+                series, backend_version=self._backend_version, dtypes=self._dtypes
+            )
         # scalar
         return series
 
@@ -184,7 +191,9 @@ class PolarsSeries:
                 separator=separator, drop_first=drop_first
             )
 
-        return PolarsDataFrame(result, backend_version=self._backend_version)
+        return PolarsDataFrame(
+            result, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         if self._backend_version < (0, 20, 6):  # pragma: no cover
@@ -232,7 +241,9 @@ class PolarsSeries:
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             )
 
-        return PolarsDataFrame(result, backend_version=self._backend_version)
+        return PolarsDataFrame(
+            result, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:

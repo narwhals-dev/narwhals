@@ -95,6 +95,7 @@ def create_native_series(
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
+    dtypes: DTypes,
 ) -> PandasLikeSeries:
     from narwhals._pandas_like.series import PandasLikeSeries
 
@@ -103,7 +104,10 @@ def create_native_series(
             iterable, index=index, name=""
         )
         return PandasLikeSeries(
-            series, implementation=implementation, backend_version=backend_version
+            series,
+            implementation=implementation,
+            backend_version=backend_version,
+            dtypes=dtypes,
         )
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"

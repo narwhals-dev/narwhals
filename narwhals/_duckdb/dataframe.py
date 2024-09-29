@@ -58,8 +58,9 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DTy
 
 
 class DuckDBInterchangeFrame:
-    def __init__(self, df: Any) -> None:
+    def __init__(self, df: Any, dtypes: DTypes) -> None:
         self._native_frame = df
+        self._dtypes = dtypes
 
     def __narwhals_dataframe__(self) -> Any:
         return self

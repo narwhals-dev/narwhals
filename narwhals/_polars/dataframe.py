@@ -17,12 +17,17 @@ if TYPE_CHECKING:
     import numpy as np
     from typing_extensions import Self
 
+    from narwhals.typing import DTypes
+
 
 class PolarsDataFrame:
-    def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
+    def __init__(
+        self, df: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+    ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
+        self._dtypes = dtypes
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsDataFrame"
@@ -41,7 +46,9 @@ class PolarsDataFrame:
         raise AssertionError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
-        return self.__class__(df, backend_version=self._backend_version)
+        return self.__class__(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def _from_native_object(self, obj: Any) -> Any:
         import polars as pl  # ignore-banned-import()
@@ -49,7 +56,9 @@ class PolarsDataFrame:
         if isinstance(obj, pl.Series):
             from narwhals._polars.series import PolarsSeries
 
-            return PolarsSeries(obj, backend_version=self._backend_version)
+            return PolarsSeries(
+                obj, backend_version=self._backend_version, dtypes=self._dtypes
+            )
         if isinstance(obj, pl.DataFrame):
             return self._from_native_frame(obj)
         # scalar
@@ -150,14 +159,18 @@ class PolarsDataFrame:
             if isinstance(result, pl.Series):
                 from narwhals._polars.series import PolarsSeries
 
-                return PolarsSeries(result, backend_version=self._backend_version)
+                return PolarsSeries(
+                    result, backend_version=self._backend_version, dtypes=self._dtypes
+                )
             return self._from_native_object(result)
 
     def get_column(self, name: str) -> Any:
         from narwhals._polars.series import PolarsSeries
 
         return PolarsSeries(
-            self._native_frame.get_column(name), backend_version=self._backend_version
+            self._native_frame.get_column(name),
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def is_empty(self) -> bool:
@@ -169,7 +182,9 @@ class PolarsDataFrame:
 
     def lazy(self) -> PolarsLazyFrame:
         return PolarsLazyFrame(
-            self._native_frame.lazy(), backend_version=self._backend_version
+            self._native_frame.lazy(),
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def to_dict(self, *, as_series: bool) -> Any:
@@ -179,7 +194,9 @@ class PolarsDataFrame:
             from narwhals._polars.series import PolarsSeries
 
             return {
-                name: PolarsSeries(col, backend_version=self._backend_version)
+                name: PolarsSeries(
+                    col, backend_version=self._backend_version, dtypes=self._dtypes
+                )
                 for name, col in df.to_dict(as_series=True).items()
             }
         else:
@@ -227,10 +244,13 @@ class PolarsDataFrame:
 
 
 class PolarsLazyFrame:
-    def __init__(self, df: Any, *, backend_version: tuple[int, ...]) -> None:
+    def __init__(
+        self, df: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+    ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
+        self._dtypes = dtypes
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
@@ -249,7 +269,9 @@ class PolarsLazyFrame:
         raise AssertionError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
-        return self.__class__(df, backend_version=self._backend_version)
+        return self.__class__(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -288,7 +310,9 @@ class PolarsLazyFrame:
 
     def collect(self) -> PolarsDataFrame:
         return PolarsDataFrame(
-            self._native_frame.collect(), backend_version=self._backend_version
+            self._native_frame.collect(),
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def group_by(self, *by: str) -> Any:

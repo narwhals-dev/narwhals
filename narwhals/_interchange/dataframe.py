@@ -74,9 +74,10 @@ def map_interchange_dtype_to_narwhals_dtype(
 
 
 class InterchangeFrame:
-    def __init__(self, df: Any) -> None:
+    def __init__(self, df: Any, dtypes: DTypes) -> None:
         self._native_frame = df
         self._interchange_frame = df.__dataframe__()
+        self._dtypes = dtypes
 
     def __narwhals_dataframe__(self) -> Any:
         return self

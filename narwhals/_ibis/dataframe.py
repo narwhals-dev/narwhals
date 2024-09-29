@@ -50,8 +50,9 @@ def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
 
 
 class IbisInterchangeFrame:
-    def __init__(self, df: Any) -> None:
+    def __init__(self, df: Any, dtypes: DTypes) -> None:
         self._native_frame = df
+        self._dtypes = dtypes
 
     def __narwhals_dataframe__(self) -> Any:
         return self
