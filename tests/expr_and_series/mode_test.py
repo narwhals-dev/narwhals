@@ -14,12 +14,7 @@ data = {
 }
 
 
-def test_mode_single_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_mode_single_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").mode()).sort("a")
     expected = {"a": [1, 2]}

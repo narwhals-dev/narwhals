@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
@@ -40,3 +41,15 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
     expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
     compare_dicts(result, expected)
+
+
+def test_dask_with_columns_modifies_index() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
+    import dask.dataframe as dd
+
+    df = nw.from_native(dd.from_dict({"a": [1, 3, 2]}, npartitions=2))
+    with pytest.raises(
+        ValueError, match="Expressions that modify the index are not supported"
+    ):
+        df.with_columns(nw.col("a").head(1))

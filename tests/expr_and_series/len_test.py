@@ -1,7 +1,5 @@
 from typing import Any
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import compare_dicts
@@ -18,11 +16,9 @@ def test_len_no_filter(constructor: Constructor) -> None:
     compare_dicts(df, expected)
 
 
-def test_len_chaining(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_len_chaining(constructor: Constructor) -> None:
     data = {"a": list("xyz"), "b": [1, 2, 1]}
     expected = {"a1": [2], "a2": [1]}
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data)).select(
         nw.col("a").filter(nw.col("b") == 1).len().alias("a1"),
         nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),
