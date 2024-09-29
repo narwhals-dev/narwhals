@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
+    from narwhals.typing import DTypes
 
 T = TypeVar("T")
 
@@ -353,7 +354,7 @@ def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
     return obj_any  # type: ignore[no-any-return]
 
 
-def is_ordered_categorical(series: Series) -> bool:
+def is_ordered_categorical(series: Series, dtypes: DTypes) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
 
@@ -394,14 +395,14 @@ def is_ordered_categorical(series: Series) -> bool:
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)
-        and series.dtype == series._dtypes.Categorical
+        and series.dtype == dtypes.Categorical
     ):
         return series._compliant_series._native_series.describe_categorical[  # type: ignore[no-any-return]
             "is_ordered"
         ]
-    if series.dtype == series._dtypes.Enum:
+    if series.dtype == dtypes.Enum:
         return True
-    if series.dtype != series._dtypes.Categorical:
+    if series.dtype != dtypes.Categorical:
         return False
     native_series = to_native(series)
     if is_polars_series(native_series):

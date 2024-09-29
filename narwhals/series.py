@@ -39,12 +39,6 @@ class Series:
 
         return DataFrame
 
-    @property
-    def _dtypes(self) -> ModuleType:
-        from narwhals import dtypes
-
-        return dtypes
-
     def __init__(
         self,
         series: Any,
