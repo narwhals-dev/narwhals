@@ -8,8 +8,8 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals.utils import parse_version
 from narwhals import dtypes
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -33,7 +33,14 @@ class Series:
     `narwhals.from_native`, making sure to pass `allow_series=True` or
     `series_only=True`.
     """
+
     _dtypes = dtypes
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame
 
     def __init__(
         self,
@@ -442,9 +449,7 @@ class Series:
             │ 3   │
             └─────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.to_frame(),
             level=self._level,
         )
@@ -2023,9 +2028,7 @@ class Series:
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             ),
@@ -2352,9 +2355,7 @@ class Series:
             │ 0   ┆ 1   │
             └─────┴─────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.to_dummies(separator=separator, drop_first=drop_first),
             level=self._level,
         )

@@ -11,9 +11,9 @@ from typing import overload
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
-from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import Implementation
 
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -78,11 +79,13 @@ class PandasLikeSeries:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._name = native_series.name
         self._native_series = native_series
         self._implementation = implementation
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary
@@ -131,6 +134,7 @@ class PandasLikeSeries:
             series,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @classmethod
@@ -142,6 +146,7 @@ class PandasLikeSeries:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         return cls(
             native_series_from_iterable(
@@ -152,6 +157,7 @@ class PandasLikeSeries:
             ),
             implementation=implementation,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     def __len__(self) -> int:
@@ -165,8 +171,9 @@ class PandasLikeSeries:
     def shape(self) -> tuple[int]:
         return self._native_series.shape  # type: ignore[no-any-return]
 
-    def dtype(self: Self, dtypes) -> DType:
-        return translate_dtype(self._native_series, dtypes)
+    @property
+    def dtype(self: Self) -> DType:
+        return native_to_narwhals_dtype(self._native_series, self._dtypes)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
@@ -190,7 +197,7 @@ class PandasLikeSeries:
     ) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(
-            dtype, ser.dtype, self._implementation, self._backend_version
+            dtype, ser.dtype, self._implementation, self._backend_version, self._dtypes
         )
         return self._from_native_series(ser.astype(dtype))
 
@@ -213,6 +220,7 @@ class PandasLikeSeries:
             self._native_series.to_frame(),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def to_list(self) -> Any:
@@ -599,6 +607,7 @@ class PandasLikeSeries:
             val_count,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def quantile(
@@ -641,6 +650,7 @@ class PandasLikeSeries:
             ).astype(int),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:

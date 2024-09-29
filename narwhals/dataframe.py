@@ -107,12 +107,6 @@ class BaseFrame(Generic[FrameT]):
     def columns(self) -> list[str]:
         return self._compliant_frame.columns  # type: ignore[no-any-return]
 
-    def lazy(self) -> LazyFrame[Any]:
-        return LazyFrame(
-            self._compliant_frame.lazy(),
-            level=self._level,
-        )
-
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -318,6 +312,16 @@ class DataFrame(BaseFrame[FrameT]):
     `narwhals.from_native`.
     """
 
+    @property
+    def _series(self) -> type[Series]:
+        from narwhals.series import Series
+
+        return Series
+
+    @property
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
+        return LazyFrame
+
     def __init__(
         self,
         df: Any,
@@ -382,14 +386,16 @@ class DataFrame(BaseFrame[FrameT]):
         If a library does not support lazy execution, then this is a no-op.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -397,7 +403,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.lazy()
 
-            Note that then, pandas dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
+            Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
             >>> func(df_pd)
                foo  bar ham
@@ -406,8 +412,17 @@ class DataFrame(BaseFrame[FrameT]):
             2    3  8.0   c
             >>> func(df_pl)
             <LazyFrame ...>
+            >>> func(df_pa)
+            pyarrow.Table
+            foo: int64
+            bar: double
+            ham: string
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
+            ham: [["a","b","c"]]
         """
-        return super().lazy()
+        return self._lazyframe(self._compliant_frame.lazy(), level=self._level)
 
     def to_native(self) -> FrameT:
         """
@@ -667,9 +682,7 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.get_column(name),
             level=self._level,
         )
@@ -819,9 +832,7 @@ class DataFrame(BaseFrame[FrameT]):
                 return self._from_compliant_dataframe(self._compliant_frame[item[0]])
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
-            from narwhals.series import Series
-
-            return Series(
+            return self._series(
                 self._compliant_frame[item],
                 level=self._level,
             )
@@ -887,11 +898,9 @@ class DataFrame(BaseFrame[FrameT]):
             >>> func(df_pa)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
-        from narwhals.series import Series
-
         if as_series:
             return {
-                key: Series(
+                key: self._series(
                     value,
                     level=self._level,
                 )
@@ -2287,9 +2296,7 @@ class DataFrame(BaseFrame[FrameT]):
                 true
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.is_duplicated(),
             level=self._level,
         )
@@ -2370,9 +2377,7 @@ class DataFrame(BaseFrame[FrameT]):
                 false
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.is_unique(),
             level=self._level,
         )
@@ -2732,6 +2737,10 @@ class LazyFrame(BaseFrame[FrameT]):
     `narwhals.from_native`.
     """
 
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
+
     def __init__(
         self,
         df: Any,
@@ -2799,7 +2808,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        return DataFrame(
+        return self._dataframe(
             self._compliant_frame.collect(),
             level=self._level,
         )
@@ -4222,7 +4231,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> func(df_pl)
             <LazyFrame ...>
         """
-        return super().lazy()  # type: ignore[return-value]
+        return self
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""

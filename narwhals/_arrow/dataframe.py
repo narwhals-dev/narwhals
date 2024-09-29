@@ -10,8 +10,8 @@ from typing import overload
 
 from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
+from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
-from narwhals._arrow.utils import translate_dtype
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
@@ -33,21 +33,27 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowDataFrame:
     # --- not in the spec ---
     def __init__(
-        self, native_dataframe: pa.Table, *, backend_version: tuple[int, ...]
+        self,
+        native_dataframe: pa.Table,
+        *,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._native_frame = native_dataframe
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version)
+        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.PYARROW:
@@ -63,7 +69,9 @@ class ArrowDataFrame:
         return self
 
     def _from_native_frame(self, df: Any) -> Self:
-        return self.__class__(df, backend_version=self._backend_version)
+        return self.__class__(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -111,6 +119,7 @@ class ArrowDataFrame:
             self._native_frame[name],
             name=name,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
@@ -151,6 +160,7 @@ class ArrowDataFrame:
                 self._native_frame[item],
                 name=item,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
         elif (
             isinstance(item, tuple)
@@ -191,12 +201,14 @@ class ArrowDataFrame:
                     self._native_frame[col_name],
                     name=col_name,
                     backend_version=self._backend_version,
+                    dtypes=self._dtypes,
                 )
             selected_rows = select_rows(self._native_frame, item[0])
             return ArrowSeries(
                 selected_rows[col_name],
                 name=col_name,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
 
         elif isinstance(item, slice):
@@ -234,7 +246,7 @@ class ArrowDataFrame:
     def schema(self) -> dict[str, DType]:
         schema = self._native_frame.schema
         return {
-            name: translate_dtype(dtype)
+            name: native_to_narwhals_dtype(dtype, self._dtypes)
             for name, dtype in zip(schema.names, schema.types)
         }
 
@@ -410,7 +422,12 @@ class ArrowDataFrame:
             from narwhals._arrow.series import ArrowSeries
 
             return {
-                name: ArrowSeries(col, name=name, backend_version=self._backend_version)
+                name: ArrowSeries(
+                    col,
+                    name=name,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
                 for name, col in names_and_values
             }
         else:
@@ -471,7 +488,9 @@ class ArrowDataFrame:
         return self
 
     def collect(self) -> ArrowDataFrame:
-        return ArrowDataFrame(self._native_frame, backend_version=self._backend_version)
+        return ArrowDataFrame(
+            self._native_frame, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def clone(self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"
@@ -541,7 +560,12 @@ class ArrowDataFrame:
             ).column(f"{col_token}_count"),
             1,
         )
-        return ArrowSeries(is_duplicated, name="", backend_version=self._backend_version)
+        return ArrowSeries(
+            is_duplicated,
+            name="",
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
 
     def is_unique(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -551,7 +575,10 @@ class ArrowDataFrame:
         is_duplicated = self.is_duplicated()._native_series
 
         return ArrowSeries(
-            pc.invert(is_duplicated), name="", backend_version=self._backend_version
+            pc.invert(is_duplicated),
+            name="",
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def unique(

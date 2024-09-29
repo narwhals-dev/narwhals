@@ -11,7 +11,6 @@ from typing import Sequence
 from typing import TypeVar
 from typing import cast
 
-from narwhals import dtypes
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
@@ -392,6 +391,8 @@ def is_ordered_categorical(series: Series) -> bool:
         True
     """
     from narwhals._interchange.series import InterchangeSeries
+
+    dtypes = series._compliant_series._dtypes
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)
