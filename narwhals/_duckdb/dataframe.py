@@ -68,7 +68,9 @@ class DuckDBInterchangeFrame:
     def __getitem__(self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
 
-        return DuckDBInterchangeSeries(self._native_frame.select(item))
+        return DuckDBInterchangeSeries(
+            self._native_frame.select(item), dtypes=self._dtypes
+        )
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
