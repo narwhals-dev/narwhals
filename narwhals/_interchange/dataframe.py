@@ -85,7 +85,9 @@ class InterchangeFrame:
     def __getitem__(self, item: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
 
-        return InterchangeSeries(self._interchange_frame.get_column_by_name(item))
+        return InterchangeSeries(
+            self._interchange_frame.get_column_by_name(item), dtypes=self._dtypes
+        )
 
     @property
     def schema(self) -> dict[str, DType]:
