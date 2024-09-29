@@ -22,7 +22,7 @@ class InterchangeSeries:
             return map_interchange_dtype_to_narwhals_dtype(
                 self._native_series.dtype, dtypes=self._dtypes
             )
-        msg = (
+        msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "Hint: you probably called `nw.from_native` on an object which isn't fully "
             "supported by Narwhals, yet implements `__dataframe__`. If you would like to "
