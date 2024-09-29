@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 import polars as pl
@@ -135,3 +136,10 @@ def test_series_docstrings() -> None:
             )
             == getattr(df, item).__doc__
         )
+
+
+def test_dtypes(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1], "b": [datetime(2020, 1, 1)]}))
+    dtype = df.collect_schema()["b"]
+    assert dtype in {nw.Datetime}
+    assert isinstance(dtype, nw.Datetime)

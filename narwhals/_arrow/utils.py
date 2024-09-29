@@ -4,16 +4,17 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from narwhals import dtypes
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     import pyarrow as pa
 
     from narwhals._arrow.series import ArrowSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
-def native_to_narwhals_dtype(dtype: Any) -> dtypes.DType:
+def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     import pyarrow as pa  # ignore-banned-import
 
     if pa.types.is_int64(dtype):
@@ -63,10 +64,8 @@ def native_to_narwhals_dtype(dtype: Any) -> dtypes.DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     import pyarrow as pa  # ignore-banned-import
-
-    from narwhals import dtypes
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()

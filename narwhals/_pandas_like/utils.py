@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     import pandas as pd
@@ -94,6 +95,7 @@ def create_native_series(
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
+    dtypes: DTypes,
 ) -> PandasLikeSeries:
     from narwhals._pandas_like.series import PandasLikeSeries
 
@@ -102,7 +104,10 @@ def create_native_series(
             iterable, index=index, name=""
         )
         return PandasLikeSeries(
-            series, implementation=implementation, backend_version=backend_version
+            series,
+            implementation=implementation,
+            backend_version=backend_version,
+            dtypes=dtypes,
         )
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
@@ -206,9 +211,7 @@ def set_axis(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
-def native_to_narwhals_dtype(column: Any) -> DType:
-    from narwhals import dtypes
-
+def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
     dtype = str(column.dtype)
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -280,7 +283,7 @@ def native_to_narwhals_dtype(column: Any) -> DType:
 
                 try:
                     return map_interchange_dtype_to_narwhals_dtype(
-                        df.__dataframe__().get_column(0).dtype
+                        df.__dataframe__().get_column(0).dtype, dtypes
                     )
                 except Exception:  # noqa: BLE001
                     return dtypes.Object()
@@ -308,10 +311,11 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> str:
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0915
-    dtype: DType | type[DType], starting_dtype: Any, implementation: Implementation
+    dtype: DType | type[DType],
+    starting_dtype: Any,
+    implementation: Implementation,
+    dtypes: DTypes,
 ) -> Any:
-    from narwhals import dtypes
-
     if "polars" in str(type(dtype)):
         msg = (
             f"Expected Narwhals object, got: {type(dtype)}.\n\n"
