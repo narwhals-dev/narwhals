@@ -222,7 +222,7 @@ def _new_series_impl(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype = polars_narwhals_to_native_dtype(dtype)
+            dtype = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
 
         native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
     elif implementation in {
@@ -357,7 +357,7 @@ def _from_dict_impl(
             )
 
             schema = {
-                name: polars_narwhals_to_native_dtype(dtype)
+                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
                 for name, dtype in schema.items()
             }
 

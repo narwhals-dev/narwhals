@@ -77,10 +77,8 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType]) -> Any:
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     import polars as pl  # ignore-banned-import()
-
-    from narwhals import dtypes
 
     if dtype == dtypes.Float64:
         return pl.Float64()

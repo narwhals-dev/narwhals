@@ -36,7 +36,7 @@ class PolarsExpr:
 
     def cast(self, dtype: DType) -> Self:
         expr = self._native_expr
-        dtype = narwhals_to_native_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_expr(expr.cast(dtype))
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]

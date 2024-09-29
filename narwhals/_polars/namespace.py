@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.typing import IntoPolarsExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class PolarsNamespace:
@@ -82,7 +83,9 @@ class PolarsNamespace:
         from narwhals._polars.expr import PolarsExpr
 
         if dtype is not None:
-            return PolarsExpr(pl.lit(value, dtype=narwhals_to_native_dtype(dtype)))
+            return PolarsExpr(
+                pl.lit(value, dtype=narwhals_to_native_dtype(dtype, self._dtypes))
+            )
         return PolarsExpr(pl.lit(value))
 
     def mean(self, *column_names: str) -> PolarsExpr:
@@ -112,17 +115,22 @@ class PolarsNamespace:
 
     @property
     def selectors(self) -> PolarsSelectors:
-        return PolarsSelectors()
+        return PolarsSelectors(self._dtypes)
 
 
 class PolarsSelectors:
+    def __init__(self, dtypes: DTypes) -> None:
+        self._dtypes = dtypes
+
     def by_dtype(self, dtypes: Iterable[DType]) -> PolarsExpr:
         import polars as pl  # ignore-banned-import()
 
         from narwhals._polars.expr import PolarsExpr
 
         return PolarsExpr(
-            pl.selectors.by_dtype([narwhals_to_native_dtype(dtype) for dtype in dtypes])
+            pl.selectors.by_dtype(
+                [narwhals_to_native_dtype(dtype, self._dtypes) for dtype in dtypes]
+            )
         )
 
     def numeric(self) -> PolarsExpr:
