@@ -8,7 +8,6 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
-from narwhals import dtypes
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -33,8 +32,6 @@ class Series:
     `narwhals.from_native`, making sure to pass `allow_series=True` or
     `series_only=True`.
     """
-
-    _dtypes = dtypes
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -340,7 +337,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return self._compliant_series.dtype(self._dtypes)  # type: ignore[no-any-return]
+        return self._compliant_series.dtype  # type: ignore[no-any-return]
 
     @property
     def name(self) -> str:

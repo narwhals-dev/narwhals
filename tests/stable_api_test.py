@@ -139,7 +139,7 @@ def test_series_docstrings() -> None:
 
 
 def test_dtypes(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1], "b": [datetime(2020, 1, 1)]}))
+    df = nw_v1.from_native(constructor({"a": [1], "b": [datetime(2020, 1, 1)]}))
     dtype = df.collect_schema()["b"]
-    assert dtype in {nw.Datetime}
-    assert isinstance(dtype, nw.Datetime)
+    assert dtype in {nw_v1.Datetime}
+    assert isinstance(dtype, nw_v1.Datetime)
