@@ -397,12 +397,6 @@ class Series(NwSeries):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    @property
-    def _dtypes(self) -> ModuleType:
-        from narwhals.stable.v1 import dtypes
-
-        return dtypes
-
     def to_frame(self) -> DataFrame[Any]:
         """
         Convert to dataframe.
