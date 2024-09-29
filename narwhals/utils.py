@@ -392,7 +392,7 @@ def is_ordered_categorical(series: Series) -> bool:
     """
     from narwhals._interchange.series import InterchangeSeries
 
-    dtypes = series._compliant_series._native_series._dtypes
+    dtypes = series._compliant_series._dtypes
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)
