@@ -578,7 +578,7 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> func(df_pd)  # doctest:+SKIP
             >>> func(df_pl)  # doctest:+SKIP
-            >>> func(df_pa)
+            >>> func(df_pa)  # doctest:+SKIP
         """
         self._compliant_frame.write_parquet(file)
 
