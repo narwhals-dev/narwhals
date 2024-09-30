@@ -197,7 +197,7 @@ class PandasLikeSeries:
     ) -> Self:
         ser = self._native_series
         dtype = narwhals_to_native_dtype(
-            dtype, ser.dtype, self._implementation, self._dtypes
+            dtype, ser.dtype, self._implementation, self._backend_version, self._dtypes
         )
         return self._from_native_series(ser.astype(dtype))
 
