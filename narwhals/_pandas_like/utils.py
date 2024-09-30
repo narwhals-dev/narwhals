@@ -436,12 +436,10 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         dt_time_unit = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
 
-        # Pandas does not support "ms" or "us" time units before version 1.5.0
+        # Pandas does not support "ms" or "us" time units before version 2.0
         # Let's overwrite with "ns"
         if implementation is Implementation.PANDAS and backend_version < (
-            1,
-            5,
-            0,
+            2,
         ):  # pragma: no cover
             dt_time_unit = "ns"
 
@@ -453,6 +451,10 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             return f"datetime64[{dt_time_unit}{tz_part}]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         du_time_unit = getattr(dtype, "time_unit", "us")
+        if implementation is Implementation.PANDAS and backend_version < (
+            2,
+        ):  # pragma: no cover
+            dt_time_unit = "ns"
         return (
             f"duration[{du_time_unit}][pyarrow]"
             if dtype_backend == "pyarrow-nullable"
