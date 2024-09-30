@@ -81,8 +81,6 @@ class Datetime(TemporalType):
         time_unit: Unit of time. Defaults to `'us'` (microseconds).
         time_zone: Time zone string, as defined in zoneinfo (to see valid strings run
             `import zoneinfo; zoneinfo.available_timezones()` for a full list).
-            When used to match dtypes, can set this to "*" to check for Datetime
-            columns that have any (non-null) timezone.
 
     Notes:
         Adapted from Polars implementation at:
@@ -91,7 +89,7 @@ class Datetime(TemporalType):
 
     def __init__(
         self: Self,
-        time_unit: Literal["us", "ns", "ms"] = "us",
+        time_unit: Literal["us", "ns", "ms", "s"] = "us",
         time_zone: str | timezone | None = None,
     ) -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
@@ -138,12 +136,12 @@ class Duration(TemporalType):
 
     def __init__(
         self: Self,
-        time_unit: Literal["us", "ns", "ms"] = "us",
+        time_unit: Literal["us", "ns", "ms", "s"] = "us",
     ) -> None:
-        if time_unit not in ("ms", "us", "ns"):
+        if time_unit not in ("s", "ms", "us", "ns"):
             msg = (
                 "invalid `time_unit`"
-                f"\n\nExpected one of {{'ns','us','ms'}}, got {time_unit!r}."
+                f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit!r}."
             )
             raise ValueError(msg)
 

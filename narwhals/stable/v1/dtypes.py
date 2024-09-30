@@ -30,8 +30,6 @@ class Datetime(NwDatetime):
         time_unit: Unit of time. Defaults to `'us'` (microseconds).
         time_zone: Time zone string, as defined in zoneinfo (to see valid strings run
             `import zoneinfo; zoneinfo.available_timezones()` for a full list).
-            When used to match dtypes, can set this to "*" to check for Datetime
-            columns that have any (non-null) timezone.
 
     Notes:
         Adapted from Polars implementation at:

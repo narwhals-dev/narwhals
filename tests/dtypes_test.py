@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 from typing import Literal
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -43,7 +46,7 @@ def test_duration_valid(time_unit: Literal["us", "ns", "ms"]) -> None:
         assert dtype != nw.Duration(time_unit="ms")
 
 
-@pytest.mark.parametrize("time_unit", ["abc", "s"])
+@pytest.mark.parametrize("time_unit", ["abc"])
 def test_duration_invalid(time_unit: str) -> None:
     with pytest.raises(ValueError, match="invalid `time_unit`"):
         nw.Duration(time_unit=time_unit)  # type: ignore[arg-type]
@@ -52,6 +55,13 @@ def test_duration_invalid(time_unit: str) -> None:
 def test_second_tu() -> None:
     s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
-    # check strftime
-    # check dtypes
-    assert result.dtype == nw.Datetime("s")  # type: ignore[arg-type]
+    assert result.dtype == nw.Datetime("s")
+    s = pa.chunked_array([pa.array([datetime(2020, 1, 1)], type=pa.timestamp("s"))])
+    result = nw.from_native(s, series_only=True)
+    assert result.dtype == nw.Datetime("s")
+    s = pd.Series(np.array([np.timedelta64(1, "s")]))
+    result = nw.from_native(s, series_only=True)
+    assert result.dtype == nw.Duration("s")
+    s = pa.chunked_array([pa.array([timedelta(1)], type=pa.duration("s"))])
+    result = nw.from_native(s, series_only=True)
+    assert result.dtype == nw.Duration("s")
