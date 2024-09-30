@@ -217,9 +217,9 @@ def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
     dtype = str(column.dtype)
 
     pd_datetime_rgx = (
-        r"^datetime64\[(?P<time_unit>ms|us|ns)(?:, (?P<time_zone>[a-zA-Z\/]+))?\]$"
+        r"^datetime64\[(?P<time_unit>s|ms|us|ns)(?:, (?P<time_zone>[a-zA-Z\/]+))?\]$"
     )
-    pa_datetime_rgx = r"^timestamp\[(?P<time_unit>ms|us|ns)(?:, tz=(?P<time_zone>[a-zA-Z\/]+))?\]\[pyarrow\]$"
+    pa_datetime_rgx = r"^timestamp\[(?P<time_unit>s|ms|us|ns)(?:, tz=(?P<time_zone>[a-zA-Z\/]+))?\]\[pyarrow\]$"
 
     pd_duration_rgx = r"^timedelta64\[(?P<time_unit>ms|us|ns)\]$"
     pa_duration_rgx = r"^duration\[(?P<time_unit>ms|us|ns)\]\[pyarrow\]$"

@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import timezone
 from typing import Literal
 
+import numpy as np
+import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -24,7 +26,7 @@ def test_datetime_valid(
         assert dtype != nw.Datetime(time_unit="ms")
 
 
-@pytest.mark.parametrize("time_unit", ["abc", "s"])
+@pytest.mark.parametrize("time_unit", ["abc"])
 def test_datetime_invalid(time_unit: str) -> None:
     with pytest.raises(ValueError, match="invalid `time_unit`"):
         nw.Datetime(time_unit=time_unit)  # type: ignore[arg-type]
@@ -45,3 +47,11 @@ def test_duration_valid(time_unit: Literal["us", "ns", "ms"]) -> None:
 def test_duration_invalid(time_unit: str) -> None:
     with pytest.raises(ValueError, match="invalid `time_unit`"):
         nw.Duration(time_unit=time_unit)  # type: ignore[arg-type]
+
+
+def test_second_tu() -> None:
+    s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
+    result = nw.from_native(s, series_only=True)
+    # check strftime
+    # check dtypes
+    assert result.dtype == nw.Datetime("s")  # type: ignore[arg-type]

@@ -94,10 +94,10 @@ class Datetime(TemporalType):
         time_unit: Literal["us", "ns", "ms"] = "us",
         time_zone: str | timezone | None = None,
     ) -> None:
-        if time_unit not in {"ms", "us", "ns"}:
+        if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
                 "invalid `time_unit`"
-                f"\n\nExpected one of {{'ns','us','ms'}}, got {time_unit!r}."
+                f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit!r}."
             )
             raise ValueError(msg)
 
