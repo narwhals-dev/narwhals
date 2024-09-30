@@ -104,8 +104,8 @@ def test_maybe_reset_index_polars() -> None:
     result = nw.maybe_reset_index(df)
     assert result is df
     series = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
-    result = nw.maybe_reset_index(series)
-    assert result is series
+    result_s = nw.maybe_reset_index(series)
+    assert result_s is series
 
 
 @pytest.mark.skipif(
