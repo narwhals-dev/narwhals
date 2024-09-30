@@ -37,7 +37,7 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
         result_key = result[key]
         if hasattr(result_key, "_compliant_series") and "CUDF" in str(
             result_key._compliant_series._implementation
-        ):
+        ):  # pragma: no cover
             result_key = result_key.to_pandas()
         for lhs, rhs in zip_strict(result_key, expected[key]):
             if hasattr(lhs, "as_py"):
