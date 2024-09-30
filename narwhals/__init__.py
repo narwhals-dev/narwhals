@@ -55,6 +55,7 @@ from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_get_index
+from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
 __version__ = "1.8.4"
@@ -72,6 +73,7 @@ __all__ = [
     "maybe_align_index",
     "maybe_convert_dtypes",
     "maybe_get_index",
+    "maybe_reset_index",
     "maybe_set_index",
     "get_native_namespace",
     "all",
