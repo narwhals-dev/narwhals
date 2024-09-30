@@ -557,14 +557,16 @@ class DataFrame(BaseFrame[FrameT]):
         Write dataframe to parquet file.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -572,10 +574,11 @@ class DataFrame(BaseFrame[FrameT]):
             ...     df = nw.from_native(df)
             ...     df.write_parquet("foo.parquet")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)  # doctest:+SKIP
             >>> func(df_pl)  # doctest:+SKIP
+            >>> func(df_pa)  # doctest:+SKIP
         """
         self._compliant_frame.write_parquet(file)
 
@@ -588,10 +591,12 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.5, 7.0, 8.5], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -599,13 +604,17 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_numpy()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
             >>> func(df_pl)
+            array([[1, 6.5, 'a'],
+                   [2, 7.0, 'b'],
+                   [3, 8.5, 'c']], dtype=object)
+            >>> func(df_pa)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
@@ -622,10 +631,12 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3, 4, 5]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -633,11 +644,13 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.shape
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)
             (5, 1)
             >>> func(df_pl)
+            (5, 1)
+            >>> func(df_pa)
             (5, 1)
         """
         return self._compliant_frame.shape  # type: ignore[no-any-return]
