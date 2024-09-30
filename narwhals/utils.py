@@ -27,7 +27,6 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
-from narwhals.translate import from_native
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
@@ -314,7 +313,7 @@ def maybe_reset_index(obj: T) -> T:
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
-        for example if your library already aligns indices for users.
+        for example if your library already resets the index for users.
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
         For non-pandas-like inputs, this is a no-op.
@@ -336,10 +335,15 @@ def maybe_reset_index(obj: T) -> T:
     """
     obj_any = cast(Any, obj)
     native_obj = to_native(obj_any)
-    if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
-        return from_native(  # type: ignore[return-value]
-            native_obj.reset_index(drop=True),
-            allow_series=True,
+    if is_pandas_like_dataframe(native_obj):
+        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
+        )
+    if is_pandas_like_series(native_obj):
+        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+            obj_any._compliant_series._from_native_series(
+                native_obj.reset_index(drop=True)
+            )
         )
     return obj_any  # type: ignore[no-any-return]
 

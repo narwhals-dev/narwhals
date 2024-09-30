@@ -1803,7 +1803,7 @@ def maybe_reset_index(obj: T) -> T:
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
-        for example if your library already aligns indices for users.
+        for example if your library already resets the index for users.
         If you're designing a new library, we highly encourage you to not
         rely on the Index.
         For non-pandas-like inputs, this is a no-op.
