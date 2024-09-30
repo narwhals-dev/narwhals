@@ -326,7 +326,7 @@ class DaskWhen:
             # `self._otherwise_value` is a scalar and can't be converted to an expression
             return [value_series.where(condition, self._otherwise_value)]
         validate_comparand(condition, otherwise_series)
-        return [value_series.zip_with(condition, otherwise_series)]
+        return [value_series.where(condition, otherwise_series)]
 
     def then(self, value: DaskExpr | Any) -> DaskThen:
         self._then_value = value
