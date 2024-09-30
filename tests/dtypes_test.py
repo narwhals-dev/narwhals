@@ -11,6 +11,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
@@ -55,13 +56,19 @@ def test_duration_invalid(time_unit: str) -> None:
 def test_second_tu() -> None:
     s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
-    assert result.dtype == nw.Datetime("s")
+    if parse_version(pd.__version__) < (2,):  # pragma: no cover
+        assert result.dtype == nw.Datetime("ns")
+    else:
+        assert result.dtype == nw.Datetime("s")
     s = pa.chunked_array([pa.array([datetime(2020, 1, 1)], type=pa.timestamp("s"))])
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Datetime("s")
     s = pd.Series(np.array([np.timedelta64(1, "s")]))
     result = nw.from_native(s, series_only=True)
-    assert result.dtype == nw.Duration("s")
+    if parse_version(pd.__version__) < (2,):  # pragma: no cover
+        assert result.dtype == nw.Duration("ns")
+    else:
+        assert result.dtype == nw.Duration("s")
     s = pa.chunked_array([pa.array([timedelta(1)], type=pa.duration("s"))])
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Duration("s")
