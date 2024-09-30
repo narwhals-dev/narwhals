@@ -174,7 +174,7 @@ class Struct(DType): ...
 
 
 class List(DType):
-    def __init__(self, inner: DType) -> None:
+    def __init__(self, inner: DType | type[DType]) -> None:
         self.inner = inner
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
