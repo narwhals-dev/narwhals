@@ -265,13 +265,13 @@ def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
     if (match_ := re.match(pd_datetime_rgx, dtype)) or (
         match_ := re.match(pa_datetime_rgx, dtype)
     ):
-        dt_time_unit: Literal["us", "ns", "ms"] = match_.group("time_unit")  # type: ignore[assignment]
+        dt_time_unit: Literal["us", "ns", "ms", "s"] = match_.group("time_unit")  # type: ignore[assignment]
         dt_time_zone: str | None = match_.group("time_zone")
         return dtypes.Datetime(dt_time_unit, dt_time_zone)
     if (match_ := re.match(pd_duration_rgx, dtype)) or (
         match_ := re.match(pa_duration_rgx, dtype)
     ):
-        du_time_unit: Literal["us", "ns", "ms"] = match_.group("time_unit")  # type: ignore[assignment]
+        du_time_unit: Literal["us", "ns", "ms", "s"] = match_.group("time_unit")  # type: ignore[assignment]
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
