@@ -173,7 +173,31 @@ class Enum(DType): ...
 class Struct(DType): ...
 
 
-class List(DType): ...
+class List(DType):
+    def __init__(self, inner: DType) -> None:
+        self.inner = inner
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        # This equality check allows comparison of type classes and type instances.
+        # If a parent type is not specific about its inner type, we infer it as equal:
+        # > list[i64] == list[i64] -> True
+        # > list[i64] == list[f32] -> False
+        # > list[i64] == list      -> True
+
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.inner == other.inner
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, self.inner))
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({self.inner!r})"
 
 
 class Array(DType): ...

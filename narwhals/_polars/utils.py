@@ -75,7 +75,7 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     if dtype == pl.Struct:
         return dtypes.Struct()
     if dtype == pl.List:
-        return dtypes.List()
+        return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))
     if dtype == pl.Array:
         return dtypes.Array()
     return dtypes.Unknown()
