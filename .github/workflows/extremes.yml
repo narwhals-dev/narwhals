@@ -119,6 +119,8 @@ jobs:
           kaggle kernels output "marcogorelli/variable-brink-glacier"
       - name: install-polars
         run: python -m pip install *.whl
+      - name: install-pandas-nightly
+        run: pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
       - name: uninstall pyarrow
@@ -127,8 +129,8 @@ jobs:
       #   run: uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow --system
       - name: uninstall pandas
         run: uv pip uninstall pandas --system
-      - name: install-pandas-nightly
-        run: uv pip install --prerelease=allow --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas --system
+      - name: show-deps
+        run: uv pip freeze
       - name: uninstall numpy
         run: uv pip uninstall numpy --system
       - name: install numpy nightly

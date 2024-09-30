@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -62,12 +63,15 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
         return dtypes.Categorical()
     if dtype == pl.Enum:
         return dtypes.Enum()
-    if dtype == pl.Datetime:
-        return dtypes.Datetime()
-    if dtype == pl.Duration:
-        return dtypes.Duration()
     if dtype == pl.Date:
         return dtypes.Date()
+    if dtype == pl.Datetime or isinstance(dtype, pl.Datetime):
+        dt_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        dt_time_zone = getattr(dtype, "time_zone", None)
+        return dtypes.Datetime(time_unit=dt_time_unit, time_zone=dt_time_zone)
+    if dtype == pl.Duration or isinstance(dtype, pl.Duration):
+        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        return dtypes.Duration(time_unit=du_time_unit)
     if dtype == pl.Struct:
         return dtypes.Struct()
     if dtype == pl.List:
@@ -111,12 +115,16 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     if dtype == dtypes.Enum:
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
-    if dtype == dtypes.Datetime:
-        return pl.Datetime()
-    if dtype == dtypes.Duration:
-        return pl.Duration()
     if dtype == dtypes.Date:
         return pl.Date()
+    if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
+        dt_time_unit = getattr(dtype, "time_unit", "us")
+        dt_time_zone = getattr(dtype, "time_zone", None)
+        return pl.Datetime(dt_time_unit, dt_time_zone)  # type: ignore[arg-type]
+    if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
+        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        return pl.Duration(time_unit=du_time_unit)
+
     if dtype == dtypes.List:  # pragma: no cover
         msg = "Converting to List dtype is not supported yet"
         return NotImplementedError(msg)
