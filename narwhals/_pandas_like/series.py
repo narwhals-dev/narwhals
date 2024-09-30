@@ -619,7 +619,9 @@ class PandasLikeSeries:
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        mask = validate_column_comparand(ser.index, mask, broadcast_length_one=False)
+        mask = validate_column_comparand(
+            ser.index, mask, treat_length_one_as_scalar=False
+        )
         other = validate_column_comparand(ser.index, other)
         res = ser.where(mask, other)
         return self._from_native_series(res)
