@@ -32,10 +32,12 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
+    from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
 
 FrameT = TypeVar("FrameT", bound="IntoFrame")
+DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 
 
 class BaseFrame(Generic[FrameT]):
@@ -302,7 +304,7 @@ class BaseFrame(Generic[FrameT]):
         )
 
 
-class DataFrame(BaseFrame[FrameT]):
+class DataFrame(BaseFrame[DataFrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
@@ -424,7 +426,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return self._lazyframe(self._compliant_frame.lazy(), level=self._level)
 
-    def to_native(self) -> FrameT:
+    def to_native(self) -> DataFrameT:
         """
         Convert Narwhals DataFrame to native one.
 
