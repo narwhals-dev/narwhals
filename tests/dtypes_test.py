@@ -67,6 +67,20 @@ def test_list_valid() -> None:
     assert dtype in {nw.List(nw.List(nw.Int64))}
 
 
+def test_array_valid() -> None:
+    dtype = nw.Array(nw.Int64)
+    assert dtype == nw.Array(nw.Int64)
+    assert dtype == nw.Array
+    assert dtype != nw.Array(nw.Float32)
+    assert dtype != nw.Duration
+    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>)"
+    dtype = nw.Array(nw.Array(nw.Int64))
+    assert dtype == nw.Array(nw.Array(nw.Int64))
+    assert dtype == nw.Array
+    assert dtype != nw.Array(nw.Array(nw.Float32))
+    assert dtype in {nw.Array(nw.Array(nw.Int64))}
+
+
 def test_second_time_unit() -> None:
     s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)

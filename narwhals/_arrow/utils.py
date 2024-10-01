@@ -60,7 +60,7 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
         return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
     if pa.types.is_fixed_size_list(dtype):
-        return dtypes.Array()
+        return dtypes.Array(native_to_narwhals_dtype(dtype.value_type, dtypes))
     return dtypes.Unknown()  # pragma: no cover
 
 

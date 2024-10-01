@@ -200,7 +200,31 @@ class List(DType):
         return f"{class_name}({self.inner!r})"
 
 
-class Array(DType): ...
+class Array(DType):
+    def __init__(self, inner: DType | type[DType]) -> None:
+        self.inner = inner
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        # This equality check allows comparison of type classes and type instances.
+        # If a parent type is not specific about its inner type, we infer it as equal:
+        # > array[i64] == array[i64] -> True
+        # > array[i64] == array[f32] -> False
+        # > array[i64] == array      -> True
+
+        # allow comparing object instances to class
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.inner == other.inner
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, self.inner))
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({self.inner!r})"
 
 
 class Date(TemporalType): ...
