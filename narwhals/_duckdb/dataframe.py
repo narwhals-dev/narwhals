@@ -50,8 +50,8 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DTy
         return dtypes.Duration()
     if duckdb_dtype.startswith("STRUCT"):
         return dtypes.Struct()
-    if re.match(r"\w+\[\]", duckdb_dtype):
-        return dtypes.List()
+    if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
+        return dtypes.List(map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes))
     if re.match(r"\w+\[\d+\]", duckdb_dtype):
         return dtypes.Array()
     return dtypes.Unknown()

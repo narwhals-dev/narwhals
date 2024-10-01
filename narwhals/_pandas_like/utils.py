@@ -7,6 +7,9 @@ from typing import Iterable
 from typing import Literal
 from typing import TypeVar
 
+from narwhals._arrow.utils import (
+    native_to_narwhals_dtype as arrow_native_to_narwhals_dtype,
+)
 from narwhals.utils import Implementation
 from narwhals.utils import isinstance_or_issubclass
 
@@ -276,7 +279,9 @@ def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
     if dtype.startswith(("large_list", "list")):
-        return dtypes.List()
+        return dtypes.List(
+            arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype.value_type, dtypes)
+        )
     if dtype.startswith("fixed_size_list"):
         return dtypes.Array()
     if dtype.startswith("struct"):
