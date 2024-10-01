@@ -11,6 +11,7 @@ from typing import Sequence
 import pandas as pd
 
 from narwhals.typing import IntoFrame
+from narwhals.utils import Implementation
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias  # pragma: no cover
@@ -35,8 +36,9 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
             assert key in expected
     for key in expected:
         result_key = result[key]
-        if hasattr(result_key, "_compliant_series") and "CUDF" in str(
-            result_key._compliant_series._implementation
+        if (
+            hasattr(result_key, "_compliant_series")
+            and result_key._compliant_series._implementation is Implementation.CUDF
         ):  # pragma: no cover
             result_key = result_key.to_pandas()
         for lhs, rhs in zip_strict(result_key, expected[key]):
