@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowSeries:
@@ -34,11 +35,13 @@ class ArrowSeries:
         *,
         name: str,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._name = name
         self._native_series = native_series
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def _from_native_series(self, series: Any) -> Self:
         import pyarrow as pa  # ignore-banned-import()
@@ -49,6 +52,7 @@ class ArrowSeries:
             series,
             name=self._name,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @classmethod
@@ -58,6 +62,7 @@ class ArrowSeries:
         name: str,
         *,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
@@ -65,12 +70,13 @@ class ArrowSeries:
             pa.chunked_array([data]),
             name=name,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version)
+        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __len__(self) -> int:
         return len(self._native_series)
@@ -361,11 +367,12 @@ class ArrowSeries:
             self._native_series,
             name=name,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.type)
+        return native_to_narwhals_dtype(self._native_series.type, self._dtypes)
 
     def abs(self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -438,7 +445,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_series(pc.cast(ser, dtype))
 
     def null_count(self: Self) -> int:
@@ -474,7 +481,10 @@ class ArrowSeries:
         ser = self._native_series
         res = np.flatnonzero(ser)
         return self._from_iterable(
-            res, name=self.name, backend_version=self._backend_version
+            res,
+            name=self.name,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def item(self: Self, index: int | None = None) -> Any:
@@ -520,8 +530,7 @@ class ArrowSeries:
             val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
-            val_count,
-            backend_version=self._backend_version,
+            val_count, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
@@ -574,7 +583,9 @@ class ArrowSeries:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         df = pa.Table.from_arrays([self._native_series], names=[self.name])
-        return ArrowDataFrame(df, backend_version=self._backend_version)
+        return ArrowDataFrame(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def to_pandas(self: Self) -> Any:
         import pandas as pd  # ignore-banned-import()
@@ -670,6 +681,7 @@ class ArrowSeries:
         return ArrowDataFrame(
             pa.Table.from_arrays(columns, names=names),
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         ).select(*sorted(names)[int(drop_first) :])
 
     def quantile(

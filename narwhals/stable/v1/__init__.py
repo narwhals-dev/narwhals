@@ -15,35 +15,38 @@ from narwhals import dependencies
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
-from narwhals.dtypes import Array
-from narwhals.dtypes import Boolean
-from narwhals.dtypes import Categorical
-from narwhals.dtypes import Date
-from narwhals.dtypes import Datetime
-from narwhals.dtypes import Duration
-from narwhals.dtypes import Enum
-from narwhals.dtypes import Float32
-from narwhals.dtypes import Float64
-from narwhals.dtypes import Int8
-from narwhals.dtypes import Int16
-from narwhals.dtypes import Int32
-from narwhals.dtypes import Int64
-from narwhals.dtypes import List
-from narwhals.dtypes import Object
-from narwhals.dtypes import String
-from narwhals.dtypes import Struct
-from narwhals.dtypes import UInt8
-from narwhals.dtypes import UInt16
-from narwhals.dtypes import UInt32
-from narwhals.dtypes import UInt64
-from narwhals.dtypes import Unknown
 from narwhals.expr import Expr as NwExpr
 from narwhals.expr import Then as NwThen
 from narwhals.expr import When as NwWhen
 from narwhals.expr import when as nw_when
+from narwhals.functions import _from_dict_impl
+from narwhals.functions import _new_series_impl
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
+from narwhals.stable.v1.dtypes import Array
+from narwhals.stable.v1.dtypes import Boolean
+from narwhals.stable.v1.dtypes import Categorical
+from narwhals.stable.v1.dtypes import Date
+from narwhals.stable.v1.dtypes import Datetime
+from narwhals.stable.v1.dtypes import Duration
+from narwhals.stable.v1.dtypes import Enum
+from narwhals.stable.v1.dtypes import Float32
+from narwhals.stable.v1.dtypes import Float64
+from narwhals.stable.v1.dtypes import Int8
+from narwhals.stable.v1.dtypes import Int16
+from narwhals.stable.v1.dtypes import Int32
+from narwhals.stable.v1.dtypes import Int64
+from narwhals.stable.v1.dtypes import List
+from narwhals.stable.v1.dtypes import Object
+from narwhals.stable.v1.dtypes import String
+from narwhals.stable.v1.dtypes import Struct
+from narwhals.stable.v1.dtypes import UInt8
+from narwhals.stable.v1.dtypes import UInt16
+from narwhals.stable.v1.dtypes import UInt32
+from narwhals.stable.v1.dtypes import UInt64
+from narwhals.stable.v1.dtypes import Unknown
+from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
@@ -52,6 +55,7 @@ from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
 from narwhals.utils import maybe_get_index as nw_maybe_get_index
+from narwhals.utils import maybe_reset_index as nw_maybe_reset_index
 from narwhals.utils import maybe_set_index as nw_maybe_set_index
 
 if TYPE_CHECKING:
@@ -811,18 +815,21 @@ def from_native(
     Returns:
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
     """
+    from narwhals.stable.v1 import dtypes
+
     # Early returns
     if isinstance(native_dataframe, (DataFrame, LazyFrame)) and not series_only:
         return native_dataframe
     if isinstance(native_dataframe, Series) and (series_only or allow_series):
         return native_dataframe
-    result = nw.from_native(
+    result = _from_native_impl(
         native_dataframe,
         strict=strict,
         eager_only=eager_only,
         eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
+        dtypes=dtypes,  # type: ignore[arg-type]
     )
     return _stableify(result)
 
@@ -1796,6 +1803,35 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     return nw_maybe_set_index(df, column_names)
 
 
+def maybe_reset_index(obj: T) -> T:
+    """
+    Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already resets the index for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this is a no-op.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]}, index=([6, 7]))
+        >>> df = nw.from_native(df_pd)
+        >>> nw.to_native(nw.maybe_reset_index(df))
+           a  b
+        0  1  4
+        1  2  5
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    return nw_maybe_reset_index(obj)
+
+
 def get_native_namespace(obj: Any) -> Any:
     """
     Get native namespace from object.
@@ -1941,8 +1977,16 @@ def new_series(
            2
         ]
     """
+    from narwhals.stable.v1 import dtypes
+
     return _stableify(
-        nw.new_series(name, values, dtype, native_namespace=native_namespace)
+        _new_series_impl(
+            name,
+            values,
+            dtype,
+            native_namespace=native_namespace,
+            dtypes=dtypes,  # type: ignore[arg-type]
+        )
     )
 
 
@@ -1996,8 +2040,15 @@ def from_dict(
         │ 2   ┆ 4   │
         └─────┴─────┘
     """
-    return _stableify(  # type: ignore[no-any-return]
-        nw.from_dict(data, schema=schema, native_namespace=native_namespace)
+    from narwhals.stable.v1 import dtypes
+
+    return _stableify(
+        _from_dict_impl(
+            data,
+            schema,
+            native_namespace=native_namespace,
+            dtypes=dtypes,  # type: ignore[arg-type]
+        )
     )
 
 
@@ -2011,6 +2062,7 @@ __all__ = [
     "maybe_align_index",
     "maybe_convert_dtypes",
     "maybe_get_index",
+    "maybe_reset_index",
     "maybe_set_index",
     "get_native_namespace",
     "get_level",

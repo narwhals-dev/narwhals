@@ -4,7 +4,6 @@ import re
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals import dtypes
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -13,11 +12,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
-def map_duckdb_dtype_to_narwhals_dtype(
-    duckdb_dtype: Any,
-) -> dtypes.DType:
+def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DType:
     duckdb_dtype = str(duckdb_dtype)
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
@@ -51,16 +50,17 @@ def map_duckdb_dtype_to_narwhals_dtype(
         return dtypes.Duration()
     if duckdb_dtype.startswith("STRUCT"):
         return dtypes.Struct()
-    if re.match(r"\w+\[\]", duckdb_dtype):
-        return dtypes.List()
+    if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
+        return dtypes.List(map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes))
     if re.match(r"\w+\[\d+\]", duckdb_dtype):
         return dtypes.Array()
     return dtypes.Unknown()
 
 
 class DuckDBInterchangeFrame:
-    def __init__(self, df: Any) -> None:
+    def __init__(self, df: Any, dtypes: DTypes) -> None:
         self._native_frame = df
+        self._dtypes = dtypes
 
     def __narwhals_dataframe__(self) -> Any:
         return self
@@ -68,12 +68,16 @@ class DuckDBInterchangeFrame:
     def __getitem__(self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
 
-        return DuckDBInterchangeSeries(self._native_frame.select(item))
+        return DuckDBInterchangeSeries(
+            self._native_frame.select(item), dtypes=self._dtypes
+        )
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
-                column_name: map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype)
+                column_name: map_duckdb_dtype_to_narwhals_dtype(
+                    duckdb_dtype, self._dtypes
+                )
                 for column_name, duckdb_dtype in zip(
                     self._native_frame.columns, self._native_frame.types
                 )

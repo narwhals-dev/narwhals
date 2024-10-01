@@ -75,6 +75,7 @@ from narwhals.utils import parse_version
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 print(nw.col("a")._call(pn))
 ```
@@ -101,6 +102,7 @@ import pandas as pd
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 
 df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -108,6 +110,7 @@ df = PandasLikeDataFrame(
     df_pd,
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 expression = pn.col("a") + 1
 result = expression._call(df)
@@ -196,6 +199,7 @@ import pandas as pd
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 
 df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -210,6 +214,7 @@ backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._c
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
     backend_version=parse_version(pd.__version__),
+    dtypes=nw.dtypes,
 )
 expr = (nw.col("a") + 1)._call(pn)
 print(expr)
