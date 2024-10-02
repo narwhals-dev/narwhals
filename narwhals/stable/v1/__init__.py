@@ -346,7 +346,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             DataFrame
 
         Examples:
-            >>> import narwhals as nw
+            >>> import narwhals.stable.v1 as nw
             >>> import polars as pl
             >>> lf_pl = pl.LazyFrame(
             ...     {
