@@ -10,6 +10,7 @@ import polars as pl
 import pytest
 from hypothesis import assume
 from hypothesis import given
+from hypothesis import settings
 from hypothesis.extra.numpy import arrays
 
 import narwhals as nw
@@ -134,6 +135,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
     return draw(rows), draw(columns)
 
 
+@settings(max_examples=10000)  # type: ignore[misc]
 @given(
     selector=st.one_of(
         single_selector,
