@@ -181,6 +181,7 @@ def test_getitem(
         )
 
         # df[[], "a":], df[[], :] etc fail in pyarrow:
+        # ArrowNotImplementedError: Function 'array_take' has no kernel matching input types (int64, null)
         assume(
             not (
                 isinstance(selector, tuple)
