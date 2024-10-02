@@ -191,6 +191,17 @@ def test_getitem(
             )
         )
 
+    elif constructor is pandas_constructor:
+        # df[[], "a":], df[[], :] etc return different results between pandas/polars:
+        assume(
+            not (
+                isinstance(selector, tuple)
+                and isinstance(selector[0], list)
+                and len(selector[0]) == 0
+                and isinstance(selector[1], slice)
+            )
+        )
+
     # df[..., ::step] is not fine:
     # TypeError: Expected slice of integers or strings, got: <class 'slice'>
     assume(
