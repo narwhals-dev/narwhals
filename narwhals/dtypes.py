@@ -201,8 +201,12 @@ class List(DType):
 
 
 class Array(DType):
-    def __init__(self, inner: DType | type[DType]) -> None:
+    def __init__(self, inner: DType | type[DType], width: int | None = None) -> None:
         self.inner = inner
+        if width is None:
+            error = "`width` must be specified when initializing an `Array`"
+            raise TypeError(error)
+        self.width = width
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
@@ -220,11 +224,11 @@ class Array(DType):
             return False
 
     def __hash__(self) -> int:
-        return hash((self.__class__, self.inner))
+        return hash((self.__class__, self.inner, self.width))
 
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
-        return f"{class_name}({self.inner!r})"
+        return f"{class_name}({self.inner!r}, {self.width})"
 
 
 class Date(TemporalType): ...
