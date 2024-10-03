@@ -186,6 +186,8 @@ class PandasLikeDataFrame:
 
         elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
             columns = self._native_frame.columns
+            if item[1] == slice(None):
+                return self._from_native_frame(self._native_frame.iloc[item[0], :])
             if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                 return self._from_native_frame(
@@ -411,7 +413,8 @@ class PandasLikeDataFrame:
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
@@ -419,7 +422,10 @@ class PandasLikeDataFrame:
             ascending: bool | list[bool] = not descending
         else:
             ascending = [not d for d in descending]
-        return self._from_native_frame(df.sort_values(flat_keys, ascending=ascending))
+        na_position = "last" if nulls_last else "first"
+        return self._from_native_frame(
+            df.sort_values(flat_keys, ascending=ascending, na_position=na_position)
+        )
 
     # --- convert ---
     def collect(self) -> PandasLikeDataFrame:

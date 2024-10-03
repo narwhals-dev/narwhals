@@ -193,8 +193,10 @@ def test_cast_raises_for_unknown_dtype(
 def test_cast_datetime_tz_aware(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor) or (
-        "pyarrow_table" in str(constructor) and is_windows()
+    if (
+        "dask" in str(constructor)
+        or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
+        or ("pyarrow_table" in str(constructor) and is_windows())
     ):
         request.applymarker(pytest.mark.xfail)
 
