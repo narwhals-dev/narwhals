@@ -333,22 +333,36 @@ class PandasLikeNamespace:
             series = (
                 s
                 for _expr in parsed_exprs
-                for s in _expr.fill_null("").cast(self._dtypes.String())._call(df)
+                for s in _expr.cast(self._dtypes.String())._call(df)
             )
-            result = reduce(lambda x, y: x + separator + y, series)
+            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
 
-            if ignore_nulls:
-                return [result]
+            if not ignore_nulls:
+                null_mask = reduce(lambda x, y: x | y, null_mask)
+                result = reduce(lambda x, y: x + separator + y, series).zip_with(
+                    ~null_mask, None
+                )
             else:
-                native_namespace = result.__native_namespace__()
-                null_series = (
-                    s for _expr in parsed_exprs for s in _expr.is_null()._call(df)
+                init_value, *values = [
+                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask)
+                ]
+
+                sep_array = init_value.__class__._from_iterable(
+                    data=[separator] * len(init_value),
+                    name="sep",
+                    index=init_value._native_series.index,
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
                 )
-                null_mask = reduce(lambda x, y: x | y, null_series)
-                null_series = result._from_native_series(
-                    native_namespace.Series([None] * len(result))
+                separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
+                result = reduce(
+                    lambda x, y: x + y,
+                    (s + v for s, v in zip(separators, values)),
+                    init_value,
                 )
-                return [result.zip_with(~null_mask, null_series)]
+
+            return [result]
 
         return self._create_expr_from_callable(
             func=func,
