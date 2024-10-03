@@ -54,6 +54,7 @@ def test_unpivot_var_value_names(
     request: pytest.FixtureRequest,
 ) -> None:
     if variable_name == "" and "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/16972
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
