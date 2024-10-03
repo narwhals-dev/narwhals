@@ -68,14 +68,14 @@ def test_list_valid() -> None:
 
 
 def test_array_valid() -> None:
-    dtype = nw.Array(nw.Int64)
-    assert dtype == nw.Array(nw.Int64)
+    dtype = nw.Array(nw.Int64, 2)
+    assert dtype == nw.Array(nw.Int64, 2)
     assert dtype == nw.Array
-    assert dtype != nw.Array(nw.Float32)
+    assert dtype != nw.Array(nw.Float32, 2)
     assert dtype != nw.Duration
     assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>)"
-    dtype = nw.Array(nw.Array(nw.Int64))
-    assert dtype == nw.Array(nw.Array(nw.Int64))
+    dtype = nw.Array(nw.Array(nw.Int64, 2), 2)
+    assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
     assert dtype != nw.Array(nw.Array(nw.Float32))
     assert dtype in {nw.Array(nw.Array(nw.Int64))}
