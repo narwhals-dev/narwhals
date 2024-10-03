@@ -338,9 +338,9 @@ class PandasLikeNamespace:
             null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
 
             if not ignore_nulls:
-                null_mask = reduce(lambda x, y: x | y, null_mask)
+                null_mask_result = reduce(lambda x, y: x | y, null_mask)
                 result = reduce(lambda x, y: x + separator + y, series).zip_with(
-                    ~null_mask, None
+                    ~null_mask_result, None
                 )
             else:
                 init_value, *values = [

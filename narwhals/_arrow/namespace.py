@@ -312,7 +312,7 @@ class ArrowNamespace:
             return [
                 ArrowSeries(
                     native_series=result_series,
-                    name=reduce_output_names(parsed_exprs) or "",
+                    name="",
                     backend_version=self._backend_version,
                     dtypes=self._dtypes,
                 )
