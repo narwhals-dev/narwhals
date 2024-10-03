@@ -120,6 +120,51 @@ class PolarsNamespace:
             dtypes=self._dtypes,
         )
 
+    def concat_str(
+        self,
+        exprs: IntoPolarsExpr | Iterable[IntoPolarsExpr],
+        *more_exprs: IntoPolarsExpr,
+        separator: str = "",
+        ignore_nulls: bool = False,
+    ) -> PolarsExpr:
+        import polars as pl  # ignore-banned-import()
+
+        from narwhals._polars.expr import PolarsExpr
+
+        exprs = [exprs] if not isinstance(exprs, Iterable) else exprs
+
+        pl_exprs = parse_into_exprs(*exprs, namespace=self)
+        pl_more_exprs = parse_into_exprs(*more_exprs, namespace=self)
+
+        if self._backend_version < (0, 20, 6):  # pragma: no cover
+            if ignore_nulls:
+                pl_exprs = (
+                    expr.cast(self._dtypes.String()).fill_null("") for expr in pl_exprs
+                )
+                pl_more_exprs = (
+                    expr.cast(self._dtypes.String()).fill_null("")
+                    for expr in pl_more_exprs
+                )
+
+            return PolarsExpr(
+                pl.concat_str(
+                    [e._native_expr for e in pl_exprs],
+                    *[e._native_expr for e in pl_more_exprs],
+                    separator=separator,
+                ),
+                dtypes=self._dtypes,
+            )  # type: ignore[arg-type]
+
+        return PolarsExpr(
+            pl.concat_str(
+                [e._native_expr for e in pl_exprs],
+                *[e._native_expr for e in pl_more_exprs],
+                separator=separator,
+                ignore_nulls=ignore_nulls,
+            ),
+            dtypes=self._dtypes,
+        )
+
     @property
     def selectors(self) -> PolarsSelectors:
         return PolarsSelectors(self._dtypes)

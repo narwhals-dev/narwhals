@@ -316,6 +316,48 @@ class PandasLikeNamespace:
             condition, self._implementation, self._backend_version, dtypes=self._dtypes
         )
 
+    def concat_str(
+        self,
+        exprs: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
+        *more_exprs: IntoPandasLikeExpr,
+        separator: str = "",
+        ignore_nulls: bool = False,
+    ) -> PandasLikeExpr:
+        exprs = [exprs] if not isinstance(exprs, Iterable) else exprs
+        parsed_exprs: list[PandasLikeExpr] = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
+        ]
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = (
+                s
+                for _expr in parsed_exprs
+                for s in _expr.fill_null("").cast(self._dtypes.String())._call(df)
+            )
+            result = reduce(lambda x, y: x + separator + y, series)
+
+            if ignore_nulls:
+                return [result]
+            else:
+                native_namespace = result.__native_namespace__()
+                null_series = (
+                    s for _expr in parsed_exprs for s in _expr.is_null()._call(df)
+                )
+                null_mask = reduce(lambda x, y: x | y, null_series)
+                null_series = result._from_native_series(
+                    native_namespace.Series([None] * len(result))
+                )
+                return [result.zip_with(~null_mask, null_series)]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="concat_str",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
 
 class PandasWhen:
     def __init__(

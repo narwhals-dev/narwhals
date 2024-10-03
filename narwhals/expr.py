@@ -4403,6 +4403,38 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
+def concat_str(
+    exprs: IntoExpr | Iterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    separator: str = "",
+    ignore_nulls: bool = False,
+) -> Expr:
+    r"""
+    Horizontally concatenate columns into a single string column.
+
+    Arguments:
+        exprs: Columns to concatenate into a single string column. Accepts expression
+            input. Strings are parsed as column names, other non-expression inputs are
+            parsed as literals. Non-`String` columns are cast to `String`.
+        *more_exprs: Additional columns to concatenate into a single string column,
+            specified as positional arguments.
+        separator: String that will be used to separate the values of each column.
+        ignore_nulls: Ignore null values (default is `False`).
+            If set to `False`, null values will be propagated and if the row contains any
+            null values, the output is null.
+
+    Examples:
+    """
+    return Expr(
+        lambda plx: plx.concat_str(
+            [extract_compliant(plx, v) for v in flatten(exprs)],
+            *[extract_compliant(plx, v) for v in more_exprs],
+            separator=separator,
+            ignore_nulls=ignore_nulls,
+        )
+    )
+
+
 __all__ = [
     "Expr",
 ]
