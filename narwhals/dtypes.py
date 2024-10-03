@@ -36,7 +36,26 @@ class NumericType(DType): ...
 class TemporalType(DType): ...
 
 
-class Int64(NumericType): ...
+class Int64(NumericType):
+    """64-bit signed integer type.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = [2, 1, 3, 7]
+        >>> ser_pd = pd.Series(data)
+        >>> ser_pl = pl.Series(data)
+        >>> ser_pa = pa.chunked_array([data])
+
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Int64
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Int64
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Int64
+    """
 
 
 class Int32(NumericType): ...
@@ -60,7 +79,26 @@ class UInt16(NumericType): ...
 class UInt8(NumericType): ...
 
 
-class Float64(NumericType): ...
+class Float64(NumericType):
+    """64-bit floating point type.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = [0.001, 0.1, 0.01, 0.1]
+        >>> ser_pd = pd.Series(data)
+        >>> ser_pl = pl.Series(data)
+        >>> ser_pa = pa.chunked_array([data])
+
+        >>> nw.from_native(ser_pd, series_only=True).dtype
+        Float64
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Float64
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Float64
+    """
 
 
 class Float32(NumericType): ...
