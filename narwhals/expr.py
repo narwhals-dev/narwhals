@@ -4424,6 +4424,57 @@ def concat_str(
             null values, the output is null.
 
     Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 2, 3],
+        ...     "b": ["dogs", "cats", None],
+        ...     "c": ["play", "swim", "walk"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal string
+        concatenation of different columns
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(
+        ...         nw.concat_str(
+        ...             [
+        ...                 nw.col("a") * 2,
+        ...                 nw.col("b"),
+        ...                 nw.col("c"),
+        ...             ],
+        ...             separator=" ",
+        ...         ).alias("full_sentence")
+        ...     )
+
+        We can then pass either pandas, Polars or PyArrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+          full_sentence
+        0   2 dogs play
+        1   4 cats swim
+        2          None
+
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌───────────────┐
+        │ full_sentence │
+        │ ---           │
+        │ str           │
+        ╞═══════════════╡
+        │ 2 dogs play   │
+        │ 4 cats swim   │
+        │ null          │
+        └───────────────┘
+
+        >>> func(pa.table(data))
+        pyarrow.Table
+        full_sentence: string
+        ----
+        full_sentence: [["2 dogs play","4 cats swim",null]]
     """
     return Expr(
         lambda plx: plx.concat_str(
