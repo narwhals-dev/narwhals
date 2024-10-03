@@ -33,7 +33,7 @@ Narwhals supports exporting a DataFrame via the Arrow PyCapsule Interface.
 ### Ibis
 
 Pitched as "The portable Dataframe library", Ibis provides a Pythonic frontend
-to SQL. Some differences with Narwhals are:
+to various SQL (as well as Polars LazyFrame). Some differences with Narwhals are:
 
 - Narwhals' main use case is for library maintainers wanting to support
   different dataframe libraries without depending on any whilst keeping
