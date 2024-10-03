@@ -186,6 +186,8 @@ class PandasLikeDataFrame:
 
         elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
             columns = self._native_frame.columns
+            if item[1] == slice(None):
+                return self._from_native_frame(self._native_frame.iloc[item[0], :])
             if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                 return self._from_native_frame(

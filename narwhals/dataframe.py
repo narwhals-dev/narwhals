@@ -843,8 +843,6 @@ class DataFrame(BaseFrame[DataFrameT]):
         ):
             if item[1] == slice(None) and item[0] == slice(None):
                 return self
-            if item[1] == slice(None):
-                return self._from_compliant_dataframe(self._compliant_frame[item[0]])
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             return self._series(
