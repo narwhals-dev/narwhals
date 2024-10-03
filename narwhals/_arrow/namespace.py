@@ -284,6 +284,48 @@ class ArrowNamespace:
 
         return ArrowWhen(condition, self._backend_version, dtypes=self._dtypes)
 
+    def concat_str(
+        self,
+        exprs: IntoArrowExpr | Iterable[IntoArrowExpr],
+        *more_exprs: IntoArrowExpr,
+        separator: str = "",
+        ignore_nulls: bool = False,
+    ) -> ArrowExpr:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        exprs = [exprs] if not isinstance(exprs, Iterable) else exprs
+        parsed_exprs: list[ArrowExpr] = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
+        ]
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = (
+                s._native_series
+                for _expr in parsed_exprs
+                for s in _expr.cast(self._dtypes.String())._call(df)
+            )
+            null_handling = "skip" if ignore_nulls else "emit_null"
+            result_series = pc.binary_join_element_wise(
+                *series, separator, null_handling=null_handling
+            )
+            return [
+                ArrowSeries(
+                    native_series=result_series,
+                    name=reduce_output_names(parsed_exprs),
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="concat_str",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
 
 class ArrowWhen:
     def __init__(
