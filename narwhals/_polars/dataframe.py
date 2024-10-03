@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.utils import convert_str_slice_to_int_slice
@@ -117,6 +118,12 @@ class PolarsDataFrame:
 
             columns = self.columns
             if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
+                if item[1] == slice(None):
+                    if isinstance(item[0], Sequence) and not len(item[0]):
+                        return self._from_native_frame(self._native_frame[0:0])
+                    return self._from_native_frame(
+                        self._native_frame.__getitem__(item[0])
+                    )
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                     start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                     return self._from_native_frame(

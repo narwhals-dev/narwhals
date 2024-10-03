@@ -176,6 +176,10 @@ class ArrowDataFrame:
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], slice):
                 columns = self.columns
+                if item[1] == slice(None):
+                    if isinstance(item[0], Sequence) and len(item[0]) == 0:
+                        return self._from_native_frame(self._native_frame.slice(0, 0))
+                    return self._from_native_frame(self._native_frame.take(item[0]))
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                     start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                     return self._from_native_frame(
