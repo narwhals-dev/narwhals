@@ -218,15 +218,11 @@ class ArrowNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (
-                _series.fill_null(0)
-                for _expr in parsed_exprs
-                for _series in _expr._call(df)
-            )
+            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr._call(df))
             non_na = (
-                1 - _series.is_null().cast(self._dtypes.Int64())
+                1 - s.is_null().cast(self._dtypes.Int64())
                 for _expr in parsed_exprs
-                for _series in _expr._call(df)
+                for s in _expr._call(df)
             )
             return [
                 reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
@@ -237,7 +233,7 @@ class ArrowNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="mean_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
         )
 
     def concat(
