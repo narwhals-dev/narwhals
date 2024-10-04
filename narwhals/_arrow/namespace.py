@@ -218,9 +218,11 @@ class ArrowNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend([_series.fill_null(0) for _series in _expr._call(df)])
+            series = (
+                _series.fill_null(0)
+                for _expr in parsed_exprs
+                for _series in _expr._call(df)
+            )
             non_na = (
                 1 - _series.is_null().cast(self._dtypes.Int64())
                 for _expr in parsed_exprs
