@@ -10,8 +10,10 @@ import narwhals.stable.v1 as nw
 
 
 def test_to_numpy(constructor_eager: Any, request: pytest.FixtureRequest) -> None:
-    if "pandas_constructor" in str(constructor_eager) or "modin_constructor" in str(
-        constructor_eager
+    if (
+        "pandas_constructor" in str(constructor_eager)
+        or "modin_constructor" in str(constructor_eager)
+        or "cudf_constructor" in str(constructor_eager)
     ):
         request.applymarker(pytest.mark.xfail)
 

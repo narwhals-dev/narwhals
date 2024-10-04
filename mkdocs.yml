@@ -19,11 +19,12 @@ nav:
   - extending.md
   - how_it_works.md
   - Roadmap and related projects: roadmap_and_related.md
-  - API Completeness:
-    - api-completeness/index.md
-    - Supported DataFrame methods: api-completeness/dataframe.md
-    - Supporteda Expr methods: api-completeness/expr.md
-    - Supported Series methods: api-completeness/series.md
+  # Commented-out until https://github.com/narwhals-dev/narwhals/issues/1004 is addressed
+  # - API Completeness:
+  #   - api-completeness/index.md
+  #   - Supported DataFrame methods: api-completeness/dataframe.md
+  #   - Supported Expr methods: api-completeness/expr.md
+  #   - Supported Series methods: api-completeness/series.md
   - API Reference:
     - api-reference/narwhals.md
     - api-reference/dataframe.md
@@ -47,8 +48,8 @@ nav:
 theme:
   name: material
   font: false
-  favicon: assets/image.png
-  logo: assets/image.png
+  favicon: assets/logo.svg
+  logo: assets/logo.svg
   features:
     - content.code.copy
     - content.code.annotate
@@ -75,6 +76,9 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
+  - css/mkdocstrings.css
 
 plugins:
 - search

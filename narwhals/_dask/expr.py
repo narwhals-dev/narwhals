@@ -9,7 +9,7 @@ from typing import NoReturn
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
-from narwhals._dask.utils import reverse_translate_dtype
+from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class DaskExpr:
@@ -34,6 +35,7 @@ class DaskExpr:
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -42,6 +44,7 @@ class DaskExpr:
         self._output_names = output_names
         self._returns_scalar = returns_scalar
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -49,13 +52,14 @@ class DaskExpr:
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._dask.namespace import DaskNamespace
 
-        return DaskNamespace(backend_version=self._backend_version)
+        return DaskNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     @classmethod
     def from_column_names(
         cls: type[Self],
         *column_names: str,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             return [df._native_frame.loc[:, column_name] for column_name in column_names]
@@ -68,6 +72,7 @@ class DaskExpr:
             output_names=list(column_names),
             returns_scalar=False,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     @classmethod
@@ -75,6 +80,7 @@ class DaskExpr:
         cls: type[Self],
         *column_indices: int,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             return [
@@ -89,6 +95,7 @@ class DaskExpr:
             output_names=None,
             returns_scalar=False,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     def _from_call(
@@ -146,6 +153,7 @@ class DaskExpr:
             output_names=output_names,
             returns_scalar=self._returns_scalar or returns_scalar,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def alias(self, name: str) -> Self:
@@ -161,6 +169,7 @@ class DaskExpr:
             output_names=[name],
             returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def __add__(self, other: Any) -> Self:
@@ -677,6 +686,7 @@ class DaskExpr:
             output_names=self._output_names,
             returns_scalar=False,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def mode(self: Self) -> Self:
@@ -700,7 +710,7 @@ class DaskExpr:
         dtype: DType | type[DType],
     ) -> Self:
         def func(_input: Any, dtype: DType | type[DType]) -> Any:
-            dtype = reverse_translate_dtype(dtype)
+            dtype = narwhals_to_native_dtype(dtype, self._dtypes)
             return _input.astype(dtype)
 
         return self._from_call(
@@ -977,6 +987,7 @@ class DaskExprNameNamespace:
             output_names=root_names,
             returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> DaskExpr:
@@ -1003,6 +1014,7 @@ class DaskExprNameNamespace:
             output_names=output_names,
             returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def prefix(self: Self, prefix: str) -> DaskExpr:
@@ -1027,6 +1039,7 @@ class DaskExprNameNamespace:
             output_names=output_names,
             returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def suffix(self: Self, suffix: str) -> DaskExpr:
@@ -1052,6 +1065,7 @@ class DaskExprNameNamespace:
             output_names=output_names,
             returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def to_lowercase(self: Self) -> DaskExpr:
@@ -1077,6 +1091,7 @@ class DaskExprNameNamespace:
             output_names=output_names,
             returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def to_uppercase(self: Self) -> DaskExpr:
@@ -1102,4 +1117,5 @@ class DaskExprNameNamespace:
             output_names=output_names,
             returns_scalar=self._expr._returns_scalar,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )

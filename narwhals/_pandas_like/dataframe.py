@@ -14,7 +14,7 @@ from narwhals._pandas_like.utils import broadcast_series
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import translate_dtype
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import IntoPandasLikeExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class PandasLikeDataFrame:
@@ -45,11 +46,13 @@ class PandasLikeDataFrame:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._validate_columns(native_dataframe.columns)
         self._native_frame = native_dataframe
         self._implementation = implementation
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -60,7 +63,9 @@ class PandasLikeDataFrame:
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasLikeNamespace(self._implementation, self._backend_version)
+        return PandasLikeNamespace(
+            self._implementation, self._backend_version, dtypes=self._dtypes
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
@@ -92,6 +97,7 @@ class PandasLikeDataFrame:
             df,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def get_column(self, name: str) -> PandasLikeSeries:
@@ -101,6 +107,7 @@ class PandasLikeDataFrame:
             self._native_frame.loc[:, name],
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
@@ -153,6 +160,7 @@ class PandasLikeDataFrame:
                 self._native_frame.loc[:, item],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
 
         elif (
@@ -178,6 +186,8 @@ class PandasLikeDataFrame:
 
         elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
             columns = self._native_frame.columns
+            if item[1] == slice(None):
+                return self._from_native_frame(self._native_frame.iloc[item[0], :])
             if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                 return self._from_native_frame(
@@ -208,6 +218,7 @@ class PandasLikeDataFrame:
                 native_series,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
 
         elif is_sequence_but_not_str(item) or (is_numpy_array(item) and item.ndim == 1):
@@ -265,7 +276,7 @@ class PandasLikeDataFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: translate_dtype(self._native_frame.loc[:, col])
+            col: native_to_narwhals_dtype(self._native_frame.loc[:, col], self._dtypes)
             for col in self._native_frame.columns
         }
 
@@ -306,6 +317,7 @@ class PandasLikeDataFrame:
             index=self._native_frame.index,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         ).alias(name)
         return self._from_native_frame(
             horizontal_concat(
@@ -401,7 +413,8 @@ class PandasLikeDataFrame:
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
@@ -409,7 +422,10 @@ class PandasLikeDataFrame:
             ascending: bool | list[bool] = not descending
         else:
             ascending = [not d for d in descending]
-        return self._from_native_frame(df.sort_values(flat_keys, ascending=ascending))
+        na_position = "last" if nulls_last else "first"
+        return self._from_native_frame(
+            df.sort_values(flat_keys, ascending=ascending, na_position=na_position)
+        )
 
     # --- convert ---
     def collect(self) -> PandasLikeDataFrame:
@@ -417,6 +433,7 @@ class PandasLikeDataFrame:
             self._native_frame,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     # --- actions ---
@@ -623,6 +640,7 @@ class PandasLikeDataFrame:
                     self._native_frame.loc[:, col],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
+                    dtypes=self._dtypes,
                 )
                 for col in self.columns
             }
@@ -672,6 +690,7 @@ class PandasLikeDataFrame:
             self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def is_empty(self: Self) -> bool:
@@ -684,6 +703,7 @@ class PandasLikeDataFrame:
             ~self._native_frame.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def null_count(self: Self) -> PandasLikeDataFrame:
@@ -691,6 +711,7 @@ class PandasLikeDataFrame:
             self._native_frame.isna().sum(axis=0).to_frame().transpose(),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
@@ -736,5 +757,21 @@ class PandasLikeDataFrame:
         return self._from_native_frame(
             self._native_frame.sample(
                 n=n, frac=fraction, replace=with_replacement, random_state=seed
+            )
+        )
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        return self._from_native_frame(
+            self._native_frame.melt(
+                id_vars=index,
+                value_vars=on,
+                var_name=variable_name if variable_name is not None else "variable",
+                value_name=value_name if value_name is not None else "value",
             )
         )
