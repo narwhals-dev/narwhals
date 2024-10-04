@@ -10,6 +10,33 @@ import narwhals.stable.v1 as nw_v1
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 
+DTYPES = {
+    "Array",
+    "Boolean",
+    "Categorical",
+    "Date",
+    "Datetime",
+    "Duration",
+    "DType",
+    "Enum",
+    "Float32",
+    "Float64",
+    "Int8",
+    "Int16",
+    "Int32",
+    "Int64",
+    "List",
+    "NumericType",
+    "Object",
+    "String",
+    "Struct",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "Unknown",
+}
+
 
 def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
@@ -85,14 +112,17 @@ def test_stable_api_docstrings() -> None:
         nw_doc = getattr(nw, item).__doc__
         if item == "from_native":
             v1_doc = v1_doc.replace("native_dataframe", "native_object")
-        assert (
-            v1_doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
-            == nw_doc
-        )
-        assert (
-            nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1 as nw")
-            == v1_doc
-        )
+        if item in DTYPES:
+            assert v1_doc == nw_doc
+        else:
+            assert (
+                v1_doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
+                == nw_doc
+            )
+            assert (
+                nw_doc.replace("import narwhals as nw", "import narwhals.stable.v1 as nw")
+                == v1_doc
+            )
 
 
 def test_dataframe_docstrings() -> None:
