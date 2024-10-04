@@ -73,12 +73,12 @@ def test_array_valid() -> None:
     assert dtype == nw.Array
     assert dtype != nw.Array(nw.Float32, 2)
     assert dtype != nw.Duration
-    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>)"
+    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>, 2)"
     dtype = nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
     assert dtype == nw.Array
-    assert dtype != nw.Array(nw.Array(nw.Float32))
-    assert dtype in {nw.Array(nw.Array(nw.Int64))}
+    assert dtype != nw.Array(nw.Array(nw.Float32, 2), 2)
+    assert dtype in {nw.Array(nw.Array(nw.Int64, 2), 2)}
 
 
 def test_second_time_unit() -> None:
