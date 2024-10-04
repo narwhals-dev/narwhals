@@ -11,6 +11,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
+from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import combine_root_names
@@ -353,7 +354,8 @@ class ArrowWhen:
                 self._otherwise_value, namespace=plx
             )._call(df)[0]  # type: ignore[arg-type]
         except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            # `self._otherwise_value` is a scalar and can't be converted to an expression.
+            # Remark that string values _are_ converted into expressions!
             return [
                 value_series._from_native_series(
                     pc.if_else(
@@ -364,7 +366,14 @@ class ArrowWhen:
         else:
             otherwise_series = cast(ArrowSeries, otherwise_series)
             condition = cast(ArrowSeries, condition)
-            return [value_series.zip_with(condition, otherwise_series)]
+            condition_native, otherwise_native = broadcast_series(
+                [condition, otherwise_series]
+            )
+            return [
+                value_series._from_native_series(
+                    pc.if_else(condition_native, value_series_native, otherwise_native)
+                )
+            ]
 
     def then(self, value: ArrowExpr | ArrowSeries | Any) -> ArrowThen:
         self._then_value = value
