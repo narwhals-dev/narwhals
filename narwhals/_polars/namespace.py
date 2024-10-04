@@ -107,13 +107,13 @@ class PolarsNamespace:
 
         if self._backend_version < (0, 20, 8):  # pragma: no cover
             return PolarsExpr(
-                pl.sum_horizontal([e._native_expr for e in polars_exprs])
-                / pl.sum_horizontal([1 - e.is_null()._native_expr for e in polars_exprs]),
+                pl.sum_horizontal(e._native_expr for e in polars_exprs)
+                / pl.sum_horizontal(1 - e.is_null()._native_expr for e in polars_exprs),
                 dtypes=self._dtypes,
             )
 
         return PolarsExpr(
-            pl.mean_horizontal([e._native_expr for e in polars_exprs]),
+            pl.mean_horizontal(e._native_expr for e in polars_exprs),
             dtypes=self._dtypes,
         )
 
