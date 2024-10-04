@@ -221,14 +221,11 @@ class ArrowNamespace:
             series = []
             for _expr in parsed_exprs:
                 series.extend([_series.fill_null(0) for _series in _expr._call(df)])
-            non_na = []
-            for _expr in parsed_exprs:
-                non_na.extend(
-                    [
-                        1 - _series.is_null().cast(self._dtypes.Int64())
-                        for _series in _expr._call(df)
-                    ]
-                )
+            non_na = (
+                1 - _series.is_null().cast(self._dtypes.Int64())
+                for _expr in parsed_exprs
+                for _series in _expr._call(df)
+            )
             return [
                 reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
             ]
