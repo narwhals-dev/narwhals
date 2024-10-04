@@ -107,7 +107,7 @@ jobs:
           cache-dependency-glob: "**requirements*.txt"
       - name: clone-shiny
         run: |
-            git clone https://github.com/posit-dev/py-shiny.git --depth=1
+            git clone https://github.com/posit-dev/py-shiny.git
             cd py-shiny
             git log
       - name: install-basics
