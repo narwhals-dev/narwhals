@@ -170,9 +170,12 @@ class BaseFrame(Generic[FrameT]):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.sort(by, *more_by, descending=descending)
+            self._compliant_frame.sort(
+                by, *more_by, descending=descending, nulls_last=nulls_last
+            )
         )
 
     def join(
@@ -843,8 +846,6 @@ class DataFrame(BaseFrame[DataFrameT]):
         ):
             if item[1] == slice(None) and item[0] == slice(None):
                 return self
-            if item[1] == slice(None):
-                return self._from_compliant_dataframe(self._compliant_frame[item[0]])
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             return self._series(
@@ -1946,19 +1947,22 @@ class DataFrame(BaseFrame[DataFrameT]):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         r"""
         Sort the dataframe by the given columns.
 
         Arguments:
             by: Column(s) names to sort by.
+            *more_by: Additional columns to sort by, specified as positional arguments.
+            descending: Sort in descending order. When sorting by multiple columns, can be
+                specified per column by passing a sequence of booleans.
+            nulls_last: Place null values last.
 
-            *more_by: Additional columns to sort by, specified as positional
-                       arguments.
-
-            descending: Sort in descending order. When sorting by multiple
-                         columns, can be specified per column by passing a
-                         sequence of booleans.
+        Warning:
+            Unlike Polars, it is not possible to specify a sequence of booleans for
+            `nulls_last` in order to control per-column behaviour. Instead a single
+            boolean is applied for all `by` columns.
 
         Examples:
             >>> import narwhals as nw
@@ -1998,7 +2002,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ 2    ┆ 5.0 ┆ c   │
             └──────┴─────┴─────┘
         """
-        return super().sort(by, *more_by, descending=descending)
+        return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
     def join(
         self,
@@ -3860,20 +3864,23 @@ class LazyFrame(BaseFrame[FrameT]):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         r"""
         Sort the LazyFrame by the given columns.
 
         Arguments:
-            by: Column(s) to sort by. Accepts expression input. Strings are
-                 parsed as column names.
+            by: Column(s) names to sort by.
+            *more_by: Additional columns to sort by, specified as positional arguments.
+            descending: Sort in descending order. When sorting by multiple columns, can be
+                specified per column by passing a sequence of booleans.
+            nulls_last: Place null values last; can specify a single boolean applying to
+                all columns or a sequence of booleans for per-column control.
 
-            *more_by: Additional columns to sort by, specified as positional
-                       arguments.
-
-            descending: Sort in descending order. When sorting by multiple
-                         columns, can be specified per column by passing a
-                         sequence of booleans.
+        Warning:
+            Unlike Polars, it is not possible to specify a sequence of booleans for
+            `nulls_last` in order to control per-column behaviour. Instead a single
+            boolean is applied for all `by` columns.
 
         Examples:
             >>> import narwhals as nw
@@ -3913,7 +3920,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2    ┆ 5.0 ┆ c   │
             └──────┴─────┴─────┘
         """
-        return super().sort(by, *more_by, descending=descending)
+        return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
     def join(
         self,

@@ -61,7 +61,7 @@ def test_string_disguised_as_object() -> None:
 
 
 def test_actual_object(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
-    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table")):
+    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...

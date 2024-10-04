@@ -129,6 +129,7 @@ plugins = ["covdefaults"]
 [tool.coverage.report]
 omit = [
   'narwhals/typing.py',
+  'narwhals/stable/v1/typing.py',
   # we can run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
 ]
