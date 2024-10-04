@@ -12,6 +12,8 @@ from typing import cast
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._dask.utils import name_preserving_div
+from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_root_names
@@ -234,15 +236,13 @@ class DaskNamespace:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = []
-            for _expr in parsed_exprs:
-                series.extend([_series.fillna(0) for _series in _expr._call(df)])
-            non_na = []
-            for _expr in parsed_exprs:
-                non_na.extend([1 - _series.isna() for _series in _expr._call(df)])
+            series = (s.fillna(0) for _expr in parsed_exprs for s in _expr._call(df))
+            non_na = (1 - s.isna() for _expr in parsed_exprs for s in _expr._call(df))
             return [
-                reduce(lambda x, y: x + y, series).rename(series[0].name)
-                / reduce(lambda x, y: x + y, non_na).rename(series[0].name)
+                name_preserving_div(
+                    reduce(name_preserving_sum, series),
+                    reduce(name_preserving_sum, non_na),
+                )
             ]
 
         return DaskExpr(
@@ -250,7 +250,7 @@ class DaskNamespace:
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="mean_horizontal",
             root_names=combine_root_names(parsed_exprs),
-            output_names=parsed_exprs[0]._output_names,
+            output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
