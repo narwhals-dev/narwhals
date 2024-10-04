@@ -319,3 +319,12 @@ def combine_root_names(parsed_exprs: Sequence[CompliantExpr]) -> list[str] | Non
                 root_names = None
                 break
     return root_names
+
+
+def reduce_output_names(parsed_exprs: Sequence[CompliantExpr]) -> list[str] | None:
+    """Returns the left-most output name"""
+    return (
+        parsed_exprs[0]._output_names[:1]
+        if parsed_exprs[0]._output_names is not None
+        else None
+    )

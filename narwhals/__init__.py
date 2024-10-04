@@ -3,6 +3,7 @@ from narwhals import selectors
 from narwhals import stable
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
+from narwhals.dtypes import Array
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
@@ -15,8 +16,10 @@ from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
+from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
+from narwhals.dtypes import Struct
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
@@ -52,9 +55,10 @@ from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_get_index
+from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.8.3"
+__version__ = "1.9.1"
 
 __all__ = [
     "dependencies",
@@ -69,6 +73,7 @@ __all__ = [
     "maybe_align_index",
     "maybe_convert_dtypes",
     "maybe_get_index",
+    "maybe_reset_index",
     "maybe_set_index",
     "get_native_namespace",
     "all",
@@ -107,6 +112,9 @@ __all__ = [
     "String",
     "Datetime",
     "Duration",
+    "Struct",
+    "Array",
+    "List",
     "Date",
     "narwhalify",
     "show_versions",

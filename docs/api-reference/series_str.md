@@ -13,6 +13,7 @@
         - slice
         - starts_with
         - strip_chars
+        - to_datetime
         - tail
       show_source: false
       show_bases: false

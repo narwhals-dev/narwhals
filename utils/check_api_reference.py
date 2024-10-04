@@ -31,7 +31,7 @@ SERIES_ONLY_METHODS = {
     "zip_with",
     "__iter__",
 }
-BASE_DTYPES = {"NumericType", "DType", "TemporalType"}
+BASE_DTYPES = {"NumericType", "DType", "TemporalType", "Literal"}
 
 files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
 

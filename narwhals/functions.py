@@ -13,6 +13,7 @@ from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
 from narwhals.utils import Implementation
+from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 
 # Missing type parameters for generic type "DataFrame"
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
+    from narwhals.typing import DTypes
 
 
 def concat(
@@ -194,6 +196,25 @@ def new_series(
            2
         ]
     """
+    from narwhals import dtypes
+
+    return _new_series_impl(
+        name,
+        values,
+        dtype,
+        native_namespace=native_namespace,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _new_series_impl(
+    name: str,
+    values: Any,
+    dtype: DType | type[DType] | None = None,
+    *,
+    native_namespace: ModuleType,
+    dtypes: DTypes,
+) -> Series:
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
@@ -202,7 +223,7 @@ def new_series(
                 narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
             )
 
-            dtype = polars_narwhals_to_native_dtype(dtype)
+            dtype = polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
 
         native_series = native_namespace.Series(name=name, values=values, dtype=dtype)
     elif implementation in {
@@ -215,7 +236,10 @@ def new_series(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
-            dtype = pandas_like_narwhals_to_native_dtype(dtype, None, implementation)
+            backend_version = parse_version(native_namespace.__version__)
+            dtype = pandas_like_narwhals_to_native_dtype(
+                dtype, None, implementation, backend_version, dtypes
+            )
         native_series = native_namespace.Series(values, name=name, dtype=dtype)
 
     elif implementation is Implementation.PYARROW:
@@ -224,7 +248,7 @@ def new_series(
                 narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
             )
 
-            dtype = arrow_narwhals_to_native_dtype(dtype)
+            dtype = arrow_narwhals_to_native_dtype(dtype, dtypes=dtypes)
         native_series = native_namespace.chunked_array([values], type=dtype)
 
     elif implementation is Implementation.DASK:
@@ -291,6 +315,23 @@ def from_dict(
         │ 2   ┆ 4   │
         └─────┴─────┘
     """
+    from narwhals import dtypes
+
+    return _from_dict_impl(
+        data,
+        schema,
+        native_namespace=native_namespace,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _from_dict_impl(
+    data: dict[str, Any],
+    schema: dict[str, DType] | Schema | None = None,
+    *,
+    native_namespace: ModuleType | None = None,
+    dtypes: DTypes,
+) -> DataFrame[Any]:
     from narwhals.series import Series
     from narwhals.translate import to_native
 
@@ -315,7 +356,7 @@ def from_dict(
             )
 
             schema = {
-                name: polars_narwhals_to_native_dtype(dtype)
+                name: polars_narwhals_to_native_dtype(dtype, dtypes=dtypes)
                 for name, dtype in schema.items()
             }
 
@@ -332,9 +373,10 @@ def from_dict(
                 narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
             )
 
+            backend_version = parse_version(native_namespace.__version__)
             schema = {
                 name: pandas_like_narwhals_to_native_dtype(
-                    schema[name], native_type, implementation
+                    schema[name], native_type, implementation, backend_version, dtypes
                 )
                 for name, native_type in native_frame.dtypes.items()
             }
@@ -348,7 +390,7 @@ def from_dict(
 
             schema = native_namespace.schema(
                 [
-                    (name, arrow_narwhals_to_native_dtype(dtype))
+                    (name, arrow_narwhals_to_native_dtype(dtype, dtypes))
                     for name, dtype in schema.items()
                 ]
             )
