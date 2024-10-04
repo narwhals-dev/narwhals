@@ -293,11 +293,7 @@ class DaskNamespace:
         ]
 
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = (
-                s
-                for _expr in parsed_exprs
-                for s in _expr.cast(self._dtypes.String())._call(df)
-            )
+            series = (s.astype(str) for _expr in parsed_exprs for s in _expr._call(df))
             null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
 
             if not ignore_nulls:
