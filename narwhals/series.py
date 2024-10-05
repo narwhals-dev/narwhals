@@ -3083,6 +3083,63 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
+    def to_datetime(self, format: str) -> Series:  # noqa: A002
+        """
+        Parse Series with strings to a Series with Datetime dtype.
+
+        Notes:
+            pandas defaults to nanosecond time unit, Polars to microsecond.
+            Prior to pandas 2.0, nanoseconds were the only time unit supported
+            in pandas, with no ability to set any other one. The ability to
+            set the time unit in pandas, if the version permits, will arrive.
+
+        Arguments:
+            format: Format to parse strings with. Must be passed, as different
+                    dataframe libraries have different ways of auto-inferring
+                    formats.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = ["2020-01-01", "2020-01-02"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.str.to_datetime(format="%Y-%m-%d")
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow::
+
+            >>> func(s_pd)
+            0   2020-01-01
+            1   2020-01-02
+            dtype: datetime64[ns]
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [datetime[μs]]
+            [
+               2020-01-01 00:00:00
+               2020-01-02 00:00:00
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                2020-01-01 00:00:00.000000,
+                2020-01-02 00:00:00.000000
+              ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.to_datetime(format=format)
+        )
+
 
 class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:
