@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoSeriesT
 
 T = TypeVar("T")
 
@@ -50,13 +51,15 @@ def to_native(
     narwhals_object: LazyFrame[IntoFrameT], *, strict: Literal[True] = ...
 ) -> IntoFrameT: ...
 @overload
-def to_native(narwhals_object: Series, *, strict: Literal[True] = ...) -> Any: ...
+def to_native(
+    narwhals_object: Series[IntoSeriesT], *, strict: Literal[True] = ...
+) -> Any: ...
 @overload
 def to_native(narwhals_object: Any, *, strict: bool) -> Any: ...
 
 
 def to_native(
-    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series,
+    narwhals_object: DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT],
     *,
     strict: bool = True,
 ) -> IntoFrameT | Any:
@@ -238,17 +241,17 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[True] = ...,
-    eager_only: None = ...,
+    eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series:
+    allow_series: None = ...,
+) -> Series[IntoSeriesT]:
     """
-    from_native(df, strict=True, allow_series=True)
-    from_native(df, allow_series=True)
+    from_native(df, strict=True, eager_only=True)
+    from_native(df, eager_only=True)
     """
 
 
@@ -259,9 +262,25 @@ def from_native(
     strict: Literal[True] = ...,
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
+    series_only: None = ...,
+    allow_series: Literal[True],
+) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]:
+    """
+    from_native(df, strict=True, allow_series=True)
+    from_native(df, allow_series=True)
+    """
+
+
+@overload
+def from_native(
+    native_object: IntoSeriesT,
+    *,
+    strict: Literal[True] = ...,
+    eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series:
+) -> Series[IntoSeriesT]:
     """
     from_native(df, strict=True, series_only=True)
     from_native(df, series_only=True)
@@ -282,6 +301,18 @@ def from_native(
     from_native(df, strict=True)
     from_native(df)
     """
+
+
+@overload
+def from_native(
+    native_object: IntoSeriesT,
+    *,
+    strict: Literal[True] = ...,
+    eager_only: None = ...,
+    eager_or_interchange_only: None = ...,
+    series_only: Literal[True],
+    allow_series: Literal[True],
+) -> Series[IntoSeriesT]: ...
 
 
 # All params passed in as variables

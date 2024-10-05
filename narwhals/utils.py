@@ -152,7 +152,7 @@ def validate_laziness(items: Iterable[Any]) -> None:
     raise NotImplementedError(msg)
 
 
-def maybe_align_index(lhs: T, rhs: Series | BaseFrame[Any]) -> T:
+def maybe_align_index(lhs: T, rhs: Series[Any] | BaseFrame[Any]) -> T:
     """
     Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
@@ -394,7 +394,7 @@ def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
     return obj_any  # type: ignore[no-any-return]
 
 
-def is_ordered_categorical(series: Series) -> bool:
+def is_ordered_categorical(series: Series[Any]) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
 

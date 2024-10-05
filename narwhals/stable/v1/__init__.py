@@ -51,6 +51,7 @@ from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoSeriesT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
@@ -83,7 +84,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # annotations are correct.
 
     @property
-    def _series(self) -> type[Series]:
+    def _series(self) -> type[Series[Any]]:
         return Series
 
     @property
@@ -97,23 +98,23 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[slice, str]) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[slice, int]) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: str) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[str]) -> Self: ...
@@ -175,14 +176,18 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
     @overload  # type: ignore[override]
-    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
+    def to_dict(
+        self, *, as_series: Literal[True] = ...
+    ) -> dict[str, Series[IntoSeriesT]]: ...
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(
+        self, *, as_series: bool
+    ) -> dict[str, Series[IntoSeriesT]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
-    ) -> dict[str, Series] | dict[str, list[Any]]:
+    ) -> dict[str, Series[IntoSeriesT]] | dict[str, list[Any]]:
         """
         Convert DataFrame to a dictionary mapping column name to values.
 
@@ -223,7 +228,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
-    def is_duplicated(self: Self) -> Series:
+    def is_duplicated(self: Self) -> Series[IntoSeriesT]:
         r"""
         Get a mask of all duplicated rows in this DataFrame.
 
@@ -271,7 +276,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().is_duplicated()  # type: ignore[return-value]
 
-    def is_unique(self: Self) -> Series:
+    def is_unique(self: Self) -> Series[IntoSeriesT]:
         r"""
         Get a mask of all unique rows in this DataFrame.
 
@@ -381,7 +386,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return self.select(all()._l1_norm())
 
 
-class Series(NwSeries):
+class Series(NwSeries[IntoSeriesT]):
     """
     Narwhals Series, backed by a native series.
 
@@ -538,7 +543,7 @@ def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
 @overload
 def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
 @overload
-def _stableify(obj: NwSeries) -> Series: ...
+def _stableify(obj: NwSeries[IntoSeriesT]) -> Series[IntoSeriesT]: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
 @overload
@@ -546,8 +551,12 @@ def _stableify(obj: Any) -> Any: ...
 
 
 def _stableify(
-    obj: NwDataFrame[IntoFrameT] | NwLazyFrame[IntoFrameT] | NwSeries | NwExpr | Any,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series | Expr | Any:
+    obj: NwDataFrame[IntoFrameT]
+    | NwLazyFrame[IntoFrameT]
+    | NwSeries[IntoSeriesT]
+    | NwExpr
+    | Any,
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(
             obj._compliant_frame,
@@ -729,7 +738,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series:
+) -> DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT]:
     """
     from_native(df, strict=True, allow_series=True)
     from_native(df, allow_series=True)
@@ -738,14 +747,14 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Series:
+) -> Series[IntoSeriesT]:
     """
     from_native(df, strict=True, series_only=True)
     from_native(df, series_only=True)
@@ -1649,7 +1658,7 @@ def concat(
     return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
 
 
-def is_ordered_categorical(series: Series) -> bool:
+def is_ordered_categorical(series: Series[IntoSeriesT]) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
 
@@ -1689,7 +1698,9 @@ def is_ordered_categorical(series: Series) -> bool:
     return nw_is_ordered_categorical(series)
 
 
-def maybe_align_index(lhs: T, rhs: Series | DataFrame[Any] | LazyFrame[Any]) -> T:
+def maybe_align_index(
+    lhs: T, rhs: Series[IntoSeriesT] | DataFrame[Any] | LazyFrame[Any]
+) -> T:
     """
     Align `lhs` to the Index of `rhs`, if they're both pandas-like.
 
@@ -1851,7 +1862,7 @@ def get_native_namespace(obj: Any) -> Any:
 
 
 def get_level(
-    obj: DataFrame[Any] | LazyFrame[Any] | Series,
+    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
 ) -> Literal["full", "interchange"]:
     """
     Level of support Narwhals has for current object.
@@ -1936,7 +1947,7 @@ def new_series(
     dtype: DType | type[DType] | None = None,
     *,
     native_namespace: ModuleType,
-) -> Series:
+) -> Series[IntoSeriesT]:
     """
     Instantiate Narwhals Series from raw data.
 
