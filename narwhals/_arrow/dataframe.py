@@ -682,6 +682,11 @@ class ArrowDataFrame:
 
         n_rows = len(self)
 
+        promote_kwargs = (
+            {"promote_options": "permissive"}
+            if self._backend_version >= (14, 0, 0)
+            else {}
+        )
         return self._from_native_frame(
             pa.concat_tables(
                 [
@@ -695,7 +700,7 @@ class ArrowDataFrame:
                     )
                     for on_col in on_
                 ],
-                promote_options="permissive",
+                **promote_kwargs,
             )
         )
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not

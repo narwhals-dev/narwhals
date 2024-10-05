@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 
@@ -93,7 +95,10 @@ def test_unpivot_mixed_types(
     data: dict[str, Any],
     expected_dtypes: list[DType],
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(constructor) or (
+        "pyarrow_table" in str(constructor)
+        and parse_version(pa.__version__) < parse_version("14.0.0")
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.unpivot(on=["a", "b"], index="idx")
