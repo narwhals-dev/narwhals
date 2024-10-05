@@ -80,6 +80,11 @@ def test_array_valid() -> None:
     assert dtype != nw.Array(nw.Array(nw.Float32, 2), 2)
     assert dtype in {nw.Array(nw.Array(nw.Int64, 2), 2)}
 
+    with pytest.raises(
+        TypeError, match="`width` must be specified when initializing an `Array`"
+    ):
+        dtype = nw.Array(nw.Int64)
+
 
 def test_second_time_unit() -> None:
     s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
