@@ -176,6 +176,10 @@ class ArrowDataFrame:
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], slice):
                 columns = self.columns
+                if item[1] == slice(None):
+                    if isinstance(item[0], Sequence) and len(item[0]) == 0:
+                        return self._from_native_frame(self._native_frame.slice(0, 0))
+                    return self._from_native_frame(self._native_frame.take(item[0]))
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                     start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                     return self._from_native_frame(
@@ -391,7 +395,8 @@ class ArrowDataFrame:
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
@@ -404,7 +409,10 @@ class ArrowDataFrame:
                 (key, "descending" if is_descending else "ascending")
                 for key, is_descending in zip(flat_keys, descending)
             ]
-        return self._from_native_frame(df.sort_by(sorting=sorting))
+
+        null_placement = "at_end" if nulls_last else "at_start"
+
+        return self._from_native_frame(df.sort_by(sorting, null_placement=null_placement))
 
     def to_pandas(self) -> Any:
         return self._native_frame.to_pandas()

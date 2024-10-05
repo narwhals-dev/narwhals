@@ -206,7 +206,8 @@ class DaskLazyFrame:
         self: Self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
@@ -214,7 +215,10 @@ class DaskLazyFrame:
             ascending: bool | list[bool] = not descending
         else:
             ascending = [not d for d in descending]
-        return self._from_native_frame(df.sort_values(flat_keys, ascending=ascending))
+        na_position = "last" if nulls_last else "first"
+        return self._from_native_frame(
+            df.sort_values(flat_keys, ascending=ascending, na_position=na_position)
+        )
 
     def join(
         self: Self,

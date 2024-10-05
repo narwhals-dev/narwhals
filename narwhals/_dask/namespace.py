@@ -12,6 +12,8 @@ from typing import cast
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._dask.utils import name_preserving_div
+from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_root_names
@@ -231,10 +233,28 @@ class DaskNamespace:
         raise NotImplementedError
 
     def mean_horizontal(self, *exprs: IntoDaskExpr) -> IntoDaskExpr:
-        dask_exprs = parse_into_exprs(*exprs, namespace=self)
-        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in dask_exprs))
-        n_non_zero = reduce(lambda x, y: x + y, ((1 - e.is_null()) for e in dask_exprs))
-        return total / n_non_zero
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            series = (s.fillna(0) for _expr in parsed_exprs for s in _expr._call(df))
+            non_na = (1 - s.isna() for _expr in parsed_exprs for s in _expr._call(df))
+            return [
+                name_preserving_div(
+                    reduce(name_preserving_sum, series),
+                    reduce(name_preserving_sum, non_na),
+                )
+            ]
+
+        return DaskExpr(
+            call=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="mean_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+            returns_scalar=False,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for DaskNamespace exists only for compatibility"

@@ -261,12 +261,22 @@ class PandasLikeNamespace:
         )
 
     def mean_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
-        pandas_like_exprs = parse_into_exprs(*exprs, namespace=self)
-        total = reduce(lambda x, y: x + y, (e.fill_null(0.0) for e in pandas_like_exprs))
-        n_non_zero = reduce(
-            lambda x, y: x + y, ((1 - e.is_null()) for e in pandas_like_exprs)
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = (s.fill_null(0) for _expr in parsed_exprs for s in _expr._call(df))
+            non_na = (1 - s.is_null() for _expr in parsed_exprs for s in _expr._call(df))
+            return [
+                reduce(lambda x, y: x + y, series) / reduce(lambda x, y: x + y, non_na)
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="mean_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
         )
-        return total / n_non_zero
 
     def concat(
         self,
