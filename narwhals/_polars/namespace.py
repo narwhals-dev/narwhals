@@ -171,7 +171,7 @@ class PolarsNamespace:
 
         return PolarsExpr(
             pl.concat_str(
-                *pl_exprs,
+                pl_exprs,
                 separator=separator,
                 ignore_nulls=ignore_nulls,
             ),
