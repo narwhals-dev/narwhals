@@ -694,6 +694,9 @@ class ArrowDataFrame:
                         names=[*index_, variable_name, value_name],
                     )
                     for on_col in on_
-                ]
+                ],
+                promote_options="permissive",
             )
         )
+        # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
+        # upcast numeric to non-numeric (e.g. string) datatypes
