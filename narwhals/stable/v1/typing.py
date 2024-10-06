@@ -14,11 +14,11 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals import dtypes
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
-    from narwhals.expr import Expr
-    from narwhals.series import Series
+    from narwhals.stable.v1 import DataFrame
+    from narwhals.stable.v1 import Expr
+    from narwhals.stable.v1 import LazyFrame
+    from narwhals.stable.v1 import Series
+    from narwhals.stable.v1 import dtypes
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -28,11 +28,9 @@ if TYPE_CHECKING:
         def columns(self) -> Any: ...
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
-        def __getitem__(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
-        def __getitem__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series"]

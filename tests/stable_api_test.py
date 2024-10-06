@@ -1,3 +1,5 @@
+from datetime import datetime
+from datetime import timedelta
 from typing import Any
 
 import polars as pl
@@ -135,3 +137,15 @@ def test_series_docstrings() -> None:
             )
             == getattr(df, item).__doc__
         )
+
+
+def test_dtypes(constructor: Constructor) -> None:
+    df = nw_v1.from_native(
+        constructor({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
+    )
+    dtype = df.collect_schema()["b"]
+    assert dtype in {nw_v1.Datetime}
+    assert isinstance(dtype, nw_v1.Datetime)
+    dtype = df.collect_schema()["c"]
+    assert dtype in {nw_v1.Duration}
+    assert isinstance(dtype, nw_v1.Duration)

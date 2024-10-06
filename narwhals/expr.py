@@ -2516,9 +2516,12 @@ class ExprStringNamespace:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
-            >>> df_pl = pl.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
+            >>> data = ["2020-01-01", "2020-01-02"]
+            >>> df_pd = pd.DataFrame({"a": data})
+            >>> df_pl = pl.DataFrame({"a": data})
+            >>> df_pa = pa.table({"a": data})
 
             We define a dataframe-agnostic function:
 
@@ -2526,7 +2529,7 @@ class ExprStringNamespace:
             ... def func(df):
             ...     return df.select(nw.col("a").str.to_datetime(format="%Y-%m-%d"))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(df_pd)
                        a
@@ -2542,6 +2545,11 @@ class ExprStringNamespace:
             │ 2020-01-01 00:00:00 │
             │ 2020-01-02 00:00:00 │
             └─────────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: timestamp[us]
+            ----
+            a: [[2020-01-01 00:00:00.000000,2020-01-02 00:00:00.000000]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)

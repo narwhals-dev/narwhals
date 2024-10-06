@@ -64,7 +64,7 @@ def test_string_disguised_as_object() -> None:
 def test_actual_object(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table")):
+    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
@@ -216,22 +216,23 @@ def test_nested_dtypes() -> None:
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_pandas(use_pyarrow_extension_array=True)
     nwdf = nw.from_native(df)
+
     assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     )
     nwdf = nw.from_native(df)
-    assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_arrow()
     nwdf = nw.from_native(df)
-    assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
     df = duckdb.sql("select * from df")
     nwdf = nw.from_native(df)
-    assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
 
 
 def test_nested_dtypes_ibis() -> None:  # pragma: no cover
