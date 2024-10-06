@@ -1,9 +1,9 @@
 from contextlib import nullcontext as does_not_raise
-from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -13,7 +13,7 @@ data = {
 }
 
 
-def test_over_single(constructor: Any) -> None:
+def test_over_single(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -36,7 +36,7 @@ def test_over_single(constructor: Any) -> None:
         compare_dicts(result, expected)
 
 
-def test_over_multiple(constructor: Any) -> None:
+def test_over_multiple(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -59,7 +59,7 @@ def test_over_multiple(constructor: Any) -> None:
         compare_dicts(result, expected)
 
 
-def test_over_invalid(constructor: Any, request: Any) -> None:
+def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

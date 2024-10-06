@@ -1,13 +1,13 @@
 from contextlib import nullcontext as does_not_raise
-from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 
-def test_filter(constructor: Any) -> None:
+def test_filter(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.filter(nw.col("a") > 1)
@@ -16,7 +16,7 @@ def test_filter(constructor: Any) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:If `index_col` is not specified for `to_spark`")
-def test_filter_with_boolean_list(constructor: Any) -> None:
+def test_filter_with_boolean_list(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))
 

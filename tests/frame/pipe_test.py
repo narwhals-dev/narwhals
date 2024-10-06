@@ -1,6 +1,5 @@
-from typing import Any
-
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -9,7 +8,7 @@ data = {
 }
 
 
-def test_pipe(constructor: Any) -> None:
+def test_pipe(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     columns = df.collect_schema().names()
     result = df.pipe(lambda _df: _df.select([x for x in columns if len(x) == 2]))

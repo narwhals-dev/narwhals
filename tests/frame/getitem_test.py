@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
@@ -29,7 +31,9 @@ def test_slice_rows(constructor_eager: Any) -> None:
     compare_dicts(result, {"a": [3.0, 4.0], "b": [13, 14]})
 
 
-def test_slice_rows_with_step(request: Any, constructor_eager: Any) -> None:
+def test_slice_rows_with_step(
+    request: pytest.FixtureRequest, constructor_eager: Any
+) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor_eager(data))[1::2]
@@ -114,7 +118,7 @@ def test_slice_int_rows_str_columns(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_slice_slice_columns(constructor_eager: Any) -> None:
+def test_slice_slice_columns(constructor_eager: Any) -> None:  # noqa: PLR0915
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 1], "b":"c"]  # type: ignore[misc]
@@ -147,8 +151,40 @@ def test_slice_slice_columns(constructor_eager: Any) -> None:
     result = df[:, [0, 2]]
     expected = {"a": [1, 2, 3], "c": [7, 8, 9]}
     compare_dicts(result, expected)
+    result = df[:2, [0, 2]]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[:2, ["a", "c"]]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    compare_dicts(result, expected)
+    result = df[1:, [0, 2]]
+    expected = {"a": [2, 3], "c": [8, 9]}
+    compare_dicts(result, expected)
+    result = df[1:, ["a", "c"]]
+    expected = {"a": [2, 3], "c": [8, 9]}
+    compare_dicts(result, expected)
     result = df[["b", "c"]]
     expected = {"b": [4, 5, 6], "c": [7, 8, 9]}
+    compare_dicts(result, expected)
+    result = df[:2]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
+    result = df[2:]
+    expected = {"a": [3], "b": [6], "c": [9], "d": [2]}
+    compare_dicts(result, expected)
+    # mypy says "Slice index must be an integer", but we do in fact support
+    # using string slices
+    result = df["a":"b"]  # type: ignore[misc]
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    compare_dicts(result, expected)
+    result = df[(0, 1), :]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], :]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], df.columns]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
     compare_dicts(result, expected)
 
 
@@ -157,3 +193,69 @@ def test_slice_invalid(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises(TypeError, match="Hint:"):
         df[0, 0]
+
+
+def test_slice_edge_cases(constructor_eager: Any) -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    assert df[[], :].shape == (0, 4)
+    assert df[:, []].shape == (0, 0)
+    assert df[[]].shape == (0, 4)
+    assert df[[], ["a"]].shape == (0, 1)
+    assert df[:, :].shape == (3, 4)
+    assert df[[], []].shape == (0, 0)
+
+
+@pytest.mark.parametrize(
+    ("row_idx", "col_idx"),
+    [
+        ([0, 2], [0]),
+        ((0, 2), [0]),
+        ([0, 2], (0,)),
+        ((0, 2), (0,)),
+        ([0, 2], range(1)),
+        (range(2), [0]),
+        (range(2), range(1)),
+    ],
+)
+def test_get_item_works_with_tuple_and_list_and_range_row_and_col_indexing(
+    constructor_eager: Any,
+    row_idx: list[int] | tuple[int] | range,
+    col_idx: list[int] | tuple[int] | range,
+) -> None:
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    nw_df[row_idx, col_idx]
+
+
+@pytest.mark.parametrize(
+    ("row_idx", "col"),
+    [
+        ([0, 2], slice(1)),
+        ((0, 2), slice(1)),
+        (range(2), slice(1)),
+    ],
+)
+def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col_indexing(
+    constructor_eager: Any,
+    row_idx: list[int] | tuple[int] | range,
+    col: slice,
+) -> None:
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    nw_df[row_idx, col]
+
+
+@pytest.mark.parametrize(
+    ("row_idx", "col"),
+    [
+        ([0, 2], "a"),
+        ((0, 2), "a"),
+        (range(2), "a"),
+    ],
+)
+def test_get_item_works_with_tuple_and_list_indexing_and_str(
+    constructor_eager: Any,
+    row_idx: list[int] | tuple[int] | range,
+    col: str,
+) -> None:
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    nw_df[row_idx, col]

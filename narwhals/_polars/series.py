@@ -7,27 +7,30 @@ from typing import overload
 
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
-from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals._polars.utils import translate_dtype
-
-PL = get_polars()
+from narwhals._polars.utils import native_to_narwhals_dtype
 
 
 class PolarsSeries:
-    def __init__(self, series: Any, *, backend_version: tuple[int, ...]) -> None:
+    def __init__(
+        self, series: Any, *, backend_version: tuple[int, ...], dtypes: DTypes
+    ) -> None:
         self._native_series = series
-        self._implementation = Implementation.POLARS
         self._backend_version = backend_version
+        self._implementation = Implementation.POLARS
+        self._dtypes = dtypes
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsSeries"
@@ -35,20 +38,29 @@ class PolarsSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __native_namespace__(self) -> Any:
-        return get_polars()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.POLARS:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def _from_native_series(self, series: Any) -> Self:
-        return self.__class__(series, backend_version=self._backend_version)
+        return self.__class__(
+            series, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def _from_native_object(self, series: Any) -> Any:
-        pl = get_polars()
+        import polars as pl  # ignore-banned-import()
+
         if isinstance(series, pl.Series):
             return self._from_native_series(series)
         if isinstance(series, pl.DataFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
-            return PolarsDataFrame(series, backend_version=self._backend_version)
+            return PolarsDataFrame(
+                series, backend_version=self._backend_version, dtypes=self._dtypes
+            )
         # scalar
         return series
 
@@ -76,8 +88,8 @@ class PolarsSeries:
         return self._native_series.name  # type: ignore[no-any-return]
 
     @property
-    def dtype(self) -> DType:
-        return translate_dtype(self._native_series.dtype)
+    def dtype(self: Self) -> DType:
+        return native_to_narwhals_dtype(self._native_series.dtype, self._dtypes)
 
     @overload
     def __getitem__(self, item: int) -> Any: ...
@@ -90,7 +102,7 @@ class PolarsSeries:
 
     def cast(self, dtype: DType) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_series(ser.cast(dtype))
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
@@ -180,14 +192,17 @@ class PolarsSeries:
                 separator=separator, drop_first=drop_first
             )
 
-        return PolarsDataFrame(result, backend_version=self._backend_version)
+        return PolarsDataFrame(
+            result, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         if self._backend_version < (0, 20, 6):  # pragma: no cover
             result = self._native_series.sort(descending=descending)
 
             if nulls_last:
-                pl = get_polars()
+                import polars as pl  # ignore-banned-import()
+
                 is_null = result.is_null()
                 result = pl.concat([result.filter(~is_null), result.filter(is_null)])
         else:
@@ -208,7 +223,8 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (1, 0, 0):  # pragma: no cover
-            pl = get_polars()
+            import polars as pl  # ignore-banned-import()
+
             value_name_ = name or ("proportion" if normalize else "count")
 
             result = self._native_series.value_counts(sort=sort, parallel=parallel)
@@ -226,7 +242,9 @@ class PolarsSeries:
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             )
 
-        return PolarsDataFrame(result, backend_version=self._backend_version)
+        return PolarsDataFrame(
+            result, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:

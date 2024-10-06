@@ -7,7 +7,9 @@ pre-commit
 pyarrow
 pytest
 pytest-cov
+pytest-randomly
 pytest-env
 hypothesis
 scikit-learn
+typing_extensions
 dask[dataframe]; python_version >= '3.9'

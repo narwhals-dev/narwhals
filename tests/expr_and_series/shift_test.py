@@ -3,6 +3,7 @@ from typing import Any
 import pyarrow as pa
 
 import narwhals.stable.v1 as nw
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {
@@ -13,7 +14,7 @@ data = {
 }
 
 
-def test_shift(constructor: Any) -> None:
+def test_shift(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {

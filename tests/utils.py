@@ -4,10 +4,21 @@ import math
 import sys
 import warnings
 from typing import Any
+from typing import Callable
 from typing import Iterator
 from typing import Sequence
 
 import pandas as pd
+
+from narwhals.typing import IntoFrame
+from narwhals.utils import Implementation
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias  # pragma: no cover
+else:
+    from typing_extensions import TypeAlias  # pragma: no cover
+
+Constructor: TypeAlias = Callable[[Any], IntoFrame]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
@@ -24,11 +35,21 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
         for key in result.columns:
             assert key in expected
     for key in expected:
-        for lhs, rhs in zip_strict(result[key], expected[key]):
+        result_key = result[key]
+        if (
+            hasattr(result_key, "_compliant_series")
+            and result_key._compliant_series._implementation is Implementation.CUDF
+        ):  # pragma: no cover
+            result_key = result_key.to_pandas()
+        for lhs, rhs in zip_strict(result_key, expected[key]):
             if hasattr(lhs, "as_py"):
                 lhs = lhs.as_py()  # noqa: PLW2901
             if hasattr(rhs, "as_py"):  # pragma: no cover
                 rhs = rhs.as_py()  # noqa: PLW2901
+            if hasattr(lhs, "item"):  # pragma: no cover
+                lhs = lhs.item()  # noqa: PLW2901
+            if hasattr(rhs, "item"):  # pragma: no cover
+                rhs = rhs.item()  # noqa: PLW2901
             if isinstance(lhs, float) and not math.isnan(lhs):
                 assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
             elif isinstance(lhs, float) and math.isnan(lhs):

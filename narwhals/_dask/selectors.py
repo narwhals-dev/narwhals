@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
-from narwhals import dtypes
 from narwhals._dask.expr import DaskExpr
 
 if TYPE_CHECKING:
@@ -13,11 +12,13 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class DaskSelectorNamespace:
-    def __init__(self: Self, *, backend_version: tuple[int, ...]) -> None:
+    def __init__(self: Self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[Any]:
@@ -33,32 +34,33 @@ class DaskSelectorNamespace:
             output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
+            dtypes=self._dtypes,
         )
 
     def numeric(self: Self) -> DaskSelector:
         return self.by_dtype(
             [
-                dtypes.Int64,
-                dtypes.Int32,
-                dtypes.Int16,
-                dtypes.Int8,
-                dtypes.UInt64,
-                dtypes.UInt32,
-                dtypes.UInt16,
-                dtypes.UInt8,
-                dtypes.Float64,
-                dtypes.Float32,
+                self._dtypes.Int64,
+                self._dtypes.Int32,
+                self._dtypes.Int16,
+                self._dtypes.Int8,
+                self._dtypes.UInt64,
+                self._dtypes.UInt32,
+                self._dtypes.UInt16,
+                self._dtypes.UInt8,
+                self._dtypes.Float64,
+                self._dtypes.Float32,
             ],
         )
 
     def categorical(self: Self) -> DaskSelector:
-        return self.by_dtype([dtypes.Categorical])
+        return self.by_dtype([self._dtypes.Categorical])
 
     def string(self: Self) -> DaskSelector:
-        return self.by_dtype([dtypes.String])
+        return self.by_dtype([self._dtypes.String])
 
     def boolean(self: Self) -> DaskSelector:
-        return self.by_dtype([dtypes.Boolean])
+        return self.by_dtype([self._dtypes.Boolean])
 
     def all(self: Self) -> DaskSelector:
         def func(df: DaskLazyFrame) -> list[Any]:
@@ -72,6 +74,7 @@ class DaskSelectorNamespace:
             output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
+            dtypes=self._dtypes,
         )
 
 
@@ -94,6 +97,7 @@ class DaskSelector(DaskExpr):
             output_names=self._output_names,
             backend_version=self._backend_version,
             returns_scalar=self._returns_scalar,
+            dtypes=self._dtypes,
         )
 
     def __sub__(self: Self, other: DaskSelector | Any) -> DaskSelector | Any:
@@ -102,7 +106,7 @@ class DaskSelector(DaskExpr):
             def call(df: DaskLazyFrame) -> list[Any]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name not in [x.name for x in rhs]]
+                return [x for x in lhs if x.name not in {x.name for x in rhs}]
 
             return DaskSelector(
                 call,
@@ -112,6 +116,7 @@ class DaskSelector(DaskExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() - other
@@ -122,7 +127,7 @@ class DaskSelector(DaskExpr):
             def call(df: DaskLazyFrame) -> list[dask_expr.Series]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name not in [x.name for x in rhs]] + rhs
+                return [x for x in lhs if x.name not in {x.name for x in rhs}] + rhs
 
             return DaskSelector(
                 call,
@@ -132,6 +137,7 @@ class DaskSelector(DaskExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() | other
@@ -142,7 +148,7 @@ class DaskSelector(DaskExpr):
             def call(df: DaskLazyFrame) -> list[Any]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name in [x.name for x in rhs]]
+                return [x for x in lhs if x.name in {x.name for x in rhs}]
 
             return DaskSelector(
                 call,
@@ -152,12 +158,18 @@ class DaskSelector(DaskExpr):
                 output_names=None,
                 backend_version=self._backend_version,
                 returns_scalar=self._returns_scalar,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() & other
 
     def __invert__(self: Self) -> DaskSelector:
-        return DaskSelectorNamespace(backend_version=self._backend_version).all() - self
+        return (
+            DaskSelectorNamespace(
+                backend_version=self._backend_version, dtypes=self._dtypes
+            ).all()
+            - self
+        )
 
     def __rsub__(self: Self, other: Any) -> NoReturn:
         raise NotImplementedError

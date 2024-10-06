@@ -2,16 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
-from narwhals import dtypes
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    import pyarrow as pa
+
     from narwhals._arrow.series import ArrowSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
-def translate_dtype(dtype: Any) -> dtypes.DType:
-    import pyarrow as pa  # ignore-banned-import()
+def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
+    import pyarrow as pa  # ignore-banned-import
 
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
@@ -46,18 +50,24 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     if pa.types.is_date32(dtype):
         return dtypes.Date()
     if pa.types.is_timestamp(dtype):
-        return dtypes.Datetime()
+        return dtypes.Datetime(time_unit=dtype.unit, time_zone=dtype.tz)
     if pa.types.is_duration(dtype):
-        return dtypes.Duration()
+        return dtypes.Duration(time_unit=dtype.unit)
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
+    if pa.types.is_struct(dtype):
+        return dtypes.Struct()
+    if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
+        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
+    if pa.types.is_fixed_size_list(dtype):
+        return dtypes.Array(
+            native_to_narwhals_dtype(dtype.value_type, dtypes), dtype.list_size
+        )
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
-    import pyarrow as pa  # ignore-banned-import()
-
-    from narwhals import dtypes
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
+    import pyarrow as pa  # ignore-banned-import
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
@@ -84,17 +94,25 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return pa.bool_()
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        # TODO(Unassigned): what should the key be? let's keep it consistent
-        # with Polars for now
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # Use Polars' default
-        return pa.timestamp("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        time_zone = getattr(dtype, "time_zone", None)
+        return pa.timestamp(time_unit, tz=time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # Use Polars' default
-        return pa.duration("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        return pa.duration(time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -142,7 +160,7 @@ def validate_dataframe_comparand(
         return NotImplemented
     if isinstance(other, ArrowSeries):
         if len(other) == 1:
-            import pyarrow as pa  # ignore-banned-import()
+            import pyarrow as pa  # ignore-banned-import
 
             value = other.item()
             if backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
@@ -159,7 +177,7 @@ def horizontal_concat(dfs: list[Any]) -> Any:
 
     Should be in namespace.
     """
-    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
 
     if not dfs:
         msg = "No dataframes to concatenate"  # pragma: no cover
@@ -192,7 +210,7 @@ def vertical_concat(dfs: list[Any]) -> Any:
             msg = "unable to vstack, column names don't match"
             raise TypeError(msg)
 
-    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
 
     return pa.concat_tables(dfs).combine_chunks()
 
@@ -200,8 +218,8 @@ def vertical_concat(dfs: list[Any]) -> Any:
 def floordiv_compat(left: Any, right: Any) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    import pyarrow as pa  # ignore-banned-import()
-    import pyarrow.compute as pc  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
 
     if isinstance(left, (int, float)):
         left = pa.scalar(left)
@@ -239,8 +257,8 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 def cast_for_truediv(arrow_array: Any, pa_object: Any) -> tuple[Any, Any]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
-    import pyarrow as pa  # ignore-banned-import()
-    import pyarrow.compute as pc  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
 
     # Ensure int / int -> float mirroring Python/Numpy behavior
     # as pc.divide_checked(int, int) -> int
@@ -262,12 +280,13 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
     if fast_path:
         return [s._native_series for s in series]
 
-    import pyarrow as pa  # ignore-banned-import()
+    import pyarrow as pa  # ignore-banned-import
 
+    is_max_length_gt_1 = max_length > 1
     reshaped = []
     for s, length in zip(series, lengths):
         s_native = s._native_series
-        if max_length > 1 and length == 1:
+        if is_max_length_gt_1 and length == 1:
             value = s_native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):  # pragma: no cover
                 value = value.as_py()
@@ -276,3 +295,34 @@ def broadcast_series(series: list[ArrowSeries]) -> list[Any]:
             reshaped.append(s_native)
 
     return reshaped
+
+
+def convert_slice_to_nparray(
+    num_rows: int, rows_slice: slice | int | Sequence[int]
+) -> Any:
+    import numpy as np  # ignore-banned-import
+
+    if isinstance(rows_slice, slice):
+        return np.arange(num_rows)[rows_slice]
+    else:
+        return rows_slice
+
+
+def select_rows(table: pa.Table, rows: Any) -> pa.Table:
+    if isinstance(rows, slice) and rows == slice(None):
+        selected_rows = table
+    elif isinstance(rows, Sequence) and not rows:
+        selected_rows = table.slice(0, 0)
+    else:
+        range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
+        selected_rows = table.take(range_)
+    return selected_rows
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: slice, columns: list[str]
+) -> tuple[int | None, int | None, int | None]:
+    start = columns.index(str_slice.start) if str_slice.start is not None else None
+    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
+    step = str_slice.step
+    return (start, stop, step)

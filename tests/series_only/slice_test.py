@@ -13,3 +13,21 @@ def test_slice(constructor_eager: Any) -> None:
     result = {"a": df["a"][1:]}
     expected = {"a": [2, 3]}
     compare_dicts(result, expected)
+    result = {"b": df[:, 1]}
+    expected = {"b": [4, 5, 6]}
+    compare_dicts(result, expected)
+    result = {"b": df[:, "b"]}
+    expected = {"b": [4, 5, 6]}
+    compare_dicts(result, expected)
+    result = {"b": df[:2, "b"]}
+    expected = {"b": [4, 5]}
+    compare_dicts(result, expected)
+    result = {"b": df[:2, 1]}
+    expected = {"b": [4, 5]}
+    compare_dicts(result, expected)
+    result = {"b": df[[0, 1], 1]}
+    expected = {"b": [4, 5]}
+    compare_dicts(result, expected)
+    result = {"b": df[[], 1]}
+    expected = {"b": []}
+    compare_dicts(result, expected)

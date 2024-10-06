@@ -9,17 +9,21 @@ from typing import Sequence
 from typing import overload
 
 from narwhals._arrow.utils import broadcast_series
-from narwhals._arrow.utils import translate_dtype
+from narwhals._arrow.utils import convert_str_slice_to_int_slice
+from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import select_rows
 from narwhals._arrow.utils import validate_dataframe_comparand
 from narwhals._expression_parsing import evaluate_into_exprs
-from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import generate_unique_token
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     import pyarrow as pa
     from typing_extensions import Self
@@ -29,24 +33,34 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowDataFrame:
     # --- not in the spec ---
     def __init__(
-        self, native_dataframe: pa.Table, *, backend_version: tuple[int, ...]
+        self,
+        native_dataframe: pa.Table,
+        *,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._native_frame = native_dataframe
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version)
+        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
-    def __native_namespace__(self) -> Any:
-        return get_pyarrow()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation is Implementation.PYARROW:
+            return self._implementation.to_native_namespace()
+
+        msg = f"Expected pyarrow, got: {type(self._implementation)}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -55,7 +69,9 @@ class ArrowDataFrame:
         return self
 
     def _from_native_frame(self, df: Any) -> Self:
-        return self.__class__(df, backend_version=self._backend_version)
+        return self.__class__(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -103,6 +119,7 @@ class ArrowDataFrame:
             self._native_frame[name],
             name=name,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
@@ -120,14 +137,22 @@ class ArrowDataFrame:
     @overload
     def __getitem__(self, item: slice) -> ArrowDataFrame: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> ArrowDataFrame: ...
+
     def __getitem__(
         self,
         item: str
         | slice
         | Sequence[int]
         | Sequence[str]
-        | tuple[Sequence[int], str | int],
+        | tuple[Sequence[int], str | int]
+        | tuple[slice, str | int]
+        | tuple[slice, slice],
     ) -> ArrowSeries | ArrowDataFrame:
+        if isinstance(item, tuple):
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
 
@@ -135,34 +160,28 @@ class ArrowDataFrame:
                 self._native_frame[item],
                 name=item,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
         elif (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[1], (list, tuple))
+            and is_sequence_but_not_str(item[1])
         ):
-            if item[0] == slice(None):
-                selected_rows = self._native_frame
-            else:
-                selected_rows = self._native_frame.take(item[0])
-
+            if len(item[1]) == 0:
+                # Return empty dataframe
+                return self._from_native_frame(self._native_frame.slice(0, 0).select([]))
+            selected_rows = select_rows(self._native_frame, item[0])
             return self._from_native_frame(selected_rows.select(item[1]))
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], slice):
                 columns = self.columns
+                if item[1] == slice(None):
+                    if isinstance(item[0], Sequence) and len(item[0]) == 0:
+                        return self._from_native_frame(self._native_frame.slice(0, 0))
+                    return self._from_native_frame(self._native_frame.take(item[0]))
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                    start = (
-                        columns.index(item[1].start)
-                        if item[1].start is not None
-                        else None
-                    )
-                    stop = (
-                        columns.index(item[1].stop) + 1
-                        if item[1].stop is not None
-                        else None
-                    )
-                    step = item[1].step
+                    start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                     return self._from_native_frame(
                         self._native_frame.take(item[0]).select(columns[start:stop:step])
                     )
@@ -174,30 +193,53 @@ class ArrowDataFrame:
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-
             from narwhals._arrow.series import ArrowSeries
 
             # PyArrow columns are always strings
             col_name = item[1] if isinstance(item[1], str) else self.columns[item[1]]
+            if isinstance(item[0], str):  # pragma: no cover
+                msg = "Can not slice with tuple with the first element as a str"
+                raise TypeError(msg)
+            if (isinstance(item[0], slice)) and (item[0] == slice(None)):
+                return ArrowSeries(
+                    self._native_frame[col_name],
+                    name=col_name,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            selected_rows = select_rows(self._native_frame, item[0])
             return ArrowSeries(
-                self._native_frame[col_name].take(item[0]),
+                selected_rows[col_name],
                 name=col_name,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
 
         elif isinstance(item, slice):
             if item.step is not None and item.step != 1:
                 msg = "Slicing with step is not supported on PyArrow tables"
                 raise NotImplementedError(msg)
+            columns = self.columns
+            if isinstance(item.start, str) or isinstance(item.stop, str):
+                start, stop, step = convert_str_slice_to_int_slice(item, columns)
+                return self._from_native_frame(
+                    self._native_frame.select(columns[start:stop:step])
+                )
             start = item.start or 0
-            stop = item.stop or len(self._native_frame)
+            stop = item.stop if item.stop is not None else len(self._native_frame)
             return self._from_native_frame(
-                self._native_frame.slice(item.start, stop - start),
+                self._native_frame.slice(start, stop - start),
             )
 
         elif isinstance(item, Sequence) or (is_numpy_array(item) and item.ndim == 1):
-            if isinstance(item, Sequence) and all(isinstance(x, str) for x in item):
+            if (
+                isinstance(item, Sequence)
+                and all(isinstance(x, str) for x in item)
+                and len(item) > 0
+            ):
                 return self._from_native_frame(self._native_frame.select(item))
+            if isinstance(item, Sequence) and len(item) == 0:
+                return self._from_native_frame(self._native_frame.slice(0, 0))
             return self._from_native_frame(self._native_frame.take(item))
 
         else:  # pragma: no cover
@@ -208,7 +250,7 @@ class ArrowDataFrame:
     def schema(self) -> dict[str, DType]:
         schema = self._native_frame.schema
         return {
-            name: translate_dtype(dtype)
+            name: native_to_narwhals_dtype(dtype, self._dtypes)
             for name, dtype in zip(schema.names, schema.types)
         }
 
@@ -353,7 +395,8 @@ class ArrowDataFrame:
         self,
         by: str | Iterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
+        descending: bool | Sequence[bool],
+        nulls_last: bool,
     ) -> Self:
         flat_keys = flatten([*flatten([by]), *more_by])
         df = self._native_frame
@@ -366,7 +409,10 @@ class ArrowDataFrame:
                 (key, "descending" if is_descending else "ascending")
                 for key, is_descending in zip(flat_keys, descending)
             ]
-        return self._from_native_frame(df.sort_by(sorting=sorting))
+
+        null_placement = "at_end" if nulls_last else "at_start"
+
+        return self._from_native_frame(df.sort_by(sorting, null_placement=null_placement))
 
     def to_pandas(self) -> Any:
         return self._native_frame.to_pandas()
@@ -384,7 +430,12 @@ class ArrowDataFrame:
             from narwhals._arrow.series import ArrowSeries
 
             return {
-                name: ArrowSeries(col, name=name, backend_version=self._backend_version)
+                name: ArrowSeries(
+                    col,
+                    name=name,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
                 for name, col in names_and_values
             }
         else:
@@ -445,7 +496,9 @@ class ArrowDataFrame:
         return self
 
     def collect(self) -> ArrowDataFrame:
-        return ArrowDataFrame(self._native_frame, backend_version=self._backend_version)
+        return ArrowDataFrame(
+            self._native_frame, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def clone(self) -> Self:
         msg = "clone is not yet supported on PyArrow tables"
@@ -515,7 +568,12 @@ class ArrowDataFrame:
             ).column(f"{col_token}_count"),
             1,
         )
-        return ArrowSeries(is_duplicated, name="", backend_version=self._backend_version)
+        return ArrowSeries(
+            is_duplicated,
+            name="",
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
 
     def is_unique(self: Self) -> ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -525,7 +583,10 @@ class ArrowDataFrame:
         is_duplicated = self.is_duplicated()._native_series
 
         return ArrowSeries(
-            pc.invert(is_duplicated), name="", backend_version=self._backend_version
+            pc.invert(is_duplicated),
+            name="",
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def unique(
@@ -572,3 +633,75 @@ class ArrowDataFrame:
 
     def to_arrow(self: Self) -> Any:
         return self._native_frame
+
+    def sample(
+        self: Self,
+        n: int | None = None,
+        *,
+        fraction: float | None = None,
+        with_replacement: bool = False,
+        seed: int | None = None,
+    ) -> Self:
+        import numpy as np  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        frame = self._native_frame
+        num_rows = len(self)
+        if n is None and fraction is not None:
+            n = int(num_rows * fraction)
+
+        rng = np.random.default_rng(seed=seed)
+        idx = np.arange(0, num_rows)
+        mask = rng.choice(idx, size=n, replace=with_replacement)
+
+        return self._from_native_frame(pc.take(frame, mask))
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+
+        native_frame = self._native_frame
+        variable_name = variable_name if variable_name is not None else "variable"
+        value_name = value_name if value_name is not None else "value"
+
+        index_: list[str] = (
+            [] if index is None else [index] if isinstance(index, str) else index
+        )
+        on_: list[str] = (
+            [c for c in self.columns if c not in index_]
+            if on is None
+            else [on]
+            if isinstance(on, str)
+            else on
+        )
+
+        n_rows = len(self)
+
+        promote_kwargs = (
+            {"promote_options": "permissive"}
+            if self._backend_version >= (14, 0, 0)
+            else {}
+        )
+        return self._from_native_frame(
+            pa.concat_tables(
+                [
+                    pa.Table.from_arrays(
+                        [
+                            *[native_frame.column(idx_col) for idx_col in index_],
+                            pa.array([on_col] * n_rows, pa.string()),
+                            native_frame.column(on_col),
+                        ],
+                        names=[*index_, variable_name, value_name],
+                    )
+                    for on_col in on_
+                ],
+                **promote_kwargs,
+            )
+        )
+        # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
+        # upcast numeric to non-numeric (e.g. string) datatypes

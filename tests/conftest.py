@@ -15,6 +15,7 @@ from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.utils import parse_version
+from tests.utils import Constructor
 
 with contextlib.suppress(ImportError):
     import modin.pandas  # noqa: F401
@@ -139,12 +140,12 @@ if get_pyspark_sql() is not None:  # pragma: no cover
 
 
 @pytest.fixture(params=eager_constructors)
-def constructor_eager(request: Any) -> Callable[[Any], IntoDataFrame]:
+def constructor_eager(request: pytest.FixtureRequest) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor(request: Any, spark_session: SparkSession) -> Callable[[Any], Any]:
+def constructor(request: pytest.FixtureRequest, spark_session: SparkSession) -> Constructor:
     def pyspark_constructor(obj: Any) -> Any:
         return request.param(obj, spark_session)
 

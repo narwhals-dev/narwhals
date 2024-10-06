@@ -28,7 +28,8 @@ def query(
 
     return (
         part_ds.filter(nw.col("p_name").str.starts_with(var4))
-        .select(nw.col("p_partkey").unique())
+        .select("p_partkey")
+        .unique("p_partkey")
         .join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
         .join(
             query1,
@@ -36,7 +37,8 @@ def query(
             right_on=["l_suppkey", "l_partkey"],
         )
         .filter(nw.col("ps_availqty") > nw.col("sum_quantity"))
-        .select(nw.col("ps_suppkey").unique())
+        .select("ps_suppkey")
+        .unique("ps_suppkey")
         .join(query3, left_on="ps_suppkey", right_on="s_suppkey")
         .select("s_name", "s_address")
         .sort("s_name")
