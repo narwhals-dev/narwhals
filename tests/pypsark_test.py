@@ -247,3 +247,23 @@ def test_sort_nulls(
     df = nw.from_native(pyspark_constructor(data))
     result = df.sort("b", descending=True, nulls_last=nulls_last)
     compare_dicts(result, expected)
+
+
+# copied from tests/frame/add_test.py
+def test_add(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.with_columns(
+        c=nw.col("a") + nw.col("b"),
+        d=nw.col("a") - nw.col("a").mean(),
+        e=nw.col("a") - nw.col("a").std(),
+    )
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8.0, 9.0],
+        "c": [5, 7, 8],
+        "d": [-1.0, 1.0, 0.0],
+        "e": [0.0, 2.0, 1.0],
+    }
+    compare_dicts(result, expected)

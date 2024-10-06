@@ -57,6 +57,7 @@ class PySparkNamespace:
             function_name="all",
             root_names=None,
             output_names=None,
+            returns_scalar=False,
             dtypes=self._dtypes,
         )
 
