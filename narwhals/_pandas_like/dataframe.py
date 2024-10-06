@@ -104,7 +104,7 @@ class PandasLikeDataFrame:
         from narwhals._pandas_like.series import PandasLikeSeries
 
         return PandasLikeSeries(
-            self._native_frame.loc[:, name],
+            self._native_frame[name],
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
@@ -157,7 +157,7 @@ class PandasLikeDataFrame:
             from narwhals._pandas_like.series import PandasLikeSeries
 
             return PandasLikeSeries(
-                self._native_frame.loc[:, item],
+                self._native_frame[item],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 dtypes=self._dtypes,
@@ -276,7 +276,7 @@ class PandasLikeDataFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: native_to_narwhals_dtype(self._native_frame.loc[:, col], self._dtypes)
+            col: native_to_narwhals_dtype(self._native_frame[col], self._dtypes)
             for col in self._native_frame.columns
         }
 
@@ -382,7 +382,7 @@ class PandasLikeDataFrame:
                         )
                     )
                 else:
-                    to_concat.append(self._native_frame.loc[:, name])
+                    to_concat.append(self._native_frame[name])
             to_concat.extend(
                 validate_dataframe_comparand(index, new_column_name_to_new_column_map[s])
                 for s in new_column_name_to_new_column_map
@@ -637,7 +637,7 @@ class PandasLikeDataFrame:
             # TODO(Unassigned): should this return narwhals series?
             return {
                 col: PandasLikeSeries(
-                    self._native_frame.loc[:, col],
+                    self._native_frame[col],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     dtypes=self._dtypes,

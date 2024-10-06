@@ -119,7 +119,7 @@ class PandasLikeNamespace:
         return PandasLikeExpr(
             lambda df: [
                 PandasLikeSeries(
-                    df._native_frame.loc[:, column_name],
+                    df._native_frame[column_name],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     dtypes=self._dtypes,
