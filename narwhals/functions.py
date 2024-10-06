@@ -12,7 +12,6 @@ from typing import Union
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.translate import from_native
-from narwhals.typing import IntoSeries
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
@@ -21,7 +20,6 @@ from narwhals.utils import validate_laziness
 # However, trying to provide one results in mypy still complaining...
 # The rest of the annotations seem to work fine with this anyway
 FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
-IntoSeriesT = TypeVar("IntoSeriesT", bound=IntoSeries)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -157,7 +155,7 @@ def new_series(
     dtype: DType | type[DType] | None = None,
     *,
     native_namespace: ModuleType,
-) -> Series[IntoSeriesT]:
+) -> Series:
     """
     Instantiate Narwhals Series from raw data.
 
@@ -216,7 +214,7 @@ def _new_series_impl(
     *,
     native_namespace: ModuleType,
     dtypes: DTypes,
-) -> Series[IntoSeriesT]:
+) -> Series:
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS:
@@ -487,7 +485,7 @@ def show_versions() -> None:
 
 
 def get_level(
-    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
+    obj: DataFrame[Any] | LazyFrame[Any] | Series,
 ) -> Literal["full", "interchange"]:
     """
     Level of support Narwhals has for current object.

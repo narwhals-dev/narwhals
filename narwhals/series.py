@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Generic
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
-from typing import TypeVar
 from typing import overload
 
 from narwhals.utils import parse_version
@@ -22,12 +20,9 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSeries
-
-IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 
 
-class Series(Generic[IntoSeriesT]):
+class Series:
     """
     Narwhals Series, backed by a native series.
 
@@ -46,7 +41,7 @@ class Series(Generic[IntoSeriesT]):
 
     def __init__(
         self,
-        series: IntoSeriesT,
+        series: Any,
         *,
         level: Literal["full", "interchange"],
     ) -> None:
@@ -2482,23 +2477,23 @@ class Series(Generic[IntoSeriesT]):
         yield from self._compliant_series.__iter__()
 
     @property
-    def str(self) -> SeriesStringNamespace[IntoSeriesT]:
+    def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
 
     @property
-    def dt(self) -> SeriesDateTimeNamespace[IntoSeriesT]:
+    def dt(self) -> SeriesDateTimeNamespace:
         return SeriesDateTimeNamespace(self)
 
     @property
-    def cat(self) -> SeriesCatNamespace[IntoSeriesT]:
+    def cat(self) -> SeriesCatNamespace:
         return SeriesCatNamespace(self)
 
 
-class SeriesCatNamespace(Generic[IntoSeriesT]):
-    def __init__(self, series: Series[IntoSeriesT]) -> None:
+class SeriesCatNamespace:
+    def __init__(self, series: Series) -> None:
         self._narwhals_series = series
 
-    def get_categories(self) -> Series[IntoSeriesT]:
+    def get_categories(self) -> Series:
         """
         Get unique categories from column.
 
@@ -2538,11 +2533,11 @@ class SeriesCatNamespace(Generic[IntoSeriesT]):
         )
 
 
-class SeriesStringNamespace(Generic[IntoSeriesT]):
-    def __init__(self, series: Series[IntoSeriesT]) -> None:
+class SeriesStringNamespace:
+    def __init__(self, series: Series) -> None:
         self._narwhals_series = series
 
-    def len_chars(self) -> Series[IntoSeriesT]:
+    def len_chars(self) -> Series:
         r"""
         Return the length of each string as the number of characters.
 
@@ -2587,7 +2582,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Series[IntoSeriesT]:
+    ) -> Series:
         r"""
         Replace first matching regex/literal substring with a new string value.
 
@@ -2626,9 +2621,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             )
         )
 
-    def replace_all(
-        self, pattern: str, value: str, *, literal: bool = False
-    ) -> Series[IntoSeriesT]:
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Series:
         r"""
         Replace all matching regex/literal substring with a new string value.
 
@@ -2666,7 +2659,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             )
         )
 
-    def strip_chars(self, characters: str | None = None) -> Series[IntoSeriesT]:
+    def strip_chars(self, characters: str | None = None) -> Series:
         r"""
         Remove leading and trailing characters.
 
@@ -2700,7 +2693,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
-    def starts_with(self, prefix: str) -> Series[IntoSeriesT]:
+    def starts_with(self, prefix: str) -> Series:
         r"""
         Check if string values start with a substring.
 
@@ -2742,7 +2735,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.str.starts_with(prefix)
         )
 
-    def ends_with(self, suffix: str) -> Series[IntoSeriesT]:
+    def ends_with(self, suffix: str) -> Series:
         r"""
         Check if string values end with a substring.
 
@@ -2784,7 +2777,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.str.ends_with(suffix)
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> Series[IntoSeriesT]:
+    def contains(self, pattern: str, *, literal: bool = False) -> Series:
         r"""
         Check if string contains a substring that matches a pattern.
 
@@ -2832,7 +2825,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.str.contains(pattern, literal=literal)
         )
 
-    def slice(self, offset: int, length: int | None = None) -> Series[IntoSeriesT]:
+    def slice(self, offset: int, length: int | None = None) -> Series:
         r"""
         Create subslices of the string values of a Series.
 
@@ -2903,7 +2896,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             )
         )
 
-    def head(self, n: int = 5) -> Series[IntoSeriesT]:
+    def head(self, n: int = 5) -> Series:
         r"""
         Take the first n elements of each string.
 
@@ -2951,7 +2944,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.str.slice(0, n)
         )
 
-    def tail(self, n: int = 5) -> Series[IntoSeriesT]:
+    def tail(self, n: int = 5) -> Series:
         r"""
         Take the last n elements of each string.
 
@@ -2999,7 +2992,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.str.slice(-n)
         )
 
-    def to_uppercase(self) -> Series[IntoSeriesT]:
+    def to_uppercase(self) -> Series:
         r"""
         Transform string to uppercase variant.
 
@@ -3047,7 +3040,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.str.to_uppercase()
         )
 
-    def to_lowercase(self) -> Series[IntoSeriesT]:
+    def to_lowercase(self) -> Series:
         r"""
         Transform string to lowercase variant.
 
@@ -3090,7 +3083,7 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
-    def to_datetime(self, format: str) -> Series[IntoSeriesT]:  # noqa: A002
+    def to_datetime(self, format: str) -> Series:  # noqa: A002
         """
         Parse Series with strings to a Series with Datetime dtype.
 
@@ -3148,11 +3141,11 @@ class SeriesStringNamespace(Generic[IntoSeriesT]):
         )
 
 
-class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
-    def __init__(self, series: Series[IntoSeriesT]) -> None:
+class SeriesDateTimeNamespace:
+    def __init__(self, series: Series) -> None:
         self._narwhals_series = series
 
-    def date(self) -> Series[IntoSeriesT]:
+    def date(self) -> Series:
         """
         Get the date in a datetime series.
 
@@ -3195,7 +3188,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.date()
         )
 
-    def year(self) -> Series[IntoSeriesT]:
+    def year(self) -> Series:
         """
         Get the year in a datetime series.
 
@@ -3232,7 +3225,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.year()
         )
 
-    def month(self) -> Series[IntoSeriesT]:
+    def month(self) -> Series:
         """
         Gets the month in a datetime series.
 
@@ -3269,7 +3262,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.month()
         )
 
-    def day(self) -> Series[IntoSeriesT]:
+    def day(self) -> Series:
         """
         Extracts the day in a datetime series.
 
@@ -3306,7 +3299,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.day()
         )
 
-    def hour(self) -> Series[IntoSeriesT]:
+    def hour(self) -> Series:
         """
          Extracts the hour in a datetime series.
 
@@ -3343,7 +3336,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.hour()
         )
 
-    def minute(self) -> Series[IntoSeriesT]:
+    def minute(self) -> Series:
         """
         Extracts the minute in a datetime series.
 
@@ -3380,7 +3373,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.minute()
         )
 
-    def second(self) -> Series[IntoSeriesT]:
+    def second(self) -> Series:
         """
         Extracts the second(s) in a datetime series.
 
@@ -3417,7 +3410,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.second()
         )
 
-    def millisecond(self) -> Series[IntoSeriesT]:
+    def millisecond(self) -> Series:
         """
         Extracts the milliseconds in a datetime series.
 
@@ -3467,7 +3460,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.millisecond()
         )
 
-    def microsecond(self) -> Series[IntoSeriesT]:
+    def microsecond(self) -> Series:
         """
         Extracts the microseconds in a datetime series.
 
@@ -3517,7 +3510,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.microsecond()
         )
 
-    def nanosecond(self) -> Series[IntoSeriesT]:
+    def nanosecond(self) -> Series:
         """
         Extracts the nanosecond(s) in a date series.
 
@@ -3557,7 +3550,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.nanosecond()
         )
 
-    def ordinal_day(self) -> Series[IntoSeriesT]:
+    def ordinal_day(self) -> Series:
         """
         Get ordinal day.
 
@@ -3594,7 +3587,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.ordinal_day()
         )
 
-    def total_minutes(self) -> Series[IntoSeriesT]:
+    def total_minutes(self) -> Series:
         """
         Get total minutes.
 
@@ -3636,7 +3629,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.total_minutes()
         )
 
-    def total_seconds(self) -> Series[IntoSeriesT]:
+    def total_seconds(self) -> Series:
         """
         Get total seconds.
 
@@ -3678,7 +3671,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.total_seconds()
         )
 
-    def total_milliseconds(self) -> Series[IntoSeriesT]:
+    def total_milliseconds(self) -> Series:
         """
         Get total milliseconds.
 
@@ -3723,7 +3716,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.total_milliseconds()
         )
 
-    def total_microseconds(self) -> Series[IntoSeriesT]:
+    def total_microseconds(self) -> Series:
         """
         Get total microseconds.
 
@@ -3768,7 +3761,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.total_microseconds()
         )
 
-    def total_nanoseconds(self) -> Series[IntoSeriesT]:
+    def total_nanoseconds(self) -> Series:
         """
         Get total nanoseconds.
 
@@ -3810,7 +3803,7 @@ class SeriesDateTimeNamespace(Generic[IntoSeriesT]):
             self._narwhals_series._compliant_series.dt.total_nanoseconds()
         )
 
-    def to_string(self, format: str) -> Series[IntoSeriesT]:  # noqa: A002
+    def to_string(self, format: str) -> Series:  # noqa: A002
         """
         Convert a Date/Time/Datetime series into a String series with the given format.
 

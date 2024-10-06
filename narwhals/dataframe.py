@@ -35,11 +35,9 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
-    from narwhals.typing import IntoSeries
 
 FrameT = TypeVar("FrameT", bound="IntoFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
-IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 
 
 class BaseFrame(Generic[FrameT]):
@@ -320,7 +318,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     """
 
     @property
-    def _series(self) -> type[Series[Any]]:
+    def _series(self) -> type[Series]:
         from narwhals.series import Series
 
         return Series
@@ -662,7 +660,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.shape  # type: ignore[no-any-return]
 
-    def get_column(self, name: str) -> Series[IntoSeriesT]:
+    def get_column(self, name: str) -> Series:
         """
         Get a single column by name.
 
@@ -714,23 +712,23 @@ class DataFrame(BaseFrame[DataFrameT]):
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[int]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, str]) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[slice, str]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
     def __getitem__(self, item: tuple[Sequence[int], Sequence[str]]) -> Self: ...
     @overload
     def __getitem__(self, item: tuple[slice, Sequence[str]]) -> Self: ...
     @overload
-    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[Sequence[int], int]) -> Series: ...  # type: ignore[overload-overlap]
     @overload
-    def __getitem__(self, item: tuple[slice, int]) -> Series[IntoSeriesT]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: tuple[slice, int]) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[int]) -> Self: ...
 
     @overload
-    def __getitem__(self, item: str) -> Series[Any]: ...  # type: ignore[overload-overlap]
+    def __getitem__(self, item: str) -> Series: ...  # type: ignore[overload-overlap]
 
     @overload
     def __getitem__(self, item: Sequence[str]) -> Self: ...
@@ -751,7 +749,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         | tuple[slice, str | int]
         | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
         | tuple[slice, slice],
-    ) -> Series[IntoSeriesT] | Self:
+    ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
 
@@ -870,18 +868,14 @@ class DataFrame(BaseFrame[DataFrameT]):
         return key in self.columns
 
     @overload
-    def to_dict(
-        self, *, as_series: Literal[True] = ...
-    ) -> dict[str, Series[IntoSeriesT]]: ...
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]: ...
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, Series[IntoSeriesT]] | dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
-    ) -> dict[str, Series[IntoSeriesT]] | dict[str, list[Any]]:
+    ) -> dict[str, Series] | dict[str, list[Any]]:
         """
         Convert DataFrame to a dictionary mapping column name to values.
 
@@ -2275,7 +2269,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
     # --- descriptive ---
-    def is_duplicated(self: Self) -> Series[IntoSeriesT]:
+    def is_duplicated(self: Self) -> Series:
         r"""
         Get a mask of all duplicated rows in this DataFrame.
 
@@ -2356,7 +2350,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.is_empty()  # type: ignore[no-any-return]
 
-    def is_unique(self: Self) -> Series[IntoSeriesT]:
+    def is_unique(self: Self) -> Series:
         r"""
         Get a mask of all unique rows in this DataFrame.
 
@@ -2793,7 +2787,7 @@ class LazyFrame(BaseFrame[FrameT]):
             + "┘"
         )
 
-    def __getitem__(self, item: str | slice) -> Series[IntoSeriesT] | Self:
+    def __getitem__(self, item: str | slice) -> Series | Self:
         msg = "Slicing is not supported on LazyFrame"
         raise TypeError(msg)
 
