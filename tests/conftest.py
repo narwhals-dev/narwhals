@@ -145,7 +145,9 @@ def constructor_eager(request: pytest.FixtureRequest) -> Callable[[Any], IntoDat
 
 
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor(request: pytest.FixtureRequest, spark_session: SparkSession) -> Constructor:
+def constructor(
+    request: pytest.FixtureRequest, spark_session: SparkSession
+) -> Constructor:
     def pyspark_constructor(obj: Any) -> Any:
         return request.param(obj, spark_session)
 
