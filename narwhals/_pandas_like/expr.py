@@ -70,7 +70,7 @@ class PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [
                 PandasLikeSeries(
-                    df._native_frame.loc[:, column_name],
+                    df._native_frame[column_name],
                     implementation=df._implementation,
                     backend_version=df._backend_version,
                     dtypes=df._dtypes,

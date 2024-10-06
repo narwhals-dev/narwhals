@@ -7,6 +7,7 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -65,6 +66,42 @@ def test_list_valid() -> None:
     assert dtype == nw.List
     assert dtype != nw.List(nw.List(nw.Float32))
     assert dtype in {nw.List(nw.List(nw.Int64))}
+
+
+def test_array_valid() -> None:
+    dtype = nw.Array(nw.Int64, 2)
+    assert dtype == nw.Array(nw.Int64, 2)
+    assert dtype == nw.Array
+    assert dtype != nw.Array(nw.Float32, 2)
+    assert dtype != nw.Duration
+    assert repr(dtype) == "Array(<class 'narwhals.dtypes.Int64'>, 2)"
+    dtype = nw.Array(nw.Array(nw.Int64, 2), 2)
+    assert dtype == nw.Array(nw.Array(nw.Int64, 2), 2)
+    assert dtype == nw.Array
+    assert dtype != nw.Array(nw.Array(nw.Float32, 2), 2)
+    assert dtype in {nw.Array(nw.Array(nw.Int64, 2), 2)}
+
+    with pytest.raises(
+        TypeError, match="`width` must be specified when initializing an `Array`"
+    ):
+        dtype = nw.Array(nw.Int64)
+
+
+@pytest.mark.skipif(
+    parse_version(pl.__version__) < (1,) or parse_version(pd.__version__) < (2, 2),
+    reason="`shape` is only available after 1.0",
+)
+def test_polars_2d_array() -> None:
+    df = pl.DataFrame(
+        {"a": [[[1, 2], [3, 4], [5, 6]]]}, schema={"a": pl.Array(pl.Int64, (3, 2))}
+    )
+    assert nw.from_native(df).collect_schema()["a"] == nw.Array(nw.Array(nw.Int64, 2), 3)
+    assert nw.from_native(df.to_arrow()).collect_schema()["a"] == nw.Array(
+        nw.Array(nw.Int64, 2), 3
+    )
+    assert nw.from_native(
+        df.to_pandas(use_pyarrow_extension_array=True)
+    ).collect_schema()["a"] == nw.Array(nw.Array(nw.Int64, 2), 3)
 
 
 def test_second_time_unit() -> None:

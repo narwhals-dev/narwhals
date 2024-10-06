@@ -30,6 +30,7 @@ from narwhals.expr import all_ as all
 from narwhals.expr import all_horizontal
 from narwhals.expr import any_horizontal
 from narwhals.expr import col
+from narwhals.expr import concat_str
 from narwhals.expr import len_ as len
 from narwhals.expr import lit
 from narwhals.expr import max
@@ -80,6 +81,7 @@ __all__ = [
     "all_horizontal",
     "any_horizontal",
     "col",
+    "concat_str",
     "len",
     "lit",
     "min",
