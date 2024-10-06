@@ -58,7 +58,6 @@ DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 
 
-
 class DTypes:
     Int64: type[dtypes.Int64]
     Int32: type[dtypes.Int32]
