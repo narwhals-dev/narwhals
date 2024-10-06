@@ -156,6 +156,10 @@ if missing := set(dtypes).difference(documented).difference(BASE_DTYPES):
     print("Dtype: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
+if extra := set(documented).difference(dtypes).difference(BASE_DTYPES):
+    print("Dtype: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
 
 # Series.cat methods
 series_cat_methods = [
