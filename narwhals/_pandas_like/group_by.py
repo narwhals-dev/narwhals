@@ -33,7 +33,7 @@ class PandasLikeGroupBy:
             self._df._implementation is Implementation.PANDAS
             and self._df._backend_version < (1, 0)
         ):  # pragma: no cover
-            if self._df._native_frame[self._keys].isna().any().any():
+            if self._df._native_frame.loc[:, self._keys].isna().any().any():
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
             self._grouped = self._df._native_frame.groupby(
@@ -261,4 +261,4 @@ def agg_pandas(  # noqa: PLR0915
 
     result = result_complex.reset_index()
 
-    return from_dataframe(result[output_names])
+    return from_dataframe(result.loc[:, output_names])

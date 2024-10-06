@@ -223,7 +223,7 @@ class PandasLikeDataFrame:
 
         elif is_sequence_but_not_str(item) or (is_numpy_array(item) and item.ndim == 1):
             if all(isinstance(x, str) for x in item) and len(item) > 0:
-                return self._from_native_frame(self._native_frame[item])
+                return self._from_native_frame(self._native_frame.loc[:, item])
             return self._from_native_frame(self._native_frame.iloc[item])
 
         elif isinstance(item, slice):
@@ -291,7 +291,7 @@ class PandasLikeDataFrame:
     ) -> Self:
         if exprs and all(isinstance(x, str) for x in exprs) and not named_exprs:
             # This is a simple slice => fastpath!
-            return self._from_native_frame(self._native_frame[list(exprs)])
+            return self._from_native_frame(self._native_frame.loc[:, list(exprs)])
         new_series = evaluate_into_exprs(self, *exprs, **named_exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -526,7 +526,7 @@ class PandasLikeDataFrame:
 
         if how == "semi":
             other_native = (
-                other._native_frame[right_on]
+                other._native_frame.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
                     columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
                 )
