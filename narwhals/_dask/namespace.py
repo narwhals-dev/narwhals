@@ -301,12 +301,11 @@ class DaskNamespace:
 
     def concat_str(
         self,
-        exprs: IntoDaskExpr | Iterable[IntoDaskExpr],
+        exprs: Iterable[IntoDaskExpr],
         *more_exprs: IntoDaskExpr,
         separator: str = "",
         ignore_nulls: bool = False,
     ) -> DaskExpr:
-        exprs = [exprs] if not isinstance(exprs, Iterable) else exprs
         parsed_exprs: list[DaskExpr] = [
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),

@@ -4486,7 +4486,7 @@ def concat_str(
     """
     return Expr(
         lambda plx: plx.concat_str(
-            [extract_compliant(plx, v) for v in flatten(exprs)],
+            [extract_compliant(plx, v) for v in flatten([exprs])],
             *[extract_compliant(plx, v) for v in more_exprs],
             separator=separator,
             ignore_nulls=ignore_nulls,

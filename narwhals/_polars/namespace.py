@@ -119,7 +119,7 @@ class PolarsNamespace:
 
     def concat_str(
         self,
-        exprs: IntoPolarsExpr | Iterable[IntoPolarsExpr],
+        exprs: Iterable[IntoPolarsExpr],
         *more_exprs: IntoPolarsExpr,
         separator: str = "",
         ignore_nulls: bool = False,
@@ -127,8 +127,6 @@ class PolarsNamespace:
         import polars as pl  # ignore-banned-import()
 
         from narwhals._polars.expr import PolarsExpr
-
-        exprs = [exprs] if not isinstance(exprs, Iterable) else exprs
 
         pl_exprs: list[pl.Expr] = [
             expr._native_expr

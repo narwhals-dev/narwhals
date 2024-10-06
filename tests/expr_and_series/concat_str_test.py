@@ -40,5 +40,19 @@ def test_concat_str(
         .sort("a")
         .select("full_sentence")
     )
-
+    compare_dicts(result, {"full_sentence": expected})
+    result = (
+        df.select(
+            "a",
+            nw.concat_str(
+                nw.col("a") * 2,
+                nw.col("b"),
+                nw.col("c"),
+                separator=" ",
+                ignore_nulls=ignore_nulls,  # default behavior is False
+            ).alias("full_sentence"),
+        )
+        .sort("a")
+        .select("full_sentence")
+    )
     compare_dicts(result, {"full_sentence": expected})

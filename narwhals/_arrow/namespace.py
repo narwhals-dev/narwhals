@@ -300,14 +300,13 @@ class ArrowNamespace:
 
     def concat_str(
         self,
-        exprs: IntoArrowExpr | Iterable[IntoArrowExpr],
+        exprs: Iterable[IntoArrowExpr],
         *more_exprs: IntoArrowExpr,
         separator: str = "",
         ignore_nulls: bool = False,
     ) -> ArrowExpr:
         import pyarrow.compute as pc  # ignore-banned-import
 
-        exprs = [exprs] if not isinstance(exprs, Iterable) else exprs
         parsed_exprs: list[ArrowExpr] = [
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),

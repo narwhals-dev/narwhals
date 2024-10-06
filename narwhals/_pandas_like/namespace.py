@@ -328,12 +328,11 @@ class PandasLikeNamespace:
 
     def concat_str(
         self,
-        exprs: IntoPandasLikeExpr | Iterable[IntoPandasLikeExpr],
+        exprs: Iterable[IntoPandasLikeExpr],
         *more_exprs: IntoPandasLikeExpr,
         separator: str = "",
         ignore_nulls: bool = False,
     ) -> PandasLikeExpr:
-        exprs = [exprs] if not isinstance(exprs, Iterable) else exprs
         parsed_exprs: list[PandasLikeExpr] = [
             *parse_into_exprs(*exprs, namespace=self),
             *parse_into_exprs(*more_exprs, namespace=self),
