@@ -141,11 +141,22 @@ class PySparkLazyFrame:
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
+        import pyspark.sql.functions as F  # noqa: N812
+
         flat_by = flatten([*flatten([by]), *more_by])
         if isinstance(descending, bool):
-            ascending: bool | list[bool] = not descending
+            descending = [descending]
+
+        if nulls_last:
+            sort_funcs = [
+                F.desc_nulls_last if d else F.asc_nulls_last for d in descending
+            ]
         else:
-            ascending = [not d for d in descending]
-        sorted_df = self._native_frame.sort(*flat_by, ascending=ascending)
-        return self._from_native_frame(sorted_df)
+            sort_funcs = [
+                F.desc_nulls_first if d else F.asc_nulls_first for d in descending
+            ]
+
+        sort_cols = [sort_f(col) for col, sort_f in zip(flat_by, sort_funcs)]
+        return self._from_native_frame(self._native_frame.sort(*sort_cols))
