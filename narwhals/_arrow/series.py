@@ -1033,8 +1033,12 @@ class ArrowSeriesStringNamespace:
             ),
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> ArrowSeries:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> ArrowSeries:  # noqa: A002
         import pyarrow.compute as pc  # ignore-banned-import()
+
+        if format is None:
+            msg = "`format` is required for pyarrow backend."
+            raise ValueError(msg)
 
         return self._arrow_series._from_native_series(
             pc.strptime(self._arrow_series._native_series, format=format, unit="us")

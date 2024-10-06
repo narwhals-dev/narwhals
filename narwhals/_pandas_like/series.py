@@ -757,7 +757,7 @@ class PandasLikeSeriesStringNamespace:
             self._pandas_series._native_series.str.slice(start=offset, stop=stop),
         )
 
-    def to_datetime(self, format: str | None = None) -> PandasLikeSeries:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:  # noqa: A002
         return self._pandas_series._from_native_series(
             to_datetime(self._pandas_series._implementation)(
                 self._pandas_series._native_series, format=format
