@@ -2,7 +2,7 @@
 
 ## List of supported libraries (and how to add yours!)
 
-Currently, Narwhals supports the following libraries as inputs:
+Currently, Narwhals has full API support for the following libraries:
 
 | Library  | 🔗 Link 🔗 |
 | ------------- | ------------- |
@@ -12,46 +12,13 @@ Currently, Narwhals supports the following libraries as inputs:
 | Modin | [github.com/modin-project/modin](https://github.com/modin-project/modin) |
 | PyArrow ⇶ | [arrow.apache.org/docs/python](https://arrow.apache.org/docs/python/index.html) |
 
-If you want your own library to be recognised too, you're welcome open a PR (with tests)!
-Alternatively, if you can't do that (for example, if you library is closed-source), see
-the next section for what else you can do.
+It also has lazy-only support for [Dask](https://github.com/dask/dask), and interchange-only support
+for [DuckDB](https://github.com/duckdb/duckdb) and [Ibis](https://github.com/ibis-project/ibis).
 
-To check which methods are supported for which backend in depth, please refer to the
-[API completeness page](api-completeness/index.md).
+### Levels
 
-## Extending Narwhals
-
-We love open source, but we're not "open source absolutists". If you're unable to open
-source you library, then this is how you can make your library compatible with Narwhals.
-
-Make sure that, in addition to the public Narwhals API, you also define:
-
-  - `DataFrame.__narwhals_dataframe__`: return an object which implements public methods
-    from `Narwhals.DataFrame`
-  - `DataFrame.__narwhals_namespace__`: return an object which implements public top-level
-    functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
-  - `DataFrame.__native_namespace__`: return a native namespace object which must have a
-    `from_dict` method
-  - `LazyFrame.__narwhals_lazyframe__`: return an object which implements public methods
-    from `Narwhals.LazyFrame`
-  - `LazyFrame.__narwhals_namespace__`: return an object which implements public top-level
-    functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
-  - `LazyFrame.__native_namespace__`: return a native namespace object which must have a
-    `from_dict` method
-  - `Series.__narwhals_series__`: return an object which implements public methods
-    from `Narwhals.Series`
-
-  If your library doesn't distinguish between lazy and eager, then it's OK for your dataframe
-  object to implement both `__narwhals_dataframe__` and `__narwhals_lazyframe__`. In fact,
-  that's currently what `narwhals._pandas_like.dataframe.PandasLikeDataFrame` does. So, if you're stuck,
-  take a look at the source code to see how it's done!
-
-Note that the "extension" mechanism is still experimental. If anything is not clear, or
-doesn't work, please do raise an issue or contact us on Discord (see the link on the README).
-
-## Levels
-
-Narwhals comes with two levels of support: "full" and "interchange".
+Narwhals comes with two levels of support ("full" and "interchange"), and we are working on defining
+a "lazy-only" level too.
 
 Libraries for which we have full support can benefit from the whole
 [Narwhals API](https://narwhals-dev.github.io/narwhals/api-reference/).
@@ -91,4 +58,38 @@ def func(df: Any) -> Schema:
     return df.schema
 ```
 is also supported, meaning that, in addition to the libraries mentioned above, you can
-also pass Ibis, Vaex, PyArrow, and any other library which implements the protocol.
+also pass Ibis, DuckDB, Vaex, and any library which implements the protocol.
+
+### Extending Narwhals
+
+If you want your own library to be recognised too, you're welcome open a PR (with tests)!.
+Alternatively, if you can't do that (for example, if you library is closed-source), see
+the next section for what else you can do.
+
+We love open source, but we're not "open source absolutists". If you're unable to open
+source you library, then this is how you can make your library compatible with Narwhals.
+
+Make sure that, in addition to the public Narwhals API, you also define:
+
+  - `DataFrame.__narwhals_dataframe__`: return an object which implements public methods
+    from `Narwhals.DataFrame`
+  - `DataFrame.__narwhals_namespace__`: return an object which implements public top-level
+    functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
+  - `DataFrame.__native_namespace__`: return a native namespace object which must have a
+    `from_dict` method
+  - `LazyFrame.__narwhals_lazyframe__`: return an object which implements public methods
+    from `Narwhals.LazyFrame`
+  - `LazyFrame.__narwhals_namespace__`: return an object which implements public top-level
+    functions from `narwhals` (e.g. `narwhals.col`, `narwhals.concat`, ...)
+  - `LazyFrame.__native_namespace__`: return a native namespace object which must have a
+    `from_dict` method
+  - `Series.__narwhals_series__`: return an object which implements public methods
+    from `Narwhals.Series`
+
+  If your library doesn't distinguish between lazy and eager, then it's OK for your dataframe
+  object to implement both `__narwhals_dataframe__` and `__narwhals_lazyframe__`. In fact,
+  that's currently what `narwhals._pandas_like.dataframe.PandasLikeDataFrame` does. So, if you're stuck,
+  take a look at the source code to see how it's done!
+
+Note that this "extension" mechanism is still experimental. If anything is not clear, or
+doesn't work, please do raise an issue or contact us on Discord (see the link on the README).

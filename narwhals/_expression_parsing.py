@@ -6,6 +6,7 @@ from __future__ import annotations
 from copy import copy
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 from typing import TypeVar
 from typing import Union
 from typing import cast
@@ -306,3 +307,24 @@ def is_simple_aggregation(expr: CompliantExpr) -> bool:
     because then, we can use a fastpath in pandas.
     """
     return expr._depth < 2
+
+
+def combine_root_names(parsed_exprs: Sequence[CompliantExpr]) -> list[str] | None:
+    root_names = copy(parsed_exprs[0]._root_names)
+    for arg in parsed_exprs[1:]:
+        if root_names is not None and hasattr(arg, "__narwhals_expr__"):
+            if arg._root_names is not None:
+                root_names.extend(arg._root_names)
+            else:
+                root_names = None
+                break
+    return root_names
+
+
+def reduce_output_names(parsed_exprs: Sequence[CompliantExpr]) -> list[str] | None:
+    """Returns the left-most output name"""
+    return (
+        parsed_exprs[0]._output_names[:1]
+        if parsed_exprs[0]._output_names is not None
+        else None
+    )

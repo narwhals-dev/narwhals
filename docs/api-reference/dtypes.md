@@ -4,6 +4,9 @@
     handler: python
     options:
       members:
+        - Array
+        - List
+        - Struct
         - Int64
         - Int32
         - Int16

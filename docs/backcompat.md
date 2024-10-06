@@ -74,8 +74,8 @@ users of `narwhals.stable.v1` will have their code unaffected.
 Which should you use? In general we recommend:
 
 - When prototyping, use `import narwhals as nw`, so you can iterate quickly.
-- Once you're happy with what you've got and what to release something production-ready and stable,
-  when switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
+- Once you're happy with what you've got and want to release something production-ready and stable,
+  then switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
 
 ## Exceptions
 

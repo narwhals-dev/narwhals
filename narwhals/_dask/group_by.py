@@ -47,6 +47,7 @@ class DaskLazyGroupBy:
         self._grouped = self._df._native_frame.groupby(
             list(self._keys),
             dropna=False,
+            observed=True,
         )
 
     def agg(
@@ -83,8 +84,7 @@ class DaskLazyGroupBy:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         return DaskLazyFrame(
-            df,
-            backend_version=self._df._backend_version,
+            df, backend_version=self._df._backend_version, dtypes=self._df._dtypes
         )
 
 
