@@ -17,7 +17,7 @@ def test_zip_with(constructor_eager: ConstructorEager) -> None:
     compare_dicts({"a": result}, {"a": expected})
 
 
-def test_zip_with_length_1(constructor_eager: Any) -> None:
+def test_zip_with_length_1(constructor_eager: ConstructorEager) -> None:
     series1 = nw.from_native(constructor_eager({"a": [1]}), eager_only=True)["a"]
     series2 = nw.from_native(constructor_eager({"a": [4]}), eager_only=True)["a"]
     mask = nw.from_native(constructor_eager({"a": [False]}), eager_only=True)["a"]
