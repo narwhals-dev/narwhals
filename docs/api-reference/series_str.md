@@ -14,6 +14,8 @@
         - starts_with
         - strip_chars
         - to_datetime
+        - to_lowercase
+        - to_uppercase
         - tail
       show_source: false
       show_bases: false

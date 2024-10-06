@@ -159,7 +159,31 @@ if missing := set(dtypes).difference(documented).difference(BASE_DTYPES):
 
 # dt
 
-# str
+# Series.str methods
+series_str_methods = [
+    i
+    for i in nw.from_native(pl.Series(), series_only=True).str.__dir__()
+    if not i[0].isupper() and i[0] != "_"
+]
+
+with open("docs/api-reference/series_str.md") as fd:
+    content = fd.read()
+
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ") and not i.startswith("        - _")
+]
+
+if missing := set(series_str_methods).difference(documented):
+    print("Series.str: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+
+if extra := set(documented).difference(series_str_methods):
+    print("Series.str: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
 
 # Check Expr vs Series
 expr = [i for i in nw.Expr(lambda: 0).__dir__() if not i[0].isupper() and i[0] != "_"]
