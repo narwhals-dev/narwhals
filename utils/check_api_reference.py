@@ -157,6 +157,32 @@ if missing := set(dtypes).difference(documented).difference(BASE_DTYPES):
     print(missing)  # noqa: T201
     ret = 1
 
+# Series.cat methods
+series_cat_methods = [
+    i
+    for i in nw.from_native(pl.Series(), series_only=True).cat.__dir__()
+    if not i[0].isupper() and i[0] != "_"
+]
+
+with open("docs/api-reference/series_cat.md") as fd:
+    content = fd.read()
+
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ") and not i.startswith("        - _")
+]
+
+if missing := set(series_cat_methods).difference(documented):
+    print("Series.cat: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+
+if extra := set(documented).difference(series_cat_methods):
+    print("Series.cat: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
+
 # Series.dt methods
 series_dt_methods = [
     i
@@ -174,12 +200,12 @@ documented = [
 ]
 
 if missing := set(series_dt_methods).difference(documented):
-    print("Series.str: not documented")  # noqa: T201
+    print("Series.dt: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
 
 if extra := set(documented).difference(series_dt_methods):
-    print("Series.str: outdated")  # noqa: T201
+    print("Series.dt: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
 
