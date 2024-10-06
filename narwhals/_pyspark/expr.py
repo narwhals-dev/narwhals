@@ -192,9 +192,8 @@ class PySparkExpr:
     def count(self) -> Self:
         def _count(_input: Column) -> Column:
             from pyspark.sql import functions as F
-            from pyspark.sql.window import Window
 
-            return F.count(_input).over(Window.partitionBy())
+            return F.count(_input)
 
         return self._from_call(_count, "count")
 
