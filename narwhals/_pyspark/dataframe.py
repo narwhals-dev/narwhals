@@ -91,7 +91,7 @@ class PySparkLazyFrame:
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
-            msg = "Filtering with boolean mask is not supported for `PySparkLazyFrame`"
+            msg = "`LazyFrame.filter` is not supported for PySpark backend with boolean masks."
             raise NotImplementedError(msg)
         plx = PySparkNamespace(dtypes=self._dtypes)
         expr = plx.all_horizontal(*predicates)

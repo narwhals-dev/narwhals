@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
@@ -27,7 +26,6 @@ def test_with_columns_order(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore:If `index_col` is not specified for `to_spark`")
 def test_with_columns_empty(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor(data))

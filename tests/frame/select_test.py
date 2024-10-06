@@ -14,7 +14,6 @@ def test_select(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore:If `index_col` is not specified for `to_spark`")
 def test_empty_select(constructor: Constructor) -> None:
     result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
     assert result.collect().shape == (0, 0)
