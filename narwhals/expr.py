@@ -2498,7 +2498,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
 
-    def to_datetime(self, format: str) -> Expr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> Expr:  # noqa: A002
         """
         Convert to Datetime dtype.
 
@@ -2508,10 +2508,13 @@ class ExprStringNamespace:
             in pandas, with no ability to set any other one. The ability to
             set the time unit in pandas, if the version permits, will arrive.
 
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
         Arguments:
-            format: Format to parse strings with. Must be passed, as different
-                    dataframe libraries have different ways of auto-inferring
-                    formats.
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
 
         Examples:
             >>> import pandas as pd
