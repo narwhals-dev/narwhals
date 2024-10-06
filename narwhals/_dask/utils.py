@@ -83,7 +83,7 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
         raise RuntimeError(msg)
 
 
-def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
+def narwhals_to_native_dtype(dtype: DType | type[DType]) -> Any:
     from narwhals import dtypes
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
@@ -122,6 +122,15 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "datetime64[us]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return "timedelta64[ns]"
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

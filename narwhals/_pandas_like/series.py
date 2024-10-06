@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -10,16 +11,15 @@ from typing import overload
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
-from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -96,13 +96,14 @@ class PandasLikeSeries:
         else:
             self._use_copy_false = False
 
-    def __native_namespace__(self) -> Any:
-        if self._implementation is Implementation.PANDAS:
-            return get_pandas()
-        if self._implementation is Implementation.MODIN:  # pragma: no cover
-            return get_modin()
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
-            return get_cudf()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+            Implementation.CUDF,
+        }:
+            return self._implementation.to_native_namespace()
+
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -165,8 +166,8 @@ class PandasLikeSeries:
         return self._native_series.shape  # type: ignore[no-any-return]
 
     @property
-    def dtype(self) -> DType:
-        return translate_dtype(self._native_series)
+    def dtype(self: Self) -> DType:
+        return native_to_narwhals_dtype(self._native_series)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
@@ -664,6 +665,9 @@ class PandasLikeSeries:
         result = native_series.mode()
         result.name = native_series.name
         return self._from_native_series(result)
+
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._native_series.__iter__()
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

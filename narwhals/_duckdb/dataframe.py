@@ -1,17 +1,24 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals import dtypes
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    import pandas as pd
+    import pyarrow as pa
+    from typing_extensions import Self
+
     from narwhals._duckdb.series import DuckDBInterchangeSeries
 
 
 def map_duckdb_dtype_to_narwhals_dtype(
     duckdb_dtype: Any,
 ) -> dtypes.DType:
+    duckdb_dtype = str(duckdb_dtype)
     if duckdb_dtype == "BIGINT":
         return dtypes.Int64()
     if duckdb_dtype == "INTEGER":
@@ -42,6 +49,12 @@ def map_duckdb_dtype_to_narwhals_dtype(
         return dtypes.Boolean()
     if duckdb_dtype == "INTERVAL":
         return dtypes.Duration()
+    if duckdb_dtype.startswith("STRUCT"):
+        return dtypes.Struct()
+    if re.match(r"\w+\[\]", duckdb_dtype):
+        return dtypes.List()
+    if re.match(r"\w+\[\d+\]", duckdb_dtype):
+        return dtypes.Array()
     return dtypes.Unknown()
 
 
@@ -73,3 +86,15 @@ class DuckDBInterchangeFrame:
             "at https://github.com/narwhals-dev/narwhals/issues."
         )
         raise NotImplementedError(msg)  # pragma: no cover
+
+    def to_pandas(self: Self) -> pd.DataFrame:
+        import pandas as pd  # ignore-banned-import()
+
+        if parse_version(pd.__version__) >= parse_version("1.0.0"):
+            return self._native_frame.df()
+        else:  # pragma: no cover
+            msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
+            raise NotImplementedError(msg)
+
+    def to_arrow(self: Self) -> pa.Table:
+        return self._native_frame.arrow()
