@@ -285,7 +285,10 @@ def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
             arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype.value_type, dtypes)
         )
     if dtype.startswith("fixed_size_list"):
-        return dtypes.Array()
+        return dtypes.Array(
+            arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype.value_type, dtypes),
+            column.dtype.pyarrow_dtype.list_size,
+        )
     if dtype.startswith("struct"):
         return dtypes.Struct()
     if dtype == "object":
