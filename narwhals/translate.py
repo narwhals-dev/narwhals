@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoSeriesT
 
 T = TypeVar("T")
 
@@ -170,14 +171,14 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Any: ...
+) -> Series: ...
 
 
 @overload
@@ -254,7 +255,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,

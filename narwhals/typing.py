@@ -29,6 +29,10 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
+    class NativeSeries(Protocol):
+        @property
+        def name(self) -> Any: ...
+
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
@@ -47,7 +51,9 @@ IntoFrame: TypeAlias = Union[
 Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
 """Narwhals DataFrame or Narwhals LazyFrame"""
 
-IntoSeries: TypeAlias = Union["Series", "DataFrame[Any]", "LazyFrame[Any]"]
+IntoSeries: TypeAlias = Union[
+    "Series", "DataFrame[Any]", "LazyFrame[Any]", "NativeSeries"
+]
 """Anything which can be converted to a Narwhals Series."""
 
 # TypeVars for some of the above

@@ -51,6 +51,7 @@ from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoSeriesT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
@@ -738,7 +739,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
