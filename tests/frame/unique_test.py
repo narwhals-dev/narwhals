@@ -21,14 +21,11 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     ],
 )
 def test_unique(
-    request: pytest.FixtureRequest,
     constructor: Any,
     subset: str | list[str] | None,
     keep: str,
     expected: dict[str, list[float]],
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
@@ -36,9 +33,7 @@ def test_unique(
     compare_dicts(result, expected)
 
 
-def test_unique_none(request: pytest.FixtureRequest, constructor: Any) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_unique_none(constructor: Any) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 

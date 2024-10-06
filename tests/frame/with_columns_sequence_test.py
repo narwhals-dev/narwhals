@@ -12,10 +12,8 @@ data = {
 }
 
 
-def test_with_columns(constructor: Any, request: pytest.FixtureRequest) -> None:
+def test_with_columns(constructor: Any, request: Any) -> None:
     if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = (
         nw.from_native(constructor(data))
