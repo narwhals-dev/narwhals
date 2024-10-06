@@ -10,11 +10,7 @@ data = {"a": list(range(10))}
 
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [1, 2, 3])
-def test_gather_every_expr(
-    constructor: Any, n: int, offset: int, request: pytest.FixtureRequest
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_gather_every_expr(constructor: Any, n: int, offset: int, request: Any) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

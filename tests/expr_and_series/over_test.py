@@ -13,9 +13,7 @@ data = {
 }
 
 
-def test_over_single(constructor: Any, request: pytest.FixtureRequest) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_over_single(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -38,9 +36,7 @@ def test_over_single(constructor: Any, request: pytest.FixtureRequest) -> None:
         compare_dicts(result, expected)
 
 
-def test_over_multiple(constructor: Any, request: pytest.FixtureRequest) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_over_multiple(constructor: Any) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -63,9 +59,7 @@ def test_over_multiple(constructor: Any, request: pytest.FixtureRequest) -> None
         compare_dicts(result, expected)
 
 
-def test_over_invalid(constructor: Any, request: pytest.FixtureRequest) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_over_invalid(constructor: Any, request: Any) -> None:
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 

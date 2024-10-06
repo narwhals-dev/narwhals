@@ -29,10 +29,8 @@ def test_str_to_uppercase(
     constructor: Any,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
-    request: pytest.FixtureRequest,
+    request: Any,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_uppercase())
 
@@ -109,13 +107,8 @@ def test_str_to_uppercase_series(
     ],
 )
 def test_str_to_lowercase(
-    constructor: Any,
-    data: dict[str, list[str]],
-    expected: dict[str, list[str]],
-    request: pytest.FixtureRequest,
+    constructor: Any, data: dict[str, list[str]], expected: dict[str, list[str]]
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_lowercase())
     compare_dicts(result_frame, expected)

@@ -99,11 +99,7 @@ def test_str_replace_expr(
     n: int,
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor(data))
 
     result_df = df.select(
@@ -123,11 +119,7 @@ def test_str_replace_all_expr(
     value: str,
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor(data))
 
     result = df.select(

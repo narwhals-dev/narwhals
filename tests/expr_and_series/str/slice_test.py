@@ -15,14 +15,8 @@ data = {"a": ["fdas", "edfas"]}
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
 )
 def test_str_slice(
-    constructor: Any,
-    offset: int,
-    length: int | None,
-    expected: Any,
-    request: pytest.FixtureRequest,
+    constructor: Any, offset: int, length: int | None, expected: Any
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.slice(offset, length))
     compare_dicts(result_frame, expected)

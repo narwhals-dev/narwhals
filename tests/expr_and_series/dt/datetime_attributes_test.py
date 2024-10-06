@@ -34,10 +34,8 @@ data = {
     ],
 )
 def test_datetime_attributes(
-    request: pytest.FixtureRequest, constructor: Any, attribute: str, expected: list[int]
+    request: Any, constructor: Any, attribute: str, expected: list[int]
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if (
         attribute == "date"
         and "pandas" in str(constructor)

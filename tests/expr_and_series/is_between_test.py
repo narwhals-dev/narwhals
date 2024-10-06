@@ -21,11 +21,7 @@ data = {
         ("none", [False, True, True, False]),
     ],
 )
-def test_is_between(
-    constructor: Any, closed: str, expected: list[bool], request: pytest.FixtureRequest
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_is_between(constructor: Any, closed: str, expected: list[bool]) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_between(1, 5, closed=closed))
     expected_dict = {"a": expected}

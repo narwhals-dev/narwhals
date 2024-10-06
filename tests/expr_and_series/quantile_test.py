@@ -25,10 +25,8 @@ def test_quantile_expr(
     constructor: Any,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
-    request: pytest.FixtureRequest,
+    request: Any,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor) and interpolation != "linear":
         request.applymarker(pytest.mark.xfail)
 
