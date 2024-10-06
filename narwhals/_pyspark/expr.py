@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals._pyspark.dataframe import PySparkLazyFrame
     from narwhals._pyspark.namespace import PySparkNamespace
+    from narwhals.typing import DTypes
 
 
 class PySparkExpr:
@@ -25,12 +26,14 @@ class PySparkExpr:
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
+        dtypes: DTypes,
     ) -> None:
         self._call = call
         self._depth = depth
         self._function_name = function_name
         self._root_names = root_names
         self._output_names = output_names
+        self._dtypes = dtypes
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -38,10 +41,10 @@ class PySparkExpr:
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._pyspark.namespace import PySparkNamespace
 
-        return PySparkNamespace()
+        return PySparkNamespace(dtypes=self._dtypes)
 
     @classmethod
-    def from_column_names(cls: type[Self], *column_names: str) -> Self:
+    def from_column_names(cls: type[Self], *column_names: str, dtypes: DTypes) -> Self:
         def func(df: PySparkLazyFrame) -> list[Column]:
             from pyspark.sql import functions as F  # noqa: N812
 
@@ -54,6 +57,7 @@ class PySparkExpr:
             function_name="col",
             root_names=list(column_names),
             output_names=list(column_names),
+            dtypes=dtypes,
         )
 
     def _from_call(
@@ -108,6 +112,7 @@ class PySparkExpr:
             function_name=f"{self._function_name}->{expr_name}",
             root_names=root_names,
             output_names=output_names,
+            dtypes=self._dtypes,
         )
 
     def __and__(self, other: PySparkExpr) -> Self:
@@ -187,11 +192,12 @@ class PySparkExpr:
             function_name=self._function_name,
             root_names=self._root_names,
             output_names=[name],
+            dtypes=self._dtypes,
         )
 
     def count(self) -> Self:
         def _count(_input: Column) -> Column:
-            from pyspark.sql import functions as F
+            from pyspark.sql import functions as F  # noqa: N812
 
             return F.count(_input)
 
@@ -199,7 +205,7 @@ class PySparkExpr:
 
     def len(self) -> Self:
         def _len(_input: Column) -> Column:
-            from pyspark.sql import functions as F
+            from pyspark.sql import functions as F  # noqa: N812
             from pyspark.sql.window import Window
 
             return F.size(_input).over(Window.partitionBy())

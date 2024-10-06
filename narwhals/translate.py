@@ -634,7 +634,7 @@ def _from_native_impl(  # noqa: PLR0915
         if eager_only or eager_or_interchange_only:
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with pyspark DataFrame"
             raise TypeError(msg)
-        return LazyFrame(PySparkLazyFrame(native_object), level="full")
+        return LazyFrame(PySparkLazyFrame(native_object, dtypes=dtypes), level="full")
 
     # Interchange protocol
     elif hasattr(native_object, "__dataframe__"):

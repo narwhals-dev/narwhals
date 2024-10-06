@@ -60,7 +60,7 @@ class PySparkLazyGroupBy:
     def _from_native_frame(self, df: PySparkLazyFrame) -> PySparkLazyFrame:
         from narwhals._pyspark.dataframe import PySparkLazyFrame
 
-        return PySparkLazyFrame(df)
+        return PySparkLazyFrame(df, dtypes=self._df._dtypes)
 
 
 def get_spark_function(function_name: str) -> Column:

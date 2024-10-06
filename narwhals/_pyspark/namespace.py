@@ -6,7 +6,6 @@ from typing import Any
 from typing import Callable
 from typing import NoReturn
 
-from narwhals import dtypes
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pyspark.expr import PySparkExpr
 
@@ -15,31 +14,12 @@ if TYPE_CHECKING:
 
     from narwhals._pyspark.dataframe import PySparkLazyFrame
     from narwhals._pyspark.typing import IntoPySparkExpr
+    from narwhals.typing import DTypes
 
 
 class PySparkNamespace:
-    Int64 = dtypes.Int64
-    Int32 = dtypes.Int32
-    Int16 = dtypes.Int16
-    Int8 = dtypes.Int8
-    UInt64 = dtypes.UInt64
-    UInt32 = dtypes.UInt32
-    UInt16 = dtypes.UInt16
-    UInt8 = dtypes.UInt8
-    Float64 = dtypes.Float64
-    Float32 = dtypes.Float32
-    Boolean = dtypes.Boolean
-    Object = dtypes.Object
-    Unknown = dtypes.Unknown
-    Categorical = dtypes.Categorical
-    Enum = dtypes.Enum
-    String = dtypes.String
-    Datetime = dtypes.Datetime
-    Duration = dtypes.Duration
-    Date = dtypes.Date
-
-    def __init__(self) -> None:
-        pass
+    def __init__(self, *, dtypes: DTypes) -> None:
+        self._dtypes = dtypes
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
         msg = "`_create_expr_from_series` for PySparkNamespace exists only for compatibility"
@@ -72,11 +52,16 @@ class PySparkNamespace:
             return [F.col(col_name) for col_name in df.columns]
 
         return PySparkExpr(
-            call=_all, depth=0, function_name="all", root_names=None, output_names=None
+            call=_all,
+            depth=0,
+            function_name="all",
+            root_names=None,
+            output_names=None,
+            dtypes=self._dtypes,
         )
 
     def all_horizontal(self, *exprs: IntoPySparkExpr) -> PySparkExpr:
         return reduce(lambda x, y: x & y, parse_into_exprs(*exprs, namespace=self))
 
     def col(self, *column_names: str) -> PySparkExpr:
-        return PySparkExpr.from_column_names(*column_names)
+        return PySparkExpr.from_column_names(*column_names, dtypes=self._dtypes)

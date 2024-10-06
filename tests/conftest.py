@@ -4,6 +4,7 @@ import contextlib
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Generator
 
 import pandas as pd
 import polars as pl
@@ -13,9 +14,7 @@ import pytest
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pyspark_sql
 from narwhals.utils import parse_version
-from tests.utils import Constructor
 
 with contextlib.suppress(ImportError):
     import modin.pandas  # noqa: F401
@@ -31,6 +30,7 @@ if TYPE_CHECKING:
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
+    from tests.utils import Constructor
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -98,7 +98,7 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
 
 
 @pytest.fixture(scope="session")
-def spark_session() -> SparkSession | None:
+def spark_session() -> Generator[SparkSession, None, None]:
     try:
         from pyspark.sql import SparkSession
     except ImportError:
@@ -135,8 +135,6 @@ if get_cudf() is not None:
     eager_constructors.append(cudf_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover
     lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # type: ignore  # noqa: PGH003
-if get_pyspark_sql() is not None:  # pragma: no cover
-    lazy_constructors.append(pyspark_constructor_with_session)  # type: ignore  # noqa: PGH003
 
 
 @pytest.fixture(params=eager_constructors)
@@ -145,12 +143,5 @@ def constructor_eager(request: pytest.FixtureRequest) -> Callable[[Any], IntoDat
 
 
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
-def constructor(
-    request: pytest.FixtureRequest, spark_session: SparkSession
-) -> Constructor:
-    def pyspark_constructor(obj: Any) -> Any:
-        return request.param(obj, spark_session)
-
-    if request.param is pyspark_constructor_with_session:
-        return pyspark_constructor
+def constructor(request: pytest.FixtureRequest) -> Constructor:
     return request.param  # type: ignore[no-any-return]
