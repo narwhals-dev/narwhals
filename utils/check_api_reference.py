@@ -141,6 +141,86 @@ if extra := set(documented).difference(expr_methods):
     print(extra)  # noqa: T201
     ret = 1
 
+# Expr.cat methods
+expr_cat_methods = [
+    i for i in nw.Expr(lambda: 0).cat.__dir__() if not i[0].isupper() and i[0] != "_"
+]
+with open("docs/api-reference/expr_cat.md") as fd:
+    content = fd.read()
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ")
+]
+if missing := set(expr_cat_methods).difference(documented):
+    print("Expr.cat: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+if extra := set(documented).difference(expr_cat_methods):
+    print("Expr.cat: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
+
+# Expr.dt methods
+expr_dt_methods = [
+    i for i in nw.Expr(lambda: 0).dt.__dir__() if not i[0].isupper() and i[0] != "_"
+]
+with open("docs/api-reference/expr_dt.md") as fd:
+    content = fd.read()
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ")
+]
+if missing := set(expr_dt_methods).difference(documented):
+    print("Expr.dt: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+if extra := set(documented).difference(expr_dt_methods):
+    print("Expr.dt: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
+
+# Expr.name methods
+expr_name_methods = [
+    i for i in nw.Expr(lambda: 0).name.__dir__() if not i[0].isupper() and i[0] != "_"
+]
+with open("docs/api-reference/expr_name.md") as fd:
+    content = fd.read()
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ")
+]
+if missing := set(expr_name_methods).difference(documented):
+    print("Expr.name: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+if extra := set(documented).difference(expr_name_methods):
+    print("Expr.name: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
+
+# Expr.str methods
+expr_str_methods = [
+    i for i in nw.Expr(lambda: 0).str.__dir__() if not i[0].isupper() and i[0] != "_"
+]
+with open("docs/api-reference/expr_str.md") as fd:
+    content = fd.read()
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ")
+]
+if missing := set(expr_str_methods).difference(documented):
+    print("Expr.str: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+if extra := set(documented).difference(expr_str_methods):
+    print("Expr.str: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
+
 # DTypes
 dtypes = [
     i for i in nw.dtypes.__dir__() if i[0].isupper() and not i.isupper() and i[0] != "_"
