@@ -88,7 +88,8 @@ def test_array_valid() -> None:
 
 
 @pytest.mark.skipif(
-    parse_version(pl.__version__) < (1,), reason="`shape` is only available after 1.0"
+    parse_version(pl.__version__) < (1,) or parse_version(pd.__version__) < (2,),
+    reason="`shape` is only available after 1.0",
 )
 def test_polars_2d_array() -> None:
     df = pl.DataFrame(
