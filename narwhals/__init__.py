@@ -10,6 +10,7 @@ from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Duration
 from narwhals.dtypes import Enum
+from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
@@ -19,7 +20,6 @@ from narwhals.dtypes import Int64
 from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
-from narwhals.dtypes import Field
 from narwhals.dtypes import Struct
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
