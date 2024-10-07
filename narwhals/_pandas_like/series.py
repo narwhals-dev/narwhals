@@ -653,7 +653,8 @@ class PandasLikeSeries:
             prefix=name,
             prefix_sep=separator,
             drop_first=drop_first,
-            dummy_na=has_nulls,  # Adds a null column at the end, even if there aren't any.
+            # Adds a null column at the end, depending on whether or not there are any.
+            dummy_na=has_nulls,
             dtype=int,
         )
         if has_nulls:
