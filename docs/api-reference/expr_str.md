@@ -8,9 +8,9 @@
         - ends_with
         - head
         - len_chars
-        - slice
         - replace
         - replace_all
+        - slice
         - starts_with
         - strip_chars
         - tail
