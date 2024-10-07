@@ -9,5 +9,5 @@ data = {
 
 
 def test_len(constructor_eager: Any) -> None:
-    result = len(nw.from_native(constructor_eager(data)))
+    result = len(nw.from_native(constructor_eager(data), eager_only=True))
     assert result == 4

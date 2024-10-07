@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -10,12 +11,15 @@ from typing import overload
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.dataframe import DataFrame
+    from narwhals.dtypes import DType
 
 
 class Series:
@@ -28,6 +32,12 @@ class Series:
     `narwhals.from_native`, making sure to pass `allow_series=True` or
     `series_only=True`.
     """
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame
 
     def __init__(
         self,
@@ -56,8 +66,8 @@ class Series:
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
 
-    def __native_namespace__(self) -> Any:
-        return self._compliant_series.__native_namespace__()
+    def __native_namespace__(self: Self) -> ModuleType:
+        return self._compliant_series.__native_namespace__()  # type: ignore[no-any-return]
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """
@@ -302,7 +312,7 @@ class Series:
         return len(self._compliant_series)
 
     @property
-    def dtype(self) -> Any:
+    def dtype(self: Self) -> DType:
         """
         Get the data type of the Series.
 
@@ -327,7 +337,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return self._compliant_series.dtype
+        return self._compliant_series.dtype  # type: ignore[no-any-return]
 
     @property
     def name(self) -> str:
@@ -436,9 +446,7 @@ class Series:
             │ 3   │
             └─────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.to_frame(),
             level=self._level,
         )
@@ -1185,10 +1193,12 @@ class Series:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="foo")
             >>> s_pl = pl.Series("foo", s)
+            >>> s_pa = pa.chunked_array([s])
 
             We define a library agnostic function:
 
@@ -1196,7 +1206,7 @@ class Series:
             ... def func(s):
             ...     return s.alias("bar")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(s_pd)
             0    1
@@ -1211,8 +1221,69 @@ class Series:
                2
                3
             ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
         """
         return self._from_compliant_series(self._compliant_series.alias(name=name))
+
+    def rename(self, name: str) -> Self:
+        """
+        Rename the Series.
+
+        Alias for `Series.alias()`.
+
+        Arguments:
+            name: The new name.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name="foo")
+            >>> s_pl = pl.Series("foo", s)
+            >>> s_pa = pa.chunked_array([s])
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.rename("bar")
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            2    3
+            Name: bar, dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'bar' [i64]
+            [
+               1
+               2
+               3
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
+        """
+        return self.alias(name=name)
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
@@ -1954,9 +2025,7 @@ class Series:
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             ),
@@ -2283,9 +2352,7 @@ class Series:
             │ 0   ┆ 1   │
             └─────┴─────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.to_dummies(separator=separator, drop_first=drop_first),
             level=self._level,
         )
@@ -2405,6 +2472,9 @@ class Series:
             ]
         """
         return self._from_compliant_series(self._compliant_series.mode())
+
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._compliant_series.__iter__()
 
     @property
     def str(self) -> SeriesStringNamespace:
@@ -3011,6 +3081,66 @@ class SeriesStringNamespace:
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.str.to_lowercase()
+        )
+
+    def to_datetime(self: Self, format: str | None = None) -> Series:  # noqa: A002
+        """
+        Parse Series with strings to a Series with Datetime dtype.
+
+        Notes:
+            pandas defaults to nanosecond time unit, Polars to microsecond.
+            Prior to pandas 2.0, nanoseconds were the only time unit supported
+            in pandas, with no ability to set any other one. The ability to
+            set the time unit in pandas, if the version permits, will arrive.
+
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
+        Arguments:
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = ["2020-01-01", "2020-01-02"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.str.to_datetime(format="%Y-%m-%d")
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow::
+
+            >>> func(s_pd)
+            0   2020-01-01
+            1   2020-01-02
+            dtype: datetime64[ns]
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [datetime[μs]]
+            [
+               2020-01-01 00:00:00
+               2020-01-02 00:00:00
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                2020-01-01 00:00:00.000000,
+                2020-01-02 00:00:00.000000
+              ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.to_datetime(format=format)
         )
 
 

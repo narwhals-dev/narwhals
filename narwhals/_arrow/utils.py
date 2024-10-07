@@ -4,16 +4,17 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from narwhals import dtypes
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     import pyarrow as pa
 
     from narwhals._arrow.series import ArrowSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
-def translate_dtype(dtype: Any) -> dtypes.DType:
+def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     import pyarrow as pa  # ignore-banned-import
 
     if pa.types.is_int64(dtype):
@@ -49,18 +50,24 @@ def translate_dtype(dtype: Any) -> dtypes.DType:
     if pa.types.is_date32(dtype):
         return dtypes.Date()
     if pa.types.is_timestamp(dtype):
-        return dtypes.Datetime()
+        return dtypes.Datetime(time_unit=dtype.unit, time_zone=dtype.tz)
     if pa.types.is_duration(dtype):
-        return dtypes.Duration()
+        return dtypes.Duration(time_unit=dtype.unit)
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
+    if pa.types.is_struct(dtype):
+        return dtypes.Struct()
+    if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
+        return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
+    if pa.types.is_fixed_size_list(dtype):
+        return dtypes.Array(
+            native_to_narwhals_dtype(dtype.value_type, dtypes), dtype.list_size
+        )
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     import pyarrow as pa  # ignore-banned-import
-
-    from narwhals import dtypes
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return pa.float64()
@@ -89,13 +96,23 @@ def narwhals_to_native_dtype(dtype: dtypes.DType | type[dtypes.DType]) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # Use Polars' default
-        return pa.timestamp("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        time_zone = getattr(dtype, "time_zone", None)
+        return pa.timestamp(time_unit, tz=time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        # Use Polars' default
-        return pa.duration("us")
+        time_unit = getattr(dtype, "time_unit", "us")
+        return pa.duration(time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

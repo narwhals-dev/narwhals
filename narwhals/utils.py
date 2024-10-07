@@ -11,7 +11,6 @@ from typing import Sequence
 from typing import TypeVar
 from typing import cast
 
-from narwhals import dtypes
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
@@ -66,7 +65,7 @@ class Implementation(Enum):
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
-    def to_native_namespace(self: Self) -> ModuleType:  # pragma: no cover
+    def to_native_namespace(self: Self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation."""
         mapping = {
             Implementation.PANDAS: get_pandas(),
@@ -74,6 +73,7 @@ class Implementation(Enum):
             Implementation.CUDF: get_cudf(),
             Implementation.PYARROW: get_pyarrow(),
             Implementation.POLARS: get_polars(),
+            Implementation.DASK: get_dask_dataframe(),
         }
         return mapping[self]  # type: ignore[no-any-return]
 
@@ -306,6 +306,47 @@ def maybe_set_index(df: T, column_names: str | list[str]) -> T:
     return df_any  # type: ignore[no-any-return]
 
 
+def maybe_reset_index(obj: T) -> T:
+    """
+    Reset the index to the default integer index of a DataFrame or a Series, if it's pandas-like.
+
+    Notes:
+        This is only really intended for backwards-compatibility purposes,
+        for example if your library already resets the index for users.
+        If you're designing a new library, we highly encourage you to not
+        rely on the Index.
+        For non-pandas-like inputs, this is a no-op.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]}, index=([6, 7]))
+        >>> df = nw.from_native(df_pd)
+        >>> nw.to_native(nw.maybe_reset_index(df))
+           a  b
+        0  1  4
+        1  2  5
+        >>> series_pd = pd.Series([1, 2])
+        >>> series = nw.from_native(series_pd, series_only=True)
+        >>> nw.maybe_get_index(series)
+        RangeIndex(start=0, stop=2, step=1)
+    """
+    obj_any = cast(Any, obj)
+    native_obj = to_native(obj_any)
+    if is_pandas_like_dataframe(native_obj):
+        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
+        )
+    if is_pandas_like_series(native_obj):
+        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+            obj_any._compliant_series._from_native_series(
+                native_obj.reset_index(drop=True)
+            )
+        )
+    return obj_any  # type: ignore[no-any-return]
+
+
 def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
     """
     Convert columns or series to the best possible dtypes using dtypes supporting ``pd.NA``, if df is pandas-like.
@@ -391,6 +432,8 @@ def is_ordered_categorical(series: Series) -> bool:
         True
     """
     from narwhals._interchange.series import InterchangeSeries
+
+    dtypes = series._compliant_series._dtypes
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)

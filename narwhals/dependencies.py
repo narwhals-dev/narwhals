@@ -93,22 +93,22 @@ def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
 
 def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
     """Check whether `df` is a modin DataFrame without importing modin."""
-    return (pd := get_modin()) is not None and isinstance(df, pd.DataFrame)
+    return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
 
 
 def is_modin_series(ser: Any) -> TypeGuard[mpd.Series]:
     """Check whether `ser` is a modin Series without importing modin."""
-    return (pd := get_modin()) is not None and isinstance(ser, pd.Series)
+    return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
 def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
     """Check whether `df` is a cudf DataFrame without importing cudf."""
-    return (pd := get_cudf()) is not None and isinstance(df, pd.DataFrame)
+    return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
 
 
-def is_cudf_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
+def is_cudf_series(ser: Any) -> TypeGuard[cudf.Series[Any]]:
     """Check whether `ser` is a cudf Series without importing cudf."""
-    return (pd := get_cudf()) is not None and isinstance(ser, pd.Series)
+    return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
 
 
 def is_dask_dataframe(df: Any) -> TypeGuard[dd.DataFrame]:

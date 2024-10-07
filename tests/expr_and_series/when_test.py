@@ -122,12 +122,7 @@ def test_otherwise_series(constructor_eager: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_otherwise_expression(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_otherwise_expression(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.when(nw.col("a") == 1).then(-1).otherwise(nw.col("a") + 7).alias("a_when")
@@ -138,13 +133,15 @@ def test_otherwise_expression(
     compare_dicts(result, expected)
 
 
-def test_when_then_otherwise_into_expr(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then("c").otherwise("e"))
     expected = {"c": [7, 5, 6]}
+    compare_dicts(result, expected)
+
+
+def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
+    expected = {"b": ["z", "b", "c"]}
     compare_dicts(result, expected)

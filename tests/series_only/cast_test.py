@@ -75,13 +75,13 @@ def test_cast_date_datetime_pandas() -> None:
     df = df.select(nw.col("a").cast(nw.Datetime))
     result = nw.to_native(df)
     expected = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype(
-        {"a": "timestamp[ns][pyarrow]"}
+        {"a": "timestamp[us][pyarrow]"}
     )
     pd.testing.assert_frame_equal(result, expected)
 
     # pandas: pyarrow datetime to date
     dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype(
-        {"a": "timestamp[ns][pyarrow]"}
+        {"a": "timestamp[us][pyarrow]"}
     )
     df = nw.from_native(dfpd)
     df = df.select(nw.col("a").cast(nw.Date))

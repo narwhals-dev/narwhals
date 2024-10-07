@@ -4,6 +4,7 @@ from datetime import timedelta
 from datetime import timezone
 from typing import Any
 
+import duckdb
 import pandas as pd
 import polars as pl
 import pytest
@@ -60,7 +61,7 @@ def test_string_disguised_as_object() -> None:
 
 
 def test_actual_object(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
-    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table")):
+    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
@@ -95,6 +96,8 @@ def test_dtypes() -> None:
             "p": ["a"],
             "q": [timedelta(1)],
             "r": ["a"],
+            "s": [[1, 2]],
+            "u": [{"a": 1}],
         },
         schema={
             "a": pl.Int64,
@@ -115,6 +118,8 @@ def test_dtypes() -> None:
             "p": pl.Categorical,
             "q": pl.Duration,
             "r": pl.Enum(["a", "b"]),
+            "s": pl.List(pl.Int64),
+            "u": pl.Struct({"a": pl.Int64}),
         },
     )
     df_from_pl = nw.from_native(df_pl, eager_only=True)
@@ -137,6 +142,8 @@ def test_dtypes() -> None:
         "p": nw.Categorical,
         "q": nw.Duration,
         "r": nw.Enum,
+        "s": nw.List,
+        "u": nw.Struct,
     }
 
     assert df_from_pl.schema == df_from_pl.collect_schema()
@@ -161,11 +168,6 @@ def test_dtypes() -> None:
 
 def test_unknown_dtype() -> None:
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="M")})
-    assert nw.from_native(df).schema == {"a": nw.Unknown}
-
-
-def test_unknown_dtype_polars() -> None:
-    df = pl.DataFrame({"a": [[1, 2, 3]]})
     assert nw.from_native(df).schema == {"a": nw.Unknown}
 
 
@@ -199,3 +201,62 @@ def test_from_non_hashable_column_name() -> None:
     df = nw.from_native(df, eager_only=True)
     assert df.columns == ["pizza", ["a", "b"]]
     assert df["pizza"].dtype == nw.Int64
+
+
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.2.0"),
+    reason="too old for pyarrow types",
+)
+def test_nested_dtypes() -> None:
+    df = pl.DataFrame(
+        {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
+        schema_overrides={"b": pl.Array(pl.Int64, 2)},
+    ).to_pandas(use_pyarrow_extension_array=True)
+    nwdf = nw.from_native(df)
+
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}
+    df = pl.DataFrame(
+        {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
+        schema_overrides={"b": pl.Array(pl.Int64, 2)},
+    )
+    nwdf = nw.from_native(df)
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
+    df = pl.DataFrame(
+        {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
+        schema_overrides={"b": pl.Array(pl.Int64, 2)},
+    ).to_arrow()
+    nwdf = nw.from_native(df)
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
+    df = duckdb.sql("select * from df")
+    nwdf = nw.from_native(df)
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
+
+
+def test_nested_dtypes_ibis() -> None:  # pragma: no cover
+    ibis = pytest.importorskip("ibis")
+    df = pl.DataFrame(
+        {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
+        schema_overrides={"b": pl.Array(pl.Int64, 2)},
+    )
+    tbl = ibis.memtable(df[["a", "c"]])
+    nwdf = nw.from_native(tbl)
+    assert nwdf.schema == {"a": nw.List, "c": nw.Struct}
+
+
+@pytest.mark.skipif(
+    parse_version(pd.__version__) < parse_version("2.2.0"),
+    reason="too old for pyarrow types",
+)
+def test_nested_dtypes_dask() -> None:
+    pytest.importorskip("dask")
+    pytest.importorskip("dask_expr", exc_type=ImportError)
+    import dask.dataframe as dd
+
+    df = dd.from_pandas(
+        pl.DataFrame(
+            {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
+            schema_overrides={"b": pl.Array(pl.Int64, 2)},
+        ).to_pandas(use_pyarrow_extension_array=True)
+    )
+    nwdf = nw.from_native(df)
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}

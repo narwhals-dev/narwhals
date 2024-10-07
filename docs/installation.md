@@ -13,7 +13,7 @@ Then, if you start the Python REPL and see the following:
 ```python
 >>> import narwhals
 >>> narwhals.__version__
-'1.8.2'
+'1.9.1'
 ```
 then installation worked correctly!
 
@@ -69,4 +69,4 @@ If you run `python t.py` then your output should look like the above. This is th
 function - as we'll soon see, we can do much more advanced things.
 Let's learn about what you just did, and what Narwhals can do for you!
 
-Note: these examples are only using pandas and Polars. Please see the following to find the [supported libriaries](extending.md).
+Note: these examples are only using pandas and Polars. Please see the following to find the [supported libraries](extending.md).

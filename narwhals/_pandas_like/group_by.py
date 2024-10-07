@@ -40,6 +40,7 @@ class PandasLikeGroupBy:
                 list(self._keys),
                 sort=False,
                 as_index=True,
+                observed=True,
             )
         else:
             self._grouped = self._df._native_frame.groupby(
@@ -47,6 +48,7 @@ class PandasLikeGroupBy:
                 sort=False,
                 as_index=True,
                 dropna=False,
+                observed=True,
             )
 
     def agg(
@@ -90,6 +92,7 @@ class PandasLikeGroupBy:
             df,
             implementation=self._df._implementation,
             backend_version=self._df._backend_version,
+            dtypes=self._df._dtypes,
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
@@ -209,7 +212,9 @@ def agg_pandas(  # noqa: PLR0915
             result_aggs = result_simple_aggs
         else:
             # No aggregation provided
-            result_aggs = native_namespace.DataFrame(grouped.groups.keys(), columns=keys)
+            result_aggs = native_namespace.DataFrame(
+                list(grouped.groups.keys()), columns=keys
+            )
         return from_dataframe(result_aggs.loc[:, output_names])
 
     if dataframe_is_empty:

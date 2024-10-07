@@ -4,8 +4,32 @@ import re
 import subprocess
 import sys
 
-subprocess.run(["git", "fetch", "upstream"])
+out = subprocess.run(["git", "fetch", "upstream", "--tags"])
+if out.returncode != 0:
+    print(
+        "Something went wrong with the release process, please check the Narwhals Wiki and try again."
+    )
+    print(out)
+    sys.exit(1)
 subprocess.run(["git", "reset", "--hard", "upstream/main"])
+
+# Delete local tags, if present
+try:
+    # Get the list of all tags
+    result = subprocess.run(
+        ["git", "tag", "-l"], capture_output=True, text=True, check=True
+    )
+    tags = result.stdout.splitlines()  # Split the tags into a list by lines
+
+    # Delete each tag using git tag -d
+    for tag in tags:
+        subprocess.run(["git", "tag", "-d", tag], check=True)
+    print("All local tags have been deleted.")
+except subprocess.CalledProcessError as e:
+    print(f"An error occurred: {e}")
+
+subprocess.run(["git", "fetch", "upstream", "--tags"])
+subprocess.run(["git", "fetch", "upstream", "--prune", "--tags"])
 
 how = sys.argv[1]
 

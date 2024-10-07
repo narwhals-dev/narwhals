@@ -5,6 +5,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
@@ -2497,7 +2498,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
 
-    def to_datetime(self, format: str) -> Expr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> Expr:  # noqa: A002
         """
         Convert to Datetime dtype.
 
@@ -2507,17 +2508,23 @@ class ExprStringNamespace:
             in pandas, with no ability to set any other one. The ability to
             set the time unit in pandas, if the version permits, will arrive.
 
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
         Arguments:
-            format: Format to parse strings with. Must be passed, as different
-                    dataframe libraries have different ways of auto-inferring
-                    formats.
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
-            >>> df_pl = pl.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
+            >>> data = ["2020-01-01", "2020-01-02"]
+            >>> df_pd = pd.DataFrame({"a": data})
+            >>> df_pl = pl.DataFrame({"a": data})
+            >>> df_pa = pa.table({"a": data})
 
             We define a dataframe-agnostic function:
 
@@ -2525,7 +2532,7 @@ class ExprStringNamespace:
             ... def func(df):
             ...     return df.select(nw.col("a").str.to_datetime(format="%Y-%m-%d"))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(df_pd)
                        a
@@ -2541,6 +2548,11 @@ class ExprStringNamespace:
             │ 2020-01-01 00:00:00 │
             │ 2020-01-02 00:00:00 │
             └─────────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: timestamp[us]
+            ----
+            a: [[2020-01-01 00:00:00.000000,2020-01-02 00:00:00.000000]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)
@@ -3741,6 +3753,61 @@ def col(*names: str | Iterable[str]) -> Expr:
     return Expr(func)
 
 
+def nth(*indices: int | Sequence[int]) -> Expr:
+    """
+    Creates an expression that references one or more columns by their index(es).
+
+    Notes:
+        `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
+
+    Arguments:
+        indices: One or more indices representing the columns to retrieve.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.nth(0) * 2)
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  2
+        1  4
+        >>> func(df_pl)  # doctest: +SKIP
+        shape: (2, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 2   │
+        │ 4   │
+        └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[2,4]]
+    """
+
+    def func(plx: Any) -> Any:
+        return plx.nth(*flatten(indices))
+
+    return Expr(func)
+
+
 # Add underscore so it doesn't conflict with builtin `all`
 def all_() -> Expr:
     """
@@ -4031,6 +4098,9 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 3   │
         └─────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `sum_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.sum_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
@@ -4162,6 +4232,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `all_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.all_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
@@ -4275,6 +4348,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `any_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.any_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
@@ -4328,9 +4404,95 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 3.0 │
         └─────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `mean_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.mean_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def concat_str(
+    exprs: IntoExpr | Iterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    separator: str = "",
+    ignore_nulls: bool = False,
+) -> Expr:
+    r"""
+    Horizontally concatenate columns into a single string column.
+
+    Arguments:
+        exprs: Columns to concatenate into a single string column. Accepts expression
+            input. Strings are parsed as column names, other non-expression inputs are
+            parsed as literals. Non-`String` columns are cast to `String`.
+        *more_exprs: Additional columns to concatenate into a single string column,
+            specified as positional arguments.
+        separator: String that will be used to separate the values of each column.
+        ignore_nulls: Ignore null values (default is `False`).
+            If set to `False`, null values will be propagated and if the row contains any
+            null values, the output is null.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 2, 3],
+        ...     "b": ["dogs", "cats", None],
+        ...     "c": ["play", "swim", "walk"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal string
+        concatenation of different columns
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(
+        ...         nw.concat_str(
+        ...             [
+        ...                 nw.col("a") * 2,
+        ...                 nw.col("b"),
+        ...                 nw.col("c"),
+        ...             ],
+        ...             separator=" ",
+        ...         ).alias("full_sentence")
+        ...     )
+
+        We can then pass either pandas, Polars or PyArrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+          full_sentence
+        0   2 dogs play
+        1   4 cats swim
+        2          None
+
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌───────────────┐
+        │ full_sentence │
+        │ ---           │
+        │ str           │
+        ╞═══════════════╡
+        │ 2 dogs play   │
+        │ 4 cats swim   │
+        │ null          │
+        └───────────────┘
+
+        >>> func(pa.table(data))
+        pyarrow.Table
+        full_sentence: string
+        ----
+        full_sentence: [["2 dogs play","4 cats swim",null]]
+    """
+    return Expr(
+        lambda plx: plx.concat_str(
+            [extract_compliant(plx, v) for v in flatten([exprs])],
+            *[extract_compliant(plx, v) for v in more_exprs],
+            separator=separator,
+            ignore_nulls=ignore_nulls,
         )
     )
 

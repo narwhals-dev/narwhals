@@ -177,6 +177,15 @@ def test_slice_slice_columns(constructor_eager: Any) -> None:  # noqa: PLR0915
     result = df["a":"b"]  # type: ignore[misc]
     expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
     compare_dicts(result, expected)
+    result = df[(0, 1), :]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], :]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
+    result = df[[0, 1], df.columns]
+    expected = {"a": [1, 2], "b": [4, 5], "c": [7, 8], "d": [1, 4]}
+    compare_dicts(result, expected)
 
 
 def test_slice_invalid(constructor_eager: Any) -> None:
