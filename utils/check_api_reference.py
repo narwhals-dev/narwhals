@@ -216,14 +216,36 @@ series = [
     for i in nw.from_native(pl.Series(), series_only=True).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
-
 if missing := set(expr).difference(series).difference(EXPR_ONLY_METHODS):
-    print("In expr but not in series")  # noqa: T201
+    print("In Expr but not in Series")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
 if extra := set(series).difference(expr).difference(SERIES_ONLY_METHODS):
-    print("in series but not in expr")  # noqa: T201
+    print("In Series but not in Expr")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
+
+# Check Expr vs Series internal methods
+for namespace in NAMESPACES.difference({"name"}):
+    expr_internal = [
+        i
+        for i in getattr(nw.Expr(lambda: 0), namespace).__dir__()
+        if not i[0].isupper() and i[0] != "_"
+    ]
+    series_internal = [
+        i
+        for i in getattr(
+            nw.from_native(pl.Series(), series_only=True), namespace
+        ).__dir__()
+        if not i[0].isupper() and i[0] != "_"
+    ]
+    if missing := set(expr_internal).difference(series_internal):
+        print(f"In Expr.{namespace} but not in Series.{namespace}")  # noqa: T201
+        print(missing)  # noqa: T201
+        ret = 1
+    if extra := set(series_internal).difference(expr_internal):
+        print(f"In Series.{namespace} but not in Expr.{namespace}")  # noqa: T201
+        print(extra)  # noqa: T201
+        ret = 1
 
 sys.exit(ret)
