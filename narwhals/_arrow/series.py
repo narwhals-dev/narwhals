@@ -623,16 +623,17 @@ class ArrowSeries:
 
         if value is not None:
             res_ser = self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
-        elif strategy == "forward":
+        elif strategy in {"forward", "backward"}:
             if limit is None:
-                res_ser = self._from_native_series(pc.fill_null_forward(ser))
+                fill_func = (
+                    pc.fill_null_forward
+                    if strategy == "forward"
+                    else pc.fill_null_backward
+                )
+                res_ser = self._from_native_series(fill_func(ser))
             else:
                 res_ser = self._from_native_series(fill_aux(ser, limit, strategy))
-        elif strategy == "backward":
-            if limit is None:
-                res_ser = self._from_native_series(pc.fill_null_backward(ser))
-            else:
-                res_ser = self._from_native_series(fill_aux(ser, limit, strategy))
+
         return res_ser
 
     def to_frame(self: Self) -> ArrowDataFrame:

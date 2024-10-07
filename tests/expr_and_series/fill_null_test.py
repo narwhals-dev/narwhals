@@ -67,6 +67,16 @@ def test_fill_null_limits(constructor: Constructor) -> None:
     }
     compare_dicts(result_backward, expected_backward)
 
+    result_none_limit = df.with_columns(
+        nw.col("a", "b").fill_null(strategy="backward", limit=None)
+    )
+
+    expected_none_limit = {
+        "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
+        "b": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
+    }
+    compare_dicts(result_none_limit, expected_none_limit)
+
 
 def test_fill_null_series(constructor_eager: Any) -> None:
     data_series_float = {
