@@ -3083,7 +3083,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
-    def to_datetime(self, format: str) -> Series:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> Series:  # noqa: A002
         """
         Parse Series with strings to a Series with Datetime dtype.
 
@@ -3093,10 +3093,13 @@ class SeriesStringNamespace:
             in pandas, with no ability to set any other one. The ability to
             set the time unit in pandas, if the version permits, will arrive.
 
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
         Arguments:
-            format: Format to parse strings with. Must be passed, as different
-                    dataframe libraries have different ways of auto-inferring
-                    formats.
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
 
         Examples:
             >>> import pandas as pd

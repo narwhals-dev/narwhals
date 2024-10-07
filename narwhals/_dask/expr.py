@@ -811,7 +811,7 @@ class DaskExprStringNamespace:
             returns_scalar=False,
         )
 
-    def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
         import dask.dataframe as dd  # ignore-banned-import()
 
         return self._expr._from_call(

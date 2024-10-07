@@ -540,7 +540,7 @@ class ArrowExprStringNamespace:
             self._expr, "str", "slice", offset, length
         )
 
-    def to_datetime(self, format: str | None = None) -> ArrowExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr,
             "str",

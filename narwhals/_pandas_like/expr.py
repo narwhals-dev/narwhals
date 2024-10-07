@@ -486,7 +486,7 @@ class PandasLikeExprStringNamespace:
             self._expr, "str", "slice", offset, length
         )
 
-    def to_datetime(self, format: str | None = None) -> PandasLikeExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> PandasLikeExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr,
             "str",
