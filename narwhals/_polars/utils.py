@@ -75,7 +75,7 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
         du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
         return dtypes.Duration(time_unit=du_time_unit)
     if dtype == pl.Struct:
-        return dtypes.Struct()
+        return dtypes.Struct(native_to_narwhals_dtype(dtype.fields, dtypes))
     if dtype == pl.List:
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))
     if dtype == pl.Array:

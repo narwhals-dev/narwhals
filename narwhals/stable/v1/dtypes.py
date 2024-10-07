@@ -16,6 +16,7 @@ from narwhals.stable.v1._dtypes import List
 from narwhals.stable.v1._dtypes import NumericType
 from narwhals.stable.v1._dtypes import Object
 from narwhals.stable.v1._dtypes import String
+from narwhals.stable.v1._dtypes import Field
 from narwhals.stable.v1._dtypes import Struct
 from narwhals.stable.v1._dtypes import UInt8
 from narwhals.stable.v1._dtypes import UInt16
@@ -42,6 +43,7 @@ __all__ = [
     "NumericType",
     "Object",
     "String",
+    "Field"
     "Struct",
     "UInt8",
     "UInt16",
