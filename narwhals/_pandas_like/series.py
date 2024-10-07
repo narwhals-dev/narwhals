@@ -433,9 +433,31 @@ class PandasLikeSeries:
         ser = self._native_series
         return self._from_native_series(ser.isna())
 
-    def fill_null(self, value: Any) -> PandasLikeSeries:
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> PandasLikeSeries:
+        if value is not None and strategy is not None:
+            msg = "cannot specify both `value` and `strategy`"
+            raise ValueError(msg)
+        if value is None and strategy is None:
+            msg = "must specify either a fill `value` or `strategy`"
+            raise ValueError(msg)
+        if strategy is not None and strategy not in {"forward", "backward"}:
+            msg = f"strategy not supported: {strategy}"
+            raise ValueError(msg)
+
         ser = self._native_series
-        return self._from_native_series(ser.fillna(value))
+        if value is not None:
+            res_ser = self._from_native_series(ser.fillna(value=value))
+        elif strategy == "forward":
+            res_ser = self._from_native_series(ser.ffill(limit=limit))
+        elif strategy == "backward":
+            res_ser = self._from_native_series(ser.bfill(limit=limit))
+
+        return res_ser
 
     def drop_nulls(self) -> PandasLikeSeries:
         ser = self._native_series

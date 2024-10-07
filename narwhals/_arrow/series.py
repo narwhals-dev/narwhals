@@ -568,14 +568,65 @@ class ArrowSeries:
 
         return self._from_native_series(pc.take(ser, mask))
 
-    def fill_null(self: Self, value: Any) -> Self:
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        if value is not None and strategy is not None:
+            msg = "cannot specify both `value` and `strategy`"
+            raise ValueError(msg)
+        if value is None and strategy is None:
+            msg = "must specify either a fill `value` or `strategy`"
+            raise ValueError(msg)
+        if strategy is not None and strategy not in {"forward", "backward"}:
+            msg = f"strategy not supported: {strategy}"
+            raise ValueError(msg)
+
+        import numpy as np  # ignore-banned-import
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
+
+        def fill_aux(
+            arr: pa.Array,
+            limit: int,
+            direction: Literal["forward", "backward"] | None = None,
+        ) -> pa.Array:
+            valid_mask = pc.is_valid(arr)
+            indices = pa.array(np.arange(len(arr)), type=pa.int64())
+            if direction == "forward":
+                valid_index = pc.cumulative_max(
+                    pc.if_else(valid_mask, indices, pa.scalar(-1, type=pa.int64()))
+                )
+                distance = pc.subtract(indices, valid_index)
+            elif direction == "backward":
+                valid_index = pc.cumulative_min(
+                    pc.if_else(
+                        valid_mask[::-1],
+                        indices[::-1],
+                        pa.scalar(len(arr), type=pa.int64()),
+                    )
+                )[::-1]
+                distance = pc.subtract(valid_index, indices)
+            return pc.if_else(
+                pc.and_(
+                    pc.is_null(arr),
+                    pc.less_equal(distance, pa.scalar(limit)),
+                ),
+                arr.take(valid_index),
+                arr,
+            )
 
         ser = self._native_series
         dtype = ser.type
 
-        return self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+        if value is not None:
+            res_ser = self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
+        else:
+            limit = limit if limit is not None else 1
+            res_ser = self._from_native_series(fill_aux(ser, limit, strategy))
+        return res_ser
 
     def to_frame(self: Self) -> ArrowDataFrame:
         import pyarrow as pa  # ignore-banned-import()

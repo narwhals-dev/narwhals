@@ -1388,7 +1388,12 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.is_null())
 
-    def fill_null(self, value: Any) -> Self:
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
         """
         Fill null values using the specified value.
 
@@ -1429,7 +1434,9 @@ class Series:
                5
             ]
         """
-        return self._from_compliant_series(self._compliant_series.fill_null(value))
+        return self._from_compliant_series(
+            self._compliant_series.fill_null(value=value, strategy=strategy, limit=limit)
+        )
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: str = "both"

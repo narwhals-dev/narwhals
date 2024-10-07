@@ -1130,7 +1130,12 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).arg_true())
 
-    def fill_null(self, value: Any) -> Self:
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
         """
         Fill null values with given value.
 
@@ -1179,7 +1184,11 @@ class Expr:
             │ 5   ┆ 5.0 │
             └─────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).fill_null(value))
+        return self.__class__(
+            lambda plx: self._call(plx).fill_null(
+                value=value, strategy=strategy, limit=limit
+            )
+        )
 
     # --- partial reduction ---
     def drop_nulls(self) -> Self:

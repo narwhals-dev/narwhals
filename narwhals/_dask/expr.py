@@ -501,11 +501,42 @@ class DaskExpr:
             returns_scalar=True,
         )
 
-    def fill_null(self, value: Any) -> DaskExpr:
+    def fill_null(
+        self: Self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> DaskExpr:
+        if value is not None and strategy is not None:
+            msg = "cannot specify both `value` and `strategy`"
+            raise ValueError(msg)
+        if value is None and strategy is None:
+            msg = "must specify either a fill `value` or `strategy`"
+            raise ValueError(msg)
+        if strategy is not None and strategy not in {"forward", "backward"}:
+            msg = f"strategy not supported: {strategy}"
+            raise ValueError(msg)
+
+        def func(
+            _input: dask_expr.Series,
+            value: Any | None,
+            strategy: str | None,
+            limit: int | None,
+        ) -> dask_expr.Series:
+            if value is not None:
+                res_ser = _input.fillna(value)
+            elif strategy == "forward":
+                res_ser = _input.ffill(limit=limit)
+            elif strategy == "backward":
+                res_ser = _input.bfill(limit=limit)
+            return res_ser
+
         return self._from_call(
-            lambda _input, _val: _input.fillna(_val),
+            func,
             "fillna",
             value,
+            strategy,
+            limit,
             returns_scalar=False,
         )
 

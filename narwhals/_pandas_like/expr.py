@@ -254,8 +254,15 @@ class PandasLikeExpr:
     def is_null(self) -> Self:
         return reuse_series_implementation(self, "is_null")
 
-    def fill_null(self, value: Any) -> Self:
-        return reuse_series_implementation(self, "fill_null", value=value)
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        return reuse_series_implementation(
+            self, "fill_null", value=value, strategy=strategy, limit=limit
+        )
 
     def is_in(self, other: Any) -> Self:
         return reuse_series_implementation(self, "is_in", other=other)
