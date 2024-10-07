@@ -1433,6 +1433,27 @@ class Series:
                2
                5
             ]
+
+            Using a strategy:
+
+            >>> @nw.narwhalify
+            ... def func_strategies(s):
+            ...     return s.fill_null(strategy="forward", limit=1)
+
+            >>> func_strategy(s_pd)
+            0    1.0
+            1    2.0
+            2    2.0
+            dtype: float64
+
+            >>> func_strategy(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+               1
+               2
+               2
+            ]
         """
         return self._from_compliant_series(
             self._compliant_series.fill_null(value=value, strategy=strategy, limit=limit)
