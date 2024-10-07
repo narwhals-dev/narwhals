@@ -4222,7 +4222,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         a: [[4,8,3]]
     """
     if not exprs:
-        msg = "At least one expression must be passed to `sum_horizontal`"
+        msg = "At least one expression must be passed to `max_horizontal`"
         raise ValueError(msg)
     return Expr(
         lambda plx: plx.max_horizontal(
