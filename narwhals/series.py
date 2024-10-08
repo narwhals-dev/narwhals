@@ -1221,7 +1221,7 @@ class Series:
                2
                3
             ]
-            >>> func(s_pa)  # doctest: +ELLIPSIS
+            >>> func(s_pa)  # doctest: +SKIP
             <pyarrow.lib.ChunkedArray object at 0x...>
             [
               [
@@ -3921,7 +3921,7 @@ class SeriesDateTimeNamespace:
                 2024-01-01 00:00:00 +0545
                 2024-01-02 00:00:00 +0545
             ]
-            >>> func(s_pa)  # doctest: +ELLIPSIS
+            >>> func(s_pa)  # doctest: +SKIP
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [

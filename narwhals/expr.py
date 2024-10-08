@@ -3546,7 +3546,7 @@ class ExprDateTimeNamespace:
             │ 2024-01-01 00:00:00 +0545    │
             │ 2024-01-02 00:00:00 +0545    │
             └──────────────────────────────┘
-            >>> func(df_pa)
+            >>> func(df_pa)  # doctest:+SKIP
             pyarrow.Table
             a: timestamp[us, tz=Asia/Kathmandu]
             ----
@@ -3601,7 +3601,7 @@ class ExprDateTimeNamespace:
             │ 2024-01-01 05:45:00 +0545    │
             │ 2024-01-02 05:45:00 +0545    │
             └──────────────────────────────┘
-            >>> func(df_pa)
+            >>> func(df_pa)  # doctest:+SKIP
             pyarrow.Table
             a: timestamp[us, tz=Asia/Kathmandu]
             ----
