@@ -87,8 +87,8 @@ class ArrowDataFrame:
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
-            return list(self.iter_rows(named=False))
-        return self._native_frame.to_pylist()
+            return list(self.iter_rows(named=False))  # type: ignore[return-value]
+        return self._native_frame.to_pylist()  # type: ignore[no-any-return]
 
     def iter_rows(
         self,
