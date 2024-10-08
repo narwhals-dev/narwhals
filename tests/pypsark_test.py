@@ -267,3 +267,63 @@ def test_add(pyspark_constructor: Constructor) -> None:
         "e": [0.0, 2.0, 1.0],
     }
     compare_dicts(result, expected)
+
+
+# copied from tests/expr_and_series/all_horizontal_test.py
+@pytest.mark.parametrize("expr1", ["a", nw.col("a")])
+@pytest.mark.parametrize("expr2", ["b", nw.col("b")])
+def test_allh(pyspark_constructor: Constructor, expr1: Any, expr2: Any) -> None:
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(all=nw.all_horizontal(expr1, expr2))
+
+    expected = {"all": [False, False, True]}
+    compare_dicts(result, expected)
+
+
+def test_allh_all(pyspark_constructor: Constructor) -> None:
+    data = {
+        "a": [False, False, True],
+        "b": [False, True, True],
+    }
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(all=nw.all_horizontal(nw.all()))
+    expected = {"all": [False, False, True]}
+    compare_dicts(result, expected)
+    result = df.select(nw.all_horizontal(nw.all()))
+    expected = {"a": [False, False, True]}
+    compare_dicts(result, expected)
+
+
+# copied from tests/expr_and_series/double_test.py
+def test_double(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.with_columns(nw.all() * 2)
+    expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
+    compare_dicts(result, expected)
+
+
+def test_double_alias(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
+    expected = {
+        "o": [1, 3, 2],
+        "a": [2, 6, 4],
+        "b": [8, 8, 12],
+        "z": [14.0, 16.0, 18.0],
+    }
+    compare_dicts(result, expected)
+
+
+# copied from tests/expr_and_series/count_test.py
+def test_count(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(nw.col("a", "b", "z").count())
+    expected = {"a": [3], "b": [2], "z": [1]}
+    compare_dicts(result, expected)
