@@ -5,6 +5,7 @@ from copy import copy
 from typing import TYPE_CHECKING
 from typing import Callable
 
+from narwhals._pyspark.utils import get_column_name
 from narwhals._pyspark.utils import maybe_evaluate
 
 if TYPE_CHECKING:
@@ -81,10 +82,12 @@ class PySparkExpr:
             _args = [maybe_evaluate(df, arg) for arg in args]
             _kwargs = {key: maybe_evaluate(df, value) for key, value in kwargs.items()}
             for _input in inputs:
-                # For safety, _from_call should not change the name of the column
+                input_col_name = get_column_name(df, _input)
                 column_result = call(_input, *_args, **_kwargs)
                 if returns_scalar:
                     column_result = column_result.over(Window.partitionBy(F.lit(1)))
+                else:
+                    column_result = column_result.alias(input_col_name)
                 results.append(column_result)
             return results
 
