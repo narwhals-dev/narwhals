@@ -6,6 +6,7 @@ from narwhals.stable.v1._dtypes import Datetime
 from narwhals.stable.v1._dtypes import DType
 from narwhals.stable.v1._dtypes import Duration
 from narwhals.stable.v1._dtypes import Enum
+from narwhals.stable.v1._dtypes import Field
 from narwhals.stable.v1._dtypes import Float32
 from narwhals.stable.v1._dtypes import Float64
 from narwhals.stable.v1._dtypes import Int8

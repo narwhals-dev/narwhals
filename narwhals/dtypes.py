@@ -187,9 +187,9 @@ class Field:
     """
 
     name: str
-    dtype: DType
+    dtype: type[DType] | DType
 
-    def __init__(self, name: str, dtype: type[DType]) -> None:
+    def __init__(self, name: str, dtype: type[DType] | DType) -> None:
         self.name = name
         self.dtype = dtype
 
@@ -207,7 +207,9 @@ class Field:
 class Struct(DType):
     fields: list[Field]
 
-    def __init__(self, fields: Sequence[Field] | Mapping[str, type[DType]]) -> None:
+    def __init__(
+        self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
+    ) -> None:
         if isinstance(fields, Mapping):
             self.fields = [Field(name, dtype) for name, dtype in fields.items()]
         else:
