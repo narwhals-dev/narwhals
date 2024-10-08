@@ -152,58 +152,73 @@ def test_getitem(
     """
 
     # TODO(PR - clean up): documenting current differences
-    if constructor is pyarrow_table_constructor:
-        # NotImplementedError: Slicing with step is not supported on PyArrow tables
-        assume(not isinstance(selector, slice) or selector.step in (None, 1))
+    # These assume(...) lines each filter out a known difference.
 
-        # IndexError: Offset must be non-negative (pyarrow does not support negative indexing)
-        assume(
-            not isinstance(selector, slice)
-            or isinstance(selector.start, int)
-            and selector.start >= 0
+    # NotImplementedError: Slicing with step is not supported on PyArrow tables
+    assume(
+        not (
+            constructor is pyarrow_table_constructor
+            and isinstance(selector, slice)
+            and selector.step is not None
         )
-        assume(
-            not isinstance(selector, slice)
-            or isinstance(selector.stop, int)
-            and selector.stop >= 0
-        )
+    )
 
-        # Pairs of slices are not supported
-        # NB a few trivial cases are supported, eg df[0:1, :]
-        # TypeError: Got unexpected argument type <class 'slice'> for compute function
-        assume(
-            not (
-                isinstance(selector, tuple)
-                and isinstance(selector[0], slice)
-                and isinstance(selector[1], slice)
-                and (
-                    selector[0] != slice(None, None, None)
-                    or selector[1] != slice(None, None, None)
-                )
+    # IndexError: Offset must be non-negative (pyarrow does not support negative indexing)
+    assume(
+        not (
+            constructor is pyarrow_table_constructor
+            and isinstance(selector, slice)
+            and isinstance(selector.start, int)
+            and selector.start < 0
+        )
+    )
+    assume(
+        not (
+            constructor is pyarrow_table_constructor
+            and isinstance(selector, slice)
+            and isinstance(selector.stop, int)
+            and selector.stop < 0
+        )
+    )
+
+    # Pairs of slices are not supported
+    # NB a few trivial cases are supported, eg df[0:1, :]
+    # TypeError: Got unexpected argument type <class 'slice'> for compute function
+    assume(
+        not (
+            constructor is pyarrow_table_constructor
+            and isinstance(selector, tuple)
+            and isinstance(selector[0], slice)
+            and isinstance(selector[1], slice)
+            and (
+                selector[0] != slice(None, None, None)
+                or selector[1] != slice(None, None, None)
             )
         )
+    )
 
-        # df[[], "a":], df[[], :] etc fail in pyarrow:
-        # ArrowNotImplementedError: Function 'array_take' has no kernel matching input types (int64, null)
-        assume(
-            not (
-                isinstance(selector, tuple)
-                and isinstance(selector[0], list)
-                and len(selector[0]) == 0
-                and isinstance(selector[1], slice)
-            )
+    # df[[], "a":], df[[], :] etc fail in pyarrow:
+    # ArrowNotImplementedError: Function 'array_take' has no kernel matching input types (int64, null)
+    assume(
+        not (
+            constructor is pyarrow_table_constructor
+            and isinstance(selector, tuple)
+            and isinstance(selector[0], list)
+            and len(selector[0]) == 0
+            and isinstance(selector[1], slice)
         )
+    )
 
-    elif constructor is pandas_constructor:
-        # df[[], "a":], df[[], :] etc return different results between pandas/polars:
-        assume(
-            not (
-                isinstance(selector, tuple)
-                and isinstance(selector[0], list)
-                and len(selector[0]) == 0
-                and isinstance(selector[1], slice)
-            )
+    # df[[], "a":], df[[], :] etc return different results between pandas/polars:
+    assume(
+        not (
+            constructor is pandas_constructor
+            and isinstance(selector, tuple)
+            and isinstance(selector[0], list)
+            and len(selector[0]) == 0
+            and isinstance(selector[1], slice)
         )
+    )
 
     # df[..., ::step] is not fine:
     # TypeError: Expected slice of integers or strings, got: <class 'slice'>
