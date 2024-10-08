@@ -3880,3 +3880,64 @@ class SeriesDateTimeNamespace:
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.to_string(format)
         )
+
+    def replace_time_zone(self, time_zone: str | None) -> Series:
+        """
+        Replace time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [
+            ...     datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...     datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ... ]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.replace_time_zone("Asia/Kathmandu")
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(s_pd)
+            0   2024-01-01 00:00:00+05:45
+            1   2024-01-02 00:00:00+05:45
+            dtype: datetime64[ns, Asia/Kathmandu]
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [datetime[μs, Asia/Kathmandu]]
+            [
+                2024-01-01 00:00:00 +0545
+                2024-01-02 00:00:00 +0545
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2023-12-31 18:15:00.000000Z,
+                2024-01-01 18:15:00.000000Z
+              ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.replace_time_zone(time_zone)
+        )
+
+    def convert_time_zone(self, time_zone: str) -> Series:
+        if time_zone is None:
+            msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
+            raise TypeError(msg)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
+        )

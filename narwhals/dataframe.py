@@ -7,6 +7,7 @@ from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import NoReturn
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
@@ -2787,7 +2788,7 @@ class LazyFrame(BaseFrame[FrameT]):
             + "┘"
         )
 
-    def __getitem__(self, item: str | slice) -> Series | Self:
+    def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
         raise TypeError(msg)
 

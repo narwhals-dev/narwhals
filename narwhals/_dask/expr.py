@@ -10,6 +10,7 @@ from typing import NoReturn
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -922,6 +923,33 @@ class DaskExprDateTimeNamespace:
             lambda _input, _format: _input.dt.strftime(_format),
             "strftime",
             format.replace("%.f", ".%f"),
+            returns_scalar=False,
+        )
+
+    def replace_time_zone(self, time_zone: str | None) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, _time_zone: _input.dt.tz_localize(None).dt.tz_localize(
+                _time_zone
+            )
+            if _time_zone is not None
+            else _input.dt.tz_localize(None),
+            "tz_localize",
+            time_zone,
+            returns_scalar=False,
+        )
+
+    def convert_time_zone(self, time_zone: str) -> DaskExpr:
+        def func(s: dask_expr.Series, time_zone: str) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes)
+            if dtype.time_zone is None:  # type: ignore[attr-defined]
+                return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)
+            else:
+                return s.dt.tz_convert(time_zone)
+
+        return self._expr._from_call(
+            func,
+            "tz_convert",
+            time_zone,
             returns_scalar=False,
         )
 

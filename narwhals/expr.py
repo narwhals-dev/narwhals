@@ -3501,6 +3501,119 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.to_string(format)
         )
 
+    def replace_time_zone(self, time_zone: str | None) -> Expr:
+        """
+        Replace time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": [
+            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                                      a
+            0 2024-01-01 00:00:00+05:45
+            1 2024-01-02 00:00:00+05:45
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌──────────────────────────────┐
+            │ a                            │
+            │ ---                          │
+            │ datetime[μs, Asia/Kathmandu] │
+            ╞══════════════════════════════╡
+            │ 2024-01-01 00:00:00 +0545    │
+            │ 2024-01-02 00:00:00 +0545    │
+            └──────────────────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: timestamp[us, tz=Asia/Kathmandu]
+            ----
+            a: [[2023-12-31 18:15:00.000000Z,2024-01-01 18:15:00.000000Z]]
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.replace_time_zone(time_zone)
+        )
+
+    def convert_time_zone(self, time_zone: str) -> Expr:
+        """
+        Convert to a new time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": [
+            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                                      a
+            0 2024-01-01 05:45:00+05:45
+            1 2024-01-02 05:45:00+05:45
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌──────────────────────────────┐
+            │ a                            │
+            │ ---                          │
+            │ datetime[μs, Asia/Kathmandu] │
+            ╞══════════════════════════════╡
+            │ 2024-01-01 05:45:00 +0545    │
+            │ 2024-01-02 05:45:00 +0545    │
+            └──────────────────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: timestamp[us, tz=Asia/Kathmandu]
+            ----
+            a: [[2024-01-01 00:00:00.000000Z,2024-01-02 00:00:00.000000Z]]
+        """
+        if time_zone is None:
+            msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
+            raise TypeError(msg)
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
+        )
+
 
 class ExprNameNamespace:
     def __init__(self: Self, expr: Expr) -> None:
