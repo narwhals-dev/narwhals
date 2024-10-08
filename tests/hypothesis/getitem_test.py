@@ -142,6 +142,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
         tuple_selector(),
     ),
 )  # type: ignore[misc]
+@pytest.mark.slow
 def test_getitem(
     constructor: Any,
     selector: Any,
