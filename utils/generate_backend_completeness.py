@@ -64,9 +64,43 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
     return methods_
 
 
+def render_table_and_write_to_output(
+    results: list[pl.DataFrame], title: str, output_filename: str
+) -> None:
+    results = (
+        pl.concat(results)  # noqa: PD010
+        .with_columns(supported=pl.lit(":white_check_mark:"))
+        .pivot(on="Backend", values="supported", index=["Class", "Method"])
+        .filter(pl.col("narwhals").is_not_null())
+        .drop("narwhals")
+        .fill_null(":x:")
+        .sort("Class", "Method")
+    )
+
+    with pl.Config(
+        tbl_formatting="ASCII_MARKDOWN",
+        tbl_hide_column_data_types=True,
+        tbl_hide_dataframe_shape=True,
+        set_tbl_rows=results.shape[0],
+        set_tbl_width_chars=1_000,
+    ):
+        table = str(results)
+
+    with TEMPLATE_PATH.open(mode="r") as stream:
+        new_content = Template(stream.read()).render(
+            {"backend_table": table, "title": title}
+        )
+
+    with (DESTINATION_PATH / f"{output_filename}.md").open(mode="w") as destination:
+        destination.write(new_content)
+
+    return table
+
+
 def get_backend_completeness_table() -> None:
     for module_name in MODULES:
         results = []
+        processed_classes = set()
 
         nw_namespace = f"narwhals.{module_name}"
 
@@ -104,32 +138,20 @@ def get_backend_completeness_table() -> None:
 
             results.extend([narhwals, *backend_methods])
 
-        results = (
-            pl.concat(results)  # noqa: PD010
-            .with_columns(supported=pl.lit(":white_check_mark:"))
-            .pivot(on="Backend", values="supported", index=["Class", "Method"])
-            .filter(pl.col("narwhals").is_not_null())
-            .drop("narwhals")
-            .fill_null(":x:")
-            .sort("Class", "Method")
+            if nw_class_name in {"DataFrame", "LazyFrame"}:
+                render_table_and_write_to_output(
+                    results=[narhwals, *backend_methods],
+                    title=nw_class_name,
+                    output_filename=nw_class_name.lower(),
+                )
+                processed_classes.add(nw_class_name)
+
+        if processed_classes == {"DataFrame", "LazyFrame"}:
+            continue
+
+        render_table_and_write_to_output(
+            results=results, title=module_name.capitalize(), output_filename=module_name
         )
-
-        with pl.Config(
-            tbl_formatting="ASCII_MARKDOWN",
-            tbl_hide_column_data_types=True,
-            tbl_hide_dataframe_shape=True,
-            set_tbl_rows=results.shape[0],
-            set_tbl_width_chars=1_000,
-        ):
-            table = str(results)
-
-        with TEMPLATE_PATH.open(mode="r") as stream:
-            new_content = Template(stream.read()).render(
-                {"backend_table": table, "title": module_name.capitalize()}
-            )
-
-        with (DESTINATION_PATH / f"{module_name}.md").open(mode="w") as destination:
-            destination.write(new_content)
 
 
 _ = get_backend_completeness_table()
