@@ -442,10 +442,12 @@ class PandasLikeSeries:
         ser = self._native_series
         if value is not None:
             res_ser = self._from_native_series(ser.fillna(value=value))
-        elif strategy == "forward":
-            res_ser = self._from_native_series(ser.ffill(limit=limit))
-        elif strategy == "backward":
-            res_ser = self._from_native_series(ser.bfill(limit=limit))
+        else:
+            res_ser = self._from_native_series(
+                ser.ffill(limit=limit)
+                if strategy == "forward"
+                else ser.bfill(limit=limit)
+            )
 
         return res_ser
 

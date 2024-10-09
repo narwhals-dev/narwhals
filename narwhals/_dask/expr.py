@@ -515,10 +515,12 @@ class DaskExpr:
         ) -> dask_expr.Series:
             if value is not None:
                 res_ser = _input.fillna(value)
-            elif strategy == "forward":
-                res_ser = _input.ffill(limit=limit)
-            elif strategy == "backward":
-                res_ser = _input.bfill(limit=limit)
+            else:
+                res_ser = (
+                    _input.ffill(limit=limit)
+                    if strategy == "forward"
+                    else _input.bfill(limit=limit)
+                )
             return res_ser
 
         return self._from_call(

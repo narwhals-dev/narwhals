@@ -591,7 +591,7 @@ class ArrowSeries:
             if direction == "forward":
                 valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
                 distance = indices - valid_index
-            elif direction == "backward":
+            else:
                 valid_index = np.minimum.accumulate(
                     np.where(valid_mask[::-1], indices[::-1], len(arr))
                 )[::-1]
@@ -610,16 +610,13 @@ class ArrowSeries:
 
         if value is not None:
             res_ser = self._from_native_series(pc.fill_null(ser, pa.scalar(value, dtype)))
-        elif strategy in {"forward", "backward"}:
-            if limit is None:
-                fill_func = (
-                    pc.fill_null_forward
-                    if strategy == "forward"
-                    else pc.fill_null_backward
-                )
-                res_ser = self._from_native_series(fill_func(ser))
-            else:
-                res_ser = self._from_native_series(fill_aux(ser, limit, strategy))
+        elif limit is None:
+            fill_func = (
+                pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
+            )
+            res_ser = self._from_native_series(fill_func(ser))
+        else:
+            res_ser = self._from_native_series(fill_aux(ser, limit, strategy))
 
         return res_ser
 
