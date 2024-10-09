@@ -59,7 +59,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.9.1"
+__version__ = "1.9.2"
 
 __all__ = [
     "dependencies",
