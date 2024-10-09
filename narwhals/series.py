@@ -1440,13 +1440,13 @@ class Series:
             ... def func_strategies(s):
             ...     return s.fill_null(strategy="forward", limit=1)
 
-            >>> func_strategy(s_pd)
+            >>> func_strategies(s_pd)
             0    1.0
             1    2.0
             2    2.0
             dtype: float64
 
-            >>> func_strategy(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            >>> func_strategies(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
@@ -1455,6 +1455,15 @@ class Series:
                2
             ]
         """
+        if value is not None and strategy is not None:
+            msg = "cannot specify both `value` and `strategy`"
+            raise ValueError(msg)
+        if value is None and strategy is None:
+            msg = "must specify either a fill `value` or `strategy`"
+            raise ValueError(msg)
+        if strategy is not None and strategy not in {"forward", "backward"}:
+            msg = f"strategy not supported: {strategy}"
+            raise ValueError(msg)
         return self._from_compliant_series(
             self._compliant_series.fill_null(value=value, strategy=strategy, limit=limit)
         )

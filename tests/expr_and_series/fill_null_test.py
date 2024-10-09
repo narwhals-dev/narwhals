@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import compare_dicts
@@ -22,23 +24,49 @@ def test_fill_null(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_fill_null_strategies(constructor: Constructor) -> None:
-    data_strategies = {"a": [1, 2, 3], "b": [4, None, 5]}
-    df = nw.from_native(constructor(data_strategies))
-
-    result = df.with_columns(nw.col("a", "b").fill_null(strategy="forward"))
-    expected = {
-        "a": [1, 2, 3],
-        "b": [4, 4, 5],
+def test_fill_null_exceptions(constructor: Constructor) -> None:
+    data = {
+        "a": [0.0, None, 2, 3, 4],
     }
-    compare_dicts(result, expected)
+    df = nw.from_native(constructor(data))
 
-    result = df.with_columns(nw.col("a", "b").fill_null(strategy="backward"))
-    expected = {
-        "a": [1, 2, 3],
-        "b": [4, 5, 5],
+    with pytest.raises(ValueError, match="cannot specify both `value` and `strategy`"):
+        df.with_columns(nw.col("a").fill_null(value=99, strategy="forward"))
+
+    with pytest.raises(
+        ValueError, match="must specify either a fill `value` or `strategy`"
+    ):
+        df.with_columns(nw.col("a").fill_null())
+
+    with pytest.raises(ValueError, match="strategy not supported:"):
+        df.with_columns(nw.col("a").fill_null(strategy="invalid"))  # type: ignore  # noqa: PGH003
+
+
+def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> None:
+    data_limits = {
+        "a": [1, None, None, None, 5, 6, None, None, None, 10],
+        "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
     }
-    compare_dicts(result, expected)
+    df = nw.from_native(constructor(data_limits))
+
+    result_forward = df.with_columns(
+        nw.col("a", "b").fill_null(strategy="forward", limit=None)
+    )
+
+    expected_forward = {
+        "a": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
+        "b": ["a", "a", "a", "a", "b", "c", "c", "c", "c", "d"],
+    }
+    compare_dicts(result_forward, expected_forward)
+
+    result_backward = df.with_columns(
+        nw.col("a", "b").fill_null(strategy="backward", limit=None)
+    )
+    expected_backward = {
+        "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
+        "b": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
+    }
+    compare_dicts(result_backward, expected_backward)
 
 
 def test_fill_null_limits(constructor: Constructor) -> None:
@@ -67,16 +95,6 @@ def test_fill_null_limits(constructor: Constructor) -> None:
     }
     compare_dicts(result_backward, expected_backward)
 
-    result_none_limit = df.with_columns(
-        nw.col("a", "b").fill_null(strategy="backward", limit=None)
-    )
-
-    expected_none_limit = {
-        "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
-        "b": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
-    }
-    compare_dicts(result_none_limit, expected_none_limit)
-
 
 def test_fill_null_series(constructor_eager: Any) -> None:
     data_series_float = {
@@ -86,13 +104,9 @@ def test_fill_null_series(constructor_eager: Any) -> None:
 
     expected_float = {
         "a_zero_digit": [0.0, 1, 0, 2, 0, 3],
-        "a_forward_strategy": [0.0, 1, 1, 2, 2, 3],
-        "a_backward_strategy": [0.0, 1, 2, 2, 3, 3],
     }
     result_float = df_float.select(
         a_zero_digit=df_float["a"].fill_null(value=0),
-        a_forward_strategy=df_float["a"].fill_null(strategy="forward"),
-        a_backward_strategy=df_float["a"].fill_null(strategy="backward"),
     )
 
     compare_dicts(result_float, expected_float)
@@ -103,13 +117,70 @@ def test_fill_null_series(constructor_eager: Any) -> None:
     df_str = nw.from_native(constructor_eager(data_series_str), eager_only=True)
 
     expected_str = {
-        "a_forward_strategy": ["a", "a", "c", "c", "e"],
-        "a_backward_strategy": ["a", "c", "c", "e", "e"],
+        "a_z_str": ["a", "z", "c", "z", "e"],
     }
 
     result_str = df_str.select(
-        a_forward_strategy=df_str["a"].fill_null(strategy="forward"),
-        a_backward_strategy=df_str["a"].fill_null(strategy="backward"),
+        a_z_str=df_str["a"].fill_null(value="z"),
     )
 
     compare_dicts(result_str, expected_str)
+
+
+def test_fill_null_series_limit_as_none(constructor_eager: Any) -> None:
+    data_series = {
+        "a": [1, None, None, None, 5, 6, None, None, None, 10],
+    }
+    df = nw.from_native(constructor_eager(data_series), eager_only=True)
+
+    expected_forward = {
+        "a_forward": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
+        "a_backward": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
+    }
+    result_forward = df.select(
+        a_forward=df["a"].fill_null(strategy="forward", limit=None),
+        a_backward=df["a"].fill_null(strategy="backward", limit=None),
+    )
+
+    compare_dicts(result_forward, expected_forward)
+
+    data_series_str = {
+        "a": ["a", None, None, None, "b", "c", None, None, None, "d"],
+    }
+
+    df_str = nw.from_native(constructor_eager(data_series_str), eager_only=True)
+
+    expected_forward_str = {
+        "a_forward": ["a", "a", "a", "a", "b", "c", "c", "c", "c", "d"],
+        "a_backward": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
+    }
+
+    result_forward_str = df_str.select(
+        a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
+        a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
+    )
+    compare_dicts(result_forward_str, expected_forward_str)
+
+
+def test_fill_null_series_exceptions(constructor_eager: Any) -> None:
+    data_series_float = {
+        "a": [0.0, 1, None, 2, None, 3],
+    }
+    df_float = nw.from_native(constructor_eager(data_series_float), eager_only=True)
+
+    with pytest.raises(ValueError, match="cannot specify both `value` and `strategy`"):
+        df_float.select(
+            a_zero_digit=df_float["a"].fill_null(value=0, strategy="forward"),
+        )
+
+    with pytest.raises(
+        ValueError, match="must specify either a fill `value` or `strategy`"
+    ):
+        df_float.select(
+            a_zero_digit=df_float["a"].fill_null(),
+        )
+
+    with pytest.raises(ValueError, match="strategy not supported:"):
+        df_float.select(
+            a_zero_digit=df_float["a"].fill_null(strategy="invalid"),  # type: ignore  # noqa: PGH003
+        )

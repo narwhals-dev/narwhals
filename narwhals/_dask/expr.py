@@ -507,16 +507,6 @@ class DaskExpr:
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
     ) -> DaskExpr:
-        if value is not None and strategy is not None:
-            msg = "cannot specify both `value` and `strategy`"
-            raise ValueError(msg)
-        if value is None and strategy is None:
-            msg = "must specify either a fill `value` or `strategy`"
-            raise ValueError(msg)
-        if strategy is not None and strategy not in {"forward", "backward"}:
-            msg = f"strategy not supported: {strategy}"
-            raise ValueError(msg)
-
         def func(
             _input: dask_expr.Series,
             value: Any | None,

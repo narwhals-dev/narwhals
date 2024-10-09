@@ -1224,6 +1224,15 @@ class Expr:
             │ 5    ┆ 5.0 │
             └──────┴─────┘
         """
+        if value is not None and strategy is not None:
+            msg = "cannot specify both `value` and `strategy`"
+            raise ValueError(msg)
+        if value is None and strategy is None:
+            msg = "must specify either a fill `value` or `strategy`"
+            raise ValueError(msg)
+        if strategy is not None and strategy not in {"forward", "backward"}:
+            msg = f"strategy not supported: {strategy}"
+            raise ValueError(msg)
         return self.__class__(
             lambda plx: self._call(plx).fill_null(
                 value=value, strategy=strategy, limit=limit

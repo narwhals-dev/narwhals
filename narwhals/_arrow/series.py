@@ -574,16 +574,6 @@ class ArrowSeries:
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
     ) -> Self:
-        if value is not None and strategy is not None:
-            msg = "cannot specify both `value` and `strategy`"
-            raise ValueError(msg)
-        if value is None and strategy is None:
-            msg = "must specify either a fill `value` or `strategy`"
-            raise ValueError(msg)
-        if strategy is not None and strategy not in {"forward", "backward"}:
-            msg = f"strategy not supported: {strategy}"
-            raise ValueError(msg)
-
         import numpy as np  # ignore-banned-import
         import pyarrow as pa  # ignore-banned-import()
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -593,22 +583,19 @@ class ArrowSeries:
             limit: int,
             direction: Literal["forward", "backward"] | None = None,
         ) -> pa.Array:
+            # this algorithm first finds the indices of the valid values to fill all the null value positions
+            # then it calculates the distance of each new index and the original index
+            # if the distance is equal to or less than the limit and the original value is null, it is replaced
             valid_mask = pc.is_valid(arr)
             indices = pa.array(np.arange(len(arr)), type=pa.int64())
             if direction == "forward":
-                valid_index = pc.cumulative_max(
-                    pc.if_else(valid_mask, indices, pa.scalar(-1, type=pa.int64()))
-                )
-                distance = pc.subtract(indices, valid_index)
+                valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
+                distance = indices - valid_index
             elif direction == "backward":
-                valid_index = pc.cumulative_min(
-                    pc.if_else(
-                        valid_mask[::-1],
-                        indices[::-1],
-                        pa.scalar(len(arr), type=pa.int64()),
-                    )
+                valid_index = np.minimum.accumulate(
+                    np.where(valid_mask[::-1], indices[::-1], len(arr))
                 )[::-1]
-                distance = pc.subtract(valid_index, indices)
+                distance = valid_index - indices
             return pc.if_else(
                 pc.and_(
                     pc.is_null(arr),
