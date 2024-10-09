@@ -1139,6 +1139,13 @@ class Expr:
         """
         Fill null values with given value.
 
+        Arguments:
+            value: Value used to fill null values.
+
+            strategy: Strategy used to fill null values.
+
+            limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
+
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
             between NaN and Null, whereas pandas doesn't.
