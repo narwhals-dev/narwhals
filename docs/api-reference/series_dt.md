@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - convert_time_zone
         - date
         - year
         - month
@@ -15,6 +16,7 @@
         - millisecond
         - microsecond
         - nanosecond
+        - replace_time_zone
         - total_minutes
         - total_seconds
         - total_milliseconds

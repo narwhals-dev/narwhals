@@ -572,6 +572,16 @@ class PandasLikeExprDateTimeNamespace:
             self._expr, "dt", "to_string", format
         )
 
+    def replace_time_zone(self, time_zone: str | None) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "replace_time_zone", time_zone
+        )
+
+    def convert_time_zone(self, time_zone: str) -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "convert_time_zone", time_zone
+        )
+
 
 class PandasLikeExprNameNamespace:
     def __init__(self: Self, expr: PandasLikeExpr) -> None:
