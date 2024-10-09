@@ -1130,9 +1130,21 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).arg_true())
 
-    def fill_null(self, value: Any) -> Self:
+    def fill_null(
+        self,
+        value: Any | None = None,
+        strategy: Literal["forward", "backward"] | None = None,
+        limit: int | None = None,
+    ) -> Self:
         """
         Fill null values with given value.
+
+        Arguments:
+            value: Value used to fill null values.
+
+            strategy: Strategy used to fill null values.
+
+            limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
 
         Notes:
             pandas and Polars handle null values differently. Polars distinguishes
@@ -1143,10 +1155,16 @@ class Expr:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame(
-            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ...     {
+            ...         "a": [2, 4, None, None, 3, 5],
+            ...         "b": [2.0, 4.0, float("nan"), float("nan"), 3.0, 5.0],
+            ...     }
             ... )
             >>> df_pl = pl.DataFrame(
-            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ...     {
+            ...         "a": [2, 4, None, None, 3, 5],
+            ...         "b": [2.0, 4.0, float("nan"), float("nan"), 3.0, 5.0],
+            ...     }
             ... )
 
             Let's define a dataframe-agnostic function:
@@ -1162,11 +1180,12 @@ class Expr:
             0  2.0  2.0
             1  4.0  4.0
             2  0.0  0.0
-            3  3.0  3.0
-            4  5.0  5.0
+            3  0.0  0.0
+            4  3.0  3.0
+            5  5.0  5.0
 
             >>> func(df_pl)  # nan != null for polars
-            shape: (5, 2)
+            shape: (6, 2)
             ┌─────┬─────┐
             │ a   ┆ b   │
             │ --- ┆ --- │
@@ -1175,11 +1194,57 @@ class Expr:
             │ 2   ┆ 2.0 │
             │ 4   ┆ 4.0 │
             │ 0   ┆ NaN │
+            │ 0   ┆ NaN │
             │ 3   ┆ 3.0 │
             │ 5   ┆ 5.0 │
             └─────┴─────┘
+
+            Using a strategy:
+
+            >>> @nw.narwhalify
+            ... def func_strategies(df):
+            ...     return df.with_columns(
+            ...         nw.col("a", "b").fill_null(strategy="forward", limit=1)
+            ...     )
+
+            >>> func_strategies(df_pd)
+                 a    b
+            0  2.0  2.0
+            1  4.0  4.0
+            2  4.0  4.0
+            3  NaN  NaN
+            4  3.0  3.0
+            5  5.0  5.0
+
+            >>> func_strategies(df_pl)  # nan != null for polars
+            shape: (6, 2)
+            ┌──────┬─────┐
+            │ a    ┆ b   │
+            │ ---  ┆ --- │
+            │ i64  ┆ f64 │
+            ╞══════╪═════╡
+            │ 2    ┆ 2.0 │
+            │ 4    ┆ 4.0 │
+            │ 4    ┆ NaN │
+            │ null ┆ NaN │
+            │ 3    ┆ 3.0 │
+            │ 5    ┆ 5.0 │
+            └──────┴─────┘
         """
-        return self.__class__(lambda plx: self._call(plx).fill_null(value))
+        if value is not None and strategy is not None:
+            msg = "cannot specify both `value` and `strategy`"
+            raise ValueError(msg)
+        if value is None and strategy is None:
+            msg = "must specify either a fill `value` or `strategy`"
+            raise ValueError(msg)
+        if strategy is not None and strategy not in {"forward", "backward"}:
+            msg = f"strategy not supported: {strategy}"
+            raise ValueError(msg)
+        return self.__class__(
+            lambda plx: self._call(plx).fill_null(
+                value=value, strategy=strategy, limit=limit
+            )
+        )
 
     # --- partial reduction ---
     def drop_nulls(self) -> Self:
