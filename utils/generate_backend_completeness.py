@@ -116,7 +116,7 @@ def get_backend_completeness_table() -> None:
 
             nw_methods = get_class_methods(nw_class)
 
-            narhwals = pl.DataFrame(
+            narwhals = pl.DataFrame(
                 {"Class": nw_class_name, "Backend": "narwhals", "Method": nw_methods}
             )
 
@@ -136,11 +136,11 @@ def get_backend_completeness_table() -> None:
                 for backend in BACKENDS
             ]
 
-            results.extend([narhwals, *backend_methods])
+            results.extend([narwhals, *backend_methods])
 
             if nw_class_name in {"DataFrame", "LazyFrame"}:
                 render_table_and_write_to_output(
-                    results=[narhwals, *backend_methods],
+                    results=[narwhals, *backend_methods],
                     title=nw_class_name,
                     output_filename=nw_class_name.lower(),
                 )
