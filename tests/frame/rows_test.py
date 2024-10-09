@@ -92,14 +92,6 @@ def test_rows(
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
     df = nw.from_native(df_raw, eager_only=True)
-    if isinstance(df_raw, pa.Table) and not named:
-        with pytest.raises(
-            NotImplementedError,
-            match="Unnamed rows are not yet supported on PyArrow tables",
-        ):
-            df.rows(named=named)
-        return
-
     result = df.rows(named=named)
     assert result == expected
 
