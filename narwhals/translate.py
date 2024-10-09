@@ -29,6 +29,7 @@ from narwhals.dependencies import is_polars_lazyframe
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.dependencies import is_pyarrow_table
+from narwhals.dependencies import is_pyspark_dataframe
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -365,6 +366,7 @@ def _from_native_impl(  # noqa: PLR0915
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.series import PolarsSeries
+    from narwhals._pyspark.dataframe import PySparkLazyFrame
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -623,6 +625,16 @@ def _from_native_impl(  # noqa: PLR0915
             IbisInterchangeFrame(native_object, dtypes=dtypes),
             level="interchange",
         )
+
+    # PySpark
+    elif is_pyspark_dataframe(native_object):
+        if series_only:
+            msg = "Cannot only use `series_only` with pyspark DataFrame"
+            raise TypeError(msg)
+        if eager_only or eager_or_interchange_only:
+            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with pyspark DataFrame"
+            raise TypeError(msg)
+        return LazyFrame(PySparkLazyFrame(native_object, dtypes=dtypes), level="full")
 
     # Interchange protocol
     elif hasattr(native_object, "__dataframe__"):
