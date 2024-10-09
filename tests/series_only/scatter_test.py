@@ -24,3 +24,16 @@ def test_scatter(constructor_eager: Any, request: pytest.FixtureRequest) -> None
         "b": [142, 132, 124],
     }
     compare_dicts(result, expected)
+
+
+def test_scatter_unchanged(constructor_eager: Any) -> None:
+    df = nw.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
+    )
+    df["a"].scatter([0, 1], [999, 888])
+    df["b"].scatter([0, 2, 1], [142, 124, 132])
+    expected = {
+        "a": [1, 2, 3],
+        "b": [142, 124, 132],
+    }
+    compare_dicts(df, expected)
