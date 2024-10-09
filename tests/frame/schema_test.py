@@ -12,6 +12,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 
 data = {
     "a": [datetime(2020, 1, 1)],
@@ -60,7 +61,9 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-def test_actual_object(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
+def test_actual_object(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
     if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 

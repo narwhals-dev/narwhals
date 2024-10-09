@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = [1, 3, 2]
@@ -17,7 +16,7 @@ data_sorted = [7.0, 8, 9]
     [(data, False, False), (data_sorted, False, True), (data_sorted, True, False)],
 )
 def test_is_sorted(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     input_data: str,
     descending: bool,  # noqa: FBT001
     expected: bool,  # noqa: FBT001
@@ -27,7 +26,7 @@ def test_is_sorted(
     compare_dicts({"a": [result]}, {"a": [expected]})
 
 
-def test_is_sorted_invalid(constructor_eager: Any) -> None:
+def test_is_sorted_invalid(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager({"a": data_sorted}), eager_only=True)["a"]
 
     with pytest.raises(TypeError):

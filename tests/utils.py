@@ -10,6 +10,7 @@ from typing import Sequence
 
 import pandas as pd
 
+from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
 
@@ -19,6 +20,7 @@ else:
     from typing_extensions import TypeAlias  # pragma: no cover
 
 Constructor: TypeAlias = Callable[[Any], IntoFrame]
+ConstructorEager: TypeAlias = Callable[[Any], IntoDataFrame]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:

@@ -6,6 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {"a": ["foobar", "bar\n", " baz"]}
@@ -34,7 +35,7 @@ def test_str_strip_chars(
     ],
 )
 def test_str_strip_chars_series(
-    constructor_eager: Any, characters: str | None, expected: Any
+    constructor_eager: ConstructorEager, characters: str | None, expected: Any
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 

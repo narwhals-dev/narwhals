@@ -6,6 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {"a": ["fdas", "edfas"]}
@@ -28,7 +29,7 @@ def test_str_slice(
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
 )
 def test_str_slice_series(
-    constructor_eager: Any, offset: int, length: int | None, expected: Any
+    constructor_eager: ConstructorEager, offset: int, length: int | None, expected: Any
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 

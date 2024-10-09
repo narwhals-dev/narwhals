@@ -1,13 +1,12 @@
-from typing import Any
-
 import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 
-def test_get_column(constructor_eager: Any) -> None:
+def test_get_column(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 2], "b": [3, 4]}), eager_only=True)
     result = df.get_column("a")
     compare_dicts({"a": result}, {"a": [1, 2]})

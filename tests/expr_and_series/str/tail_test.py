@@ -1,7 +1,6 @@
-from typing import Any
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {"a": ["foo", "bars"]}
@@ -15,7 +14,7 @@ def test_str_tail(constructor: Constructor) -> None:
     compare_dicts(result_frame, expected)
 
 
-def test_str_tail_series(constructor_eager: Any) -> None:
+def test_str_tail_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = {"a": ["foo", "ars"]}
 

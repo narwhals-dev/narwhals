@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from datetime import date
 from datetime import datetime
-from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {
@@ -72,7 +72,7 @@ def test_datetime_attributes(
 )
 def test_datetime_attributes_series(
     request: pytest.FixtureRequest,
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     attribute: str,
     expected: list[int],
 ) -> None:
@@ -91,7 +91,7 @@ def test_datetime_attributes_series(
 
 
 def test_datetime_chained_attributes(
-    request: pytest.FixtureRequest, constructor_eager: Any
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)

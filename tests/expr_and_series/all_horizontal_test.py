@@ -6,6 +6,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 
@@ -23,7 +24,7 @@ def test_allh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_allh_series(constructor_eager: Any) -> None:
+def test_allh_series(constructor_eager: ConstructorEager) -> None:
     data = {
         "a": [False, False, True],
         "b": [False, True, True],

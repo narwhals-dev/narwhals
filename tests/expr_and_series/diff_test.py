@@ -1,11 +1,10 @@
-from typing import Any
-
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {
@@ -32,7 +31,9 @@ def test_diff(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     compare_dicts(result, expected)
 
 
-def test_diff_series(constructor_eager: Any, request: pytest.FixtureRequest) -> None:
+def test_diff_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "pyarrow_table_constructor" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < (13,):
