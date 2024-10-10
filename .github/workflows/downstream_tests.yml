@@ -113,9 +113,11 @@ jobs:
       - name: install-basics
         run: uv pip install --upgrade tox virtualenv setuptools --system
       - name: install-shiny-dev
-        run: |
+        env:
+          UV_SYSTEM_PYTHON: 1
+        run: |            
             cd py-shiny
-            uv pip install -e ".[dev,test]" --system
+            make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system
@@ -125,10 +127,4 @@ jobs:
       - name: Run pytest
         run: |
             cd py-shiny
-            python tests/pytest/asyncio_prevent.py
-            pytest
-      - name: Run mypy
-        run: |
-            cd py-shiny
-            uv pip install mypy --system
-            mypy shiny
+            make narwhals-test-integration
