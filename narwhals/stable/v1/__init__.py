@@ -51,6 +51,7 @@ from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoSeriesT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
@@ -570,26 +571,26 @@ def _stableify(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | Series: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -642,26 +643,26 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Any: ...
+) -> Series: ...
 
 
 @overload
@@ -722,7 +723,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -738,7 +739,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoSeriesT | Any,  # remain `Any` for downstream compatibility
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
