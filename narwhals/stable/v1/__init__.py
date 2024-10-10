@@ -571,26 +571,26 @@ def _stableify(
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT | IntoSeriesT,
+    native_dataframe: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | Series: ...
 
 
 @overload
 def from_native(
-    native_dataframe: IntoFrameT | IntoSeriesT,
+    native_dataframe: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -650,7 +650,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
 
 @overload
@@ -662,7 +662,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Any: ...
+) -> Series: ...
 
 
 @overload

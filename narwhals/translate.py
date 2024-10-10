@@ -87,26 +87,26 @@ def to_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -166,7 +166,7 @@ def from_native(
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
 
 @overload
