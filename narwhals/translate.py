@@ -255,7 +255,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
