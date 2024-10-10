@@ -16,6 +16,7 @@ from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import validate_column_comparand
 from narwhals.utils import Implementation
+from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -643,13 +644,30 @@ class PandasLikeSeries:
         plx = self.__native_namespace__()
         series = self._native_series
         name = str(self._name) if self._name else ""
+
+        null_col_pl = f"{name}{separator}null"
+
+        has_nulls = series.isna().any()
+        result = plx.get_dummies(
+            series,
+            prefix=name,
+            prefix_sep=separator,
+            drop_first=drop_first,
+            # Adds a null column at the end, depending on whether or not there are any.
+            dummy_na=has_nulls,
+            dtype=int,
+        )
+        if has_nulls:
+            *cols, null_col_pd = list(result.columns)
+            output_order = [null_col_pd, *cols]
+        else:
+            output_order = list(result.columns)
+            null_col_pd = generate_unique_token(n_bytes=8, columns=output_order)
+
         return PandasLikeDataFrame(
-            plx.get_dummies(
-                series,
-                prefix=name,
-                prefix_sep=separator,
-                drop_first=drop_first,
-            ).astype(int),
+            result.loc[:, output_order].rename(
+                columns={null_col_pd: null_col_pl}, errors="ignore"
+            ),
             implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
