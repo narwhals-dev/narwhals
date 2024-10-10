@@ -679,6 +679,37 @@ class PandasLikeSeries:
         result.name = native_series.name
         return self._from_native_series(result)
 
+    def log(self: Self, base: float) -> Self:
+        import numpy as np  # ignore-banned-import()
+
+        from narwhals.dtypes import Float64
+
+        native_series = self._native_series
+        native_dtype = native_series.dtype
+        out_dtype = narwhals_to_native_dtype(
+            dtype=Float64(),
+            starting_dtype=native_dtype,
+            implementation=self._implementation,
+        )
+        return self._from_native_series(
+            (np.log(native_series) / np.log(base)).astype(out_dtype)
+        )
+
+    def log10(self: Self) -> Self:
+        import numpy as np  # ignore-banned-import()
+
+        from narwhals.dtypes import Float64
+
+        native_series = self._native_series
+        native_dtype = native_series.dtype
+        out_dtype = narwhals_to_native_dtype(
+            dtype=Float64(),
+            starting_dtype=native_dtype,
+            implementation=self._implementation,
+        )
+
+        return self._from_native_series(np.log10(native_series).astype(out_dtype))
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 

@@ -720,6 +720,16 @@ class ArrowSeries:
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
 
+    def log(self: Self, base: float) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        return self._from_native_series(pc.logb(self._native_series, base))
+
+    def log10(self: Self) -> Self:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        return self._from_native_series(pc.log10(self._native_series))
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
