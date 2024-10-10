@@ -87,7 +87,7 @@ def to_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -99,7 +99,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
@@ -159,7 +159,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -171,7 +171,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoSeriesT,
+    native_object: IntoSeriesT | Any,
     *,
     strict: Literal[False],
     eager_only: None = ...,
@@ -239,7 +239,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
