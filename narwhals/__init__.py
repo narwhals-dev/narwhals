@@ -30,6 +30,7 @@ from narwhals.expr import all_ as all
 from narwhals.expr import all_horizontal
 from narwhals.expr import any_horizontal
 from narwhals.expr import col
+from narwhals.expr import concat_str
 from narwhals.expr import len_ as len
 from narwhals.expr import lit
 from narwhals.expr import max
@@ -58,7 +59,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.9.1"
+__version__ = "1.9.2"
 
 __all__ = [
     "dependencies",
@@ -80,6 +81,7 @@ __all__ = [
     "all_horizontal",
     "any_horizontal",
     "col",
+    "concat_str",
     "len",
     "lit",
     "min",

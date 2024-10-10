@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
+from narwhals.utils import parse_version
+
 
 def extract_native(obj: Any) -> Any:
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -77,7 +79,12 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     if dtype == pl.List:
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))
     if dtype == pl.Array:
-        return dtypes.Array()
+        if parse_version(pl.__version__) < (1, 0):  # pragma: no cover
+            return dtypes.Array(
+                native_to_narwhals_dtype(dtype.inner, dtypes), dtype.width
+            )
+        else:
+            return dtypes.Array(native_to_narwhals_dtype(dtype.inner, dtypes), dtype.size)
     return dtypes.Unknown()
 
 

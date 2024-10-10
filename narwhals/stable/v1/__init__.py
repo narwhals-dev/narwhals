@@ -1650,6 +1650,85 @@ def concat(
     return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
 
 
+def concat_str(
+    exprs: IntoExpr | Iterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    separator: str = "",
+    ignore_nulls: bool = False,
+) -> Expr:
+    r"""
+    Horizontally concatenate columns into a single string column.
+
+    Arguments:
+        exprs: Columns to concatenate into a single string column. Accepts expression
+            input. Strings are parsed as column names, other non-expression inputs are
+            parsed as literals. Non-`String` columns are cast to `String`.
+        *more_exprs: Additional columns to concatenate into a single string column,
+            specified as positional arguments.
+        separator: String that will be used to separate the values of each column.
+        ignore_nulls: Ignore null values (default is `False`).
+            If set to `False`, null values will be propagated and if the row contains any
+            null values, the output is null.
+
+    Examples:
+        >>> import narwhals.stable.v1 as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 2, 3],
+        ...     "b": ["dogs", "cats", None],
+        ...     "c": ["play", "swim", "walk"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal string
+        concatenation of different columns
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(
+        ...         nw.concat_str(
+        ...             [
+        ...                 nw.col("a") * 2,
+        ...                 nw.col("b"),
+        ...                 nw.col("c"),
+        ...             ],
+        ...             separator=" ",
+        ...         ).alias("full_sentence")
+        ...     )
+
+        We can then pass either pandas, Polars or PyArrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+          full_sentence
+        0   2 dogs play
+        1   4 cats swim
+        2          None
+
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌───────────────┐
+        │ full_sentence │
+        │ ---           │
+        │ str           │
+        ╞═══════════════╡
+        │ 2 dogs play   │
+        │ 4 cats swim   │
+        │ null          │
+        └───────────────┘
+
+        >>> func(pa.table(data))
+        pyarrow.Table
+        full_sentence: string
+        ----
+        full_sentence: [["2 dogs play","4 cats swim",null]]
+    """
+
+    return _stableify(
+        nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
+    )
+
+
 def is_ordered_categorical(series: Series) -> bool:
     """
     Return whether indices of categories are semantically meaningful.
@@ -2071,6 +2150,7 @@ __all__ = [
     "all_horizontal",
     "any_horizontal",
     "col",
+    "concat_str",
     "nth",
     "len",
     "lit",

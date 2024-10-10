@@ -117,6 +117,65 @@ class PolarsNamespace:
             dtypes=self._dtypes,
         )
 
+    def concat_str(
+        self,
+        exprs: Iterable[IntoPolarsExpr],
+        *more_exprs: IntoPolarsExpr,
+        separator: str = "",
+        ignore_nulls: bool = False,
+    ) -> PolarsExpr:
+        import polars as pl  # ignore-banned-import()
+
+        from narwhals._polars.expr import PolarsExpr
+
+        pl_exprs: list[pl.Expr] = [
+            expr._native_expr
+            for expr in (
+                *parse_into_exprs(*exprs, namespace=self),
+                *parse_into_exprs(*more_exprs, namespace=self),
+            )
+        ]
+
+        if self._backend_version < (0, 20, 6):  # pragma: no cover
+            null_mask = [expr.is_null() for expr in pl_exprs]
+            sep = pl.lit(separator)
+
+            if not ignore_nulls:
+                null_mask_result = pl.any_horizontal(*null_mask)
+                output_expr = pl.reduce(
+                    lambda x, y: x.cast(pl.String()) + sep + y.cast(pl.String()),  # type: ignore[arg-type,return-value]
+                    pl_exprs,
+                )
+                result = pl.when(~null_mask_result).then(output_expr)
+            else:
+                init_value, *values = [
+                    pl.when(nm).then(pl.lit("")).otherwise(expr.cast(pl.String()))
+                    for expr, nm in zip(pl_exprs, null_mask)
+                ]
+                separators = [
+                    pl.when(~nm).then(sep).otherwise(pl.lit("")) for nm in null_mask[:-1]
+                ]
+
+                result = pl.fold(  # type: ignore[assignment]
+                    acc=init_value,
+                    function=lambda x, y: x + y,
+                    exprs=[s + v for s, v in zip(separators, values)],
+                )
+
+            return PolarsExpr(
+                result,
+                dtypes=self._dtypes,
+            )
+
+        return PolarsExpr(
+            pl.concat_str(
+                pl_exprs,
+                separator=separator,
+                ignore_nulls=ignore_nulls,
+            ),
+            dtypes=self._dtypes,
+        )
+
     @property
     def selectors(self) -> PolarsSelectors:
         return PolarsSelectors(self._dtypes)

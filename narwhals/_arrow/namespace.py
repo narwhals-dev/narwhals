@@ -11,6 +11,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
+from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import combine_root_names
@@ -297,6 +298,47 @@ class ArrowNamespace:
 
         return ArrowWhen(condition, self._backend_version, dtypes=self._dtypes)
 
+    def concat_str(
+        self,
+        exprs: Iterable[IntoArrowExpr],
+        *more_exprs: IntoArrowExpr,
+        separator: str = "",
+        ignore_nulls: bool = False,
+    ) -> ArrowExpr:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        parsed_exprs: list[ArrowExpr] = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
+        ]
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = (
+                s._native_series
+                for _expr in parsed_exprs
+                for s in _expr.cast(self._dtypes.String())._call(df)
+            )
+            null_handling = "skip" if ignore_nulls else "emit_null"
+            result_series = pc.binary_join_element_wise(
+                *series, separator, null_handling=null_handling
+            )
+            return [
+                ArrowSeries(
+                    native_series=result_series,
+                    name="",
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="concat_str",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
 
 class ArrowWhen:
     def __init__(
@@ -353,7 +395,8 @@ class ArrowWhen:
                 self._otherwise_value, namespace=plx
             )._call(df)[0]  # type: ignore[arg-type]
         except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
+            # `self._otherwise_value` is a scalar and can't be converted to an expression.
+            # Remark that string values _are_ converted into expressions!
             return [
                 value_series._from_native_series(
                     pc.if_else(
@@ -364,7 +407,14 @@ class ArrowWhen:
         else:
             otherwise_series = cast(ArrowSeries, otherwise_series)
             condition = cast(ArrowSeries, condition)
-            return [value_series.zip_with(condition, otherwise_series)]
+            condition_native, otherwise_native = broadcast_series(
+                [condition, otherwise_series]
+            )
+            return [
+                value_series._from_native_series(
+                    pc.if_else(condition_native, value_series_native, otherwise_native)
+                )
+            ]
 
     def then(self, value: ArrowExpr | ArrowSeries | Any) -> ArrowThen:
         self._then_value = value

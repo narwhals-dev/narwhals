@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+from typing import Any
+
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import compare_dicts
+
+if TYPE_CHECKING:
+    from narwhals.stable.v1.dtypes import DType
 
 data = {
     "a": ["x", "y", "z"],
@@ -70,3 +78,33 @@ def test_unpivot_default_var_value_names(constructor: Constructor) -> None:
     result = df.unpivot(on=["b", "c"], index=["a"])
 
     assert result.collect_schema().names()[-2:] == ["variable", "value"]
+
+
+@pytest.mark.parametrize(
+    ("data", "expected_dtypes"),
+    [
+        (
+            {"idx": [0, 1], "a": [1, 2], "b": [1.5, 2.5]},
+            [nw.Int64(), nw.String(), nw.Float64()],
+        ),
+    ],
+)
+def test_unpivot_mixed_types(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    data: dict[str, Any],
+    expected_dtypes: list[DType],
+) -> None:
+    if (
+        "dask" in str(constructor)
+        or "cudf" in str(constructor)
+        or (
+            "pyarrow_table" in str(constructor)
+            and parse_version(pa.__version__) < parse_version("14.0.0")
+        )
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor(data))
+    result = df.unpivot(on=["a", "b"], index="idx")
+
+    assert result.collect_schema().dtypes() == expected_dtypes

@@ -212,7 +212,9 @@ def agg_pandas(  # noqa: PLR0915
             result_aggs = result_simple_aggs
         else:
             # No aggregation provided
-            result_aggs = native_namespace.DataFrame(grouped.groups.keys(), columns=keys)
+            result_aggs = native_namespace.DataFrame(
+                list(grouped.groups.keys()), columns=keys
+            )
         return from_dataframe(result_aggs.loc[:, output_names])
 
     if dataframe_is_empty:

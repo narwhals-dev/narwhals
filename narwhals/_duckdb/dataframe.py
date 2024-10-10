@@ -52,8 +52,11 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DTy
         return dtypes.Struct()
     if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
         return dtypes.List(map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes))
-    if re.match(r"\w+\[\d+\]", duckdb_dtype):
-        return dtypes.Array()
+    if match_ := re.match(r"(\w+)\[(\d+)\]", duckdb_dtype):
+        return dtypes.Array(
+            map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes),
+            int(match_.group(2)),
+        )
     return dtypes.Unknown()
 
 

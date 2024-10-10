@@ -2498,7 +2498,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
 
-    def to_datetime(self, format: str) -> Expr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> Expr:  # noqa: A002
         """
         Convert to Datetime dtype.
 
@@ -2508,10 +2508,13 @@ class ExprStringNamespace:
             in pandas, with no ability to set any other one. The ability to
             set the time unit in pandas, if the version permits, will arrive.
 
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
         Arguments:
-            format: Format to parse strings with. Must be passed, as different
-                    dataframe libraries have different ways of auto-inferring
-                    formats.
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
 
         Examples:
             >>> import pandas as pd
@@ -3498,6 +3501,119 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.to_string(format)
         )
 
+    def replace_time_zone(self, time_zone: str | None) -> Expr:
+        """
+        Replace time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": [
+            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                                      a
+            0 2024-01-01 00:00:00+05:45
+            1 2024-01-02 00:00:00+05:45
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌──────────────────────────────┐
+            │ a                            │
+            │ ---                          │
+            │ datetime[μs, Asia/Kathmandu] │
+            ╞══════════════════════════════╡
+            │ 2024-01-01 00:00:00 +0545    │
+            │ 2024-01-02 00:00:00 +0545    │
+            └──────────────────────────────┘
+            >>> func(df_pa)  # doctest:+SKIP
+            pyarrow.Table
+            a: timestamp[us, tz=Asia/Kathmandu]
+            ----
+            a: [[2023-12-31 18:15:00.000000Z,2024-01-01 18:15:00.000000Z]]
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.replace_time_zone(time_zone)
+        )
+
+    def convert_time_zone(self, time_zone: str) -> Expr:
+        """
+        Convert to a new time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": [
+            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                                      a
+            0 2024-01-01 05:45:00+05:45
+            1 2024-01-02 05:45:00+05:45
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌──────────────────────────────┐
+            │ a                            │
+            │ ---                          │
+            │ datetime[μs, Asia/Kathmandu] │
+            ╞══════════════════════════════╡
+            │ 2024-01-01 05:45:00 +0545    │
+            │ 2024-01-02 05:45:00 +0545    │
+            └──────────────────────────────┘
+            >>> func(df_pa)  # doctest:+SKIP
+            pyarrow.Table
+            a: timestamp[us, tz=Asia/Kathmandu]
+            ----
+            a: [[2024-01-01 00:00:00.000000Z,2024-01-02 00:00:00.000000Z]]
+        """
+        if time_zone is None:
+            msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
+            raise TypeError(msg)
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
+        )
+
 
 class ExprNameNamespace:
     def __init__(self: Self, expr: Expr) -> None:
@@ -4407,6 +4523,89 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return Expr(
         lambda plx: plx.mean_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def concat_str(
+    exprs: IntoExpr | Iterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    separator: str = "",
+    ignore_nulls: bool = False,
+) -> Expr:
+    r"""
+    Horizontally concatenate columns into a single string column.
+
+    Arguments:
+        exprs: Columns to concatenate into a single string column. Accepts expression
+            input. Strings are parsed as column names, other non-expression inputs are
+            parsed as literals. Non-`String` columns are cast to `String`.
+        *more_exprs: Additional columns to concatenate into a single string column,
+            specified as positional arguments.
+        separator: String that will be used to separate the values of each column.
+        ignore_nulls: Ignore null values (default is `False`).
+            If set to `False`, null values will be propagated and if the row contains any
+            null values, the output is null.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 2, 3],
+        ...     "b": ["dogs", "cats", None],
+        ...     "c": ["play", "swim", "walk"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal string
+        concatenation of different columns
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(
+        ...         nw.concat_str(
+        ...             [
+        ...                 nw.col("a") * 2,
+        ...                 nw.col("b"),
+        ...                 nw.col("c"),
+        ...             ],
+        ...             separator=" ",
+        ...         ).alias("full_sentence")
+        ...     )
+
+        We can then pass either pandas, Polars or PyArrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+          full_sentence
+        0   2 dogs play
+        1   4 cats swim
+        2          None
+
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌───────────────┐
+        │ full_sentence │
+        │ ---           │
+        │ str           │
+        ╞═══════════════╡
+        │ 2 dogs play   │
+        │ 4 cats swim   │
+        │ null          │
+        └───────────────┘
+
+        >>> func(pa.table(data))
+        pyarrow.Table
+        full_sentence: string
+        ----
+        full_sentence: [["2 dogs play","4 cats swim",null]]
+    """
+    return Expr(
+        lambda plx: plx.concat_str(
+            [extract_compliant(plx, v) for v in flatten([exprs])],
+            *[extract_compliant(plx, v) for v in more_exprs],
+            separator=separator,
+            ignore_nulls=ignore_nulls,
         )
     )
 
