@@ -278,6 +278,60 @@ class PandasLikeNamespace:
             output_names=reduce_output_names(parsed_exprs),
         )
 
+    def min_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+
+            return [
+                PandasLikeSeries(
+                    native_series=self.concat(
+                        (s.to_frame() for s in series), how="horizontal"
+                    )
+                    ._native_frame.min(axis=1)
+                    .rename(series[0].name),
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="min_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
+    def max_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+
+            return [
+                PandasLikeSeries(
+                    native_series=self.concat(
+                        (s.to_frame() for s in series), how="horizontal"
+                    )
+                    ._native_frame.max(axis=1)
+                    .rename(series[0].name),
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="max_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
     def concat(
         self,
         items: Iterable[PandasLikeDataFrame],

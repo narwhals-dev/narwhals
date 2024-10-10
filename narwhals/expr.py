@@ -4221,6 +4221,132 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
+def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Get the minimum value horizontally across columns.
+
+    Notes:
+        We support `min_horizontal` over numeric columns only.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal min of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.min_horizontal("a", "b"))
+
+        We can then pass either pandas, polars or pyarrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+             a
+        0  1.0
+        1  5.0
+        2  3.0
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 1   │
+        │ 5   │
+        │ 3   │
+        └─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[1,5,3]]
+    """
+    if not exprs:
+        msg = "At least one expression must be passed to `min_horizontal`"
+        raise ValueError(msg)
+    return Expr(
+        lambda plx: plx.min_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Get the maximum value horizontally across columns.
+
+    Notes:
+        We support `max_horizontal` over numeric columns only.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal max of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.max_horizontal("a", "b"))
+
+        We can then pass either pandas, polars or pyarrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+             a
+        0  4.0
+        1  8.0
+        2  3.0
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 4   │
+        │ 8   │
+        │ 3   │
+        └─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[4,8,3]]
+    """
+    if not exprs:
+        msg = "At least one expression must be passed to `max_horizontal`"
+        raise ValueError(msg)
+    return Expr(
+        lambda plx: plx.max_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicates = flatten([predicates])

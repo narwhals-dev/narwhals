@@ -34,9 +34,11 @@ from narwhals.expr import concat_str
 from narwhals.expr import len_ as len
 from narwhals.expr import lit
 from narwhals.expr import max
+from narwhals.expr import max_horizontal
 from narwhals.expr import mean
 from narwhals.expr import mean_horizontal
 from narwhals.expr import min
+from narwhals.expr import min_horizontal
 from narwhals.expr import nth
 from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
@@ -84,10 +86,12 @@ __all__ = [
     "concat_str",
     "len",
     "lit",
-    "min",
     "max",
+    "max_horizontal",
     "mean",
     "mean_horizontal",
+    "min",
+    "min_horizontal",
     "nth",
     "sum",
     "sum_horizontal",
