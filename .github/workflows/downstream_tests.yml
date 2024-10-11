@@ -86,6 +86,11 @@ jobs:
             uv pip install -e . --system
       - name: show-deps
         run: uv pip freeze
+      - name: Create assets directory, copy over index.html
+        run: |
+          mkdir -p marimo/_static/assets
+          cp frontend/index.html marimo/_static/index.html
+          cp frontend/public/favicon.ico marimo/_static/favicon.ico
       - name: Run test with minimal dependencies
         if: ${{ matrix.dependencies == 'core' }}
         run: |
@@ -95,8 +100,7 @@ jobs:
         run: |
             hatch run +py=${{ matrix.python-version }} test-optional:test -v tests/ -k "not test_cli"
       - name: Run typechecks
-        run: |
-            hatch run typecheck:check
+        run: hatch run typecheck:check
 
   scikit-lego:
     strategy:
