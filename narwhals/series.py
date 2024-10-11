@@ -143,19 +143,25 @@ class Series:
             values: Values to set.
 
         Note:
-            This method always returns a new Series, without modifying the original one. Using this function in a for-loop is an anti-pattern, we recommend building up your positions and values beforehand and doing an update in one go.
+            This method always returns a new Series, without modifying the original one.
+            Using this function in a for-loop is an anti-pattern, we recommend building
+            up your positions and values beforehand and doing an update in one go.
 
             For example, instead of
 
-            >>> for i in [1, 3, 2]:  # doctest: +SKIP
-            ...     value = some_function(i)
-            ...     s = s.scatter(i, value)
+            ```python
+            for i in [1, 3, 2]:
+                value = some_function(i)
+                s = s.scatter(i, value)
+            ```
 
             prefer
 
-            >>> positions = [1, 3, 2]  # doctest: +SKIP
-            >>> values = [some_function(x) for x in positions]  # doctest: +SKIP
-            >>> s = s.scatter(positions, values)  # doctest: +SKIP
+            ```python
+            positions = [1, 3, 2]
+            values = [some_function(x) for x in positions]
+            s = s.scatter(positions, values)
+            ```
 
         Examples:
             >>> import pandas as pd
