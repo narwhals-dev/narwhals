@@ -213,8 +213,7 @@ class PolarsSeries:
         return self._from_native_series(result)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        if isinstance(values, self.__class__):
-            values = values._native_series.to_list()
+        values = extract_native(values)
         s = self._native_series.clone()
         s.scatter(indices, values)
         return self._from_native_series(s)

@@ -393,6 +393,7 @@ class PandasLikeDataFrame:
                 backend_version=self._backend_version,
             )
         else:
+            # This is the logic in pandas' DataFrame.assign
             if self._backend_version < (2,):  # pragma: no cover
                 df = self._native_frame.copy(deep=True)
             else:
