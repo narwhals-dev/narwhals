@@ -124,7 +124,7 @@ jobs:
             uv pip install -e . --system
       - name: show-deps
         run: uv pip freeze
-      - name: Run pytest
+      - name: Run `make narwhals-test-integration`
         run: |
             cd py-shiny
             make narwhals-test-integration
