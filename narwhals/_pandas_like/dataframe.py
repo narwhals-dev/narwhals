@@ -355,7 +355,6 @@ class PandasLikeDataFrame:
     ) -> Self:
         index = self._native_frame.index
         new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
-
         if not new_columns and len(self) == 0:
             return self
 
@@ -394,7 +393,10 @@ class PandasLikeDataFrame:
                 backend_version=self._backend_version,
             )
         else:
-            df = self._native_frame.copy(deep=False)
+            if self._backend_version < (2,):  # pragma: no cover
+                df = self._native_frame.copy(deep=True)
+            else:
+                df = self._native_frame.copy(deep=False)
             for s in new_columns:
                 df[s.name] = validate_dataframe_comparand(index, s)
         return self._from_native_frame(df)
