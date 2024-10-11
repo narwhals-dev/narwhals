@@ -89,16 +89,13 @@ jobs:
       - name: Run test with minimal dependencies
         if: ${{ matrix.dependencies == 'core' }}
         run: |
-            cd marimo
             hatch run +py=${{ matrix.python-version }} test:test -v tests/ -k "not test_cli"
       - name: Run test with optional dependencies
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
-            cd marimo
             hatch run +py=${{ matrix.python-version }} test-optional:test -v tests/ -k "not test_cli"
       - name: Run typechecks
         run: |
-            cd marimo
             hatch run typecheck:check
 
   scikit-lego:
