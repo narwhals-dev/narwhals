@@ -86,14 +86,11 @@ jobs:
             uv pip install -e . --system
       - name: show-deps
         run: uv pip freeze
-      - name: Debug
-        run: |
-            ls -la marimo/frontend/
       - name: Create assets directory, copy over index.html
         run: |
-          mkdir -p marimo/_static/assets
-          cp frontend/index.html marimo/_static/index.html
-          cp frontend/public/favicon.ico marimo/_static/favicon.ico
+          mkdir -p marimo/marimo/_static/assets
+          cp marimo/frontend/index.html marimo/marimo/_static/index.html
+          cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
       - name: Run test with minimal dependencies
         if: ${{ matrix.dependencies == 'core' }}
         run: |
