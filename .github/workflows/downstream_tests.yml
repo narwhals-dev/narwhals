@@ -86,6 +86,10 @@ jobs:
             uv pip install -e . --system
       - name: show-deps
         run: uv pip freeze
+      - name: Debug
+        run: |
+            ls -la marimo/
+            ls -la frontend/
       - name: Create assets directory, copy over index.html
         run: |
           mkdir -p marimo/_static/assets
