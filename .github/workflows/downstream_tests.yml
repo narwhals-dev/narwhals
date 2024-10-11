@@ -115,7 +115,7 @@ jobs:
       - name: install-shiny-dev
         env:
           UV_SYSTEM_PYTHON: 1
-        run: |            
+        run: |
             cd py-shiny
             make narwhals-install-shiny
       - name: install-narwhals-dev
