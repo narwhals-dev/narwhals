@@ -139,15 +139,29 @@ class Series:
         Set value(s) at given position(s).
 
         Arguments:
-           indices: Position(s) to set items at.
-           values: Values to set.
+            indices: Position(s) to set items at.
+            values: Values to set.
 
-        Warning:
-            For some libraries (pandas, Polars), this method operates in-place,
-            whereas for others (PyArrow) it doesn't!
-            We recommend being careful with it, and not relying on the
-            in-placeness. For example, a valid use case is when updating
-            a column in an eager dataframe, see the example below.
+        Note:
+            This method always returns a new Series, without modifying the original one.
+            Using this function in a for-loop is an anti-pattern, we recommend building
+            up your positions and values beforehand and doing an update in one go.
+
+            For example, instead of
+
+            ```python
+            for i in [1, 3, 2]:
+                value = some_function(i)
+                s = s.scatter(i, value)
+            ```
+
+            prefer
+
+            ```python
+            positions = [1, 3, 2]
+            values = [some_function(x) for x in positions]
+            s = s.scatter(positions, values)
+            ```
 
         Examples:
             >>> import pandas as pd

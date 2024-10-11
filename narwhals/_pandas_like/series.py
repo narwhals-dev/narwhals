@@ -186,7 +186,7 @@ class PandasLikeSeries:
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
-        s = self._native_series
+        s = self._native_series.copy(deep=True)
         s.iloc[indices] = values
         s.name = self.name
         return self._from_native_series(s)
