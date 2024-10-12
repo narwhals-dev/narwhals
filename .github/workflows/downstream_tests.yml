@@ -91,6 +91,8 @@ jobs:
           mkdir -p marimo/marimo/_static/assets
           cp marimo/frontend/index.html marimo/marimo/_static/index.html
           cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
+      - name: hatch-envs
+        run: hatch env show
       - name: Run test with minimal dependencies
         if: ${{ matrix.dependencies == 'core' }}
         run: |
