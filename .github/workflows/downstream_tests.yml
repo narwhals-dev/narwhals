@@ -94,11 +94,11 @@ jobs:
       - name: Run test with minimal dependencies
         if: ${{ matrix.dependencies == 'core' }}
         run: |
-            hatch run +py=${{ matrix.python-version }} test:test -v tests/ -k "not test_cli"
+            hatch run test:test -v tests/ -k "not test_cli"
       - name: Run test with optional dependencies
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
-            hatch run +py=${{ matrix.python-version }} test-optional:test -v tests/ -k "not test_cli"
+            hatch run test-optional:test -v tests/ -k "not test_cli"
       - name: Run typechecks
         run: hatch run typecheck:check
 
