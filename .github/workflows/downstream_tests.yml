@@ -91,24 +91,10 @@ jobs:
             mkdir -p marimo/marimo/_static/assets
             cp marimo/frontend/index.html marimo/marimo/_static/index.html
             cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
-      - name: Add further debugging temporary step
-        run: |
-            pwd
-            cd marimo
-            ls -la
-      - name: hatch-envs
-        run: |
-            cd marimo
-            hatch env show
-      - name: Run test with minimal dependencies
-        if: ${{ matrix.dependencies == 'core' }}
+      - name: Run tests
         run: |
             cd marimo
             hatch run test:test -v tests/ -k "not test_cli"
-      - name: Run test with optional dependencies
-        if: ${{ matrix.dependencies == 'core,optional' }}
-        run: |
-            cd marimo
             hatch run test-optional:test -v tests/ -k "not test_cli"
       - name: Run typechecks
         run: |
