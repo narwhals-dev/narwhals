@@ -206,7 +206,6 @@ class Field:
 
 class Struct(DType):
     fields: list[Field]
-
     def __init__(
         self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
     ) -> None:
@@ -220,7 +219,7 @@ class Struct(DType):
         # inner types to those without (eg: inner=None). if one of the
         # arguments is not specific about its inner type we infer it
         # as being equal. (See the List type for more info).
-        if type(other) and issubclass(other, self.__class__):
+        if type(other) is type and issubclass(other, self.__class__):
             return True
         elif isinstance(other, self.__class__):
             return self.fields == other.fields
@@ -230,11 +229,11 @@ class Struct(DType):
     def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.fields)))
 
-    def __iter__(self) -> Iterator[tuple[str, DType]]:
+    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:
         for fld in self.fields:
             yield fld.name, fld.dtype
 
-    def __reversed__(self) -> Iterator[tuple[str, DType]]:
+    def __reversed__(self) -> Iterator[tuple[str, DType | type[DType]]]:
         for fld in reversed(self.fields):
             yield fld.name, fld.dtype
 
@@ -242,7 +241,7 @@ class Struct(DType):
         class_name = self.__class__.__name__
         return f"{class_name}({dict(self)})"
 
-    def to_schema(self) -> OrderedDict[str, DType]:
+    def to_schema(self) -> OrderedDict[str, DType | type[DType]]:
         """Return Struct dtype as a schema dict."""
         return OrderedDict(self)
 

@@ -56,7 +56,13 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
     if pa.types.is_struct(dtype):
-        return dtypes.Struct()
+        return dtypes.Struct(
+            [
+                dtypes.Field(dtype.field(i).name, native_to_narwhals_dtype(dtype.field(i).type, dtypes)) 
+                for i in range(dtype.num_fields) 
+            ]
+        )
+    
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype):
         return dtypes.List(native_to_narwhals_dtype(dtype.value_type, dtypes))
     if pa.types.is_fixed_size_list(dtype):
