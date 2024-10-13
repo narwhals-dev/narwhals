@@ -45,6 +45,19 @@ def pyspark_constructor(
     return _constructor
 
 
+# copied from tests/translate/from_native_test.py
+def test_series_only(pyspark_constructor: Constructor) -> None:
+    obj = pyspark_constructor({"a": [1, 2, 3]})
+    with pytest.raises(TypeError, match="Cannot only use `series_only`"):
+        _ = nw.from_native(obj, series_only=True)
+
+
+def test_eager_only_lazy(pyspark_constructor: Constructor) -> None:
+    dframe = pyspark_constructor({"a": [1, 2, 3]})
+    with pytest.raises(TypeError, match="Cannot only use `eager_only`"):
+        _ = nw.from_native(dframe, eager_only=True)
+
+
 # copied from tests/frame/with_columns_test.py
 def test_columns(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -110,19 +123,11 @@ def test_filter_with_boolean_list(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(pyspark_constructor(data))
 
-    context = (
-        pytest.raises(
-            NotImplementedError,
-            match="`LazyFrame.filter` is not supported for PySpark backend with boolean masks.",
-        )
-        if "pyspark" in str(pyspark_constructor)
-        else does_not_raise()
-    )
-
-    with context:
-        result = df.filter([False, True, True])
-        expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-        compare_dicts(result, expected)
+    with pytest.raises(
+        NotImplementedError,
+        match="`LazyFrame.filter` is not supported for PySpark backend with boolean masks.",
+    ):
+        _ = df.filter([False, True, True])
 
 
 # copied from tests/frame/schema_test.py
@@ -363,9 +368,8 @@ def test_std(pyspark_constructor: Constructor) -> None:
         nw.col("b").std(ddof=2).alias("b_ddof_2"),
         nw.col("z").std(ddof=0).alias("z_ddof_0"),
     )
-    if parse_version(pyspark.__version__) < (3, 4) or parse_version(np.__version__) > (
-        2,
-        0,
+    if parse_version(pyspark.__version__) < (3, 4) or (
+        parse_version(np.__version__) > (2, 0)
     ):
         expected = {
             "a_ddof_default": [1.0],
@@ -374,7 +378,7 @@ def test_std(pyspark_constructor: Constructor) -> None:
             "b_ddof_2": [1.154701],
             "z_ddof_0": [1.0],
         }
-    else:
+    else:  # pragma: no cover
         expected = {
             "a_ddof_default": [1.0],
             "a_ddof_1": [1.0],

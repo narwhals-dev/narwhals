@@ -101,7 +101,7 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
 def spark_session() -> Generator[SparkSession, None, None]:
     try:
         from pyspark.sql import SparkSession
-    except ImportError:
+    except ImportError:  # pragma: no cover
         pytest.skip("pyspark is not installed")
         return
 
@@ -111,10 +111,6 @@ def spark_session() -> Generator[SparkSession, None, None]:
     session = SparkSession.builder.appName("unit-tests").getOrCreate()
     yield session
     session.stop()
-
-
-def pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> IntoFrame:
-    return spark_session.createDataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
 
 if parse_version(pd.__version__) >= parse_version("2.0.0"):

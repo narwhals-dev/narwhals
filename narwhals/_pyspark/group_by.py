@@ -40,7 +40,7 @@ class PySparkLazyGroupBy:
         )
         output_names: list[str] = copy(self._keys)
         for expr in exprs:
-            if expr._output_names is None:
+            if expr._output_names is None:  # pragma: no cover
                 msg = (
                     "Anonymous expressions are not supported in group_by.agg.\n"
                     "Instead of `nw.all()`, try using a named expression, such as "
@@ -78,7 +78,7 @@ def agg_pyspark(
     from_dataframe: Callable[[Any], PySparkLazyFrame],
 ) -> PySparkLazyFrame:
     for expr in exprs:
-        if not is_simple_aggregation(expr):
+        if not is_simple_aggregation(expr):  # pragma: no cover
             msg = (
                 "Non-trivial complex found.\n\n"
                 "Hint: you were probably trying to apply a non-elementary aggregation with a "
@@ -93,7 +93,7 @@ def agg_pyspark(
 
     simple_aggregations: dict[str, Column] = {}
     for expr in exprs:
-        if expr._depth == 0:
+        if expr._depth == 0:  # pragma: no cover
             # e.g. agg(nw.len()) # noqa: ERA001
             if expr._output_names is None:  # pragma: no cover
                 msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
@@ -123,7 +123,7 @@ def agg_pyspark(
     agg_columns = [col_.alias(name) for name, col_ in simple_aggregations.items()]
     try:
         result_simple = grouped.agg(*agg_columns)
-    except ValueError as exc:
+    except ValueError as exc:  # pragma: no cover
         msg = "Failed to aggregated - does your aggregation function return a scalar?"
         raise RuntimeError(msg) from exc
     return from_dataframe(result_simple)

@@ -13,7 +13,9 @@ if TYPE_CHECKING:
     from narwhals._pyspark.typing import IntoPySparkExpr
 
 
-def translate_sql_api_dtype(dtype: pyspark_types.DataType) -> dtypes.DType:
+def translate_sql_api_dtype(
+    dtype: pyspark_types.DataType,
+) -> dtypes.DType:  # pragma: no cover
     from pyspark.sql import types as pyspark_types
 
     if isinstance(dtype, pyspark_types.DoubleType):
@@ -58,7 +60,7 @@ def parse_exprs_and_named_exprs(
     df: PySparkLazyFrame, *exprs: IntoPySparkExpr, **named_exprs: IntoPySparkExpr
 ) -> dict[str, Column]:
     def _columns_from_expr(expr: IntoPySparkExpr) -> list[Column]:
-        if isinstance(expr, str):
+        if isinstance(expr, str):  # pragma: no cover
             from pyspark.sql import functions as F  # noqa: N812
 
             return [F.col(expr)]
@@ -77,7 +79,7 @@ def parse_exprs_and_named_exprs(
     result_columns: dict[str, list[Column]] = {}
     for expr in exprs:
         column_list = _columns_from_expr(expr)
-        if isinstance(expr, str):
+        if isinstance(expr, str):  # pragma: no cover
             output_names = [expr]
         elif expr._output_names is None:
             output_names = [get_column_name(df, col) for col in column_list]

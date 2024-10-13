@@ -107,7 +107,7 @@ class PySparkExpr:
             if root_names is not None and isinstance(arg, self.__class__):
                 if arg._root_names is not None:
                     root_names.extend(arg._root_names)
-                else:
+                else:  # pragma: no cover
                     root_names = None
                     output_names = None
                     break
@@ -133,89 +133,14 @@ class PySparkExpr:
             dtypes=self._dtypes,
         )
 
-    def __and__(self, other: PySparkExpr) -> Self:
-        return self._from_call(operator.and_, "__and__", other, returns_scalar=False)
-
     def __add__(self, other: PySparkExpr) -> Self:
         return self._from_call(operator.add, "__add__", other, returns_scalar=False)
-
-    def __radd__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__radd__(other),
-            "__radd__",
-            other,
-            returns_scalar=False,
-        )
 
     def __sub__(self, other: PySparkExpr) -> Self:
         return self._from_call(operator.sub, "__sub__", other, returns_scalar=False)
 
-    def __rsub__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rsub__(other),
-            "__rsub__",
-            other,
-            returns_scalar=False,
-        )
-
     def __mul__(self, other: PySparkExpr) -> Self:
         return self._from_call(operator.mul, "__mul__", other, returns_scalar=False)
-
-    def __rmul__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rmul__(other),
-            "__rmul__",
-            other,
-            returns_scalar=False,
-        )
-
-    def __truediv__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            operator.truediv, "__truediv__", other, returns_scalar=False
-        )
-
-    def __rtruediv__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rtruediv__(other),
-            "__rtruediv__",
-            other,
-            returns_scalar=False,
-        )
-
-    def __floordiv__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            operator.floordiv, "__floordiv__", other, returns_scalar=False
-        )
-
-    def __rfloordiv__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rfloordiv__(other),
-            "__rfloordiv__",
-            other,
-            returns_scalar=False,
-        )
-
-    def __mod__(self, other: PySparkExpr) -> Self:
-        return self._from_call(operator.mod, "__mod__", other, returns_scalar=False)
-
-    def __rmod__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rmod__(other),
-            "__rmod__",
-            other,
-            returns_scalar=False,
-        )
-
-    def __pow__(self, other: PySparkExpr) -> Self:
-        return self._from_call(operator.pow, "__pow__", other, returns_scalar=False)
-
-    def __rpow__(self, other: PySparkExpr) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__rpow__(other),
-            "__rpow__",
-            other,
-            returns_scalar=False,
-        )
 
     def __lt__(self, other: PySparkExpr) -> Self:
         return self._from_call(operator.lt, "__lt__", other, returns_scalar=False)
@@ -275,7 +200,7 @@ class PySparkExpr:
     def std(self, ddof: int = 1) -> Self:
         import numpy as np  # ignore-banned-import
 
-        def _std(_input: Column) -> Column:
+        def _std(_input: Column) -> Column:  # pragma: no cover
             if self._backend_version < (3, 4) or parse_version(np.__version__) > (2, 0):
                 from pyspark.sql.functions import stddev
 

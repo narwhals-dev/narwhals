@@ -92,7 +92,7 @@ class PySparkLazyFrame:
 
             if self._backend_version >= (3, 3, 0):
                 spark_session = self._native_frame.sparkSession
-            else:
+            else:  # pragma: no cover
                 from pyspark.sql import SparkSession
 
                 spark_session = SparkSession.builder.getOrCreate()
