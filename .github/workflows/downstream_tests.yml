@@ -88,9 +88,13 @@ jobs:
         run: uv pip freeze
       - name: Create assets directory, copy over index.html
         run: |
-          mkdir -p marimo/marimo/_static/assets
-          cp marimo/frontend/index.html marimo/marimo/_static/index.html
-          cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
+            mkdir -p marimo/marimo/_static/assets
+            cp marimo/frontend/index.html marimo/marimo/_static/index.html
+            cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
+      - name: Add further debugging temporary step
+        run: |
+            pwd
+            ls -la
       - name: hatch-envs
         run: hatch env show
       - name: Run test with minimal dependencies
