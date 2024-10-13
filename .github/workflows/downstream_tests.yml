@@ -94,19 +94,26 @@ jobs:
       - name: Add further debugging temporary step
         run: |
             pwd
+            cd marimo
             ls -la
       - name: hatch-envs
-        run: hatch env show
+        run: |
+            cd marimo
+            hatch env show
       - name: Run test with minimal dependencies
         if: ${{ matrix.dependencies == 'core' }}
         run: |
+            cd marimo
             hatch run test:test -v tests/ -k "not test_cli"
       - name: Run test with optional dependencies
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
+            cd marimo
             hatch run test-optional:test -v tests/ -k "not test_cli"
       - name: Run typechecks
-        run: hatch run typecheck:check
+        run: |
+            cd marimo
+            hatch run typecheck:check
 
   scikit-lego:
     strategy:
