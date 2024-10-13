@@ -88,9 +88,18 @@ class PySparkLazyFrame:
 
         if not new_columns:
             # return empty dataframe, like Polars does
-            import pyspark.pandas as ps
+            from pyspark.sql.types import StructType
 
-            return self._from_native_frame(ps.DataFrame().to_spark())
+            if self._backend_version >= (3, 3, 0):
+                spark_session = self._native_frame.sparkSession
+            else:
+                from pyspark.sql import SparkSession
+
+                spark_session = SparkSession.builder.getOrCreate()
+
+            spark_df = spark_session.createDataFrame([], StructType([]))
+
+            return self._from_native_frame(spark_df)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
