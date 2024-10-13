@@ -12,11 +12,14 @@ from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Any
 
+import numpy as np
 import pandas as pd
+import pyspark
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
+from narwhals.utils import parse_version
 from tests.utils import compare_dicts
 
 if TYPE_CHECKING:
@@ -360,13 +363,25 @@ def test_std(pyspark_constructor: Constructor) -> None:
         nw.col("b").std(ddof=2).alias("b_ddof_2"),
         nw.col("z").std(ddof=0).alias("z_ddof_0"),
     )
-    expected = {
-        "a_ddof_default": [1.0],
-        "a_ddof_1": [1.0],
-        "a_ddof_0": [0.816497],
-        "b_ddof_2": [1.632993],
-        "z_ddof_0": [0.816497],
-    }
+    if parse_version(pyspark.__version__) < (3, 4) or parse_version(np.__version__) > (
+        2,
+        0,
+    ):
+        expected = {
+            "a_ddof_default": [1.0],
+            "a_ddof_1": [1.0],
+            "a_ddof_0": [1.0],
+            "b_ddof_2": [1.154701],
+            "z_ddof_0": [1.0],
+        }
+    else:
+        expected = {
+            "a_ddof_default": [1.0],
+            "a_ddof_1": [1.0],
+            "a_ddof_0": [0.816497],
+            "b_ddof_2": [1.632993],
+            "z_ddof_0": [0.816497],
+        }
     compare_dicts(result, expected)
 
 

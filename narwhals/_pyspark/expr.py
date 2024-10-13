@@ -7,6 +7,7 @@ from typing import Callable
 
 from narwhals._pyspark.utils import get_column_name
 from narwhals._pyspark.utils import maybe_evaluate
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -272,7 +273,14 @@ class PySparkExpr:
         return self._from_call(_min, "min", returns_scalar=True)
 
     def std(self, ddof: int = 1) -> Self:
+        import numpy as np  # ignore-banned-import
+
         def _std(_input: Column) -> Column:
+            if self._backend_version < (3, 4) or parse_version(np.__version__) > (2, 0):
+                from pyspark.sql.functions import stddev
+
+                _ = ddof
+                return stddev(_input)
             from pyspark.pandas.spark.functions import stddev
 
             return stddev(_input, ddof=ddof)
