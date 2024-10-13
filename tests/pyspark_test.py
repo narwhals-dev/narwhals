@@ -368,3 +368,77 @@ def test_std(pyspark_constructor: Constructor) -> None:
         "z_ddof_0": [0.816497],
     }
     compare_dicts(result, expected)
+
+
+# copied from tests/group_by_test.py
+def test_group_by_std(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2, 2], "b": [5, 4, 3, 2]}
+    result = (
+        nw.from_native(pyspark_constructor(data))
+        .group_by("a")
+        .agg(nw.col("b").std())
+        .sort("a")
+    )
+    expected = {"a": [1, 2], "b": [0.707107] * 2}
+    compare_dicts(result, expected)
+
+
+def test_group_by_simple_named(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
+    df = nw.from_native(pyspark_constructor(data)).lazy()
+    result = (
+        df.group_by("a")
+        .agg(
+            b_min=nw.col("b").min(),
+            b_max=nw.col("b").max(),
+        )
+        .collect()
+        .sort("a")
+    )
+    expected = {
+        "a": [1, 2],
+        "b_min": [4, 6],
+        "b_max": [5, 6],
+    }
+    compare_dicts(result, expected)
+
+
+def test_group_by_simple_unnamed(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
+    df = nw.from_native(pyspark_constructor(data)).lazy()
+    result = (
+        df.group_by("a")
+        .agg(
+            nw.col("b").min(),
+            nw.col("c").max(),
+        )
+        .collect()
+        .sort("a")
+    )
+    expected = {
+        "a": [1, 2],
+        "b": [4, 6],
+        "c": [7, 1],
+    }
+    compare_dicts(result, expected)
+
+
+def test_group_by_multiple_keys(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
+    df = nw.from_native(pyspark_constructor(data)).lazy()
+    result = (
+        df.group_by("a", "b")
+        .agg(
+            c_min=nw.col("c").min(),
+            c_max=nw.col("c").max(),
+        )
+        .collect()
+        .sort("a")
+    )
+    expected = {
+        "a": [1, 2],
+        "b": [4, 6],
+        "c_min": [2, 1],
+        "c_max": [7, 1],
+    }
+    compare_dicts(result, expected)
