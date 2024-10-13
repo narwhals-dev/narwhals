@@ -5,6 +5,7 @@ pandas
 polars
 pre-commit
 pyarrow
+pyspark
 pytest
 pytest-cov
 pytest-randomly
