@@ -19,12 +19,12 @@ nav:
   - extending.md
   - how_it_works.md
   - Roadmap and related projects: roadmap_and_related.md
-  # Commented-out until https://github.com/narwhals-dev/narwhals/issues/1004 is addressed
-  # - API Completeness:
-  #   - api-completeness/index.md
-  #   - Supported DataFrame methods: api-completeness/dataframe.md
-  #   - Supported Expr methods: api-completeness/expr.md
-  #   - Supported Series methods: api-completeness/series.md
+  - API Completeness:
+    - api-completeness/index.md
+    - Supported DataFrame methods: api-completeness/dataframe.md
+    - Supported LazyFrame methods: api-completeness/lazyframe.md
+    - Supported Expr methods: api-completeness/expr.md
+    - Supported Series methods: api-completeness/series.md
   - API Reference:
     - api-reference/narwhals.md
     - api-reference/dataframe.md
