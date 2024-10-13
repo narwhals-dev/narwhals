@@ -82,6 +82,11 @@ def get_ibis() -> Any:
     return sys.modules.get("ibis", None)
 
 
+def get_pyspark() -> Any:
+    """Get pyspark module (if already imported - else return None)."""
+    return sys.modules.get("pyspark", None)
+
+
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
     return sys.modules.get("pyspark.sql", None)

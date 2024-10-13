@@ -7,7 +7,6 @@ from typing import Sequence
 
 from narwhals._pyspark.utils import parse_exprs_and_named_exprs
 from narwhals._pyspark.utils import translate_sql_api_dtype
-from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
@@ -26,8 +25,15 @@ if TYPE_CHECKING:
 
 
 class PySparkLazyFrame:
-    def __init__(self, native_dataframe: DataFrame, *, dtypes: DTypes) -> None:
+    def __init__(
+        self,
+        native_dataframe: DataFrame,
+        *,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
+    ) -> None:
         self._native_frame = native_dataframe
+        self._backend_version = backend_version
         self._implementation = Implementation.PYSPARK
         self._dtypes = dtypes
 
@@ -41,25 +47,31 @@ class PySparkLazyFrame:
     def __narwhals_namespace__(self) -> PySparkNamespace:
         from narwhals._pyspark.namespace import PySparkNamespace
 
-        return PySparkNamespace(dtypes=self._dtypes)
+        return PySparkNamespace(
+            backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
     def _from_native_frame(self, df: DataFrame) -> Self:
-        return self.__class__(df, dtypes=self._dtypes)
+        return self.__class__(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     @property
     def columns(self) -> list[str]:
         return self._native_frame.columns  # type: ignore[no-any-return]
 
     def collect(self) -> Any:
+        import pandas as pd  # ignore-banned-import()
+
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         return PandasLikeDataFrame(
             native_dataframe=self._native_frame.toPandas(),
             implementation=Implementation.PANDAS,
-            backend_version=parse_version(get_pandas().__version__),
+            backend_version=parse_version(pd.__version__),
             dtypes=self._dtypes,
         )
 
@@ -93,7 +105,7 @@ class PySparkLazyFrame:
         ):
             msg = "`LazyFrame.filter` is not supported for PySpark backend with boolean masks."
             raise NotImplementedError(msg)
-        plx = PySparkNamespace(dtypes=self._dtypes)
+        plx = PySparkNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
         expr = plx.all_horizontal(*predicates)
         # Safety: all_horizontal's expression only returns a single column.
         condition = expr._call(self)[0]

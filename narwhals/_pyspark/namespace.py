@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 
 
 class PySparkNamespace:
-    def __init__(self, *, dtypes: DTypes) -> None:
+    def __init__(self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
+        self._backend_version = backend_version
         self._dtypes = dtypes
 
     def _create_expr_from_series(self, _: Any) -> NoReturn:
@@ -62,6 +63,7 @@ class PySparkNamespace:
             root_names=None,
             output_names=None,
             returns_scalar=False,
+            backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
 
@@ -80,8 +82,11 @@ class PySparkNamespace:
             root_names=combine_root_names(parsed_exprs),
             output_names=reduce_output_names(parsed_exprs),
             returns_scalar=False,
+            backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
 
     def col(self, *column_names: str) -> PySparkExpr:
-        return PySparkExpr.from_column_names(*column_names, dtypes=self._dtypes)
+        return PySparkExpr.from_column_names(
+            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+        )

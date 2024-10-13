@@ -29,6 +29,7 @@ class PySparkExpr:
         # Whether the expression is a length-1 Column resulting from
         # a reduction, such as `nw.col('a').sum()`
         returns_scalar: bool,
+        backend_version: tuple[int, ...],
         dtypes: DTypes,
     ) -> None:
         self._call = call
@@ -37,6 +38,7 @@ class PySparkExpr:
         self._root_names = root_names
         self._output_names = output_names
         self._returns_scalar = returns_scalar
+        self._backend_version = backend_version
         self._dtypes = dtypes
 
     def __narwhals_expr__(self) -> None: ...
@@ -45,10 +47,17 @@ class PySparkExpr:
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._pyspark.namespace import PySparkNamespace
 
-        return PySparkNamespace(dtypes=self._dtypes)
+        return PySparkNamespace(
+            backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     @classmethod
-    def from_column_names(cls: type[Self], *column_names: str, dtypes: DTypes) -> Self:
+    def from_column_names(
+        cls: type[Self],
+        *column_names: str,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
+    ) -> Self:
         def func(df: PySparkLazyFrame) -> list[Column]:
             from pyspark.sql import functions as F  # noqa: N812
 
@@ -62,6 +71,7 @@ class PySparkExpr:
             root_names=list(column_names),
             output_names=list(column_names),
             returns_scalar=False,
+            backend_version=backend_version,
             dtypes=dtypes,
         )
 
@@ -118,6 +128,7 @@ class PySparkExpr:
             root_names=root_names,
             output_names=output_names,
             returns_scalar=self._returns_scalar or returns_scalar,
+            backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
 
@@ -224,6 +235,7 @@ class PySparkExpr:
             root_names=self._root_names,
             output_names=[name],
             returns_scalar=self._returns_scalar,
+            backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
 
@@ -234,14 +246,6 @@ class PySparkExpr:
             return F.count(_input)
 
         return self._from_call(_count, "count", returns_scalar=True)
-
-    def len(self) -> Self:
-        def _len(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
-
-            return F.size(_input)
-
-        return self._from_call(_len, "len", returns_scalar=True)
 
     def max(self) -> Self:
         def _max(_input: Column) -> Column:
@@ -268,10 +272,9 @@ class PySparkExpr:
         return self._from_call(_min, "min", returns_scalar=True)
 
     def std(self, ddof: int = 1) -> Self:
-        def std(_input: Column) -> Column:
-            from pyspark.sql import functions as F  # noqa: N812
+        def _std(_input: Column) -> Column:
+            from pyspark.pandas.spark.functions import stddev
 
-            return F.stddev(_input)
+            return stddev(_input, ddof=ddof)
 
-        _ = ddof
-        return self._from_call(std, "std", returns_scalar=True)
+        return self._from_call(_std, "std", returns_scalar=True)
