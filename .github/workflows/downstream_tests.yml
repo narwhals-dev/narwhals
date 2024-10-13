@@ -96,6 +96,7 @@ jobs:
             cd marimo
             hatch run test:test -v tests/ -k "not test_cli"
             hatch run test-optional:test -v tests/ -k "not test_cli"
+        timeout-minutes: 10
       - name: Run typechecks
         run: |
             cd marimo
