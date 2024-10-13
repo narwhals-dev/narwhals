@@ -2,20 +2,31 @@
 
 ## Installation
 
-First, make sure you have [created and activated](https://docs.python.org/3/library/venv.html) a Python3.8+ virtual environment.
+First, ensure you have [created and activated](https://docs.python.org/3/library/venv.html) a Python 3.8+ virtual environment.
 
-Then, run
+### Option 1: Using UV
+
+Run the following command:
+```console
+uv pip install narwhals
+```
+
+### Option 2: Using Python's venv
+
+Run the following command:
 ```console
 python -m pip install narwhals
 ```
 
-Then, if you start the Python REPL and see the following:
+### Verifying the Installation
+
+To verify the installation, start the Python REPL and execute:
 ```python
 >>> import narwhals
 >>> narwhals.__version__
 '1.9.3'
 ```
-then installation worked correctly!
+If you see the version number, the installation was successful!
 
 ## Quick start
 
