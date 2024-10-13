@@ -74,9 +74,6 @@ class PySparkExpr:
         **kwargs: PySparkExpr,
     ) -> Self:
         def func(df: PySparkLazyFrame) -> list[Column]:
-            from pyspark.sql import functions as F  # noqa: N812
-            from pyspark.sql.window import Window
-
             results = []
             inputs = self._call(df)
             _args = [maybe_evaluate(df, arg) for arg in args]
@@ -84,9 +81,7 @@ class PySparkExpr:
             for _input in inputs:
                 input_col_name = get_column_name(df, _input)
                 column_result = call(_input, *_args, **_kwargs)
-                if returns_scalar:
-                    column_result = column_result.over(Window.partitionBy(F.lit(1)))
-                else:
+                if not returns_scalar:
                     column_result = column_result.alias(input_col_name)
                 results.append(column_result)
             return results

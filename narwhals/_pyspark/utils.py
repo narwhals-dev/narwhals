@@ -74,13 +74,16 @@ def parse_exprs_and_named_exprs(
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
 
-    result_columns = {}
+    result_columns: dict[str, list[Column]] = {}
     for expr in exprs:
         column_list = _columns_from_expr(expr)
-        for col in column_list:
-            col_name = get_column_name(df, col)
-            result_columns[col_name] = col
-
+        if isinstance(expr, str):
+            output_names = [expr]
+        elif expr._output_names is None:
+            output_names = [get_column_name(df, col) for col in column_list]
+        else:
+            output_names = expr._output_names
+        result_columns.update(zip(output_names, column_list))
     for col_alias, expr in named_exprs.items():
         columns_list = _columns_from_expr(expr)
         if len(columns_list) != 1:  # pragma: no cover
@@ -94,9 +97,16 @@ def maybe_evaluate(df: PySparkLazyFrame, obj: Any) -> Any:
     from narwhals._pyspark.expr import PySparkExpr
 
     if isinstance(obj, PySparkExpr):
-        column_result = obj._call(df)
-        if len(column_result) != 1:  # pragma: no cover
+        column_results = obj._call(df)
+        if len(column_results) != 1:  # pragma: no cover
             msg = "Multi-output expressions not supported in this context"
             raise NotImplementedError(msg)
-        return column_result[0]
+        column_result = column_results[0]
+        if obj._returns_scalar:
+            # Return scalar, let PySpark do its broadcasting
+            from pyspark.sql import functions as F  # noqa: N812
+            from pyspark.sql.window import Window
+
+            return column_result.over(Window.partitionBy(F.lit(1)))
+        return column_result
     return obj
