@@ -298,6 +298,15 @@ def test_allh_all(pyspark_constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
+# copied from tests/expr_and_series/count_test.py
+def test_count(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(nw.col("a", "b", "z").count())
+    expected = {"a": [3], "b": [2], "z": [1]}
+    compare_dicts(result, expected)
+
+
 # copied from tests/expr_and_series/double_test.py
 def test_double(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
@@ -320,10 +329,42 @@ def test_double_alias(pyspark_constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-# copied from tests/expr_and_series/count_test.py
-def test_count(pyspark_constructor: Constructor) -> None:
-    data = {"a": [1, 3, 2], "b": [4, None, 6], "z": [7.0, None, None]}
+# copied from tests/expr_and_series/max_test.py
+def test_expr_max_expr(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+
     df = nw.from_native(pyspark_constructor(data))
-    result = df.select(nw.col("a", "b", "z").count())
-    expected = {"a": [3], "b": [2], "z": [1]}
+    result = df.select(nw.col("a", "b", "z").max())
+    expected = {"a": [3], "b": [6], "z": [9.0]}
+    compare_dicts(result, expected)
+
+
+# copied from tests/expr_and_series/min_test.py
+def test_expr_min_expr(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(nw.col("a", "b", "z").min())
+    expected = {"a": [1], "b": [4], "z": [7.0]}
+    compare_dicts(result, expected)
+
+
+# copied from tests/expr_and_series/std_test.py
+def test_std(pyspark_constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+
+    df = nw.from_native(pyspark_constructor(data))
+    result = df.select(
+        nw.col("a").std().alias("a_ddof_default"),
+        nw.col("a").std(ddof=1).alias("a_ddof_1"),
+        nw.col("a").std(ddof=0).alias("a_ddof_0"),
+        nw.col("b").std(ddof=2).alias("b_ddof_2"),
+        nw.col("z").std(ddof=0).alias("z_ddof_0"),
+    )
+    expected = {
+        "a_ddof_default": [1.0],
+        "a_ddof_1": [1.0],
+        "a_ddof_0": [0.816497],
+        "b_ddof_2": [1.632993],
+        "z_ddof_0": [0.816497],
+    }
     compare_dicts(result, expected)
