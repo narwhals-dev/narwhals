@@ -1,0 +1,48 @@
+name: Bump version
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:     
+        description: 'Type of version bump: patch, minor, or major'
+        required: true
+        default: 'patch'
+        type: choice
+        options: 
+        - patch
+        - minor
+        - major
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: bump version
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git checkout -b bump-version
+        git remote rename origin upstream
+        python utils/bump_version.py ${{ github.event.inputs.release_type }}
+
+    - name: Create pull request
+      uses: actions/github-script@v6
+      if: github.actor == 'MarcoGorelli' || github.actor == 'FBruzzesi'
+      with:
+        script: |
+          const branch = `bump-version`
+          github.pulls.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            head: branch,
+            base: 'main',
+            body: 'Bumping the version to reflect the latest release type.',
+          })
+        
