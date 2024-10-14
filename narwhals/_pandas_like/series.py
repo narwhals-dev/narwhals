@@ -434,9 +434,6 @@ class PandasLikeSeries:
             return float(ser.skew())
         else:
             values = ser.to_numpy()
-            n = len(values)
-            if n < 3:
-                return float("nan")
             m = np.mean(values)
             m2 = np.mean((values - m) ** 2)
             m3 = np.mean((values - m) ** 3)
