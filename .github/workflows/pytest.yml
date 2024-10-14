@@ -58,9 +58,6 @@ jobs:
         run: uv pip install --upgrade modin[dask] --system
       - name: show-deps
         run: uv pip freeze
-      # TODO: remove
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95
       - name: Run doctests
