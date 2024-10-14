@@ -225,9 +225,9 @@ def test_nested_dtypes() -> None:
     ).to_arrow()
     nwdf = nw.from_native(df)
     assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
-    # df = duckdb.sql("select * from df")
-    # nwdf = nw.from_native(df)
-    # assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
+    df = duckdb.sql("select * from df")
+    nwdf = nw.from_native(df)
+    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
 
 
 def test_nested_dtypes_ibis() -> None:  # pragma: no cover
