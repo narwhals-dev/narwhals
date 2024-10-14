@@ -94,9 +94,8 @@ jobs:
       - name: Run tests
         run: |
             cd marimo
-            hatch run test:test -v tests/ -k "not test_cli"
-            hatch run test-optional:test -v tests/ -k "not test_cli"
-        timeout-minutes: 10
+            hatch run +py=${{ matrix.python-version }} test:test -v tests/ -k "not test_cli"
+            hatch run +py=${{ matrix.python-version }} test-optional:test -v tests/ -k "not test_cli"
       - name: Run typechecks
         run: |
             cd marimo
