@@ -290,10 +290,7 @@ def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
             column.dtype.pyarrow_dtype.list_size,
         )
     if dtype.startswith("struct"):
-        
-        return dtypes.Struct(
-
-        )
+        return arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype, dtypes)
     if dtype == "object":
         if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
             idx := getattr(column, "first_valid_index", lambda: None)()
