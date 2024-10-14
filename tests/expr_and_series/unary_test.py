@@ -18,11 +18,14 @@ def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None
             a_sum=nw.col("a").sum(),
             a_skew=nw.col("a").skew(),
             b_nunique=nw.col("b").n_unique(),
+            b_skew=nw.col("b").skew(),
             z_min=nw.col("z").min(),
             z_max=nw.col("z").max(),
         )
         .select(
-            nw.col("a_mean", "a_sum", "a_skew", "b_nunique", "z_min", "z_max").unique()
+            nw.col(
+                "a_mean", "a_sum", "a_skew", "b_nunique", "b_skew", "z_min", "z_max"
+            ).unique()
         )
     )
     expected = {
@@ -30,6 +33,7 @@ def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None
         "a_sum": [6],
         "a_skew": [0.0],
         "b_nunique": [2],
+        "b_skew": [0.7071067811865465],
         "z_min": [7],
         "z_max": [9],
     }
@@ -44,6 +48,7 @@ def test_unary_series(constructor_eager: Any) -> None:
         "a_sum": [df["a"].sum()],
         "a_skew": [df["a"].skew()],
         "b_nunique": [df["b"].n_unique()],
+        "b_skew": [df["b"].skew()],
         "z_min": [df["z"].min()],
         "z_max": [df["z"].max()],
     }
@@ -52,6 +57,7 @@ def test_unary_series(constructor_eager: Any) -> None:
         "a_sum": [6],
         "a_skew": [0.0],
         "b_nunique": [2],
+        "b_skew": [0.7071067811865465],
         "z_min": [7.0],
         "z_max": [9.0],
     }

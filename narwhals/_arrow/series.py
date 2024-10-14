@@ -303,10 +303,10 @@ class ArrowSeries:
 
         values = self._native_series.to_numpy()
         m = np.mean(values)
-        s = np.std(values)
-        n = len(values)
-        g1 = np.sum((values - m) ** 3) / (n * s**3)
-        return float(g1)  # Population skewness
+        m2 = np.mean((values - m) ** 2)
+        m3 = np.mean((values - m) ** 3)
+        g1 = m3 / (m2**1.5)
+        return float(g1)  # Biased population skewness
 
     def count(self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
