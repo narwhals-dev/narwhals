@@ -33,6 +33,7 @@ jobs:
 
     - name: Create pull request
       uses: actions/github-script@v6
+      if: github.actor == 'MarcoGorelli' || github.actor == 'FBruzzesi'
       with:
         script: |
           const branch = `bump-version`
