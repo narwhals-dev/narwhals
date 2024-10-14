@@ -399,7 +399,7 @@ class Expr:
         Get standard deviation.
 
         Arguments:
-            ddof: “Delta Degrees of Freedom”: the divisor used in the calculation is N - ddof,
+            ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements. By default ddof is 1.
 
         Examples:
@@ -456,17 +456,17 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)
-                   a         b
-            0  0.000000  2.194964
+                 a         b
+            0  0.0  2.194964
             >>> func(df_pl)
             shape: (1, 2)
-            ┌──────────┬──────────┐
-            │ a        ┆ b        │
-            │ ---      ┆ ---      │
-            │ f64      ┆ f64      │
-            ╞══════════╪══════════╡
-            │ 0.000000 ┆ 2.194964 │
-            └──────────┴──────────┘
+            ┌─────┬──────────┐
+            │ a   ┆ b        │
+            │ --- ┆ ---      │
+            │ f64 ┆ f64      │
+            ╞═════╪══════════╡
+            │ 0.0 ┆ 1.472427 │
+            └─────┴──────────┘
         """
         return self.__class__(lambda plx: self._call(plx).skew())
 
