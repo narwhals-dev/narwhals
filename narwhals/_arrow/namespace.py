@@ -325,6 +325,11 @@ class ArrowNamespace:
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
         ).mean()
 
+    def skew(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+        ).skew()
+
     def max(self, *column_names: str) -> ArrowExpr:
         return ArrowExpr.from_column_names(
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes

@@ -7,6 +7,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import parse_into_exprs
+from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
@@ -14,7 +15,6 @@ from narwhals.utils import Implementation
 if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
-    from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.typing import IntoPolarsExpr
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
@@ -97,6 +97,13 @@ class PolarsNamespace:
         if self._backend_version < (0, 20, 4):  # pragma: no cover
             return PolarsExpr(pl.mean([*column_names]), dtypes=self._dtypes)  # type: ignore[arg-type]
         return PolarsExpr(pl.mean(*column_names), dtypes=self._dtypes)
+
+    def skew(self, *column_names: str) -> PolarsExpr:
+        import polars as pl  # ignore-banned-import()
+
+        if self._backend_version < (0, 20, 4):  # pragma: no cover
+            return PolarsExpr(pl.skew([*column_names]), dtypes=self._dtypes)
+        return PolarsExpr(pl.skew(*column_names), dtypes=self._dtypes)
 
     def mean_horizontal(self, *exprs: IntoPolarsExpr) -> PolarsExpr:
         import polars as pl  # ignore-banned-import()

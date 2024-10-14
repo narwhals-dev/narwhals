@@ -13,6 +13,7 @@ from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import validate_column_comparand
+from narwhals.dependencies import get_numpy
 from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
 
@@ -297,6 +298,17 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
+
+    def skew(self) -> float:
+        values = self._native_series.to_numpy()
+        np = get_numpy()
+        m = np.mean(values)
+        s = np.std(values)
+        n = len(values)
+        if n < 3:
+            return float("nan")
+        g1 = np.sum((values - m) ** 3) / (n * s**3)
+        return float(g1)  # Population skewness
 
     def count(self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()

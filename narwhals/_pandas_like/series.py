@@ -15,6 +15,8 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import validate_column_comparand
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -423,6 +425,23 @@ class PandasLikeSeries:
     ) -> Any:
         ser = self._native_series
         return ser.std(ddof=ddof)
+
+    def skew(self) -> Any:
+        np = get_numpy()
+        pd = get_pandas()
+        ser = self._native_series
+        if hasattr(ser, "skew") and not isinstance(ser.dtype, pd.ArrowDtype):
+            return float(ser.skew())
+        else:
+            values = ser.to_numpy()
+            n = len(values)
+            if n < 3:
+                return float("nan")
+            m = np.mean(values)
+            m2 = np.mean((values - m) ** 2)
+            m3 = np.mean((values - m) ** 3)
+            g1 = m3 / (m2**1.5)
+            return float(g1)  # Population skewness
 
     def len(self) -> Any:
         return len(self._native_series)

@@ -433,6 +433,43 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).std(ddof=ddof))
 
+    def skew(self) -> Self:
+        """
+        Calculate the sample skewness of a column.
+
+        Returns:
+            An expression representing the sample skewness of the column.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a", "b").skew())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                   a         b
+            0  0.000000  2.194964
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌──────────┬──────────┐
+            │ a        ┆ b        │
+            │ ---      ┆ ---      │
+            │ f64      ┆ f64      │
+            ╞══════════╪══════════╡
+            │ 0.000000 ┆ 2.194964 │
+            └──────────┴──────────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).skew())
+
     def sum(self) -> Expr:
         """
         Return the sum value.
