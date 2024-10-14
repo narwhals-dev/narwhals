@@ -31,6 +31,7 @@ jobs:
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=85
       - name: Run doctests
+        if: startsWith(matrix.os, 'windows') != true
         run: pytest narwhals --doctest-modules
 
   pytest-windows:

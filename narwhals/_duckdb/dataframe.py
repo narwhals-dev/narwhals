@@ -4,9 +4,12 @@ import re
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.dependencies import get_duckdb
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -70,6 +73,9 @@ class DuckDBInterchangeFrame:
 
     def __narwhals_dataframe__(self) -> Any:
         return self
+
+    def __native_namespace__(self: Self) -> ModuleType:
+        return get_duckdb()  # type: ignore[no-any-return]
 
     def __getitem__(self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries

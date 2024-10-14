@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.dependencies import get_ibis
+
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -58,6 +62,9 @@ class IbisInterchangeFrame:
 
     def __narwhals_dataframe__(self) -> Any:
         return self
+
+    def __native_namespace__(self: Self) -> ModuleType:
+        return get_ibis()  # type: ignore[no-any-return]
 
     def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries

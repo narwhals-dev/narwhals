@@ -218,8 +218,8 @@ def set_axis(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
-def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
-    dtype = str(column.dtype)
+def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
+    dtype = str(native_column.dtype)
 
     pd_datetime_rgx = (
         r"^datetime64\[(?P<time_unit>s|ms|us|ns)(?:, (?P<time_zone>[a-zA-Z\/]+))?\]$"
@@ -282,26 +282,30 @@ def native_to_narwhals_dtype(column: Any, dtypes: DTypes) -> DType:
         return dtypes.Date()
     if dtype.startswith(("large_list", "list")):
         return dtypes.List(
-            arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype.value_type, dtypes)
+            arrow_native_to_narwhals_dtype(
+                native_column.dtype.pyarrow_dtype.value_type, dtypes
+            )
         )
     if dtype.startswith("fixed_size_list"):
         return dtypes.Array(
-            arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype.value_type, dtypes),
-            column.dtype.pyarrow_dtype.list_size,
+            arrow_native_to_narwhals_dtype(
+                native_column.dtype.pyarrow_dtype.value_type, dtypes
+            ),
+            native_column.dtype.pyarrow_dtype.list_size,
         )
     if dtype.startswith("struct"):
         return arrow_native_to_narwhals_dtype(column.dtype.pyarrow_dtype, dtypes)
     if dtype == "object":
         if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
-            idx := getattr(column, "first_valid_index", lambda: None)()
-        ) is not None and isinstance(column.loc[idx], str):
+            idx := getattr(native_column, "first_valid_index", lambda: None)()
+        ) is not None and isinstance(native_column.loc[idx], str):
             # Infer based on first non-missing value.
             # For pandas pre 3.0, this isn't perfect.
             # After pandas 3.0, pandas has a dedicated string dtype
             # which is inferred by default.
             return dtypes.String()
         else:
-            df = column.to_frame()
+            df = native_column.to_frame()
             if hasattr(df, "__dataframe__"):
                 from narwhals._interchange.dataframe import (
                     map_interchange_dtype_to_narwhals_dtype,

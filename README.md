@@ -46,6 +46,7 @@ Join the party!
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+- [marimo](https://github.com/marimo-team/marimo)
 
 Feel free to add your project to the list if it's missing, and/or
 [chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
