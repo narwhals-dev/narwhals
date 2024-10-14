@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 def _pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> IntoFrame:
     # NaN and NULL are not the same in PySpark
     pd_df = pd.DataFrame(obj).replace({float("nan"): None})
-    return spark_session.createDataFrame(pd_df)  # type: ignore[no-any-return]
+    return spark_session.createDataFrame(pd_df).repartition(2)  # type: ignore[no-any-return]
 
 
 @pytest.fixture(params=[_pyspark_constructor_with_session])
