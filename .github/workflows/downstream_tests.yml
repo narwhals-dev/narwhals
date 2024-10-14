@@ -71,7 +71,7 @@ jobs:
           cache-dependency-glob: "**requirements*.txt"
       - name: clone-marimo
         run: |
-            git clone https://github.com/marimo-team/marimo.git
+            git clone https://github.com/marimo-team/marimo.git --depth=1
             cd marimo
             git log
       - name: install-basics
@@ -91,12 +91,18 @@ jobs:
             mkdir -p marimo/marimo/_static/assets
             cp marimo/frontend/index.html marimo/marimo/_static/index.html
             cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
-      - name: Run tests
+      - name: Run tests with minimal dependencies
+        if: ${{ matrix.dependencies == 'core' }}
         run: |
             cd marimo
             hatch run +py=${{ matrix.python-version }} test:test -v tests/ -k "not test_cli"
+        timeout-minutes: 15
+      - name: Run tests with optional dependencies
+        if: ${{ matrix.dependencies == 'core,optional' }}
+        run: |
+            cd marimo
             hatch run +py=${{ matrix.python-version }} test-optional:test -v tests/ -k "not test_cli"
-        timeout-minutes: 10
+        timeout-minutes: 15
       - name: Run typechecks
         run: |
             cd marimo
