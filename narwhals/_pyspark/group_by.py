@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 POLARS_TO_PYSPARK_AGGREGATIONS = {
     "len": "count",
+    "std": "stddev",
 }
 
 
