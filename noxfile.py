@@ -43,6 +43,7 @@ def min_and_old_versions(session: Session, pandas_version: str) -> None:
         "polars==0.20.3",
         "numpy==1.17.5",
         "pyarrow==11.0.0",
+        "pyspark==3.2.0",
         "scipy==1.5.0",
         "scikit-learn==1.1.0",
         "tzdata",
