@@ -71,7 +71,7 @@ jobs:
           cache-dependency-glob: "**requirements*.txt"
       - name: clone-marimo
         run: |
-            git clone https://github.com/marimo-team/marimo.git --depth=1
+            git clone https://github.com/marimo-team/marimo.git
             cd marimo
             git log
       - name: install-basics
@@ -96,6 +96,7 @@ jobs:
             cd marimo
             hatch run +py=${{ matrix.python-version }} test:test -v tests/ -k "not test_cli"
             hatch run +py=${{ matrix.python-version }} test-optional:test -v tests/ -k "not test_cli"
+        timeout-minutes: 10
       - name: Run typechecks
         run: |
             cd marimo
