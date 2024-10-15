@@ -221,7 +221,7 @@ def test_nested_dtypes() -> None:
     nwdf = nw.from_native(df)
     assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
     df = pl.DataFrame(
-        {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
+        {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1, "b": "x", "c": 1.1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_arrow()
     nwdf = nw.from_native(df)

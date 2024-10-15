@@ -51,8 +51,15 @@ def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
             map_ibis_dtype_to_narwhals_dtype(ibis_dtype.value_type, dtypes)
         )
     if ibis_dtype.is_struct():
-        breakpoint()
-        return dtypes.Struct()
+        return dtypes.Struct(
+            [
+                dtypes.Field(
+                    ibis_dtype_name,
+                    map_ibis_dtype_to_narwhals_dtype(ibis_dtype_field, dtypes),
+                )
+                for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
+            ]
+        )
     return dtypes.Unknown()  # pragma: no cover
 
 
