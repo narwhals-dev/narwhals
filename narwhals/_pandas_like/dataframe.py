@@ -262,6 +262,13 @@ class PandasLikeDataFrame:
         named: Literal[False] = False,
     ) -> list[tuple[Any, ...]]: ...
 
+    @overload
+    def rows(
+        self,
+        *,
+        named: bool,
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
