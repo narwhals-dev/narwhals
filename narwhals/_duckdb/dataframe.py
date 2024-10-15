@@ -52,13 +52,14 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DTy
     if duckdb_dtype == "INTERVAL":
         return dtypes.Duration()
     if duckdb_dtype.startswith("STRUCT"):
-        match_ = re.match(r".*\((.*)\s(.*)\)", duckdb_dtype)
+        match_ = re.findall(r'(\w+)\s+(\w+)', duckdb_dtype)
         return dtypes.Struct(
             [
                 dtypes.Field(
-                    match_.group(1),
-                    map_duckdb_dtype_to_narwhals_dtype(match_.group(2), dtypes),
+                    match_[i][0],
+                    map_duckdb_dtype_to_narwhals_dtype(match_[i][1], dtypes),
                 )
+                for i in range(len(match_))
             ]
         )
     if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
