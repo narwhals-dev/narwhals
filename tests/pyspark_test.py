@@ -7,8 +7,6 @@ Once we're a bit further along, we can integrate PySpark tests into the main tes
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from datetime import datetime
-from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -131,12 +129,6 @@ def test_filter_with_boolean_list(pyspark_constructor: Constructor) -> None:
 
 
 # copied from tests/frame/schema_test.py
-data = {
-    "a": [datetime(2020, 1, 1)],
-    "b": [datetime(2020, 1, 1, tzinfo=timezone.utc)],
-}
-
-
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(
