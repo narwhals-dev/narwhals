@@ -111,7 +111,7 @@ def spark_session() -> Generator[SparkSession, None, None]:
     session = (
         SparkSession.builder.appName("unit-tests")
         .config("spark.ui.enabled", "false")
-        .config("spark.default.parallelism", "2")
+        .config("spark.default.parallelism", "1")
         .config("spark.sql.shuffle.partitions", "2")
         .getOrCreate()
     )

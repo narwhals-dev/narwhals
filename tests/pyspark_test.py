@@ -31,7 +31,7 @@ def _pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> 
     # NaN and NULL are not the same in PySpark
     pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
     return (  # type: ignore[no-any-return]
-        spark_session.createDataFrame(pd_df).orderBy("index").drop("index")
+        spark_session.createDataFrame(pd_df).orderBy("index").drop("index").repartition(2)
     )
 
 
