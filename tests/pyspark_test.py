@@ -29,8 +29,10 @@ if TYPE_CHECKING:
 
 def _pyspark_constructor_with_session(obj: Any, spark_session: SparkSession) -> IntoFrame:
     # NaN and NULL are not the same in PySpark
-    pd_df = pd.DataFrame(obj).replace({float("nan"): None})
-    return spark_session.createDataFrame(pd_df).repartition(2)  # type: ignore[no-any-return]
+    pd_df = pd.DataFrame(obj).replace({float("nan"): None}).reset_index()
+    return (  # type: ignore[no-any-return]
+        spark_session.createDataFrame(pd_df).orderBy("index").drop("index")
+    )
 
 
 @pytest.fixture(params=[_pyspark_constructor_with_session])
@@ -224,7 +226,7 @@ def test_sort(pyspark_constructor: Constructor) -> None:
         "z": [7.0, 9.0, 8.0],
     }
     compare_dicts(result, expected)
-    result = df.sort("a", "b", descending=[True, False])
+    result = df.sort("a", "b", descending=[True, False]).lazy().collect()
     expected = {
         "a": [3, 2, 1],
         "b": [4, 6, 4],
@@ -245,7 +247,7 @@ def test_sort_nulls(
 ) -> None:
     data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
     df = nw.from_native(pyspark_constructor(data))
-    result = df.sort("b", descending=True, nulls_last=nulls_last)
+    result = df.sort("b", descending=True, nulls_last=nulls_last).lazy().collect()
     compare_dicts(result, expected)
 
 

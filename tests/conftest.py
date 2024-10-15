@@ -108,7 +108,13 @@ def spark_session() -> Generator[SparkSession, None, None]:
     import os
 
     os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
-    session = SparkSession.builder.appName("unit-tests").getOrCreate()
+    session = (
+        SparkSession.builder.appName("unit-tests")
+        .config("spark.ui.enabled", "false")
+        .config("spark.default.parallelism", "2")
+        .config("spark.sql.shuffle.partitions", "2")
+        .getOrCreate()
+    )
     yield session
     session.stop()
 

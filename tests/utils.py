@@ -28,36 +28,61 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     return zip(left, right)
 
 
+def _to_python_object(value: Any) -> Any:
+    # PyArrow: return scalars as Python objects
+    if hasattr(value, "as_py"):  # pragma: no cover
+        return value.as_py()
+    # cuDF: returns cupy scalars as Python objects
+    if hasattr(value, "item"):  # pragma: no cover
+        return value.item()
+    return value
+
+
+def _to_comparable_list(column_values: Any) -> Any:
+    if (
+        hasattr(column_values, "_compliant_series")
+        and column_values._compliant_series._implementation is Implementation.CUDF
+    ):  # pragma: no cover
+        column_values = column_values.to_pandas()
+    if hasattr(column_values, "to_list"):
+        return column_values.to_list()
+    return [_to_python_object(v) for v in column_values]
+
+
+def _sort_dict_by_key(data_dict: dict[str, list[Any]], key: str) -> dict[str, list[Any]]:
+    sort_list = data_dict[key]
+    sorted_indices = sorted(range(len(sort_list)), key=lambda i: sort_list[i])
+    return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
+
+
 def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
+    is_pyspark = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation is Implementation.PYSPARK
+    )
     if hasattr(result, "collect"):
         result = result.collect()
     if hasattr(result, "columns"):
         for key in result.columns:
             assert key in expected
+    result = {key: _to_comparable_list(result[key]) for key in expected}
+    if is_pyspark and expected:
+        sort_key = next(iter(expected.keys()))
+        expected = _sort_dict_by_key(expected, sort_key)
+        result = _sort_dict_by_key(result, sort_key)
     for key in expected:
         result_key = result[key]
-        if (
-            hasattr(result_key, "_compliant_series")
-            and result_key._compliant_series._implementation is Implementation.CUDF
-        ):  # pragma: no cover
-            result_key = result_key.to_pandas()
-        for lhs, rhs in zip_strict(result_key, expected[key]):
-            if hasattr(lhs, "as_py"):
-                lhs = lhs.as_py()  # noqa: PLW2901
-            if hasattr(rhs, "as_py"):  # pragma: no cover
-                rhs = rhs.as_py()  # noqa: PLW2901
-            if hasattr(lhs, "item"):  # pragma: no cover
-                lhs = lhs.item()  # noqa: PLW2901
-            if hasattr(rhs, "item"):  # pragma: no cover
-                rhs = rhs.item()  # noqa: PLW2901
+        expected_key = expected[key]
+        for i, (lhs, rhs) in enumerate(zip_strict(result_key, expected_key)):
             if isinstance(lhs, float) and not math.isnan(lhs):
-                assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
+                are_valid_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
             elif isinstance(lhs, float) and math.isnan(lhs):
-                assert math.isnan(rhs), (lhs, rhs)  # pragma: no cover
+                are_valid_values = math.isnan(rhs)  # pragma: no cover
             elif pd.isna(lhs):
-                assert pd.isna(rhs), (lhs, rhs)
+                are_valid_values = pd.isna(rhs)
             else:
-                assert lhs == rhs, (lhs, rhs)
+                are_valid_values = lhs == rhs
+            assert are_valid_values, f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
