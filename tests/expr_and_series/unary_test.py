@@ -18,8 +18,8 @@ def test_unary(constructor: Constructor) -> None:
             z_min=nw.col("z").min(),
             z_max=nw.col("z").max(),
         )
-        .unique(["a_mean", "a_sum", "b_nunique", "b_skew", "z_min", "z_max"])
-        .select(["a_mean", "a_sum", "b_nunique", "b_skew", "z_min", "z_max"])
+        .unique(["a_mean", "a_sum", "a_skew", "b_nunique", "b_skew", "z_min", "z_max"])
+        .select(["a_mean", "a_sum", "a_skew", "b_nunique", "b_skew", "z_min", "z_max"])
     )
     expected = {
         "a_mean": [2],
