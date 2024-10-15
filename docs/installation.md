@@ -6,8 +6,7 @@
 
     First, ensure you have installed [UV](https://github.com/astral-sh/uv), and make sure you have [created and activated](https://docs.astral.sh/uv/pip/environments/#python-environments) a Python 3.8+ virtual environment.
 
-    If you haven't, you can follow our guide [here](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md#option-1-use-uv-recommended).
-
+    If you haven't, you can follow our [_setting up your environment_](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md#option-1-use-uv-recommended) guide.
     Then, run:
 
     ```console
