@@ -26,7 +26,7 @@ To verify the installation, start the Python REPL and execute:
 >>> narwhals.__version__
 '1.9.3'
 ```
-If you see the version number, the installation was successful!
+If you see the version number, then the installation was successful!
 
 ## Quick start
 
