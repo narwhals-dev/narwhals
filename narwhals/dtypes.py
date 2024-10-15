@@ -206,6 +206,7 @@ class Field:
 
 class Struct(DType):
     fields: list[Field]
+
     def __init__(
         self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
     ) -> None:
