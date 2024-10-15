@@ -91,3 +91,31 @@ Here are exceptions to our backwards compatibility policy:
   expressions, or pandas were to remove support for categorical data. At that point, we might
   need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.
 - we may consider making some type hints more precise.
+
+## Breaking changes carried out so far
+
+### After `stable.v1`
+
+- `Datetime` and `Duration` dtypes hash using both `time_unit` and `time_zone`.
+  The effect of this can be seen when doing `dtype in {nw.Duration}` checks:
+
+  ```python
+  import narwhals.stable.v1 as nw_v1
+  import narwhals as nw
+
+  # v1 behaviour:
+  assert nw_v1.Datetime("us") in {nw.Datetime}
+
+  # main namespace (and, later, v2) behaviour:
+  assert nw.Datetime("us") not in {nw.Datetime}
+  assert nw.Datetime("us") in {nw.Datetime("us")}
+  ```
+
+  To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
+  we recommend using `==` instead, as that works consistenty
+  across versions:
+
+  ```python
+  assert nw.Datetime("us") == nw.Datetime
+  assert nw.Datetime("us") in {nw.Datetime("us")}
+  ```
