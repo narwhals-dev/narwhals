@@ -443,9 +443,11 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df_pa = pa.Table.from_pandas(df_pd)
 
             Let's define a dataframe-agnostic function:
 
@@ -453,7 +455,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").skew())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a         b
@@ -467,6 +469,13 @@ class Expr:
             ╞═════╪══════════╡
             │ 0.0 ┆ 1.472427 │
             └─────┴──────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[0]]
+            b: [[1.4724267269058975]]
         """
         return self.__class__(lambda plx: self._call(plx).skew())
 
