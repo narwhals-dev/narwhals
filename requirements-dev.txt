@@ -5,7 +5,7 @@ pandas
 polars
 pre-commit
 pyarrow
-pyspark
+pyspark; python_version < '3.12'
 pytest
 pytest-cov
 pytest-randomly

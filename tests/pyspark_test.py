@@ -6,13 +6,17 @@ Once we're a bit further along, we can integrate PySpark tests into the main tes
 
 from __future__ import annotations
 
+import contextlib
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
 
 import numpy as np
 import pandas as pd
-import pyspark
+
+with contextlib.suppress(ImportError):
+    import pyspark
+
 import pytest
 
 import narwhals.stable.v1 as nw

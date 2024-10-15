@@ -38,11 +38,7 @@ pandas = ["pandas>=0.25.3"]
 polars = ["polars>=0.20.3"]
 pyarrow = ["pyarrow>=11.0.0"]
 dask = ["dask[dataframe]>=2024.7"]
-pyspark = [
-  "pyspark>=3.3.0",
-  #https://issues.apache.org/jira/browse/SPARK-48710
-  "numpy<2.0.0",
-]
+pyspark = ["pyspark>=3.3.0"]
 
 [project.urls]
 "Homepage" = "https://github.com/narwhals-dev/narwhals"
