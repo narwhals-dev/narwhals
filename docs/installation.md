@@ -4,19 +4,17 @@
 
 First, ensure you have [created and activated](https://docs.python.org/3/library/venv.html) a Python 3.8+ virtual environment.
 
-### Option 1: Using UV
+=== "UV"
 
-Run the following command:
-```console
-uv pip install narwhals
-```
+    ```console
+    uv pip install narwhals
+    ```
 
-### Option 2: Using Python's venv
+=== "Python's venv"
 
-Run the following command:
-```console
-python -m pip install narwhals
-```
+    ```console
+    python -m pip install narwhals
+    ```
 
 ### Verifying the Installation
 
