@@ -2,15 +2,23 @@
 
 ## Installation
 
-First, ensure you have [created and activated](https://docs.python.org/3/library/venv.html) a Python 3.8+ virtual environment.
-
 === "UV"
+
+    First, ensure you have installed [UV](https://github.com/astral-sh/uv), and make sure you have [created and activated](https://docs.astral.sh/uv/pip/environments/#python-environments) a Python 3.8+ virtual environment.
+
+    If you haven't, you can follow our guide [here](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md#option-1-use-uv-recommended).
+
+    Then, run:
 
     ```console
     uv pip install narwhals
     ```
 
 === "Python's venv"
+
+    First, ensure you have [created and activated](https://docs.python.org/3/library/venv.html) a Python 3.8+ virtual environment.
+
+    Then, run:
 
     ```console
     python -m pip install narwhals
