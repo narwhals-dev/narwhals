@@ -274,7 +274,7 @@ class PandasLikeDataFrame:
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             # cuDF does not support itertuples. But it does support to_dict!
-            if is_cudf_dataframe(self._native_frame):
+            if self._implementation is Implementation.CUDF:  # pragma: no cover
                 # Extract the row values from the named rows
                 return [tuple(row.values()) for row in self.rows(named=True)]
 
