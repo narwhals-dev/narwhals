@@ -38,4 +38,5 @@ Here are the top-level functions available in Narwhals.
         - when
         - show_versions
         - to_native
+        - to_py_scalar
       show_source: false

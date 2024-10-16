@@ -49,6 +49,7 @@ from narwhals.stable.v1.dtypes import Unknown
 from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
+from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
@@ -2249,6 +2250,7 @@ __all__ = [
     "dependencies",
     "to_native",
     "from_native",
+    "to_py_scalar",
     "is_ordered_categorical",
     "maybe_align_index",
     "maybe_convert_dtypes",
