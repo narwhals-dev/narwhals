@@ -1,5 +1,3 @@
-import pytest
-from typing import Any
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
