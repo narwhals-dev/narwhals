@@ -2190,7 +2190,7 @@ def from_pycapsule(
     Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
-        supports_py_capsule: Object which implements `__arrow_c_stream__`.
+        native_frame: Object which implements `__arrow_c_stream__`.
         native_namespace: The native library to use for DataFrame creation.
 
     Examples:
