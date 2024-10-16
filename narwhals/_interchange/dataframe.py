@@ -82,6 +82,14 @@ class InterchangeFrame:
     def __narwhals_dataframe__(self) -> Any:
         return self
 
+    def __native_namespace__(self: Self) -> NoReturn:
+        msg = (
+            "Cannot access native namespace for metadata-only dataframes with unknown backend."
+            "If you would like to see this kind of object supported in Narwhals, please "
+            "open a feature request at https://github.com/narwhals-dev/narwhals/issues."
+        )
+        raise NotImplementedError(msg)
+
     def __getitem__(self, item: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
 
