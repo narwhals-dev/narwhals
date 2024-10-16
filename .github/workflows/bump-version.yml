@@ -33,7 +33,7 @@ jobs:
         python utils/bump_version.py ${{ github.event.inputs.release_type }}
 
     - name: Create pull request
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       if: github.actor == 'MarcoGorelli' || github.actor == 'FBruzzesi'
       with:
         script: |
