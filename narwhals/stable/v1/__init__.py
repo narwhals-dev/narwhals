@@ -515,7 +515,7 @@ class Schema(NwSchema):
 
         >>> import narwhals.stable.v1 as nw
         >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
-        >>> schema  # doctest:+SKIP
+        >>> schema
         Schema({'foo': Int8, 'bar': String})
 
         Access the data type associated with a specific column name.
@@ -1060,7 +1060,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
            a
         0  2
         1  4
-        >>> func(df_pl)  # doctest: +SKIP
+        >>> func(df_pl)
         shape: (2, 1)
         ┌─────┐
         │ a   │
