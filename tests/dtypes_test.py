@@ -94,25 +94,13 @@ def test_struct_valid() -> None:
     assert dtype != nw.Struct([nw.Field("a", nw.Float32)])
     assert dtype != nw.Duration
     assert repr(dtype) == "Struct({'a': <class 'narwhals.dtypes.Int64'>})"
-    dtype = nw.Struct(nw.Struct([nw.Field("a", nw.Int64), nw.Field("b", nw.String)]))
-    assert dtype == nw.Struct(
-        nw.Struct([nw.Field("a", nw.Int64), nw.Field("b", nw.String)])
-    )
+    dtype = nw.Struct({"a": nw.Int64, "b": nw.String})
+    assert dtype == nw.Struct({"a": nw.Int64, "b": nw.String})
+
     assert dtype == nw.Struct
-    assert dtype != nw.Struct(
-        nw.Struct([nw.Field("a", nw.Float32), nw.Field("b", nw.String)])
-    )
-    assert dtype in {
-        nw.Struct(nw.Struct([nw.Field("a", nw.Int64), nw.Field("b", nw.String)]))
-    }
-    dtype = nw.Struct({"a": {"b": 1}})
-    assert dtype == nw.Struct({"a": {"b": 1}})
+    assert dtype != nw.Struct({"a": nw.Int32, "b": nw.String})
 
-
-def test_struct_reverse() -> None:
-    dtype = nw.Struct({"a": {"b": 1}})
-
-    (next(reversed(dtype)))
+    assert dtype in {nw.Struct({"a": nw.Int64, "b": nw.String})}
 
 
 def test_field_repr() -> None:
