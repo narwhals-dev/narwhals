@@ -16,7 +16,6 @@ from narwhals._pandas_like.utils import create_native_series
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import validate_dataframe_comparand
-from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
