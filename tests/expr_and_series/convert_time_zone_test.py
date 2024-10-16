@@ -80,7 +80,7 @@ def test_convert_time_zone_from_none(
             and parse_version(pd.__version__) < (2, 1)
         )
         or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
-        or ("cuDF" in str(constructor))
+        or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and parse_version(pl.__version__) < (0, 20, 7):
