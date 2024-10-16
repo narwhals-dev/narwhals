@@ -87,6 +87,48 @@ def test_array_valid() -> None:
         dtype = nw.Array(nw.Int64)
 
 
+def test_struct_valid() -> None:
+    dtype = nw.Struct([nw.Field("a", nw.Int64)])
+    assert dtype == nw.Struct([nw.Field("a", nw.Int64)])
+    assert dtype == nw.Struct
+    assert dtype != nw.Struct([nw.Field("a", nw.Float32)])
+    assert dtype != nw.Duration
+    assert repr(dtype) == "Struct({'a': <class 'narwhals.dtypes.Int64'>})"
+    dtype = nw.Struct(nw.Struct([nw.Field("a", nw.Int64), nw.Field("b", nw.String)]))
+    assert dtype == nw.Struct(
+        nw.Struct([nw.Field("a", nw.Int64), nw.Field("b", nw.String)])
+    )
+    assert dtype == nw.Struct
+    assert dtype != nw.Struct(
+        nw.Struct([nw.Field("a", nw.Float32), nw.Field("b", nw.String)])
+    )
+    assert dtype in {
+        nw.Struct(nw.Struct([nw.Field("a", nw.Int64), nw.Field("b", nw.String)]))
+    }
+    dtype = nw.Struct({"a": {"b": 1}})
+    assert dtype == nw.Struct({"a": {"b": 1}})
+
+
+def test_struct_reverse() -> None:
+    dtype = nw.Struct({"a": {"b": 1}})
+
+    (next(reversed(dtype)))
+
+
+def test_field_repr() -> None:
+    dtype = nw.Field("a", nw.Int32)
+    assert repr(dtype) == "Field('a', <class 'narwhals.dtypes.Int32'>)"
+
+
+def test_struct_hashes() -> None:
+    dtypes = (
+        nw.Struct,
+        nw.Struct([nw.Field("a", nw.Int64)]),
+        nw.Struct([nw.Field("a", nw.Int64), nw.Field("b", nw.List(nw.Int64))]),
+    )
+    assert len({hash(tp) for tp in (dtypes)}) == 3
+
+
 @pytest.mark.skipif(
     parse_version(pl.__version__) < (1,) or parse_version(pd.__version__) < (2, 2),
     reason="`shape` is only available after 1.0",
