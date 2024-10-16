@@ -3,12 +3,13 @@ from __future__ import annotations
 from collections import OrderedDict
 from datetime import timezone
 from typing import TYPE_CHECKING
-from typing import Iterator
-from typing import Literal
 from typing import Mapping
-from typing import Sequence
 
 if TYPE_CHECKING:
+    from typing import Iterator
+    from typing import Literal
+    from typing import Sequence
+
     from typing_extensions import Self
 
 
@@ -178,12 +179,10 @@ class Field:
     """
     Definition of a single field within a `Struct` DataType.
 
-    Parameters
-    ----------
-    name
-        The name of the field within its parent `Struct`.
-    dtype
-        The `DataType` of the field's values.
+    Arguments:
+        name: The name of the field within its parent `Struct`.
+        dtype: The `DataType` of the field's values.
+
     """
 
     name: str
@@ -205,6 +204,13 @@ class Field:
 
 
 class Struct(DType):
+    """
+    Struct composite type.
+
+    Arguments:
+        fields: The fields that make up the struct. Can be either a sequence of Field objects or a mapping of column names to data types.
+    """
+
     fields: list[Field]
 
     def __init__(
