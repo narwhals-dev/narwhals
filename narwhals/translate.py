@@ -784,7 +784,7 @@ def to_py_scalar(scalar_like: Any) -> Any:
         >>> import pandas as pd
         >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
         >>> nw.to_py_scalar(df["a"].item(0))
-        1
+        np.int64(1)
         >>> import pyarrow as pa
         >>> df = nw.from_native(pa.table({"a": [1, 2, 3]}))
         >>> nw.to_py_scalar(df["a"].item(0))
@@ -797,7 +797,9 @@ def to_py_scalar(scalar_like: Any) -> Any:
         return scalar_like.as_py()
 
     cupy = get_cupy()
-    if cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1:
+    if (  # pragma: no cover
+        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
+    ):
         return scalar_like.item()
 
     return scalar_like

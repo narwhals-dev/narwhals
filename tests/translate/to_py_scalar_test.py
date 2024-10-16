@@ -1,4 +1,4 @@
-import narwhals as nw
+import narwhals.stable.v1 as nw
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_cupy
 from tests.utils import Constructor
@@ -10,7 +10,7 @@ def test_to_py_scalar(constructor_eager: Constructor) -> None:
 
 
 def test_to_py_scalar_cudf_array() -> None:
-    if cudf := get_cudf():
+    if cudf := get_cudf():  # pragma: no cover
         cupy = get_cupy()
         df = nw.from_native(cudf.DataFrame({"a": [1, 2, 3]}))
         assert isinstance(nw.to_py_scalar(df["a"]), cupy.ndarray)
