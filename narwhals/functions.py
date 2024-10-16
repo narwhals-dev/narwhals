@@ -412,13 +412,13 @@ def _from_dict_impl(
 
 
 def from_pycapsule(
-    supports_py_capsule: SupportsPyCapsule, *, native_namespace: ModuleType
+    native_frame: SupportsPyCapsule, *, native_namespace: ModuleType
 ) -> DataFrame[Any]:
     """
     Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
-        supports_py_capsule: Object which implements `__arrow_c_stream__`.
+        native_frame: Object which implements `__arrow_c_stream__`.
         native_namespace: The native library to use for DataFrame creation.
 
     Examples:
@@ -452,15 +452,15 @@ def from_pycapsule(
         a: [[1,2,3]]
         b: [[4,5,6]]
     """
-    if not hasattr(supports_py_capsule, "__arrow_c_stream__"):
-        msg = f"Given object of type {type(supports_py_capsule)} does not support PyCapsule interface"
+    if not hasattr(native_frame, "__arrow_c_stream__"):
+        msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
     implementation = Implementation.from_native_namespace(native_namespace)
 
     if implementation is Implementation.POLARS and parse_version(
         native_namespace.__version__
     ) >= (1, 3):
-        native_frame = native_namespace.DataFrame(supports_py_capsule)
+        native_frame = native_namespace.DataFrame(native_frame)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -478,7 +478,7 @@ def from_pycapsule(
             msg = f"PyArrow>=14.0.0 is required for `from_pycapsule` for object of type {native_namespace}"
             raise ModuleNotFoundError(msg) from None
 
-        tbl = pa.table(supports_py_capsule)
+        tbl = pa.table(native_frame)
         if implementation is Implementation.PANDAS:
             native_frame = tbl.to_pandas()
         elif implementation is Implementation.MODIN:  # pragma: no cover
@@ -493,12 +493,12 @@ def from_pycapsule(
             msg = "congratulations, you entered unrecheable code - please report a bug"
             raise AssertionError(msg)
     elif implementation is Implementation.PYARROW:
-        native_frame = native_namespace.table(supports_py_capsule)
+        native_frame = native_namespace.table(native_frame)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement PyCapsule support
-            native_frame = native_namespace.DataFrame(supports_py_capsule)
+            native_frame = native_namespace.DataFrame(native_frame)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e

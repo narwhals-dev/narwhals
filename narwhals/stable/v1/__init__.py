@@ -2184,7 +2184,7 @@ def new_series(
 
 
 def from_pycapsule(
-    supports_py_capsule: SupportsPyCapsule, *, native_namespace: ModuleType
+    native_frame: SupportsPyCapsule, *, native_namespace: ModuleType
 ) -> DataFrame[Any]:
     """
     Construct a DataFrame from an object which supports the PyCapsule Interface.
@@ -2225,7 +2225,7 @@ def from_pycapsule(
         b: [[4,5,6]]
     """
     return _stableify(  # type: ignore[no-any-return]
-        nw_from_pycapsule(supports_py_capsule, native_namespace=native_namespace)
+        nw_from_pycapsule(native_frame, native_namespace=native_namespace)
     )
 
 
