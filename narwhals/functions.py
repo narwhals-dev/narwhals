@@ -469,7 +469,7 @@ def show_versions() -> None:
     Examples:
 
         >>> from narwhals import show_versions
-        >>> show_versions()  # doctest:+SKIP
+        >>> show_versions()  # doctest: +SKIP
     """
 
     sys_info = _get_sys_info()
