@@ -237,6 +237,62 @@ class ArrowNamespace:
             output_names=reduce_output_names(parsed_exprs),
         )
 
+    def min_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            init_series, *series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            return [
+                ArrowSeries(
+                    native_series=reduce(
+                        lambda x, y: pc.min_element_wise(x, y),
+                        [s._native_series for s in series],
+                        init_series._native_series,
+                    ),
+                    name=init_series.name,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="min_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
+    def max_horizontal(self, *exprs: IntoArrowExpr) -> ArrowExpr:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            init_series, *series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+            return [
+                ArrowSeries(
+                    native_series=reduce(
+                        lambda x, y: pc.max_element_wise(x, y),
+                        [s._native_series for s in series],
+                        init_series._native_series,
+                    ),
+                    name=init_series.name,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="max_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
     def concat(
         self,
         items: Iterable[ArrowDataFrame],
@@ -297,6 +353,47 @@ class ArrowNamespace:
             raise TypeError(msg)
 
         return ArrowWhen(condition, self._backend_version, dtypes=self._dtypes)
+
+    def concat_str(
+        self,
+        exprs: Iterable[IntoArrowExpr],
+        *more_exprs: IntoArrowExpr,
+        separator: str = "",
+        ignore_nulls: bool = False,
+    ) -> ArrowExpr:
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        parsed_exprs: list[ArrowExpr] = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
+        ]
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = (
+                s._native_series
+                for _expr in parsed_exprs
+                for s in _expr.cast(self._dtypes.String())._call(df)
+            )
+            null_handling = "skip" if ignore_nulls else "emit_null"
+            result_series = pc.binary_join_element_wise(
+                *series, separator, null_handling=null_handling
+            )
+            return [
+                ArrowSeries(
+                    native_series=result_series,
+                    name="",
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="concat_str",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
 
 
 class ArrowWhen:

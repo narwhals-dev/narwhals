@@ -410,6 +410,16 @@ class ArrowExprDateTimeNamespace:
             self._expr, "dt", "to_string", format
         )
 
+    def replace_time_zone(self: Self, time_zone: str | None) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "replace_time_zone", time_zone
+        )
+
+    def convert_time_zone(self: Self, time_zone: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "convert_time_zone", time_zone
+        )
+
     def date(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(self._expr, "dt", "date")
 
@@ -540,7 +550,7 @@ class ArrowExprStringNamespace:
             self._expr, "str", "slice", offset, length
         )
 
-    def to_datetime(self, format: str | None = None) -> ArrowExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr,
             "str",

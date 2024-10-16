@@ -119,7 +119,7 @@ class PandasLikeNamespace:
         return PandasLikeExpr(
             lambda df: [
                 PandasLikeSeries(
-                    df._native_frame.loc[:, column_name],
+                    df._native_frame[column_name],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     dtypes=self._dtypes,
@@ -278,6 +278,60 @@ class PandasLikeNamespace:
             output_names=reduce_output_names(parsed_exprs),
         )
 
+    def min_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+
+            return [
+                PandasLikeSeries(
+                    native_series=self.concat(
+                        (s.to_frame() for s in series), how="horizontal"
+                    )
+                    ._native_frame.min(axis=1)
+                    .rename(series[0].name),
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="min_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
+    def max_horizontal(self, *exprs: IntoPandasLikeExpr) -> PandasLikeExpr:
+        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = [s for _expr in parsed_exprs for s in _expr._call(df)]
+
+            return [
+                PandasLikeSeries(
+                    native_series=self.concat(
+                        (s.to_frame() for s in series), how="horizontal"
+                    )
+                    ._native_frame.max(axis=1)
+                    .rename(series[0].name),
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+            ]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="max_horizontal",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
+        )
+
     def concat(
         self,
         items: Iterable[PandasLikeDataFrame],
@@ -324,6 +378,61 @@ class PandasLikeNamespace:
 
         return PandasWhen(
             condition, self._implementation, self._backend_version, dtypes=self._dtypes
+        )
+
+    def concat_str(
+        self,
+        exprs: Iterable[IntoPandasLikeExpr],
+        *more_exprs: IntoPandasLikeExpr,
+        separator: str = "",
+        ignore_nulls: bool = False,
+    ) -> PandasLikeExpr:
+        parsed_exprs: list[PandasLikeExpr] = [
+            *parse_into_exprs(*exprs, namespace=self),
+            *parse_into_exprs(*more_exprs, namespace=self),
+        ]
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = (
+                s
+                for _expr in parsed_exprs
+                for s in _expr.cast(self._dtypes.String())._call(df)
+            )
+            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()._call(df)]
+
+            if not ignore_nulls:
+                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                result = reduce(lambda x, y: x + separator + y, series).zip_with(
+                    ~null_mask_result, None
+                )
+            else:
+                init_value, *values = [
+                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask)
+                ]
+
+                sep_array = init_value.__class__._from_iterable(
+                    data=[separator] * len(init_value),
+                    name="sep",
+                    index=init_value._native_series.index,
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    dtypes=self._dtypes,
+                )
+                separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
+                result = reduce(
+                    lambda x, y: x + y,
+                    (s + v for s, v in zip(separators, values)),
+                    init_value,
+                )
+
+            return [result]
+
+        return self._create_expr_from_callable(
+            func=func,
+            depth=max(x._depth for x in parsed_exprs) + 1,
+            function_name="concat_str",
+            root_names=combine_root_names(parsed_exprs),
+            output_names=reduce_output_names(parsed_exprs),
         )
 
 

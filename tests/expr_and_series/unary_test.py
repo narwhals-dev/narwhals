@@ -1,4 +1,5 @@
 import pytest
+from typing import Any
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
@@ -6,9 +7,7 @@ from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 
-def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_unary(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     result = (
         nw.from_native(constructor(data))
@@ -19,7 +18,8 @@ def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None
             z_min=nw.col("z").min(),
             z_max=nw.col("z").max(),
         )
-        .select(nw.col("a_mean", "a_sum", "b_nunique", "z_min", "z_max").unique())
+        .unique(["a_mean", "a_sum", "b_nunique", "z_min", "z_max"])
+        .select(["a_mean", "a_sum", "b_nunique", "z_min", "z_max"])
     )
     expected = {
         "a_mean": [2],
