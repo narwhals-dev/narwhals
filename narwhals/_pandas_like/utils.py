@@ -281,11 +281,7 @@ def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
     if dtype.startswith(("large_list", "list")):
-        return dtypes.List(
-            arrow_native_to_narwhals_dtype(
-                native_column.dtype.pyarrow_dtype.value_type, dtypes
-            )
-        )
+        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
     if dtype.startswith("fixed_size_list"):
         return dtypes.Array(
             arrow_native_to_narwhals_dtype(
