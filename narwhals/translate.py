@@ -9,9 +9,11 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_cupy
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
@@ -776,8 +778,43 @@ def narwhalify(
         return decorator(func)
 
 
+def to_py_scalar(scalar_like: Any) -> Any:
+    """If a scalar is not Python native, tries to convert it to Python native.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
+        >>> nw.to_py_scalar(df["a"].item(0))
+        1
+        >>> import pyarrow as pa
+        >>> df = nw.from_native(pa.table({"a": [1, 2, 3]}))
+        >>> nw.to_py_scalar(df["a"].item(0))
+        1
+        >>> nw.to_py_scalar(1)
+        1
+    """
+
+    pa = get_pyarrow()
+    if pa and isinstance(scalar_like, pa.Scalar):
+        return scalar_like.as_py()
+
+    cupy = get_cupy()
+    if (  # pragma: no cover
+        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
+    ):
+        return scalar_like.item()
+
+    np = get_numpy()
+    if np and np.isscalar(scalar_like) and hasattr(scalar_like, "item"):
+        return scalar_like.item()
+
+    return scalar_like
+
+
 __all__ = [
     "get_native_namespace",
     "to_native",
     "narwhalify",
+    "to_py_scalar",
 ]
