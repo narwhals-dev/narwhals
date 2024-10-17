@@ -957,7 +957,7 @@ def to_py_scalar(scalar: Any) -> Any:
         >>> import pandas as pd
         >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
         >>> nw.to_py_scalar(df["a"].item(0))
-        np.int64(1)
+        1
         >>> import pyarrow as pa
         >>> df = nw.from_native(pa.table({"a": [1, 2, 3]}))
         >>> nw.to_py_scalar(df["a"].item(0))

@@ -1,5 +1,6 @@
 import narwhals.stable.v1 as nw
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_numpy
 from tests.utils import Constructor
 
 
@@ -13,3 +14,6 @@ def test_to_py_scalar_cudf_series() -> None:
         df = nw.from_native(cudf.DataFrame({"a": [1, 2, 3]}))
         cudf_series = nw.to_native(nw.to_py_scalar(df["a"]))
         assert isinstance(cudf_series, cudf.Series)
+    if np := get_numpy():  # pragma: no cover
+        array = np.array([1, 2, 3])
+        assert isinstance(nw.to_py_scalar(array), np.ndarray)
