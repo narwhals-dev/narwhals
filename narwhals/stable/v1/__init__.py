@@ -1254,9 +1254,11 @@ def mean(*columns: str) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals.stable.v1 as nw
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
+        >>> df_pa = pa.table({"a": [1, 8, 3]})
 
         We define a dataframe agnostic function:
 
@@ -1264,7 +1266,7 @@ def mean(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.mean("a"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
              a
@@ -1278,6 +1280,11 @@ def mean(*columns: str) -> Expr:
         ╞═════╡
         │ 4.0 │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
     """
     return _stableify(nw.mean(*columns))
 
