@@ -33,13 +33,21 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import IntoPolarsExpr
+    from narwhals._pyspark.dataframe import PySparkLazyFrame
+    from narwhals._pyspark.expr import PySparkExpr
+    from narwhals._pyspark.namespace import PySparkNamespace
+    from narwhals._pyspark.typing import IntoPySparkExpr
 
     CompliantNamespace = Union[
-        PandasLikeNamespace, ArrowNamespace, DaskNamespace, PolarsNamespace
+        PandasLikeNamespace,
+        ArrowNamespace,
+        DaskNamespace,
+        PolarsNamespace,
+        PySparkNamespace,
     ]
-    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr]
+    CompliantExpr = Union[PandasLikeExpr, ArrowExpr, DaskExpr, PolarsExpr, PySparkExpr]
     IntoCompliantExpr = Union[
-        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr
+        IntoPandasLikeExpr, IntoArrowExpr, IntoDaskExpr, IntoPolarsExpr, IntoPySparkExpr
     ]
     IntoCompliantExprT = TypeVar("IntoCompliantExprT", bound=IntoCompliantExpr)
     CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr)
@@ -48,9 +56,15 @@ if TYPE_CHECKING:
         list[PandasLikeSeries], list[ArrowSeries], list[DaskExpr], list[PolarsSeries]
     ]
     ListOfCompliantExpr = Union[
-        list[PandasLikeExpr], list[ArrowExpr], list[DaskExpr], list[PolarsExpr]
+        list[PandasLikeExpr],
+        list[ArrowExpr],
+        list[DaskExpr],
+        list[PolarsExpr],
+        list[PySparkExpr],
     ]
-    CompliantDataFrame = Union[PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame]
+    CompliantDataFrame = Union[
+        PandasLikeDataFrame, ArrowDataFrame, DaskLazyFrame, PySparkLazyFrame
+    ]
 
     T = TypeVar("T")
 
@@ -148,6 +162,14 @@ def parse_into_exprs(
     namespace: PolarsNamespace,
     **named_exprs: IntoPolarsExpr,
 ) -> list[PolarsExpr]: ...
+
+
+@overload
+def parse_into_exprs(
+    *exprs: IntoPySparkExpr,
+    namespace: PySparkNamespace,
+    **named_exprs: IntoPySparkExpr,
+) -> list[PySparkExpr]: ...
 
 
 def parse_into_exprs(
