@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -12,6 +11,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {
@@ -74,7 +74,7 @@ def test_duration_attributes(
 )
 def test_duration_attributes_series(
     request: pytest.FixtureRequest,
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],

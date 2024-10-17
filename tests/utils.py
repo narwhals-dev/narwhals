@@ -10,6 +10,7 @@ from typing import Sequence
 
 import pandas as pd
 
+from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
 
@@ -19,6 +20,7 @@ else:
     from typing_extensions import TypeAlias  # pragma: no cover
 
 Constructor: TypeAlias = Callable[[Any], IntoFrame]
+ConstructorEager: TypeAlias = Callable[[Any], IntoDataFrame]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
@@ -52,7 +54,7 @@ def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
                 rhs = rhs.item()  # noqa: PLW2901
             if isinstance(lhs, float) and not math.isnan(lhs):
                 assert math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6), (lhs, rhs)
-            elif isinstance(lhs, float) and math.isnan(lhs):
+            elif isinstance(lhs, float) and math.isnan(lhs) and rhs is not None:
                 assert math.isnan(rhs), (lhs, rhs)  # pragma: no cover
             elif pd.isna(lhs):
                 assert pd.isna(rhs), (lhs, rhs)

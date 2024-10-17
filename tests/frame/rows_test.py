@@ -1,43 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
-df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
-if parse_version(pd.__version__) >= parse_version("1.5.0"):
-    df_pandas_pyarrow = pd.DataFrame(
-        {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    ).astype(
-        {
-            "a": "Int64[pyarrow]",
-            "b": "Int64[pyarrow]",
-            "z": "Float64[pyarrow]",
-        }
-    )
-    df_pandas_nullable = pd.DataFrame(
-        {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    ).astype(
-        {
-            "a": "Int64",
-            "b": "Int64",
-            "z": "Float64",
-        }
-    )
-else:  # pragma: no cover
-    df_pandas_pyarrow = df_pandas
-    df_pandas_nullable = df_pandas
-df_polars = pl.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
-df_pandas_na = pd.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
-df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]})
+data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+data_na = {"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]}
 
 
 @pytest.mark.parametrize(
@@ -56,7 +31,7 @@ df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
 )
 def test_iter_rows(
     request: Any,
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
@@ -69,8 +44,8 @@ def test_iter_rows(
     assert result == expected
 
 
-@pytest.mark.parametrize(
-    "df_raw", [df_pandas, df_pandas_nullable, df_pandas_pyarrow, df_polars, df_pa]
+@pytest.mark.filterwarnings(
+    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
 )
 @pytest.mark.parametrize(
     ("named", "expected"),
@@ -87,19 +62,18 @@ def test_iter_rows(
     ],
 )
 def test_rows(
-    df_raw: Any,
+    constructor_eager: ConstructorEager,
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
-    df = nw.from_native(df_raw, eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.rows(named=named)
     assert result == expected
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas_na, df_polars_na])
-def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
+def test_rows_with_nulls_unnamed(constructor_eager: ConstructorEager) -> None:
     # GIVEN
-    df = nw.from_native(df_raw, eager_only=True)
+    df = nw.from_native(constructor_eager(data_na), eager_only=True)
 
     # WHEN
     result = list(df.iter_rows(named=False))
@@ -115,10 +89,9 @@ def test_rows_with_nulls_unnamed(df_raw: Any) -> None:
                 assert value_in_result == value
 
 
-@pytest.mark.parametrize("df_raw", [df_pandas_na, df_polars_na])
-def test_rows_with_nulls_named(df_raw: Any) -> None:
+def test_rows_with_nulls_named(constructor_eager: ConstructorEager) -> None:
     # GIVEN
-    df = nw.from_native(df_raw, eager_only=True)
+    df = nw.from_native(constructor_eager(data_na), eager_only=True)
 
     # WHEN
     result = list(df.iter_rows(named=True))

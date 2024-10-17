@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 
@@ -40,3 +45,14 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
     expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
     compare_dicts(result, expected)
+
+
+def test_with_columns_dtypes_single_row(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (15,):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": ["foo"]}
+    df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))
+    result = df.with_columns(nw.col("a"))
+    assert result.collect_schema() == {"a": nw.Categorical}

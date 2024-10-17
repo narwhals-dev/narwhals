@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypes
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoSeriesT
 
 T = TypeVar("T")
 
@@ -88,26 +89,26 @@ def to_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -160,26 +161,26 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Any: ...
+) -> Series: ...
 
 
 @overload
@@ -240,7 +241,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -256,7 +257,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,

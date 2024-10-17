@@ -1,10 +1,14 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
 
+if TYPE_CHECKING:
+    from tests.utils import Constructor
+    from tests.utils import ConstructorEager
 data = {"a": ["2020-01-01T12:34:56"]}
 
 
@@ -24,7 +28,7 @@ def test_to_datetime(constructor: Constructor) -> None:
     assert str(result) == expected
 
 
-def test_to_datetime_series(constructor_eager: Any) -> None:
+def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
     if "cudf" in str(constructor_eager):  # pragma: no cover
         expected = "2020-01-01T12:34:56.000000000"
     else:
@@ -60,7 +64,7 @@ def test_to_datetime_infer_fmt(
 
 
 def test_to_datetime_series_infer_fmt(
-    request: pytest.FixtureRequest, constructor_eager: Any
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)

@@ -1,5 +1,11 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import narwhals as nw
-from narwhals.typing import FrameT
+
+if TYPE_CHECKING:
+    from narwhals.typing import FrameT
 
 
 @nw.narwhalify

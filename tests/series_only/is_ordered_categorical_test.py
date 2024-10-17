@@ -1,4 +1,6 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import polars as pl
@@ -7,6 +9,9 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
 def test_is_ordered_categorical() -> None:
@@ -39,7 +44,7 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
 
 
 def test_is_definitely_not_ordered_categorical(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
 ) -> None:
     assert not nw.is_ordered_categorical(
         nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
