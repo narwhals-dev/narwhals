@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from queries import q12
 
 from . import IO_FUNCS

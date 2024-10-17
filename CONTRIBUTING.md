@@ -51,17 +51,20 @@ Here's how you can set up your local development environment to contribute.
 
 #### Option 1: Use UV (recommended)
 
-1. Make sure you have Python3.8+ installed (for example, Python 3.11), create a virtual environment,
+1. Make sure you have Python3.12 installed, create a virtual environment,
    and activate it. If you're new to this, here's one way that we recommend:
    1. Install uv: https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started
-   2. Install some version of Python greater than Python3.8. For example, to install
-      Python3.11:
+      or make sure it is up-to-date with:
       ```
-      uv python install 3.11
+      uv self update
+      ```
+   2. Install Python3.12:
+      ```
+      uv python install 3.12
       ```
    3. Create a virtual environment:
       ```
-      uv venv -p 3.11 --seed
+      uv venv -p 3.12 --seed
       ```
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 2. Install Narwhals: `uv pip install -e .`

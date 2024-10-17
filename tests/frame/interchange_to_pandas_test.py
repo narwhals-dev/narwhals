@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import duckdb
 import pandas as pd
 import pytest
