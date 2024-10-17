@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from typing import TYPE_CHECKING
 from typing import Any
 
 import duckdb
@@ -11,8 +14,11 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
+
+if TYPE_CHECKING:
+    from tests.utils import Constructor
+    from tests.utils import ConstructorEager
+
 
 data = {
     "a": [datetime(2020, 1, 1)],

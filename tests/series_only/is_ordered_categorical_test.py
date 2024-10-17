@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -5,7 +9,9 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import ConstructorEager
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
 def test_is_ordered_categorical() -> None:

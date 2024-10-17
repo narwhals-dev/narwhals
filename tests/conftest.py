@@ -48,47 +48,47 @@ def pytest_collection_modifyitems(config: Any, items: Any) -> Any:  # pragma: no
             item.add_marker(skip_slow)
 
 
-def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_constructor(obj: dict[str, Any]) -> IntoDataFrame:
     return pd.DataFrame(obj)  # type: ignore[no-any-return]
 
 
-def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_nullable_constructor(obj: dict[str, Any]) -> IntoDataFrame:
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
 
 
-def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_pyarrow_constructor(obj: dict[str, Any]) -> IntoDataFrame:
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
-def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
+def modin_constructor(obj: dict[str, Any]) -> IntoDataFrame:  # pragma: no cover
     mpd = get_modin()
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
-def cudf_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
+def cudf_constructor(obj: dict[str, Any]) -> IntoDataFrame:  # pragma: no cover
     cudf = get_cudf()
     return cudf.DataFrame(obj)  # type: ignore[no-any-return]
 
 
-def polars_eager_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def polars_eager_constructor(obj: dict[str, Any]) -> IntoDataFrame:
     return pl.DataFrame(obj)
 
 
-def polars_lazy_constructor(obj: dict[str, list[Any]]) -> pl.LazyFrame:
+def polars_lazy_constructor(obj: dict[str, Any]) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
-def dask_lazy_p1_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p1_constructor(obj: dict[str, Any]) -> IntoFrame:  # pragma: no cover
     dd = get_dask_dataframe()
     return dd.from_dict(obj, npartitions=1)  # type: ignore[no-any-return]
 
 
-def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p2_constructor(obj: dict[str, Any]) -> IntoFrame:  # pragma: no cover
     dd = get_dask_dataframe()
     return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
-def pyarrow_table_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
@@ -115,7 +115,7 @@ if get_dask_dataframe() is not None:  # pragma: no cover
 @pytest.fixture(params=eager_constructors)
 def constructor_eager(
     request: pytest.FixtureRequest,
-) -> Callable[[dict[str, list[Any]]], IntoDataFrame]:
+) -> Callable[[dict[str, Any]], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 

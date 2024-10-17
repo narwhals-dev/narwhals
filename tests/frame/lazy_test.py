@@ -1,6 +1,12 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import ConstructorEager
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
 def test_lazy(constructor_eager: ConstructorEager) -> None:

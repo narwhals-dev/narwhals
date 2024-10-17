@@ -19,8 +19,8 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeAlias  # pragma: no cover
 
-Constructor: TypeAlias = Callable[[dict[str, list[Any]]], IntoFrame]
-ConstructorEager: TypeAlias = Callable[[dict[str, list[Any]]], IntoDataFrame]
+Constructor: TypeAlias = Callable[[dict[str, Any]], IntoFrame]
+ConstructorEager: TypeAlias = Callable[[dict[str, Any]], IntoDataFrame]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
@@ -30,7 +30,7 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     return zip(left, right)
 
 
-def compare_dicts(result: Any, expected: dict[str, list[Any]]) -> None:
+def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
     if hasattr(result, "collect"):
         result = result.collect()
     if hasattr(result, "columns"):

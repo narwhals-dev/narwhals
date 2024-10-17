@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from narwhals import dependencies
 from narwhals import selectors
 from narwhals import stable
