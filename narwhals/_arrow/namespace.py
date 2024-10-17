@@ -325,6 +325,11 @@ class ArrowNamespace:
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
         ).mean()
 
+    def median(self, *column_names: str) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+        ).median()
+
     def max(self, *column_names: str) -> ArrowExpr:
         return ArrowExpr.from_column_names(
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes

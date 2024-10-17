@@ -425,6 +425,10 @@ class PandasLikeSeries:
         ser = self._native_series
         return ser.mean()
 
+    def median(self) -> Any:
+        ser = self._native_series
+        return ser.median()
+
     def std(
         self,
         *,

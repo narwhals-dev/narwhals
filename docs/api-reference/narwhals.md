@@ -30,6 +30,7 @@ Here are the top-level functions available in Narwhals.
         - maybe_set_index
         - mean
         - mean_horizontal
+        - median
         - min
         - min_horizontal
         - narwhalify

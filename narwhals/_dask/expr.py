@@ -383,6 +383,13 @@ class DaskExpr:
             returns_scalar=True,
         )
 
+    def median(self) -> Self:
+        return self._from_call(
+            lambda _input: _input.median_approximate(),
+            "median",
+            returns_scalar=True,
+        )
+
     def min(self) -> Self:
         return self._from_call(
             lambda _input: _input.min(),

@@ -1620,6 +1620,47 @@ def mean(*columns: str) -> Expr:
     return _stableify(nw.mean(*columns))
 
 
+def median(*columns: str) -> Expr:
+    """
+    Get the median value.
+
+    Note:
+        Syntactic sugar for ``nw.col(columns).median()``
+
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals.stable.v1 as nw
+        >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
+        >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
+
+        We define a dataframe agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.median("a"))
+
+        We can then pass either pandas or Polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  4.0
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 4.0 │
+        └─────┘
+    """
+    return _stableify(nw.median(*columns))
+
+
 def sum(*columns: str) -> Expr:
     """
     Sum all values.
@@ -2519,6 +2560,7 @@ __all__ = [
     "max_horizontal",
     "mean",
     "mean_horizontal",
+    "median",
     "min",
     "min_horizontal",
     "sum",

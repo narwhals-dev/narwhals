@@ -40,6 +40,7 @@ from narwhals.expr import max
 from narwhals.expr import max_horizontal
 from narwhals.expr import mean
 from narwhals.expr import mean_horizontal
+from narwhals.expr import median
 from narwhals.expr import min
 from narwhals.expr import min_horizontal
 from narwhals.expr import nth
@@ -99,6 +100,7 @@ __all__ = [
     "max_horizontal",
     "mean",
     "mean_horizontal",
+    "median",
     "min",
     "min_horizontal",
     "nth",

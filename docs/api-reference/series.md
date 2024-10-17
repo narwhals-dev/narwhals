@@ -36,6 +36,7 @@
         - len
         - max
         - mean
+        - median
         - min
         - mode
         - name

@@ -524,6 +524,33 @@ class Series:
         """
         return self._compliant_series.mean()
 
+    def median(self) -> Any:
+        """
+        Reduce this Series to the median value.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [5, 3, 8]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.median()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            np.float64(5.0)
+            >>> func(s_pl)
+            5.0
+        """
+        return self._compliant_series.median()
+
     def count(self) -> Any:
         """
         Returns the number of non-null elements in the Series.

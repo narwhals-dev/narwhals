@@ -444,6 +444,40 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).mean())
 
+    def median(self) -> Self:
+        """
+        Get median value.
+
+        Examples:
+            >>> import polars as pl
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_pd = pd.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
+            >>> df_pl = pl.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2]})
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a", "b").median())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+                 a    b
+            0  3.0  4.0
+            >>> func(df_pl)
+            shape: (1, 2)
+            ┌─────┬─────┐
+            │ a   ┆ b   │
+            │ --- ┆ --- │
+            │ f64 ┆ f64 │
+            ╞═════╪═════╡
+            │ 3.0 ┆ 4.0 │
+            └─────┴─────┘
+        """
+        return self.__class__(lambda plx: self._call(plx).median())
+
     def std(self, *, ddof: int = 1) -> Self:
         """
         Get standard deviation.
@@ -4621,6 +4655,48 @@ def mean(*columns: str) -> Expr:
     """
 
     return Expr(lambda plx: plx.mean(*columns))
+
+
+def median(*columns: str) -> Expr:
+    """
+    Get the median value.
+
+    Note:
+        Syntactic sugar for ``nw.col(columns).median()``
+
+    Arguments:
+        columns: Name(s) of the columns to use in the aggregation function
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
+        >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
+
+        We define a dataframe agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.median("a"))
+
+        We can then pass either pandas or Polars to `func`:
+
+        >>> func(df_pd)
+             a
+        0  4.0
+        >>> func(df_pl)
+        shape: (1, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ f64 │
+        ╞═════╡
+        │ 4.0 │
+        └─────┘
+    """
+
+    return Expr(lambda plx: plx.median(*columns))
 
 
 def min(*columns: str) -> Expr:
