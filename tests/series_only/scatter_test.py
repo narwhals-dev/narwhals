@@ -27,7 +27,7 @@ def test_scatter(
     compare_dicts(result, expected)
 
 
-def test_scatter_unchanged(constructor_eager: Any) -> None:
+def test_scatter_unchanged(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
         constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
     )
@@ -41,7 +41,7 @@ def test_scatter_unchanged(constructor_eager: Any) -> None:
     compare_dicts(df, expected)
 
 
-def test_single_series(constructor_eager: Any) -> None:
+def test_single_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
         constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
     )

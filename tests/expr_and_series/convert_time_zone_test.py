@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from datetime import datetime
 from datetime import timezone
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import polars as pl
@@ -12,6 +14,9 @@ from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 from tests.utils import is_windows
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
 def test_convert_time_zone(
@@ -43,7 +48,7 @@ def test_convert_time_zone(
 
 
 def test_convert_time_zone_series(
-    constructor_eager: Any, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
@@ -116,7 +121,7 @@ def test_convert_time_zone_to_none(constructor: Constructor) -> None:
         df.select(nw.col("a").dt.convert_time_zone(None))  # type: ignore[arg-type]
 
 
-def test_convert_time_zone_to_none_series(constructor_eager: Any) -> None:
+def test_convert_time_zone_to_none_series(constructor_eager: ConstructorEager) -> None:
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
