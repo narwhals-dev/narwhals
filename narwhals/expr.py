@@ -1262,12 +1262,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)  # doctest: +SKIP
                a
             2  3
             0  1
             2  3
-            >>> func(df_pl)  # doctest:+SKIP
+            >>> func(df_pl)  # doctest: +SKIP
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -2662,9 +2662,7 @@ class ExprDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> data = {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
-            >>> df_pd = pd.DataFrame(data).convert_dtypes(
-            ...     dtype_backend="pyarrow"
-            ... )  # doctest:+SKIP
+            >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
             >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
@@ -2675,7 +2673,7 @@ class ExprDateTimeNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)
                         a
             0  2012-01-07
             1  2023-03-10
@@ -3546,7 +3544,7 @@ class ExprDateTimeNamespace:
             │ 2024-01-01 00:00:00 +0545    │
             │ 2024-01-02 00:00:00 +0545    │
             └──────────────────────────────┘
-            >>> func(df_pa)  # doctest:+SKIP
+            >>> func(df_pa)
             pyarrow.Table
             a: timestamp[us, tz=Asia/Kathmandu]
             ----
@@ -3601,7 +3599,7 @@ class ExprDateTimeNamespace:
             │ 2024-01-01 05:45:00 +0545    │
             │ 2024-01-02 05:45:00 +0545    │
             └──────────────────────────────┘
-            >>> func(df_pa)  # doctest:+SKIP
+            >>> func(df_pa)
             pyarrow.Table
             a: timestamp[us, tz=Asia/Kathmandu]
             ----
@@ -3898,7 +3896,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
            a
         0  2
         1  4
-        >>> func(df_pl)  # doctest: +SKIP
+        >>> func(df_pl)
         shape: (2, 1)
         ┌─────┐
         │ a   │
@@ -4216,6 +4214,132 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     return Expr(
         lambda plx: plx.sum_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Get the minimum value horizontally across columns.
+
+    Notes:
+        We support `min_horizontal` over numeric columns only.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal min of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.min_horizontal("a", "b"))
+
+        We can then pass either pandas, polars or pyarrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+             a
+        0  1.0
+        1  5.0
+        2  3.0
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 1   │
+        │ 5   │
+        │ 3   │
+        └─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[1,5,3]]
+    """
+    if not exprs:
+        msg = "At least one expression must be passed to `min_horizontal`"
+        raise ValueError(msg)
+    return Expr(
+        lambda plx: plx.min_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Get the maximum value horizontally across columns.
+
+    Notes:
+        We support `max_horizontal` over numeric columns only.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal max of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.max_horizontal("a", "b"))
+
+        We can then pass either pandas, polars or pyarrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+             a
+        0  4.0
+        1  8.0
+        2  3.0
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 4   │
+        │ 8   │
+        │ 3   │
+        └─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[4,8,3]]
+    """
+    if not exprs:
+        msg = "At least one expression must be passed to `max_horizontal`"
+        raise ValueError(msg)
+    return Expr(
+        lambda plx: plx.max_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
         )
     )

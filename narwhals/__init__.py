@@ -10,6 +10,7 @@ from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Duration
 from narwhals.dtypes import Enum
+from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
@@ -34,9 +35,11 @@ from narwhals.expr import concat_str
 from narwhals.expr import len_ as len
 from narwhals.expr import lit
 from narwhals.expr import max
+from narwhals.expr import max_horizontal
 from narwhals.expr import mean
 from narwhals.expr import mean_horizontal
 from narwhals.expr import min
+from narwhals.expr import min_horizontal
 from narwhals.expr import nth
 from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
@@ -59,7 +62,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.9.2"
+__version__ = "1.9.3"
 
 __all__ = [
     "dependencies",
@@ -84,10 +87,12 @@ __all__ = [
     "concat_str",
     "len",
     "lit",
-    "min",
     "max",
+    "max_horizontal",
     "mean",
     "mean_horizontal",
+    "min",
+    "min_horizontal",
     "nth",
     "sum",
     "sum_horizontal",
@@ -114,6 +119,7 @@ __all__ = [
     "String",
     "Datetime",
     "Duration",
+    "Field",
     "Struct",
     "Array",
     "List",

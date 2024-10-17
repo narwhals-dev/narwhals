@@ -139,15 +139,29 @@ class Series:
         Set value(s) at given position(s).
 
         Arguments:
-           indices: Position(s) to set items at.
-           values: Values to set.
+            indices: Position(s) to set items at.
+            values: Values to set.
 
-        Warning:
-            For some libraries (pandas, Polars), this method operates in-place,
-            whereas for others (PyArrow) it doesn't!
-            We recommend being careful with it, and not relying on the
-            in-placeness. For example, a valid use case is when updating
-            a column in an eager dataframe, see the example below.
+        Note:
+            This method always returns a new Series, without modifying the original one.
+            Using this function in a for-loop is an anti-pattern, we recommend building
+            up your positions and values beforehand and doing an update in one go.
+
+            For example, instead of
+
+            ```python
+            for i in [1, 3, 2]:
+                value = some_function(i)
+                s = s.scatter(i, value)
+            ```
+
+            prefer
+
+            ```python
+            positions = [1, 3, 2]
+            values = [some_function(x) for x in positions]
+            s = s.scatter(positions, values)
+            ```
 
         Examples:
             >>> import pandas as pd
@@ -498,7 +512,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.float64(2.0)
             >>> func(s_pl)
             2.0
@@ -525,7 +539,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.int64(3)
             >>> func(s_pl)
             3
@@ -556,7 +570,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.True_
             >>> func(s_pl)
             True
@@ -583,7 +597,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.False_
             >>> func(s_pl)
             False
@@ -611,7 +625,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.int64(1)
             >>> func(s_pl)
             1
@@ -638,7 +652,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.int64(3)
             >>> func(s_pl)
             3
@@ -665,7 +679,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.int64(6)
             >>> func(s_pl)
             6
@@ -696,7 +710,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.float64(1.0)
             >>> func(s_pl)
             1.0
@@ -1161,13 +1175,13 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)  # doctest: +SKIP
                a
             2  3
             1  2
             3  4
             3  4
-            >>> func(s_pl)  # doctest:+SKIP
+            >>> func(s_pl)  # doctest: +SKIP
             shape: (4,)
             Series: '' [i64]
             [
@@ -1853,8 +1867,8 @@ class Series:
             ...     return s.null_count()
 
             We can then pass either pandas or Polars to `func`:
-            >>> func(s_pd)  # doctest:+SKIP
-            1
+            >>> func(s_pd)
+            np.int64(1)
             >>> func(s_pl)
             2
         """
@@ -2068,8 +2082,8 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +SKIP
-            [5, 12, 24, 37, 44]
+            >>> func(s_pd)
+            [np.int64(5), np.int64(12), np.int64(24), np.int64(37), np.int64(44)]
 
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             [5.0, 12.0, 25.0, 37.0, 44.0]
@@ -2152,8 +2166,8 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)  # doctest:+SKIP
-            (1, 1)
+            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)
+            (1, np.int64(1))
 
             >>> func(pl.Series("a", [9, 8, 7]), -1), func(pl.Series([9, 8, 7]), -2)
             (7, 8)
@@ -3161,9 +3175,7 @@ class SeriesDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
-            >>> s_pd = pd.Series(dates).convert_dtypes(
-            ...     dtype_backend="pyarrow"
-            ... )  # doctest:+SKIP
+            >>> s_pd = pd.Series(dates).convert_dtypes(dtype_backend="pyarrow")
             >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
@@ -3174,7 +3186,7 @@ class SeriesDateTimeNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             0    2012-01-07
             1    2023-03-10
             dtype: date32[day][pyarrow]
@@ -3921,7 +3933,7 @@ class SeriesDateTimeNamespace:
                 2024-01-01 00:00:00 +0545
                 2024-01-02 00:00:00 +0545
             ]
-            >>> func(s_pa)  # doctest: +SKIP
+            >>> func(s_pa)
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
@@ -3974,7 +3986,7 @@ class SeriesDateTimeNamespace:
                 2024-01-01 05:45:00 +0545
                 2024-01-02 05:45:00 +0545
             ]
-            >>> func(s_pa)  # doctest: +SKIP
+            >>> func(s_pa)
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [

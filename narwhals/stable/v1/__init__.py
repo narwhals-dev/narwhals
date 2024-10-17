@@ -31,6 +31,7 @@ from narwhals.stable.v1.dtypes import Date
 from narwhals.stable.v1.dtypes import Datetime
 from narwhals.stable.v1.dtypes import Duration
 from narwhals.stable.v1.dtypes import Enum
+from narwhals.stable.v1.dtypes import Field
 from narwhals.stable.v1.dtypes import Float32
 from narwhals.stable.v1.dtypes import Float64
 from narwhals.stable.v1.dtypes import Int8
@@ -515,7 +516,7 @@ class Schema(NwSchema):
 
         >>> import narwhals.stable.v1 as nw
         >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
-        >>> schema  # doctest:+SKIP
+        >>> schema
         Schema({'foo': Int8, 'bar': String})
 
         Access the data type associated with a specific column name.
@@ -1060,7 +1061,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
            a
         0  2
         1  4
-        >>> func(df_pl)  # doctest: +SKIP
+        >>> func(df_pl)
         shape: (2, 1)
         ┌─────┐
         │ a   │
@@ -1526,6 +1527,118 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         └─────┘
     """
     return _stableify(nw.mean_horizontal(*exprs))
+
+
+def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Get the minimum value horizontally across columns.
+
+    Notes:
+        We support `min_horizontal` over numeric columns only.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import narwhals.stable.v1 as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal min of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.min_horizontal("a", "b"))
+
+        We can then pass either pandas, polars or pyarrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+             a
+        0  1.0
+        1  5.0
+        2  3.0
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 1   │
+        │ 5   │
+        │ 3   │
+        └─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[1,5,3]]
+    """
+    return _stableify(nw.min_horizontal(*exprs))
+
+
+def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Get the maximum value horizontally across columns.
+
+    Notes:
+        We support `max_horizontal` over numeric columns only.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import narwhals.stable.v1 as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal max of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.max_horizontal("a", "b"))
+
+        We can then pass either pandas, polars or pyarrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+             a
+        0  4.0
+        1  8.0
+        2  3.0
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 4   │
+        │ 8   │
+        │ 3   │
+        └─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[4,8,3]]
+    """
+    return _stableify(nw.max_horizontal(*exprs))
 
 
 @overload
@@ -2154,10 +2267,12 @@ __all__ = [
     "nth",
     "len",
     "lit",
-    "min",
     "max",
+    "max_horizontal",
     "mean",
     "mean_horizontal",
+    "min",
+    "min_horizontal",
     "sum",
     "sum_horizontal",
     "when",
@@ -2183,6 +2298,7 @@ __all__ = [
     "String",
     "Datetime",
     "Duration",
+    "Field",
     "Struct",
     "Array",
     "List",

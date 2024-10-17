@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.dependencies import get_ibis
+
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -47,7 +51,15 @@ def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
             map_ibis_dtype_to_narwhals_dtype(ibis_dtype.value_type, dtypes)
         )
     if ibis_dtype.is_struct():
-        return dtypes.Struct()
+        return dtypes.Struct(
+            [
+                dtypes.Field(
+                    ibis_dtype_name,
+                    map_ibis_dtype_to_narwhals_dtype(ibis_dtype_field, dtypes),
+                )
+                for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
+            ]
+        )
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -58,6 +70,9 @@ class IbisInterchangeFrame:
 
     def __narwhals_dataframe__(self) -> Any:
         return self
+
+    def __native_namespace__(self: Self) -> ModuleType:
+        return get_ibis()  # type: ignore[no-any-return]
 
     def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries

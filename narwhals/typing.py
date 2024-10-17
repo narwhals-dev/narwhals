@@ -81,6 +81,7 @@ class DTypes:
     Datetime: type[dtypes.Datetime]
     Duration: type[dtypes.Duration]
     Date: type[dtypes.Date]
+    Field: type[dtypes.Field]
     Struct: type[dtypes.Struct]
     List: type[dtypes.List]
     Array: type[dtypes.Array]

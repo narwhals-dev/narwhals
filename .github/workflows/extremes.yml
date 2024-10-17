@@ -59,8 +59,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
 
   not_so_old_versions:
     strategy:
@@ -88,8 +86,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
 
   nightlies:
     strategy:

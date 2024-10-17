@@ -13,7 +13,7 @@ Then, if you start the Python REPL and see the following:
 ```python
 >>> import narwhals
 >>> narwhals.__version__
-'1.9.2'
+'1.9.3'
 ```
 then installation worked correctly!
 

@@ -87,3 +87,13 @@ def test_horizontal_expressions_emtpy(constructor: Constructor) -> None:
         ValueError, match=r"At least one expression must be passed.*sum_horizontal"
     ):
         df.select(nw.sum_horizontal())
+
+    with pytest.raises(
+        ValueError, match=r"At least one expression must be passed.*max_horizontal"
+    ):
+        df.select(nw.max_horizontal())
+
+    with pytest.raises(
+        ValueError, match=r"At least one expression must be passed.*min_horizontal"
+    ):
+        df.select(nw.min_horizontal())
