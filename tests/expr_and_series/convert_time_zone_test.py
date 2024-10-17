@@ -17,8 +17,13 @@ from tests.utils import is_windows
 def test_convert_time_zone(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows()) or (
-        "pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2, 1)
+    if (
+        (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
+        or (
+            "pandas_pyarrow" in str(constructor)
+            and parse_version(pd.__version__) < (2, 1)
+        )
+        or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -41,10 +46,12 @@ def test_convert_time_zone_series(
     constructor_eager: Any, request: pytest.FixtureRequest
 ) -> None:
     if (
-        any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows()
-    ) or (
-        "pandas_pyarrow" in str(constructor_eager)
-        and parse_version(pd.__version__) < (2, 1)
+        (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
+        or (
+            "pandas_pyarrow" in str(constructor_eager)
+            and parse_version(pd.__version__) < (2, 1)
+        )
+        or ("cudf" in str(constructor_eager))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -73,6 +80,7 @@ def test_convert_time_zone_from_none(
             and parse_version(pd.__version__) < (2, 1)
         )
         or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
+        or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and parse_version(pl.__version__) < (0, 20, 7):

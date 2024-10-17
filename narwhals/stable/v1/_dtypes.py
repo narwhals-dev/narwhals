@@ -6,6 +6,7 @@ from narwhals.dtypes import Datetime as NwDatetime
 from narwhals.dtypes import DType
 from narwhals.dtypes import Duration as NwDuration
 from narwhals.dtypes import Enum
+from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
@@ -77,6 +78,7 @@ __all__ = [
     "NumericType",
     "Object",
     "String",
+    "Field",
     "Struct",
     "UInt8",
     "UInt16",

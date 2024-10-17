@@ -20,6 +20,7 @@ def test_replace_time_zone(
         (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2,))
         or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
+        or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -76,6 +77,7 @@ def test_replace_time_zone_series(
             "pyarrow_table" in str(constructor_eager)
             and parse_version(pa.__version__) < (12,)
         )
+        or ("cudf" in str(constructor_eager))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
