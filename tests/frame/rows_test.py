@@ -71,7 +71,9 @@ def test_rows(
     assert result == expected
 
 
-@pytest.mark.filterwarnings(r'ignore:.*Starting with pandas version 3\.0 all arguments of to_dict')
+@pytest.mark.filterwarnings(
+    r"ignore:.*Starting with pandas version 3\.0 all arguments of to_dict"
+)
 @pytest.mark.parametrize(
     ("named", "expected"),
     [
