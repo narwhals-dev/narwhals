@@ -4,6 +4,7 @@ Check that `output.txt` doesn't contain the string
 
 This is just used in CI.
 """
+from __future__ import annotations
 
 import sys
 
