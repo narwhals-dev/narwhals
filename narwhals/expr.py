@@ -3626,7 +3626,7 @@ class ExprDateTimeNamespace:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import pyarrow as pa
-            >>> data = {"a": [date(2001, 1, 1), None, date(2001, 1, 3)]}
+            >>> data = {"date": [date(2001, 1, 1), None, date(2001, 1, 3)]}
             >>> df_pd = pd.DataFrame(data, dtype="datetime64[ns]")
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -3635,31 +3635,38 @@ class ExprDateTimeNamespace:
 
             >>> @nw.narwhalify
             ... def func(df):
-            ...     return df.select(nw.col("a").dt.timestamp())
+            ...     return df.with_columns(
+            ...         nw.col("date").dt.timestamp().alias("timestamp_us"),
+            ...         nw.col("date").dt.timestamp("ms").alias("timestamp_ms"),
+            ...     )
 
             We can then pass pandas / PyArrow / Polars / any other supported library:
 
             >>> func(df_pd)
-                          a
-            0  9.783072e+14
-            1           NaN
-            2  9.784800e+14
+                    date  timestamp_us  timestamp_ms
+            0 2001-01-01  9.783072e+14  9.783072e+11
+            1        NaT           NaN           NaN
+            2 2001-01-03  9.784800e+14  9.784800e+11
             >>> func(df_pl)
-            shape: (3, 1)
-            ┌─────────────────┐
-            │ a               │
-            │ ---             │
-            │ i64             │
-            ╞═════════════════╡
-            │ 978307200000000 │
-            │ null            │
-            │ 978480000000000 │
-            └─────────────────┘
+            shape: (3, 3)
+            ┌────────────┬─────────────────┬──────────────┐
+            │ date       ┆ timestamp_us    ┆ timestamp_ms │
+            │ ---        ┆ ---             ┆ ---          │
+            │ date       ┆ i64             ┆ i64          │
+            ╞════════════╪═════════════════╪══════════════╡
+            │ 2001-01-01 ┆ 978307200000000 ┆ 978307200000 │
+            │ null       ┆ null            ┆ null         │
+            │ 2001-01-03 ┆ 978480000000000 ┆ 978480000000 │
+            └────────────┴─────────────────┴──────────────┘
             >>> func(df_pa)
             pyarrow.Table
-            a: int64
+            date: date32[day]
+            timestamp_us: int64
+            timestamp_ms: int64
             ----
-            a: [[978307200000000,null,978480000000000]]
+            date: [[2001-01-01,null,2001-01-03]]
+            timestamp_us: [[978307200000000,null,978480000000000]]
+            timestamp_ms: [[978307200000,null,978480000000]]
         """
         if time_unit not in {"ns", "us", "ms"}:
             msg = (

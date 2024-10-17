@@ -4025,30 +4025,30 @@ class SeriesDateTimeNamespace:
 
             >>> @nw.narwhalify
             ... def func(s):
-            ...     return s.dt.timestamp()
+            ...     return s.dt.timestamp("ms")
 
             We can then pass pandas / PyArrow / Polars / any other supported library:
 
             >>> func(s_pd)
-            0    9.783072e+14
+            0    9.783072e+11
             1             NaN
-            2    9.784800e+14
+            2    9.784800e+11
             dtype: float64
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
-                    978307200000000
+                    978307200000
                     null
-                    978480000000000
+                    978480000000
             ]
             >>> func(s_pa)
             <pyarrow.lib.ChunkedArray object at ...>
             [
               [
-                978307200000000,
+                978307200000,
                 null,
-                978480000000000
+                978480000000
               ]
             ]
         """
