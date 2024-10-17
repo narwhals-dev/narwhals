@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import narwhals.stable.v1 as nw
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_numpy
