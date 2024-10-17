@@ -71,6 +71,35 @@ def test_rows(
     assert result == expected
 
 
+@pytest.mark.filterwarnings(
+    r"ignore:.*Starting with pandas version 3\.0 all arguments of to_dict"
+)
+@pytest.mark.parametrize(
+    ("named", "expected"),
+    [
+        (False, [(1, 4, 7.0, 5), (3, 4, 8.0, 6), (2, 6, 9.0, 7)]),
+        (
+            True,
+            [
+                {"a": 1, "_b": 4, "z": 7.0, "1": 5},
+                {"a": 3, "_b": 4, "z": 8.0, "1": 6},
+                {"a": 2, "_b": 6, "z": 9.0, "1": 7},
+            ],
+        ),
+    ],
+)
+def test_rows_eager(
+    constructor_eager: Any,
+    named: bool,  # noqa: FBT001
+    expected: list[tuple[Any, ...]] | list[dict[str, Any]],
+) -> None:
+    # posit-dev/py-shiny relies on `.rows(named=False)` to return unnamed rows
+    data = {"a": [1, 3, 2], "_b": [4, 4, 6], "z": [7.0, 8, 9], "1": [5, 6, 7]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.rows(named=named)
+    assert result == expected
+
+
 def test_rows_with_nulls_unnamed(constructor_eager: ConstructorEager) -> None:
     # GIVEN
     df = nw.from_native(constructor_eager(data_na), eager_only=True)
