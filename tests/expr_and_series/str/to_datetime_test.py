@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Any
 
 import pyarrow as pa
 import pytest
@@ -60,7 +59,6 @@ def test_to_datetime_infer_fmt(constructor: Constructor) -> None:
         .item(row=0, column="b")
     )
     assert str(result) == expected
-
 
 
 def test_to_datetime_series_infer_fmt(constructor_eager: ConstructorEager) -> None:
