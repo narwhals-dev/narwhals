@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pandas as pd
@@ -9,6 +10,9 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 df_pandas = pd.DataFrame({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
 df_pa = pa.table({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]})
@@ -56,7 +60,7 @@ df_polars_na = pl.DataFrame({"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None,
 )
 def test_iter_rows(
     request: Any,
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     named: bool,  # noqa: FBT001
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 
 # Don't move this into typechecking block, for coverage
 # purposes
@@ -21,7 +20,7 @@ def test_ends_with(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_ends_with_series(constructor_eager: Any) -> None:
+def test_ends_with_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].str.ends_with("das"))
     expected = {
@@ -39,7 +38,7 @@ def test_starts_with(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_starts_with_series(constructor_eager: Any) -> None:
+def test_starts_with_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].str.starts_with("fda"))
     expected = {
