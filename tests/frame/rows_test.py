@@ -100,14 +100,14 @@ def test_rows_eager(
     assert result == expected
 
 
-def test_rows_with_nulls_unnamed(constructor_eager: ConstructorEager) -> None:
-    # GIVEN
+def test_rows_with_nulls_unnamed(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor_eager):
+        # cudf intentionally doesn't support itertuples / iter_rows
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data_na), eager_only=True)
-
-    # WHEN
     result = list(df.iter_rows(named=False))
-
-    # THEN
     expected = [(None, 4, 7.0), (3, 4, None), (2, 6, 9.0)]
     for i, row in enumerate(expected):
         for j, value in enumerate(row):
@@ -118,14 +118,14 @@ def test_rows_with_nulls_unnamed(constructor_eager: ConstructorEager) -> None:
                 assert value_in_result == value
 
 
-def test_rows_with_nulls_named(constructor_eager: ConstructorEager) -> None:
-    # GIVEN
+def test_rows_with_nulls_named(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor_eager):
+        # cudf intentionally doesn't support itertuples / iter_rows
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data_na), eager_only=True)
-
-    # WHEN
     result = list(df.iter_rows(named=True))
-
-    # THEN
     expected: list[dict[str, Any]] = [
         {"a": None, "b": 4, "z": 7.0},
         {"a": 3, "b": 4, "z": None},
