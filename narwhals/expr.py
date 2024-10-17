@@ -3621,6 +3621,45 @@ class ExprDateTimeNamespace:
                 Time unit.
 
         Examples:
+            >>> from datetime import date
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"a": [date(2001, 1, 1), None, date(2001, 1, 3)]}
+            >>> df_pd = pd.DataFrame(data, dtype="datetime64[ns]")
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.timestamp())
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                          a
+            0  9.783072e+14
+            1           NaN
+            2  9.784800e+14
+            >>> func(df_pl)
+            shape: (3, 1)
+            ┌─────────────────┐
+            │ a               │
+            │ ---             │
+            │ i64             │
+            ╞═════════════════╡
+            │ 978307200000000 │
+            │ null            │
+            │ 978480000000000 │
+            └─────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[978307200000000,null,978480000000000]]
         """
         if time_unit not in {"ns", "us", "ms"}:
             msg = (
