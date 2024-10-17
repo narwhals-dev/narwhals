@@ -21,6 +21,7 @@ from narwhals.expr import When as NwWhen
 from narwhals.expr import when as nw_when
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _new_series_impl
+from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
@@ -66,6 +67,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.functions import ArrowStreamExportable
     from narwhals.typing import IntoExpr
 
 T = TypeVar("T")
@@ -2183,6 +2185,52 @@ def new_series(
     )
 
 
+def from_arrow(
+    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
+) -> DataFrame[Any]:
+    """
+    Construct a DataFrame from an object which supports the PyCapsule Interface.
+
+    Arguments:
+        native_frame: Object which implements `__arrow_c_stream__`.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function which creates a PyArrow
+        Table.
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return nw.from_arrow(df, native_namespace=pa)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))  # doctest: +SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+        >>> func(pl.DataFrame(data))  # doctest: +SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        nw_from_arrow(native_frame, native_namespace=native_namespace)
+    )
+
+
 def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
@@ -2307,5 +2355,6 @@ __all__ = [
     "show_versions",
     "Schema",
     "from_dict",
+    "from_arrow",
     "new_series",
 ]
