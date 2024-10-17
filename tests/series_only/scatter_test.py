@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals as nw
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 
-def test_scatter(constructor_eager: Any, request: pytest.FixtureRequest) -> None:
+def test_scatter(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "modin" in str(constructor_eager):
         # https://github.com/modin-project/modin/issues/7392
         request.applymarker(pytest.mark.xfail)
@@ -26,7 +27,7 @@ def test_scatter(constructor_eager: Any, request: pytest.FixtureRequest) -> None
     compare_dicts(result, expected)
 
 
-def test_scatter_unchanged(constructor_eager: Any) -> None:
+def test_scatter_unchanged(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
         constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
     )
@@ -40,7 +41,7 @@ def test_scatter_unchanged(constructor_eager: Any) -> None:
     compare_dicts(df, expected)
 
 
-def test_single_series(constructor_eager: Any) -> None:
+def test_single_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
         constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
     )

@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from datetime import datetime
 from datetime import timezone
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pyarrow as pa
@@ -11,6 +13,9 @@ from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import compare_dicts
 from tests.utils import is_windows
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
 def test_replace_time_zone(
@@ -65,7 +70,7 @@ def test_replace_time_zone_none(
 
 
 def test_replace_time_zone_series(
-    constructor_eager: Any, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
@@ -97,7 +102,7 @@ def test_replace_time_zone_series(
 
 
 def test_replace_time_zone_none_series(
-    constructor_eager: Any, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
