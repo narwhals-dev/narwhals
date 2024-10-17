@@ -794,7 +794,6 @@ def to_py_scalar(scalar_like: Any) -> Any:
         >>> nw.to_py_scalar(1)
         1
     """
-    from narwhals.utils import parse_version
 
     pa = get_pyarrow()
     if pa and isinstance(scalar_like, pa.Scalar):
@@ -807,12 +806,7 @@ def to_py_scalar(scalar_like: Any) -> Any:
         return scalar_like.item()
 
     np = get_numpy()
-    if (
-        np
-        and parse_version(np.__version__) >= (2, 0, 0)
-        and np.isscalar(scalar_like)
-        and hasattr(scalar_like, "item")
-    ):
+    if np and np.isscalar(scalar_like) and hasattr(scalar_like, "item"):
         return scalar_like.item()
 
     return scalar_like
