@@ -118,7 +118,7 @@ def test_rows_eager(
     # posit-dev/py-shiny relies on `.rows(named=False)` to return unnamed rows
     data = {"a": [1, 3, 2], "_b": [4, 4, 6], "z": [7.0, 8, 9], "1": [5, 6, 7]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = list(df.iter_rows(named=named))
+    result = df.rows(named=named)
     assert result == expected
 
 
