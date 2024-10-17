@@ -1,4 +1,6 @@
-from pathlib import Path  # noqa: INP001
+from __future__ import annotations
+
+from pathlib import Path
 
 import duckdb
 import pyarrow as pa

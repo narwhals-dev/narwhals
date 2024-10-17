@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import sys
 
@@ -53,7 +55,7 @@ documented = [
     for i in content.splitlines()
     if i.startswith("        - ")
 ]
-if missing := set(top_level_functions).difference(documented):
+if missing := set(top_level_functions).difference(documented).difference({"annotations"}):
     print("top-level functions: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1

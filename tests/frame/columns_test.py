@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import Constructor
+
+if TYPE_CHECKING:
+    from tests.utils import Constructor
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
