@@ -58,11 +58,11 @@ Here's how you can set up your local development environment to contribute.
       ```
       uv self update
       ```
-   3. Install Python3.12:
+   2. Install Python3.12:
       ```
       uv python install 3.12
       ```
-   4. Create a virtual environment:
+   3. Create a virtual environment:
       ```
       uv venv -p 3.12 --seed
       ```
