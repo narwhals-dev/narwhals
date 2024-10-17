@@ -1,7 +1,6 @@
-from typing import Any
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {
@@ -22,7 +21,7 @@ def test_cum_sum_simple(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_cum_sum_simple_series(constructor_eager: Any) -> None:
+def test_cum_sum_simple_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = {
         "a": [0, 1, 3, 6, 10],
