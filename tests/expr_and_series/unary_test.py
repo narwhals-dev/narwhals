@@ -11,14 +11,18 @@ def test_unary(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).select(
         a_mean=nw.col("a").mean(),
         a_sum=nw.col("a").sum(),
+        a_skew=nw.col("a").skew(),
         b_nunique=nw.col("b").n_unique(),
+        b_skew=nw.col("b").skew(),
         z_min=nw.col("z").min(),
         z_max=nw.col("z").max(),
     )
     expected = {
         "a_mean": [2],
         "a_sum": [6],
+        "a_skew": [0.0],
         "b_nunique": [2],
+        "b_skew": [0.7071067811865465],
         "z_min": [7],
         "z_max": [9],
     }
@@ -31,15 +35,19 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
     result = {
         "a_mean": [df["a"].mean()],
         "a_sum": [df["a"].sum()],
+        "a_skew": [df["a"].skew()],
         "b_nunique": [df["b"].n_unique()],
+        "b_skew": [df["b"].skew()],
         "z_min": [df["z"].min()],
         "z_max": [df["z"].max()],
     }
     expected = {
-        "a_mean": [2],
+        "a_mean": [2.0],
         "a_sum": [6],
+        "a_skew": [0.0],
         "b_nunique": [2],
-        "z_min": [7],
-        "z_max": [9],
+        "b_skew": [0.7071067811865465],
+        "z_min": [7.0],
+        "z_max": [9.0],
     }
     compare_dicts(result, expected)

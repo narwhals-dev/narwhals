@@ -519,6 +519,40 @@ class Series:
         """
         return self._compliant_series.mean()
 
+    def skew(self) -> Any:
+        """
+        Calculate the sample skewness of the Series.
+
+        Returns:
+            The sample skewness of the Series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3, 4, 5]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.skew()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0.0
+            >>> func(s_pl)
+            0.0
+
+        Notes:
+            The skewness is a measure of the asymmetry of the probability distribution.
+            A perfectly symmetric distribution has a skewness of 0.
+        """
+        return self._compliant_series.skew()
+
     def count(self) -> Any:
         """
         Returns the number of non-null elements in the Series.
