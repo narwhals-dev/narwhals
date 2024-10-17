@@ -11,6 +11,7 @@ from narwhals._arrow.utils import parse_datetime_format
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
+    from tests.utils import ConstructorEager
 
 data = {"a": ["2020-01-01T12:34:56"]}
 
@@ -31,7 +32,7 @@ def test_to_datetime(constructor: Constructor) -> None:
     assert str(result) == expected
 
 
-def test_to_datetime_series(constructor_eager: Any) -> None:
+def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
     if "cudf" in str(constructor_eager):  # pragma: no cover
         expected = "2020-01-01T12:34:56.000000000"
     else:
@@ -61,7 +62,8 @@ def test_to_datetime_infer_fmt(constructor: Constructor) -> None:
     assert str(result) == expected
 
 
-def test_to_datetime_series_infer_fmt(constructor_eager: Any) -> None:
+
+def test_to_datetime_series_infer_fmt(constructor_eager: ConstructorEager) -> None:
     if "cudf" in str(constructor_eager):  # pragma: no cover
         expected = "2020-01-01T12:34:56.000000000"
     else:

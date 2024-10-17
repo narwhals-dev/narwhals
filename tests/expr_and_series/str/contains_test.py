@@ -1,11 +1,10 @@
-from typing import Any
-
 import pandas as pd
 import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {"pets": ["cat", "dog", "rabbit and parrot", "dove"]}
@@ -32,7 +31,7 @@ def test_contains_case_insensitive(
 
 
 def test_contains_series_case_insensitive(
-    constructor_eager: Any, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
@@ -58,7 +57,7 @@ def test_contains_case_sensitive(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_contains_series_case_sensitive(constructor_eager: Any) -> None:
+def test_contains_series_case_sensitive(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.with_columns(case_sensitive_match=df["pets"].str.contains("parrot|Dove"))
     expected = {
