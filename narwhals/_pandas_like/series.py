@@ -946,3 +946,18 @@ class PandasLikeSeriesDateTimeNamespace:
         else:
             result = self._pandas_series._native_series.dt.tz_convert(time_zone)
         return self._pandas_series._from_native_series(result)
+
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> PandasLikeSeries:
+        import numpy as np  # ignore-banned-import
+
+        s = self._pandas_series._native_series
+        mask_na = s.isna()
+        time_ns = s.astype(np.int64)
+        time_ns[mask_na] = None
+        if time_unit == "ns":
+            result = time_ns
+        if time_unit == "us":
+            result = time_ns / 1_000
+        if time_unit == "ms":
+            result = time_ns / 1_000_000
+        return self._pandas_series._from_native_series(result)

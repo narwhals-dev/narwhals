@@ -4001,3 +4001,23 @@ class SeriesDateTimeNamespace:
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
         )
+
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> Series:
+        """
+        Return a timestamp in the given time unit.
+
+        Arguments:
+            time_unit: {'ns', 'us', 'ms'}
+                Time unit.
+
+        Examples:
+        """
+        if time_unit not in {"ns", "us", "ms"}:
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.timestamp(time_unit)
+        )

@@ -3612,6 +3612,26 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
         )
 
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> Expr:
+        """
+        Return a timestamp in the given time unit.
+
+        Arguments:
+            time_unit: {'ns', 'us', 'ms'}
+                Time unit.
+
+        Examples:
+        """
+        if time_unit not in {"ns", "us", "ms"}:
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.timestamp(time_unit)
+        )
+
 
 class ExprNameNamespace:
     def __init__(self: Self, expr: Expr) -> None:

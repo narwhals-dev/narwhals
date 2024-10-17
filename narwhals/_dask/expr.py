@@ -953,6 +953,30 @@ class DaskExprDateTimeNamespace:
             returns_scalar=False,
         )
 
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> DaskExpr:
+        def func(
+            s: dask_expr.Series, time_unit: Literal["ns", "us", "ms"] = "us"
+        ) -> dask_expr.Series:
+            import numpy as np  # ignore-banned-import
+
+            mask_na = s.isna()
+            time_ns = s.astype(np.int64)
+            time_ns[mask_na] = None
+            if time_unit == "ns":
+                result = time_ns
+            if time_unit == "us":
+                result = time_ns / 1_000
+            if time_unit == "ms":
+                result = time_ns / 1_000_000
+            return result
+
+        return self._expr._from_call(
+            func,
+            "datetime",
+            time_unit,
+            returns_scalar=False,
+        )
+
     def total_minutes(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.total_seconds() // 60,
