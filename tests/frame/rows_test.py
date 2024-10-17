@@ -44,6 +44,9 @@ def test_iter_rows(
     assert result == expected
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
+)
 @pytest.mark.parametrize(
     ("named", "expected"),
     [
