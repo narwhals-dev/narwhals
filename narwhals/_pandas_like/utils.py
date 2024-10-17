@@ -280,15 +280,8 @@ def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
-    if dtype.startswith(("large_list", "list", "struct")):
+    if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
         return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
-    if dtype.startswith("fixed_size_list"):
-        return dtypes.Array(
-            arrow_native_to_narwhals_dtype(
-                native_column.dtype.pyarrow_dtype.value_type, dtypes
-            ),
-            native_column.dtype.pyarrow_dtype.list_size,
-        )
     if dtype == "object":
         if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
             idx := getattr(native_column, "first_valid_index", lambda: None)()
