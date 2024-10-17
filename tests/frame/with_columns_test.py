@@ -40,3 +40,10 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
     expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
     compare_dicts(result, expected)
+
+
+def test_with_columns_dtypes_single_row(constructor: Constructor) -> None:
+    data = {"a": ["foo"]}
+    df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))
+    result = df.with_columns(nw.col("a"))
+    assert result.collect_schema() == {"a": nw.Categorical}

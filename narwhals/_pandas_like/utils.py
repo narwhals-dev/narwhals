@@ -32,9 +32,7 @@ PANDAS_LIKE_IMPLEMENTATION = {
 }
 
 
-def validate_column_comparand(
-    index: Any, other: Any, *, treat_length_one_as_scalar: bool = True
-) -> Any:
+def validate_column_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -55,9 +53,10 @@ def validate_column_comparand(
     if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
     if isinstance(other, PandasLikeSeries):
-        if other.len() == 1 and treat_length_one_as_scalar:
+        if other.len() == 1:
             # broadcast
-            return other.item()
+            s = other._native_series
+            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
         if other._native_series.index is not index:
             return set_axis(
                 other._native_series,
@@ -83,7 +82,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
-            return other._native_series.iloc[0]
+            s = other._native_series
+            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
         if other._native_series.index is not index:
             return set_axis(
                 other._native_series,
