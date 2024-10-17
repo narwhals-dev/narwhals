@@ -2,7 +2,7 @@ from typing import Any
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_clip(constructor: Constructor) -> None:
@@ -17,7 +17,7 @@ def test_clip(constructor: Constructor) -> None:
         "upper_only": [1, 2, 3, -4, 4],
         "both": [3, 3, 3, 3, 4],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_clip_series(constructor_eager: Any) -> None:
@@ -33,4 +33,4 @@ def test_clip_series(constructor_eager: Any) -> None:
         "upper_only": [1, 2, 3, -4, 4],
         "both": [3, 3, 3, 3, 4],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

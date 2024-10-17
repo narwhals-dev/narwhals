@@ -2,7 +2,7 @@ from typing import Any
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": ["foo", "bars"]}
 
@@ -13,7 +13,7 @@ def test_str_head(constructor: Constructor) -> None:
     expected = {
         "a": ["foo", "bar"],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_str_head_series(constructor_eager: Any) -> None:
@@ -22,4 +22,4 @@ def test_str_head_series(constructor_eager: Any) -> None:
         "a": ["foo", "bar"],
     }
     result = df.select(df["a"].str.head(3))
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

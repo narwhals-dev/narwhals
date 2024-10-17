@@ -1,7 +1,7 @@
 from typing import Any
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = [1, 2, 3]
 
@@ -12,4 +12,4 @@ def test_to_frame(constructor_eager: Any) -> None:
         .alias("")
         .to_frame()
     )
-    compare_dicts(df, {"": [1, 2, 3]})
+    assert_equal_data(df, {"": [1, 2, 3]})

@@ -11,7 +11,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
 
@@ -27,13 +27,13 @@ def test_group_by_complex() -> None:
         result = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     lf = nw.from_native(df_lazy).lazy()
     result = nw.to_native(
         lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_invalid_group_by_dask() -> None:
@@ -80,7 +80,7 @@ def test_group_by_iter(constructor_eager: Any) -> None:
     for key, sub_df in df.group_by("a"):
         if key == (1,):
             expected = {"a": [1, 1], "b": [4, 4], "c": [7.0, 8.0]}
-            compare_dicts(sub_df, expected)
+            assert_equal_data(sub_df, expected)
             assert isinstance(sub_df, nw.DataFrame)
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
@@ -100,7 +100,7 @@ def test_group_by_len(constructor: Constructor) -> None:
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").len()).sort("a")
     )
     expected = {"a": [1, 3], "b": [2, 1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_n_unique(constructor: Constructor) -> None:
@@ -111,7 +111,7 @@ def test_group_by_n_unique(constructor: Constructor) -> None:
         .sort("a")
     )
     expected = {"a": [1, 3], "b": [1, 1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_std(constructor: Constructor) -> None:
@@ -120,7 +120,7 @@ def test_group_by_std(constructor: Constructor) -> None:
         nw.from_native(constructor(data)).group_by("a").agg(nw.col("b").std()).sort("a")
     )
     expected = {"a": [1, 2], "b": [0.707107] * 2}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_n_unique_w_missing(
@@ -149,7 +149,7 @@ def test_group_by_n_unique_w_missing(
         "c_n_min": [4, 5],
         "d_n_unique": [1, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_same_name_twice() -> None:
@@ -186,7 +186,7 @@ def test_group_by_simple_named(constructor: Constructor) -> None:
         "b_min": [4, 6],
         "b_max": [5, 6],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_simple_unnamed(constructor: Constructor) -> None:
@@ -206,7 +206,7 @@ def test_group_by_simple_unnamed(constructor: Constructor) -> None:
         "b": [4, 6],
         "c": [7, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_multiple_keys(constructor: Constructor) -> None:
@@ -227,7 +227,7 @@ def test_group_by_multiple_keys(constructor: Constructor) -> None:
         "c_min": [2, 1],
         "c_max": [7, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -252,14 +252,14 @@ def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest
             .with_columns(nw.col("b").cast(nw.Float64))
         )
         expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
 
 
 def test_no_agg(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
 
     expected = {"a": [1, 3], "b": [4, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_categorical(
@@ -283,4 +283,4 @@ def test_group_by_categorical(
         .agg(nw.col("x").sum())
         .sort("x")
     )
-    compare_dicts(result, data)
+    assert_equal_data(result, data)

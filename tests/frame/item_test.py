@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -18,8 +18,8 @@ def test_item(
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    compare_dicts({"a": [df.item(row, column)]}, {"a": [expected]})
-    compare_dicts({"a": [df.select("a").head(1).item()]}, {"a": [1]})
+    assert_equal_data({"a": [df.item(row, column)]}, {"a": [expected]})
+    assert_equal_data({"a": [df.select("a").head(1).item()]}, {"a": [1]})
 
 
 @pytest.mark.parametrize(

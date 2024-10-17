@@ -28,7 +28,7 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     return zip(left, right)
 
 
-def compare_dicts(result: Any, expected: dict[str, Any]) -> None:
+def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     if hasattr(result, "collect"):
         result = result.collect()
     if hasattr(result, "columns"):

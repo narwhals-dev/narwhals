@@ -2,7 +2,7 @@ from typing import Any
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1, 1, 2, 3, 2],
@@ -17,7 +17,7 @@ def test_is_first_distinct_expr(constructor: Constructor) -> None:
         "a": [True, False, True, True, False],
         "b": [True, True, True, False, False],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_is_first_distinct_series(constructor_eager: Any) -> None:
@@ -26,4 +26,4 @@ def test_is_first_distinct_series(constructor_eager: Any) -> None:
     expected = {
         "a": [True, False, True, True, False],
     }
-    compare_dicts({"a": result}, expected)
+    assert_equal_data({"a": result}, expected)

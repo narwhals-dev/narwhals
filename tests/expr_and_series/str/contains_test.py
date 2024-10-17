@@ -6,7 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"pets": ["cat", "dog", "rabbit and parrot", "dove"]}
 
@@ -28,7 +28,7 @@ def test_contains_case_insensitive(
         "pets": ["cat", "dog", "rabbit and parrot", "dove"],
         "result": [False, False, True, True],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_contains_series_case_insensitive(
@@ -45,7 +45,7 @@ def test_contains_series_case_insensitive(
         "pets": ["cat", "dog", "rabbit and parrot", "dove"],
         "case_insensitive_match": [False, False, True, True],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_contains_case_sensitive(constructor: Constructor) -> None:
@@ -55,7 +55,7 @@ def test_contains_case_sensitive(constructor: Constructor) -> None:
         "pets": ["cat", "dog", "rabbit and parrot", "dove"],
         "result": [False, False, True, False],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_contains_series_case_sensitive(constructor_eager: Any) -> None:
@@ -65,4 +65,4 @@ def test_contains_series_case_sensitive(constructor_eager: Any) -> None:
         "pets": ["cat", "dog", "rabbit and parrot", "dove"],
         "case_sensitive_match": [False, False, True, False],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

@@ -6,7 +6,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "i": [0, 1, 2, 3, 4],
@@ -29,7 +29,7 @@ def test_diff(constructor: Constructor, request: pytest.FixtureRequest) -> None:
         "c": [4, 3, 2, 1],
         "c_diff": [-1, -1, -1, -1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_diff_series(constructor_eager: Any, request: pytest.FixtureRequest) -> None:
@@ -46,4 +46,4 @@ def test_diff_series(constructor_eager: Any, request: pytest.FixtureRequest) -> 
         "c_diff": [-1, -1, -1, -1],
     }
     result = df.with_columns(c_diff=df["c"].diff())[1:]
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

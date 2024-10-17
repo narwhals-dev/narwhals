@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_is_unique(constructor_eager: Any) -> None:
@@ -12,4 +12,4 @@ def test_is_unique(constructor_eager: Any) -> None:
     df = nw.from_native(df_raw, eager_only=True)
     result = nw.concat([df, df.head(1)]).is_unique()
     expected = {"is_unique": [False, True, True, False]}
-    compare_dicts({"is_unique": result}, expected)
+    assert_equal_data({"is_unique": result}, expected)

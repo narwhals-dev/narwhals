@@ -7,7 +7,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_array_dunder(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
@@ -53,4 +53,4 @@ def test_array_dunder_with_copy(
         result = s.__array__(copy=False)
         np.testing.assert_array_equal(result, np.array([1, 2, 3], dtype="int64"))
         result[0] = 999
-        compare_dicts({"a": s}, {"a": [999, 2, 3]})
+        assert_equal_data({"a": s}, {"a": [999, 2, 3]})

@@ -11,7 +11,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -87,7 +87,7 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -155,7 +155,7 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
@@ -216,4 +216,4 @@ def test_q1_w_pandas_agg_generic_path() -> None:
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

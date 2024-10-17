@@ -4,7 +4,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": list(range(10))}
 
@@ -21,7 +21,7 @@ def test_gather_every_expr(
     result = df.select(nw.col("a").gather_every(n=n, offset=offset))
     expected = {"a": data["a"][offset::n]}
 
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize("n", [1, 2, 3])
@@ -32,4 +32,4 @@ def test_gather_every_series(constructor_eager: Any, n: int, offset: int) -> Non
     result = series.gather_every(n=n, offset=offset)
     expected = data["a"][offset::n]
 
-    compare_dicts({"a": result}, {"a": expected})
+    assert_equal_data({"a": result}, {"a": expected})

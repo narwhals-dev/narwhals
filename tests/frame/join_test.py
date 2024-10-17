@@ -12,7 +12,7 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_inner_join_two_keys(constructor: Constructor) -> None:
@@ -40,8 +40,8 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
         "zorro_right": [7.0, 8, 9],
         "index": [0, 1, 2],
     }
-    compare_dicts(result, expected)
-    compare_dicts(result_on, expected)
+    assert_equal_data(result, expected)
+    assert_equal_data(result_on, expected)
 
 
 def test_inner_join_single_key(constructor: Constructor) -> None:
@@ -70,8 +70,8 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
         "zorro_right": [7.0, 8, 9],
         "index": [0, 1, 2],
     }
-    compare_dicts(result, expected)
-    compare_dicts(result_on, expected)
+    assert_equal_data(result, expected)
+    assert_equal_data(result_on, expected)
 
 
 def test_cross_join(constructor: Constructor) -> None:
@@ -82,7 +82,7 @@ def test_cross_join(constructor: Constructor) -> None:
         "antananarivo": [1, 1, 1, 2, 2, 2, 3, 3, 3],
         "antananarivo_right": [1, 2, 3, 1, 2, 3, 1, 2, 3],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     with pytest.raises(
         ValueError, match="Can not pass `left_on`, `right_on` or `on` keys for cross join"
@@ -122,7 +122,7 @@ def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
         "antananarivo": [1, 1, 1, 2, 2, 2, 3, 3, 3],
         f"antananarivo{suffix}": [1, 2, 3, 1, 2, 3, 1, 2, 3],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_cross_join_non_pandas() -> None:
@@ -135,7 +135,7 @@ def test_cross_join_non_pandas() -> None:
         "antananarivo": [1, 1, 1, 3, 3, 3, 2, 2, 2],
         "antananarivo_right": [1, 3, 2, 1, 3, 2, 1, 3, 2],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -164,7 +164,7 @@ def test_anti_join(
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -204,7 +204,7 @@ def test_semi_join(
     result = df.join(other, how="semi", left_on=join_key, right_on=join_key).sort(  # type: ignore[arg-type]
         "antananarivo"
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize("how", ["right", "full"])
@@ -258,8 +258,8 @@ def test_left_join(constructor: Constructor) -> None:
         "index": [0, 1, 2],
         "co": [4, 5, 7],
     }
-    compare_dicts(result, expected)
-    compare_dicts(result_on_list, expected_on_list)
+    assert_equal_data(result, expected)
+    assert_equal_data(result_on_list, expected_on_list)
 
 
 @pytest.mark.filterwarnings("ignore: the default coalesce behavior")
@@ -277,7 +277,7 @@ def test_left_join_multiple_column(constructor: Constructor) -> None:
     result = result.sort("index")
     result = result.drop("index_right")
     expected = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "index": [0, 1, 2]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.filterwarnings("ignore: the default coalesce behavior")
@@ -306,7 +306,7 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         "d_right": [1, 4, 2],
         "index": [0, 1, 2],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = df_left.join(
         df_right,  # type: ignore[arg-type]
         left_on="antananarivo",
@@ -323,7 +323,7 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         "c": [4.0, 6.0, float("nan")],
         "index": [0, 1, 2],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
@@ -403,12 +403,12 @@ def test_joinasof_numeric(
         "val": ["a", "b", "c"],
         "val_right": [1, 6, 7],
     }
-    compare_dicts(result_backward, expected_backward)
-    compare_dicts(result_forward, expected_forward)
-    compare_dicts(result_nearest, expected_nearest)
-    compare_dicts(result_backward_on, expected_backward)
-    compare_dicts(result_forward_on, expected_forward)
-    compare_dicts(result_nearest_on, expected_nearest)
+    assert_equal_data(result_backward, expected_backward)
+    assert_equal_data(result_forward, expected_forward)
+    assert_equal_data(result_nearest, expected_nearest)
+    assert_equal_data(result_backward_on, expected_backward)
+    assert_equal_data(result_forward_on, expected_forward)
+    assert_equal_data(result_nearest_on, expected_nearest)
 
 
 def test_joinasof_time(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -481,12 +481,12 @@ def test_joinasof_time(constructor: Constructor, request: pytest.FixtureRequest)
         "population": [82.19, 82.66, 83.12],
         "gdp": [4164, 4696, 4696],
     }
-    compare_dicts(result_backward, expected_backward)
-    compare_dicts(result_forward, expected_forward)
-    compare_dicts(result_nearest, expected_nearest)
-    compare_dicts(result_backward_on, expected_backward)
-    compare_dicts(result_forward_on, expected_forward)
-    compare_dicts(result_nearest_on, expected_nearest)
+    assert_equal_data(result_backward, expected_backward)
+    assert_equal_data(result_forward, expected_forward)
+    assert_equal_data(result_nearest, expected_nearest)
+    assert_equal_data(result_backward_on, expected_backward)
+    assert_equal_data(result_forward_on, expected_forward)
+    assert_equal_data(result_nearest_on, expected_nearest)
 
 
 def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -518,8 +518,8 @@ def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -
         "c": [9, 2, 1, 1],
         "d": [1, 3, float("nan"), 4],
     }
-    compare_dicts(result, expected)
-    compare_dicts(result_by, expected)
+    assert_equal_data(result, expected)
+    assert_equal_data(result_by, expected)
 
 
 @pytest.mark.parametrize("strategy", ["back", "furthest"])

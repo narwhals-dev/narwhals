@@ -2,7 +2,7 @@ from typing import Any
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_null(constructor: Constructor) -> None:
@@ -11,7 +11,7 @@ def test_null(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data_na))
     result = df.select(nw.col("a").is_null(), ~nw.col("z").is_null())
 
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_null_series(constructor_eager: Any) -> None:
@@ -20,4 +20,4 @@ def test_null_series(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data_na), eager_only=True)
     result = {"a": df["a"].is_null(), "z": ~df["z"].is_null()}
 
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

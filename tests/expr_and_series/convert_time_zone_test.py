@@ -10,7 +10,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 from tests.utils import is_windows
 
 
@@ -34,7 +34,7 @@ def test_convert_time_zone(
     assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T05:45+0545", "2020-01-02T05:45+0545"]}
-    compare_dicts(result_str, expected)
+    assert_equal_data(result_str, expected)
 
 
 def test_convert_time_zone_series(
@@ -60,7 +60,7 @@ def test_convert_time_zone_series(
     assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T05:45+0545", "2020-01-02T05:45+0545"]}
-    compare_dicts(result_str, expected)
+    assert_equal_data(result_str, expected)
 
 
 def test_convert_time_zone_from_none(
@@ -93,7 +93,7 @@ def test_convert_time_zone_from_none(
     assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T05:45+0545", "2020-01-02T05:45+0545"]}
-    compare_dicts(result_str, expected)
+    assert_equal_data(result_str, expected)
 
 
 def test_convert_time_zone_to_none(constructor: Constructor) -> None:

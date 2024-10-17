@@ -3,7 +3,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_select(constructor: Constructor) -> None:
@@ -11,7 +11,7 @@ def test_select(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select("a")
     expected = {"a": [1, 3, 2]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_empty_select(constructor: Constructor) -> None:

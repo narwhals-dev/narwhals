@@ -2,7 +2,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": list(range(10))}
 
@@ -13,4 +13,4 @@ def test_gather_every(constructor: Constructor, n: int, offset: int) -> None:
     df = nw.from_native(constructor(data))
     result = df.gather_every(n=n, offset=offset)
     expected = {"a": data["a"][offset::n]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

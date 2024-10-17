@@ -7,7 +7,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": ["one", "two", "two"]}
 
@@ -23,10 +23,10 @@ def test_get_categories(request: pytest.FixtureRequest, constructor_eager: Any) 
     expected = {"a": ["one", "two"]}
 
     result_expr = df.select(nw.col("a").cat.get_categories())
-    compare_dicts(result_expr, expected)
+    assert_equal_data(result_expr, expected)
 
     result_series = df["a"].cat.get_categories()
-    compare_dicts({"a": result_series}, expected)
+    assert_equal_data({"a": result_series}, expected)
 
 
 def test_get_categories_pyarrow() -> None:
@@ -39,7 +39,7 @@ def test_get_categories_pyarrow() -> None:
     expected = {"a": ["a", "b", "d"]}
 
     result_expr = df.select(nw.col("a").cat.get_categories())
-    compare_dicts(result_expr, expected)
+    assert_equal_data(result_expr, expected)
 
     result_series = df["a"].cat.get_categories()
-    compare_dicts({"a": result_series}, expected)
+    assert_equal_data({"a": result_series}, expected)

@@ -6,7 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize("decimals", [0, 1, 2])
@@ -17,7 +17,7 @@ def test_round(constructor: Constructor, decimals: int) -> None:
 
     expected_data = {k: [round(e, decimals) for e in v] for k, v in data.items()}
     result_frame = df.select(nw.col("a").round(decimals))
-    compare_dicts(result_frame, expected_data)
+    assert_equal_data(result_frame, expected_data)
 
 
 @pytest.mark.parametrize("decimals", [0, 1, 2])
@@ -29,4 +29,4 @@ def test_round_series(constructor_eager: Any, decimals: int) -> None:
     expected_data = {k: [round(e, decimals) for e in v] for k, v in data.items()}
     result_series = df["a"].round(decimals)
 
-    compare_dicts({"a": result_series}, expected_data)
+    assert_equal_data({"a": result_series}, expected_data)

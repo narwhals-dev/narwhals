@@ -1,6 +1,6 @@
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_double_selected(constructor: Constructor) -> None:
@@ -9,12 +9,12 @@ def test_double_selected(constructor: Constructor) -> None:
 
     result = df.select(nw.col("a", "b") * 2)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     result = df.select("z", nw.col("a", "b") * 2)
     expected = {"z": [7, 8, 9], "a": [2, 6, 4], "b": [8, 8, 12]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     result = df.select("a").select(nw.col("a") + nw.all())
     expected = {"a": [2, 6, 4]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

@@ -6,7 +6,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1, 1, 2, 2, 3],
@@ -23,7 +23,7 @@ def test_mode_single_expr(
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").mode()).sort("a")
     expected = {"a": [1, 2]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_mode_multi_expr(
@@ -36,11 +36,11 @@ def test_mode_multi_expr(
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b").mode()).sort("a", "b")
     expected = {"a": [1, 2], "b": [3, 3]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_mode_series(constructor_eager: Any) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.mode().sort()
     expected = {"a": [1, 2]}
-    compare_dicts({"a": result}, expected)
+    assert_equal_data({"a": result}, expected)

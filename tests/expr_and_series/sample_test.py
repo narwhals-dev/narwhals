@@ -2,7 +2,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_expr_sample(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -57,13 +57,13 @@ def test_sample_with_seed(
         .collect()
     )
 
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     series = df.collect()["a"]
     seed1 = series.sample(n=n, seed=123)
     seed2 = series.sample(n=n, seed=123)
     seed3 = series.sample(n=n, seed=42)
 
-    compare_dicts(
+    assert_equal_data(
         {"res1": [(seed1 == seed2).all()], "res2": [(seed1 == seed3).all()]}, expected
     )

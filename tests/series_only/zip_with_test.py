@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_zip_with(constructor_eager: Any) -> None:
@@ -15,7 +15,7 @@ def test_zip_with(constructor_eager: Any) -> None:
 
     result = series1.zip_with(mask, series2)
     expected = [1, 4, 2]
-    compare_dicts({"a": result}, {"a": expected})
+    assert_equal_data({"a": result}, {"a": expected})
 
 
 def test_zip_with_length_1(constructor_eager: Any) -> None:
@@ -25,4 +25,4 @@ def test_zip_with_length_1(constructor_eager: Any) -> None:
 
     result = series1.zip_with(mask, series2)
     expected = [4]
-    compare_dicts({"a": result}, {"a": expected})
+    assert_equal_data({"a": result}, {"a": expected})

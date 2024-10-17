@@ -8,7 +8,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ def test_str_to_uppercase(
         # smaller cap 'ß' to upper cap 'ẞ' instead of 'SS'
         request.applymarker(pytest.mark.xfail)
 
-    compare_dicts(result_frame, expected)
+    assert_equal_data(result_frame, expected)
 
 
 @pytest.mark.parametrize(
@@ -90,7 +90,7 @@ def test_str_to_uppercase_series(
         request.applymarker(pytest.mark.xfail)
 
     result_series = df["a"].str.to_uppercase()
-    compare_dicts({"a": result_series}, expected)
+    assert_equal_data({"a": result_series}, expected)
 
 
 @pytest.mark.parametrize(
@@ -115,7 +115,7 @@ def test_str_to_lowercase(
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_lowercase())
-    compare_dicts(result_frame, expected)
+    assert_equal_data(result_frame, expected)
 
 
 @pytest.mark.parametrize(
@@ -141,4 +141,4 @@ def test_str_to_lowercase_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.to_lowercase()
-    compare_dicts({"a": result_series}, expected)
+    assert_equal_data({"a": result_series}, expected)
