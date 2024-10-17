@@ -106,11 +106,26 @@ def test_datetime_chained_attributes(
     compare_dicts(result, {"a": [2021, 2020]})
 
 
-def test_timestamp(constructor_eager: Any) -> None:
-    dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    df = nw.from_native(constructor_eager(dates))
+def test_timestamp_datetimes(constructor: Constructor) -> None:
+    datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    df = nw.from_native(constructor(datetimes))
     result = df.select(nw.col("a").dt.timestamp())
     expected = {"a": [978307200000000, None, 978480000000000]}
     compare_dicts(result, expected)
     result = df.select(nw.col("a").cast(nw.Datetime("ms")).dt.timestamp())
-    expected = {"a": [978307200, 9784800]}
+    compare_dicts(result, expected)
+
+
+def test_timestamp_dates(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if any(
+        x in str(constructor)
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    dates = {"a": [date(2001, 1, 1), None, date(2001, 1, 3)]}
+    df = nw.from_native(constructor(dates))
+    result = df.select(nw.col("a").dt.timestamp())
+    expected = {"a": [978307200000000, None, 978480000000000]}
+    compare_dicts(result, expected)

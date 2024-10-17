@@ -946,16 +946,42 @@ class PandasLikeSeriesDateTimeNamespace:
         return self._pandas_series._from_native_series(result)
 
     def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> PandasLikeSeries:
-        import numpy as np  # ignore-banned-import
-
         s = self._pandas_series._native_series
+        dtype = self._pandas_series.dtype
+        is_pyarrow_dtype = "pyarrow" in str(self._pandas_series._native_series.dtype)
         mask_na = s.isna()
-        time_ns = s.astype(np.int64)
-        time_ns[mask_na] = None
-        if time_unit == "ns":
-            result = time_ns
-        if time_unit == "us":
-            result = time_ns / 1_000
-        if time_unit == "ms":
-            result = time_ns / 1_000_000
+        if dtype == self._pandas_series._dtypes.Date:
+            result = s.astype("Int32[pyarrow]")
+        if dtype == self._pandas_series._dtypes.Datetime:
+            original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+            s_cast = s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
+            if original_time_unit == "ns":
+                if time_unit == "ns":
+                    result = s_cast
+                if time_unit == "us":
+                    result = s_cast / 1_000
+                if time_unit == "ms":
+                    result = s_cast / 1_000_000
+            if original_time_unit == "us":
+                if time_unit == "ns":
+                    result = s_cast * 1_000
+                if time_unit == "us":
+                    result = s_cast
+                if time_unit == "ms":
+                    result = s_cast / 1_000
+            if original_time_unit == "ms":
+                if time_unit == "ns":
+                    result = s_cast * 1_000_000
+                if time_unit == "us":
+                    result = s_cast * 1_000
+                if time_unit == "ms":
+                    result = s_cast
+            if original_time_unit == "s":
+                if time_unit == "ns":
+                    result = s_cast * 1_000_000_000
+                if time_unit == "us":
+                    result = s_cast * 1_000_000
+                if time_unit == "ms":
+                    result = s_cast * 1_000
+            result[mask_na] = None
         return self._pandas_series._from_native_series(result)
