@@ -298,14 +298,20 @@ class ArrowSeries:
 
         return pc.stddev(self._native_series, ddof=ddof)  # type: ignore[no-any-return]
 
-    def skew(self) -> float:
-        import numpy as np  # ignore-banned-import
+    def skew(self) -> Any:
+        import pyarrow.compute as pc  # ignore-banned-import()
 
-        values = self._native_series.to_numpy()
-        m = np.mean(values)
-        m2 = np.mean((values - m) ** 2)
-        m3 = np.mean((values - m) ** 3)
-        g1 = m3 / (m2**1.5)
+        ser = self._native_series
+        m = pc.mean(ser)
+        m2 = pc.mean(pc.multiply(pc.subtract(ser, m), pc.subtract(ser, m)))
+        m3 = pc.mean(
+            pc.multiply(
+                pc.multiply(pc.subtract(ser, m), pc.subtract(ser, m)), pc.subtract(ser, m)
+            )
+        )
+        m2_py = m2.as_py()
+        m3_py = m3.as_py()
+        g1 = float(m3_py) / (float(m2_py) ** 1.5) if float(m2_py) != 0 else 0
         return float(g1)  # Biased population skewness
 
     def count(self) -> int:
