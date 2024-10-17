@@ -19,8 +19,8 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeAlias  # pragma: no cover
 
-Constructor: TypeAlias = Callable[[dict[str, Any]], IntoFrame]
-ConstructorEager: TypeAlias = Callable[[dict[str, Any]], IntoDataFrame]
+Constructor: TypeAlias = Callable[[Any], IntoFrame]
+ConstructorEager: TypeAlias = Callable[[Any], IntoDataFrame]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
