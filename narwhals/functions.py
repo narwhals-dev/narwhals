@@ -31,8 +31,10 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import DTypes
 
-    class SupportsPyCapsule(Protocol):
-        def __arrow_c_stream__(self) -> Any: ...
+    class ArrowStreamExportable(Protocol):
+        def __arrow_c_stream__(
+            self, requested_schema: object | None = None
+        ) -> object: ...
 
 
 def concat(
@@ -411,8 +413,8 @@ def _from_dict_impl(
     return from_native(native_frame, eager_only=True)
 
 
-def from_pycapsule(
-    native_frame: SupportsPyCapsule, *, native_namespace: ModuleType
+def from_arrow(
+    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
 ) -> DataFrame[Any]:
     """
     Construct a DataFrame from an object which supports the PyCapsule Interface.
@@ -433,7 +435,7 @@ def from_pycapsule(
 
         >>> @nw.narwhalify
         ... def func(df):
-        ...     return nw.from_pycapsule(df, native_namespace=pa)
+        ...     return nw.from_arrow(df, native_namespace=pa)
 
         Let's see what happens when passing pandas / Polars input:
 
@@ -472,10 +474,10 @@ def from_pycapsule(
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `from_pycapsule` for object of type {native_namespace}"
+            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
             raise ModuleNotFoundError(msg) from exc
         if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `from_pycapsule` for object of type {native_namespace}"
+            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
             raise ModuleNotFoundError(msg) from None
 
         tbl = pa.table(native_frame)
