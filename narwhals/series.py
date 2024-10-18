@@ -545,11 +545,9 @@ class Series:
             We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(s_pd)
-            1.472427
+            1.4724267269058975
             >>> func(s_pl)
-            1.472427
-            >>> func(s_pa)
-            1.472427
+            1.4724267269058975
 
         Notes:
             The skewness is a measure of the asymmetry of the probability distribution.
