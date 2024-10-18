@@ -104,3 +104,15 @@ def test_datetime_chained_attributes(
 
     result = df.select(nw.col("a").dt.date().dt.year())
     compare_dicts(result, {"a": [2021, 2020]})
+
+
+def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if any(
+        x in str(constructor)
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "dask")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    df = nw.from_native(constructor(dates))
+    result = df.select(nw.col("a").dt.date())
+    assert result.collect_schema() == {"a": nw.Date}
