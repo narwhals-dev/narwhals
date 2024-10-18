@@ -4189,9 +4189,11 @@ def col(*names: str | Iterable[str]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [3, 4]})
 
         We define a dataframe-agnostic function:
 
@@ -4199,7 +4201,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.col("a") * nw.col("b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a
@@ -4215,6 +4217,11 @@ def col(*names: str | Iterable[str]) -> Expr:
         │ 3   │
         │ 8   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[3,8]]
     """
 
     def func(plx: Any) -> Any:
@@ -4249,7 +4256,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.nth(0) * 2)
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a
@@ -4286,9 +4293,11 @@ def all_() -> Expr:
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> df_pa = pa.table({"a": [1, 2, 3], "b": [4, 5, 6]})
 
         Let's define a dataframe-agnostic function:
 
@@ -4296,7 +4305,7 @@ def all_() -> Expr:
         ... def func(df):
         ...     return df.select(nw.all() * 2)
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a   b
@@ -4314,6 +4323,13 @@ def all_() -> Expr:
         │ 4   ┆ 10  │
         │ 6   ┆ 12  │
         └─────┴─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[2,4,6]]
+        b: [[8,10,12]]
     """
     return Expr(lambda plx: plx.all())
 
@@ -4326,9 +4342,11 @@ def len_() -> Expr:
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
@@ -4336,7 +4354,7 @@ def len_() -> Expr:
         ... def func(df):
         ...     return df.select(nw.len())
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            len
@@ -4350,6 +4368,11 @@ def len_() -> Expr:
         ╞═════╡
         │ 2   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        len: int64
+        ----
+        len: [[2]]
     """
 
     def func(plx: Any) -> Any:
@@ -4371,9 +4394,11 @@ def sum(*columns: str) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
+        >>> df_pa = pa.table({"a": [1, 2]})
 
         We define a dataframe-agnostic function:
 
@@ -4381,7 +4406,7 @@ def sum(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.sum("a"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a
@@ -4395,6 +4420,11 @@ def sum(*columns: str) -> Expr:
         ╞═════╡
         │ 3   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[3]]
     """
 
     return Expr(lambda plx: plx.sum(*columns))
@@ -4462,9 +4492,11 @@ def min(*columns: str) -> Expr:
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
@@ -4472,7 +4504,7 @@ def min(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.min("b"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            b
@@ -4486,6 +4518,11 @@ def min(*columns: str) -> Expr:
         ╞═════╡
         │ 5   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        b: int64
+        ----
+        b: [[5]]
     """
     return Expr(lambda plx: plx.min(*columns))
 
@@ -4503,9 +4540,11 @@ def max(*columns: str) -> Expr:
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
@@ -4513,7 +4552,7 @@ def max(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.max("a"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a
@@ -4527,6 +4566,11 @@ def max(*columns: str) -> Expr:
         ╞═════╡
         │ 2   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[2]]
     """
     return Expr(lambda plx: plx.max(*columns))
 
@@ -4545,10 +4589,12 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
@@ -4556,7 +4602,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.sum_horizontal("a", "b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
               a
@@ -4574,6 +4620,11 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 12  │
         │ 3   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[6,12,3]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `sum_horizontal`"
@@ -4614,7 +4665,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.min_horizontal("a", "b"))
 
-        We can then pass either pandas, polars or pyarrow to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(pd.DataFrame(data))
              a
@@ -4677,7 +4728,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.max_horizontal("a", "b"))
 
-        We can then pass either pandas, polars or pyarrow to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(pd.DataFrame(data))
              a
@@ -4748,9 +4799,11 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> df_pa = pa.table({"a": [1, 2, 3], "b": [5, 10, 15]})
 
         We define a dataframe-agnostic function:
 
@@ -4760,7 +4813,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         ...         nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
         ...     )
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a   b  a_when
@@ -4778,6 +4831,15 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         │ 2   ┆ 10  ┆ 5      │
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        b: int64
+        a_when: int64
+        ----
+        a: [[1,2,3]]
+        b: [[5,10,15]]
+        a_when: [[5,5,6]]
     """
     return When(*predicates)
 
@@ -4795,6 +4857,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
@@ -4802,6 +4865,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... }
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
@@ -4834,6 +4898,16 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ false ┆ null  ┆ false │
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
+
+        >>> func(df_pa)
+        pyarrow.Table
+        a: bool
+        b: bool
+        all: bool
+        ----
+        a: [[false,false,true,true,false,null]]
+        b: [[false,true,true,null,null,null]]
+        all: [[false,false,true,null,false,null]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `all_horizontal`"
@@ -4856,9 +4930,11 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
+        >>> df_pa = pa.table({"a": [1, 2]})
 
         We define a dataframe-agnostic function:
 
@@ -4866,7 +4942,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         ... def func(df):
         ...     return df.with_columns(nw.lit(3).alias("b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a  b
@@ -4883,6 +4959,13 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         │ 2   ┆ 3   │
         └─────┴─────┘
 
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2]]
+        b: [[3,3]]
     """
     if is_numpy_array(value):
         msg = (
@@ -4911,6 +4994,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
@@ -4918,6 +5002,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... }
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
@@ -4925,7 +5010,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select("a", "b", any=nw.any_horizontal("a", "b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
                a      b    any
@@ -4950,6 +5035,16 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ false ┆ null  ┆ null  │
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
+
+        >>> func(df_pa)
+        pyarrow.Table
+        a: bool
+        b: bool
+        any: bool
+        ----
+        a: [[false,false,true,true,false,null]]
+        b: [[false,true,true,null,null,null]]
+        any: [[false,true,true,true,null,null]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `any_horizontal`"
@@ -4972,6 +5067,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {
         ...     "a": [1, 8, 3],
@@ -4980,6 +5076,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... }
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function that computes the horizontal mean of "a"
         and "b" columns:
@@ -4988,7 +5085,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.mean_horizontal("a", "b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
              a
@@ -5006,6 +5103,12 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 6.5 │
         │ 3.0 │
         └─────┘
+
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[2.5,6.5,3]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `mean_horizontal`"
@@ -5064,7 +5167,7 @@ def concat_str(
         ...         ).alias("full_sentence")
         ...     )
 
-        We can then pass either pandas, Polars or PyArrow to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(pd.DataFrame(data))
           full_sentence
