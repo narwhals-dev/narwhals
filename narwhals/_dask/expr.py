@@ -10,6 +10,8 @@ from typing import NoReturn
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._pandas_like.utils import calculate_timestamp_date
+from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import generate_unique_token
 
@@ -962,46 +964,15 @@ class DaskExprDateTimeNamespace:
             mask_na = s.isna()
             if dtype == self._expr._dtypes.Date:
                 s_cast = s.astype("Int32[pyarrow]") * 86_400
-                if time_unit == "ns":
-                    result = s_cast * 1_000_000_000
-                if time_unit == "us":
-                    result = s_cast * 1_000_000
-                if time_unit == "ms":
-                    result = s_cast * 1_000
+                result = calculate_timestamp_date(s_cast, time_unit)
             elif dtype == self._expr._dtypes.Datetime:
                 original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
-                if is_pyarrow_dtype:
-                    s_cast = s.astype("Int64[pyarrow]")
-                else:
-                    s_cast = s.astype("int64")
-                if original_time_unit == "ns":
-                    if time_unit == "ns":
-                        result = s_cast
-                    if time_unit == "us":
-                        result = s_cast / 1_000
-                    if time_unit == "ms":
-                        result = s_cast / 1_000_000
-                if original_time_unit == "us":
-                    if time_unit == "ns":
-                        result = s_cast * 1_000
-                    if time_unit == "us":
-                        result = s_cast
-                    if time_unit == "ms":
-                        result = s_cast / 1_000
-                if original_time_unit == "ms":
-                    if time_unit == "ns":
-                        result = s_cast * 1_000_000
-                    if time_unit == "us":
-                        result = s_cast * 1_000
-                    if time_unit == "ms":
-                        result = s_cast
-                if original_time_unit == "s":
-                    if time_unit == "ns":
-                        result = s_cast * 1_000_000_000
-                    if time_unit == "us":
-                        result = s_cast * 1_000_000
-                    if time_unit == "ms":
-                        result = s_cast * 1_000
+                s_cast = (
+                    s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
+                )
+                result = calculate_timestamp_datetime(
+                    s_cast, original_time_unit, time_unit
+                )
             else:
                 msg = "Input should be either of Date or Datetime type"
                 raise TypeError(msg)

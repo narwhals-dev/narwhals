@@ -542,3 +542,47 @@ def convert_str_slice_to_int_slice(
     stop = columns.get_loc(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+def calculate_timestamp_datetime(
+    s_cast: int, original_time_unit: str, time_unit: str
+) -> Any:
+    if original_time_unit == "ns":
+        if time_unit == "ns":
+            result = s_cast
+        if time_unit == "us":
+            result = s_cast // 1_000
+        if time_unit == "ms":
+            result = s_cast // 1_000_000
+    if original_time_unit == "us":
+        if time_unit == "ns":
+            result = s_cast * 1_000
+        if time_unit == "us":
+            result = s_cast
+        if time_unit == "ms":
+            result = s_cast // 1_000
+    if original_time_unit == "ms":
+        if time_unit == "ns":
+            result = s_cast * 1_000_000
+        if time_unit == "us":
+            result = s_cast * 1_000
+        if time_unit == "ms":
+            result = s_cast
+    if original_time_unit == "s":
+        if time_unit == "ns":
+            result = s_cast * 1_000_000_000
+        if time_unit == "us":
+            result = s_cast * 1_000_000
+        if time_unit == "ms":
+            result = s_cast * 1_000
+    return result
+
+
+def calculate_timestamp_date(s_cast: int, time_unit: str) -> Any:
+    if time_unit == "ns":
+        result = s_cast * 1_000_000_000
+    if time_unit == "us":
+        result = s_cast * 1_000_000
+    if time_unit == "ms":
+        result = s_cast * 1_000
+    return result

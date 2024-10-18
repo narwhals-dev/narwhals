@@ -826,7 +826,7 @@ class ArrowSeriesDateTimeNamespace:
             if time_unit == "ms":
                 result = pc.multiply(time_s, 1_000)
         else:
-            msg = "Input should be either of TimeStamp or Date type"
+            msg = "Input should be either of Date or Datetime type"
             raise TypeError(msg)
         return self._arrow_series._from_native_series(result)
 

@@ -141,28 +141,85 @@ def test_timestamp_datetimes(
     compare_dicts(result, {"a": expected})
 
 
+@pytest.mark.parametrize(
+    ("time_unit", "expected"),
+    [
+        ("ns", [978307200000000000, None, 978480000000000000]),
+        ("us", [978307200000000, None, 978480000000000]),
+        ("ms", [978307200000, None, 978480000000]),
+    ],
+)
 def test_timestamp_dates(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    time_unit: Literal["ns", "us", "ms"],
+    expected: list[int | None],
 ) -> None:
     if any(
         x in str(constructor)
-        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf", "dask")
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf")
     ):
         request.applymarker(pytest.mark.xfail)
+
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    df = nw.from_native(constructor(dates))
-    result = df.select(nw.col("a").dt.date().dt.timestamp())
-    expected = {"a": [978307200000000, None, 978480000000000]}
-    compare_dicts(result, expected)
+    if "dask" in str(constructor):
+        df = nw.from_native(
+            constructor(dates).astype({"a": "timestamp[ns][pyarrow]"})  # type: ignore[union-attr]
+        )
+    else:
+        df = nw.from_native(constructor(dates))
+    result = df.select(nw.col("a").dt.date().dt.timestamp(time_unit))
+    compare_dicts(result, {"a": expected})
+
+
+def test_timestamp_invalid_date(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "polars" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    data_str = {"a": ["x", "y", None]}
+    data_num = {"a": [1, 2, None]}
+    df_str = nw.from_native(constructor(data_str))
+    df_num = nw.from_native(constructor(data_num))
+    msg = "Input should be either of Date or Datetime type"
+    with pytest.raises(TypeError, match=msg):
+        df_str.select(nw.col("a").dt.timestamp())
+    with pytest.raises(TypeError, match=msg):
+        df_num.select(nw.col("a").dt.timestamp())
+
+
+def test_timestamp_invalid_unit_expr(constructor: Constructor) -> None:
+    time_unit_invalid = "i"
+    msg = (
+        "invalid `time_unit`"
+        f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit_invalid!r}."
+    )
+    with pytest.raises(ValueError, match=msg):
+        nw.from_native(constructor(data)).select(
+            nw.col("a").dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
+        )
+
+
+def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> None:
+    time_unit_invalid = "i"
+    msg = (
+        "invalid `time_unit`"
+        f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit_invalid!r}."
+    )
+    with pytest.raises(ValueError, match=msg):
+        nw.from_native(constructor_eager(data))["a"].dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
 
 
 def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
         x in str(constructor)
-        for x in ("pandas_constructor", "pandas_nullable_constructor", "dask")
+        for x in ("pandas_constructor", "pandas_nullable_constructor")
     ):
         request.applymarker(pytest.mark.xfail)
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    df = nw.from_native(constructor(dates))
+    if "dask" in str(constructor):
+        df = nw.from_native(constructor(dates).astype({"a": "timestamp[ns][pyarrow]"}))  # type: ignore[union-attr]
+    else:
+        df = nw.from_native(constructor(dates))
     result = df.select(nw.col("a").dt.date())
     assert result.collect_schema() == {"a": nw.Date}
