@@ -780,6 +780,56 @@ class ArrowSeriesDateTimeNamespace:
 
         return self._arrow_series._from_native_series(result)
 
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        s = self._arrow_series._native_series
+        dtype = self._arrow_series.dtype
+        if dtype == self._arrow_series._dtypes.Datetime:
+            unit = dtype.time_unit  # type: ignore[attr-defined]
+            s_cast = s.cast(pa.int64())
+            if unit == "ns":
+                if time_unit == "ns":
+                    result = s_cast
+                if time_unit == "us":
+                    result = pc.divide(s_cast, 1_000)
+                if time_unit == "ms":
+                    result = pc.divide(s_cast, 1_000_000)
+            if unit == "us":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000)
+                if time_unit == "us":
+                    result = s_cast
+                if time_unit == "ms":
+                    result = pc.divide(s_cast, 1_000)
+            if unit == "ms":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000)
+                if time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000)
+                if time_unit == "ms":
+                    result = s_cast
+            if unit == "s":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000_000)
+                if time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000_000)
+                if time_unit == "ms":
+                    result = pc.multiply(s_cast, 1_000)
+        elif dtype == self._arrow_series._dtypes.Date:
+            time_s = pc.multiply(s.cast(pa.int32()), 86400)
+            if time_unit == "ns":
+                result = pc.multiply(time_s, 1_000_000_000)
+            if time_unit == "us":
+                result = pc.multiply(time_s, 1_000_000)
+            if time_unit == "ms":
+                result = pc.multiply(time_s, 1_000)
+        else:
+            msg = "Input should be either of Date or Datetime type"
+            raise TypeError(msg)
+        return self._arrow_series._from_native_series(result)
+
     def date(self: Self) -> ArrowSeries:
         import pyarrow as pa  # ignore-banned-import()
 

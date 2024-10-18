@@ -6,22 +6,23 @@
       members:
         - convert_time_zone
         - date
-        - year
-        - month
         - day
-        - ordinal_day
         - hour
-        - minute
-        - second
-        - millisecond
         - microsecond
+        - millisecond
+        - minute
+        - month
         - nanosecond
+        - ordinal_day
         - replace_time_zone
-        - total_minutes
-        - total_seconds
-        - total_milliseconds
+        - second
+        - timestamp
         - total_microseconds
+        - total_milliseconds
+        - total_minutes
         - total_nanoseconds
+        - total_seconds
         - to_string
+        - year
       show_source: false
       show_bases: false

@@ -8,6 +8,8 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals._pandas_like.utils import calculate_timestamp_date
+from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
@@ -943,4 +945,22 @@ class PandasLikeSeriesDateTimeNamespace:
             ).dt.tz_convert(time_zone)
         else:
             result = self._pandas_series._native_series.dt.tz_convert(time_zone)
+        return self._pandas_series._from_native_series(result)
+
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> PandasLikeSeries:
+        s = self._pandas_series._native_series
+        dtype = self._pandas_series.dtype
+        is_pyarrow_dtype = "pyarrow" in str(self._pandas_series._native_series.dtype)
+        mask_na = s.isna()
+        if dtype == self._pandas_series._dtypes.Date:
+            s_cast = s.astype("Int32[pyarrow]") * 86_400
+            result = calculate_timestamp_date(s_cast, time_unit)
+        elif dtype == self._pandas_series._dtypes.Datetime:
+            original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+            s_cast = s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
+            result = calculate_timestamp_datetime(s_cast, original_time_unit, time_unit)
+        else:
+            msg = "Input should be either of Date or Datetime type"
+            raise TypeError(msg)
+        result[mask_na] = None
         return self._pandas_series._from_native_series(result)
