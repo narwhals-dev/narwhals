@@ -531,23 +531,27 @@ class Series:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s = [5, 3, 8]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.chunked_array([s])
 
-            We define a library agnostic function:
+            Let's define a library agnostic function:
 
             >>> @nw.narwhalify
             ... def func(s):
             ...     return s.median()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
 
             >>> func(s_pd)
             np.float64(5.0)
             >>> func(s_pl)
             5.0
+            >>> func(s_pa)
+            <pyarrow.DoubleScalar: 5.0>
         """
         return self._compliant_series.median()
 

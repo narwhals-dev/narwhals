@@ -1633,17 +1633,19 @@ def median(*columns: str) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals.stable.v1 as nw
         >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
         >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
+        >>> df_pa = pa.table({"a": [4, 5, 2]})
 
-        We define a dataframe agnostic function:
+        Let's define a dataframe agnostic function:
 
         >>> @nw.narwhalify
         ... def func(df):
         ...     return df.select(nw.median("a"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can then pass any supported library such as pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
              a
@@ -1657,6 +1659,11 @@ def median(*columns: str) -> Expr:
         ╞═════╡
         │ 4.0 │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
     """
     return _stableify(nw.median(*columns))
 
