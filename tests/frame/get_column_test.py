@@ -5,13 +5,13 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_get_column(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 2], "b": [3, 4]}), eager_only=True)
     result = df.get_column("a")
-    compare_dicts({"a": result}, {"a": [1, 2]})
+    assert_equal_data({"a": result}, {"a": [1, 2]})
     assert result.name == "a"
     with pytest.raises(
         (KeyError, TypeError), match="Expected str|'int' object cannot be converted|0"
@@ -23,11 +23,11 @@ def test_get_column(constructor_eager: ConstructorEager) -> None:
 def test_non_string_name() -> None:
     df = pd.DataFrame({0: [1, 2]})
     result = nw.from_native(df, eager_only=True).get_column(0)  # type: ignore[arg-type]
-    compare_dicts({"a": result}, {"a": [1, 2]})
+    assert_equal_data({"a": result}, {"a": [1, 2]})
     assert result.name == 0  # type: ignore[comparison-overlap]
 
 
 def test_get_single_row() -> None:
     df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
     result = nw.from_native(df, eager_only=True)[0]  # type: ignore[call-overload]
-    compare_dicts(result, {"a": [1], "b": [3]})
+    assert_equal_data(result, {"a": [1], "b": [3]})

@@ -14,7 +14,7 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -45,7 +45,7 @@ def test_arithmetic_expr(
     data = {"a": [1.0, 2, 3]}
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), attr)(rhs))
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.parametrize(
@@ -75,7 +75,7 @@ def test_right_arithmetic_expr(
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
     result = df.select(a=getattr(nw.col("a"), attr)(rhs))
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.parametrize(
@@ -106,7 +106,7 @@ def test_arithmetic_series(
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(getattr(df["a"], attr)(rhs))
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.parametrize(
@@ -136,7 +136,7 @@ def test_right_arithmetic_series(
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(a=getattr(df["a"], attr)(rhs))
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 def test_truediv_same_dims(
@@ -148,9 +148,9 @@ def test_truediv_same_dims(
     s_left = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     s_right = nw.from_native(constructor_eager({"a": [2, 2, 1]}), eager_only=True)["a"]
     result = s_left / s_right
-    compare_dicts({"a": result}, {"a": [0.5, 1.0, 3.0]})
+    assert_equal_data({"a": result}, {"a": [0.5, 1.0, 3.0]})
     result = s_left.__rtruediv__(s_right)
-    compare_dicts({"a": result}, {"a": [2, 1, 1 / 3]})
+    assert_equal_data({"a": result}, {"a": [2, 1, 1 / 3]})
 
 
 @pytest.mark.slow
@@ -169,7 +169,7 @@ def test_floordiv(left: int, right: int) -> None:
     result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
         nw.col("a") // right
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     if parse_version(pd.__version__) < (2, 2):  # pragma: no cover
         # Bug in old version of pandas
         pass
@@ -178,19 +178,19 @@ def test_floordiv(left: int, right: int) -> None:
             pd.DataFrame({"a": [left]}).convert_dtypes(dtype_backend="pyarrow"),
             eager_only=True,
         ).select(nw.col("a") // right)
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
     result = nw.from_native(
         pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
     ).select(nw.col("a") // right)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = nw.from_native(pl.DataFrame({"a": [left]}), eager_only=True).select(
         nw.col("a") // right
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
         nw.col("a") // right
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.slow
@@ -209,16 +209,16 @@ def test_mod(left: int, right: int) -> None:
     result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
         nw.col("a") % right
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = nw.from_native(
         pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
     ).select(nw.col("a") % right)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = nw.from_native(pl.DataFrame({"a": [left]}), eager_only=True).select(
         nw.col("a") % right
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
         nw.col("a") % right
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

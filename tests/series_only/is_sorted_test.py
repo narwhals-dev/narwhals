@@ -4,7 +4,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = [1, 3, 2]
 data_dups = [4, 4, 6]
@@ -23,7 +23,7 @@ def test_is_sorted(
 ) -> None:
     series = nw.from_native(constructor_eager({"a": input_data}), eager_only=True)["a"]
     result = series.is_sorted(descending=descending)
-    compare_dicts({"a": [result]}, {"a": [expected]})
+    assert_equal_data({"a": [result]}, {"a": [expected]})
 
 
 def test_is_sorted_invalid(constructor_eager: ConstructorEager) -> None:

@@ -8,7 +8,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [
@@ -51,7 +51,7 @@ def test_datetime_attributes(
 
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a").dt, attribute)())
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.parametrize(
@@ -87,7 +87,7 @@ def test_datetime_attributes_series(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(getattr(df["a"].dt, attribute)())
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 def test_datetime_chained_attributes(
@@ -100,10 +100,10 @@ def test_datetime_chained_attributes(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.date().dt.year())
-    compare_dicts(result, {"a": [2021, 2020]})
+    assert_equal_data(result, {"a": [2021, 2020]})
 
     result = df.select(nw.col("a").dt.date().dt.year())
-    compare_dicts(result, {"a": [2021, 2020]})
+    assert_equal_data(result, {"a": [2021, 2020]})
 
 
 def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [0.0, None, 2, 3, 4],
@@ -21,7 +21,7 @@ def test_fill_null(constructor: Constructor) -> None:
         "b": [1.0, 99, 99, 5, 3],
         "c": [5.0, 99, 3, 2, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
@@ -37,4 +37,4 @@ def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
         b=df["b"].fill_null(99),
         c=df["c"].fill_null(99),
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

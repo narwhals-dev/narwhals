@@ -4,7 +4,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.filterwarnings(
@@ -24,4 +24,4 @@ def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
     assert isinstance(result["a"], nw.Series)
     assert isinstance(result["b"], nw.Series)
     assert isinstance(result["c"], nw.Series)
-    compare_dicts(result, data)
+    assert_equal_data(result, data)

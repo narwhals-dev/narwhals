@@ -8,7 +8,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
 
@@ -33,7 +33,7 @@ def test_nth(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.nth(idx))
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.skipif(

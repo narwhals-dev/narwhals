@@ -13,7 +13,7 @@ from narwhals.selectors import numeric
 from narwhals.selectors import string
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1, 1, 2],
@@ -27,21 +27,21 @@ def test_selectors(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(by_dtype([nw.Int64, nw.Float64]) + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_numeric(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(numeric() + 1)
     expected = {"a": [2, 2, 3], "c": [5.1, 6.0, 7.0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_boolean(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(boolean())
     expected = {"d": [True, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -51,7 +51,7 @@ def test_string(constructor: Constructor, request: pytest.FixtureRequest) -> Non
     df = nw.from_native(constructor(data))
     result = df.select(string())
     expected = {"b": ["a", "b", "c"]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -> None:
@@ -63,7 +63,7 @@ def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -
 
     df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
     result = df.select(categorical())
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(

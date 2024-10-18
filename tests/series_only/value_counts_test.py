@@ -8,7 +8,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
 
@@ -41,9 +41,9 @@ def test_value_counts(
     )
 
     sorted_result = series.value_counts(sort=True, name=name, normalize=normalize)
-    compare_dicts(sorted_result, expected)
+    assert_equal_data(sorted_result, expected)
 
     unsorted_result = series.value_counts(
         sort=False, name=name, normalize=normalize
     ).sort(expected_name, descending=True)
-    compare_dicts(unsorted_result, expected)
+    assert_equal_data(unsorted_result, expected)

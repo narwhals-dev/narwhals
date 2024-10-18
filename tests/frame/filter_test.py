@@ -6,7 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_filter(constructor: Constructor) -> None:
@@ -14,7 +14,7 @@ def test_filter(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.filter(nw.col("a") > 1)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_filter_with_boolean_list(constructor: Constructor) -> None:
@@ -33,4 +33,4 @@ def test_filter_with_boolean_list(constructor: Constructor) -> None:
     with context:
         result = df.filter([False, True, True])
         expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)

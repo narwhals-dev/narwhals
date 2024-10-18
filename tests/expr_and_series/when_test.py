@@ -6,7 +6,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1, 2, 3],
@@ -23,7 +23,7 @@ def test_when(constructor: Constructor) -> None:
     expected = {
         "a_when": [3, np.nan, np.nan],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_when_otherwise(constructor: Constructor) -> None:
@@ -32,7 +32,7 @@ def test_when_otherwise(constructor: Constructor) -> None:
     expected = {
         "a_when": [3, 6, 6],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_multiple_conditions(constructor: Constructor) -> None:
@@ -43,7 +43,7 @@ def test_multiple_conditions(constructor: Constructor) -> None:
     expected = {
         "a_when": [3, np.nan, np.nan],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_no_arg_when_fail(constructor: Constructor) -> None:
@@ -67,7 +67,7 @@ def test_value_numpy_array(
     expected = {
         "a_when": [3, np.nan, np.nan],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_value_series(constructor_eager: ConstructorEager) -> None:
@@ -79,7 +79,7 @@ def test_value_series(constructor_eager: ConstructorEager) -> None:
     expected = {
         "a_when": [3, np.nan, np.nan],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_value_expression(constructor: Constructor) -> None:
@@ -88,7 +88,7 @@ def test_value_expression(constructor: Constructor) -> None:
     expected = {
         "a_when": [10, np.nan, np.nan],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_otherwise_numpy_array(
@@ -106,7 +106,7 @@ def test_otherwise_numpy_array(
     expected = {
         "a_when": [-1, 9, 10],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_otherwise_series(constructor_eager: ConstructorEager) -> None:
@@ -118,7 +118,7 @@ def test_otherwise_series(constructor_eager: ConstructorEager) -> None:
     expected = {
         "a_when": [-1, 9, 10],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_otherwise_expression(constructor: Constructor) -> None:
@@ -129,18 +129,18 @@ def test_otherwise_expression(constructor: Constructor) -> None:
     expected = {
         "a_when": [-1, 9, 10],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then("c").otherwise("e"))
     expected = {"c": [7, 5, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
     expected = {"b": ["z", "b", "c"]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

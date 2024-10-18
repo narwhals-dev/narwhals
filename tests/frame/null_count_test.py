@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_null_count(constructor_eager: ConstructorEager) -> None:
@@ -11,4 +11,4 @@ def test_null_count(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(df_raw, eager_only=True)
     result = df.null_count()
     expected = {"a": [1], "b": [0], "z": [1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

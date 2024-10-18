@@ -11,7 +11,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 from tests.utils import is_windows
 
 data = {
@@ -217,4 +217,4 @@ def test_cast_datetime_tz_aware(
         .cast(nw.String())
         .str.slice(offset=0, length=19)
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

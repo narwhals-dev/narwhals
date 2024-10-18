@@ -6,7 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": ["a", "a", "b", "b", "b"],
@@ -35,7 +35,7 @@ def test_over_single(constructor: Constructor) -> None:
 
     with context:
         result = df.with_columns(c_max=nw.col("c").max().over("a"))
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
 
 
 def test_over_multiple(constructor: Constructor) -> None:
@@ -58,7 +58,7 @@ def test_over_multiple(constructor: Constructor) -> None:
 
     with context:
         result = df.with_columns(c_min=nw.col("c").min().over("a", "b"))
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
 
 
 def test_over_invalid(request: pytest.FixtureRequest, constructor: Constructor) -> None:

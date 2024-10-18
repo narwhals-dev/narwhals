@@ -8,7 +8,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -31,7 +31,7 @@ def test_lit(
         "z": [7.0, 8.0, 9.0],
         "lit": expected_lit,
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_lit_error(constructor: Constructor) -> None:

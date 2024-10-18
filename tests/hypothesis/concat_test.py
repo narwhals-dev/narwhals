@@ -9,7 +9,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 from tests.utils import is_windows
 
 
@@ -62,4 +62,4 @@ def test_concat(  # pragma: no cover
     dframe_pd1 = nw.to_native(dframe_pl)
     dframe_pd2 = nw.to_native(dframe_pd)
 
-    compare_dicts(dframe_pd1, dframe_pd2)
+    assert_equal_data(dframe_pd1, dframe_pd2)

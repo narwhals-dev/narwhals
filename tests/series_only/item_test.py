@@ -6,7 +6,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = [1, 3, 2]
 
@@ -15,8 +15,8 @@ data = [1, 3, 2]
 def test_item(constructor_eager: ConstructorEager, index: int, expected: int) -> None:
     series = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
     result = series.item(index)
-    compare_dicts({"a": [result]}, {"a": [expected]})
-    compare_dicts({"a": [series.head(1).item()]}, {"a": [1]})
+    assert_equal_data({"a": [result]}, {"a": [expected]})
+    assert_equal_data({"a": [series.head(1).item()]}, {"a": [1]})
 
     with pytest.raises(
         ValueError,

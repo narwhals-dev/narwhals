@@ -4,7 +4,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1.0, 2.0, None, 4.0],
@@ -18,7 +18,7 @@ def test_drop_nulls(constructor: Constructor) -> None:
         "a": [2.0, 4.0],
         "b": [3.0, 5.0],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -33,4 +33,4 @@ def test_drop_nulls_subset(
     constructor: Constructor, subset: str | list[str], expected: dict[str, float]
 ) -> None:
     result = nw.from_native(constructor(data)).drop_nulls(subset=subset)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

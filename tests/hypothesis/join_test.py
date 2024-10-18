@@ -11,7 +11,7 @@ from pandas.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 pl_version = parse_version(pl.__version__)
 pd_version = parse_version(pd.__version__)
@@ -164,7 +164,9 @@ def test_left_join(  # pragma: no cover
             right_on=right_key,
         )
     ).select(pl.all().fill_null(float("nan")))
-    compare_dicts(result_pd.to_dict(as_series=False), result_pl.to_dict(as_series=False))
+    assert_equal_data(
+        result_pd.to_dict(as_series=False), result_pl.to_dict(as_series=False)
+    )
     # For PyArrow, insert an extra sort, as the order of rows isn't guaranteed
     result_pa = (
         nw.from_native(pa.table(data_left), eager_only=True)
@@ -177,7 +179,7 @@ def test_left_join(  # pragma: no cover
         .select(nw.all().cast(nw.Float64).fill_null(float("nan")))
         .pipe(lambda df: df.sort(df.columns))
     )
-    compare_dicts(
+    assert_equal_data(
         result_pa,
         result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False),
     )
