@@ -188,6 +188,8 @@ jobs:
             make narwhals-test-integration
   
   tubular:
+    env:
+      MODIN_ENGINE: python
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -210,6 +212,8 @@ jobs:
             git clone https://github.com/lvgig/tubular --depth=1
             cd tubular
             git log
+      - name: install-basics
+        run: uv pip install --upgrade tox virtualenv setuptools pytest-env --system
       - name: install-tubular-dev
         run: |
             cd tubular
