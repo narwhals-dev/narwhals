@@ -426,6 +426,8 @@ class PandasLikeSeries:
 
     def skew(self) -> Any:
         ser = self._native_series
+        if len(ser) <= 1 or ser.isna().any():
+            return float("nan")
         m = ser.mean()
         m2 = ((ser - m) ** 2).mean()
         m3 = ((ser - m) ** 3).mean()

@@ -302,6 +302,8 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series
+        if len(ser) <= 1:
+            return float("nan")
         m = pc.subtract(ser, pc.mean(ser))
         m2 = pc.mean(pc.power(m, 2))
         m3 = pc.mean(pc.power(m, 3))
