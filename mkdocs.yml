@@ -26,6 +26,7 @@ nav:
     - Supported Expr methods: api-completeness/expr.md
     - Supported Series methods: api-completeness/series.md
   - API Reference:
+    - api-reference/index.md
     - api-reference/narwhals.md
     - api-reference/dataframe.md
     - api-reference/expr.md
@@ -42,7 +43,6 @@ nav:
     - api-reference/series_str.md
     - api-reference/dependencies.md
     - api-reference/dtypes.md
-    - api-reference/index.md
     - api-reference/selectors.md
     - api-reference/typing.md
 theme:
