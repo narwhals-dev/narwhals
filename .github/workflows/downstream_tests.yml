@@ -222,4 +222,4 @@ jobs:
       - name: Run pytest
         run: |
             cd tubular
-            pytest .
+            pytest --disable-warnings tests
