@@ -4873,7 +4873,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select("a", "b", all=nw.all_horizontal("a", "b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
                a      b    all
@@ -4958,7 +4958,6 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         │ 1   ┆ 3   │
         │ 2   ┆ 3   │
         └─────┴─────┘
-
         >>> func(df_pa)
         pyarrow.Table
         a: int64
@@ -5092,6 +5091,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         0  2.5
         1  6.5
         2  3.0
+
         >>> func(df_pl)
         shape: (3, 1)
         ┌─────┐

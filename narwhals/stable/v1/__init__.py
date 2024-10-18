@@ -235,7 +235,6 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             >>> import narwhals.stable.v1 as nw
             >>> import pandas as pd
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> df_pd = pd.DataFrame(
             ...     {
             ...         "a": [1, 2, 3, 1],
@@ -255,7 +254,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             ... def func(df):
             ...     return df.is_duplicated()
 
-            We can then pass either pandas, Polars or PyArrow to `func`:
+            We can then pass either pandas or Polars to `func`:
 
             >>> func(df_pd)  # doctest: +NORMALIZE_WHITESPACE
             0     True
@@ -990,7 +989,7 @@ def all() -> Expr:
         │ 4   ┆ 10  │
         │ 6   ┆ 12  │
         └─────┴─────┘
-        >>> func(df_pa)  # doctest: +NORMALIZE_WHITESPACE
+        >>> func(df_pa)
         pyarrow.Table
         a: int64
         b: int64
@@ -1039,7 +1038,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         │ 3   │
         │ 8   │
         └─────┘
-        >>> func(df_pa)  # doctest: +NORMALIZE_WHITESPACE
+        >>> func(df_pa)
         pyarrow.Table
         a: int64
         ----
@@ -1788,7 +1787,6 @@ def concat(
 
         >>> import pandas as pd
         >>> import polars as pl
-        >>> import pyarrow as pa
         >>> import narwhals.stable.v1 as nw
         >>> data_1 = {"a": [1, 2, 3], "b": [4, 5, 6]}
         >>> data_2 = {"a": [5, 2], "b": [1, 4]}
@@ -1797,8 +1795,6 @@ def concat(
         >>> df_pd_2 = pd.DataFrame(data_2)
         >>> df_pl_1 = pl.DataFrame(data_1)
         >>> df_pl_2 = pl.DataFrame(data_2)
-        >>> df_pa_1 = pa.table(data_1)
-        >>> df_pa_2 = pa.table(data_2)
 
         Let's define a dataframe-agnostic function:
 
@@ -1826,13 +1822,6 @@ def concat(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
-        >>> func(df_pa_1, df_pa_2)
-        pyarrow.Table
-        a: int64
-        b: int64
-        ----
-        a: [[1,2,3,5,2]]
-        b: [[4,5,6,1,4]]
 
         Let's look at case a for horizontal concatenation:
 
@@ -1870,6 +1859,7 @@ def concat(
         │ 2   ┆ 5   ┆ 2    ┆ 4    │
         │ 3   ┆ 6   ┆ null ┆ null │
         └─────┴─────┴──────┴──────┘
+
     """
     return _stableify(nw.concat(items, how=how))  # type: ignore[no-any-return]
 
@@ -1921,7 +1911,7 @@ def concat_str(
         ...         ).alias("full_sentence")
         ...     )
 
-        We can then pass either pandas, Polars or PyArrow to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(pd.DataFrame(data))
           full_sentence
@@ -2385,7 +2375,7 @@ def from_dict(
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
-        Let's see what happens when passing pandas / Polars input:
+        Let's see what happens when passing Pandas, Polars or PyArrow input:
 
         >>> func(pd.DataFrame(data))
            c  d
