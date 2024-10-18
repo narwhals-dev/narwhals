@@ -784,7 +784,7 @@ class ArrowSeriesDateTimeNamespace:
         import pyarrow as pa  # ignore-banned-import()
 
         return self._arrow_series._from_native_series(
-            self._arrow_series._native_series.cast(pa.date64())
+            self._arrow_series._native_series.cast(pa.date32())
         )
 
     def year(self: Self) -> ArrowSeries:
