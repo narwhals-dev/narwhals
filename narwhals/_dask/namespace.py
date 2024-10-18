@@ -104,6 +104,11 @@ class DaskNamespace:
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
         ).mean()
 
+    def median(self, *column_names: str) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            *column_names, backend_version=self._backend_version, dtypes=self._dtypes
+        ).median()
+
     def sum(self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
