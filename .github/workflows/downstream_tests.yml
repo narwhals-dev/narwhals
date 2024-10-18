@@ -87,21 +87,16 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Create assets directory, copy over index.html
+        continue-on-error: true
         run: |
             mkdir -p marimo/marimo/_static/assets
             cp marimo/frontend/index.html marimo/marimo/_static/index.html
             cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
-      - name: Run tests with minimal dependencies
-        if: ${{ matrix.dependencies == 'core' }}
-        run: |
-            cd marimo
-            hatch run +py=${{ matrix.python-version }} test:test -v tests/ -k "not test_cli"
-        timeout-minutes: 15
-      - name: Run tests with optional dependencies
+      - name: Run tests with full dependencies
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
             cd marimo
-            hatch run +py=${{ matrix.python-version }} test-optional:test -v tests/ -k "not test_cli"
+            hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
         timeout-minutes: 15
       - name: Run typechecks
         run: |

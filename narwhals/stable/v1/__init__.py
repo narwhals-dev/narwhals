@@ -21,6 +21,7 @@ from narwhals.expr import When as NwWhen
 from narwhals.expr import when as nw_when
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _new_series_impl
+from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
@@ -31,6 +32,7 @@ from narwhals.stable.v1.dtypes import Date
 from narwhals.stable.v1.dtypes import Datetime
 from narwhals.stable.v1.dtypes import Duration
 from narwhals.stable.v1.dtypes import Enum
+from narwhals.stable.v1.dtypes import Field
 from narwhals.stable.v1.dtypes import Float32
 from narwhals.stable.v1.dtypes import Float64
 from narwhals.stable.v1.dtypes import Int8
@@ -51,6 +53,7 @@ from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoSeriesT
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
@@ -64,6 +67,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.functions import ArrowStreamExportable
     from narwhals.typing import IntoExpr
 
 T = TypeVar("T")
@@ -514,7 +518,7 @@ class Schema(NwSchema):
 
         >>> import narwhals.stable.v1 as nw
         >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
-        >>> schema  # doctest:+SKIP
+        >>> schema
         Schema({'foo': Int8, 'bar': String})
 
         Access the data type associated with a specific column name.
@@ -570,26 +574,26 @@ def _stableify(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | Series: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -642,26 +646,26 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Any: ...
+) -> Series: ...
 
 
 @overload
@@ -722,7 +726,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -738,7 +742,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_dataframe: Any,
+    native_dataframe: IntoSeriesT | Any,  # remain `Any` for downstream compatibility
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -1059,7 +1063,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
            a
         0  2
         1  4
-        >>> func(df_pl)  # doctest: +SKIP
+        >>> func(df_pl)
         shape: (2, 1)
         ┌─────┐
         │ a   │
@@ -1250,9 +1254,11 @@ def mean(*columns: str) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals.stable.v1 as nw
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
+        >>> df_pa = pa.table({"a": [1, 8, 3]})
 
         We define a dataframe agnostic function:
 
@@ -1260,7 +1266,7 @@ def mean(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.mean("a"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
              a
@@ -1274,6 +1280,11 @@ def mean(*columns: str) -> Expr:
         ╞═════╡
         │ 4.0 │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
     """
     return _stableify(nw.mean(*columns))
 
@@ -2181,6 +2192,52 @@ def new_series(
     )
 
 
+def from_arrow(
+    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
+) -> DataFrame[Any]:
+    """
+    Construct a DataFrame from an object which supports the PyCapsule Interface.
+
+    Arguments:
+        native_frame: Object which implements `__arrow_c_stream__`.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals.stable.v1 as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function which creates a PyArrow
+        Table.
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return nw.from_arrow(df, native_namespace=pa)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))  # doctest: +SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+        >>> func(pl.DataFrame(data))  # doctest: +SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+    """
+    return _stableify(  # type: ignore[no-any-return]
+        nw_from_arrow(native_frame, native_namespace=native_namespace)
+    )
+
+
 def from_dict(
     data: dict[str, Any],
     schema: dict[str, DType] | Schema | None = None,
@@ -2296,6 +2353,7 @@ __all__ = [
     "String",
     "Datetime",
     "Duration",
+    "Field",
     "Struct",
     "Array",
     "List",
@@ -2304,5 +2362,6 @@ __all__ = [
     "show_versions",
     "Schema",
     "from_dict",
+    "from_arrow",
     "new_series",
 ]

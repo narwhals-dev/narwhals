@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {"a": ["one", "two", "two"]}
 
 
-def test_get_categories(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
+def test_get_categories(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < parse_version("15.0.0"):

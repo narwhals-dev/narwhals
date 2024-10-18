@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from typing import TYPE_CHECKING
 from typing import Any
 
 import duckdb
@@ -11,7 +14,11 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import Constructor
+
+if TYPE_CHECKING:
+    from tests.utils import Constructor
+    from tests.utils import ConstructorEager
+
 
 data = {
     "a": [datetime(2020, 1, 1)],
@@ -60,7 +67,9 @@ def test_string_disguised_as_object() -> None:
     assert result["a"] == nw.String
 
 
-def test_actual_object(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
+def test_actual_object(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
     if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
@@ -213,23 +222,39 @@ def test_nested_dtypes() -> None:
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_pandas(use_pyarrow_extension_array=True)
     nwdf = nw.from_native(df)
-
-    assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}
+    assert nwdf.schema == {
+        "a": nw.List(nw.Int64),
+        "b": nw.Array(nw.Int64, 2),
+        "c": nw.Struct({"a": nw.Int64}),
+    }
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     )
     nwdf = nw.from_native(df)
-    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
+    assert nwdf.schema == {
+        "a": nw.List(nw.Int64),
+        "b": nw.Array(nw.Int64, 2),
+        "c": nw.Struct({"a": nw.Int64}),
+    }
+
     df = pl.DataFrame(
-        {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
+        {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1, "b": "x", "c": 1.1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_arrow()
     nwdf = nw.from_native(df)
-    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
+    assert nwdf.schema == {
+        "a": nw.List(nw.Int64),
+        "b": nw.Array(nw.Int64, 2),
+        "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
+    }
     df = duckdb.sql("select * from df")
     nwdf = nw.from_native(df)
-    assert nwdf.schema == {"a": nw.List, "b": nw.Array(nw.Int64, 2), "c": nw.Struct}
+    assert nwdf.schema == {
+        "a": nw.List(nw.Int64),
+        "b": nw.Array(nw.Int64, 2),
+        "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
+    }
 
 
 def test_nested_dtypes_ibis() -> None:  # pragma: no cover
@@ -240,7 +265,7 @@ def test_nested_dtypes_ibis() -> None:  # pragma: no cover
     )
     tbl = ibis.memtable(df[["a", "c"]])
     nwdf = nw.from_native(tbl)
-    assert nwdf.schema == {"a": nw.List, "c": nw.Struct}
+    assert nwdf.schema == {"a": nw.List(nw.Int64), "c": nw.Struct({"a": nw.Int64})}
 
 
 @pytest.mark.skipif(
@@ -259,4 +284,8 @@ def test_nested_dtypes_dask() -> None:
         ).to_pandas(use_pyarrow_extension_array=True)
     )
     nwdf = nw.from_native(df)
-    assert nwdf.schema == {"a": nw.List, "b": nw.Array, "c": nw.Struct}
+    assert nwdf.schema == {
+        "a": nw.List(nw.Int64),
+        "b": nw.Array(nw.Int64, 2),
+        "c": nw.Struct({"a": nw.Int64}),
+    }

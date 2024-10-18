@@ -1,9 +1,10 @@
-from typing import Any
+from __future__ import annotations
 
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {"a": [1, 4, 2, 5]}
@@ -17,7 +18,7 @@ def test_expr_is_in(constructor: Constructor) -> None:
     compare_dicts(result, expected)
 
 
-def test_ser_is_in(constructor_eager: Any) -> None:
+def test_ser_is_in(constructor_eager: ConstructorEager) -> None:
     ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = {"a": ser.is_in([4, 5])}
     expected = {"a": [False, True, False, True]}

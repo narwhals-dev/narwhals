@@ -1,5 +1,11 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import nox
-from nox.sessions import Session
+
+if TYPE_CHECKING:
+    from nox.sessions import Session
 
 nox.options.default_venv_backend = "uv"
 nox.options.reuse_venv = True
