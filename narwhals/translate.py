@@ -809,6 +809,12 @@ def to_py_scalar(scalar_like: Any) -> Any:
     if np and np.isscalar(scalar_like) and hasattr(scalar_like, "item"):
         return scalar_like.item()
 
+    pd = get_pandas()
+    if pd and isinstance(scalar_like, pd.Timestamp):
+        return scalar_like.to_pydatetime()
+    if pd and isinstance(scalar_like, pd.Timedelta):
+        return scalar_like.to_pytimedelta()
+
     return scalar_like
 
 
