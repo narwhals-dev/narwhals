@@ -47,8 +47,6 @@ def test_duration_attributes(
 ) -> None:
     if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
 
@@ -83,8 +81,6 @@ def test_duration_attributes_series(
     if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(
         constructor_eager
     ):
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
