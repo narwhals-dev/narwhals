@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from datetime import datetime
+from typing import Literal
 
 import pytest
 
@@ -106,14 +107,25 @@ def test_datetime_chained_attributes(
     compare_dicts(result, {"a": [2021, 2020]})
 
 
-def test_timestamp_datetimes(constructor: Constructor) -> None:
+@pytest.mark.parametrize(
+    ("original_time_unit", "time_unit", "expected"),
+    [
+        ("ns", "ns", [978307200000000000, None, 978480000000000000]),
+        ("ns", "us", [978307200000000, None, 978480000000000]),
+    ],
+)
+def test_timestamp_datetimes(
+    constructor: Constructor,
+    original_time_unit: Literal["us", "ns", "ms", "s"],
+    time_unit: Literal["ns", "us", "ms"],
+    expected: list[int | None],
+) -> None:
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
-    result = df.select(nw.col("a").dt.timestamp())
-    expected = {"a": [978307200000000, None, 978480000000000]}
-    compare_dicts(result, expected)
-    result = df.select(nw.col("a").cast(nw.Datetime("ms")).dt.timestamp())
-    compare_dicts(result, expected)
+    result = df.select(
+        nw.col("a").cast(nw.Datetime(original_time_unit)).dt.timestamp(time_unit)
+    )
+    compare_dicts(result, {"a": expected})
 
 
 def test_timestamp_dates(
