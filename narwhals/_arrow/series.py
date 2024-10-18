@@ -12,6 +12,7 @@ from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import parse_datetime_format
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
@@ -1062,8 +1063,7 @@ class ArrowSeriesStringNamespace:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         if format is None:
-            msg = "`format` is required for pyarrow backend."
-            raise ValueError(msg)
+            format = parse_datetime_format(self._arrow_series._native_series)
 
         return self._arrow_series._from_native_series(
             pc.strptime(self._arrow_series._native_series, format=format, unit="us")
