@@ -954,7 +954,10 @@ def narwhalify(
 
 
 def to_py_scalar(scalar: Any) -> Any:
-    """If a scalar is not Python native, tries to convert it to Python native.
+    """If a scalar is not Python native, converts it to Python native.
+
+    Raises:
+        ValueError: If the object is not convertible to a scalar.
 
     Examples:
         >>> import narwhals.stable.v1 as nw

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import numbers
+from datetime import datetime
+from datetime import timedelta
 from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
@@ -779,7 +782,10 @@ def narwhalify(
 
 
 def to_py_scalar(scalar_like: Any) -> Any:
-    """If a scalar is not Python native, tries to convert it to Python native.
+    """If a scalar is not Python native, converts it to Python native.
+
+    Raises:
+        ValueError: If the object is not convertible to a scalar.
 
     Examples:
         >>> import narwhals as nw
@@ -815,7 +821,25 @@ def to_py_scalar(scalar_like: Any) -> Any:
     if pd and isinstance(scalar_like, pd.Timedelta):
         return scalar_like.to_pytimedelta()
 
-    return scalar_like
+    all_scalar_types = (
+        int,
+        float,
+        complex,
+        bool,
+        bytes,
+        str,
+        datetime,
+        timedelta,
+        numbers.Number,
+    )
+    if isinstance(scalar_like, all_scalar_types):
+        return scalar_like
+
+    msg = (
+        f"Expected object convertible to a scalar, found {type(scalar_like)}. "
+        "Please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+    )
+    raise ValueError(msg)
 
 
 __all__ = [
