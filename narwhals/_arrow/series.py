@@ -810,6 +810,13 @@ class ArrowSeriesDateTimeNamespace:
                     result = pc.multiply(s_cast, 1_000)
                 if time_unit == "ms":
                     result = s_cast
+            if unit == "s":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000_000)
+                if time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000_000)
+                if time_unit == "ms":
+                    result = pc.multiply(s_cast, 1_000)
         elif dtype == self._arrow_series._dtypes.Date:
             time_s = pc.multiply(s.cast(pa.int32()), 86400)
             if time_unit == "ns":

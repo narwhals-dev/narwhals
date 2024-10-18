@@ -112,14 +112,27 @@ def test_datetime_chained_attributes(
     [
         ("ns", "ns", [978307200000000000, None, 978480000000000000]),
         ("ns", "us", [978307200000000, None, 978480000000000]),
+        ("ns", "ms", [978307200000, None, 978480000000]),
+        ("us", "ns", [978307200000000000, None, 978480000000000000]),
+        ("us", "us", [978307200000000, None, 978480000000000]),
+        ("us", "ms", [978307200000, None, 978480000000]),
+        ("ms", "ns", [978307200000000000, None, 978480000000000000]),
+        ("ms", "us", [978307200000000, None, 978480000000000]),
+        ("ms", "ms", [978307200000, None, 978480000000]),
+        ("s", "ns", [978307200000000000, None, 978480000000000000]),
+        ("s", "us", [978307200000000, None, 978480000000000]),
+        ("s", "ms", [978307200000, None, 978480000000]),
     ],
 )
 def test_timestamp_datetimes(
+    request: pytest.FixtureRequest,
     constructor: Constructor,
     original_time_unit: Literal["us", "ns", "ms", "s"],
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
+    if original_time_unit == "s" and "polars" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
     result = df.select(
