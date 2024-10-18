@@ -294,6 +294,7 @@ def from_dict(
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
@@ -305,7 +306,7 @@ def from_dict(
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
-        Let's see what happens when passing pandas / Polars input:
+        Let's see what happens when passing Pandas, Polars or PyArrow input:
 
         >>> func(pd.DataFrame(data))
            c  d
@@ -321,6 +322,13 @@ def from_dict(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        c: int64
+        d: int64
+        ----
+        c: [[5,2]]
+        d: [[1,4]]
     """
     from narwhals import dtypes
 
