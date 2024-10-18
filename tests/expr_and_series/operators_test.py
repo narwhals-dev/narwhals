@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
@@ -78,7 +77,7 @@ def test_logic_operators_expr(
     ],
 )
 def test_comparand_operators_scalar_series(
-    constructor_eager: Any, operator: str, expected: list[bool]
+    constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 2]}
     s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
@@ -98,7 +97,7 @@ def test_comparand_operators_scalar_series(
     ],
 )
 def test_comparand_operators_series(
-    constructor_eager: Any, operator: str, expected: list[bool]
+    constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 1], "b": [0, 0, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -115,7 +114,7 @@ def test_comparand_operators_series(
     ],
 )
 def test_logic_operators_series(
-    constructor_eager: Any, operator: str, expected: list[bool]
+    constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
     df = nw.from_native(constructor_eager(data), eager_only=True)

@@ -1,7 +1,8 @@
-from typing import Any
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -20,7 +21,7 @@ def test_null_count_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_null_count_series(constructor_eager: Any) -> None:
+def test_null_count_series(constructor_eager: ConstructorEager) -> None:
     data = [1, 2, None]
     series = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
     result = series.null_count()

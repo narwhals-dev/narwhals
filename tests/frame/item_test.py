@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
@@ -14,7 +15,10 @@ from tests.utils import assert_equal_data
     [(0, 2, 7), (1, "z", 8)],
 )
 def test_item(
-    constructor_eager: Any, row: int | None, column: int | str | None, expected: Any
+    constructor_eager: ConstructorEager,
+    row: int | None,
+    column: int | str | None,
+    expected: Any,
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -43,7 +47,10 @@ def test_item(
     ],
 )
 def test_item_value_error(
-    constructor_eager: Any, row: int | None, column: int | str | None, err_msg: str
+    constructor_eager: ConstructorEager,
+    row: int | None,
+    column: int | str | None,
+    err_msg: str,
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     with pytest.raises(ValueError, match=err_msg):

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
-from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -11,6 +10,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8, 9]}
@@ -73,7 +73,7 @@ def test_invalid_group_by() -> None:
         )
 
 
-def test_group_by_iter(constructor_eager: Any) -> None:
+def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []

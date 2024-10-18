@@ -1,10 +1,11 @@
-from typing import Any
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_slice(constructor_eager: Any) -> None:
+def test_slice(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {"a": df["a"][[0, 1]]}

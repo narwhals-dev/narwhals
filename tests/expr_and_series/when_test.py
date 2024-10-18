@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -71,7 +70,7 @@ def test_value_numpy_array(
     assert_equal_data(result, expected)
 
 
-def test_value_series(constructor_eager: Any) -> None:
+def test_value_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     s_data = {"s": [3, 4, 5]}
     s = nw.from_native(constructor_eager(s_data))["s"]
@@ -110,7 +109,7 @@ def test_otherwise_numpy_array(
     assert_equal_data(result, expected)
 
 
-def test_otherwise_series(constructor_eager: Any) -> None:
+def test_otherwise_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     s_data = {"s": [0, 9, 10]}
     s = nw.from_native(constructor_eager(s_data))["s"]

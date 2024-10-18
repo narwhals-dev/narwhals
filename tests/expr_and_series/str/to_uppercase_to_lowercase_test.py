@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
@@ -68,7 +67,7 @@ def test_str_to_uppercase(
     ],
 )
 def test_str_to_uppercase_series(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
@@ -134,7 +133,7 @@ def test_str_to_lowercase(
     ],
 )
 def test_str_to_lowercase_series(
-    constructor_eager: Any,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
 ) -> None:

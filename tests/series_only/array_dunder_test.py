@@ -1,4 +1,4 @@
-from typing import Any
+from __future__ import annotations
 
 import numpy as np
 import pandas as pd
@@ -7,10 +7,13 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_array_dunder(request: pytest.FixtureRequest, constructor_eager: Any) -> None:
+def test_array_dunder(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
     ) < parse_version("16.0.0"):  # pragma: no cover
@@ -22,7 +25,7 @@ def test_array_dunder(request: pytest.FixtureRequest, constructor_eager: Any) ->
 
 
 def test_array_dunder_with_dtype(
-    request: pytest.FixtureRequest, constructor_eager: Any
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
@@ -35,7 +38,7 @@ def test_array_dunder_with_dtype(
 
 
 def test_array_dunder_with_copy(
-    request: pytest.FixtureRequest, constructor_eager: Any
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__

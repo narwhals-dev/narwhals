@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
@@ -36,7 +35,7 @@ def test_drop_nulls(constructor: Constructor, request: pytest.FixtureRequest) ->
     assert_equal_data(result_d, expected_d)
 
 
-def test_drop_nulls_series(constructor_eager: Any) -> None:
+def test_drop_nulls_series(constructor_eager: ConstructorEager) -> None:
     data = {
         "A": [1, 2, None, 4],
         "B": [5, 6, 7, 8],

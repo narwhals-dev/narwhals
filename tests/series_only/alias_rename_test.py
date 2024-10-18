@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import narwhals as nw
 from tests.utils import Constructor
 from tests.utils import assert_equal_data

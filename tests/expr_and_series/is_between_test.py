@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -39,7 +38,7 @@ def test_is_between(constructor: Constructor, closed: str, expected: list[bool])
     ],
 )
 def test_is_between_series(
-    constructor_eager: Any, closed: str, expected: list[bool]
+    constructor_eager: ConstructorEager, closed: str, expected: list[bool]
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.with_columns(a=df["a"].is_between(1, 5, closed=closed))

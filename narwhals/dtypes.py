@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from datetime import timezone
 from typing import TYPE_CHECKING
-from typing import Literal
+from typing import Mapping
 
 if TYPE_CHECKING:
+    from typing import Iterator
+    from typing import Literal
+    from typing import Sequence
+
     from typing_extensions import Self
 
 
@@ -170,7 +175,82 @@ class Categorical(DType): ...
 class Enum(DType): ...
 
 
-class Struct(DType): ...
+class Field:
+    """
+    Definition of a single field within a `Struct` DataType.
+
+    Arguments:
+        name: The name of the field within its parent `Struct`.
+        dtype: The `DataType` of the field's values.
+
+    """
+
+    name: str
+    dtype: type[DType] | DType
+
+    def __init__(self, name: str, dtype: type[DType] | DType) -> None:
+        self.name = name
+        self.dtype = dtype
+
+    def __eq__(self, other: Field) -> bool:  # type: ignore[override]
+        return (self.name == other.name) & (self.dtype == other.dtype)
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.dtype))
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({self.name!r}, {self.dtype})"
+
+
+class Struct(DType):
+    """
+    Struct composite type.
+
+    Arguments:
+        fields: The fields that make up the struct. Can be either a sequence of Field objects or a mapping of column names to data types.
+    """
+
+    fields: list[Field]
+
+    def __init__(
+        self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
+    ) -> None:
+        if isinstance(fields, Mapping):
+            self.fields = [Field(name, dtype) for name, dtype in fields.items()]
+        else:
+            self.fields = list(fields)
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        # The comparison allows comparing objects to classes, and specific
+        # inner types to those without (eg: inner=None). if one of the
+        # arguments is not specific about its inner type we infer it
+        # as being equal. (See the List type for more info).
+        if type(other) is type and issubclass(other, self.__class__):
+            return True
+        elif isinstance(other, self.__class__):
+            return self.fields == other.fields
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, tuple(self.fields)))
+
+    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+        for fld in self.fields:
+            yield fld.name, fld.dtype
+
+    def __reversed__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+        for fld in reversed(self.fields):
+            yield fld.name, fld.dtype
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({dict(self)})"
+
+    def to_schema(self) -> OrderedDict[str, DType | type[DType]]:
+        """Return Struct dtype as a schema dict."""
+        return OrderedDict(self)
 
 
 class List(DType):

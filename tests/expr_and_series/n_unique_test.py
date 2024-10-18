@@ -1,7 +1,8 @@
-from typing import Any
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -17,7 +18,7 @@ def test_n_unique(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_n_unique_series(constructor_eager: Any) -> None:
+def test_n_unique_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = {"a": [3], "b": [4]}
     result_series = {"a": [df["a"].n_unique()], "b": [df["b"].n_unique()]}

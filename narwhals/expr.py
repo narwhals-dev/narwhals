@@ -367,9 +367,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
             >>> df_pl = pl.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df_pa = pa.table({"a": [-1, 0, 1], "b": [2, 4, 6]})
 
             Let's define a dataframe-agnostic function:
 
@@ -377,7 +379,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").mean())
 
-            We can then pass either pandas or Polars to `func`:
+            We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a    b
@@ -391,6 +393,13 @@ class Expr:
             ╞═════╪═════╡
             │ 0.0 ┆ 4.0 │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[0]]
+            b: [[4]]
         """
         return self.__class__(lambda plx: self._call(plx).mean())
 
@@ -1262,12 +1271,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)  # doctest: +SKIP
                a
             2  3
             0  1
             2  3
-            >>> func(df_pl)  # doctest:+SKIP
+            >>> func(df_pl)  # doctest: +SKIP
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -2662,9 +2671,7 @@ class ExprDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> data = {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
-            >>> df_pd = pd.DataFrame(data).convert_dtypes(
-            ...     dtype_backend="pyarrow"
-            ... )  # doctest:+SKIP
+            >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
             >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
@@ -2675,7 +2682,7 @@ class ExprDateTimeNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)
                         a
             0  2012-01-07
             1  2023-03-10
@@ -3546,7 +3553,7 @@ class ExprDateTimeNamespace:
             │ 2024-01-01 00:00:00 +0545    │
             │ 2024-01-02 00:00:00 +0545    │
             └──────────────────────────────┘
-            >>> func(df_pa)  # doctest:+SKIP
+            >>> func(df_pa)
             pyarrow.Table
             a: timestamp[us, tz=Asia/Kathmandu]
             ----
@@ -3601,7 +3608,7 @@ class ExprDateTimeNamespace:
             │ 2024-01-01 05:45:00 +0545    │
             │ 2024-01-02 05:45:00 +0545    │
             └──────────────────────────────┘
-            >>> func(df_pa)  # doctest:+SKIP
+            >>> func(df_pa)
             pyarrow.Table
             a: timestamp[us, tz=Asia/Kathmandu]
             ----
@@ -3898,7 +3905,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
            a
         0  2
         1  4
-        >>> func(df_pl)  # doctest: +SKIP
+        >>> func(df_pl)
         shape: (2, 1)
         ┌─────┐
         │ a   │
@@ -4056,9 +4063,11 @@ def mean(*columns: str) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
+        >>> df_pa = pa.table({"a": [1, 8, 3]})
 
         We define a dataframe agnostic function:
 
@@ -4066,7 +4075,7 @@ def mean(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.mean("a"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
              a
@@ -4080,6 +4089,11 @@ def mean(*columns: str) -> Expr:
         ╞═════╡
         │ 4.0 │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
     """
 
     return Expr(lambda plx: plx.mean(*columns))

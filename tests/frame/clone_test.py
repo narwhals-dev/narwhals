@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 import narwhals.stable.v1 as nw

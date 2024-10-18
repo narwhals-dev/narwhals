@@ -1,14 +1,15 @@
-from typing import Any
+from __future__ import annotations
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_new_series(constructor_eager: Any) -> None:
+def test_new_series(constructor_eager: ConstructorEager) -> None:
     s = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     result = nw.new_series("b", [4, 1, 2], native_namespace=nw.get_native_namespace(s))
     expected = {"b": [4, 1, 2]}
@@ -25,7 +26,7 @@ def test_new_series(constructor_eager: Any) -> None:
     assert_equal_data(result.to_frame(), expected)
 
 
-def test_new_series_v1(constructor_eager: Any) -> None:
+def test_new_series_v1(constructor_eager: ConstructorEager) -> None:
     s = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     result = nw_v1.new_series(
         "b", [4, 1, 2], native_namespace=nw_v1.get_native_namespace(s)
