@@ -785,9 +785,9 @@ class ArrowSeriesDateTimeNamespace:
         import pyarrow.compute as pc  # ignore-banned-import
 
         s = self._arrow_series._native_series
-        dtype = s.type
-        if isinstance(dtype, pa.TimestampType):
-            unit = dtype.unit
+        dtype = self._arrow_series.dtype
+        if dtype == self._arrow_series._dtypes.Datetime:
+            unit = dtype.time_unit  # type: ignore[attr-defined]
             s_cast = s.cast(pa.int64())
             if unit == "ns":
                 if time_unit == "ns":
@@ -810,7 +810,7 @@ class ArrowSeriesDateTimeNamespace:
                     result = pc.multiply(s_cast, 1_000)
                 if time_unit == "ms":
                     result = s_cast
-        elif dtype == pa.date32():
+        elif dtype == self._arrow_series._dtypes.Date:
             time_s = pc.multiply(s.cast(pa.int32()), 86400)
             if time_unit == "ns":
                 result = pc.multiply(time_s, 1_000_000_000)

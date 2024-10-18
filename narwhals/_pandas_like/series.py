@@ -951,8 +951,14 @@ class PandasLikeSeriesDateTimeNamespace:
         is_pyarrow_dtype = "pyarrow" in str(self._pandas_series._native_series.dtype)
         mask_na = s.isna()
         if dtype == self._pandas_series._dtypes.Date:
-            result = s.astype("Int32[pyarrow]")
-        if dtype == self._pandas_series._dtypes.Datetime:
+            s_cast = s.astype("Int32[pyarrow]") * 86_400
+            if time_unit == "ns":
+                result = s_cast * 1_000_000_000
+            if time_unit == "us":
+                result = s_cast * 1_000_000
+            if time_unit == "ms":
+                result = s_cast * 1_000
+        elif dtype == self._pandas_series._dtypes.Datetime:
             original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
             s_cast = s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
             if original_time_unit == "ns":
@@ -983,5 +989,8 @@ class PandasLikeSeriesDateTimeNamespace:
                     result = s_cast * 1_000_000
                 if time_unit == "ms":
                     result = s_cast * 1_000
-            result[mask_na] = None
+        else:
+            msg = "Input should be either of Date or Datetime type"
+            raise TypeError(msg)
+        result[mask_na] = None
         return self._pandas_series._from_native_series(result)

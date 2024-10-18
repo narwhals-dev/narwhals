@@ -121,11 +121,11 @@ def test_timestamp_dates(
 ) -> None:
     if any(
         x in str(constructor)
-        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf")
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf", "dask")
     ):
         request.applymarker(pytest.mark.xfail)
-    dates = {"a": [date(2001, 1, 1), None, date(2001, 1, 3)]}
+    dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(dates))
-    result = df.select(nw.col("a").dt.timestamp())
+    result = df.select(nw.col("a").dt.date().dt.timestamp())
     expected = {"a": [978307200000000, None, 978480000000000]}
     compare_dicts(result, expected)

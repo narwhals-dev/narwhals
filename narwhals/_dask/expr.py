@@ -961,8 +961,14 @@ class DaskExprDateTimeNamespace:
             is_pyarrow_dtype = "pyarrow" in str(dtype)
             mask_na = s.isna()
             if dtype == self._expr._dtypes.Date:
-                result = s.astype("Int32[pyarrow]")
-            if dtype == self._expr._dtypes.Datetime:
+                s_cast = s.astype("Int32[pyarrow]") * 86_400
+                if time_unit == "ns":
+                    result = s_cast * 1_000_000_000
+                if time_unit == "us":
+                    result = s_cast * 1_000_000
+                if time_unit == "ms":
+                    result = s_cast * 1_000
+            elif dtype == self._expr._dtypes.Datetime:
                 original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
                 if is_pyarrow_dtype:
                     s_cast = s.astype("Int64[pyarrow]")
@@ -996,6 +1002,9 @@ class DaskExprDateTimeNamespace:
                         result = s_cast * 1_000_000
                     if time_unit == "ms":
                         result = s_cast * 1_000
+            else:
+                msg = "Input should be either of Date or Datetime type"
+                raise TypeError(msg)
             return result.where(~mask_na)
 
         return self._expr._from_call(
