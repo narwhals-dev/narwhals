@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import compare_dicts

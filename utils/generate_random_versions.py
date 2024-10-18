@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 
 PANDAS_AND_NUMPY_VERSION = [

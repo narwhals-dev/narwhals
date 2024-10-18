@@ -94,6 +94,7 @@ convention = "google"
 
 [tool.ruff.lint.isort]
 force-single-line = true
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.format]
 docstring-code-format = true

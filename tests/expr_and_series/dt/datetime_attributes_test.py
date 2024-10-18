@@ -141,3 +141,15 @@ def test_timestamp_dates(
     result = df.select(nw.col("a").dt.date().dt.timestamp())
     expected = {"a": [978307200000000, None, 978480000000000]}
     compare_dicts(result, expected)
+
+
+def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if any(
+        x in str(constructor)
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "dask")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    df = nw.from_native(constructor(dates))
+    result = df.select(nw.col("a").dt.date())
+    assert result.collect_schema() == {"a": nw.Date}

@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 from contextlib import nullcontext as does_not_raise
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
 @pytest.mark.parametrize(
