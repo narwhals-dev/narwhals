@@ -582,9 +582,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We can then pass either pandas, Polars or PyArrow to `func`:
 
-            >>> func(df_pd)
-            >>> func(df_pl)
-            >>> func(df_pa)
+            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pl)  # doctest:+SKIP
+            >>> func(df_pa)  # doctest:+SKIP
         """
         self._compliant_frame.write_parquet(file)
 

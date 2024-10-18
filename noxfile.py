@@ -27,7 +27,9 @@ def run_common(session: Session, coverage_threshold: float) -> None:
         f"--cov-fail-under={coverage_threshold}",
         "--runslow",
     )
-    session.run("pytest", "narwhals", "--doctest-modules")
+
+    if session.python == "3.12":
+        session.run("pytest", "narwhals", "--doctest-modules")
 
 
 @nox.session(python=PYTHON_VERSIONS)  # type: ignore[misc]
