@@ -529,10 +529,12 @@ class Series:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s = [1, 2, 3, 4, 5]
+            >>> s = [1, 1, 2, 10, 100]
             >>> s_pd = pd.Series(s)
             >>> s_pl = pl.Series(s)
+            >>> s_pa = pa.array(s)
 
             We define a library agnostic function:
 
@@ -540,12 +542,14 @@ class Series:
             ... def func(s):
             ...     return s.skew()
 
-            We can then pass either pandas or Polars to `func`:
+            We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(s_pd)
-            0.0
+            1.472427
             >>> func(s_pl)
-            0.0
+            1.472427
+            >>> func(s_pa)
+            1.472427
 
         Notes:
             The skewness is a measure of the asymmetry of the probability distribution.
