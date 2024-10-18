@@ -40,6 +40,7 @@
         - sample
         - shift
         - sort
+        - skew
         - std
         - sum
         - tail
