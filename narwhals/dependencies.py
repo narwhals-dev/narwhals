@@ -176,6 +176,45 @@ def is_pandas_like_series(arr: Any) -> bool:
     return is_pandas_series(arr) or is_modin_series(arr) or is_cudf_series(arr)
 
 
+def is_into_series(ser: Any) -> bool:
+    """
+    Check whether `ser` can be converted to a Narwhals Series.
+
+    Arguments:
+        ser: The object to check.
+
+    Returns:
+        `True` if `ser` can be converted to a Narwhals Series, `False` otherwise.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import numpy as np
+        >>> import narwhals as nw
+
+        >>> s_pd = pd.Series([1, 2, 3])
+        >>> s_pl = pl.Series([1, 2, 3])
+        >>> np_arr = np.array([1, 2, 3])
+
+        >>> nw.dependencies.is_into_series(s_pd)
+        True
+        >>> nw.dependencies.is_into_series(s_pl)
+        True
+        >>> nw.dependencies.is_into_series(np_arr)
+        False
+    """
+
+    return (
+        (
+            hasattr(ser, "_compliant_series")
+            and hasattr(ser._compliant_series, "__narwhals_series__")
+        )
+        or is_polars_series(ser)
+        or is_pyarrow_chunked_array(ser)
+        or is_pandas_like_series(ser)
+    )
+
+
 __all__ = [
     "get_polars",
     "get_pandas",
@@ -200,4 +239,5 @@ __all__ = [
     "is_dask_dataframe",
     "is_pandas_like_dataframe",
     "is_pandas_like_series",
+    "is_into_series",
 ]
