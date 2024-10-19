@@ -85,4 +85,4 @@ If you run `python t.py` then your output should look like the above. This is th
 function - as we'll soon see, we can do much more advanced things.
 Let's learn about what you just did, and what Narwhals can do for you!
 
-Note: these examples are only using pandas and Polars. Please see the following to find the [supported libraries](extending.md).
+Note: these examples are only using pandas, Polars and PyArrow. Please see the following to find the [supported libraries](extending.md).
