@@ -188,7 +188,7 @@ jobs:
 
      strategy:
        matrix:
-         python-version: ["3.12"]
+         python-version: ["3.11"]
          os: [ubuntu-latest]
 
      runs-on: ${{ matrix.os }}
@@ -208,16 +208,20 @@ jobs:
               git clone https://github.com/vega/vegafusion.git --depth=1
               cd vegafusion
               git log
-        - name: Install latest stable Rust toolchain
-          uses: actions-rs/toolchain@v1
-          with:
-            toolchain: stable
-            override: true
-        - name: Build wheels
-          uses: PyO3/maturin-action@v1
-          with:
-            command: build
-            manylinux: 2014
-            rust-toolchain: stable
-            args: --release -m vegafusion/vegafusion-python-embed/Cargo.toml --features=protobuf-src --strip
+
+        - name: Setup tmate session
+          uses: mxschmitt/action-tmate@v3
+
+        # - name: Install latest stable Rust toolchain
+        #   uses: actions-rs/toolchain@v1
+        #   with:
+        #     toolchain: stable
+        #     override: true
+        # - name: Build wheels
+        #   uses: PyO3/maturin-action@v1
+        #   with:
+        #     command: build
+        #     manylinux: 2014
+        #     rust-toolchain: stable
+        #     args: --release -m vegafusion/vegafusion-python-embed/Cargo.toml --features=protobuf-src --strip --target aarch64-unknown-linux-gnu
       
