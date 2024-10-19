@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from datetime import date
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import polars as pl
@@ -10,16 +13,18 @@ from polars.testing import assert_frame_equal
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
-def test_cast_253() -> None:
-    df_polars = pl.DataFrame({"a": [1]})
-    result = nw.from_native(df_polars, eager_only=True).select(
-        nw.col("a").cast(nw.String) + "hi"
-    )["a"][0]
-    assert result == "1hi"
 
-    df_pandas = pd.DataFrame({"a": [1]})
-    result = nw.from_native(df_pandas, eager_only=True).select(
+def test_cast_253(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
+    df_raw = constructor_eager({"a": [1]})
+    result = nw.from_native(df_raw, eager_only=True).select(
         nw.col("a").cast(nw.String) + "hi"
     )["a"][0]
     assert result == "1hi"
@@ -75,13 +80,13 @@ def test_cast_date_datetime_pandas() -> None:
     df = df.select(nw.col("a").cast(nw.Datetime))
     result = nw.to_native(df)
     expected = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype(
-        {"a": "timestamp[ns][pyarrow]"}
+        {"a": "timestamp[us][pyarrow]"}
     )
     pd.testing.assert_frame_equal(result, expected)
 
     # pandas: pyarrow datetime to date
     dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype(
-        {"a": "timestamp[ns][pyarrow]"}
+        {"a": "timestamp[us][pyarrow]"}
     )
     df = nw.from_native(dfpd)
     df = df.select(nw.col("a").cast(nw.Date))

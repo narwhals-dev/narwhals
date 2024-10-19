@@ -12,18 +12,20 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class PolarsExpr:
-    def __init__(self, expr: Any) -> None:
+    def __init__(self, expr: Any, dtypes: DTypes) -> None:
         self._native_expr = expr
         self._implementation = Implementation.POLARS
+        self._dtypes = dtypes
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsExpr"
 
     def _from_native_expr(self, expr: Any) -> Self:
-        return self.__class__(expr)
+        return self.__class__(expr, dtypes=self._dtypes)
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -36,7 +38,7 @@ class PolarsExpr:
 
     def cast(self, dtype: DType) -> Self:
         expr = self._native_expr
-        dtype = narwhals_to_native_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_expr(expr.cast(dtype))
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]

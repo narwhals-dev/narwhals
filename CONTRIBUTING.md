@@ -51,17 +51,20 @@ Here's how you can set up your local development environment to contribute.
 
 #### Option 1: Use UV (recommended)
 
-1. Make sure you have Python3.8+ installed (for example, Python 3.11), create a virtual environment,
+1. Make sure you have Python3.12 installed, create a virtual environment,
    and activate it. If you're new to this, here's one way that we recommend:
    1. Install uv: https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started
-   2. Install some version of Python greater than Python3.8. For example, to install
-      Python3.11:
+      or make sure it is up-to-date with:
       ```
-      uv python install 3.11
+      uv self update
+      ```
+   2. Install Python3.12:
+      ```
+      uv python install 3.12
       ```
    3. Create a virtual environment:
       ```
-      uv venv -p 3.11 --seed
+      uv venv -p 3.12 --seed
       ```
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 2. Install Narwhals: `uv pip install -e .`
@@ -90,8 +93,10 @@ If you add code that should be tested, please add tests.
 
 ### 6. Running tests
 
-To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`.
-To run tests on the docset-module, use `pytest narwhals --doctest-modules`.
+- To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`
+- To run tests on the doctests, use `pytest narwhals --doctest-modules`
+- To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=narwhals --doctest-modules`
+- To run tests multiprocessed, you may also want to use [pytest-xdist](https://github.com/pytest-dev/pytest-xdist) (optional)
 
 If you want to have less surprises when opening a PR, you can take advantage of [nox](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
 
@@ -153,7 +158,7 @@ listed above in [Working with local development environment](#working-with-local
 ## How it works
 
 If Narwhals looks like underwater unicorn magic to you, then please read
-[how it works](https://narwhals-dev.github.io/narwhals/how-it-works/).
+[how it works](https://narwhals-dev.github.io/narwhals/how_it_works/).
 
 ## Imports
 

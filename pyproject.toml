@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.8.1"
+version = "1.9.4"
 authors = [
   { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
 ]
@@ -94,11 +94,13 @@ convention = "google"
 
 [tool.ruff.lint.isort]
 force-single-line = true
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.format]
 docstring-code-format = true
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 filterwarnings = [
   "error",
   'ignore:distutils Version classes are deprecated:DeprecationWarning',
@@ -128,6 +130,8 @@ plugins = ["covdefaults"]
 [tool.coverage.report]
 omit = [
   'narwhals/typing.py',
+  'narwhals/stable/v1/typing.py',
+  'narwhals/this.py',
   # we can run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
 ]

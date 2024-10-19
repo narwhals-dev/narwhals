@@ -1,7 +1,8 @@
-from typing import Any
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 
@@ -42,7 +43,7 @@ def test_namespace_len(constructor: Constructor) -> None:
     compare_dicts(df, expected)
 
 
-def test_len_series(constructor_eager: Any) -> None:
+def test_len_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 1]}
     s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
 

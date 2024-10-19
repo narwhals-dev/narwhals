@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import pytest
@@ -13,4 +15,19 @@ def test_meanh(constructor: Constructor, col_expr: Any) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(horizontal_mean=nw.mean_horizontal(col_expr, nw.col("b")))
     expected = {"horizontal_mean": [2.5, 3.0, 6.0, float("nan")]}
+    compare_dicts(result, expected)
+
+
+def test_meanh_all(constructor: Constructor) -> None:
+    data = {"a": [2, 4, 6], "b": [10, 20, 30]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.mean_horizontal(nw.all()))
+    expected = {
+        "a": [6, 12, 18],
+    }
+    compare_dicts(result, expected)
+    result = df.select(c=nw.mean_horizontal(nw.all()))
+    expected = {
+        "c": [6, 12, 18],
+    }
     compare_dicts(result, expected)

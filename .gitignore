@@ -32,5 +32,8 @@ tpch/data/*
 # VSCode
 .vscode/
 
+# IntelliJ IDEA / PyCharm
+.idea/
+
 # MacOS
 .DS_Store

@@ -7,6 +7,7 @@ from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import NoReturn
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
@@ -14,12 +15,15 @@ from typing import overload
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.schema import Schema
+from narwhals.translate import to_native
 from narwhals.utils import flatten
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
+    from types import ModuleType
 
     import numpy as np
     import pandas as pd
@@ -31,19 +35,18 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
+    from narwhals.typing import IntoFrame
 
-FrameT = TypeVar("FrameT", bound="IntoDataFrame")
+FrameT = TypeVar("FrameT", bound="IntoFrame")
+DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 
 
 class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "interchange"]
 
-    def __len__(self) -> Any:
-        return self._compliant_frame.__len__()
-
-    def __native_namespace__(self) -> Any:
-        return self._compliant_frame.__native_namespace__()
+    def __native_namespace__(self: Self) -> ModuleType:
+        return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
 
     def __narwhals_namespace__(self) -> Any:
         return self._compliant_frame.__narwhals_namespace__()
@@ -107,12 +110,6 @@ class BaseFrame(Generic[FrameT]):
     def columns(self) -> list[str]:
         return self._compliant_frame.columns  # type: ignore[no-any-return]
 
-    def lazy(self) -> LazyFrame[Any]:
-        return LazyFrame(
-            self._compliant_frame.lazy(),
-            level=self._level,
-        )
-
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
@@ -174,9 +171,12 @@ class BaseFrame(Generic[FrameT]):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.sort(by, *more_by, descending=descending)
+            self._compliant_frame.sort(
+                by, *more_by, descending=descending, nulls_last=nulls_last
+            )
         )
 
     def join(
@@ -290,8 +290,25 @@ class BaseFrame(Generic[FrameT]):
             )
         )
 
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None,
+        *,
+        index: str | list[str] | None,
+        variable_name: str | None,
+        value_name: str | None,
+    ) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.unpivot(
+                on=on,
+                index=index,
+                variable_name=variable_name,
+                value_name=value_name,
+            )
+        )
 
-class DataFrame(BaseFrame[FrameT]):
+
+class DataFrame(BaseFrame[DataFrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
@@ -300,6 +317,16 @@ class DataFrame(BaseFrame[FrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    @property
+    def _series(self) -> type[Series]:
+        from narwhals.series import Series
+
+        return Series
+
+    @property
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
+        return LazyFrame
 
     def __init__(
         self,
@@ -314,18 +341,21 @@ class DataFrame(BaseFrame[FrameT]):
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
 
+    def __len__(self) -> Any:
+        return self._compliant_frame.__len__()
+
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals DataFrame                            "
+        header = " Narwhals DataFrame                    "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `narwhals.to_native` to see native output |\n"
+            + "| Use `.to_native` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -362,14 +392,16 @@ class DataFrame(BaseFrame[FrameT]):
         If a library does not support lazy execution, then this is a no-op.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -377,7 +409,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.lazy()
 
-            Note that then, pandas dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
+            Note that then, pandas and pyarrow dataframe stay eager, but Polars DataFrame becomes a Polars LazyFrame:
 
             >>> func(df_pd)
                foo  bar ham
@@ -386,22 +418,81 @@ class DataFrame(BaseFrame[FrameT]):
             2    3  8.0   c
             >>> func(df_pl)
             <LazyFrame ...>
+            >>> func(df_pa)
+            pyarrow.Table
+            foo: int64
+            bar: double
+            ham: string
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
+            ham: [["a","b","c"]]
         """
-        return super().lazy()
+        return self._lazyframe(self._compliant_frame.lazy(), level=self._level)
+
+    def to_native(self) -> DataFrameT:
+        """
+        Convert Narwhals DataFrame to native one.
+
+        Returns:
+            Object of class that user started with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Calling `to_native` on a Narwhals DataFrame returns the native object:
+
+            >>> nw.from_native(df_pd).to_native()
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+            >>> nw.from_native(df_pl).to_native()
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+            >>> nw.from_native(df_pa).to_native()
+            pyarrow.Table
+            foo: int64
+            bar: double
+            ham: string
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
+            ham: [["a","b","c"]]
+        """
+
+        return self._compliant_frame._native_frame  # type: ignore[no-any-return]
 
     def to_pandas(self) -> pd.DataFrame:
         """
         Convert this DataFrame to a pandas DataFrame.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars (eager) and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -409,7 +500,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_pandas()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars (eager), or PyArrow to `func`:
 
             >>> func(df_pd)
                foo  bar ham
@@ -421,6 +512,13 @@ class DataFrame(BaseFrame[FrameT]):
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
+            >>> func(df_pa)
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+
+
         """
         return self._compliant_frame.to_pandas()
 
@@ -433,10 +531,12 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -444,12 +544,14 @@ class DataFrame(BaseFrame[FrameT]):
             ...     df = nw.from_native(df)
             ...     return df.write_csv()
 
-            We can then pass either pandas or Polars to `func`:
+            We can pass any supported library such as pandas, Polars or PyArrow to `func`:
 
-            >>> func(df_pd)  # doctest: +SKIP
+            >>> func(df_pd)
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> func(df_pl)  # doctest: +SKIP
+            >>> func(df_pl)
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+            >>> func(df_pa)
+            '"foo","bar","ham"\n1,6,"a"\n2,7,"b"\n3,8,"c"\n'
 
             If we had passed a file name to `write_csv`, it would have been
             written to that file.
@@ -461,14 +563,16 @@ class DataFrame(BaseFrame[FrameT]):
         Write dataframe to parquet file.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -476,10 +580,11 @@ class DataFrame(BaseFrame[FrameT]):
             ...     df = nw.from_native(df)
             ...     df.write_parquet("foo.parquet")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)  # doctest:+SKIP
             >>> func(df_pl)  # doctest:+SKIP
+            >>> func(df_pa)  # doctest:+SKIP
         """
         self._compliant_frame.write_parquet(file)
 
@@ -492,10 +597,12 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.5, 7.0, 8.5], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -503,13 +610,17 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_numpy()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
             >>> func(df_pl)
+            array([[1, 6.5, 'a'],
+                   [2, 7.0, 'b'],
+                   [3, 8.5, 'c']], dtype=object)
+            >>> func(df_pa)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
@@ -526,10 +637,12 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3, 4, 5]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -537,11 +650,13 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.shape
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)
             (5, 1)
             >>> func(df_pl)
+            (5, 1)
+            >>> func(df_pa)
             (5, 1)
         """
         return self._compliant_frame.shape  # type: ignore[no-any-return]
@@ -586,9 +701,7 @@ class DataFrame(BaseFrame[FrameT]):
                 2
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.get_column(name),
             level=self._level,
         )
@@ -624,15 +737,21 @@ class DataFrame(BaseFrame[FrameT]):
     @overload
     def __getitem__(self, item: slice) -> Self: ...
 
+    @overload
+    def __getitem__(self, item: tuple[slice, slice]) -> Self: ...
+
     def __getitem__(
         self,
-        item: str
-        | slice
-        | Sequence[int]
-        | Sequence[str]
-        | tuple[Sequence[int], str | int]
-        | tuple[slice, str | int]
-        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice],
+        item: (
+            str
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[Sequence[int], str | int]
+            | tuple[slice, str | int]
+            | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
+            | tuple[slice, slice]
+        ),
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -674,10 +793,12 @@ class DataFrame(BaseFrame[FrameT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> data = {"a": [1, 2], "b": [3, 4]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a library agnostic function:
 
@@ -685,7 +806,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df["a"]
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)
             0    1
@@ -698,6 +819,15 @@ class DataFrame(BaseFrame[FrameT]):
                 1
                 2
             ]
+            >>> func(df_pa)  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                1,
+                2
+              ]
+            ]
+
         """
         if isinstance(item, int):
             item = [item]
@@ -715,19 +845,21 @@ class DataFrame(BaseFrame[FrameT]):
         if (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[1], (list, tuple, slice))
+            and (is_sequence_but_not_str(item[1]) or isinstance(item[1], slice))
         ):
+            if item[1] == slice(None) and item[0] == slice(None):
+                return self
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
-            from narwhals.series import Series
-
-            return Series(
+            return self._series(
                 self._compliant_frame[item],
                 level=self._level,
             )
 
-        elif isinstance(item, (Sequence, slice)) or (
-            is_numpy_array(item) and item.ndim == 1
+        elif (
+            is_sequence_but_not_str(item)
+            or isinstance(item, slice)
+            or (is_numpy_array(item) and item.ndim == 1)
         ):
             return self._from_compliant_dataframe(self._compliant_frame[item])
 
@@ -757,6 +889,7 @@ class DataFrame(BaseFrame[FrameT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {
             ...     "A": [1, 2, 3, 4, 5],
@@ -767,6 +900,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... }
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -774,18 +908,18 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_dict(as_series=False)
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28.0, 300.0, nan, 2.0, -30.0]}
             >>> func(df_pl)
             {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
+            >>> func(df_pa)
+            {'A': [1, 2, 3, 4, 5], 'fruits': ['banana', 'banana', 'apple', 'apple', 'banana'], 'B': [5, 4, 3, 2, 1], 'animals': ['beetle', 'fly', 'beetle', 'beetle', 'beetle'], 'optional': [28, 300, None, 2, -30]}
         """
-        from narwhals.series import Series
-
         if as_series:
             return {
-                key: Series(
+                key: self._series(
                     value,
                     level=self._level,
                 )
@@ -984,12 +1118,12 @@ class DataFrame(BaseFrame[FrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pd_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pl_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().schema
 
@@ -1018,12 +1152,12 @@ class DataFrame(BaseFrame[FrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pd_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pl_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().collect_schema()
 
@@ -1035,10 +1169,12 @@ class DataFrame(BaseFrame[FrameT]):
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -1046,11 +1182,13 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.columns
 
-            We can then pass either pandas or Polars to `func`:
+            We can pass any supported library such as pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
             ['foo', 'bar', 'ham']
             >>> func(df_pl)
+            ['foo', 'bar', 'ham']
+            >>> func(df_pa)
             ['foo', 'bar', 'ham']
         """
         return super().columns
@@ -1059,16 +1197,14 @@ class DataFrame(BaseFrame[FrameT]):
     def rows(
         self,
         *,
-        named: Literal[False],
+        named: Literal[False] = False,
     ) -> list[tuple[Any, ...]]: ...
-
     @overload
     def rows(
         self,
         *,
         named: Literal[True],
     ) -> list[dict[str, Any]]: ...
-
     @overload
     def rows(
         self,
@@ -1812,19 +1948,22 @@ class DataFrame(BaseFrame[FrameT]):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         r"""
         Sort the dataframe by the given columns.
 
         Arguments:
             by: Column(s) names to sort by.
+            *more_by: Additional columns to sort by, specified as positional arguments.
+            descending: Sort in descending order. When sorting by multiple columns, can be
+                specified per column by passing a sequence of booleans.
+            nulls_last: Place null values last.
 
-            *more_by: Additional columns to sort by, specified as positional
-                       arguments.
-
-            descending: Sort in descending order. When sorting by multiple
-                         columns, can be specified per column by passing a
-                         sequence of booleans.
+        Warning:
+            Unlike Polars, it is not possible to specify a sequence of booleans for
+            `nulls_last` in order to control per-column behaviour. Instead a single
+            boolean is applied for all `by` columns.
 
         Examples:
             >>> import narwhals as nw
@@ -1864,7 +2003,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 2    ┆ 5.0 ┆ c   │
             └──────┴─────┴─────┘
         """
-        return super().sort(by, *more_by, descending=descending)
+        return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
     def join(
         self,
@@ -2177,9 +2316,7 @@ class DataFrame(BaseFrame[FrameT]):
                 true
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.is_duplicated(),
             level=self._level,
         )
@@ -2260,9 +2397,7 @@ class DataFrame(BaseFrame[FrameT]):
                 false
             ]
         """
-        from narwhals.series import Series
-
-        return Series(
+        return self._series(
             self._compliant_frame.is_unique(),
             level=self._level,
         )
@@ -2343,8 +2478,8 @@ class DataFrame(BaseFrame[FrameT]):
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")  # doctest:+SKIP
-            (5, 6)
+            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")
+            (np.int64(5), np.int64(6))
 
             >>> func(df_pl, 1, 1), func(df_pl, 2, "b")
             (5, 6)
@@ -2446,7 +2581,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_arrow()
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)
             pyarrow.Table
             foo: int64
             bar: string
@@ -2524,6 +2659,93 @@ class DataFrame(BaseFrame[FrameT]):
             )
         )
 
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None = None,
+        *,
+        index: str | list[str] | None = None,
+        variable_name: str | None = None,
+        value_name: str | None = None,
+    ) -> Self:
+        r"""
+        Unpivot a DataFrame from wide to long format.
+
+        Optionally leaves identifiers set.
+
+        This function is useful to massage a DataFrame into a format where one or more
+        columns are identifier variables (index) while all other columns, considered
+        measured variables (on), are "unpivoted" to the row axis leaving just
+        two non-identifier columns, 'variable' and 'value'.
+
+        Arguments:
+            on: Column(s) to use as values variables; if `on` is empty all columns that
+                are not in `index` will be used.
+            index: Column(s) to use as identifier variables.
+            variable_name: Name to give to the `variable` column. Defaults to "variable".
+            value_name: Name to give to the `value` column. Defaults to "value".
+
+        Notes:
+            If you're coming from pandas, this is similar to `pandas.DataFrame.melt`,
+            but with `index` replacing `id_vars` and `on` replacing `value_vars`.
+            In other frameworks, you might know this operation as `pivot_longer`.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": ["x", "y", "z"],
+            ...     "b": [1, 3, 5],
+            ...     "c": [2, 4, 6],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.unpivot(on=["b", "c"], index="a")
+
+            We can pass any supported library such as pandas, Polars or PyArrow to `func`:
+
+            >>> func(pl.DataFrame(data))
+            shape: (6, 3)
+            ┌─────┬──────────┬───────┐
+            │ a   ┆ variable ┆ value │
+            │ --- ┆ ---      ┆ ---   │
+            │ str ┆ str      ┆ i64   │
+            ╞═════╪══════════╪═══════╡
+            │ x   ┆ b        ┆ 1     │
+            │ y   ┆ b        ┆ 3     │
+            │ z   ┆ b        ┆ 5     │
+            │ x   ┆ c        ┆ 2     │
+            │ y   ┆ c        ┆ 4     │
+            │ z   ┆ c        ┆ 6     │
+            └─────┴──────────┴───────┘
+
+            >>> func(pd.DataFrame(data))
+               a variable  value
+            0  x        b      1
+            1  y        b      3
+            2  z        b      5
+            3  x        c      2
+            4  y        c      4
+            5  z        c      6
+
+            >>> func(pa.table(data))
+            pyarrow.Table
+            a: string
+            variable: string
+            value: int64
+            ----
+            a: [["x","y","z"],["x","y","z"]]
+            variable: [["b","b","b"],["c","c","c"]]
+            value: [[1,3,5],[2,4,6]]
+        """
+        return super().unpivot(
+            on=on, index=index, variable_name=variable_name, value_name=value_name
+        )
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """
@@ -2534,6 +2756,10 @@ class LazyFrame(BaseFrame[FrameT]):
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`.
     """
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        return DataFrame
 
     def __init__(
         self,
@@ -2549,20 +2775,20 @@ class LazyFrame(BaseFrame[FrameT]):
             raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals LazyFrame                            "
+        header = " Narwhals LazyFrame                    "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `narwhals.to_native` to see native output |\n"
+            + "| Use `.to_native` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
         )
 
-    def __getitem__(self, item: str | slice) -> Series | Self:
+    def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
         raise TypeError(msg)
 
@@ -2585,12 +2811,12 @@ class LazyFrame(BaseFrame[FrameT]):
             ... )
             >>> lf = nw.from_native(lf_pl)
             >>> lf
-            ┌───────────────────────────────────────────────┐
-            | Narwhals LazyFrame                            |
-            | Use `narwhals.to_native` to see native output |
-            └───────────────────────────────────────────────┘
+            ┌───────────────────────────────────────┐
+            | Narwhals LazyFrame                    |
+            | Use `.to_native` to see native output |
+            └───────────────────────────────────────┘
             >>> df = lf.group_by("a").agg(nw.all().sum()).collect()
-            >>> nw.to_native(df).sort("a")
+            >>> df.to_native().sort("a")
             shape: (3, 3)
             ┌─────┬─────┬─────┐
             │ a   ┆ b   ┆ c   │
@@ -2602,10 +2828,49 @@ class LazyFrame(BaseFrame[FrameT]):
             │ c   ┆ 6   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        return DataFrame(
+        return self._dataframe(
             self._compliant_frame.collect(),
             level=self._level,
         )
+
+    def to_native(self) -> FrameT:
+        """
+        Convert Narwhals LazyFrame to native one.
+
+        Returns:
+            Object of class that user started with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.LazyFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Calling `to_native` on a Narwhals DataFrame returns the native object:
+
+            >>> nw.from_native(df_pd).lazy().to_native()
+               foo  bar ham
+            0    1  6.0   a
+            1    2  7.0   b
+            2    3  8.0   c
+            >>> nw.from_native(df_pl).to_native().collect()
+            shape: (3, 3)
+            ┌─────┬─────┬─────┐
+            │ foo ┆ bar ┆ ham │
+            │ --- ┆ --- ┆ --- │
+            │ i64 ┆ f64 ┆ str │
+            ╞═════╪═════╪═════╡
+            │ 1   ┆ 6.0 ┆ a   │
+            │ 2   ┆ 7.0 ┆ b   │
+            │ 3   ┆ 8.0 ┆ c   │
+            └─────┴─────┴─────┘
+        """
+
+        return to_native(narwhals_object=self, strict=True)
 
     # inherited
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
@@ -2745,7 +3010,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.schema  # doctest:+SKIP
+            >>> lf.schema  # doctest: +SKIP
             Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().schema
@@ -2765,8 +3030,8 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.collect_schema()  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> lf.collect_schema()
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().collect_schema()
 
@@ -3600,20 +3865,23 @@ class LazyFrame(BaseFrame[FrameT]):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         r"""
         Sort the LazyFrame by the given columns.
 
         Arguments:
-            by: Column(s) to sort by. Accepts expression input. Strings are
-                 parsed as column names.
+            by: Column(s) names to sort by.
+            *more_by: Additional columns to sort by, specified as positional arguments.
+            descending: Sort in descending order. When sorting by multiple columns, can be
+                specified per column by passing a sequence of booleans.
+            nulls_last: Place null values last; can specify a single boolean applying to
+                all columns or a sequence of booleans for per-column control.
 
-            *more_by: Additional columns to sort by, specified as positional
-                       arguments.
-
-            descending: Sort in descending order. When sorting by multiple
-                         columns, can be specified per column by passing a
-                         sequence of booleans.
+        Warning:
+            Unlike Polars, it is not possible to specify a sequence of booleans for
+            `nulls_last` in order to control per-column behaviour. Instead a single
+            boolean is applied for all `by` columns.
 
         Examples:
             >>> import narwhals as nw
@@ -3653,7 +3921,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2    ┆ 5.0 ┆ c   │
             └──────┴─────┴─────┘
         """
-        return super().sort(by, *more_by, descending=descending)
+        return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
     def join(
         self,
@@ -3986,7 +4254,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> func(df_pl)
             <LazyFrame ...>
         """
-        return super().lazy()  # type: ignore[return-value]
+        return self
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""
@@ -4028,3 +4296,69 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────┴─────┘
         """
         return super().gather_every(n=n, offset=offset)
+
+    def unpivot(
+        self: Self,
+        on: str | list[str] | None = None,
+        *,
+        index: str | list[str] | None = None,
+        variable_name: str | None = None,
+        value_name: str | None = None,
+    ) -> Self:
+        r"""
+        Unpivot a DataFrame from wide to long format.
+
+        Optionally leaves identifiers set.
+
+        This function is useful to massage a DataFrame into a format where one or more
+        columns are identifier variables (index) while all other columns, considered
+        measured variables (on), are "unpivoted" to the row axis leaving just
+        two non-identifier columns, 'variable' and 'value'.
+
+        Arguments:
+            on: Column(s) to use as values variables; if `on` is empty all columns that
+                are not in `index` will be used.
+            index: Column(s) to use as identifier variables.
+            variable_name: Name to give to the `variable` column. Defaults to "variable".
+            value_name: Name to give to the `value` column. Defaults to "value".
+
+        Notes:
+            If you're coming from pandas, this is similar to `pandas.DataFrame.melt`,
+            but with `index` replacing `id_vars` and `on` replacing `value_vars`.
+            In other frameworks, you might know this operation as `pivot_longer`.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import polars as pl
+            >>> data = {
+            ...     "a": ["x", "y", "z"],
+            ...     "b": [1, 3, 5],
+            ...     "c": [2, 4, 6],
+            ... }
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(lf):
+            ...     return (
+            ...         lf.unpivot(on=["b", "c"], index="a").sort(["variable", "a"]).collect()
+            ...     )
+
+            >>> func(pl.LazyFrame(data))
+            shape: (6, 3)
+            ┌─────┬──────────┬───────┐
+            │ a   ┆ variable ┆ value │
+            │ --- ┆ ---      ┆ ---   │
+            │ str ┆ str      ┆ i64   │
+            ╞═════╪══════════╪═══════╡
+            │ x   ┆ b        ┆ 1     │
+            │ y   ┆ b        ┆ 3     │
+            │ z   ┆ b        ┆ 5     │
+            │ x   ┆ c        ┆ 2     │
+            │ y   ┆ c        ┆ 4     │
+            │ z   ┆ c        ┆ 6     │
+            └─────┴──────────┴───────┘
+        """
+        return super().unpivot(
+            on=on, index=index, variable_name=variable_name, value_name=value_name
+        )

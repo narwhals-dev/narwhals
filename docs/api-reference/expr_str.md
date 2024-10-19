@@ -7,9 +7,10 @@
         - contains
         - ends_with
         - head
-        - slice
+        - len_chars
         - replace
         - replace_all
+        - slice
         - starts_with
         - strip_chars
         - tail

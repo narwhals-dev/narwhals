@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
-from narwhals import dtypes
 from narwhals._arrow.expr import ArrowExpr
 from narwhals.utils import Implementation
 
@@ -14,12 +13,14 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowSelectorNamespace:
-    def __init__(self: Self, *, backend_version: tuple[int, ...]) -> None:
+    def __init__(self: Self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.PYARROW
+        self._dtypes = dtypes
 
     def by_dtype(self: Self, dtypes: list[DType | type[DType]]) -> ArrowSelector:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -32,32 +33,33 @@ class ArrowSelectorNamespace:
             root_names=None,
             output_names=None,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def numeric(self: Self) -> ArrowSelector:
         return self.by_dtype(
             [
-                dtypes.Int64,
-                dtypes.Int32,
-                dtypes.Int16,
-                dtypes.Int8,
-                dtypes.UInt64,
-                dtypes.UInt32,
-                dtypes.UInt16,
-                dtypes.UInt8,
-                dtypes.Float64,
-                dtypes.Float32,
+                self._dtypes.Int64,
+                self._dtypes.Int32,
+                self._dtypes.Int16,
+                self._dtypes.Int8,
+                self._dtypes.UInt64,
+                self._dtypes.UInt32,
+                self._dtypes.UInt16,
+                self._dtypes.UInt8,
+                self._dtypes.Float64,
+                self._dtypes.Float32,
             ],
         )
 
     def categorical(self: Self) -> ArrowSelector:
-        return self.by_dtype([dtypes.Categorical])
+        return self.by_dtype([self._dtypes.Categorical])
 
     def string(self: Self) -> ArrowSelector:
-        return self.by_dtype([dtypes.String])
+        return self.by_dtype([self._dtypes.String])
 
     def boolean(self: Self) -> ArrowSelector:
-        return self.by_dtype([dtypes.Boolean])
+        return self.by_dtype([self._dtypes.Boolean])
 
     def all(self: Self) -> ArrowSelector:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -70,6 +72,7 @@ class ArrowSelectorNamespace:
             root_names=None,
             output_names=None,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
 
@@ -91,6 +94,7 @@ class ArrowSelector(ArrowExpr):
             root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def __sub__(self: Self, other: Self | Any) -> ArrowSelector | Any:
@@ -99,7 +103,7 @@ class ArrowSelector(ArrowExpr):
             def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name not in [x.name for x in rhs]]
+                return [x for x in lhs if x.name not in {x.name for x in rhs}]
 
             return ArrowSelector(
                 call,
@@ -108,6 +112,7 @@ class ArrowSelector(ArrowExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() - other
@@ -118,7 +123,7 @@ class ArrowSelector(ArrowExpr):
             def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name not in [x.name for x in rhs]] + rhs
+                return [x for x in lhs if x.name not in {x.name for x in rhs}] + rhs
 
             return ArrowSelector(
                 call,
@@ -127,6 +132,7 @@ class ArrowSelector(ArrowExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() | other
@@ -137,7 +143,7 @@ class ArrowSelector(ArrowExpr):
             def call(df: ArrowDataFrame) -> list[ArrowSeries]:
                 lhs = self._call(df)
                 rhs = other._call(df)
-                return [x for x in lhs if x.name in [x.name for x in rhs]]
+                return [x for x in lhs if x.name in {x.name for x in rhs}]
 
             return ArrowSelector(
                 call,
@@ -146,12 +152,18 @@ class ArrowSelector(ArrowExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                dtypes=self._dtypes,
             )
         else:
             return self._to_expr() & other
 
     def __invert__(self: Self) -> ArrowSelector:
-        return ArrowSelectorNamespace(backend_version=self._backend_version).all() - self
+        return (
+            ArrowSelectorNamespace(
+                backend_version=self._backend_version, dtypes=self._dtypes
+            ).all()
+            - self
+        )
 
     def __rsub__(self: Self, other: Any) -> NoReturn:
         raise NotImplementedError

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
     T = TypeVar("T", Scalar, Series)
 
@@ -50,21 +51,18 @@ def parse_exprs_and_named_exprs(
         else:  # pragma: no cover
             msg = f"Expected expression or column name, got: {expr}"
             raise TypeError(msg)
+        return_scalar = getattr(expr, "_returns_scalar", False)
         for _result in _results:
-            if getattr(expr, "_returns_scalar", False):
-                results[_result.name] = _result[0]
-            else:
-                results[_result.name] = _result
+            results[_result.name] = _result[0] if return_scalar else _result
+
     for name, value in named_exprs.items():
         _results = value._call(df)
         if len(_results) != 1:  # pragma: no cover
             msg = "Named expressions must return a single column"
             raise AssertionError(msg)
+        return_scalar = getattr(value, "_returns_scalar", False)
         for _result in _results:
-            if getattr(value, "_returns_scalar", False):
-                results[name] = _result[0]
-            else:
-                results[name] = _result
+            results[name] = _result[0] if return_scalar else _result
     return results
 
 
@@ -91,9 +89,7 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
         raise RuntimeError(msg)
 
 
-def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
-    from narwhals import dtypes
-
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):
@@ -130,6 +126,23 @@ def reverse_translate_dtype(dtype: DType | type[DType]) -> Any:
         return "datetime64[us]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return "timedelta64[ns]"
+    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
+        msg = "Converting to List dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+        msg = "Converting to Struct dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def name_preserving_sum(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
+    return (s1 + s2).rename(s1.name)
+
+
+def name_preserving_div(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
+    return (s1 / s2).rename(s1.name)

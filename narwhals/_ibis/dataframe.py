@@ -3,15 +3,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from narwhals import dtypes
+from narwhals.dependencies import get_ibis
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
+    import pandas as pd
+    import pyarrow as pa
+    from typing_extensions import Self
+
     from narwhals._ibis.series import IbisInterchangeSeries
+    from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
-def map_ibis_dtype_to_narwhals_dtype(
-    ibis_dtype: Any,
-) -> dtypes.DType:
+def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
@@ -40,25 +46,49 @@ def map_ibis_dtype_to_narwhals_dtype(
         return dtypes.Date()
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
+    if ibis_dtype.is_array():
+        return dtypes.List(
+            map_ibis_dtype_to_narwhals_dtype(ibis_dtype.value_type, dtypes)
+        )
+    if ibis_dtype.is_struct():
+        return dtypes.Struct(
+            [
+                dtypes.Field(
+                    ibis_dtype_name,
+                    map_ibis_dtype_to_narwhals_dtype(ibis_dtype_field, dtypes),
+                )
+                for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
+            ]
+        )
     return dtypes.Unknown()  # pragma: no cover
 
 
 class IbisInterchangeFrame:
-    def __init__(self, df: Any) -> None:
+    def __init__(self, df: Any, dtypes: DTypes) -> None:
         self._native_frame = df
+        self._dtypes = dtypes
 
     def __narwhals_dataframe__(self) -> Any:
         return self
 
+    def __native_namespace__(self: Self) -> ModuleType:
+        return get_ibis()  # type: ignore[no-any-return]
+
     def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
-        return IbisInterchangeSeries(self._native_frame[item])
+        return IbisInterchangeSeries(self._native_frame[item], dtypes=self._dtypes)
+
+    def to_pandas(self: Self) -> pd.DataFrame:
+        return self._native_frame.to_pandas()
+
+    def to_arrow(self: Self) -> pa.Table:
+        return self._native_frame.to_pyarrow()
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
-                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype)
+                column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, self._dtypes)
                 for column_name, ibis_dtype in self._native_frame.schema().items()
             }
         msg = (

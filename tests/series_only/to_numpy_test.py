@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -8,10 +8,17 @@ from numpy.testing import assert_array_equal
 
 import narwhals.stable.v1 as nw
 
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
-def test_to_numpy(constructor_eager: Any, request: pytest.FixtureRequest) -> None:
-    if "pandas_constructor" in str(constructor_eager) or "modin_constructor" in str(
-        constructor_eager
+
+def test_to_numpy(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if (
+        "pandas_constructor" in str(constructor_eager)
+        or "modin_constructor" in str(constructor_eager)
+        or "cudf_constructor" in str(constructor_eager)
     ):
         request.applymarker(pytest.mark.xfail)
 

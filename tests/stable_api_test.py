@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from datetime import datetime
+from datetime import timedelta
+from typing import Any
+
 import polars as pl
 import pytest
 
@@ -33,6 +39,33 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
 
     # The older `_l1_norm` still works in the stable api
     result = df.with_columns(b=nw_v1.col("a")._l1_norm())
+    compare_dicts(result, expected)
+
+
+def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
+    # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
+    # in the main namespace. Here, we check that it's still usable from
+    # the stable api.
+    def func(df_any: Any) -> Any:
+        df = nw_v1.from_native(df_any)
+        df = df._l1_norm()
+        return df.to_native()
+
+    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    expected = {"a": [15]}
+    compare_dicts(result, expected)
+
+
+def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
+    # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
+    # in the main namespace. Here, we check that it's still usable from
+    # the stable api when using `narwhalify`.
+    @nw_v1.narwhalify
+    def func(df: Any) -> Any:
+        return df._l1_norm()
+
+    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    expected = {"a": [15]}
     compare_dicts(result, expected)
 
 
@@ -106,3 +139,15 @@ def test_series_docstrings() -> None:
             )
             == getattr(df, item).__doc__
         )
+
+
+def test_dtypes(constructor: Constructor) -> None:
+    df = nw_v1.from_native(
+        constructor({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
+    )
+    dtype = df.collect_schema()["b"]
+    assert dtype in {nw_v1.Datetime}
+    assert isinstance(dtype, nw_v1.Datetime)
+    dtype = df.collect_schema()["c"]
+    assert dtype in {nw_v1.Duration}
+    assert isinstance(dtype, nw_v1.Duration)

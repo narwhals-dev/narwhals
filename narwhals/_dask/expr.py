@@ -9,8 +9,8 @@ from typing import NoReturn
 
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
-from narwhals._dask.utils import reverse_translate_dtype
-from narwhals.dependencies import get_dask
+from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class DaskExpr:
@@ -36,6 +37,7 @@ class DaskExpr:
         returns_scalar: bool,
         modifies_index: bool,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -45,6 +47,7 @@ class DaskExpr:
         self._returns_scalar = returns_scalar
         self._modifies_index = modifies_index
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -52,13 +55,14 @@ class DaskExpr:
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._dask.namespace import DaskNamespace
 
-        return DaskNamespace(backend_version=self._backend_version)
+        return DaskNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     @classmethod
     def from_column_names(
         cls: type[Self],
         *column_names: str,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
             return [df._native_frame.loc[:, column_name] for column_name in column_names]
@@ -72,6 +76,31 @@ class DaskExpr:
             returns_scalar=False,
             modifies_index=False,
             backend_version=backend_version,
+            dtypes=dtypes,
+        )
+
+    @classmethod
+    def from_column_indices(
+        cls: type[Self],
+        *column_indices: int,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
+    ) -> Self:
+        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
+            return [
+                df._native_frame.iloc[:, column_index] for column_index in column_indices
+            ]
+
+        return cls(
+            func,
+            depth=0,
+            function_name="nth",
+            root_names=None,
+            output_names=None,
+            returns_scalar=False,
+            backend_version=backend_version,
+            modifies_index=False,
+            dtypes=dtypes,
         )
 
     def _from_call(
@@ -132,6 +161,7 @@ class DaskExpr:
             modifies_index=(self._modifies_index or modifies_index)
             and not (self._returns_scalar or returns_scalar),
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def alias(self, name: str) -> Self:
@@ -148,6 +178,7 @@ class DaskExpr:
             returns_scalar=self._returns_scalar,
             modifies_index=self._modifies_index,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def __add__(self, other: Any) -> Self:
@@ -686,6 +717,7 @@ class DaskExpr:
             returns_scalar=False,
             modifies_index=False,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def cast(
@@ -693,7 +725,7 @@ class DaskExpr:
         dtype: DType | type[DType],
     ) -> Self:
         def func(_input: Any, dtype: DType | type[DType]) -> Any:
-            dtype = reverse_translate_dtype(dtype)
+            dtype = narwhals_to_native_dtype(dtype, self._dtypes)
             return _input.astype(dtype)
 
         return self._from_call(
@@ -801,6 +833,7 @@ class DaskExpr:
             returns_scalar=False,
             modifies_index=True,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def arg_true(self: Self) -> Self:
@@ -833,6 +866,14 @@ class DaskExpr:
 class DaskExprStringNamespace:
     def __init__(self, expr: DaskExpr) -> None:
         self._expr = expr
+
+    def len_chars(self) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input: _input.str.len(),
+            "len",
+            returns_scalar=False,
+            modifies_index=False,
+        )
 
     def replace(
         self,
@@ -922,9 +963,11 @@ class DaskExprStringNamespace:
             modifies_index=False,
         )
 
-    def to_datetime(self, format: str | None = None) -> DaskExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
+        import dask.dataframe as dd  # ignore-banned-import()
+
         return self._expr._from_call(
-            lambda _input, fmt: get_dask().dataframe.to_datetime(_input, format=fmt),
+            lambda _input, fmt: dd.to_datetime(_input, format=fmt),
             "to_datetime",
             format,
             returns_scalar=False,
@@ -1049,6 +1092,35 @@ class DaskExprDateTimeNamespace:
             modifies_index=False,
         )
 
+    def replace_time_zone(self, time_zone: str | None) -> DaskExpr:
+        return self._expr._from_call(
+            lambda _input, _time_zone: _input.dt.tz_localize(None).dt.tz_localize(
+                _time_zone
+            )
+            if _time_zone is not None
+            else _input.dt.tz_localize(None),
+            "tz_localize",
+            time_zone,
+            returns_scalar=False,
+            modifies_index=False,
+        )
+
+    def convert_time_zone(self, time_zone: str) -> DaskExpr:
+        def func(s: dask_expr.Series, time_zone: str) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes)
+            if dtype.time_zone is None:  # type: ignore[attr-defined]
+                return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)
+            else:
+                return s.dt.tz_convert(time_zone)
+
+        return self._expr._from_call(
+            func,
+            "tz_convert",
+            time_zone,
+            returns_scalar=False,
+            modifies_index=False,
+        )
+
     def total_minutes(self) -> DaskExpr:
         return self._expr._from_call(
             lambda _input: _input.dt.total_seconds() // 60,
@@ -1117,6 +1189,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._expr._returns_scalar,
             modifies_index=self._expr._modifies_index,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> DaskExpr:
@@ -1144,6 +1217,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._expr._returns_scalar,
             modifies_index=self._expr._modifies_index,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def prefix(self: Self, prefix: str) -> DaskExpr:
@@ -1169,6 +1243,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._expr._returns_scalar,
             modifies_index=self._expr._modifies_index,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def suffix(self: Self, suffix: str) -> DaskExpr:
@@ -1195,6 +1270,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._expr._returns_scalar,
             modifies_index=self._expr._modifies_index,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def to_lowercase(self: Self) -> DaskExpr:
@@ -1221,6 +1297,7 @@ class DaskExprNameNamespace:
             returns_scalar=self._expr._returns_scalar,
             modifies_index=self._expr._modifies_index,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def to_uppercase(self: Self) -> DaskExpr:
@@ -1247,4 +1324,5 @@ class DaskExprNameNamespace:
             returns_scalar=self._expr._returns_scalar,
             modifies_index=self._expr._modifies_index,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )

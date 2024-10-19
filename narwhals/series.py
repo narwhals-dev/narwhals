@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -10,24 +11,33 @@ from typing import overload
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import numpy as np
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals.dataframe import DataFrame
+    from narwhals.dtypes import DType
 
 
 class Series:
     """
     Narwhals Series, backed by a native series.
 
-    The native dataframe might be pandas.Series, polars.Series, ...
+    The native series might be pandas.Series, polars.Series, ...
 
     This class is not meant to be instantiated directly - instead, use
     `narwhals.from_native`, making sure to pass `allow_series=True` or
     `series_only=True`.
     """
+
+    @property
+    def _dataframe(self) -> type[DataFrame[Any]]:
+        from narwhals.dataframe import DataFrame
+
+        return DataFrame
 
     def __init__(
         self,
@@ -56,8 +66,8 @@ class Series:
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
 
-    def __native_namespace__(self) -> Any:
-        return self._compliant_series.__native_namespace__()
+    def __native_namespace__(self: Self) -> ModuleType:
+        return self._compliant_series.__native_namespace__()  # type: ignore[no-any-return]
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """
@@ -85,20 +95,73 @@ class Series:
         ca = pa.chunked_array([self.to_arrow()])
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
+    def to_native(self) -> Any:
+        """
+        Convert Narwhals series to native series.
+
+        Returns:
+            Series of class that user started with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s)
+            >>> s_pl = pl.Series(s)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.to_native()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            2    3
+            dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+                1
+                2
+                3
+            ]
+        """
+        return self._compliant_series._native_series
+
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         """
         Set value(s) at given position(s).
 
         Arguments:
-           indices: Position(s) to set items at.
-           values: Values to set.
+            indices: Position(s) to set items at.
+            values: Values to set.
 
-        Warning:
-            For some libraries (pandas, Polars), this method operates in-place,
-            whereas for others (PyArrow) it doesn't!
-            We recommend being careful with it, and not relying on the
-            in-placeness. For example, a valid use case is when updating
-            a column in an eager dataframe, see the example below.
+        Note:
+            This method always returns a new Series, without modifying the original one.
+            Using this function in a for-loop is an anti-pattern, we recommend building
+            up your positions and values beforehand and doing an update in one go.
+
+            For example, instead of
+
+            ```python
+            for i in [1, 3, 2]:
+                value = some_function(i)
+                s = s.scatter(i, value)
+            ```
+
+            prefer
+
+            ```python
+            positions = [1, 3, 2]
+            values = [some_function(x) for x in positions]
+            s = s.scatter(positions, values)
+            ```
 
         Examples:
             >>> import pandas as pd
@@ -217,14 +280,14 @@ class Series:
         return function(self, *args, **kwargs)
 
     def __repr__(self) -> str:  # pragma: no cover
-        header = " Narwhals Series                                 "
+        header = " Narwhals Series                         "
         length = len(header)
         return (
             "┌"
             + "─" * length
             + "┐\n"
             + f"|{header}|\n"
-            + "| Use `narwhals.to_native()` to see native output |\n"
+            + "| Use `.to_native()` to see native output |\n"
             + "└"
             + "─" * length
             + "┘"
@@ -263,7 +326,7 @@ class Series:
         return len(self._compliant_series)
 
     @property
-    def dtype(self) -> Any:
+    def dtype(self: Self) -> DType:
         """
         Get the data type of the Series.
 
@@ -288,7 +351,7 @@ class Series:
             >>> func(s_pl)
             Int64
         """
-        return self._compliant_series.dtype
+        return self._compliant_series.dtype  # type: ignore[no-any-return]
 
     @property
     def name(self) -> str:
@@ -397,9 +460,7 @@ class Series:
             │ 3   │
             └─────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.to_frame(),
             level=self._level,
         )
@@ -451,7 +512,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.float64(2.0)
             >>> func(s_pl)
             2.0
@@ -478,7 +539,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.int64(3)
             >>> func(s_pl)
             3
@@ -509,7 +570,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.True_
             >>> func(s_pl)
             True
@@ -536,7 +597,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.False_
             >>> func(s_pl)
             False
@@ -564,7 +625,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.int64(1)
             >>> func(s_pl)
             1
@@ -591,7 +652,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.int64(3)
             >>> func(s_pl)
             3
@@ -618,7 +679,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.int64(6)
             >>> func(s_pl)
             6
@@ -649,7 +710,7 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             np.float64(1.0)
             >>> func(s_pl)
             1.0
@@ -1114,13 +1175,13 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)  # doctest: +SKIP
                a
             2  3
             1  2
             3  4
             3  4
-            >>> func(s_pl)  # doctest:+SKIP
+            >>> func(s_pl)  # doctest: +SKIP
             shape: (4,)
             Series: '' [i64]
             [
@@ -1146,10 +1207,12 @@ class Series:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s = [1, 2, 3]
             >>> s_pd = pd.Series(s, name="foo")
             >>> s_pl = pl.Series("foo", s)
+            >>> s_pa = pa.chunked_array([s])
 
             We define a library agnostic function:
 
@@ -1157,7 +1220,7 @@ class Series:
             ... def func(s):
             ...     return s.alias("bar")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(s_pd)
             0    1
@@ -1172,8 +1235,69 @@ class Series:
                2
                3
             ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
         """
         return self._from_compliant_series(self._compliant_series.alias(name=name))
+
+    def rename(self, name: str) -> Self:
+        """
+        Rename the Series.
+
+        Alias for `Series.alias()`.
+
+        Arguments:
+            name: The new name.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s = [1, 2, 3]
+            >>> s_pd = pd.Series(s, name="foo")
+            >>> s_pl = pl.Series("foo", s)
+            >>> s_pa = pa.chunked_array([s])
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.rename("bar")
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
+
+            >>> func(s_pd)
+            0    1
+            1    2
+            2    3
+            Name: bar, dtype: int64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'bar' [i64]
+            [
+               1
+               2
+               3
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
+        """
+        return self.alias(name=name)
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """
@@ -1743,8 +1867,8 @@ class Series:
             ...     return s.null_count()
 
             We can then pass either pandas or Polars to `func`:
-            >>> func(s_pd)  # doctest:+SKIP
-            1
+            >>> func(s_pd)
+            np.int64(1)
             >>> func(s_pl)
             2
         """
@@ -1915,9 +2039,7 @@ class Series:
             │ 3   ┆ 1     │
             └─────┴───────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             ),
@@ -1960,8 +2082,8 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest: +SKIP
-            [5, 12, 24, 37, 44]
+            >>> func(s_pd)
+            [np.int64(5), np.int64(12), np.int64(24), np.int64(37), np.int64(44)]
 
             >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             [5.0, 12.0, 25.0, 37.0, 44.0]
@@ -2044,8 +2166,8 @@ class Series:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)  # doctest:+SKIP
-            (1, 1)
+            >>> func(pl.Series("a", [1]), None), func(pd.Series([1]), None)
+            (1, np.int64(1))
 
             >>> func(pl.Series("a", [9, 8, 7]), -1), func(pl.Series([9, 8, 7]), -2)
             (7, 8)
@@ -2244,9 +2366,7 @@ class Series:
             │ 0   ┆ 1   │
             └─────┴─────┘
         """
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame(
+        return self._dataframe(
             self._compliant_series.to_dummies(separator=separator, drop_first=drop_first),
             level=self._level,
         )
@@ -2367,6 +2487,9 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.mode())
 
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._compliant_series.__iter__()
+
     @property
     def str(self) -> SeriesStringNamespace:
         return SeriesStringNamespace(self)
@@ -2427,6 +2550,49 @@ class SeriesCatNamespace:
 class SeriesStringNamespace:
     def __init__(self, series: Series) -> None:
         self._narwhals_series = series
+
+    def len_chars(self) -> Series:
+        r"""
+        Return the length of each string as the number of characters.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = ["foo", "Café", "345", "東京", None]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.str.len_chars()
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    3.0
+            1    4.0
+            2    3.0
+            3    2.0
+            4    NaN
+            dtype: float64
+
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (5,)
+            Series: '' [u32]
+            [
+               3
+               4
+               3
+               2
+               null
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.len_chars()
+        )
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
@@ -2931,6 +3097,66 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
+    def to_datetime(self: Self, format: str | None = None) -> Series:  # noqa: A002
+        """
+        Parse Series with strings to a Series with Datetime dtype.
+
+        Notes:
+            pandas defaults to nanosecond time unit, Polars to microsecond.
+            Prior to pandas 2.0, nanoseconds were the only time unit supported
+            in pandas, with no ability to set any other one. The ability to
+            set the time unit in pandas, if the version permits, will arrive.
+
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
+        Arguments:
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = ["2020-01-01", "2020-01-02"]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.str.to_datetime(format="%Y-%m-%d")
+
+            We can then pass any supported library such as pandas, Polars, or PyArrow::
+
+            >>> func(s_pd)
+            0   2020-01-01
+            1   2020-01-02
+            dtype: datetime64[ns]
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [datetime[μs]]
+            [
+               2020-01-01 00:00:00
+               2020-01-02 00:00:00
+            ]
+            >>> func(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x...>
+            [
+              [
+                2020-01-01 00:00:00.000000,
+                2020-01-02 00:00:00.000000
+              ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.to_datetime(format=format)
+        )
+
 
 class SeriesDateTimeNamespace:
     def __init__(self, series: Series) -> None:
@@ -2949,9 +3175,7 @@ class SeriesDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> dates = [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
-            >>> s_pd = pd.Series(dates).convert_dtypes(
-            ...     dtype_backend="pyarrow"
-            ... )  # doctest:+SKIP
+            >>> s_pd = pd.Series(dates).convert_dtypes(dtype_backend="pyarrow")
             >>> s_pl = pl.Series(dates)
 
             We define a library agnostic function:
@@ -2962,7 +3186,7 @@ class SeriesDateTimeNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(s_pd)  # doctest:+SKIP
+            >>> func(s_pd)
             0    2012-01-07
             1    2023-03-10
             dtype: date32[day][pyarrow]
@@ -3667,4 +3891,113 @@ class SeriesDateTimeNamespace:
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.to_string(format)
+        )
+
+    def replace_time_zone(self, time_zone: str | None) -> Series:
+        """
+        Replace time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [
+            ...     datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...     datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ... ]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.replace_time_zone("Asia/Kathmandu")
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(s_pd)
+            0   2024-01-01 00:00:00+05:45
+            1   2024-01-02 00:00:00+05:45
+            dtype: datetime64[ns, Asia/Kathmandu]
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [datetime[μs, Asia/Kathmandu]]
+            [
+                2024-01-01 00:00:00 +0545
+                2024-01-02 00:00:00 +0545
+            ]
+            >>> func(s_pa)
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2023-12-31 18:15:00.000000Z,
+                2024-01-01 18:15:00.000000Z
+              ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.replace_time_zone(time_zone)
+        )
+
+    def convert_time_zone(self, time_zone: str) -> Series:
+        """
+        Convert time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [
+            ...     datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...     datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ... ]
+            >>> s_pd = pd.Series(data)
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.convert_time_zone("Asia/Kathmandu")
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(s_pd)
+            0   2024-01-01 05:45:00+05:45
+            1   2024-01-02 05:45:00+05:45
+            dtype: datetime64[ns, Asia/Kathmandu]
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [datetime[μs, Asia/Kathmandu]]
+            [
+                2024-01-01 05:45:00 +0545
+                2024-01-02 05:45:00 +0545
+            ]
+            >>> func(s_pa)
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2024-01-01 00:00:00.000000Z,
+                2024-01-02 00:00:00.000000Z
+              ]
+            ]
+        """
+        if time_zone is None:
+            msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
+            raise TypeError(msg)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
         )

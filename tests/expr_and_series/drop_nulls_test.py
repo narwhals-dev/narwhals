@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 data = {
@@ -37,7 +36,9 @@ def test_drop_nulls(constructor: Constructor) -> None:
     compare_dicts(result_d, expected_d)
 
 
-def test_drop_nulls_broadcast(constructor: Any, request: Any) -> None:
+def test_drop_nulls_broadcast(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
     if "dask" in str(constructor) or (
         "polars" in str(constructor) and parse_version(pl.__version__) >= (1, 7, 0)
     ):
@@ -48,14 +49,14 @@ def test_drop_nulls_broadcast(constructor: Any, request: Any) -> None:
     compare_dicts(result, expected)
 
 
-def test_drop_nulls_invalid(constructor: Any) -> None:
+def test_drop_nulls_invalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data)).lazy()
 
     with pytest.raises(Exception):  # noqa: B017, PT011
         df.select(nw.col("a").drop_nulls(), nw.col("b").drop_nulls()).collect()
 
 
-def test_drop_nulls_series(constructor_eager: Any) -> None:
+def test_drop_nulls_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_a = df.select(df["a"].drop_nulls())

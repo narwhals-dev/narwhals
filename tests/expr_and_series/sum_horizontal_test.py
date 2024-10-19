@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import pytest
@@ -27,4 +29,19 @@ def test_sumh_nullable(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor(data))
     result = df.select(hsum=nw.sum_horizontal("a", "b"))
+    compare_dicts(result, expected)
+
+
+def test_sumh_all(constructor: Constructor) -> None:
+    data = {"a": [1, 2, 3], "b": [10, 20, 30]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.sum_horizontal(nw.all()))
+    expected = {
+        "a": [11, 22, 33],
+    }
+    compare_dicts(result, expected)
+    result = df.select(c=nw.sum_horizontal(nw.all()))
+    expected = {
+        "c": [11, 22, 33],
+    }
     compare_dicts(result, expected)

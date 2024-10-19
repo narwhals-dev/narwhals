@@ -5,6 +5,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
@@ -366,9 +367,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
             >>> df_pl = pl.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df_pa = pa.table({"a": [-1, 0, 1], "b": [2, 4, 6]})
 
             Let's define a dataframe-agnostic function:
 
@@ -376,7 +379,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").mean())
 
-            We can then pass either pandas or Polars to `func`:
+            We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a    b
@@ -390,6 +393,13 @@ class Expr:
             ╞═════╪═════╡
             │ 0.0 ┆ 4.0 │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[0]]
+            b: [[4]]
         """
         return self.__class__(lambda plx: self._call(plx).mean())
 
@@ -1261,12 +1271,12 @@ class Expr:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)  # doctest: +SKIP
                a
             2  3
             0  1
             2  3
-            >>> func(df_pl)  # doctest:+SKIP
+            >>> func(df_pl)  # doctest: +SKIP
             shape: (3, 1)
             ┌─────┐
             │ a   │
@@ -2021,6 +2031,50 @@ class ExprStringNamespace:
     def __init__(self, expr: Expr) -> None:
         self._expr = expr
 
+    def len_chars(self) -> Expr:
+        r"""
+        Return the length of each string as the number of characters.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {"words": ["foo", "Café", "345", "東京", None]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(words_len=nw.col("words").str.len_chars())
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(df_pd)
+              words  words_len
+            0   foo        3.0
+            1  Café        4.0
+            2   345        3.0
+            3    東京        2.0
+            4  None        NaN
+
+            >>> func(df_pl)
+            shape: (5, 2)
+            ┌───────┬───────────┐
+            │ words ┆ words_len │
+            │ ---   ┆ ---       │
+            │ str   ┆ u32       │
+            ╞═══════╪═══════════╡
+            │ foo   ┆ 3         │
+            │ Café  ┆ 4         │
+            │ 345   ┆ 3         │
+            │ 東京  ┆ 2         │
+            │ null  ┆ null      │
+            └───────┴───────────┘
+        """
+        return self._expr.__class__(lambda plx: self._expr._call(plx).str.len_chars())
+
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> Expr:
@@ -2453,7 +2507,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
 
-    def to_datetime(self, format: str) -> Expr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> Expr:  # noqa: A002
         """
         Convert to Datetime dtype.
 
@@ -2463,17 +2517,23 @@ class ExprStringNamespace:
             in pandas, with no ability to set any other one. The ability to
             set the time unit in pandas, if the version permits, will arrive.
 
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
         Arguments:
-            format: Format to parse strings with. Must be passed, as different
-                    dataframe libraries have different ways of auto-inferring
-                    formats.
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
 
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_pd = pd.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
-            >>> df_pl = pl.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
+            >>> data = ["2020-01-01", "2020-01-02"]
+            >>> df_pd = pd.DataFrame({"a": data})
+            >>> df_pl = pl.DataFrame({"a": data})
+            >>> df_pa = pa.table({"a": data})
 
             We define a dataframe-agnostic function:
 
@@ -2481,7 +2541,7 @@ class ExprStringNamespace:
             ... def func(df):
             ...     return df.select(nw.col("a").str.to_datetime(format="%Y-%m-%d"))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as pandas, Polars, or PyArrow:
 
             >>> func(df_pd)
                        a
@@ -2497,6 +2557,11 @@ class ExprStringNamespace:
             │ 2020-01-01 00:00:00 │
             │ 2020-01-02 00:00:00 │
             └─────────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: timestamp[us]
+            ----
+            a: [[2020-01-01 00:00:00.000000,2020-01-02 00:00:00.000000]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)
@@ -2606,9 +2671,7 @@ class ExprDateTimeNamespace:
             >>> from datetime import datetime
             >>> import narwhals as nw
             >>> data = {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
-            >>> df_pd = pd.DataFrame(data).convert_dtypes(
-            ...     dtype_backend="pyarrow"
-            ... )  # doctest:+SKIP
+            >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
             >>> df_pl = pl.DataFrame(data)
 
             We define a library agnostic function:
@@ -2619,7 +2682,7 @@ class ExprDateTimeNamespace:
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)
                         a
             0  2012-01-07
             1  2023-03-10
@@ -3445,6 +3508,119 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.to_string(format)
         )
 
+    def replace_time_zone(self, time_zone: str | None) -> Expr:
+        """
+        Replace time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": [
+            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                                      a
+            0 2024-01-01 00:00:00+05:45
+            1 2024-01-02 00:00:00+05:45
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌──────────────────────────────┐
+            │ a                            │
+            │ ---                          │
+            │ datetime[μs, Asia/Kathmandu] │
+            ╞══════════════════════════════╡
+            │ 2024-01-01 00:00:00 +0545    │
+            │ 2024-01-02 00:00:00 +0545    │
+            └──────────────────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: timestamp[us, tz=Asia/Kathmandu]
+            ----
+            a: [[2023-12-31 18:15:00.000000Z,2024-01-01 18:15:00.000000Z]]
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.replace_time_zone(time_zone)
+        )
+
+    def convert_time_zone(self, time_zone: str) -> Expr:
+        """
+        Convert to a new time zone.
+
+        Arguments:
+            time_zone: Target time zone.
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {
+            ...     "a": [
+            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ...     ]
+            ... }
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                                      a
+            0 2024-01-01 05:45:00+05:45
+            1 2024-01-02 05:45:00+05:45
+            >>> func(df_pl)
+            shape: (2, 1)
+            ┌──────────────────────────────┐
+            │ a                            │
+            │ ---                          │
+            │ datetime[μs, Asia/Kathmandu] │
+            ╞══════════════════════════════╡
+            │ 2024-01-01 05:45:00 +0545    │
+            │ 2024-01-02 05:45:00 +0545    │
+            └──────────────────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: timestamp[us, tz=Asia/Kathmandu]
+            ----
+            a: [[2024-01-01 00:00:00.000000Z,2024-01-02 00:00:00.000000Z]]
+        """
+        if time_zone is None:
+            msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
+            raise TypeError(msg)
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
+        )
+
 
 class ExprNameNamespace:
     def __init__(self: Self, expr: Expr) -> None:
@@ -3697,6 +3873,61 @@ def col(*names: str | Iterable[str]) -> Expr:
     return Expr(func)
 
 
+def nth(*indices: int | Sequence[int]) -> Expr:
+    """
+    Creates an expression that references one or more columns by their index(es).
+
+    Notes:
+        `nth` is not supported for Polars version<1.0.0. Please use [`col`](/api-reference/narwhals/#narwhals.col) instead.
+
+    Arguments:
+        indices: One or more indices representing the columns to retrieve.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2], "b": [3, 4]}
+        >>> df_pl = pl.DataFrame(data)
+        >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
+
+        We define a dataframe-agnostic function:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.nth(0) * 2)
+
+        We can then pass either pandas or polars to `func`:
+
+        >>> func(df_pd)
+           a
+        0  2
+        1  4
+        >>> func(df_pl)
+        shape: (2, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 2   │
+        │ 4   │
+        └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[2,4]]
+    """
+
+    def func(plx: Any) -> Any:
+        return plx.nth(*flatten(indices))
+
+    return Expr(func)
+
+
 # Add underscore so it doesn't conflict with builtin `all`
 def all_() -> Expr:
     """
@@ -3832,9 +4063,11 @@ def mean(*columns: str) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
+        >>> df_pa = pa.table({"a": [1, 8, 3]})
 
         We define a dataframe agnostic function:
 
@@ -3842,7 +4075,7 @@ def mean(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.mean("a"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
              a
@@ -3856,6 +4089,11 @@ def mean(*columns: str) -> Expr:
         ╞═════╡
         │ 4.0 │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
     """
 
     return Expr(lambda plx: plx.mean(*columns))
@@ -3987,8 +4225,137 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 3   │
         └─────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `sum_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.sum_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Get the minimum value horizontally across columns.
+
+    Notes:
+        We support `min_horizontal` over numeric columns only.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal min of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.min_horizontal("a", "b"))
+
+        We can then pass either pandas, polars or pyarrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+             a
+        0  1.0
+        1  5.0
+        2  3.0
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 1   │
+        │ 5   │
+        │ 3   │
+        └─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[1,5,3]]
+    """
+    if not exprs:
+        msg = "At least one expression must be passed to `min_horizontal`"
+        raise ValueError(msg)
+    return Expr(
+        lambda plx: plx.min_horizontal(
+            *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+    """
+    Get the maximum value horizontally across columns.
+
+    Notes:
+        We support `max_horizontal` over numeric columns only.
+
+    Arguments:
+        exprs: Name(s) of the columns to use in the aggregation function. Accepts
+            expression input.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 8, 3],
+        ...     "b": [4, 5, None],
+        ...     "c": ["x", "y", "z"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal max of "a"
+        and "b" columns:
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(nw.max_horizontal("a", "b"))
+
+        We can then pass either pandas, polars or pyarrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+             a
+        0  4.0
+        1  8.0
+        2  3.0
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌─────┐
+        │ a   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 4   │
+        │ 8   │
+        │ 3   │
+        └─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[4,8,3]]
+    """
+    if not exprs:
+        msg = "At least one expression must be passed to `max_horizontal`"
+        raise ValueError(msg)
+    return Expr(
+        lambda plx: plx.max_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
         )
     )
@@ -4118,6 +4485,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `all_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.all_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
@@ -4231,6 +4601,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `any_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.any_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
@@ -4284,9 +4657,95 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 3.0 │
         └─────┘
     """
+    if not exprs:
+        msg = "At least one expression must be passed to `mean_horizontal`"
+        raise ValueError(msg)
     return Expr(
         lambda plx: plx.mean_horizontal(
             *[extract_compliant(plx, v) for v in flatten(exprs)]
+        )
+    )
+
+
+def concat_str(
+    exprs: IntoExpr | Iterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    separator: str = "",
+    ignore_nulls: bool = False,
+) -> Expr:
+    r"""
+    Horizontally concatenate columns into a single string column.
+
+    Arguments:
+        exprs: Columns to concatenate into a single string column. Accepts expression
+            input. Strings are parsed as column names, other non-expression inputs are
+            parsed as literals. Non-`String` columns are cast to `String`.
+        *more_exprs: Additional columns to concatenate into a single string column,
+            specified as positional arguments.
+        separator: String that will be used to separate the values of each column.
+        ignore_nulls: Ignore null values (default is `False`).
+            If set to `False`, null values will be propagated and if the row contains any
+            null values, the output is null.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> data = {
+        ...     "a": [1, 2, 3],
+        ...     "b": ["dogs", "cats", None],
+        ...     "c": ["play", "swim", "walk"],
+        ... }
+
+        We define a dataframe-agnostic function that computes the horizontal string
+        concatenation of different columns
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return df.select(
+        ...         nw.concat_str(
+        ...             [
+        ...                 nw.col("a") * 2,
+        ...                 nw.col("b"),
+        ...                 nw.col("c"),
+        ...             ],
+        ...             separator=" ",
+        ...         ).alias("full_sentence")
+        ...     )
+
+        We can then pass either pandas, Polars or PyArrow to `func`:
+
+        >>> func(pd.DataFrame(data))
+          full_sentence
+        0   2 dogs play
+        1   4 cats swim
+        2          None
+
+        >>> func(pl.DataFrame(data))
+        shape: (3, 1)
+        ┌───────────────┐
+        │ full_sentence │
+        │ ---           │
+        │ str           │
+        ╞═══════════════╡
+        │ 2 dogs play   │
+        │ 4 cats swim   │
+        │ null          │
+        └───────────────┘
+
+        >>> func(pa.table(data))
+        pyarrow.Table
+        full_sentence: string
+        ----
+        full_sentence: [["2 dogs play","4 cats swim",null]]
+    """
+    return Expr(
+        lambda plx: plx.concat_str(
+            [extract_compliant(plx, v) for v in flatten([exprs])],
+            *[extract_compliant(plx, v) for v in more_exprs],
+            separator=separator,
+            ignore_nulls=ignore_nulls,
         )
     )
 

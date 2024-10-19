@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -10,20 +11,20 @@ from typing import overload
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
-from narwhals._pandas_like.utils import translate_dtype
 from narwhals._pandas_like.utils import validate_column_comparand
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -78,11 +79,13 @@ class PandasLikeSeries:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._name = native_series.name
         self._native_series = native_series
         self._implementation = implementation
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary
@@ -96,13 +99,14 @@ class PandasLikeSeries:
         else:
             self._use_copy_false = False
 
-    def __native_namespace__(self) -> Any:
-        if self._implementation is Implementation.PANDAS:
-            return get_pandas()
-        if self._implementation is Implementation.MODIN:  # pragma: no cover
-            return get_modin()
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
-            return get_cudf()
+    def __native_namespace__(self: Self) -> ModuleType:
+        if self._implementation in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+            Implementation.CUDF,
+        }:
+            return self._implementation.to_native_namespace()
+
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -130,6 +134,7 @@ class PandasLikeSeries:
             series,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @classmethod
@@ -141,6 +146,7 @@ class PandasLikeSeries:
         *,
         implementation: Implementation,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         return cls(
             native_series_from_iterable(
@@ -151,6 +157,7 @@ class PandasLikeSeries:
             ),
             implementation=implementation,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     def __len__(self) -> int:
@@ -165,8 +172,8 @@ class PandasLikeSeries:
         return self._native_series.shape  # type: ignore[no-any-return]
 
     @property
-    def dtype(self) -> DType:
-        return translate_dtype(self._native_series)
+    def dtype(self: Self) -> DType:
+        return native_to_narwhals_dtype(self._native_series, self._dtypes)
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
@@ -179,7 +186,7 @@ class PandasLikeSeries:
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
-        s = self._native_series
+        s = self._native_series.copy(deep=True)
         s.iloc[indices] = values
         s.name = self.name
         return self._from_native_series(s)
@@ -189,7 +196,9 @@ class PandasLikeSeries:
         dtype: Any,
     ) -> Self:
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype, ser.dtype, self._implementation)
+        dtype = narwhals_to_native_dtype(
+            dtype, ser.dtype, self._implementation, self._backend_version, self._dtypes
+        )
         return self._from_native_series(ser.astype(dtype))
 
     def item(self: Self, index: int | None = None) -> Any:
@@ -211,6 +220,7 @@ class PandasLikeSeries:
             self._native_series.to_frame(),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def to_list(self) -> Any:
@@ -597,6 +607,7 @@ class PandasLikeSeries:
             val_count,
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def quantile(
@@ -639,6 +650,7 @@ class PandasLikeSeries:
             ).astype(int),
             implementation=self._implementation,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -664,6 +676,9 @@ class PandasLikeSeries:
         result = native_series.mode()
         result.name = native_series.name
         return self._from_native_series(result)
+
+    def __iter__(self: Self) -> Iterator[Any]:
+        yield from self._native_series.__iter__()
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
@@ -692,6 +707,11 @@ class PandasLikeSeriesCatNamespace:
 class PandasLikeSeriesStringNamespace:
     def __init__(self, series: PandasLikeSeries) -> None:
         self._pandas_series = series
+
+    def len_chars(self) -> PandasLikeSeries:
+        return self._pandas_series._from_native_series(
+            self._pandas_series._native_series.str.len()
+        )
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
@@ -735,7 +755,7 @@ class PandasLikeSeriesStringNamespace:
             self._pandas_series._native_series.str.slice(start=offset, stop=stop),
         )
 
-    def to_datetime(self, format: str | None = None) -> PandasLikeSeries:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:  # noqa: A002
         return self._pandas_series._from_native_series(
             to_datetime(self._pandas_series._implementation)(
                 self._pandas_series._native_series, format=format
@@ -906,3 +926,21 @@ class PandasLikeSeriesDateTimeNamespace:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.strftime(format)
         )
+
+    def replace_time_zone(self, time_zone: str | None) -> PandasLikeSeries:
+        if time_zone is not None:
+            result = self._pandas_series._native_series.dt.tz_localize(
+                None
+            ).dt.tz_localize(time_zone)
+        else:
+            result = self._pandas_series._native_series.dt.tz_localize(None)
+        return self._pandas_series._from_native_series(result)
+
+    def convert_time_zone(self, time_zone: str) -> PandasLikeSeries:
+        if self._pandas_series.dtype.time_zone is None:  # type: ignore[attr-defined]
+            result = self._pandas_series._native_series.dt.tz_localize(
+                "UTC"
+            ).dt.tz_convert(time_zone)
+        else:
+            result = self._pandas_series._native_series.dt.tz_convert(time_zone)
+        return self._pandas_series._from_native_series(result)

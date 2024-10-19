@@ -1,11 +1,17 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw
 
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
-def test_row_column(request: Any, constructor_eager: Any) -> None:
+
+def test_row_column(request: Any, constructor_eager: ConstructorEager) -> None:
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 

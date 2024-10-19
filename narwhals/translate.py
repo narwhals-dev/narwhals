@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import numbers
+from datetime import datetime
+from datetime import timedelta
 from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
@@ -9,9 +12,11 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_cupy
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_expr
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
@@ -34,8 +39,10 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import DTypes
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoSeriesT
 
 T = TypeVar("T")
 
@@ -85,26 +92,26 @@ def to_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: Literal[True],
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: Literal[True],
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoDataFrameT] | Series: ...
 
 
 @overload
@@ -157,26 +164,26 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: None = ...,
     allow_series: Literal[True],
-) -> Any: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series: ...
 
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[False],
     eager_only: None = ...,
     eager_or_interchange_only: None = ...,
     series_only: Literal[True],
     allow_series: None = ...,
-) -> Any: ...
+) -> Series: ...
 
 
 @overload
@@ -237,7 +244,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoFrameT | IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -253,7 +260,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: Any,
+    native_object: IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: None = ...,
@@ -296,7 +303,7 @@ def from_native(
 ) -> Any: ...
 
 
-def from_native(  # noqa: PLR0915
+def from_native(
     native_object: Any,
     *,
     strict: bool = True,
@@ -330,6 +337,29 @@ def from_native(  # noqa: PLR0915
     Returns:
         narwhals.DataFrame or narwhals.LazyFrame or narwhals.Series
     """
+    from narwhals import dtypes
+
+    return _from_native_impl(
+        native_object,
+        strict=strict,
+        eager_only=eager_only,
+        eager_or_interchange_only=eager_or_interchange_only,
+        series_only=series_only,
+        allow_series=allow_series,
+        dtypes=dtypes,  # type: ignore[arg-type]
+    )
+
+
+def _from_native_impl(  # noqa: PLR0915
+    native_object: Any,
+    *,
+    strict: bool = True,
+    eager_only: bool | None = None,
+    eager_or_interchange_only: bool | None = None,
+    series_only: bool | None = None,
+    allow_series: bool | None = None,
+    dtypes: DTypes,
+) -> Any:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -398,7 +428,11 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         pl = get_polars()
         return DataFrame(
-            PolarsDataFrame(native_object, backend_version=parse_version(pl.__version__)),
+            PolarsDataFrame(
+                native_object,
+                backend_version=parse_version(pl.__version__),
+                dtypes=dtypes,
+            ),
             level="full",
         )
     elif is_polars_lazyframe(native_object):
@@ -410,7 +444,11 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         pl = get_polars()
         return LazyFrame(
-            PolarsLazyFrame(native_object, backend_version=parse_version(pl.__version__)),
+            PolarsLazyFrame(
+                native_object,
+                backend_version=parse_version(pl.__version__),
+                dtypes=dtypes,
+            ),
             level="full",
         )
     elif is_polars_series(native_object):
@@ -419,7 +457,11 @@ def from_native(  # noqa: PLR0915
             msg = "Please set `allow_series=True`"
             raise TypeError(msg)
         return Series(
-            PolarsSeries(native_object, backend_version=parse_version(pl.__version__)),
+            PolarsSeries(
+                native_object,
+                backend_version=parse_version(pl.__version__),
+                dtypes=dtypes,
+            ),
             level="full",
         )
 
@@ -434,6 +476,7 @@ def from_native(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(pd.__version__),
                 implementation=Implementation.PANDAS,
+                dtypes=dtypes,
             ),
             level="full",
         )
@@ -447,6 +490,7 @@ def from_native(  # noqa: PLR0915
                 native_object,
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd.__version__),
+                dtypes=dtypes,
             ),
             level="full",
         )
@@ -462,6 +506,7 @@ def from_native(  # noqa: PLR0915
                 native_object,
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
+                dtypes=dtypes,
             ),
             level="full",
         )
@@ -475,6 +520,7 @@ def from_native(  # noqa: PLR0915
                 native_object,
                 implementation=Implementation.MODIN,
                 backend_version=parse_version(mpd.__version__),
+                dtypes=dtypes,
             ),
             level="full",
         )
@@ -490,6 +536,7 @@ def from_native(  # noqa: PLR0915
                 native_object,
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
+                dtypes=dtypes,
             ),
             level="full",
         )
@@ -503,6 +550,7 @@ def from_native(  # noqa: PLR0915
                 native_object,
                 implementation=Implementation.CUDF,
                 backend_version=parse_version(cudf.__version__),
+                dtypes=dtypes,
             ),
             level="full",
         )
@@ -514,7 +562,11 @@ def from_native(  # noqa: PLR0915
             msg = "Cannot only use `series_only` with arrow table"
             raise TypeError(msg)
         return DataFrame(
-            ArrowDataFrame(native_object, backend_version=parse_version(pa.__version__)),
+            ArrowDataFrame(
+                native_object,
+                backend_version=parse_version(pa.__version__),
+                dtypes=dtypes,
+            ),
             level="full",
         )
     elif is_pyarrow_chunked_array(native_object):
@@ -524,7 +576,10 @@ def from_native(  # noqa: PLR0915
             raise TypeError(msg)
         return Series(
             ArrowSeries(
-                native_object, backend_version=parse_version(pa.__version__), name=""
+                native_object,
+                backend_version=parse_version(pa.__version__),
+                name="",
+                dtypes=dtypes,
             ),
             level="full",
         )
@@ -542,7 +597,9 @@ def from_native(  # noqa: PLR0915
             raise ImportError(msg)
         return LazyFrame(
             DaskLazyFrame(
-                native_object, backend_version=parse_version(get_dask().__version__)
+                native_object,
+                backend_version=parse_version(get_dask().__version__),
+                dtypes=dtypes,
             ),
             level="full",
         )
@@ -556,7 +613,7 @@ def from_native(  # noqa: PLR0915
             )
             raise TypeError(msg)
         return DataFrame(
-            DuckDBInterchangeFrame(native_object),
+            DuckDBInterchangeFrame(native_object, dtypes=dtypes),
             level="interchange",
         )
 
@@ -569,7 +626,7 @@ def from_native(  # noqa: PLR0915
             )
             raise TypeError(msg)
         return DataFrame(
-            IbisInterchangeFrame(native_object),
+            IbisInterchangeFrame(native_object, dtypes=dtypes),
             level="interchange",
         )
 
@@ -582,7 +639,7 @@ def from_native(  # noqa: PLR0915
             )
             raise TypeError(msg)
         return DataFrame(
-            InterchangeFrame(native_object),
+            InterchangeFrame(native_object, dtypes=dtypes),
             level="interchange",
         )
 
@@ -703,7 +760,7 @@ def narwhalify(
 
             backends = {
                 b()
-                for v in [*args, *kwargs.values()]
+                for v in (*args, *kwargs.values())
                 if (b := getattr(v, "__native_namespace__", None))
             }
 
@@ -724,8 +781,70 @@ def narwhalify(
         return decorator(func)
 
 
+def to_py_scalar(scalar_like: Any) -> Any:
+    """If a scalar is not Python native, converts it to Python native.
+
+    Raises:
+        ValueError: If the object is not convertible to a scalar.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
+        >>> nw.to_py_scalar(df["a"].item(0))
+        1
+        >>> import pyarrow as pa
+        >>> df = nw.from_native(pa.table({"a": [1, 2, 3]}))
+        >>> nw.to_py_scalar(df["a"].item(0))
+        1
+        >>> nw.to_py_scalar(1)
+        1
+    """
+
+    pa = get_pyarrow()
+    if pa and isinstance(scalar_like, pa.Scalar):
+        return scalar_like.as_py()
+
+    cupy = get_cupy()
+    if (  # pragma: no cover
+        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
+    ):
+        return scalar_like.item()
+
+    np = get_numpy()
+    if np and np.isscalar(scalar_like) and hasattr(scalar_like, "item"):
+        return scalar_like.item()
+
+    pd = get_pandas()
+    if pd and isinstance(scalar_like, pd.Timestamp):
+        return scalar_like.to_pydatetime()
+    if pd and isinstance(scalar_like, pd.Timedelta):
+        return scalar_like.to_pytimedelta()
+
+    all_scalar_types = (
+        int,
+        float,
+        complex,
+        bool,
+        bytes,
+        str,
+        datetime,
+        timedelta,
+        numbers.Number,
+    )
+    if isinstance(scalar_like, all_scalar_types):
+        return scalar_like
+
+    msg = (
+        f"Expected object convertible to a scalar, found {type(scalar_like)}. "
+        "Please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+    )
+    raise ValueError(msg)
+
+
 __all__ = [
     "get_native_namespace",
     "to_native",
     "narwhalify",
+    "to_py_scalar",
 ]

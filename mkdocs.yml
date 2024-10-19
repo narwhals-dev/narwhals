@@ -5,29 +5,28 @@ watch:
 nav:
   - Home: index.md
   - Why: why.md
-  - Installation: installation.md
-  - Quick start: quick_start.md
+  - Installation and quick start: installation.md
   - Tutorial:
     - basics/dataframe.md
-    - basics/column.md
+    - basics/series.md
     - basics/complete_example.md
   - Pandas-like concepts:
     - other/pandas_index.md
     - other/user_warning.md
     - other/column_names.md
-  - levels.md
   - overhead.md
   - backcompat.md
   - extending.md
   - how_it_works.md
-  - Roadmap: roadmap.md
-  - Related projects: related.md
+  - Roadmap and related projects: roadmap_and_related.md
   - API Completeness:
     - api-completeness/index.md
-    - api-completeness/dataframe.md
-    - api-completeness/expr.md
-    - api-completeness/series.md
+    - Supported DataFrame methods: api-completeness/dataframe.md
+    - Supported LazyFrame methods: api-completeness/lazyframe.md
+    - Supported Expr methods: api-completeness/expr.md
+    - Supported Series methods: api-completeness/series.md
   - API Reference:
+    - api-reference/index.md
     - api-reference/narwhals.md
     - api-reference/dataframe.md
     - api-reference/expr.md
@@ -44,14 +43,13 @@ nav:
     - api-reference/series_str.md
     - api-reference/dependencies.md
     - api-reference/dtypes.md
-    - api-reference/index.md
     - api-reference/selectors.md
     - api-reference/typing.md
 theme:
   name: material
   font: false
-  favicon: assets/image.png
-  logo: assets/image.png
+  favicon: assets/logo.svg
+  logo: assets/logo.svg
   features:
     - content.code.copy
     - content.code.annotate
@@ -78,6 +76,9 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
+  - css/mkdocstrings.css
 
 plugins:
 - search
