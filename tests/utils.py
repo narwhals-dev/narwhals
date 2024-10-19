@@ -10,6 +10,7 @@ from typing import Sequence
 
 import pandas as pd
 
+import narwhals as nw
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
@@ -30,16 +31,6 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     return zip(left, right)
 
 
-def _to_py_object(value: Any) -> Any:
-    # PyArrow: return scalars as Python objects
-    if hasattr(value, "as_py"):  # pragma: no cover
-        return value.as_py()
-    # cuDF: returns cupy scalars as Python objects
-    if hasattr(value, "item"):  # pragma: no cover
-        return value.item()
-    return value
-
-
 def _to_comparable_list(column_values: Any) -> Any:
     if (
         hasattr(column_values, "_compliant_series")
@@ -48,7 +39,7 @@ def _to_comparable_list(column_values: Any) -> Any:
         column_values = column_values.to_pandas()
     if hasattr(column_values, "to_list"):
         return column_values.to_list()
-    return [_to_py_object(v) for v in column_values]
+    return [nw.to_py_scalar(v) for v in column_values]
 
 
 def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
