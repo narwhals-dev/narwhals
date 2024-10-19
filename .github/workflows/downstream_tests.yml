@@ -181,7 +181,7 @@ jobs:
         run: |
             cd py-shiny
             make narwhals-test-integration
-    
+  
   vegafusion:
      env:
        UV_SYSTEM_PYTHON: true
@@ -203,16 +203,21 @@ jobs:
             enable-cache: "true"
             cache-suffix: ${{ matrix.python-version }}
             cache-dependency-glob: "**requirements*.txt"
-        - uses: prefix-dev/setup-pixi@v0.8.1
-          with:
-            pixi-version: v0.27.1
         - name: clone-vegafusion
           run: |
               git clone https://github.com/vega/vegafusion.git --depth=1
               cd vegafusion
               git log
-        - name: Build vegafusion wheel
-          run: |
-              cd vegafusion    
-              pixi run build-py-vegafusion
+        - name: Install latest stable Rust toolchain
+          uses: actions-rs/toolchain@v1
+          with:
+            toolchain: stable
+            override: true
+        - name: Build wheels
+          uses: PyO3/maturin-action@v1
+          with:
+            command: build
+            manylinux: 2014
+            rust-toolchain: stable
+            args: --release -m vegafusion/vegafusion-python-embed/Cargo.toml --features=protobuf-src --strip
       
