@@ -1444,7 +1444,7 @@ class Expr:
             │ 3.0 │
             │ 5.0 │
             └─────┘
-            >>> func(df_pa)
+            >>> func(df_pa)  # nan != null for pyarrow
             pyarrow.Table
             a: double
             ----
