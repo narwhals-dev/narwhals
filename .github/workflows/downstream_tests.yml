@@ -7,6 +7,9 @@ on:
 
 jobs:
   altair:
+    env:
+      UV_SYSTEM_PYTHON: true
+    
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -30,15 +33,15 @@ jobs:
             cd altair
             git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
+        run: uv pip install --upgrade tox virtualenv setuptools
       - name: install-altair-dev
         run: |
             cd altair
-            uv pip install -e ".[dev, all]" --system
+            uv pip install -e ".[dev, all]"
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals --system
-            uv pip install -e . --system
+            uv pip uninstall narwhals
+            uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -51,6 +54,9 @@ jobs:
             mypy altair tests
 
   marimo:
+    env:
+      UV_SYSTEM_PYTHON: true
+    
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -75,15 +81,15 @@ jobs:
             cd marimo
             git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools hatch --system
+        run: uv pip install --upgrade tox virtualenv setuptools hatch
       - name: install-marimo-dev
         run: |
             cd marimo
-            uv pip install -e ".[dev]" --system
+            uv pip install -e ".[dev]"
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals --system
-            uv pip install -e . --system
+            uv pip uninstall narwhals
+            uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Create assets directory, copy over index.html
@@ -104,6 +110,9 @@ jobs:
             hatch run typecheck:check
 
   scikit-lego:
+    env:
+      UV_SYSTEM_PYTHON: true
+    
     strategy:
       matrix:
         python-version: ["3.11"]
@@ -124,15 +133,15 @@ jobs:
       - name: clone-scikit-lego
         run: git clone https://github.com/koaning/scikit-lego.git --depth 1
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
+        run: uv pip install --upgrade tox virtualenv setuptools
       - name: install-scikit-lego-dev
         run: |
             cd scikit-lego
-            uv pip install -e ".[test]" --system
+            uv pip install -e ".[test]"
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals --system
-            uv pip install -e . --system
+            uv pip uninstall narwhals
+            uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -141,6 +150,9 @@ jobs:
             pytest --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
+    env:
+      UV_SYSTEM_PYTHON: true
+    
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -164,7 +176,7 @@ jobs:
             cd py-shiny
             git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
+        run: uv pip install --upgrade tox virtualenv setuptools
       - name: install-shiny-dev
         env:
           UV_SYSTEM_PYTHON: 1
@@ -173,8 +185,8 @@ jobs:
             make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals --system
-            uv pip install -e . --system
+            uv pip uninstall narwhals
+            uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run `make narwhals-test-integration`
@@ -184,7 +196,8 @@ jobs:
   
   tubular:
     env:
-      MODIN_ENGINE: python
+      UV_SYSTEM_PYTHON: true
+    
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -208,18 +221,18 @@ jobs:
             cd tubular
             git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools pytest-env --system
+        run: uv pip install --upgrade tox virtualenv setuptools pytest-env
       - name: install-tubular-dev
         run: |
             cd tubular
-            uv pip install -e .[dev] --system
+            uv pip install -e .[dev]
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals --system
-            uv pip install -e . --system
+            uv pip uninstall narwhals
+            uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: |
             cd tubular
-            pytest --disable-warnings tests
+            pytest tests --config-file=pyproject.toml
