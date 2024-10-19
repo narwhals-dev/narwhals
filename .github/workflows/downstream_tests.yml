@@ -205,7 +205,7 @@ jobs:
             cache-dependency-glob: "**requirements*.txt"
         - name: clone-vegafusion
           run: |
-              git clone https://github.com/vega/vegafusion.git --depth=1
+              git clone --single-branch -b v2 https://github.com/vega/vegafusion.git
               cd vegafusion
               git log
 
