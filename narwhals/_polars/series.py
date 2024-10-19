@@ -185,8 +185,13 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (0, 20, 15):  # pragma: no cover
+            has_nulls = self._native_series.is_null().any()
             result = self._native_series.to_dummies(separator=separator)
-            result = result.select(result.columns[int(drop_first) :])
+            output_columns = result.columns
+            if drop_first:
+                _ = output_columns.pop(int(has_nulls))
+
+            result = result.select(output_columns)
         else:
             result = self._native_series.to_dummies(
                 separator=separator, drop_first=drop_first
