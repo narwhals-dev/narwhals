@@ -141,14 +141,16 @@ class PandasLikeDataFrame:
 
     def __getitem__(
         self,
-        item: str
-        | int
-        | slice
-        | Sequence[int]
-        | Sequence[str]
-        | tuple[Sequence[int], str | int]
-        | tuple[slice | Sequence[int], Sequence[int] | slice]
-        | tuple[slice, slice],
+        item: (
+            str
+            | int
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[Sequence[int], str | int]
+            | tuple[slice | Sequence[int], Sequence[int] | slice]
+            | tuple[slice, slice]
+        ),
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, tuple):
             item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
@@ -245,10 +247,36 @@ class PandasLikeDataFrame:
     def columns(self) -> list[str]:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[True],
+    ) -> list[dict[str, Any]]: ...
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[False] = False,
+    ) -> list[tuple[Any, ...]]: ...
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: bool,
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
+            # cuDF does not support itertuples. But it does support to_dict!
+            if self._implementation is Implementation.CUDF:  # pragma: no cover
+                # Extract the row values from the named rows
+                return [tuple(row.values()) for row in self.rows(named=True)]
+
             return list(self._native_frame.itertuples(index=False, name=None))
 
         return self._native_frame.to_dict(orient="records")  # type: ignore[no-any-return]
@@ -355,7 +383,6 @@ class PandasLikeDataFrame:
     ) -> Self:
         index = self._native_frame.index
         new_columns = evaluate_into_exprs(self, *exprs, **named_exprs)
-
         if not new_columns and len(self) == 0:
             return self
 
@@ -394,7 +421,11 @@ class PandasLikeDataFrame:
                 backend_version=self._backend_version,
             )
         else:
-            df = self._native_frame.copy(deep=False)
+            # This is the logic in pandas' DataFrame.assign
+            if self._backend_version < (2,):  # pragma: no cover
+                df = self._native_frame.copy(deep=True)
+            else:
+                df = self._native_frame.copy(deep=False)
             for s in new_columns:
                 df[s.name] = validate_dataframe_comparand(index, s)
         return self._from_native_frame(df)

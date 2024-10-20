@@ -30,8 +30,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=85
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
 
   pytest-windows:
     strategy:
@@ -59,8 +57,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
 
   pytest-coverage:
     strategy:
@@ -94,4 +90,5 @@ jobs:
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow
       - name: Run doctests
+        if: matrix.python-version == '3.12'
         run: pytest narwhals --doctest-modules

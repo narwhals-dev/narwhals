@@ -50,6 +50,59 @@ jobs:
             cd altair
             mypy altair tests
 
+  marimo:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+        dependencies: ["core", "core,optional"]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "**requirements*.txt"
+      - name: clone-marimo
+        run: |
+            git clone https://github.com/marimo-team/marimo.git --depth=1
+            cd marimo
+            git log
+      - name: install-basics
+        run: uv pip install --upgrade tox virtualenv setuptools hatch --system
+      - name: install-marimo-dev
+        run: |
+            cd marimo
+            uv pip install -e ".[dev]" --system
+      - name: install-narwhals-dev
+        run: |
+            uv pip uninstall narwhals --system
+            uv pip install -e . --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Create assets directory, copy over index.html
+        continue-on-error: true
+        run: |
+            mkdir -p marimo/marimo/_static/assets
+            cp marimo/frontend/index.html marimo/marimo/_static/index.html
+            cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
+      - name: Run tests with full dependencies
+        if: ${{ matrix.dependencies == 'core,optional' }}
+        run: |
+            cd marimo
+            hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
+        timeout-minutes: 15
+      - name: Run typechecks
+        run: |
+            cd marimo
+            hatch run typecheck:check
+
   scikit-lego:
     strategy:
       matrix:
@@ -113,22 +166,18 @@ jobs:
       - name: install-basics
         run: uv pip install --upgrade tox virtualenv setuptools --system
       - name: install-shiny-dev
+        env:
+          UV_SYSTEM_PYTHON: 1
         run: |
             cd py-shiny
-            uv pip install -e ".[dev,test]" --system
+            make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system
             uv pip install -e . --system
       - name: show-deps
         run: uv pip freeze
-      - name: Run pytest
+      - name: Run `make narwhals-test-integration`
         run: |
             cd py-shiny
-            python tests/pytest/asyncio_prevent.py
-            pytest
-      - name: Run mypy
-        run: |
-            cd py-shiny
-            uv pip install mypy --system
-            mypy shiny
+            make narwhals-test-integration

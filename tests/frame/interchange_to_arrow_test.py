@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import duckdb
 import polars as pl
 import pyarrow as pa

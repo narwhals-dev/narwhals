@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 
@@ -5,6 +7,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
 
 
@@ -176,7 +179,7 @@ def test_fill_null_series_limits(constructor_eager: Any) -> None:
         compare_dicts(result_backward, expected_backward)
 
 
-def test_fill_null_series_limit_as_none(constructor_eager: Any) -> None:
+def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> None:
     data_series = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
     }
@@ -211,7 +214,7 @@ def test_fill_null_series_limit_as_none(constructor_eager: Any) -> None:
     compare_dicts(result_forward_str, expected_forward_str)
 
 
-def test_fill_null_series_exceptions(constructor_eager: Any) -> None:
+def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> None:
     data_series_float = {
         "a": [0.0, 1, None, 2, None, 3],
     }

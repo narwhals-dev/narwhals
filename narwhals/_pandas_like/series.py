@@ -186,7 +186,7 @@ class PandasLikeSeries:
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
-        s = self._native_series
+        s = self._native_series.copy(deep=True)
         s.iloc[indices] = values
         s.name = self.name
         return self._from_native_series(s)
@@ -633,9 +633,7 @@ class PandasLikeSeries:
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        mask = validate_column_comparand(
-            ser.index, mask, treat_length_one_as_scalar=False
-        )
+        mask = validate_column_comparand(ser.index, mask)
         other = validate_column_comparand(ser.index, other)
         res = ser.where(mask, other)
         return self._from_native_series(res)
@@ -771,7 +769,7 @@ class PandasLikeSeriesStringNamespace:
             self._pandas_series._native_series.str.slice(start=offset, stop=stop),
         )
 
-    def to_datetime(self, format: str | None = None) -> PandasLikeSeries:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:  # noqa: A002
         return self._pandas_series._from_native_series(
             to_datetime(self._pandas_series._implementation)(
                 self._pandas_series._native_series, format=format
@@ -942,3 +940,21 @@ class PandasLikeSeriesDateTimeNamespace:
         return self._pandas_series._from_native_series(
             self._pandas_series._native_series.dt.strftime(format)
         )
+
+    def replace_time_zone(self, time_zone: str | None) -> PandasLikeSeries:
+        if time_zone is not None:
+            result = self._pandas_series._native_series.dt.tz_localize(
+                None
+            ).dt.tz_localize(time_zone)
+        else:
+            result = self._pandas_series._native_series.dt.tz_localize(None)
+        return self._pandas_series._from_native_series(result)
+
+    def convert_time_zone(self, time_zone: str) -> PandasLikeSeries:
+        if self._pandas_series.dtype.time_zone is None:  # type: ignore[attr-defined]
+            result = self._pandas_series._native_series.dt.tz_localize(
+                "UTC"
+            ).dt.tz_convert(time_zone)
+        else:
+            result = self._pandas_series._native_series.dt.tz_convert(time_zone)
+        return self._pandas_series._from_native_series(result)

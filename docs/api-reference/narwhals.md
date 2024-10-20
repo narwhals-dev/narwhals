@@ -14,12 +14,14 @@ Here are the top-level functions available in Narwhals.
         - concat_str
         - from_dict
         - from_native
+        - from_arrow
         - get_level
         - get_native_namespace
         - is_ordered_categorical
         - len
         - lit
         - max
+        - max_horizontal
         - maybe_align_index
         - maybe_convert_dtypes
         - maybe_get_index
@@ -28,6 +30,7 @@ Here are the top-level functions available in Narwhals.
         - mean
         - mean_horizontal
         - min
+        - min_horizontal
         - narwhalify
         - new_series
         - nth
@@ -36,4 +39,5 @@ Here are the top-level functions available in Narwhals.
         - when
         - show_versions
         - to_native
+        - to_py_scalar
       show_source: false

@@ -4,9 +4,12 @@ import re
 from typing import TYPE_CHECKING
 from typing import Any
 
+from narwhals.dependencies import get_duckdb
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
@@ -49,7 +52,16 @@ def map_duckdb_dtype_to_narwhals_dtype(duckdb_dtype: Any, dtypes: DTypes) -> DTy
     if duckdb_dtype == "INTERVAL":
         return dtypes.Duration()
     if duckdb_dtype.startswith("STRUCT"):
-        return dtypes.Struct()
+        matchstruc_ = re.findall(r"(\w+)\s+(\w+)", duckdb_dtype)
+        return dtypes.Struct(
+            [
+                dtypes.Field(
+                    matchstruc_[i][0],
+                    map_duckdb_dtype_to_narwhals_dtype(matchstruc_[i][1], dtypes),
+                )
+                for i in range(len(matchstruc_))
+            ]
+        )
     if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
         return dtypes.List(map_duckdb_dtype_to_narwhals_dtype(match_.group(1), dtypes))
     if match_ := re.match(r"(\w+)\[(\d+)\]", duckdb_dtype):
@@ -67,6 +79,9 @@ class DuckDBInterchangeFrame:
 
     def __narwhals_dataframe__(self) -> Any:
         return self
+
+    def __native_namespace__(self: Self) -> ModuleType:
+        return get_duckdb()  # type: ignore[no-any-return]
 
     def __getitem__(self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries

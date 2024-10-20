@@ -83,12 +83,31 @@ class ArrowDataFrame:
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(col[index] for col in self._native_frame)
 
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[True],
+    ) -> list[dict[str, Any]]: ...
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[False] = False,
+    ) -> list[tuple[Any, ...]]: ...
+    @overload
+    def rows(
+        self,
+        *,
+        named: bool,
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
-            msg = "Unnamed rows are not yet supported on PyArrow tables"
-            raise NotImplementedError(msg)
+            return list(self.iter_rows(named=False))  # type: ignore[return-value]
         return self._native_frame.to_pylist()  # type: ignore[no-any-return]
 
     def iter_rows(
@@ -142,13 +161,15 @@ class ArrowDataFrame:
 
     def __getitem__(
         self,
-        item: str
-        | slice
-        | Sequence[int]
-        | Sequence[str]
-        | tuple[Sequence[int], str | int]
-        | tuple[slice, str | int]
-        | tuple[slice, slice],
+        item: (
+            str
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[Sequence[int], str | int]
+            | tuple[slice, str | int]
+            | tuple[slice, slice]
+        ),
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, tuple):
             item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
@@ -497,7 +518,9 @@ class ArrowDataFrame:
 
     def collect(self) -> ArrowDataFrame:
         return ArrowDataFrame(
-            self._native_frame, backend_version=self._backend_version, dtypes=self._dtypes
+            self._native_frame,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def clone(self) -> Self:
