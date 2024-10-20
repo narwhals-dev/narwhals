@@ -1215,32 +1215,34 @@ class Expr:
             >>> @nw.narwhalify
             ... def func_strategies(df):
             ...     return df.with_columns(
-            ...         nw.col("a", "b").fill_null(strategy="forward", limit=1)
+            ...         nw.col("a", "b")
+            ...         .fill_null(strategy="forward", limit=1)
+            ...         .name.suffix("_filled")
             ...     )
 
             >>> func_strategies(df_pd)
-                 a    b
-            0  2.0  2.0
-            1  4.0  4.0
-            2  4.0  4.0
-            3  NaN  NaN
-            4  3.0  3.0
-            5  5.0  5.0
+             a    b  a_filled  b_filled
+            0  2.0  2.0       2.0       2.0
+            1  4.0  4.0       4.0       4.0
+            2  NaN  NaN       4.0       4.0
+            3  NaN  NaN       NaN       NaN
+            4  3.0  3.0       3.0       3.0
+            5  5.0  5.0       5.0       5.0
 
             >>> func_strategies(df_pl)  # nan != null for polars
-            shape: (6, 2)
-            ┌──────┬─────┐
-            │ a    ┆ b   │
-            │ ---  ┆ --- │
-            │ i64  ┆ f64 │
-            ╞══════╪═════╡
-            │ 2    ┆ 2.0 │
-            │ 4    ┆ 4.0 │
-            │ 4    ┆ NaN │
-            │ null ┆ NaN │
-            │ 3    ┆ 3.0 │
-            │ 5    ┆ 5.0 │
-            └──────┴─────┘
+            shape: (6, 4)
+            ┌──────┬─────┬──────────┬──────────┐
+            │ a    ┆ b   ┆ a_filled ┆ b_filled │
+            │ ---  ┆ --- ┆ ---      ┆ ---      │
+            │ i64  ┆ f64 ┆ i64      ┆ f64      │
+            ╞══════╪═════╪══════════╪══════════╡
+            │ 2    ┆ 2.0 ┆ 2        ┆ 2.0      │
+            │ 4    ┆ 4.0 ┆ 4        ┆ 4.0      │
+            │ null ┆ NaN ┆ 4        ┆ NaN      │
+            │ null ┆ NaN ┆ null     ┆ NaN      │
+            │ 3    ┆ 3.0 ┆ 3        ┆ 3.0      │
+            │ 5    ┆ 5.0 ┆ 5        ┆ 5.0      │
+            └──────┴─────┴──────────┴──────────┘
         """
         if value is not None and strategy is not None:
             msg = "cannot specify both `value` and `strategy`"
