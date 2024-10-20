@@ -50,7 +50,10 @@ def test_timestamp_datetimes(
 ) -> None:
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2, 2):
+    if "pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (
+        2,
+        2,
+    ):  # pragma: no cover
         # pyarrow-backed timestamps were too inconsistent and unreliable before 2.2
         request.applymarker(pytest.mark.xfail(strict=False))
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
@@ -92,7 +95,10 @@ def test_timestamp_datetimes_tz_aware(
         or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2, 2):
+    if "pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (
+        2,
+        2,
+    ):  # pragma: no cover
         # pyarrow-backed timestamps were too inconsistent and unreliable before 2.2
         request.applymarker(pytest.mark.xfail(strict=False))
     if original_time_unit == "s" and "polars" in str(constructor):
