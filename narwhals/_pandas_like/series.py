@@ -957,7 +957,15 @@ class PandasLikeSeriesDateTimeNamespace:
             result = calculate_timestamp_date(s_cast, time_unit)
         elif dtype == self._pandas_series._dtypes.Datetime:
             original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
-            s_cast = s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
+            if (
+                self._pandas_series._implementation is Implementation.PANDAS
+                and self._pandas_series._backend_version < (2,)
+            ):  # pragma: no cover
+                s_cast = s.view("Int64[pyarrow]") if is_pyarrow_dtype else s.view("int64")
+            else:
+                s_cast = (
+                    s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
+                )
             result = calculate_timestamp_datetime(s_cast, original_time_unit, time_unit)
         else:
             msg = "Input should be either of Date or Datetime type"
