@@ -575,7 +575,7 @@ def calculate_timestamp_datetime(
             result = s_cast * 1_000_000
         else:
             result = s_cast * 1_000
-    else:
+    else:  # pragma: no cover
         msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
         raise AssertionError(msg)
     return result

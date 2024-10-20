@@ -817,7 +817,7 @@ class ArrowSeriesDateTimeNamespace:
                     result = pc.multiply(s_cast, 1_000_000)
                 else:
                     result = pc.multiply(s_cast, 1_000)
-            else:
+            else:  # pragma: no cover
                 msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
                 raise AssertionError(msg)
         elif dtype == self._arrow_series._dtypes.Date:
