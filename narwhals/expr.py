@@ -1375,7 +1375,10 @@ class Expr:
             ...     }
             ... )
             >>> df_pa = pa.table(
-            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ...     {
+            ...         "a": [2, 4, None, None, 3, 5],
+            ...         "b": [2.0, 4.0, float("nan"), float("nan"), 3.0, 5.0],
+            ...     }
             ... )
 
             Let's define a dataframe-agnostic function:
@@ -1410,6 +1413,14 @@ class Expr:
             │ 5   ┆ 5.0 │
             └─────┴─────┘
 
+            >>> func(df_pa)  # nan != null for pyarrow
+            pyarrow.Table
+            a: int64
+            b: double
+            ----
+            a: [[2,4,0,0,3,5]]
+            b: [[2,4,nan,nan,3,5]]
+
             Using a strategy:
 
             >>> @nw.narwhalify
@@ -1443,6 +1454,18 @@ class Expr:
             │ 3    ┆ 3.0 ┆ 3        ┆ 3.0      │
             │ 5    ┆ 5.0 ┆ 5        ┆ 5.0      │
             └──────┴─────┴──────────┴──────────┘
+
+            >>> func_strategies(df_pa)  # nan != null for pyarrow
+            pyarrow.Table
+            a: int64
+            b: double
+            a_filled: int64
+            b_filled: double
+            ----
+            a: [[2,4,null,null,3,5]]
+            b: [[2,4,nan,nan,3,5]]
+            a_filled: [[2,4,4,null,3,5]]
+            b_filled: [[2,4,nan,nan,3,5]]
         """
         if value is not None and strategy is not None:
             msg = "cannot specify both `value` and `strategy`"
