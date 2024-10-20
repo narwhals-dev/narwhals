@@ -4,10 +4,12 @@ from datetime import datetime
 from typing import Literal
 
 import hypothesis.strategies as st
+import pandas as pd
 import pytest
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
+from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
@@ -129,6 +131,7 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
     # We keep 'ms' out for now due to an upstream bug: https://github.com/pola-rs/polars/issues/19309
     starting_time_unit=st.sampled_from(["us", "ns"]),
 )
+@pytest.mark.skipif(parse_version(pd.__version__) < (2, 2), reason="bug in old pandas")
 def test_timestamp_hypothesis(
     inputs: datetime,
     time_unit: Literal["ms", "us", "ns"],
