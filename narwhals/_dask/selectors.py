@@ -34,6 +34,7 @@ class DaskSelectorNamespace:
             output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -74,6 +75,7 @@ class DaskSelectorNamespace:
             output_names=None,
             backend_version=self._backend_version,
             returns_scalar=False,
+            modifies_index=False,
             dtypes=self._dtypes,
         )
 
@@ -96,6 +98,7 @@ class DaskSelector(DaskExpr):
             root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
+            modifies_index=self._modifies_index,
             returns_scalar=self._returns_scalar,
             dtypes=self._dtypes,
         )
@@ -115,6 +118,7 @@ class DaskSelector(DaskExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                modifies_index=self._modifies_index,
                 returns_scalar=self._returns_scalar,
                 dtypes=self._dtypes,
             )
@@ -136,6 +140,7 @@ class DaskSelector(DaskExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                modifies_index=self._modifies_index,
                 returns_scalar=self._returns_scalar,
                 dtypes=self._dtypes,
             )
@@ -157,6 +162,7 @@ class DaskSelector(DaskExpr):
                 root_names=None,
                 output_names=None,
                 backend_version=self._backend_version,
+                modifies_index=self._modifies_index,
                 returns_scalar=self._returns_scalar,
                 dtypes=self._dtypes,
             )

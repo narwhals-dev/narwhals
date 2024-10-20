@@ -5,14 +5,14 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import ConstructorEager
+from tests.utils import Constructor
 from tests.utils import compare_dicts
 
 data = {"a": ["one", "two", "two"]}
 
 
 def test_get_categories(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, constructor_eager: Constructor
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and parse_version(
         pa.__version__
