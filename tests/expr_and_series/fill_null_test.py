@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from contextlib import nullcontext as does_not_raise
 from typing import Any
-from typing import ContextManager
 
 import pandas as pd
 import pytest
@@ -103,15 +102,13 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
 
 
 def test_fill_null_limits(constructor: Constructor) -> None:
-    if "cudf" in str(constructor):
-        context: ContextManager[Any] = pytest.raises(
-            NotImplementedError,
-            match="The limit keyword is not supported",
-        )
-    elif "modin" in str(constructor):
-        context = warnings.catch_warnings()
-    else:
-        context = does_not_raise()
+    context: Any = (
+        pytest.raises(NotImplementedError, match="The limit keyword is not supported")
+        if "cudf" in str(constructor)
+        else warnings.catch_warnings()
+        if "modin" in str(constructor)
+        else does_not_raise()
+    )
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
@@ -173,15 +170,13 @@ def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
-    if "cudf" in str(constructor_eager):
-        context: ContextManager[Any] = pytest.raises(
-            NotImplementedError,
-            match="The limit keyword is not supported",
-        )
-    elif "modin" in str(constructor_eager):
-        context = warnings.catch_warnings()
-    else:
-        context = does_not_raise()
+    context: Any = (
+        pytest.raises(NotImplementedError, match="The limit keyword is not supported")
+        if "cudf" in str(constructor_eager)
+        else warnings.catch_warnings()
+        if "modin" in str(constructor_eager)
+        else does_not_raise()
+    )
     data_series_float = {
         "a": [0.0, 1, None, None, 2, None, None, 3],
         "b": ["", "a", None, None, "c", None, None, "e"],
