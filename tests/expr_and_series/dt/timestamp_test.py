@@ -51,7 +51,10 @@ def test_timestamp_datetimes(
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
     result = df.select(
-        nw.col("a").cast(nw.Datetime(original_time_unit)).dt.timestamp(time_unit)
+        nw.col("a")
+        .cast(nw.Datetime(original_time_unit))
+        .dt.convert_time_zone("Asia/Kathmandu")
+        .dt.timestamp(time_unit)
     )
     compare_dicts(result, {"a": expected})
 
