@@ -56,6 +56,10 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
     }
     df = nw.from_native(constructor(data_limits))
 
+    expected_forward = {
+        "a": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
+        "b": ["a", "a", "a", "a", "b", "c", "c", "c", "c", "d"],
+    }
     if (
         "pandas_pyarrow_constructor" in str(constructor)
         or "modin" in str(constructor)
@@ -67,17 +71,18 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
             result_forward = df.with_columns(
                 nw.col("a", "b").fill_null(strategy="forward", limit=None)
             )
+            compare_dicts(result_forward, expected_forward)
     else:
         result_forward = df.with_columns(
             nw.col("a", "b").fill_null(strategy="forward", limit=None)
         )
 
-    expected_forward = {
-        "a": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
-        "b": ["a", "a", "a", "a", "b", "c", "c", "c", "c", "d"],
-    }
-    compare_dicts(result_forward, expected_forward)
+        compare_dicts(result_forward, expected_forward)
 
+    expected_backward = {
+        "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
+        "b": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
+    }
     if "pandas_pyarrow_constructor" in str(constructor) or "modin" in str(constructor):
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
@@ -85,15 +90,12 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
             result_backward = df.with_columns(
                 nw.col("a", "b").fill_null(strategy="backward", limit=None)
             )
+            compare_dicts(result_backward, expected_backward)
     else:
         result_backward = df.with_columns(
             nw.col("a", "b").fill_null(strategy="backward", limit=None)
         )
-    expected_backward = {
-        "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
-        "b": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
-    }
-    compare_dicts(result_backward, expected_backward)
+        compare_dicts(result_backward, expected_backward)
 
 
 def test_fill_null_limits(constructor: Constructor) -> None:
@@ -231,13 +233,14 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
                 a_forward=df["a"].fill_null(strategy="forward", limit=None),
                 a_backward=df["a"].fill_null(strategy="backward", limit=None),
             )
+            compare_dicts(result_forward, expected_forward)
     else:
         result_forward = df.select(
             a_forward=df["a"].fill_null(strategy="forward", limit=None),
             a_backward=df["a"].fill_null(strategy="backward", limit=None),
         )
 
-    compare_dicts(result_forward, expected_forward)
+        compare_dicts(result_forward, expected_forward)
 
     data_series_str = {
         "a": ["a", None, None, None, "b", "c", None, None, None, "d"],
@@ -260,12 +263,13 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
                 a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
                 a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
             )
+            compare_dicts(result_forward_str, expected_forward_str)
     else:
         result_forward_str = df_str.select(
             a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
             a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
         )
-    compare_dicts(result_forward_str, expected_forward_str)
+        compare_dicts(result_forward_str, expected_forward_str)
 
 
 def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> None:
