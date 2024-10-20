@@ -84,7 +84,7 @@ def native_to_narwhals_dtype(dtype: Any, dtypes: DTypes) -> DType:
     if dtype == pl.List:
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, dtypes))
     if dtype == pl.Array:
-        if parse_version(pl.__version__) < (1, 0):  # pragma: no cover
+        if parse_version(pl.__version__) < (0, 20, 30):  # pragma: no cover
             return dtypes.Array(
                 native_to_narwhals_dtype(dtype.inner, dtypes), dtype.width
             )

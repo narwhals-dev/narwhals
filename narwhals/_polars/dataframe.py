@@ -68,6 +68,12 @@ class PolarsDataFrame:
     def __getattr__(self, attr: str) -> Any:
         if attr == "collect":  # pragma: no cover
             raise AttributeError
+        if attr == "schema":
+            schema = self._native_frame.schema
+            return {
+                name: native_to_narwhals_dtype(dtype, self._dtypes)
+                for name, dtype in schema.items()
+            }
 
         def func(*args: Any, **kwargs: Any) -> Any:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
@@ -84,14 +90,6 @@ class PolarsDataFrame:
         if self._backend_version < (0, 20, 28):  # pragma: no cover
             return self._native_frame.__array__(dtype)
         return self._native_frame.__array__(dtype)
-
-    @property
-    def schema(self) -> dict[str, Any]:
-        schema = self._native_frame.schema
-        return {
-            name: native_to_narwhals_dtype(dtype, self._dtypes)
-            for name, dtype in schema.items()
-        }
 
     def collect_schema(self) -> dict[str, Any]:
         if self._backend_version < (1,):  # pragma: no cover
