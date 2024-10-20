@@ -5,6 +5,7 @@ from typing import Literal
 
 import hypothesis.strategies as st
 import pandas as pd
+import pyarrow as pa
 import pytest
 from hypothesis import given
 
@@ -13,6 +14,7 @@ from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import compare_dicts
+from tests.utils import is_windows
 
 data = {
     "a": [
@@ -46,6 +48,47 @@ def test_timestamp_datetimes(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
+    if original_time_unit == "s" and "polars" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    df = nw.from_native(constructor(datetimes))
+    result = df.select(
+        nw.col("a").cast(nw.Datetime(original_time_unit)).dt.timestamp(time_unit)
+    )
+    compare_dicts(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("original_time_unit", "time_unit", "expected"),
+    [
+        ("ns", "ns", [978307200000000000, None, 978480000000000000]),
+        ("ns", "us", [978307200000000, None, 978480000000000]),
+        ("ns", "ms", [978307200000, None, 978480000000]),
+        ("us", "ns", [978307200000000000, None, 978480000000000000]),
+        ("us", "us", [978307200000000, None, 978480000000000]),
+        ("us", "ms", [978307200000, None, 978480000000]),
+        ("ms", "ns", [978307200000000000, None, 978480000000000000]),
+        ("ms", "us", [978307200000000, None, 978480000000000]),
+        ("ms", "ms", [978307200000, None, 978480000000]),
+        ("s", "ns", [978307200000000000, None, 978480000000000000]),
+        ("s", "us", [978307200000000, None, 978480000000000]),
+        ("s", "ms", [978307200000, None, 978480000000]),
+    ],
+)
+def test_timestamp_datetimes_tz_aware(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    original_time_unit: Literal["us", "ns", "ms", "s"],
+    time_unit: Literal["ns", "us", "ms"],
+    expected: list[int | None],
+) -> None:
+    if (
+        (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
+        or ("pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2,))
+        or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
+        or ("cudf" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail)
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
