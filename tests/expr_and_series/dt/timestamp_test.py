@@ -89,7 +89,7 @@ def test_timestamp_datetimes_tz_aware(
     expected: list[int | None],
 ) -> None:
     if (
-        (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
+        (any(x in str(constructor) for x in ("pyarrow",)) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2,))
         or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
         or ("cudf" in str(constructor))
