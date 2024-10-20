@@ -56,7 +56,11 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
     }
     df = nw.from_native(constructor(data_limits))
 
-    if "pandas_pyarrow_constructor" in str(constructor) or "modin" in str(constructor):
+    if (
+        "pandas_pyarrow_constructor" in str(constructor)
+        or "modin" in str(constructor)
+        or "dask" in str(constructor)
+    ):
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
             warnings.simplefilter(action="ignore", category=FutureWarning)
@@ -215,8 +219,10 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
         "a_forward": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
         "a_backward": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
     }
-    if "pandas_pyarrow_constructor" in str(constructor_eager) or "modin" in str(
-        constructor_eager
+    if (
+        "pandas_pyarrow_constructor" in str(constructor_eager)
+        or "modin" in str(constructor_eager)
+        or "dask" in str(constructor_eager)
     ):
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
