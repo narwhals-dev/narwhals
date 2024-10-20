@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Generic
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import TypeVar
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
@@ -1964,27 +1966,30 @@ class Expr:
         return self.__class__(lambda plx: self._call(plx).mode())
 
     @property
-    def str(self: Self) -> ExprStringNamespace:
+    def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)
 
     @property
-    def dt(self: Self) -> ExprDateTimeNamespace:
+    def dt(self: Self) -> ExprDateTimeNamespace[Self]:
         return ExprDateTimeNamespace(self)
 
     @property
-    def cat(self: Self) -> ExprCatNamespace:
+    def cat(self: Self) -> ExprCatNamespace[Self]:
         return ExprCatNamespace(self)
 
     @property
-    def name(self: Self) -> ExprNameNamespace:
+    def name(self: Self) -> ExprNameNamespace[Self]:
         return ExprNameNamespace(self)
 
 
-class ExprCatNamespace:
-    def __init__(self, expr: Expr) -> None:
+T = TypeVar("T", bound=Expr)
+
+
+class ExprCatNamespace(Generic[T]):
+    def __init__(self: Self, expr: T) -> None:
         self._expr = expr
 
-    def get_categories(self) -> Expr:
+    def get_categories(self: Self) -> T:
         """
         Get unique categories from column.
 
@@ -2027,11 +2032,11 @@ class ExprCatNamespace:
         )
 
 
-class ExprStringNamespace:
-    def __init__(self, expr: Expr) -> None:
+class ExprStringNamespace(Generic[T]):
+    def __init__(self: Self, expr: T) -> None:
         self._expr = expr
 
-    def len_chars(self) -> Expr:
+    def len_chars(self: Self) -> T:
         r"""
         Return the length of each string as the number of characters.
 
@@ -2077,7 +2082,7 @@ class ExprStringNamespace:
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Expr:
+    ) -> T:
         r"""
         Replace first matching regex/literal substring with a new string value.
 
@@ -2117,7 +2122,7 @@ class ExprStringNamespace:
             )
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
+    def replace_all(self: Self, pattern: str, value: str, *, literal: bool = False) -> T:
         r"""
         Replace all matching regex/literal substring with a new string value.
 
@@ -2156,7 +2161,7 @@ class ExprStringNamespace:
             )
         )
 
-    def strip_chars(self, characters: str | None = None) -> Expr:
+    def strip_chars(self: Self, characters: str | None = None) -> T:
         r"""
         Remove leading and trailing characters.
 
@@ -2190,7 +2195,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.strip_chars(characters)
         )
 
-    def starts_with(self, prefix: str) -> Expr:
+    def starts_with(self: Self, prefix: str) -> T:
         r"""
         Check if string values start with a substring.
 
@@ -2235,7 +2240,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.starts_with(prefix)
         )
 
-    def ends_with(self, suffix: str) -> Expr:
+    def ends_with(self: Self, suffix: str) -> T:
         r"""
         Check if string values end with a substring.
 
@@ -2280,7 +2285,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> Expr:
+    def contains(self: Self, pattern: str, *, literal: bool = False) -> T:
         r"""
         Check if string contains a substring that matches a pattern.
 
@@ -2336,7 +2341,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
         )
 
-    def slice(self, offset: int, length: int | None = None) -> Expr:
+    def slice(self: Self, offset: int, length: int | None = None) -> T:
         r"""
         Create subslices of the string values of an expression.
 
@@ -2411,7 +2416,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.slice(offset=offset, length=length)
         )
 
-    def head(self, n: int = 5) -> Expr:
+    def head(self: Self, n: int = 5) -> T:
         r"""
         Take the first n elements of each string.
 
@@ -2459,7 +2464,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(0, n))
 
-    def tail(self, n: int = 5) -> Expr:
+    def tail(self: Self, n: int = 5) -> T:
         r"""
         Take the last n elements of each string.
 
@@ -2507,7 +2512,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
 
-    def to_datetime(self: Self, format: str | None = None) -> Expr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> T:  # noqa: A002
         """
         Convert to Datetime dtype.
 
@@ -2567,7 +2572,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)
         )
 
-    def to_uppercase(self) -> Expr:
+    def to_uppercase(self: Self) -> T:
         r"""
         Transform string to uppercase variant.
 
@@ -2613,7 +2618,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_uppercase())
 
-    def to_lowercase(self) -> Expr:
+    def to_lowercase(self: Self) -> T:
         r"""
         Transform string to lowercase variant.
 
@@ -2654,11 +2659,11 @@ class ExprStringNamespace:
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_lowercase())
 
 
-class ExprDateTimeNamespace:
-    def __init__(self, expr: Expr) -> None:
+class ExprDateTimeNamespace(Generic[T]):
+    def __init__(self: Self, expr: T) -> None:
         self._expr = expr
 
-    def date(self) -> Expr:
+    def date(self: Self) -> T:
         """
         Extract the date from underlying DateTime representation.
 
@@ -2700,7 +2705,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
 
-    def year(self) -> Expr:
+    def year(self: Self) -> T:
         """
         Extract year from underlying DateTime representation.
 
@@ -2748,7 +2753,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
 
-    def month(self) -> Expr:
+    def month(self: Self) -> T:
         """
         Extract month from underlying DateTime representation.
 
@@ -2799,7 +2804,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.month())
 
-    def day(self) -> Expr:
+    def day(self: Self) -> T:
         """
         Extract day from underlying DateTime representation.
 
@@ -2851,7 +2856,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.day())
 
-    def hour(self) -> Expr:
+    def hour(self: Self) -> T:
         """
         Extract hour from underlying DateTime representation.
 
@@ -2899,7 +2904,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.hour())
 
-    def minute(self) -> Expr:
+    def minute(self: Self) -> T:
         """
         Extract minutes from underlying DateTime representation.
 
@@ -2950,7 +2955,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.minute())
 
-    def second(self) -> Expr:
+    def second(self: Self) -> T:
         """
         Extract seconds from underlying DateTime representation.
 
@@ -3000,7 +3005,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
 
-    def millisecond(self) -> Expr:
+    def millisecond(self: Self) -> T:
         """
         Extract milliseconds from underlying DateTime representation.
 
@@ -3051,7 +3056,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
 
-    def microsecond(self) -> Expr:
+    def microsecond(self: Self) -> T:
         """
         Extract microseconds from underlying DateTime representation.
 
@@ -3102,7 +3107,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
 
-    def nanosecond(self) -> Expr:
+    def nanosecond(self: Self) -> T:
         """
         Extract Nanoseconds from underlying DateTime representation
 
@@ -3153,7 +3158,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.nanosecond())
 
-    def ordinal_day(self) -> Expr:
+    def ordinal_day(self: Self) -> T:
         """
         Get ordinal day.
 
@@ -3191,7 +3196,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
 
-    def total_minutes(self) -> Expr:
+    def total_minutes(self: Self) -> T:
         """
         Get total minutes.
 
@@ -3234,7 +3239,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_minutes())
 
-    def total_seconds(self) -> Expr:
+    def total_seconds(self: Self) -> T:
         """
         Get total seconds.
 
@@ -3277,7 +3282,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_seconds())
 
-    def total_milliseconds(self) -> Expr:
+    def total_milliseconds(self: Self) -> T:
         """
         Get total milliseconds.
 
@@ -3329,7 +3334,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.total_milliseconds()
         )
 
-    def total_microseconds(self) -> Expr:
+    def total_microseconds(self: Self) -> T:
         """
         Get total microseconds.
 
@@ -3381,7 +3386,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.total_microseconds()
         )
 
-    def total_nanoseconds(self) -> Expr:
+    def total_nanoseconds(self: Self) -> T:
         """
         Get total nanoseconds.
 
@@ -3430,7 +3435,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.total_nanoseconds()
         )
 
-    def to_string(self, format: str) -> Expr:  # noqa: A002
+    def to_string(self: Self, format: str) -> T:  # noqa: A002
         """
         Convert a Date/Time/Datetime column into a String column with the given format.
 
@@ -3508,7 +3513,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.to_string(format)
         )
 
-    def replace_time_zone(self, time_zone: str | None) -> Expr:
+    def replace_time_zone(self: Self, time_zone: str | None) -> T:
         """
         Replace time zone.
 
@@ -3563,7 +3568,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.replace_time_zone(time_zone)
         )
 
-    def convert_time_zone(self, time_zone: str) -> Expr:
+    def convert_time_zone(self: Self, time_zone: str) -> T:
         """
         Convert to a new time zone.
 
@@ -3622,11 +3627,11 @@ class ExprDateTimeNamespace:
         )
 
 
-class ExprNameNamespace:
-    def __init__(self: Self, expr: Expr) -> None:
+class ExprNameNamespace(Generic[T]):
+    def __init__(self: Self, expr: T) -> None:
         self._expr = expr
 
-    def keep(self: Self) -> Expr:
+    def keep(self: Self) -> T:
         r"""
         Keep the original root name of the expression.
 
@@ -3658,7 +3663,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
 
-    def map(self: Self, function: Callable[[str], str]) -> Expr:
+    def map(self: Self, function: Callable[[str], str]) -> T:
         r"""
         Rename the output of an expression by mapping a function over the root name.
 
@@ -3694,7 +3699,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
 
-    def prefix(self: Self, prefix: str) -> Expr:
+    def prefix(self: Self, prefix: str) -> T:
         r"""
         Add a prefix to the root column name of the expression.
 
@@ -3730,7 +3735,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.prefix(prefix))
 
-    def suffix(self: Self, suffix: str) -> Expr:
+    def suffix(self: Self, suffix: str) -> T:
         r"""
         Add a suffix to the root column name of the expression.
 
@@ -3765,7 +3770,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.suffix(suffix))
 
-    def to_lowercase(self: Self) -> Expr:
+    def to_lowercase(self: Self) -> T:
         r"""
         Make the root column name lowercase.
 
@@ -3797,7 +3802,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.to_lowercase())
 
-    def to_uppercase(self: Self) -> Expr:
+    def to_uppercase(self: Self) -> T:
         r"""
         Make the root column name uppercase.
 
