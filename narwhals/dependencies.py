@@ -203,12 +203,11 @@ def is_into_series(ser: Any) -> bool:
         >>> nw.dependencies.is_into_series(np_arr)
         False
     """
+    from narwhals.series import Series
 
     return (
-        (
-            hasattr(ser, "_compliant_series")
-            and hasattr(ser._compliant_series, "__narwhals_series__")
-        )
+        isinstance(ser, Series)
+        or hasattr(ser, "__narwhals_series__")
         or is_polars_series(ser)
         or is_pyarrow_chunked_array(ser)
         or is_pandas_like_series(ser)
