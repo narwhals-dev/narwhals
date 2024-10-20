@@ -117,8 +117,6 @@ filterwarnings = [
   'ignore:.*but when imported by',
   'ignore:Distributing .*This may take some time',
   'ignore:.*The default coalesce behavior',
-  "ignore:.*The 'downcast' keyword in fillna is deprecated",
-  'ignore:.*Falling back on a non-pyarrow code path which',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

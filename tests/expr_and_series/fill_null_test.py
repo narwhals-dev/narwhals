@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import warnings
 from contextlib import nullcontext as does_not_raise
 from typing import Any
+from typing import ContextManager
 
+import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -53,9 +56,17 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
     }
     df = nw.from_native(constructor(data_limits))
 
-    result_forward = df.with_columns(
-        nw.col("a", "b").fill_null(strategy="forward", limit=None)
-    )
+    if "pandas_pyarrow_constructor" in str(constructor) or "modin" in str(constructor):
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+            warnings.simplefilter(action="ignore", category=FutureWarning)
+            result_forward = df.with_columns(
+                nw.col("a", "b").fill_null(strategy="forward", limit=None)
+            )
+    else:
+        result_forward = df.with_columns(
+            nw.col("a", "b").fill_null(strategy="forward", limit=None)
+        )
 
     expected_forward = {
         "a": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
@@ -63,9 +74,17 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
     }
     compare_dicts(result_forward, expected_forward)
 
-    result_backward = df.with_columns(
-        nw.col("a", "b").fill_null(strategy="backward", limit=None)
-    )
+    if "pandas_pyarrow_constructor" in str(constructor) or "modin" in str(constructor):
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+            warnings.simplefilter(action="ignore", category=FutureWarning)
+            result_backward = df.with_columns(
+                nw.col("a", "b").fill_null(strategy="backward", limit=None)
+            )
+    else:
+        result_backward = df.with_columns(
+            nw.col("a", "b").fill_null(strategy="backward", limit=None)
+        )
     expected_backward = {
         "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
         "b": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
@@ -74,20 +93,24 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
 
 
 def test_fill_null_limits(constructor: Constructor) -> None:
-    context = (
-        pytest.raises(
+    if "cudf" in str(constructor):
+        context: ContextManager[Any] = pytest.raises(
             NotImplementedError,
             match="The limit keyword is not supported",
         )
-        if "cudf" in str(constructor)
-        else does_not_raise()
-    )
+    elif "modin" in str(constructor):
+        context = warnings.catch_warnings()
+    else:
+        context = does_not_raise()
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
     }
     df = nw.from_native(constructor(data_limits))
     with context:
+        if "modin" in str(constructor):
+            warnings.simplefilter("ignore", category=FutureWarning)
+
         result_forward = df.with_columns(
             nw.col("a", "b").fill_null(strategy="forward", limit=2)
         )
@@ -108,7 +131,7 @@ def test_fill_null_limits(constructor: Constructor) -> None:
         compare_dicts(result_backward, expected_backward)
 
 
-def test_fill_null_series(constructor_eager: Any) -> None:
+def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
     data_series_float = {
         "a": [0.0, 1, None, 2, None, 3],
     }
@@ -139,15 +162,16 @@ def test_fill_null_series(constructor_eager: Any) -> None:
     compare_dicts(result_str, expected_str)
 
 
-def test_fill_null_series_limits(constructor_eager: Any) -> None:
-    context = (
-        pytest.raises(
+def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
+    if "cudf" in str(constructor_eager):
+        context: ContextManager[Any] = pytest.raises(
             NotImplementedError,
             match="The limit keyword is not supported",
         )
-        if "cudf" in str(constructor_eager)
-        else does_not_raise()
-    )
+    elif "modin" in str(constructor_eager):
+        context = warnings.catch_warnings()
+    else:
+        context = does_not_raise()
     data_series_float = {
         "a": [0.0, 1, None, None, 2, None, None, 3],
         "b": ["", "a", None, None, "c", None, None, "e"],
@@ -155,6 +179,8 @@ def test_fill_null_series_limits(constructor_eager: Any) -> None:
     df = nw.from_native(constructor_eager(data_series_float), eager_only=True)
 
     with context:
+        if "modin" in str(constructor_eager):
+            warnings.simplefilter("ignore", category=FutureWarning)
         expected_forward = {
             "a_forward": [0.0, 1, 1, float("nan"), 2, 2, float("nan"), 3],
             "b_forward": ["", "a", "a", None, "c", "c", None, "e"],
@@ -189,10 +215,21 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
         "a_forward": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
         "a_backward": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
     }
-    result_forward = df.select(
-        a_forward=df["a"].fill_null(strategy="forward", limit=None),
-        a_backward=df["a"].fill_null(strategy="backward", limit=None),
-    )
+    if "pandas_pyarrow_constructor" in str(constructor_eager) or "modin" in str(
+        constructor_eager
+    ):
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+            warnings.simplefilter(action="ignore", category=FutureWarning)
+            result_forward = df.select(
+                a_forward=df["a"].fill_null(strategy="forward", limit=None),
+                a_backward=df["a"].fill_null(strategy="backward", limit=None),
+            )
+    else:
+        result_forward = df.select(
+            a_forward=df["a"].fill_null(strategy="forward", limit=None),
+            a_backward=df["a"].fill_null(strategy="backward", limit=None),
+        )
 
     compare_dicts(result_forward, expected_forward)
 
@@ -207,10 +244,21 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
         "a_backward": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
     }
 
-    result_forward_str = df_str.select(
-        a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
-        a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
-    )
+    if "pandas_pyarrow_constructor" in str(constructor_eager) or "modin" in str(
+        constructor_eager
+    ):
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+            warnings.simplefilter(action="ignore", category=FutureWarning)
+            result_forward_str = df_str.select(
+                a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
+                a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
+            )
+    else:
+        result_forward_str = df_str.select(
+            a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
+            a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
+        )
     compare_dicts(result_forward_str, expected_forward_str)
 
 
