@@ -50,6 +50,12 @@ def test_timestamp_datetimes(
 ) -> None:
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if (
+        "pandas_pyarrow" in str(constructor)
+        and parse_version(pd.__version__) < (2, 2)
+        and (original_time_unit == "ns" and time_unit != "ns")
+    ):
+        request.applymarker(pytest.mark.xfail)
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
     result = df.select(
@@ -87,6 +93,12 @@ def test_timestamp_datetimes_tz_aware(
         or ("pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2,))
         or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
         or ("cudf" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if (
+        "pandas_pyarrow" in str(constructor)
+        and parse_version(pd.__version__) < (2, 2)
+        and (original_time_unit == "ns" and time_unit != "ns")
     ):
         request.applymarker(pytest.mark.xfail)
     if original_time_unit == "s" and "polars" in str(constructor):
