@@ -545,47 +545,48 @@ def convert_str_slice_to_int_slice(
 
 
 def calculate_timestamp_datetime(
-    s_cast: int, original_time_unit: str, time_unit: str
-) -> Any:
+    s: pd.Series, original_time_unit: str, time_unit: str
+) -> pd.Series:
     if original_time_unit == "ns":
         if time_unit == "ns":
-            result = s_cast
+            result = s
         elif time_unit == "us":
-            result = s_cast // 1_000
+            result = s // 1_000
         else:
-            result = s_cast // 1_000_000
+            result = s // 1_000_000
     elif original_time_unit == "us":
         if time_unit == "ns":
-            result = s_cast * 1_000
+            result = s * 1_000
         elif time_unit == "us":
-            result = s_cast
+            result = s
         else:
-            result = s_cast // 1_000
+            result = s // 1_000
     elif original_time_unit == "ms":
         if time_unit == "ns":
-            result = s_cast * 1_000_000
+            result = s * 1_000_000
         elif time_unit == "us":
-            result = s_cast * 1_000
+            result = s * 1_000
         else:
-            result = s_cast
+            result = s
     elif original_time_unit == "s":
         if time_unit == "ns":
-            result = s_cast * 1_000_000_000
+            result = s * 1_000_000_000
         elif time_unit == "us":
-            result = s_cast * 1_000_000
+            result = s * 1_000_000
         else:
-            result = s_cast * 1_000
+            result = s * 1_000
     else:  # pragma: no cover
         msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
         raise AssertionError(msg)
     return result
 
 
-def calculate_timestamp_date(s_cast: int, time_unit: str) -> Any:
+def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
+    s = s * 86_400  # number of seconds in a day
     if time_unit == "ns":
-        result = s_cast * 1_000_000_000
+        result = s * 1_000_000_000
     elif time_unit == "us":
-        result = s_cast * 1_000_000
+        result = s * 1_000_000
     else:
-        result = s_cast * 1_000
+        result = s * 1_000
     return result

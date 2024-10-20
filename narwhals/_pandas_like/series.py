@@ -953,7 +953,7 @@ class PandasLikeSeriesDateTimeNamespace:
         is_pyarrow_dtype = "pyarrow" in str(self._pandas_series._native_series.dtype)
         mask_na = s.isna()
         if dtype == self._pandas_series._dtypes.Date:
-            s_cast = s.astype("Int32[pyarrow]") * 86_400
+            s_cast = s.astype("Int32[pyarrow]")
             result = calculate_timestamp_date(s_cast, time_unit)
         elif dtype == self._pandas_series._dtypes.Datetime:
             original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
