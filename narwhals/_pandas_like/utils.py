@@ -550,39 +550,42 @@ def calculate_timestamp_datetime(
     if original_time_unit == "ns":
         if time_unit == "ns":
             result = s_cast
-        if time_unit == "us":
+        elif time_unit == "us":
             result = s_cast // 1_000
-        if time_unit == "ms":
+        else:
             result = s_cast // 1_000_000
-    if original_time_unit == "us":
+    elif original_time_unit == "us":
         if time_unit == "ns":
             result = s_cast * 1_000
-        if time_unit == "us":
+        elif time_unit == "us":
             result = s_cast
-        if time_unit == "ms":
+        else:
             result = s_cast // 1_000
-    if original_time_unit == "ms":
+    elif original_time_unit == "ms":
         if time_unit == "ns":
             result = s_cast * 1_000_000
-        if time_unit == "us":
+        elif time_unit == "us":
             result = s_cast * 1_000
-        if time_unit == "ms":
+        else:
             result = s_cast
-    if original_time_unit == "s":
+    elif original_time_unit == "s":
         if time_unit == "ns":
             result = s_cast * 1_000_000_000
-        if time_unit == "us":
+        elif time_unit == "us":
             result = s_cast * 1_000_000
-        if time_unit == "ms":
+        else:
             result = s_cast * 1_000
+    else:
+        msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
+        raise AssertionError(msg)
     return result
 
 
 def calculate_timestamp_date(s_cast: int, time_unit: str) -> Any:
     if time_unit == "ns":
         result = s_cast * 1_000_000_000
-    if time_unit == "us":
+    elif time_unit == "us":
         result = s_cast * 1_000_000
-    if time_unit == "ms":
+    else:
         result = s_cast * 1_000
     return result

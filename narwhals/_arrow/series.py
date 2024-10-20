@@ -792,38 +792,41 @@ class ArrowSeriesDateTimeNamespace:
             if unit == "ns":
                 if time_unit == "ns":
                     result = s_cast
-                if time_unit == "us":
-                    result = pc.divide(s_cast, 1_000)
-                if time_unit == "ms":
-                    result = pc.divide(s_cast, 1_000_000)
-            if unit == "us":
+                elif time_unit == "us":
+                    result = floordiv_compat(s_cast, 1_000)
+                else:
+                    result = floordiv_compat(s_cast, 1_000_000)
+            elif unit == "us":
                 if time_unit == "ns":
                     result = pc.multiply(s_cast, 1_000)
-                if time_unit == "us":
+                elif time_unit == "us":
                     result = s_cast
-                if time_unit == "ms":
-                    result = pc.divide(s_cast, 1_000)
-            if unit == "ms":
+                else:
+                    result = floordiv_compat(s_cast, 1_000)
+            elif unit == "ms":
                 if time_unit == "ns":
                     result = pc.multiply(s_cast, 1_000_000)
-                if time_unit == "us":
+                elif time_unit == "us":
                     result = pc.multiply(s_cast, 1_000)
-                if time_unit == "ms":
+                else:
                     result = s_cast
-            if unit == "s":
+            elif unit == "s":
                 if time_unit == "ns":
                     result = pc.multiply(s_cast, 1_000_000_000)
-                if time_unit == "us":
+                elif time_unit == "us":
                     result = pc.multiply(s_cast, 1_000_000)
-                if time_unit == "ms":
+                else:
                     result = pc.multiply(s_cast, 1_000)
+            else:
+                msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
+                raise AssertionError(msg)
         elif dtype == self._arrow_series._dtypes.Date:
             time_s = pc.multiply(s.cast(pa.int32()), 86400)
             if time_unit == "ns":
                 result = pc.multiply(time_s, 1_000_000_000)
-            if time_unit == "us":
+            elif time_unit == "us":
                 result = pc.multiply(time_s, 1_000_000)
-            if time_unit == "ms":
+            else:
                 result = pc.multiply(time_s, 1_000)
         else:
             msg = "Input should be either of Date or Datetime type"
