@@ -1432,7 +1432,7 @@ class Expr:
             ...     )
 
             >>> func_strategies(df_pd)
-             a    b  a_filled  b_filled
+                 a    b  a_filled  b_filled
             0  2.0  2.0       2.0       2.0
             1  4.0  4.0       4.0       4.0
             2  NaN  NaN       4.0       4.0
