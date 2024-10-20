@@ -53,6 +53,7 @@ def test_timestamp_datetimes(
     result = df.select(
         nw.col("a")
         .cast(nw.Datetime(original_time_unit))
+        .dt.replace_time_zone("UTC")
         .dt.convert_time_zone("Asia/Kathmandu")
         .dt.timestamp(time_unit)
     )
