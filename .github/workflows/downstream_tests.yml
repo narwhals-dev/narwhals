@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  altair:    
+  altair:
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -138,7 +138,7 @@ jobs:
       - name: Run pytest
         run: |
             cd scikit-lego
-            pytest --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
+            pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
     strategy:
