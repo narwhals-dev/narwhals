@@ -132,26 +132,26 @@ def constructor(request: pytest.FixtureRequest) -> Constructor:
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ibis_version() -> tuple[int, ...]:
     return IBIS_VERSION
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def numpy_version() -> tuple[int, ...]:
     return NUMPY_VERSION
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def pandas_version() -> tuple[int, ...]:
     return PANDAS_VERSION
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def polars_version() -> tuple[int, ...]:
     return POLARS_VERSION
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def pyarrow_version() -> tuple[int, ...]:
     return PYARROW_VERSION
