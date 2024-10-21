@@ -181,3 +181,39 @@ jobs:
         run: |
             cd py-shiny
             make narwhals-test-integration
+  
+  vegafusion:
+     env:
+       UV_SYSTEM_PYTHON: true
+
+     strategy:
+       matrix:
+         python-version: ["3.11"]
+         os: [ubuntu-latest]
+
+     runs-on: ${{ matrix.os }}
+     steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-python@v5
+          with:
+            python-version: ${{ matrix.python-version }}
+        - name: Install uv
+          uses: astral-sh/setup-uv@v3
+          with:
+            enable-cache: "true"
+            cache-suffix: ${{ matrix.python-version }}
+            cache-dependency-glob: "**requirements*.txt"
+        - name: clone-vegafusion
+          run: |
+              git clone --single-branch -b v2 https://github.com/vega/vegafusion.git
+              cd vegafusion
+              git log
+
+        - name: Build wheels
+          uses: PyO3/maturin-action@v1
+          with:
+            command: build
+            manylinux: 2014
+            rust-toolchain: stable
+            args: --release -m vegafusion/vegafusion-python/Cargo.toml --features=protobuf-src --strip
+      
