@@ -3976,6 +3976,72 @@ class ExprDateTimeNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
         )
 
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
+        """
+        Return a timestamp in the given time unit.
+
+        Arguments:
+            time_unit: {'ns', 'us', 'ms'}
+                Time unit.
+
+        Examples:
+            >>> from datetime import date
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"date": [date(2001, 1, 1), None, date(2001, 1, 3)]}
+            >>> df_pd = pd.DataFrame(data, dtype="datetime64[ns]")
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         nw.col("date").dt.timestamp().alias("timestamp_us"),
+            ...         nw.col("date").dt.timestamp("ms").alias("timestamp_ms"),
+            ...     )
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                    date  timestamp_us  timestamp_ms
+            0 2001-01-01  9.783072e+14  9.783072e+11
+            1        NaT           NaN           NaN
+            2 2001-01-03  9.784800e+14  9.784800e+11
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌────────────┬─────────────────┬──────────────┐
+            │ date       ┆ timestamp_us    ┆ timestamp_ms │
+            │ ---        ┆ ---             ┆ ---          │
+            │ date       ┆ i64             ┆ i64          │
+            ╞════════════╪═════════════════╪══════════════╡
+            │ 2001-01-01 ┆ 978307200000000 ┆ 978307200000 │
+            │ null       ┆ null            ┆ null         │
+            │ 2001-01-03 ┆ 978480000000000 ┆ 978480000000 │
+            └────────────┴─────────────────┴──────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            date: date32[day]
+            timestamp_us: int64
+            timestamp_ms: int64
+            ----
+            date: [[2001-01-01,null,2001-01-03]]
+            timestamp_us: [[978307200000000,null,978480000000000]]
+            timestamp_ms: [[978307200000,null,978480000000]]
+        """
+        if time_unit not in {"ns", "us", "ms"}:
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.timestamp(time_unit)
+        )
+
 
 class ExprNameNamespace(Generic[T]):
     def __init__(self: Self, expr: T) -> None:

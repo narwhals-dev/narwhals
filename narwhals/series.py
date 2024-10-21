@@ -4006,3 +4006,63 @@ class SeriesDateTimeNamespace(Generic[T]):
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
         )
+
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
+        """
+        Return a timestamp in the given time unit.
+
+        Arguments:
+            time_unit: {'ns', 'us', 'ms'}
+                Time unit.
+
+        Examples:
+            >>> from datetime import date
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [date(2001, 1, 1), None, date(2001, 1, 3)]
+            >>> s_pd = pd.Series(data, dtype="datetime64[ns]")
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.timestamp("ms")
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(s_pd)
+            0    9.783072e+11
+            1             NaN
+            2    9.784800e+11
+            dtype: float64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+                    978307200000
+                    null
+                    978480000000
+            ]
+            >>> func(s_pa)
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                978307200000,
+                null,
+                978480000000
+              ]
+            ]
+        """
+        if time_unit not in {"ns", "us", "ms"}:
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.timestamp(time_unit)
+        )
