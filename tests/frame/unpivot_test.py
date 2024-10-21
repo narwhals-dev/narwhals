@@ -9,7 +9,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.stable.v1.dtypes import DType
@@ -44,7 +44,7 @@ def test_unpivot_on(
 ) -> None:
     df = nw.from_native(constructor(data))
     result = df.unpivot(on=on, index=["a"]).sort("variable", "a")
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(

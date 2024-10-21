@@ -4,7 +4,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_scatter(
@@ -24,7 +24,7 @@ def test_scatter(
         "a": [999, 888, 3],
         "b": [142, 132, 124],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_scatter_unchanged(constructor_eager: ConstructorEager) -> None:
@@ -38,7 +38,7 @@ def test_scatter_unchanged(constructor_eager: ConstructorEager) -> None:
         "a": [1, 2, 3],
         "b": [142, 124, 132],
     }
-    compare_dicts(df, expected)
+    assert_equal_data(df, expected)
 
 
 def test_single_series(constructor_eager: ConstructorEager) -> None:
@@ -48,4 +48,4 @@ def test_single_series(constructor_eager: ConstructorEager) -> None:
     s = df["a"]
     s.scatter([0, 1], [999, 888])
     expected = {"a": [1, 2, 3]}
-    compare_dicts({"a": s}, expected)
+    assert_equal_data({"a": s}, expected)

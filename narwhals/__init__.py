@@ -58,6 +58,7 @@ from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
 from narwhals.translate import to_native
+from narwhals.translate import to_py_scalar
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
@@ -84,6 +85,7 @@ __all__ = [
     "maybe_reset_index",
     "maybe_set_index",
     "get_native_namespace",
+    "to_py_scalar",
     "all",
     "all_horizontal",
     "any_horizontal",

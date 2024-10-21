@@ -420,6 +420,11 @@ class ArrowExprDateTimeNamespace:
             self._expr, "dt", "convert_time_zone", time_zone
         )
 
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "timestamp", time_unit
+        )
+
     def date(self: Self) -> ArrowExpr:
         return reuse_series_namespace_implementation(self._expr, "dt", "date")
 
