@@ -9,6 +9,7 @@ from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
+from tests.utils import get_module_version_as_tuple
 
 
 def test_maybe_align_index_pandas() -> None:
@@ -131,3 +132,8 @@ def test_maybe_convert_dtypes_polars() -> None:
     df = nw.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
     result = nw.maybe_convert_dtypes(df)
     assert result is df
+
+
+def test_get_trivial_version_with_uninstalled_module() -> None:
+    result = get_module_version_as_tuple("non_existent_module")
+    assert result == (0, 0, 0)
