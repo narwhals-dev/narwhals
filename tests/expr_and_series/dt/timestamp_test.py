@@ -101,11 +101,11 @@ def test_timestamp_datetimes_tz_aware(
     ):  # pragma: no cover
         # pyarrow-backed timestamps were too inconsistent and unreliable before 2.2
         request.applymarker(pytest.mark.xfail(strict=False))
-    if "dask" in str(constructor):
-        import dask
-
-        if parse_version(dask.__version__) < (2024, 8):  # pragma: no cover
-            request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor) and parse_version(pd.__version__) < (
+        2,
+        1,
+    ):  # pragma: no cover
+        request.applymarker(pytest.mark.xfail)
 
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
