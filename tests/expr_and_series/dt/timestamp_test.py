@@ -13,7 +13,7 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 from tests.utils import is_windows
 
 data = {
@@ -61,7 +61,7 @@ def test_timestamp_datetimes(
     result = df.select(
         nw.col("a").cast(nw.Datetime(original_time_unit)).dt.timestamp(time_unit)
     )
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.parametrize(
@@ -118,7 +118,7 @@ def test_timestamp_datetimes_tz_aware(
         .dt.convert_time_zone("Asia/Kathmandu")
         .dt.timestamp(time_unit)
     )
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.parametrize(
@@ -149,7 +149,7 @@ def test_timestamp_dates(
     else:
         df = nw.from_native(constructor(dates))
     result = df.select(nw.col("a").dt.date().dt.timestamp(time_unit))
-    compare_dicts(result, {"a": expected})
+    assert_equal_data(result, {"a": expected})
 
 
 def test_timestamp_invalid_date(
