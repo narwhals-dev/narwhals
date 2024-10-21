@@ -176,15 +176,15 @@ def is_pandas_like_series(arr: Any) -> bool:
     return is_pandas_series(arr) or is_modin_series(arr) or is_cudf_series(arr)
 
 
-def is_into_series(ser: Any) -> bool:
+def is_into_series(native_series: Any) -> bool:
     """
-    Check whether `ser` can be converted to a Narwhals Series.
+    Check whether `native_series` can be converted to a Narwhals Series.
 
     Arguments:
-        ser: The object to check.
+        native_series: The object to check.
 
     Returns:
-        `True` if `ser` can be converted to a Narwhals Series, `False` otherwise.
+        `True` if `native_series` can be converted to a Narwhals Series, `False` otherwise.
 
     Examples:
         >>> import pandas as pd
@@ -206,11 +206,11 @@ def is_into_series(ser: Any) -> bool:
     from narwhals.series import Series
 
     return (
-        isinstance(ser, Series)
-        or hasattr(ser, "__narwhals_series__")
-        or is_polars_series(ser)
-        or is_pyarrow_chunked_array(ser)
-        or is_pandas_like_series(ser)
+        isinstance(native_series, Series)
+        or hasattr(native_series, "__narwhals_series__")
+        or is_polars_series(native_series)
+        or is_pyarrow_chunked_array(native_series)
+        or is_pandas_like_series(native_series)
     )
 
 
