@@ -9,7 +9,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.xfail(parse_version(pa.__version__) < (14,), reason="too old")
@@ -18,7 +18,7 @@ def test_from_arrow_to_arrow() -> None:
     result = nw.from_arrow(df, native_namespace=pa)
     assert isinstance(result.to_native(), pa.Table)
     expected = {"ab": [1, 2, 3], "ba": [4, 5, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.xfail(parse_version(pa.__version__) < (14,), reason="too old")
@@ -29,7 +29,7 @@ def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     result = nw.from_arrow(df, native_namespace=pl)
     assert isinstance(result.to_native(), pl.DataFrame)
     expected = {"ab": [1, 2, 3], "ba": [4, 5, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     assert "pandas" not in sys.modules
 
 
@@ -39,7 +39,7 @@ def test_from_arrow_to_pandas() -> None:
     result = nw.from_arrow(df, native_namespace=pd)
     assert isinstance(result.to_native(), pd.DataFrame)
     expected = {"ab": [1, 2, 3], "ba": [4, 5, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_from_arrow_invalid() -> None:

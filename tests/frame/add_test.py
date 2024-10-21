@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_add(constructor: Constructor) -> None:
@@ -21,4 +21,4 @@ def test_add(constructor: Constructor) -> None:
         "d": [-1.0, 1.0, 0.0],
         "e": [0.0, 2.0, 1.0],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

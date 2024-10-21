@@ -6,7 +6,7 @@ from tests.utils import ConstructorEager
 
 # Don't move this into typechecking block, for coverage
 # purposes
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": ["fdas", "edfas"]}
 
@@ -17,7 +17,7 @@ def test_ends_with(constructor: Constructor) -> None:
     expected = {
         "a": [True, False],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_ends_with_series(constructor_eager: ConstructorEager) -> None:
@@ -26,7 +26,7 @@ def test_ends_with_series(constructor_eager: ConstructorEager) -> None:
     expected = {
         "a": [True, False],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_starts_with(constructor: Constructor) -> None:
@@ -35,7 +35,7 @@ def test_starts_with(constructor: Constructor) -> None:
     expected = {
         "a": [True, False],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_starts_with_series(constructor_eager: ConstructorEager) -> None:
@@ -44,4 +44,4 @@ def test_starts_with_series(constructor_eager: ConstructorEager) -> None:
     expected = {
         "a": [True, False],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

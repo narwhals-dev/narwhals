@@ -5,7 +5,7 @@ import pyarrow as pa
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "i": [0, 1, 2, 3, 4],
@@ -24,7 +24,7 @@ def test_shift(constructor: Constructor) -> None:
         "b": [1, 2, 3],
         "c": [5, 4, 3],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_shift_series(constructor_eager: ConstructorEager) -> None:
@@ -40,7 +40,7 @@ def test_shift_series(constructor_eager: ConstructorEager) -> None:
         "b": [1, 2, 3],
         "c": [5, 4, 3],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_shift_multi_chunk_pyarrow() -> None:
@@ -50,12 +50,12 @@ def test_shift_multi_chunk_pyarrow() -> None:
 
     result = df.select(nw.col("a").shift(1))
     expected = {"a": [None, 1, 2, 3, 1, 2, 3, 1, 2]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     result = df.select(nw.col("a").shift(-1))
     expected = {"a": [2, 3, 1, 2, 3, 1, 2, 3, None]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     result = df.select(nw.col("a").shift(0))
     expected = {"a": [1, 2, 3, 1, 2, 3, 1, 2, 3]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

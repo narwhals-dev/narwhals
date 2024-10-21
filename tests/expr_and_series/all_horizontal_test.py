@@ -9,7 +9,7 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
@@ -23,7 +23,7 @@ def test_allh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
     result = df.select(all=nw.all_horizontal(expr1, expr2))
 
     expected = {"all": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_allh_series(constructor_eager: ConstructorEager) -> None:
@@ -35,7 +35,7 @@ def test_allh_series(constructor_eager: ConstructorEager) -> None:
     result = df.select(all=nw.all_horizontal(df["a"], df["b"]))
 
     expected = {"all": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_allh_all(constructor: Constructor) -> None:
@@ -46,10 +46,10 @@ def test_allh_all(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(all=nw.all_horizontal(nw.all()))
     expected = {"all": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = df.select(nw.all_horizontal(nw.all()))
     expected = {"a": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_allh_nth(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -62,10 +62,10 @@ def test_allh_nth(constructor: Constructor, request: pytest.FixtureRequest) -> N
     df = nw.from_native(constructor(data))
     result = df.select(nw.all_horizontal(nw.nth(0, 1)))
     expected = {"a": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = df.select(nw.all_horizontal(nw.col("a"), nw.nth(0)))
     expected = {"a": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_horizontal_expressions_empty(constructor: Constructor) -> None:
