@@ -20,10 +20,10 @@ class ListBackedSeries:
         self._data = data
         self._name = name
 
-    def __len__(self) -> int:
+    def __len__(self) -> int:  # pragma: no cover
         return len(self._data)
 
-    def __narwhals_series__(self) -> Self:
+    def __narwhals_series__(self) -> Self:  # pragma: no cover
         return self
 
 
