@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -28,10 +26,12 @@ def test_mode_single_expr(
 
 
 def test_mode_multi_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    polars_version: tuple[int, ...],
 ) -> None:
     if "dask" in str(constructor) or (
-        "polars" in str(constructor) and parse_version(pl.__version__) >= (1, 7, 0)
+        "polars" in str(constructor) and polars_version >= (1, 7, 0)
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

@@ -10,11 +10,7 @@ from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import assert_equal_data
-
-pl_version = parse_version(pl.__version__)
-pd_version = parse_version(pd.__version__)
 
 
 @given(
@@ -40,15 +36,20 @@ pd_version = parse_version(pd.__version__)
         unique=True,
     ),
 )  # type: ignore[misc]
-@pytest.mark.skipif(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
-@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
 @pytest.mark.slow
 def test_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
     floats: st.SearchStrategy[list[float]],
     cols: st.SearchStrategy[list[str]],
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+    polars_version: tuple[int, ...],
 ) -> None:
+    if polars_version < (0, 20, 13):
+        request.applymarker(pytest.mark.skipif(reason="0.0 == -0.0"))
+    if pandas_version < (2, 0, 0):
+        request.applymarker(pytest.mark.skipif(reason="requires pyarrow"))
     data = {"a": integers, "b": other_integers, "c": floats}
 
     df_polars = pl.DataFrame(data)
@@ -89,11 +90,14 @@ def test_join(  # pragma: no cover
     ),
 )  # type: ignore[misc]
 @pytest.mark.slow
-@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
 def test_cross_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
 ) -> None:
+    if pandas_version < (2, 0, 0):
+        request.applymarker(pytest.mark.skipif(reason="requires pyarrow"))
     data = {"a": integers, "b": other_integers}
 
     df_polars = pl.DataFrame(data)

@@ -8,7 +8,6 @@ from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 
 def test_maybe_align_index_pandas() -> None:
@@ -110,13 +109,13 @@ def test_maybe_reset_index_polars() -> None:
     assert result_s is series
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"),
-    reason="too old for convert_dtypes",
-)
-def test_maybe_convert_dtypes_pandas() -> None:
+def test_maybe_convert_dtypes_pandas(
+    request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
+) -> None:
     import numpy as np
 
+    if pandas_version < (1, 0, 0):
+        request.applymarker(pytest.mark.skipif(reason="too old for convert_dtypes"))
     df = nw.from_native(
         pd.DataFrame({"a": [1, np.nan]}, dtype=np.dtype("float64")), eager_only=True
     )

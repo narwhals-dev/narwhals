@@ -10,7 +10,6 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 
 def test_interchange_schema() -> None:
@@ -72,7 +71,7 @@ def test_interchange_schema() -> None:
 
 @pytest.mark.filterwarnings("ignore:.*locale specific date formats")
 def test_interchange_schema_ibis(
-    tmpdir: pytest.TempdirFactory,
+    tmpdir: pytest.TempdirFactory, ibis_version: tuple[int, ...]
 ) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
     df_pl = pl.DataFrame(
@@ -116,7 +115,7 @@ def test_interchange_schema_ibis(
     tbl = ibis.read_parquet(filepath)
     df = nw.from_native(tbl, eager_or_interchange_only=True)
     result = df.schema
-    if parse_version(ibis.__version__) > (6, 0, 0):
+    if ibis_version > (6, 0, 0):
         expected = {
             "a": nw.Int64,
             "b": nw.Int32,

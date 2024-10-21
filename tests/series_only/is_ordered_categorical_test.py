@@ -8,7 +8,6 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -31,10 +30,11 @@ def test_is_ordered_categorical() -> None:
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < (2, 0), reason="requires interchange protocol"
-)
-def test_is_ordered_categorical_interchange_protocol() -> None:
+def test_is_ordered_categorical_interchange_protocol(
+    request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
+) -> None:
+    if pandas_version < (2, 0):
+        request.applymarker(pytest.mark.skipif(reason="requires interchange protocol"))
     df = pd.DataFrame(
         {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
     ).__dataframe__()

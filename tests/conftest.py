@@ -14,6 +14,7 @@ from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
 from narwhals.utils import parse_version
+from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
@@ -26,6 +27,13 @@ with contextlib.suppress(ImportError):
     import dask.dataframe  # noqa: F401
 with contextlib.suppress(ImportError):
     import cudf  # noqa: F401
+
+
+IBIS_VERSION: tuple[int, ...] = get_module_version_as_tuple("ibis")
+NUMPY_VERSION: tuple[int, ...] = get_module_version_as_tuple("numpy")
+PANDAS_VERSION: tuple[int, ...] = get_module_version_as_tuple("pandas")
+POLARS_VERSION: tuple[int, ...] = get_module_version_as_tuple("polars")
+PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -122,3 +130,28 @@ def constructor_eager(
 @pytest.fixture(params=[*eager_constructors, *lazy_constructors])
 def constructor(request: pytest.FixtureRequest) -> Constructor:
     return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture
+def ibis_version() -> tuple[int, ...]:
+    return IBIS_VERSION
+
+
+@pytest.fixture
+def numpy_version() -> tuple[int, ...]:
+    return NUMPY_VERSION
+
+
+@pytest.fixture
+def pandas_version() -> tuple[int, ...]:
+    return PANDAS_VERSION
+
+
+@pytest.fixture
+def polars_version() -> tuple[int, ...]:
+    return POLARS_VERSION
+
+
+@pytest.fixture
+def pyarrow_version() -> tuple[int, ...]:
+    return PYARROW_VERSION

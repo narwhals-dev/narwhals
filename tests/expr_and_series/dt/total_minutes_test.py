@@ -9,7 +9,6 @@ import pytest
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 
 @given(
@@ -18,12 +17,14 @@ from narwhals.utils import parse_version
         max_value=timedelta(days=3, minutes=90, seconds=60),
     )
 )  # type: ignore[misc]
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.2.0"),
-    reason="pyarrow dtype not available",
-)
 @pytest.mark.slow
-def test_total_minutes(timedeltas: timedelta) -> None:
+def test_total_minutes(
+    timedeltas: timedelta,
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+) -> None:
+    if pandas_version < (2, 2, 0):
+        request.applymarker(pytest.mark.skipif(reason="pyarrow dtype not available"))
     result_pd = nw.from_native(
         pd.Series([timedeltas]), series_only=True
     ).dt.total_minutes()[0]

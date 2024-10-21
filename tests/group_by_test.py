@@ -8,7 +8,6 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -230,16 +229,17 @@ def test_group_by_multiple_keys(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_key_with_nulls(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+) -> None:
     if "modin" in str(constructor):
         # TODO(unassigned): Modin flaky here?
         request.applymarker(pytest.mark.skip)
     context = (
         pytest.raises(NotImplementedError, match="null values")
-        if (
-            "pandas_constructor" in str(constructor)
-            and parse_version(pd.__version__) < parse_version("1.0.0")
-        )
+        if ("pandas_constructor" in str(constructor) and pandas_version < (1, 0, 0))
         else nullcontext()
     )
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
@@ -263,9 +263,11 @@ def test_no_agg(constructor: Constructor) -> None:
 
 
 def test_group_by_categorical(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (
+    if "pyarrow_table" in str(constructor) and pyarrow_version < (
         15,
         0,
         0,

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -30,6 +28,7 @@ def test_str_to_uppercase(
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
+    pyarrow_version: tuple[int, ...],
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_uppercase())
@@ -41,7 +40,7 @@ def test_str_to_uppercase(
             "pyarrow_table_constructor",
             "modin_constructor",
         )
-        or ("dask" in str(constructor) and parse_version(pa.__version__) >= (12,))
+        or ("dask" in str(constructor) and pyarrow_version >= (12,))
     ):
         # We are marking it xfail for these conditions above
         # since the pyarrow backend will convert

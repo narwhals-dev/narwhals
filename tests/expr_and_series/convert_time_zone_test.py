@@ -4,13 +4,9 @@ from datetime import datetime
 from datetime import timezone
 from typing import TYPE_CHECKING
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
@@ -20,14 +16,13 @@ if TYPE_CHECKING:
 
 
 def test_convert_time_zone(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
 ) -> None:
     if (
         (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
-        or (
-            "pandas_pyarrow" in str(constructor)
-            and parse_version(pd.__version__) < (2, 1)
-        )
+        or ("pandas_pyarrow" in str(constructor) and pandas_version < (2, 1))
         or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -48,14 +43,13 @@ def test_convert_time_zone(
 
 
 def test_convert_time_zone_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
 ) -> None:
     if (
         (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
-        or (
-            "pandas_pyarrow" in str(constructor_eager)
-            and parse_version(pd.__version__) < (2, 1)
-        )
+        or ("pandas_pyarrow" in str(constructor_eager) and pandas_version < (2, 1))
         or ("cudf" in str(constructor_eager))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -76,19 +70,20 @@ def test_convert_time_zone_series(
 
 
 def test_convert_time_zone_from_none(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+    polars_version: tuple[int, ...],
+    pyarrow_version: tuple[int, ...],
 ) -> None:
     if (
         (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
-        or (
-            "pandas_pyarrow" in str(constructor)
-            and parse_version(pd.__version__) < (2, 1)
-        )
-        or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
+        or ("pandas_pyarrow" in str(constructor) and pandas_version < (2, 1))
+        or ("pyarrow_table" in str(constructor) and pyarrow_version < (12,))
         or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and parse_version(pl.__version__) < (0, 20, 7):
+    if "polars" in str(constructor) and polars_version < (0, 20, 7):
         # polars used to disallow this
         request.applymarker(pytest.mark.xfail)
     data = {

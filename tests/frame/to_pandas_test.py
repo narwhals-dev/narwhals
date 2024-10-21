@@ -6,20 +6,19 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
-    reason="too old for pandas-pyarrow",
-)
 def test_convert_pandas(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
 ) -> None:
+    if pandas_version < (2, 0, 0):
+        request.applymarker(pytest.mark.skipif(reason="too old for pandas-pyarrow"))
     if "modin" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}

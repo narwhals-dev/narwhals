@@ -11,7 +11,6 @@ from hypothesis import assume
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -158,10 +157,14 @@ def test_truediv_same_dims(
     left=st.integers(-100, 100),
     right=st.integers(-100, 100),
 )
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < (2, 0), reason="convert_dtypes not available"
-)
-def test_floordiv(left: int, right: int) -> None:
+def test_floordiv(
+    left: int,
+    right: int,
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+) -> None:
+    if pandas_version < (2, 0):
+        request.applymarker(pytest.mark.skipif(reason="convert_dtypes not available"))
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)
@@ -170,7 +173,7 @@ def test_floordiv(left: int, right: int) -> None:
         nw.col("a") // right
     )
     assert_equal_data(result, expected)
-    if parse_version(pd.__version__) < (2, 2):  # pragma: no cover
+    if pandas_version < (2, 2):  # pragma: no cover
         # Bug in old version of pandas
         pass
     else:
@@ -198,10 +201,14 @@ def test_floordiv(left: int, right: int) -> None:
     left=st.integers(-100, 100),
     right=st.integers(-100, 100),
 )
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < (2, 0), reason="convert_dtypes not available"
-)
-def test_mod(left: int, right: int) -> None:
+def test_mod(
+    left: int,
+    right: int,
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+) -> None:
+    if pandas_version < (2, 0):
+        request.applymarker(pytest.mark.skipif(reason="convert_dtypes not available"))
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)

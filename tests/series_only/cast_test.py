@@ -11,7 +11,6 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -67,11 +66,12 @@ def test_cast_date_datetime_pyarrow() -> None:
     assert result == expected
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
-    reason="pyarrow dtype not available",
-)
-def test_cast_date_datetime_pandas() -> None:
+def test_cast_date_datetime_pandas(
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+) -> None:
+    if pandas_version < (2, 0, 0):
+        request.applymarker(pytest.mark.skipif(reason="pyarrow dtype not available"))
     # pandas: pyarrow date to datetime
     dfpd = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype(
         {"a": "date32[pyarrow]"}
@@ -98,11 +98,12 @@ def test_cast_date_datetime_pandas() -> None:
     assert df.schema == {"a": nw.Date}
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"),
-    reason="pyarrow dtype not available",
-)
-def test_cast_date_datetime_invalid() -> None:
+def test_cast_date_datetime_invalid(
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+) -> None:
+    if pandas_version < (2, 0, 0):
+        request.applymarker(pytest.mark.skipif(reason="pyarrow dtype not available"))
     # pandas: pyarrow datetime to date
     dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]})
     df = nw.from_native(dfpd)

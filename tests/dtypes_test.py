@@ -12,7 +12,6 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
@@ -124,11 +123,15 @@ def test_struct_hashes() -> None:
     assert len({hash(tp) for tp in (dtypes)}) == 3
 
 
-@pytest.mark.skipif(
-    parse_version(pl.__version__) < (1,) or parse_version(pd.__version__) < (2, 2),
-    reason="`shape` is only available after 1.0",
-)
-def test_polars_2d_array() -> None:
+def test_polars_2d_array(
+    request: pytest.FixtureRequest,
+    pandas_version: tuple[int, ...],
+    polars_version: tuple[int, ...],
+) -> None:
+    if polars_version < (1,) or pandas_version < (2, 2):
+        request.applymarker(
+            pytest.mark.skip(reason="`shape` is only available after 1.0")
+        )
     df = pl.DataFrame(
         {"a": [[[1, 2], [3, 4], [5, 6]]]}, schema={"a": pl.Array(pl.Int64, (3, 2))}
     )
@@ -141,10 +144,10 @@ def test_polars_2d_array() -> None:
     ).collect_schema()["a"] == nw.Array(nw.Array(nw.Int64, 2), 3)
 
 
-def test_second_time_unit() -> None:
+def test_second_time_unit(pandas_version: tuple[int, ...]) -> None:
     s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
-    if parse_version(pd.__version__) < (2,):  # pragma: no cover
+    if pandas_version < (2,):  # pragma: no cover
         assert result.dtype == nw.Datetime("ns")
     else:
         assert result.dtype == nw.Datetime("s")
@@ -153,7 +156,7 @@ def test_second_time_unit() -> None:
     assert result.dtype == nw.Datetime("s")
     s = pd.Series(np.array([np.timedelta64(1, "s")]))
     result = nw.from_native(s, series_only=True)
-    if parse_version(pd.__version__) < (2,):  # pragma: no cover
+    if pandas_version < (2,):  # pragma: no cover
         assert result.dtype == nw.Duration("ns")
     else:
         assert result.dtype == nw.Duration("s")

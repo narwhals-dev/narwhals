@@ -5,11 +5,9 @@ from datetime import timedelta
 from datetime import timezone
 
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
@@ -53,10 +51,14 @@ schema = {
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and parse_version(
-        pa.__version__
-    ) <= (15,):  # pragma: no cover
+def test_cast(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    pyarrow_version: tuple[int, ...],
+) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and pyarrow_version <= (
+        15,
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
@@ -103,10 +105,14 @@ def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     assert dict(result.collect_schema()) == expected
 
 
-def test_cast_series(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and parse_version(
-        pa.__version__
-    ) <= (15,):  # pragma: no cover
+def test_cast_series(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    pyarrow_version: tuple[int, ...],
+) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and pyarrow_version <= (
+        15,
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
@@ -157,11 +163,11 @@ def test_cast_series(constructor: Constructor, request: pytest.FixtureRequest) -
     assert result.schema == expected
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"),
-    reason="too old for convert_dtypes",
-)
-def test_cast_string() -> None:
+def test_cast_string(
+    request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
+) -> None:
+    if pandas_version < (1, 0, 0):
+        request.applymarker(pytest.mark.skipif(reason="too old for convert_dtypes"))
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
@@ -170,11 +176,13 @@ def test_cast_string() -> None:
 
 
 def test_cast_raises_for_unknown_dtype(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and parse_version(
-        pa.__version__
-    ) <= (15,):  # pragma: no cover
+    if "pyarrow_table_constructor" in str(constructor) and pyarrow_version <= (
+        15,
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)

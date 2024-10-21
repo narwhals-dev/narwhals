@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
-
 import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -25,22 +22,21 @@ def test_nth(
     constructor: Constructor,
     idx: int | list[int],
     expected: dict[str, list[int]],
-    request: Any,
+    request: pytest.FixtureRequest,
+    polars_version: tuple[int, ...],
 ) -> None:
-    if "polars" in str(constructor) and parse_version(pl.__version__) < parse_version(
-        "1.0.0"
-    ):
+    if "polars" in str(constructor) and polars_version < (1, 0, 0):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.nth(idx))
     assert_equal_data(result, expected)
 
 
-@pytest.mark.skipif(
-    parse_version(pl.__version__) >= parse_version("1.0.0"),
-    reason="1.0.0",
-)
-def test_nth_not_supported() -> None:  # pragma: no cover
+def test_nth_not_supported(
+    polars_version: tuple[int, ...],
+) -> None:  # pragma: no cover
+    if polars_version >= (1, 0, 0):
+        pytest.skip(reason="1.0.0")
     df = nw.from_native(pl.DataFrame(data))
     with pytest.raises(
         AttributeError, match="`nth` is only supported for Polars>=1.0.0."
