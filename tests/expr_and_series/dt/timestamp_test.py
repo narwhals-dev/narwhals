@@ -208,7 +208,7 @@ def test_timestamp_hypothesis(
 
     @nw.narwhalify
     def func(s: nw.Series) -> nw.Series:
-        return s.dt.timestamp(time_unit)  # type: ignore[return-value]
+        return s.dt.timestamp(time_unit)
 
     result_pl = func(pl.Series([inputs], dtype=pl.Datetime(starting_time_unit)))
     result_pd = func(pd.Series([inputs], dtype=f"datetime64[{starting_time_unit}]"))

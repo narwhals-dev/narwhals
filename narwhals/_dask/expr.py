@@ -963,6 +963,7 @@ class DaskExprDateTimeNamespace:
             is_pyarrow_dtype = "pyarrow" in str(dtype)
             mask_na = s.isna()
             if dtype == self._expr._dtypes.Date:
+                # Date is only supported in pandas dtypes if pyarrow-backed
                 s_cast = s.astype("Int32[pyarrow]")
                 result = calculate_timestamp_date(s_cast, time_unit)
             elif dtype == self._expr._dtypes.Datetime:

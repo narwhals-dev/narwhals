@@ -4007,7 +4007,7 @@ class SeriesDateTimeNamespace(Generic[T]):
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
         )
 
-    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> Series:
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
         """
         Return a timestamp in the given time unit.
 

@@ -3976,7 +3976,7 @@ class ExprDateTimeNamespace(Generic[T]):
             lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
         )
 
-    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> Expr:
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
         """
         Return a timestamp in the given time unit.
 
