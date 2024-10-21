@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
 
+    from narwhals.typing import IntoSeries
+
 
 def get_polars() -> Any:
     """Get Polars module (if already imported - else return None)."""
@@ -176,7 +178,7 @@ def is_pandas_like_series(arr: Any) -> bool:
     return is_pandas_series(arr) or is_modin_series(arr) or is_cudf_series(arr)
 
 
-def is_into_series(native_series: Any) -> bool:
+def is_into_series(native_series: IntoSeries) -> bool:
     """
     Check whether `native_series` can be converted to a Narwhals Series.
 

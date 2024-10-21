@@ -24,6 +24,9 @@ class ListBackedSeries:
     def name(self) -> str:
         return self._name
 
+    def __len__(self) -> int:
+        return len(self._data)
+
     def __narwhals_series__(self) -> Self:
         return self
 
@@ -32,7 +35,7 @@ def test_is_into_series() -> None:
     assert is_into_series(pa.chunked_array([["a", "b"]]))
     assert is_into_series(pl.Series([1, 2, 3]))
     assert is_into_series(pd.Series([1, 2, 3]))
-    assert is_into_series(nw.from_native(pd.Series([1, 2, 3]), allow_series=True))
+    assert is_into_series(nw.from_native(pd.Series([1, 2, 3]), series_only=True))
     assert is_into_series(ListBackedSeries("a", [1, 4, 2]))
     assert not is_into_series(np.array([1, 2, 3]))
     assert not is_into_series([1, 2, 3])
