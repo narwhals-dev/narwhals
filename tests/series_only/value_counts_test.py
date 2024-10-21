@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -21,9 +20,10 @@ def test_value_counts(
     normalize: Any,
     name: str | None,
 ) -> None:
-    if "pandas_nullable_constructor" in str(constructor_eager) and parse_version(
-        pd.__version__
-    ) < (2, 2):
+    if "pandas_nullable_constructor" in str(constructor_eager) and PANDAS_VERSION < (
+        2,
+        2,
+    ):
         # bug in old pandas
         request.applymarker(pytest.mark.xfail)
 

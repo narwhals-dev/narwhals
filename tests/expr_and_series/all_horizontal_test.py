@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -52,8 +51,11 @@ def test_allh_all(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_allh_nth(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "polars" in str(constructor) and parse_version(pl.__version__) < (1, 0):
+def test_allh_nth(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [False, False, True],

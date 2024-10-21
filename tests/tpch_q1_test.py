@@ -10,7 +10,7 @@ import pyarrow.parquet as pq
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 from tests.utils import assert_equal_data
 
 
@@ -20,7 +20,7 @@ from tests.utils import assert_equal_data
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str, request: pytest.FixtureRequest) -> None:
-    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+    if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
@@ -99,7 +99,7 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     "ignore:.*Complex.*:UserWarning",
 )
 def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> None:
-    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+    if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
@@ -160,9 +160,7 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
 
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
-)
+@pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for pyarrow")
 def test_q1_w_pandas_agg_generic_path() -> None:
     df_raw = pd.read_parquet("tests/data/lineitem.parquet")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])

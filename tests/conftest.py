@@ -13,7 +13,7 @@ import pytest
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
@@ -92,7 +92,7 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
-if parse_version(pd.__version__) >= parse_version("2.0.0"):
+if PANDAS_VERSION >= (2, 0, 0):
     eager_constructors = [
         pandas_constructor,
         pandas_nullable_constructor,

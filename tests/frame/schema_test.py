@@ -13,7 +13,7 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -81,9 +81,7 @@ def test_actual_object(
     assert result == {"a": nw.Object}
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.0.0"), reason="too old"
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
 def test_dtypes() -> None:
     df_pl = pl.DataFrame(
         {
@@ -199,7 +197,7 @@ def test_schema_object(method: str, expected: Any) -> None:
 
 
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < (2,),
+    PANDAS_VERSION < (2,),
     reason="Before 2.0, pandas would raise on `drop_duplicates`",
 )
 def test_from_non_hashable_column_name() -> None:
@@ -213,7 +211,7 @@ def test_from_non_hashable_column_name() -> None:
 
 
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.2.0"),
+    PANDAS_VERSION < (2, 2, 0),
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes() -> None:
@@ -269,7 +267,7 @@ def test_nested_dtypes_ibis() -> None:  # pragma: no cover
 
 
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.2.0"),
+    PANDAS_VERSION < (2, 2, 0),
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes_dask() -> None:

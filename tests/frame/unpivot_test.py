@@ -3,11 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -98,10 +97,7 @@ def test_unpivot_mixed_types(
     if (
         "dask" in str(constructor)
         or "cudf" in str(constructor)
-        or (
-            "pyarrow_table" in str(constructor)
-            and parse_version(pa.__version__) < parse_version("14.0.0")
-        )
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0))
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

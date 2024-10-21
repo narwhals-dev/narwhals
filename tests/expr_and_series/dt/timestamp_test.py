@@ -10,7 +10,8 @@ import pytest
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -50,7 +51,7 @@ def test_timestamp_datetimes(
 ) -> None:
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
         2,
         2,
     ):  # pragma: no cover
@@ -90,18 +91,18 @@ def test_timestamp_datetimes_tz_aware(
 ) -> None:
     if (
         (any(x in str(constructor) for x in ("pyarrow",)) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2,))
-        or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
         2,
         2,
     ):  # pragma: no cover
         # pyarrow-backed timestamps were too inconsistent and unreliable before 2.2
         request.applymarker(pytest.mark.xfail(strict=False))
-    if "dask" in str(constructor) and parse_version(pd.__version__) < (
+    if "dask" in str(constructor) and PANDAS_VERSION < (
         2,
         1,
     ):  # pragma: no cover
@@ -196,15 +197,13 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
     # We keep 'ms' out for now due to an upstream bug: https://github.com/pola-rs/polars/issues/19309
     starting_time_unit=st.sampled_from(["us", "ns"]),
 )
-@pytest.mark.skipif(parse_version(pd.__version__) < (2, 2), reason="bug in old pandas")
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="bug in old pandas")
 def test_timestamp_hypothesis(
     inputs: datetime,
     time_unit: Literal["ms", "us", "ns"],
     starting_time_unit: Literal["ms", "us", "ns"],
 ) -> None:
-    import pandas as pd
     import polars as pl
-    import pyarrow as pa
 
     @nw.narwhalify
     def func(s: nw.Series) -> nw.Series:
