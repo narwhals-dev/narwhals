@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
@@ -16,15 +18,12 @@ if TYPE_CHECKING:
 
 
 def test_replace_time_zone(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
-    pyarrow_version: tuple[int, ...],
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and pandas_version < (2,))
-        or ("pyarrow_table" in str(constructor) and pyarrow_version < (12,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -45,15 +44,12 @@ def test_replace_time_zone(
 
 
 def test_replace_time_zone_none(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
-    pyarrow_version: tuple[int, ...],
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and pandas_version < (2,))
-        or ("pyarrow_table" in str(constructor) and pyarrow_version < (12,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -73,15 +69,12 @@ def test_replace_time_zone_none(
 
 
 def test_replace_time_zone_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
-    pyarrow_version: tuple[int, ...],
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
-        or ("pandas_pyarrow" in str(constructor_eager) and pandas_version < (2,))
-        or ("pyarrow_table" in str(constructor_eager) and pyarrow_version < (12,))
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
         or ("cudf" in str(constructor_eager))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -102,15 +95,12 @@ def test_replace_time_zone_series(
 
 
 def test_replace_time_zone_none_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
-    pyarrow_version: tuple[int, ...],
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
-        or ("pandas_pyarrow" in str(constructor_eager) and pandas_version < (2,))
-        or ("pyarrow_table" in str(constructor_eager) and pyarrow_version < (12,))
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {

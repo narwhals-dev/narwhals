@@ -9,6 +9,7 @@ from polars.exceptions import ColumnNotFoundError as PlColumnNotFoundError
 
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
+from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -44,11 +45,10 @@ def test_drop_strict(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     context: Any,
-    polars_version: tuple[int, ...],
     *,
     strict: bool,
 ) -> None:
-    if "polars_lazy" in str(request) and polars_version < (1, 0, 0) and strict:
+    if "polars_lazy" in str(request) and POLARS_VERSION < (1, 0, 0) and strict:
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}

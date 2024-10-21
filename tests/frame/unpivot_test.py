@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -92,12 +93,11 @@ def test_unpivot_mixed_types(
     constructor: Constructor,
     data: dict[str, Any],
     expected_dtypes: list[DType],
-    pyarrow_version: tuple[int, ...],
 ) -> None:
     if (
         "dask" in str(constructor)
         or "cudf" in str(constructor)
-        or ("pyarrow_table" in str(constructor) and pyarrow_version < (14, 0, 0))
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0))
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

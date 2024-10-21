@@ -6,6 +6,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import NUMPY_VERSION
 
 
 def test_invalid() -> None:
@@ -42,9 +43,8 @@ def test_validate_laziness() -> None:
         nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]
 
 
-def test_memmap(request: pytest.FixtureRequest, numpy_version: tuple[int, ...]) -> None:
-    if numpy_version < (1, 26, 4):
-        request.applymarker(pytest.mark.skip(reason="too old"))
+@pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
+def test_memmap() -> None:
     pytest.importorskip("sklearn")
     # the headache this caused me...
     from sklearn.utils import check_X_y

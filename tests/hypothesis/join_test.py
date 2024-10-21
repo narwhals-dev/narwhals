@@ -10,6 +10,8 @@ from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
 
 
@@ -36,20 +38,15 @@ from tests.utils import assert_equal_data
         unique=True,
     ),
 )  # type: ignore[misc]
+@pytest.mark.skipif(POLARS_VERSION < (0, 20, 13), reason="0.0 == -0.0")
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
 def test_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
     floats: st.SearchStrategy[list[float]],
     cols: st.SearchStrategy[list[str]],
-    request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
-    polars_version: tuple[int, ...],
 ) -> None:
-    if polars_version < (0, 20, 13):
-        request.applymarker(pytest.mark.skip(reason="0.0 == -0.0"))
-    if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skip(reason="requires pyarrow"))
     data = {"a": integers, "b": other_integers, "c": floats}
 
     df_polars = pl.DataFrame(data)
@@ -89,15 +86,12 @@ def test_join(  # pragma: no cover
         max_size=3,
     ),
 )  # type: ignore[misc]
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
 def test_cross_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
-    request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
 ) -> None:
-    if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skip(reason="requires pyarrow"))
     data = {"a": integers, "b": other_integers}
 
     df_polars = pl.DataFrame(data)

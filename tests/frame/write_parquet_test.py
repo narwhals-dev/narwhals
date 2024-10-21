@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -12,14 +13,11 @@ if TYPE_CHECKING:
 data = {"a": [1, 2, 3]}
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pyarrow")
 def test_write_parquet(
     constructor_eager: ConstructorEager,
     tmpdir: pytest.TempdirFactory,
-    request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
 ) -> None:
-    if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skip(reason="too old for pyarrow"))
     path = tmpdir / "foo.parquet"  # type: ignore[operator]
     nw.from_native(constructor_eager(data), eager_only=True).write_parquet(str(path))
     assert path.exists()

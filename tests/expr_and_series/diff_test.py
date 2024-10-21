@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -17,9 +18,8 @@ data = {
 def test_diff(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and pyarrow_version < (13,):
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -36,9 +36,8 @@ def test_diff(
 def test_diff_series(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
-    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor_eager) and pyarrow_version < (13,):
+    if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data), eager_only=True)

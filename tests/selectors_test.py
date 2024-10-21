@@ -11,6 +11,7 @@ from narwhals.selectors import by_dtype
 from narwhals.selectors import categorical
 from narwhals.selectors import numeric
 from narwhals.selectors import string
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -46,9 +47,8 @@ def test_boolean(constructor: Constructor) -> None:
 def test_string(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "dask" in str(constructor) and pyarrow_version < (12,):
+    if "dask" in str(constructor) and PYARROW_VERSION < (12,):
         # Dask doesn't infer `'b'` as String for old PyArrow versions
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -60,9 +60,8 @@ def test_string(
 def test_categorical(
     request: pytest.FixtureRequest,
     constructor: Constructor,
-    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and pyarrow_version <= (
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)

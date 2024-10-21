@@ -8,6 +8,7 @@ import pyarrow.compute as pc
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -42,9 +43,8 @@ def test_duration_attributes(
     expected_a: list[int],
     expected_b: list[int],
     expected_c: list[int],
-    pandas_version: tuple[int, ...],
 ) -> None:
-    if pandas_version < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -78,9 +78,8 @@ def test_duration_attributes_series(
     expected_a: list[int],
     expected_b: list[int],
     expected_c: list[int],
-    pandas_version: tuple[int, ...],
 ) -> None:
-    if pandas_version < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)

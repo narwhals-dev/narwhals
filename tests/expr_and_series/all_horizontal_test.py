@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -53,9 +54,8 @@ def test_allh_all(constructor: Constructor) -> None:
 def test_allh_nth(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    polars_version: tuple[int, ...],
 ) -> None:
-    if "polars" in str(constructor) and polars_version < (1, 0):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [False, False, True],

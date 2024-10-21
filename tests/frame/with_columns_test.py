@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -48,9 +49,8 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
 def test_with_columns_dtypes_single_row(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table" in str(constructor) and pyarrow_version < (15,):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         request.applymarker(pytest.mark.xfail)
     data = {"a": ["foo"]}
     df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))

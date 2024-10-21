@@ -8,6 +8,8 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
@@ -54,9 +56,8 @@ schema = {
 def test_cast(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and pyarrow_version <= (
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
@@ -108,9 +109,8 @@ def test_cast(
 def test_cast_series(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and pyarrow_version <= (
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
@@ -163,11 +163,8 @@ def test_cast_series(
     assert result.schema == expected
 
 
-def test_cast_string(
-    request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
-) -> None:
-    if pandas_version < (1, 0, 0):
-        request.applymarker(pytest.mark.skip(reason="too old for convert_dtypes"))
+@pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for convert_dtypes")
+def test_cast_string() -> None:
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
@@ -178,9 +175,8 @@ def test_cast_string(
 def test_cast_raises_for_unknown_dtype(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pyarrow_version: tuple[int, ...],
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and pyarrow_version <= (
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)

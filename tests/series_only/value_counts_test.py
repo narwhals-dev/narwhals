@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -16,11 +17,10 @@ data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
 def test_value_counts(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
-    pandas_version: tuple[int, ...],
     normalize: Any,
     name: str | None,
 ) -> None:
-    if "pandas_nullable_constructor" in str(constructor_eager) and pandas_version < (
+    if "pandas_nullable_constructor" in str(constructor_eager) and PANDAS_VERSION < (
         2,
         2,
     ):

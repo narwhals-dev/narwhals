@@ -21,6 +21,20 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeAlias  # pragma: no cover
 
+
+def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
+    try:
+        return parse_version(__import__(module_name).__version__)
+    except ImportError:
+        return (0, 0, 0)
+
+
+IBIS_VERSION: tuple[int, ...] = get_module_version_as_tuple("ibis")
+NUMPY_VERSION: tuple[int, ...] = get_module_version_as_tuple("numpy")
+PANDAS_VERSION: tuple[int, ...] = get_module_version_as_tuple("pandas")
+POLARS_VERSION: tuple[int, ...] = get_module_version_as_tuple("polars")
+PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
+
 Constructor: TypeAlias = Callable[[Any], IntoFrame]
 ConstructorEager: TypeAlias = Callable[[Any], IntoDataFrame]
 
@@ -80,10 +94,3 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
     return sys.platform in ["win32", "cygwin"]
-
-
-def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
-    try:
-        return parse_version(__import__(module_name).__version__)
-    except ImportError:
-        return (0, 0, 0)

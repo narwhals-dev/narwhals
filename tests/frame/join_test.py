@@ -10,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -355,11 +356,10 @@ def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
 def test_joinasof_numeric(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
 ) -> None:
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if pandas_version < (2, 1) and (
+    if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -415,11 +415,10 @@ def test_joinasof_numeric(
 def test_joinasof_time(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
 ) -> None:
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if pandas_version < (2, 1) and ("pandas_pyarrow" in str(constructor)):
+    if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor(
@@ -497,11 +496,10 @@ def test_joinasof_time(
 def test_joinasof_by(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    pandas_version: tuple[int, ...],
 ) -> None:
     if "pyarrow_table" in str(constructor) or "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if pandas_version < (2, 1) and (
+    if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)

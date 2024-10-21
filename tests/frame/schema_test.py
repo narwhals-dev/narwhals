@@ -13,6 +13,7 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -80,9 +81,8 @@ def test_actual_object(
     assert result == {"a": nw.Object}
 
 
-def test_dtypes(request: pytest.FixtureRequest, pandas_version: tuple[int, ...]) -> None:
-    if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skip(reason="too old"))
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
+def test_dtypes() -> None:
     df_pl = pl.DataFrame(
         {
             "a": [1],
@@ -196,13 +196,11 @@ def test_schema_object(method: str, expected: Any) -> None:
     assert getattr(schema, method)() == expected
 
 
-def test_from_non_hashable_column_name(
-    request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
-) -> None:
-    if pandas_version < (2,):
-        request.applymarker(
-            pytest.mark.skip(reason="Before 2.0, pandas would raise on `drop_duplicates`")
-        )
+@pytest.mark.skipif(
+    PANDAS_VERSION < (2,),
+    reason="Before 2.0, pandas would raise on `drop_duplicates`",
+)
+def test_from_non_hashable_column_name() -> None:
     # This is technically super-illegal
     # BUT, it shows up in a scikit-learn test, so...
     df = pd.DataFrame([[1, 2], [3, 4]], columns=["pizza", ["a", "b"]])
@@ -212,11 +210,11 @@ def test_from_non_hashable_column_name(
     assert df["pizza"].dtype == nw.Int64
 
 
-def test_nested_dtypes(
-    request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
-) -> None:
-    if pandas_version < (2, 2, 0):
-        request.applymarker(pytest.mark.skip(reason="too old for pyarrow types"))
+@pytest.mark.skipif(
+    PANDAS_VERSION < (2, 2, 0),
+    reason="too old for pyarrow types",
+)
+def test_nested_dtypes() -> None:
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
@@ -268,11 +266,11 @@ def test_nested_dtypes_ibis() -> None:  # pragma: no cover
     assert nwdf.schema == {"a": nw.List(nw.Int64), "c": nw.Struct({"a": nw.Int64})}
 
 
-def test_nested_dtypes_dask(
-    request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
-) -> None:
-    if pandas_version < (2, 2, 0):
-        request.applymarker(pytest.mark.skip(reason="too old for pyarrow types"))
+@pytest.mark.skipif(
+    PANDAS_VERSION < (2, 2, 0),
+    reason="too old for pyarrow types",
+)
+def test_nested_dtypes_dask() -> None:
     pytest.importorskip("dask")
     pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd
