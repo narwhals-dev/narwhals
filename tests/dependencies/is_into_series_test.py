@@ -20,10 +20,6 @@ class ListBackedSeries:
         self._data = data
         self._name = name
 
-    @property
-    def name(self) -> str:
-        return self._name
-
     def __len__(self) -> int:
         return len(self._data)
 
