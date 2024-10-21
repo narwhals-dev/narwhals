@@ -109,6 +109,10 @@ nox
 
 Notice that nox will also require to have all the python versions that are defined in the `noxfile.py` installed in your system.
 
+#### Testing cuDF
+
+We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
+
 ### 7. Building docs
 
 To build the docs, run `mkdocs serve`, and then open the link provided in a browser.
