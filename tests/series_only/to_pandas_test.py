@@ -20,7 +20,7 @@ def test_convert(
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for pyarrow"))
+        request.applymarker(pytest.mark.skip(reason="too old for pyarrow"))
     if any(
         cname in str(constructor_eager)
         for cname in ("pandas_nullable", "pandas_pyarrow", "modin")

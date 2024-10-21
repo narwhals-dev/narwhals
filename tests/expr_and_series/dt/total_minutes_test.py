@@ -24,7 +24,7 @@ def test_total_minutes(
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 2, 0):
-        request.applymarker(pytest.mark.skipif(reason="pyarrow dtype not available"))
+        request.applymarker(pytest.mark.skip(reason="pyarrow dtype not available"))
     result_pd = nw.from_native(
         pd.Series([timedeltas]), series_only=True
     ).dt.total_minutes()[0]

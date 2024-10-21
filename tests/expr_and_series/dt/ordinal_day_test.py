@@ -19,7 +19,7 @@ def test_ordinal_day(
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="pyarrow dtype not available"))
+        request.applymarker(pytest.mark.skip(reason="pyarrow dtype not available"))
     result_pd = nw.from_native(pd.Series([dates]), series_only=True).dt.ordinal_day()[0]
     result_pdms = nw.from_native(
         pd.Series([dates]).dt.as_unit("ms"), series_only=True

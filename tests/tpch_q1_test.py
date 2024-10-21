@@ -167,7 +167,7 @@ def test_q1_w_pandas_agg_generic_path(
     request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
 ) -> None:
     if pandas_version < (1, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for pyarrow"))
+        request.applymarker(pytest.mark.skip(reason="too old for pyarrow"))
     df_raw = pd.read_parquet("tests/data/lineitem.parquet")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
     var_1 = datetime(1998, 9, 2)

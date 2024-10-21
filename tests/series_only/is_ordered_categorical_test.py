@@ -34,7 +34,7 @@ def test_is_ordered_categorical_interchange_protocol(
     request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
 ) -> None:
     if pandas_version < (2, 0):
-        request.applymarker(pytest.mark.skipif(reason="requires interchange protocol"))
+        request.applymarker(pytest.mark.skip(reason="requires interchange protocol"))
     df = pd.DataFrame(
         {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
     ).__dataframe__()

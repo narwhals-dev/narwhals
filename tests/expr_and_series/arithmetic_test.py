@@ -164,7 +164,7 @@ def test_floordiv(
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 0):
-        request.applymarker(pytest.mark.skipif(reason="convert_dtypes not available"))
+        request.applymarker(pytest.mark.skip(reason="convert_dtypes not available"))
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)
@@ -208,7 +208,7 @@ def test_mod(
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 0):
-        request.applymarker(pytest.mark.skipif(reason="convert_dtypes not available"))
+        request.applymarker(pytest.mark.skip(reason="convert_dtypes not available"))
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)

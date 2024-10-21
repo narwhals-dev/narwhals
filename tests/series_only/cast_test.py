@@ -71,7 +71,7 @@ def test_cast_date_datetime_pandas(
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="pyarrow dtype not available"))
+        request.applymarker(pytest.mark.skip(reason="pyarrow dtype not available"))
     # pandas: pyarrow date to datetime
     dfpd = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype(
         {"a": "date32[pyarrow]"}
@@ -103,7 +103,7 @@ def test_cast_date_datetime_invalid(
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="pyarrow dtype not available"))
+        request.applymarker(pytest.mark.skip(reason="pyarrow dtype not available"))
     # pandas: pyarrow datetime to date
     dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]})
     df = nw.from_native(dfpd)

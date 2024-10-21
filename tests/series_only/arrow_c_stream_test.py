@@ -14,9 +14,9 @@ def test_arrow_c_stream_test(
     pyarrow_version: tuple[int, ...],
 ) -> None:
     if polars_version < (1, 3):
-        request.applymarker(pytest.mark.skipif(reason="too old for pycapsule in Polars"))
+        request.applymarker(pytest.mark.skip(reason="too old for pycapsule in Polars"))
     if pyarrow_version < (16, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for pycapsule in PyArrow"))
+        request.applymarker(pytest.mark.skip(reason="too old for pycapsule in PyArrow"))
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = pa.chunked_array(s)
     expected = pa.chunked_array([[1, 2, 3]])
@@ -30,9 +30,9 @@ def test_arrow_c_stream_test_invalid(
     pyarrow_version: tuple[int, ...],
 ) -> None:
     if polars_version < (1, 3):
-        request.applymarker(pytest.mark.skipif(reason="too old for pycapsule in Polars"))
+        request.applymarker(pytest.mark.skip(reason="too old for pycapsule in Polars"))
     if pyarrow_version < (16, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for pycapsule in PyArrow"))
+        request.applymarker(pytest.mark.skip(reason="too old for pycapsule in PyArrow"))
     # "poison" the dunder method to make sure it actually got called above
     monkeypatch.setattr("narwhals.series.Series.__arrow_c_stream__", lambda *_: 1 / 0)
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
@@ -47,9 +47,9 @@ def test_arrow_c_stream_test_fallback(
     pyarrow_version: tuple[int, ...],
 ) -> None:
     if polars_version < (1, 3):
-        request.applymarker(pytest.mark.skipif(reason="too old for pycapsule in Polars"))
+        request.applymarker(pytest.mark.skip(reason="too old for pycapsule in Polars"))
     if pyarrow_version < (16, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for pycapsule in PyArrow"))
+        request.applymarker(pytest.mark.skip(reason="too old for pycapsule in PyArrow"))
     # Check that fallback to PyArrow works
     monkeypatch.delattr("polars.Series.__arrow_c_stream__")
     s = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)["a"]

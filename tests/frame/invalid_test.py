@@ -44,7 +44,7 @@ def test_validate_laziness() -> None:
 
 def test_memmap(request: pytest.FixtureRequest, numpy_version: tuple[int, ...]) -> None:
     if numpy_version < (1, 26, 4):
-        request.applymarker(pytest.mark.skipif(reason="too old"))
+        request.applymarker(pytest.mark.skip(reason="too old"))
     pytest.importorskip("sklearn")
     # the headache this caused me...
     from sklearn.utils import check_X_y

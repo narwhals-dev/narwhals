@@ -47,9 +47,9 @@ def test_join(  # pragma: no cover
     polars_version: tuple[int, ...],
 ) -> None:
     if polars_version < (0, 20, 13):
-        request.applymarker(pytest.mark.skipif(reason="0.0 == -0.0"))
+        request.applymarker(pytest.mark.skip(reason="0.0 == -0.0"))
     if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="requires pyarrow"))
+        request.applymarker(pytest.mark.skip(reason="requires pyarrow"))
     data = {"a": integers, "b": other_integers, "c": floats}
 
     df_polars = pl.DataFrame(data)
@@ -97,7 +97,7 @@ def test_cross_join(  # pragma: no cover
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="requires pyarrow"))
+        request.applymarker(pytest.mark.skip(reason="requires pyarrow"))
     data = {"a": integers, "b": other_integers}
 
     df_polars = pl.DataFrame(data)

@@ -167,7 +167,7 @@ def test_cast_string(
     request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
 ) -> None:
     if pandas_version < (1, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for convert_dtypes"))
+        request.applymarker(pytest.mark.skip(reason="too old for convert_dtypes"))
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)

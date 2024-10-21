@@ -82,7 +82,7 @@ def test_actual_object(
 
 def test_dtypes(request: pytest.FixtureRequest, pandas_version: tuple[int, ...]) -> None:
     if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old"))
+        request.applymarker(pytest.mark.skip(reason="too old"))
     df_pl = pl.DataFrame(
         {
             "a": [1],
@@ -201,9 +201,7 @@ def test_from_non_hashable_column_name(
 ) -> None:
     if pandas_version < (2,):
         request.applymarker(
-            pytest.mark.skipif(
-                reason="Before 2.0, pandas would raise on `drop_duplicates`"
-            )
+            pytest.mark.skip(reason="Before 2.0, pandas would raise on `drop_duplicates`")
         )
     # This is technically super-illegal
     # BUT, it shows up in a scikit-learn test, so...
@@ -218,7 +216,7 @@ def test_nested_dtypes(
     request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
 ) -> None:
     if pandas_version < (2, 2, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for pyarrow types"))
+        request.applymarker(pytest.mark.skip(reason="too old for pyarrow types"))
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
@@ -274,7 +272,7 @@ def test_nested_dtypes_dask(
     request: pytest.FixtureRequest, pandas_version: tuple[int, ...]
 ) -> None:
     if pandas_version < (2, 2, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for pyarrow types"))
+        request.applymarker(pytest.mark.skip(reason="too old for pyarrow types"))
     pytest.importorskip("dask")
     pytest.importorskip("dask_expr", exc_type=ImportError)
     import dask.dataframe as dd

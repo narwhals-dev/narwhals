@@ -115,7 +115,7 @@ def test_maybe_convert_dtypes_pandas(
     import numpy as np
 
     if pandas_version < (1, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for convert_dtypes"))
+        request.applymarker(pytest.mark.skip(reason="too old for convert_dtypes"))
     df = nw.from_native(
         pd.DataFrame({"a": [1, np.nan]}, dtype=np.dtype("float64")), eager_only=True
     )

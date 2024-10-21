@@ -18,7 +18,7 @@ def test_convert_pandas(
     pandas_version: tuple[int, ...],
 ) -> None:
     if pandas_version < (2, 0, 0):
-        request.applymarker(pytest.mark.skipif(reason="too old for pandas-pyarrow"))
+        request.applymarker(pytest.mark.skip(reason="too old for pandas-pyarrow"))
     if "modin" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
