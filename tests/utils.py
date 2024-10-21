@@ -54,14 +54,14 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         expected_key = expected[key]
         for i, (lhs, rhs) in enumerate(zip_strict(result_key, expected_key)):
             if isinstance(lhs, float) and not math.isnan(lhs):
-                are_valid_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
+                are_equivalent_values = math.isclose(lhs, rhs, rel_tol=0, abs_tol=1e-6)
             elif isinstance(lhs, float) and math.isnan(lhs) and rhs is not None:
-                are_valid_values = math.isnan(rhs)  # pragma: no cover
+                are_equivalent_values = math.isnan(rhs)  # pragma: no cover
             elif pd.isna(lhs):
-                are_valid_values = pd.isna(rhs)
+                are_equivalent_values = pd.isna(rhs)
             else:
-                are_valid_values = lhs == rhs
-            assert are_valid_values, f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
+                are_equivalent_values = lhs == rhs
+            assert are_equivalent_values, f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
