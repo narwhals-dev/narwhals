@@ -10,10 +10,12 @@ For example, this function can ingest any data frame type supported by Narwhals,
 
 ```python
 import narwhals as nw
+
+
 def df_to_pandas(df):
-  out = nw.from_native(df)
-  out = out.to_pandas()
-  return out
+    out = nw.from_native(df)
+    out = out.to_pandas()
+    return out
 ```
 
 Similarly, if your library uses Polars internally, you can convert any user-supplied data frames to Polars format using Narwhals.
@@ -21,9 +23,11 @@ Similarly, if your library uses Polars internally, you can convert any user-supp
 ```python
 import narwhals as nw
 import polars as pl
+
+
 def df_to_polars(df):
-  out = nw.from_native(df)  
-  out = out.to_arrow()
-  return pl.DataFrame(out)
+    out = nw.from_native(df)
+    out = out.to_arrow()
+    return pl.DataFrame(out)
 ```
 
