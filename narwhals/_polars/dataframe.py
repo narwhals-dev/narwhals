@@ -179,7 +179,7 @@ class PolarsDataFrame:
 
     @property
     def columns(self) -> list[str]:
-        return self._native_frame.collect_schema().names()  # type: ignore[no-any-return]
+        return self._native_frame.columns  # type: ignore[no-any-return]
 
     def lazy(self) -> PolarsLazyFrame:
         return PolarsLazyFrame(
@@ -285,7 +285,7 @@ class PolarsLazyFrame:
 
     @property
     def columns(self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.collect_schema().names()  # type: ignore[no-any-return]
 
     @property
     def schema(self) -> dict[str, Any]:
