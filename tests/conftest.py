@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import contextlib
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 
@@ -10,10 +13,12 @@ import pytest
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
-from narwhals.typing import IntoDataFrame
-from narwhals.typing import IntoFrame
-from narwhals.utils import parse_version
-from tests.utils import Constructor
+from tests.utils import PANDAS_VERSION
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoFrame
+    from tests.utils import Constructor
 
 with contextlib.suppress(ImportError):
     import modin.pandas  # noqa: F401
@@ -87,7 +92,7 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
-if parse_version(pd.__version__) >= parse_version("2.0.0"):
+if PANDAS_VERSION >= (2, 0, 0):
     eager_constructors = [
         pandas_constructor,
         pandas_nullable_constructor,
@@ -108,7 +113,9 @@ if get_dask_dataframe() is not None:  # pragma: no cover
 
 
 @pytest.fixture(params=eager_constructors)
-def constructor_eager(request: pytest.FixtureRequest) -> Callable[[Any], IntoDataFrame]:
+def constructor_eager(
+    request: pytest.FixtureRequest,
+) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 

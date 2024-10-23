@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import pandas as pd
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_new_series(constructor_eager: ConstructorEager) -> None:
@@ -14,14 +16,14 @@ def test_new_series(constructor_eager: ConstructorEager) -> None:
     # all supported libraries auto-infer this to be int64, we can always special-case
     # something different if necessary
     assert result.dtype == nw.Int64
-    compare_dicts(result.to_frame(), expected)
+    assert_equal_data(result.to_frame(), expected)
 
     result = nw.new_series(
         "b", [4, 1, 2], nw.Int32, native_namespace=nw.get_native_namespace(s)
     )
     expected = {"b": [4, 1, 2]}
     assert result.dtype == nw.Int32
-    compare_dicts(result.to_frame(), expected)
+    assert_equal_data(result.to_frame(), expected)
 
 
 def test_new_series_v1(constructor_eager: ConstructorEager) -> None:
@@ -33,14 +35,14 @@ def test_new_series_v1(constructor_eager: ConstructorEager) -> None:
     # all supported libraries auto-infer this to be int64, we can always special-case
     # something different if necessary
     assert result.dtype == nw_v1.Int64
-    compare_dicts(result.to_frame(), expected)
+    assert_equal_data(result.to_frame(), expected)
 
     result = nw_v1.new_series(
         "b", [4, 1, 2], nw_v1.Int32, native_namespace=nw_v1.get_native_namespace(s)
     )
     expected = {"b": [4, 1, 2]}
     assert result.dtype == nw_v1.Int32
-    compare_dicts(result.to_frame(), expected)
+    assert_equal_data(result.to_frame(), expected)
 
 
 def test_new_series_dask() -> None:

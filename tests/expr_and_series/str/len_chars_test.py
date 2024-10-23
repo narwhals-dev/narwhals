@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": ["foo", "foobar", "Café", "345", "東京"]}
 
@@ -12,7 +14,7 @@ def test_str_len_chars(constructor: Constructor) -> None:
     expected = {
         "a": [3, 6, 4, 3, 2],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_str_len_chars_series(constructor_eager: ConstructorEager) -> None:
@@ -21,4 +23,4 @@ def test_str_len_chars_series(constructor_eager: ConstructorEager) -> None:
         "a": [3, 6, 4, 3, 2],
     }
     result = df.select(df["a"].str.len_chars())
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

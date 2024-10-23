@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pandas as pd
 import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
 def test_to_arrow(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
 ) -> None:
-    if "pandas" in str(constructor_eager) and parse_version(pd.__version__) < (1, 0, 0):
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 0, 0):
         # pyarrow requires pandas>=1.0.0
         request.applymarker(pytest.mark.xfail)
 

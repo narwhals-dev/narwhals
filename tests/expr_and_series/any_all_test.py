@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_any_all(constructor: Constructor) -> None:
@@ -16,10 +18,10 @@ def test_any_all(constructor: Constructor) -> None:
     )
     result = df.select(nw.col("a", "b", "c").all())
     expected = {"a": [False], "b": [True], "c": [False]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = df.select(nw.all().any())
     expected = {"a": [True], "b": [True], "c": [False]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_any_all_series(constructor_eager: ConstructorEager) -> None:
@@ -35,7 +37,7 @@ def test_any_all_series(constructor_eager: ConstructorEager) -> None:
     )
     result = {"a": [df["a"].all()], "b": [df["b"].all()], "c": [df["c"].all()]}
     expected = {"a": [False], "b": [True], "c": [False]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = {"a": [df["a"].any()], "b": [df["b"].any()], "c": [df["c"].any()]}
     expected = {"a": [True], "b": [True], "c": [False]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

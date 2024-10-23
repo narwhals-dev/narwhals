@@ -10,6 +10,8 @@ from typing import NoReturn
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._pandas_like.utils import calculate_timestamp_date
+from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import generate_unique_token
 
@@ -950,6 +952,37 @@ class DaskExprDateTimeNamespace:
             func,
             "tz_convert",
             time_zone,
+            returns_scalar=False,
+        )
+
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> DaskExpr:
+        def func(
+            s: dask_expr.Series, time_unit: Literal["ns", "us", "ms"] = "us"
+        ) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes)
+            is_pyarrow_dtype = "pyarrow" in str(dtype)
+            mask_na = s.isna()
+            if dtype == self._expr._dtypes.Date:
+                # Date is only supported in pandas dtypes if pyarrow-backed
+                s_cast = s.astype("Int32[pyarrow]")
+                result = calculate_timestamp_date(s_cast, time_unit)
+            elif dtype == self._expr._dtypes.Datetime:
+                original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+                s_cast = (
+                    s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
+                )
+                result = calculate_timestamp_datetime(
+                    s_cast, original_time_unit, time_unit
+                )
+            else:
+                msg = "Input should be either of Date or Datetime type"
+                raise TypeError(msg)
+            return result.where(~mask_na)
+
+        return self._expr._from_call(
+            func,
+            "datetime",
+            time_unit,
             returns_scalar=False,
         )
 

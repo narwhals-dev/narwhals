@@ -1,5 +1,11 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
 def test_shape(constructor_eager: ConstructorEager) -> None:

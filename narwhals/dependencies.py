@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
 
+    from narwhals.typing import IntoSeries
+
 
 def get_polars() -> Any:
     """Get Polars module (if already imported - else return None)."""
@@ -44,6 +46,11 @@ def get_modin() -> Any:  # pragma: no cover
 def get_cudf() -> Any:
     """Get cudf module (if already imported - else return None)."""
     return sys.modules.get("cudf", None)
+
+
+def get_cupy() -> Any:
+    """Get cupy module (if already imported - else return None)."""
+    return sys.modules.get("cupy", None)
 
 
 def get_pyarrow() -> Any:  # pragma: no cover
@@ -176,6 +183,44 @@ def is_pandas_like_series(arr: Any) -> bool:
     return is_pandas_series(arr) or is_modin_series(arr) or is_cudf_series(arr)
 
 
+def is_into_series(native_series: IntoSeries) -> bool:
+    """
+    Check whether `native_series` can be converted to a Narwhals Series.
+
+    Arguments:
+        native_series: The object to check.
+
+    Returns:
+        `True` if `native_series` can be converted to a Narwhals Series, `False` otherwise.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import numpy as np
+        >>> import narwhals as nw
+
+        >>> s_pd = pd.Series([1, 2, 3])
+        >>> s_pl = pl.Series([1, 2, 3])
+        >>> np_arr = np.array([1, 2, 3])
+
+        >>> nw.dependencies.is_into_series(s_pd)
+        True
+        >>> nw.dependencies.is_into_series(s_pl)
+        True
+        >>> nw.dependencies.is_into_series(np_arr)
+        False
+    """
+    from narwhals.series import Series
+
+    return (
+        isinstance(native_series, Series)
+        or hasattr(native_series, "__narwhals_series__")
+        or is_polars_series(native_series)
+        or is_pyarrow_chunked_array(native_series)
+        or is_pandas_like_series(native_series)
+    )
+
+
 __all__ = [
     "get_polars",
     "get_pandas",
@@ -200,4 +245,5 @@ __all__ = [
     "is_dask_dataframe",
     "is_pandas_like_dataframe",
     "is_pandas_like_series",
+    "is_into_series",
 ]

@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_len_no_filter(constructor: Constructor) -> None:
@@ -14,7 +16,7 @@ def test_len_no_filter(constructor: Constructor) -> None:
         (nw.col("a").len() * 2).alias("l2"),
     )
 
-    compare_dicts(df, expected)
+    assert_equal_data(df, expected)
 
 
 def test_len_chaining(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -27,7 +29,7 @@ def test_len_chaining(constructor: Constructor, request: pytest.FixtureRequest) 
         nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),
     )
 
-    compare_dicts(df, expected)
+    assert_equal_data(df, expected)
 
 
 def test_namespace_len(constructor: Constructor) -> None:
@@ -35,14 +37,14 @@ def test_namespace_len(constructor: Constructor) -> None:
         nw.len(), a=nw.len()
     )
     expected = {"len": [3], "a": [3]}
-    compare_dicts(df, expected)
+    assert_equal_data(df, expected)
     df = (
         nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         .select()
         .select(nw.len(), a=nw.len())
     )
     expected = {"len": [0], "a": [0]}
-    compare_dicts(df, expected)
+    assert_equal_data(df, expected)
 
 
 def test_len_series(constructor_eager: ConstructorEager) -> None:

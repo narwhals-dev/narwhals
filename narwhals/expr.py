@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Generic
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import TypeVar
 
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import flatten
@@ -48,9 +50,11 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 5]})
+            >>> df_pa = pa.table({"a": [1, 2], "b": [4, 5]})
 
             Let's define a dataframe-agnostic function:
 
@@ -58,7 +62,7 @@ class Expr:
             ... def func(df):
             ...     return df.select((nw.col("b") + 10).alias("c"))
 
-            We can then pass either pandas or Polars to `func`:
+            We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                 c
@@ -74,6 +78,12 @@ class Expr:
             │ 14  │
             │ 15  │
             └─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            c: int64
+            ----
+            c: [[14,15]]
+
         """
         return self.__class__(lambda plx: self._call(plx).alias(name))
 
@@ -84,10 +94,12 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> data = {"a": [1, 2, 3, 4]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Lets define a library-agnostic function:
 
@@ -95,7 +107,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").pipe(lambda x: x + 1))
 
-            We can then pass any supported library:
+            We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a
@@ -115,6 +127,11 @@ class Expr:
             │ 4   │
             │ 5   │
             └─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[2,3,4,5]]
         """
         return function(self, *args, **kwargs)
 
@@ -131,10 +148,12 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> from datetime import date
             >>> df_pd = pd.DataFrame({"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]})
             >>> df_pl = pl.DataFrame({"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]})
+            >>> df_pa = pa.table({"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0]})
 
             Let's define a dataframe-agnostic function:
 
@@ -144,7 +163,7 @@ class Expr:
             ...         nw.col("foo").cast(nw.Float32), nw.col("bar").cast(nw.UInt8)
             ...     )
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                foo  bar
@@ -162,6 +181,13 @@ class Expr:
             │ 2.0 ┆ 7   │
             │ 3.0 ┆ 8   │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            foo: float
+            bar: uint8
+            ----
+            foo: [[1,2,3]]
+            bar: [[6,7,8]]
         """
         return self.__class__(
             lambda plx: self._call(plx).cast(dtype),
@@ -299,9 +325,11 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [True, False], "b": [True, True]})
             >>> df_pl = pl.DataFrame({"a": [True, False], "b": [True, True]})
+            >>> df_pa = pa.table({"a": [True, False], "b": [True, True]})
 
             We define a dataframe-agnostic function:
 
@@ -309,7 +337,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").any())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                   a     b
@@ -323,6 +351,13 @@ class Expr:
             ╞══════╪══════╡
             │ true ┆ true │
             └──────┴──────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: bool
+            b: bool
+            ----
+            a: [[true]]
+            b: [[true]]
         """
         return self.__class__(lambda plx: self._call(plx).any())
 
@@ -333,9 +368,11 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [True, False], "b": [True, True]})
             >>> df_pl = pl.DataFrame({"a": [True, False], "b": [True, True]})
+            >>> df_pa = pa.table({"a": [True, False], "b": [True, True]})
 
             Let's define a dataframe-agnostic function:
 
@@ -343,7 +380,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").all())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                    a     b
@@ -357,6 +394,13 @@ class Expr:
             ╞═══════╪══════╡
             │ false ┆ true │
             └───────┴──────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: bool
+            b: bool
+            ----
+            a: [[false]]
+            b: [[true]]
         """
         return self.__class__(lambda plx: self._call(plx).all())
 
@@ -367,9 +411,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
             >>> df_pl = pl.DataFrame({"a": [-1, 0, 1], "b": [2, 4, 6]})
+            >>> df_pa = pa.table({"a": [-1, 0, 1], "b": [2, 4, 6]})
 
             Let's define a dataframe-agnostic function:
 
@@ -377,7 +423,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").mean())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a    b
@@ -391,6 +437,13 @@ class Expr:
             ╞═════╪═════╡
             │ 0.0 ┆ 4.0 │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[0]]
+            b: [[4]]
         """
         return self.__class__(lambda plx: self._call(plx).mean())
 
@@ -405,9 +458,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
             >>> df_pl = pl.DataFrame({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
+            >>> df_pa = pa.table({"a": [20, 25, 60], "b": [1.5, 1, -1.4]})
 
             Let's define a dataframe-agnostic function:
 
@@ -415,7 +470,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").std(ddof=0))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                       a         b
@@ -429,6 +484,13 @@ class Expr:
             ╞══════════╪══════════╡
             │ 17.79513 ┆ 1.265789 │
             └──────────┴──────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[17.795130420052185]]
+            b: [[1.2657891697365016]]
 
         """
         return self.__class__(lambda plx: self._call(plx).std(ddof=ddof))
@@ -440,9 +502,11 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [5, 10], "b": [50, 100]})
             >>> df_pl = pl.DataFrame({"a": [5, 10], "b": [50, 100]})
+            >>> df_pa = pa.table({"a": [5, 10], "b": [50, 100]})
 
             Let's define a dataframe-agnostic function:
 
@@ -450,7 +514,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").sum())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                 a    b
@@ -464,6 +528,13 @@ class Expr:
             ╞═════╪═════╡
             │ 15  ┆ 150 │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[15]]
+            b: [[150]]
         """
         return self.__class__(lambda plx: self._call(plx).sum())
 
@@ -474,9 +545,11 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [4, 3]})
             >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [4, 3]})
+            >>> df_pa = pa.table({"a": [1, 2], "b": [4, 3]})
 
             Let's define a dataframe-agnostic function:
 
@@ -484,7 +557,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.min("a", "b"))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a  b
@@ -498,6 +571,13 @@ class Expr:
             ╞═════╪═════╡
             │ 1   ┆ 3   │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[1]]
+            b: [[3]]
         """
         return self.__class__(lambda plx: self._call(plx).min())
 
@@ -508,9 +588,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [10, 20], "b": [50, 100]})
             >>> df_pl = pl.DataFrame({"a": [10, 20], "b": [50, 100]})
+            >>> df_pa = pa.table({"a": [10, 20], "b": [50, 100]})
 
             Let's define a dataframe-agnostic function:
 
@@ -518,7 +600,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.max("a", "b"))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                 a    b
@@ -532,6 +614,13 @@ class Expr:
             ╞═════╪═════╡
             │ 20  ┆ 100 │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[20]]
+            b: [[100]]
         """
         return self.__class__(lambda plx: self._call(plx).max())
 
@@ -542,9 +631,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [None, 4, 4]})
+            >>> df_pa = pa.table({"a": [1, 2, 3], "b": [None, 4, 4]})
 
             Let's define a dataframe-agnostic function:
 
@@ -552,7 +643,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.all().count())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a  b
@@ -566,6 +657,13 @@ class Expr:
             ╞═════╪═════╡
             │ 3   ┆ 2   │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[3]]
+            b: [[2]]
         """
         return self.__class__(lambda plx: self._call(plx).count())
 
@@ -576,9 +674,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
+            >>> df_pa = pa.table({"a": [1, 2, 3, 4, 5], "b": [1, 1, 3, 3, 5]})
 
             Let's define a dataframe-agnostic function:
 
@@ -586,7 +686,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").n_unique())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a  b
@@ -600,6 +700,13 @@ class Expr:
             ╞═════╪═════╡
             │ 5   ┆ 3   │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[5]]
+            b: [[3]]
         """
         return self.__class__(lambda plx: self._call(plx).n_unique())
 
@@ -610,9 +717,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
             >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
+            >>> df_pa = pa.table({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
 
             Let's define a dataframe-agnostic function:
 
@@ -620,7 +729,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").unique())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a  b
@@ -638,6 +747,13 @@ class Expr:
             │ 3   ┆ 4   │
             │ 5   ┆ 6   │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[1,3,5]]
+            b: [[2,4,6]]
         """
         return self.__class__(lambda plx: self._call(plx).unique())
 
@@ -648,10 +764,12 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> data = {"a": [1, -2], "b": [-3, 4]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -659,7 +777,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").abs())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a  b
@@ -675,6 +793,13 @@ class Expr:
             │ 1   ┆ 3   │
             │ 2   ┆ 4   │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[1,2]]
+            b: [[3,4]]
         """
         return self.__class__(lambda plx: self._call(plx).abs())
 
@@ -685,9 +810,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
             >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
+            >>> df_pa = pa.table({"a": [1, 1, 3, 5, 5], "b": [2, 4, 4, 6, 6]})
 
             Let's define a dataframe-agnostic function:
 
@@ -695,7 +822,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").cum_sum())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                 a   b
@@ -717,6 +844,13 @@ class Expr:
             │ 10  ┆ 16  │
             │ 15  ┆ 22  │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[1,2,5,10,15]]
+            b: [[2,6,10,16,22]]
         """
         return self.__class__(lambda plx: self._call(plx).cum_sum())
 
@@ -736,9 +870,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
+            >>> df_pa = pa.table({"a": [1, 1, 3, 5, 5]})
 
             Let's define a dataframe-agnostic function:
 
@@ -746,7 +882,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(a_diff=nw.col("a").diff())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a_diff
@@ -768,6 +904,11 @@ class Expr:
             │ 2      │
             │ 0      │
             └────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a_diff: int64
+            ----
+            a_diff: [[null,0,2,2,0]]
         """
         return self.__class__(lambda plx: self._call(plx).diff())
 
@@ -787,9 +928,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 1, 3, 5, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 1, 3, 5, 5]})
+            >>> df_pa = pa.table({"a": [1, 1, 3, 5, 5]})
 
             Let's define a dataframe-agnostic function:
 
@@ -797,7 +940,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(a_shift=nw.col("a").shift(n=1))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a_shift
@@ -819,6 +962,11 @@ class Expr:
             │ 3       │
             │ 5       │
             └─────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a_shift: int64
+            ----
+            a_shift: [[null,1,1,3,5]]
         """
         return self.__class__(lambda plx: self._call(plx).shift(n))
 
@@ -834,9 +982,10 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
-
+            >>> import pyarrow as pa
             >>> df_pd = pd.DataFrame({"a": [5, None, 1, 2]})
             >>> df_pl = pl.DataFrame({"a": [5, None, 1, 2]})
+            >>> df_pa = pa.table({"a": [5, None, 1, 2]})
 
             Let's define dataframe-agnostic functions:
 
@@ -849,7 +998,7 @@ class Expr:
             ...     df = df.select(nw.col("a").sort(descending=True))
             ...     return nw.to_native(df)
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a
@@ -869,6 +1018,11 @@ class Expr:
             │ 2    │
             │ 5    │
             └──────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[null,1,2,5]]
 
             >>> func_descend(df_pd)
                  a
@@ -888,6 +1042,11 @@ class Expr:
             │ 2    │
             │ 1    │
             └──────┘
+            >>> func_descend(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[null,5,2,1]]
         """
         return self.__class__(
             lambda plx: self._call(plx).sort(descending=descending, nulls_last=nulls_last)
@@ -910,9 +1069,11 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 3, 4, 5]})
+            >>> df_pa = pa.table({"a": [1, 2, 3, 4, 5]})
 
             Let's define a dataframe-agnostic function:
 
@@ -920,7 +1081,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").is_between(2, 4, "right"))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                    a
@@ -942,6 +1103,11 @@ class Expr:
             │ true  │
             │ false │
             └───────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: bool
+            ----
+            a: [[false,false,true,true,false]]
         """
         return self.__class__(
             lambda plx: self._call(plx).is_between(lower_bound, upper_bound, closed)
@@ -957,9 +1123,11 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [1, 2, 9, 10]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 9, 10]})
+            >>> df_pa = pa.table({"a": [1, 2, 9, 10]})
 
             Let's define a dataframe-agnostic function:
 
@@ -967,7 +1135,7 @@ class Expr:
             ... def func(df):
             ...     return df.with_columns(b=nw.col("a").is_in([1, 2]))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                 a      b
@@ -988,6 +1156,13 @@ class Expr:
             │ 9   ┆ false │
             │ 10  ┆ false │
             └─────┴───────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: bool
+            ----
+            a: [[1,2,9,10]]
+            b: [[true,true,false,false]]
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(lambda plx: self._call(plx).is_in(other))
@@ -1002,9 +1177,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame({"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]})
             >>> df_pl = pl.DataFrame({"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]})
+            >>> df_pa = pa.table({"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]})
 
             Let's define a dataframe-agnostic function:
 
@@ -1015,7 +1192,7 @@ class Expr:
             ...         nw.col("b").filter(nw.col("b") < 13),
             ...     )
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a   b
@@ -1033,6 +1210,13 @@ class Expr:
             │ 6   ┆ 11  │
             │ 7   ┆ 12  │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[5,6,7]]
+            b: [[10,11,12]]
         """
         return self.__class__(
             lambda plx: self._call(plx).filter(
@@ -1051,11 +1235,15 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame(
             ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
             >>> df_pl = pl.DataFrame(
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ... )
+            >>> df_pa = pa.table(
             ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
 
@@ -1067,7 +1255,7 @@ class Expr:
             ...         a_is_null=nw.col("a").is_null(), b_is_null=nw.col("b").is_null()
             ...     )
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a    b  a_is_null  b_is_null
@@ -1090,6 +1278,18 @@ class Expr:
             │ 3    ┆ 3.0 ┆ false     ┆ false     │
             │ 5    ┆ 5.0 ┆ false     ┆ false     │
             └──────┴─────┴───────────┴───────────┘
+
+            >>> func(df_pa)  # nan != null for pyarrow
+            pyarrow.Table
+            a: int64
+            b: double
+            a_is_null: bool
+            b_is_null: bool
+            ----
+            a: [[2,4,null,3,5]]
+            b: [[2,4,nan,3,5]]
+            a_is_null: [[false,false,true,false,false]]
+            b_is_null: [[false,false,false,false,false]]
         """
         return self.__class__(lambda plx: self._call(plx).is_null())
 
@@ -1100,10 +1300,12 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> data = {"a": [1, None, None, 2]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a library agnostic function:
 
@@ -1111,7 +1313,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").is_null().arg_true())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a
@@ -1127,6 +1329,11 @@ class Expr:
             │ 1   │
             │ 2   │
             └─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[1,2]]
         """
         return self.__class__(lambda plx: self._call(plx).arg_true())
 
@@ -1141,11 +1348,15 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_pd = pd.DataFrame(
             ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
             >>> df_pl = pl.DataFrame(
+            ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
+            ... )
+            >>> df_pa = pa.table(
             ...     {"a": [2, 4, None, 3, 5], "b": [2.0, 4.0, float("nan"), 3.0, 5.0]}
             ... )
 
@@ -1155,7 +1366,7 @@ class Expr:
             ... def func(df):
             ...     return df.with_columns(nw.col("a", "b").fill_null(0))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a    b
@@ -1178,6 +1389,14 @@ class Expr:
             │ 3   ┆ 3.0 │
             │ 5   ┆ 5.0 │
             └─────┴─────┘
+
+            >>> func(df_pa)  # nan != null for pyarrow
+            pyarrow.Table
+            a: int64
+            b: double
+            ----
+            a: [[2,4,0,3,5]]
+            b: [[2,4,nan,3,5]]
         """
         return self.__class__(lambda plx: self._call(plx).fill_null(value))
 
@@ -1194,9 +1413,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
 
             >>> df_pd = pd.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
             >>> df_pl = pl.DataFrame({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
+            >>> df_pa = pa.table({"a": [2.0, 4.0, float("nan"), 3.0, None, 5.0]})
 
             Let's define a dataframe-agnostic function:
 
@@ -1204,7 +1425,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").drop_nulls())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a
@@ -1225,6 +1446,11 @@ class Expr:
             │ 3.0 │
             │ 5.0 │
             └─────┘
+            >>> func(df_pa)  # nan != null for pyarrow
+            pyarrow.Table
+            a: double
+            ----
+            a: [[2,4,nan,3,5]]
         """
         return self.__class__(lambda plx: self._call(plx).drop_nulls())
 
@@ -1250,9 +1476,10 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
-
+            >>> import pyarrow as pa
             >>> df_pd = pd.DataFrame({"a": [1, 2, 3]})
             >>> df_pl = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df_pa = pa.table({"a": [1, 2, 3]})
 
             Let's define a dataframe-agnostic function:
 
@@ -1260,7 +1487,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").sample(fraction=1.0, with_replacement=True))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)  # doctest: +SKIP
                a
@@ -1278,6 +1505,11 @@ class Expr:
             │ 3   │
             │ 3   │
             └─────┘
+            >>> func(df_pa)  # doctest: +SKIP
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[1,3,3]]
         """
         return self.__class__(
             lambda plx: self._call(plx).sample(
@@ -1298,9 +1530,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": [1, 2, 3], "b": [1, 1, 2]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1308,7 +1542,7 @@ class Expr:
             ... def func(df):
             ...     return df.with_columns(a_min_per_group=nw.col("a").min().over("b"))
 
-            We can then pass either pandas or Polars:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a  b  a_min_per_group
@@ -1326,6 +1560,15 @@ class Expr:
             │ 2   ┆ 1   ┆ 1               │
             │ 3   ┆ 2   ┆ 3               │
             └─────┴─────┴─────────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            a_min_per_group: int64
+            ----
+            a: [[1,2,3]]
+            b: [[1,1,2]]
+            a_min_per_group: [[1,1,3]]
         """
         return self.__class__(lambda plx: self._call(plx).over(flatten(keys)))
 
@@ -1337,9 +1580,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1347,7 +1592,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.all().is_duplicated())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                    a      b
@@ -1367,6 +1612,13 @@ class Expr:
             │ false ┆ false │
             │ true  ┆ false │
             └───────┴───────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: bool
+            b: bool
+            ----
+            a: [[true,false,false,true]]
+            b: [[true,true,false,false]]
         """
         return self.__class__(lambda plx: self._call(plx).is_duplicated())
 
@@ -1378,9 +1630,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1388,7 +1642,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.all().is_unique())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                    a      b
@@ -1408,6 +1662,13 @@ class Expr:
             │ true  ┆ true  │
             │ false ┆ true  │
             └───────┴───────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: bool
+            b: bool
+            ----
+            a: [[false,true,true,false]]
+            b: [[false,false,true,true]]
         """
         return self.__class__(lambda plx: self._call(plx).is_unique())
 
@@ -1423,9 +1684,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": [1, 2, None, 1], "b": ["a", None, "b", None]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1433,7 +1696,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.all().null_count())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a  b
@@ -1447,6 +1710,13 @@ class Expr:
             ╞═════╪═════╡
             │ 1   ┆ 2   │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            b: int64
+            ----
+            a: [[1]]
+            b: [[2]]
         """
         return self.__class__(lambda plx: self._call(plx).null_count())
 
@@ -1458,9 +1728,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1468,7 +1740,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.all().is_first_distinct())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                    a      b
@@ -1488,6 +1760,13 @@ class Expr:
             │ true  ┆ true  │
             │ false ┆ true  │
             └───────┴───────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: bool
+            b: bool
+            ----
+            a: [[true,true,true,false]]
+            b: [[true,false,true,true]]
         """
         return self.__class__(lambda plx: self._call(plx).is_first_distinct())
 
@@ -1498,9 +1777,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": [1, 2, 3, 1], "b": ["a", "a", "b", "c"]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1508,7 +1789,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.all().is_last_distinct())
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                    a      b
@@ -1528,6 +1809,13 @@ class Expr:
             │ true  ┆ true  │
             │ true  ┆ true  │
             └───────┴───────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: bool
+            b: bool
+            ----
+            a: [[false,true,true,true]]
+            b: [[false,true,true,true]]
         """
         return self.__class__(lambda plx: self._call(plx).is_last_distinct())
 
@@ -1553,9 +1841,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": list(range(50)), "b": list(range(50, 100))}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function:
 
@@ -1563,7 +1853,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a", "b").quantile(0.5, interpolation="linear"))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                   a     b
@@ -1578,6 +1868,13 @@ class Expr:
             ╞══════╪══════╡
             │ 24.5 ┆ 74.5 │
             └──────┴──────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            b: double
+            ----
+            a: [[24.5]]
+            b: [[74.5]]
         """
         return self.__class__(
             lambda plx: self._call(plx).quantile(quantile, interpolation)
@@ -1594,9 +1891,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": list(range(10))}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function that returns the first 3 rows:
 
@@ -1604,7 +1903,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").head(3))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a
@@ -1622,6 +1921,11 @@ class Expr:
             │ 1   │
             │ 2   │
             └─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[0,1,2]]
         """
         return self.__class__(lambda plx: self._call(plx).head(n))
 
@@ -1636,9 +1940,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": list(range(10))}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function that returns the last 3 rows:
 
@@ -1646,7 +1952,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").tail(3))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a
@@ -1664,6 +1970,11 @@ class Expr:
             │ 8   │
             │ 9   │
             └─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[7,8,9]]
         """
         return self.__class__(lambda plx: self._call(plx).tail(n))
 
@@ -1687,9 +1998,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": [1.12345, 2.56789, 3.901234]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function that rounds to the first decimal:
 
@@ -1697,7 +2010,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").round(1))
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                  a
@@ -1715,6 +2028,11 @@ class Expr:
             │ 2.6 │
             │ 3.9 │
             └─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: double
+            ----
+            a: [[1.1,2.6,3.9]]
         """
         return self.__class__(lambda plx: self._call(plx).round(decimals))
 
@@ -1728,9 +2046,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": ["x", "y", "z"], "b": [1, 2, 1]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function that computes the len over different values of "b" column:
 
@@ -1741,7 +2061,7 @@ class Expr:
             ...         nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),
             ...     )
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a1  a2
@@ -1755,6 +2075,13 @@ class Expr:
             ╞═════╪═════╡
             │ 2   ┆ 1   │
             └─────┴─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a1: int64
+            a2: int64
+            ----
+            a1: [[2]]
+            a2: [[1]]
         """
         return self.__class__(lambda plx: self._call(plx).len())
 
@@ -1770,9 +2097,11 @@ class Expr:
             >>> import narwhals as nw
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> data = {"a": [1, 2, 3, 4], "b": [5, 6, 7, 8]}
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             Let's define a dataframe-agnostic function in which gather every 2 rows,
             starting from a offset of 1:
@@ -1781,11 +2110,12 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").gather_every(n=2, offset=1))
 
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
             >>> func(df_pd)
                a
             1  2
             3  4
-
             >>> func(df_pl)
             shape: (2, 1)
             ┌─────┐
@@ -1796,6 +2126,11 @@ class Expr:
             │ 2   │
             │ 4   │
             └─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[2,4]]
         """
         return self.__class__(
             lambda plx: self._call(plx).gather_every(n=n, offset=offset)
@@ -1818,11 +2153,13 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
 
             >>> s = [1, 2, 3]
             >>> df_pd = pd.DataFrame({"s": s})
             >>> df_pl = pl.DataFrame({"s": s})
+            >>> df_pa = pa.table({"s": s})
 
             We define a library agnostic function:
 
@@ -1830,7 +2167,7 @@ class Expr:
             ... def func_lower(df):
             ...     return df.select(nw.col("s").clip(2))
 
-            We can then pass either pandas or Polars to `func_lower`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func_lower`:
 
             >>> func_lower(df_pd)
                s
@@ -1848,6 +2185,11 @@ class Expr:
             │ 2   │
             │ 3   │
             └─────┘
+            >>> func_lower(df_pa)
+            pyarrow.Table
+            s: int64
+            ----
+            s: [[2,2,3]]
 
             We define another library agnostic function:
 
@@ -1855,7 +2197,7 @@ class Expr:
             ... def func_upper(df):
             ...     return df.select(nw.col("s").clip(upper_bound=2))
 
-            We can then pass either pandas or Polars to `func_upper`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func_upper`:
 
             >>> func_upper(df_pd)
                s
@@ -1873,12 +2215,18 @@ class Expr:
             │ 2   │
             │ 2   │
             └─────┘
+            >>> func_upper(df_pa)
+            pyarrow.Table
+            s: int64
+            ----
+            s: [[1,2,2]]
 
             We can have both at the same time
 
             >>> s = [-1, 1, -3, 3, -5, 5]
             >>> df_pd = pd.DataFrame({"s": s})
             >>> df_pl = pl.DataFrame({"s": s})
+            >>> df_pa = pa.table({"s": s})
 
             We define a library agnostic function:
 
@@ -1886,7 +2234,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("s").clip(-1, 3))
 
-            We can pass either pandas or Polars to `func`:
+            We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                s
@@ -1910,6 +2258,11 @@ class Expr:
             │ -1  │
             │ 3   │
             └─────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            s: int64
+            ----
+            s: [[-1,1,-1,3,-1,3]]
         """
         return self.__class__(lambda plx: self._call(plx).clip(lower_bound, upper_bound))
 
@@ -1921,6 +2274,7 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
 
             >>> data = {
@@ -1929,6 +2283,7 @@ class Expr:
             ... }
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
 
             We define a library agnostic function:
 
@@ -1936,7 +2291,7 @@ class Expr:
             ... def func(df):
             ...     return df.select(nw.col("a").mode()).sort("a")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
             >>> func(df_pd)
                a
@@ -1951,31 +2306,40 @@ class Expr:
             ╞═════╡
             │ 1   │
             └─────┘
+
+            >>> func(df_pa)
+            pyarrow.Table
+            a: int64
+            ----
+            a: [[1]]
         """
         return self.__class__(lambda plx: self._call(plx).mode())
 
     @property
-    def str(self: Self) -> ExprStringNamespace:
+    def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)
 
     @property
-    def dt(self: Self) -> ExprDateTimeNamespace:
+    def dt(self: Self) -> ExprDateTimeNamespace[Self]:
         return ExprDateTimeNamespace(self)
 
     @property
-    def cat(self: Self) -> ExprCatNamespace:
+    def cat(self: Self) -> ExprCatNamespace[Self]:
         return ExprCatNamespace(self)
 
     @property
-    def name(self: Self) -> ExprNameNamespace:
+    def name(self: Self) -> ExprNameNamespace[Self]:
         return ExprNameNamespace(self)
 
 
-class ExprCatNamespace:
-    def __init__(self, expr: Expr) -> None:
+T = TypeVar("T", bound=Expr)
+
+
+class ExprCatNamespace(Generic[T]):
+    def __init__(self: Self, expr: T) -> None:
         self._expr = expr
 
-    def get_categories(self) -> Expr:
+    def get_categories(self: Self) -> T:
         """
         Get unique categories from column.
 
@@ -2018,11 +2382,11 @@ class ExprCatNamespace:
         )
 
 
-class ExprStringNamespace:
-    def __init__(self, expr: Expr) -> None:
+class ExprStringNamespace(Generic[T]):
+    def __init__(self: Self, expr: T) -> None:
         self._expr = expr
 
-    def len_chars(self) -> Expr:
+    def len_chars(self: Self) -> T:
         r"""
         Return the length of each string as the number of characters.
 
@@ -2068,7 +2432,7 @@ class ExprStringNamespace:
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Expr:
+    ) -> T:
         r"""
         Replace first matching regex/literal substring with a new string value.
 
@@ -2108,7 +2472,7 @@ class ExprStringNamespace:
             )
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
+    def replace_all(self: Self, pattern: str, value: str, *, literal: bool = False) -> T:
         r"""
         Replace all matching regex/literal substring with a new string value.
 
@@ -2147,7 +2511,7 @@ class ExprStringNamespace:
             )
         )
 
-    def strip_chars(self, characters: str | None = None) -> Expr:
+    def strip_chars(self: Self, characters: str | None = None) -> T:
         r"""
         Remove leading and trailing characters.
 
@@ -2181,7 +2545,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.strip_chars(characters)
         )
 
-    def starts_with(self, prefix: str) -> Expr:
+    def starts_with(self: Self, prefix: str) -> T:
         r"""
         Check if string values start with a substring.
 
@@ -2226,7 +2590,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.starts_with(prefix)
         )
 
-    def ends_with(self, suffix: str) -> Expr:
+    def ends_with(self: Self, suffix: str) -> T:
         r"""
         Check if string values end with a substring.
 
@@ -2271,7 +2635,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.ends_with(suffix)
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> Expr:
+    def contains(self: Self, pattern: str, *, literal: bool = False) -> T:
         r"""
         Check if string contains a substring that matches a pattern.
 
@@ -2327,7 +2691,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.contains(pattern, literal=literal)
         )
 
-    def slice(self, offset: int, length: int | None = None) -> Expr:
+    def slice(self: Self, offset: int, length: int | None = None) -> T:
         r"""
         Create subslices of the string values of an expression.
 
@@ -2402,7 +2766,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.slice(offset=offset, length=length)
         )
 
-    def head(self, n: int = 5) -> Expr:
+    def head(self: Self, n: int = 5) -> T:
         r"""
         Take the first n elements of each string.
 
@@ -2450,7 +2814,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(0, n))
 
-    def tail(self, n: int = 5) -> Expr:
+    def tail(self: Self, n: int = 5) -> T:
         r"""
         Take the last n elements of each string.
 
@@ -2498,7 +2862,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.slice(-n))
 
-    def to_datetime(self: Self, format: str | None = None) -> Expr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> T:  # noqa: A002
         """
         Convert to Datetime dtype.
 
@@ -2558,7 +2922,7 @@ class ExprStringNamespace:
             lambda plx: self._expr._call(plx).str.to_datetime(format=format)
         )
 
-    def to_uppercase(self) -> Expr:
+    def to_uppercase(self: Self) -> T:
         r"""
         Transform string to uppercase variant.
 
@@ -2604,7 +2968,7 @@ class ExprStringNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_uppercase())
 
-    def to_lowercase(self) -> Expr:
+    def to_lowercase(self: Self) -> T:
         r"""
         Transform string to lowercase variant.
 
@@ -2645,11 +3009,11 @@ class ExprStringNamespace:
         return self._expr.__class__(lambda plx: self._expr._call(plx).str.to_lowercase())
 
 
-class ExprDateTimeNamespace:
-    def __init__(self, expr: Expr) -> None:
+class ExprDateTimeNamespace(Generic[T]):
+    def __init__(self: Self, expr: T) -> None:
         self._expr = expr
 
-    def date(self) -> Expr:
+    def date(self: Self) -> T:
         """
         Extract the date from underlying DateTime representation.
 
@@ -2691,7 +3055,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.date())
 
-    def year(self) -> Expr:
+    def year(self: Self) -> T:
         """
         Extract year from underlying DateTime representation.
 
@@ -2739,7 +3103,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.year())
 
-    def month(self) -> Expr:
+    def month(self: Self) -> T:
         """
         Extract month from underlying DateTime representation.
 
@@ -2790,7 +3154,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.month())
 
-    def day(self) -> Expr:
+    def day(self: Self) -> T:
         """
         Extract day from underlying DateTime representation.
 
@@ -2842,7 +3206,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.day())
 
-    def hour(self) -> Expr:
+    def hour(self: Self) -> T:
         """
         Extract hour from underlying DateTime representation.
 
@@ -2890,7 +3254,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.hour())
 
-    def minute(self) -> Expr:
+    def minute(self: Self) -> T:
         """
         Extract minutes from underlying DateTime representation.
 
@@ -2941,7 +3305,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.minute())
 
-    def second(self) -> Expr:
+    def second(self: Self) -> T:
         """
         Extract seconds from underlying DateTime representation.
 
@@ -2991,7 +3355,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.second())
 
-    def millisecond(self) -> Expr:
+    def millisecond(self: Self) -> T:
         """
         Extract milliseconds from underlying DateTime representation.
 
@@ -3042,7 +3406,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.millisecond())
 
-    def microsecond(self) -> Expr:
+    def microsecond(self: Self) -> T:
         """
         Extract microseconds from underlying DateTime representation.
 
@@ -3093,7 +3457,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.microsecond())
 
-    def nanosecond(self) -> Expr:
+    def nanosecond(self: Self) -> T:
         """
         Extract Nanoseconds from underlying DateTime representation
 
@@ -3144,7 +3508,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.nanosecond())
 
-    def ordinal_day(self) -> Expr:
+    def ordinal_day(self: Self) -> T:
         """
         Get ordinal day.
 
@@ -3182,7 +3546,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.ordinal_day())
 
-    def total_minutes(self) -> Expr:
+    def total_minutes(self: Self) -> T:
         """
         Get total minutes.
 
@@ -3225,7 +3589,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_minutes())
 
-    def total_seconds(self) -> Expr:
+    def total_seconds(self: Self) -> T:
         """
         Get total seconds.
 
@@ -3268,7 +3632,7 @@ class ExprDateTimeNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).dt.total_seconds())
 
-    def total_milliseconds(self) -> Expr:
+    def total_milliseconds(self: Self) -> T:
         """
         Get total milliseconds.
 
@@ -3320,7 +3684,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.total_milliseconds()
         )
 
-    def total_microseconds(self) -> Expr:
+    def total_microseconds(self: Self) -> T:
         """
         Get total microseconds.
 
@@ -3372,7 +3736,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.total_microseconds()
         )
 
-    def total_nanoseconds(self) -> Expr:
+    def total_nanoseconds(self: Self) -> T:
         """
         Get total nanoseconds.
 
@@ -3421,7 +3785,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.total_nanoseconds()
         )
 
-    def to_string(self, format: str) -> Expr:  # noqa: A002
+    def to_string(self: Self, format: str) -> T:  # noqa: A002
         """
         Convert a Date/Time/Datetime column into a String column with the given format.
 
@@ -3499,7 +3863,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.to_string(format)
         )
 
-    def replace_time_zone(self, time_zone: str | None) -> Expr:
+    def replace_time_zone(self: Self, time_zone: str | None) -> T:
         """
         Replace time zone.
 
@@ -3554,7 +3918,7 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.replace_time_zone(time_zone)
         )
 
-    def convert_time_zone(self, time_zone: str) -> Expr:
+    def convert_time_zone(self: Self, time_zone: str) -> T:
         """
         Convert to a new time zone.
 
@@ -3612,12 +3976,78 @@ class ExprDateTimeNamespace:
             lambda plx: self._expr._call(plx).dt.convert_time_zone(time_zone)
         )
 
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
+        """
+        Return a timestamp in the given time unit.
 
-class ExprNameNamespace:
-    def __init__(self: Self, expr: Expr) -> None:
+        Arguments:
+            time_unit: {'ns', 'us', 'ms'}
+                Time unit.
+
+        Examples:
+            >>> from datetime import date
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = {"date": [date(2001, 1, 1), None, date(2001, 1, 3)]}
+            >>> df_pd = pd.DataFrame(data, dtype="datetime64[ns]")
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(
+            ...         nw.col("date").dt.timestamp().alias("timestamp_us"),
+            ...         nw.col("date").dt.timestamp("ms").alias("timestamp_ms"),
+            ...     )
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(df_pd)
+                    date  timestamp_us  timestamp_ms
+            0 2001-01-01  9.783072e+14  9.783072e+11
+            1        NaT           NaN           NaN
+            2 2001-01-03  9.784800e+14  9.784800e+11
+            >>> func(df_pl)
+            shape: (3, 3)
+            ┌────────────┬─────────────────┬──────────────┐
+            │ date       ┆ timestamp_us    ┆ timestamp_ms │
+            │ ---        ┆ ---             ┆ ---          │
+            │ date       ┆ i64             ┆ i64          │
+            ╞════════════╪═════════════════╪══════════════╡
+            │ 2001-01-01 ┆ 978307200000000 ┆ 978307200000 │
+            │ null       ┆ null            ┆ null         │
+            │ 2001-01-03 ┆ 978480000000000 ┆ 978480000000 │
+            └────────────┴─────────────────┴──────────────┘
+            >>> func(df_pa)
+            pyarrow.Table
+            date: date32[day]
+            timestamp_us: int64
+            timestamp_ms: int64
+            ----
+            date: [[2001-01-01,null,2001-01-03]]
+            timestamp_us: [[978307200000000,null,978480000000000]]
+            timestamp_ms: [[978307200000,null,978480000000]]
+        """
+        if time_unit not in {"ns", "us", "ms"}:
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+        return self._expr.__class__(
+            lambda plx: self._expr._call(plx).dt.timestamp(time_unit)
+        )
+
+
+class ExprNameNamespace(Generic[T]):
+    def __init__(self: Self, expr: T) -> None:
         self._expr = expr
 
-    def keep(self: Self) -> Expr:
+    def keep(self: Self) -> T:
         r"""
         Keep the original root name of the expression.
 
@@ -3649,7 +4079,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.keep())
 
-    def map(self: Self, function: Callable[[str], str]) -> Expr:
+    def map(self: Self, function: Callable[[str], str]) -> T:
         r"""
         Rename the output of an expression by mapping a function over the root name.
 
@@ -3685,7 +4115,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.map(function))
 
-    def prefix(self: Self, prefix: str) -> Expr:
+    def prefix(self: Self, prefix: str) -> T:
         r"""
         Add a prefix to the root column name of the expression.
 
@@ -3721,7 +4151,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.prefix(prefix))
 
-    def suffix(self: Self, suffix: str) -> Expr:
+    def suffix(self: Self, suffix: str) -> T:
         r"""
         Add a suffix to the root column name of the expression.
 
@@ -3756,7 +4186,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.suffix(suffix))
 
-    def to_lowercase(self: Self) -> Expr:
+    def to_lowercase(self: Self) -> T:
         r"""
         Make the root column name lowercase.
 
@@ -3788,7 +4218,7 @@ class ExprNameNamespace:
         """
         return self._expr.__class__(lambda plx: self._expr._call(plx).name.to_lowercase())
 
-    def to_uppercase(self: Self) -> Expr:
+    def to_uppercase(self: Self) -> T:
         r"""
         Make the root column name uppercase.
 
@@ -3830,9 +4260,11 @@ def col(*names: str | Iterable[str]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [3, 4]})
 
         We define a dataframe-agnostic function:
 
@@ -3840,7 +4272,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.col("a") * nw.col("b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a
@@ -3856,6 +4288,11 @@ def col(*names: str | Iterable[str]) -> Expr:
         │ 3   │
         │ 8   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[3,8]]
     """
 
     def func(plx: Any) -> Any:
@@ -3890,7 +4327,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.nth(0) * 2)
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a
@@ -3927,9 +4364,11 @@ def all_() -> Expr:
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> df_pa = pa.table({"a": [1, 2, 3], "b": [4, 5, 6]})
 
         Let's define a dataframe-agnostic function:
 
@@ -3937,7 +4376,7 @@ def all_() -> Expr:
         ... def func(df):
         ...     return df.select(nw.all() * 2)
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a   b
@@ -3955,6 +4394,13 @@ def all_() -> Expr:
         │ 4   ┆ 10  │
         │ 6   ┆ 12  │
         └─────┴─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[2,4,6]]
+        b: [[8,10,12]]
     """
     return Expr(lambda plx: plx.all())
 
@@ -3967,9 +4413,11 @@ def len_() -> Expr:
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
@@ -3977,7 +4425,7 @@ def len_() -> Expr:
         ... def func(df):
         ...     return df.select(nw.len())
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            len
@@ -3991,6 +4439,11 @@ def len_() -> Expr:
         ╞═════╡
         │ 2   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        len: int64
+        ----
+        len: [[2]]
     """
 
     def func(plx: Any) -> Any:
@@ -4012,9 +4465,11 @@ def sum(*columns: str) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
+        >>> df_pa = pa.table({"a": [1, 2]})
 
         We define a dataframe-agnostic function:
 
@@ -4022,7 +4477,7 @@ def sum(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.sum("a"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a
@@ -4036,6 +4491,11 @@ def sum(*columns: str) -> Expr:
         ╞═════╡
         │ 3   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[3]]
     """
 
     return Expr(lambda plx: plx.sum(*columns))
@@ -4054,9 +4514,11 @@ def mean(*columns: str) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 8, 3]})
         >>> df_pd = pd.DataFrame({"a": [1, 8, 3]})
+        >>> df_pa = pa.table({"a": [1, 8, 3]})
 
         We define a dataframe agnostic function:
 
@@ -4064,7 +4526,7 @@ def mean(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.mean("a"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
              a
@@ -4078,6 +4540,11 @@ def mean(*columns: str) -> Expr:
         ╞═════╡
         │ 4.0 │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[4]]
     """
 
     return Expr(lambda plx: plx.mean(*columns))
@@ -4096,9 +4563,11 @@ def min(*columns: str) -> Expr:
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
@@ -4106,7 +4575,7 @@ def min(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.min("b"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            b
@@ -4120,6 +4589,11 @@ def min(*columns: str) -> Expr:
         ╞═════╡
         │ 5   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        b: int64
+        ----
+        b: [[5]]
     """
     return Expr(lambda plx: plx.min(*columns))
 
@@ -4137,9 +4611,11 @@ def max(*columns: str) -> Expr:
     Examples:
         >>> import polars as pl
         >>> import pandas as pd
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [1, 2], "b": [5, 10]})
         >>> df_pl = pl.DataFrame({"a": [1, 2], "b": [5, 10]})
+        >>> df_pa = pa.table({"a": [1, 2], "b": [5, 10]})
 
         Let's define a dataframe-agnostic function:
 
@@ -4147,7 +4623,7 @@ def max(*columns: str) -> Expr:
         ... def func(df):
         ...     return df.select(nw.max("a"))
 
-        We can then pass either pandas or Polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a
@@ -4161,6 +4637,11 @@ def max(*columns: str) -> Expr:
         ╞═════╡
         │ 2   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[2]]
     """
     return Expr(lambda plx: plx.max(*columns))
 
@@ -4179,10 +4660,12 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {"a": [1, 2, 3], "b": [5, 10, None]}
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
@@ -4190,7 +4673,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.sum_horizontal("a", "b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
               a
@@ -4208,6 +4691,11 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 12  │
         │ 3   │
         └─────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        ----
+        a: [[6,12,3]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `sum_horizontal`"
@@ -4248,7 +4736,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.min_horizontal("a", "b"))
 
-        We can then pass either pandas, polars or pyarrow to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(pd.DataFrame(data))
              a
@@ -4311,7 +4799,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.max_horizontal("a", "b"))
 
-        We can then pass either pandas, polars or pyarrow to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(pd.DataFrame(data))
              a
@@ -4382,9 +4870,11 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
         >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [5, 10, 15]})
+        >>> df_pa = pa.table({"a": [1, 2, 3], "b": [5, 10, 15]})
 
         We define a dataframe-agnostic function:
 
@@ -4394,7 +4884,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         ...         nw.when(nw.col("a") < 3).then(5).otherwise(6).alias("a_when")
         ...     )
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a   b  a_when
@@ -4412,6 +4902,15 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         │ 2   ┆ 10  ┆ 5      │
         │ 3   ┆ 15  ┆ 6      │
         └─────┴─────┴────────┘
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        b: int64
+        a_when: int64
+        ----
+        a: [[1,2,3]]
+        b: [[5,10,15]]
+        a_when: [[5,5,6]]
     """
     return When(*predicates)
 
@@ -4429,6 +4928,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
@@ -4436,6 +4936,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... }
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
@@ -4443,7 +4944,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select("a", "b", all=nw.all_horizontal("a", "b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
                a      b    all
@@ -4468,6 +4969,16 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ false ┆ null  ┆ false │
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
+
+        >>> func(df_pa)
+        pyarrow.Table
+        a: bool
+        b: bool
+        all: bool
+        ----
+        a: [[false,false,true,true,false,null]]
+        b: [[false,true,true,null,null,null]]
+        all: [[false,false,true,null,false,null]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `all_horizontal`"
@@ -4490,9 +5001,11 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> df_pl = pl.DataFrame({"a": [1, 2]})
         >>> df_pd = pd.DataFrame({"a": [1, 2]})
+        >>> df_pa = pa.table({"a": [1, 2]})
 
         We define a dataframe-agnostic function:
 
@@ -4500,7 +5013,7 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         ... def func(df):
         ...     return df.with_columns(nw.lit(3).alias("b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
            a  b
@@ -4516,7 +5029,13 @@ def lit(value: Any, dtype: DType | None = None) -> Expr:
         │ 1   ┆ 3   │
         │ 2   ┆ 3   │
         └─────┴─────┘
-
+        >>> func(df_pa)
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2]]
+        b: [[3,3]]
     """
     if is_numpy_array(value):
         msg = (
@@ -4545,6 +5064,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {
         ...     "a": [False, False, True, True, False, None],
@@ -4552,6 +5072,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... }
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function:
 
@@ -4559,7 +5080,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select("a", "b", any=nw.any_horizontal("a", "b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
                a      b    any
@@ -4584,6 +5105,16 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ false ┆ null  ┆ null  │
         │ null  ┆ null  ┆ null  │
         └───────┴───────┴───────┘
+
+        >>> func(df_pa)
+        pyarrow.Table
+        a: bool
+        b: bool
+        any: bool
+        ----
+        a: [[false,false,true,true,false,null]]
+        b: [[false,true,true,null,null,null]]
+        any: [[false,true,true,true,null,null]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `any_horizontal`"
@@ -4606,6 +5137,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {
         ...     "a": [1, 8, 3],
@@ -4614,6 +5146,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... }
         >>> df_pl = pl.DataFrame(data)
         >>> df_pd = pd.DataFrame(data)
+        >>> df_pa = pa.table(data)
 
         We define a dataframe-agnostic function that computes the horizontal mean of "a"
         and "b" columns:
@@ -4622,13 +5155,14 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ... def func(df):
         ...     return df.select(nw.mean_horizontal("a", "b"))
 
-        We can then pass either pandas or polars to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(df_pd)
              a
         0  2.5
         1  6.5
         2  3.0
+
         >>> func(df_pl)
         shape: (3, 1)
         ┌─────┐
@@ -4640,6 +5174,12 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         │ 6.5 │
         │ 3.0 │
         └─────┘
+
+        >>> func(df_pa)
+        pyarrow.Table
+        a: double
+        ----
+        a: [[2.5,6.5,3]]
     """
     if not exprs:
         msg = "At least one expression must be passed to `mean_horizontal`"
@@ -4698,7 +5238,7 @@ def concat_str(
         ...         ).alias("full_sentence")
         ...     )
 
-        We can then pass either pandas, Polars or PyArrow to `func`:
+        We can pass any supported library such as Pandas, Polars, or PyArrow to `func`:
 
         >>> func(pd.DataFrame(data))
           full_sentence

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from narwhals.dtypes import Array
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical

@@ -582,9 +582,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We can then pass either pandas, Polars or PyArrow to `func`:
 
-            >>> func(df_pd)
-            >>> func(df_pl)
-            >>> func(df_pa)
+            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pl)  # doctest:+SKIP
+            >>> func(df_pa)  # doctest:+SKIP
         """
         self._compliant_frame.write_parquet(file)
 
@@ -742,14 +742,16 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def __getitem__(
         self,
-        item: str
-        | slice
-        | Sequence[int]
-        | Sequence[str]
-        | tuple[Sequence[int], str | int]
-        | tuple[slice, str | int]
-        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
-        | tuple[slice, slice],
+        item: (
+            str
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[Sequence[int], str | int]
+            | tuple[slice, str | int]
+            | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
+            | tuple[slice, slice]
+        ),
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -1195,16 +1197,14 @@ class DataFrame(BaseFrame[DataFrameT]):
     def rows(
         self,
         *,
-        named: Literal[False],
+        named: Literal[False] = False,
     ) -> list[tuple[Any, ...]]: ...
-
     @overload
     def rows(
         self,
         *,
         named: Literal[True],
     ) -> list[dict[str, Any]]: ...
-
     @overload
     def rows(
         self,

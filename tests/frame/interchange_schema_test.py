@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
@@ -8,7 +10,7 @@ import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import IBIS_VERSION
 
 
 def test_interchange_schema() -> None:
@@ -114,7 +116,7 @@ def test_interchange_schema_ibis(
     tbl = ibis.read_parquet(filepath)
     df = nw.from_native(tbl, eager_or_interchange_only=True)
     result = df.schema
-    if parse_version(ibis.__version__) > (6, 0, 0):
+    if IBIS_VERSION > (6, 0, 0):
         expected = {
             "a": nw.Int64,
             "b": nw.Int32,

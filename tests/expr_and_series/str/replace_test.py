@@ -5,7 +5,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 replace_data = [
     (
@@ -66,7 +66,7 @@ def test_str_replace_series(
     result_series = df["a"].str.replace(
         pattern=pattern, value=value, n=n, literal=literal
     )
-    compare_dicts({"a": result_series}, expected)
+    assert_equal_data({"a": result_series}, expected)
 
 
 @pytest.mark.parametrize(
@@ -84,7 +84,7 @@ def test_str_replace_all_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.replace_all(pattern=pattern, value=value, literal=literal)
-    compare_dicts({"a": result_series}, expected)
+    assert_equal_data({"a": result_series}, expected)
 
 
 @pytest.mark.parametrize(
@@ -105,7 +105,7 @@ def test_str_replace_expr(
     result_df = df.select(
         nw.col("a").str.replace(pattern=pattern, value=value, n=n, literal=literal)
     )
-    compare_dicts(result_df, expected)
+    assert_equal_data(result_df, expected)
 
 
 @pytest.mark.parametrize(
@@ -125,4 +125,4 @@ def test_str_replace_all_expr(
     result = df.select(
         nw.col("a").str.replace_all(pattern=pattern, value=value, literal=literal)
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

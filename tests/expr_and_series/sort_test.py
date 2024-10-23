@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
 
@@ -26,7 +28,7 @@ def test_sort_expr(
         "a",
         nw.col("b").sort(descending=descending, nulls_last=nulls_last),
     )
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
