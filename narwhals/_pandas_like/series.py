@@ -426,13 +426,19 @@ class PandasLikeSeries:
 
     def skew(self) -> Any:
         ser = self._native_series
-        if len(ser) <= 1 or ser.isna().any():
+        ser_not_null = ser.dropna()
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
             return float("nan")
-        m = ser.mean()
-        m2 = ((ser - m) ** 2).mean()
-        m3 = ((ser - m) ** 3).mean()
-        g1 = m3 / (m2**1.5) if m2 != 0 else 0
-        return float(g1)  # Biased population skewness
+        elif len(ser_not_null) == 2:
+            return 0.0
+        else:
+            m = ser_not_null.mean()
+            m2 = ((ser_not_null - m) ** 2).mean()
+            m3 = ((ser_not_null - m) ** 3).mean()
+            g1 = m3 / (m2**1.5) if m2 != 0 else 0
+            return float(g1)  # Biased population skewness
 
     def len(self) -> Any:
         return len(self._native_series)

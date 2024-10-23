@@ -12,7 +12,7 @@ def test_unary(constructor: Constructor) -> None:
     data = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
-        "c": [7.0, 8.0, float("nan")],
+        "c": [7.0, 8.0, None],
         "z": [7.0, 8, 9],
     }
     result = nw.from_native(constructor(data)).select(
@@ -33,7 +33,7 @@ def test_unary(constructor: Constructor) -> None:
         "b_nunique": [2],
         "b_skew": [0.7071067811865465],
         "c_nunique": [3],
-        "c_skew": [float("nan")],
+        "c_skew": [0.0],
         "z_min": [7],
         "z_max": [9],
     }
@@ -44,7 +44,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
     data = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
-        "c": [7.0, 8.0, float("nan")],
+        "c": [7.0, 8.0, None],
         "z": [7.0, 8, 9],
     }
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -66,7 +66,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
         "b_nunique": [2],
         "b_skew": [0.7071067811865465],
         "c_nunique": [3],
-        "c_skew": [float("nan")],
+        "c_skew": [0.0],
         "z_min": [7.0],
         "z_max": [9.0],
     }
@@ -74,7 +74,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_unary_two_elements(constructor: Constructor) -> None:
-    data = {"a": [1, 2], "b": [2, 10], "c": [2.0, float("nan")]}
+    data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     result = nw.from_native(constructor(data)).select(
         a_nunique=nw.col("a").n_unique(),
         a_skew=nw.col("a").skew(),
@@ -95,7 +95,7 @@ def test_unary_two_elements(constructor: Constructor) -> None:
 
 
 def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
-    data = {"a": [1, 2], "b": [2, 10], "c": [2.0, float("nan")]}
+    data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {
         "a_nunique": [df["a"].n_unique()],
