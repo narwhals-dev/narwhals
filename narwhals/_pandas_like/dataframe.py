@@ -431,7 +431,9 @@ class PandasLikeDataFrame:
         return self._from_native_frame(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        return self._from_native_frame(self._native_frame.rename(columns=mapping))
+        return self._from_native_frame(
+            self._native_frame.rename(columns=mapping, copy=False)
+        )
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         to_drop = parse_columns_to_drop(
@@ -539,7 +541,8 @@ class PandasLikeDataFrame:
                 other_native = (
                     other._native_frame.loc[:, right_on]
                     .rename(  # rename to avoid creating extra columns in join
-                        columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                        columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
+                        copy=False,
                     )
                     .drop_duplicates()
                 )
@@ -559,7 +562,8 @@ class PandasLikeDataFrame:
             other_native = (
                 other._native_frame.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                    columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
+                    copy=False,
                 )
                 .drop_duplicates()  # avoids potential rows duplication from inner join
             )
