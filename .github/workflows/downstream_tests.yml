@@ -216,4 +216,17 @@ jobs:
             manylinux: 2014
             rust-toolchain: stable
             args: --release -m vegafusion/vegafusion-python/Cargo.toml --features=protobuf-src --strip
+        
+        - name: Install wheels
+          working-directory: vegafusion/vegafusion-python/target/wheels/
+          run: |
+            ls -la
+            python -m pip install vegafusion-*manylinux*.whl
+
+            # Optional dependencies
+            python -m pip install pyarrow pandas polars-lts-cpu "duckdb>=1.0" "vl-convert-python>=1.0.1rc1" scikit-image "pandas>=2.2" jupytext voila anywidget ipywidgets chromedriver-binary-auto
+
+            # Test dependencies
+            python -m pip install pytest altair vega-datasets scikit-image jupytext voila ipykernel anywidget ipywidgets selenium flaky tenacity chromedriver-binary-auto 
+
       
