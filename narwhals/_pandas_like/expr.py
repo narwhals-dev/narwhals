@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.typing import DTypes
     from narwhals.utils import Implementation
+    from narwhals.dtypes import DType
 
 
 class PandasLikeExpr:
@@ -386,6 +387,19 @@ class PandasLikeExpr:
 
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
+    
+    def map_batches(self, function: Callable[[Any], Self], return_dtype: DType | None = None, *args: Any, **kwargs: Any) -> Self:
+        breakpoint()
+        return self.__class__(
+            lambda df: [function(series) for series in self._call(df)],
+            depth=self._depth + 1,
+            function_name=self._function_name + "->map_batches",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            implementation=self._implementation,
+            backend_version=self._backend_version, 
+            dtypes=self._dtypes,
+        )
 
     @property
     def str(self: Self) -> PandasLikeExprStringNamespace:
