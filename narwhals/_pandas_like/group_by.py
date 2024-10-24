@@ -186,7 +186,7 @@ def agg_pandas(  # noqa: PLR0915
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
             result_simple_aggs = result_simple_aggs.rename(
-                columns=name_mapping
+                columns=name_mapping, copy=False
             ).reset_index()
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
