@@ -177,6 +177,14 @@ class PandasLikeNamespace:
             dtypes=self._dtypes,
         ).mean()
 
+    def median(self, *column_names: str) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_names(
+            *column_names,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        ).median()
+
     def max(self, *column_names: str) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_names(
             *column_names,

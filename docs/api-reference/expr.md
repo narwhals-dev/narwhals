@@ -29,6 +29,7 @@
         - len
         - max
         - mean
+        - median
         - min
         - mode
         - null_count
