@@ -354,7 +354,7 @@ class DaskLazyFrame:
         native_frame = self._native_frame
         n_partitions = native_frame.npartitions
 
-        if n_partitions == 1:
+        if n_partitions == 1:  # pragma: no cover
             return self._from_native_frame(self._native_frame.tail(n=n, compute=False))
         else:
             msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."

@@ -564,7 +564,7 @@ class DaskExpr:
                 if _input.npartitions > 1:
                     msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
                     raise NotImplementedError(msg)
-                return _input.quantile(q=_quantile, method="dask")
+                return _input.quantile(q=_quantile, method="dask")  # pragma: no cover
 
             return self._from_call(
                 func,
@@ -669,17 +669,18 @@ class DaskExpr:
                 )
                 raise ValueError(msg)
 
-            if df._native_frame.npartitions > 1:
-                msg = "`Expr.over` is not supported for Dask backend with multiple partitions."
-                raise NotImplementedError(msg)
-
-            tmp = df.group_by(*keys).agg(self)
-            tmp_native = (
-                df.select(*keys)
-                .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
-                ._native_frame
+            if df._native_frame.npartitions == 1:  # pragma: no cover
+                tmp = df.group_by(*keys).agg(self)
+                tmp_native = (
+                    df.select(*keys)
+                    .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
+                    ._native_frame
+                )
+                return [tmp_native[name] for name in self._output_names]
+            msg = (
+                "`Expr.over` is not supported for Dask backend with multiple partitions."
             )
-            return [tmp_native[name] for name in self._output_names]
+            raise NotImplementedError(msg)
 
         return self.__class__(
             func,
