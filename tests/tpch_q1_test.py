@@ -10,8 +10,8 @@ import pyarrow.parquet as pq
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
-from tests.utils import compare_dicts
+from tests.utils import PANDAS_VERSION
+from tests.utils import assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -20,7 +20,7 @@ from tests.utils import compare_dicts
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str, request: pytest.FixtureRequest) -> None:
-    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+    if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
@@ -87,7 +87,7 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -99,7 +99,7 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     "ignore:.*Complex.*:UserWarning",
 )
 def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> None:
-    if library == "pandas" and parse_version(pd.__version__) < (1, 5):
+    if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
         df_raw = pd.read_parquet("tests/data/lineitem.parquet")
@@ -155,14 +155,12 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"), reason="too old for pyarrow"
-)
+@pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for pyarrow")
 def test_q1_w_pandas_agg_generic_path() -> None:
     df_raw = pd.read_parquet("tests/data/lineitem.parquet")
     df_raw["l_shipdate"] = pd.to_datetime(df_raw["l_shipdate"])
@@ -216,4 +214,4 @@ def test_q1_w_pandas_agg_generic_path() -> None:
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

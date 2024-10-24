@@ -9,7 +9,7 @@ import pytest
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 
 
 @given(
@@ -19,7 +19,7 @@ from narwhals.utils import parse_version
     )
 )  # type: ignore[misc]
 @pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("2.2.0"),
+    PANDAS_VERSION < (2, 2, 0),
     reason="pyarrow dtype not available",
 )
 @pytest.mark.slow

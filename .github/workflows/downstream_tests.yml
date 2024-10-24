@@ -182,6 +182,46 @@ jobs:
             cd py-shiny
             make narwhals-test-integration
   
+  tubular:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "**requirements*.txt"
+      - name: clone-tubular
+        run: |
+            git clone https://github.com/lvgig/tubular --depth=1
+            cd tubular
+            git log
+      - name: install-basics
+        run: uv pip install --upgrade tox virtualenv setuptools pytest-env --system
+      - name: install-tubular-dev
+        run: |
+            cd tubular
+            uv pip install -e .[dev] --system
+      - name: install-narwhals-dev
+        run: |
+            uv pip uninstall narwhals --system
+            uv pip install -e . --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: |
+            cd tubular
+            pytest tests --config-file=pyproject.toml
+  
   vegafusion:
      env:
        UV_SYSTEM_PYTHON: true

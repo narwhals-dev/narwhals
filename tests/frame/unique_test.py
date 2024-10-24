@@ -4,7 +4,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
 
@@ -29,7 +29,7 @@ def test_unique(
     df = nw.from_native(df_raw)
 
     result = df.unique(subset, keep=keep, maintain_order=True)  # type: ignore[arg-type]
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_unique_none(constructor: Constructor) -> None:
@@ -37,4 +37,4 @@ def test_unique_none(constructor: Constructor) -> None:
     df = nw.from_native(df_raw)
 
     result = df.unique(maintain_order=True)
-    compare_dicts(result, data)
+    assert_equal_data(result, data)

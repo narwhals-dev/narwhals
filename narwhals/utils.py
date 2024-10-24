@@ -31,6 +31,7 @@ from narwhals.translate import to_native
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import pandas as pd
     from typing_extensions import Self
     from typing_extensions import TypeGuard
 
@@ -335,16 +336,34 @@ def maybe_reset_index(obj: T) -> T:
     obj_any = cast(Any, obj)
     native_obj = to_native(obj_any)
     if is_pandas_like_dataframe(native_obj):
+        native_namespace = obj_any.__native_namespace__()
+        if _has_default_index(native_obj, native_namespace):
+            return obj_any  # type: ignore[no-any-return]
         return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
             obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
         )
     if is_pandas_like_series(native_obj):
+        native_namespace = obj_any.__native_namespace__()
+        if _has_default_index(native_obj, native_namespace):
+            return obj_any  # type: ignore[no-any-return]
         return obj_any._from_compliant_series(  # type: ignore[no-any-return]
             obj_any._compliant_series._from_native_series(
                 native_obj.reset_index(drop=True)
             )
         )
     return obj_any  # type: ignore[no-any-return]
+
+
+def _has_default_index(
+    native_frame_or_series: pd.Series | pd.DataFrame, native_namespace: Any
+) -> bool:
+    index = native_frame_or_series.index
+    return (
+        isinstance(index, native_namespace.RangeIndex)
+        and index.start == 0
+        and index.stop == len(index)
+        and index.step == 1
+    )
 
 
 def maybe_convert_dtypes(obj: T, *args: bool, **kwargs: bool | str) -> T:
