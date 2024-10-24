@@ -109,7 +109,7 @@ def test_datetime_chained_attributes(
 def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
         x in str(constructor)
-        for x in ("pandas_constructor", "pandas_nullable_constructor")
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf")
     ):
         request.applymarker(pytest.mark.xfail)
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
