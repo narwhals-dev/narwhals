@@ -297,11 +297,13 @@ def native_to_narwhals_dtype(
                 )
             except Exception:  # noqa: BLE001, S110
                 pass
+        else:  # pragma: no cover
+            pass
         if implementation is Implementation.DASK:
             # Dask columns are lazy, so we can't inspect values.
             # The most useful assumption is probably String
             return dtypes.String()
-        if implementation is Implementation.PANDAS:
+        if implementation is Implementation.PANDAS:  # pragma: no cover
             # Old versions of pandas pre-dataframe-interchange-protocol
             import pandas as pd  # ignore-banned-import
 
