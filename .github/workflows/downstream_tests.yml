@@ -273,3 +273,8 @@ jobs:
         - name: Test lazy imports
           working-directory: vegafusion/vegafusion-python/
           run: python checks/check_lazy_imports.py
+        - name: Test vegafusion
+          working-directory: vegafusion-python/
+          env:
+            VEGAFUSION_TEST_HEADLESS: 1
+          run: pytest
