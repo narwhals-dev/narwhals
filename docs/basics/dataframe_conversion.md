@@ -6,28 +6,45 @@ Imagine that you maintain a library with a function that operates on Pandas data
 
 One solution is to use Narwhals as a thin "DataFrame ingestion" layer, to convert user-supplied data frames to the format that your library uses internally. Since Narwhals is 0-dependency, this is a much more lightweight solution than including all the data frame libraries as dependencies.
 
-For example, this function can ingest any data frame type supported by Narwhals, and convert it to a Pandas DataFrame for internal use:
+To illustrate, we create data frames in various formats:
 
-```python
+```python exec="1" source="above"
 import narwhals as nw
+from narwhals.typing import IntoDataFrame
 
+import duckdb
+import polars as pl
+import pandas as pd
 
-def df_to_pandas(df):
+df_polars = pl.DataFrame( {
+        "A": [1, 2, 3, 4, 5],
+        "fruits": ["banana", "banana", "apple", "apple", "banana"],
+        "B": [5, 4, 3, 2, 1],
+        "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+} )
+df_pandas = df_polars.to_pandas()
+df_duckdb = duckdb.sql("SELECT * FROM df")
+```
+
+Now, we define a function that can ingest any data frame type supported by Narwhals, and convert it to a Pandas DataFrame for internal use:
+
+```python exec="1" source="above"
+def df_to_pandas(df: IntoDataFrame) -> pd.DataFrame:
     out = nw.from_native(df)
     out = out.to_pandas()
     return out
+
+df_to_pandas(df_duckdb)
 ```
 
-Similarly, if your library uses Polars internally, you can convert any user-supplied data frames to Polars format using Narwhals.
+Similarly, if your library uses Polars internally, you can convert any user-supplied data frame to Polars format using Narwhals.
 
-```python
-import narwhals as nw
-import polars as pl
-
-
-def df_to_polars(df):
+```python exec="1" source="above"
+def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
     out = nw.from_native(df)
     out = out.to_arrow()
     return pl.DataFrame(out)
+
+df_to_polars(df_pandas)
 ```
 
