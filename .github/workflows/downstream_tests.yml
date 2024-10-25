@@ -250,6 +250,8 @@ jobs:
               git log
         - name: Cache rust dependencies
           uses: Swatinem/rust-cache@v2
+          with:
+            workspaces: vegafusion
         - name: Build wheels
           uses: PyO3/maturin-action@v1
           with:
