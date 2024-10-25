@@ -286,7 +286,8 @@ def native_to_narwhals_dtype(
         return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
     if dtype == "object":
         df = native_column.to_frame()
-        if hasattr(df, "__dataframe__"):
+        # "else" branch is not covered in the coverage CI job
+        if hasattr(df, "__dataframe__"):  # pragma: no cover
             from narwhals._interchange.dataframe import (
                 map_interchange_dtype_to_narwhals_dtype,
             )
@@ -297,8 +298,6 @@ def native_to_narwhals_dtype(
                 )
             except Exception:  # noqa: BLE001, S110
                 pass
-        else:  # pragma: no cover
-            pass
         if implementation is Implementation.DASK:
             # Dask columns are lazy, so we can't inspect values.
             # The most useful assumption is probably String
