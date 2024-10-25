@@ -283,29 +283,31 @@ def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
         return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
     if dtype == "object":
-        if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
-            idx := getattr(native_column, "first_valid_index", lambda: None)()
-        ) is not None and isinstance(native_column.loc[idx], str):
-            # Infer based on first non-missing value.
-            # For pandas pre 3.0, this isn't perfect.
-            # After pandas 3.0, pandas has a dedicated string dtype
-            # which is inferred by default.
+        import pandas as pd
+        dtype = pd.api.types.infer_dtype(native_column, skipna=True)
+        if dtype == 'string':
             return dtypes.String()
-        else:
-            df = native_column.to_frame()
-            if hasattr(df, "__dataframe__"):
-                from narwhals._interchange.dataframe import (
-                    map_interchange_dtype_to_narwhals_dtype,
-                )
+        return dtypes.Object()
+        i = 0
+        # Try the first few values - 
+        while i < 5:
+            if isinstance(native_column[i], str):
+                return dtypes.String()
+            i += 1
+        df = native_column.to_frame()
+        if hasattr(df, "__dataframe__"):
+            from narwhals._interchange.dataframe import (
+                map_interchange_dtype_to_narwhals_dtype,
+            )
 
-                try:
-                    return map_interchange_dtype_to_narwhals_dtype(
-                        df.__dataframe__().get_column(0).dtype, dtypes
-                    )
-                except Exception:  # noqa: BLE001
-                    return dtypes.Object()
-            else:  # pragma: no cover
+            try:
+                return map_interchange_dtype_to_narwhals_dtype(
+                    df.__dataframe__().get_column(0).dtype, dtypes
+                )
+            except Exception:  # noqa: BLE001
                 return dtypes.Object()
+        else:  # pragma: no cover
+            return dtypes.Object()
     return dtypes.Unknown()
 
 
