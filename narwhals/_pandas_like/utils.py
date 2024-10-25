@@ -592,14 +592,20 @@ def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
     return result
 
 
-def reset_index_no_copy(native_series_or_frame: Any, native_namespace: Any) -> None:
-    if set(native_series_or_frame.index.names).intersection(
-        native_series_or_frame.columns
-    ):
-        msg = f"Cannot insert column with name {native_series_or_frame.index.name} into dataframe with columns {native_series_or_frame.columns}"
+def reset_index_no_copy(native_dataframe: pd.DataFrame, native_namespace: Any) -> None:
+    """
+    Reset index without triggering a copy.
+
+    pandas' reset_index isn't free, and creates a copy. To avoid that, and keep
+    overhead as low as possible, we introduce a utility to use instead of that.
+    This should be used internally in Narwhals whenever you need to reset the index
+    of an object which is not the original object passed by the user. We should
+    never mutate the user's object, but if we create intermediate objects ourselves,
+    then it's fine to mutate them.
+    """
+    if set(native_dataframe.index.names).intersection(native_dataframe.columns):
+        msg = f"Cannot insert column with name {native_dataframe.index.name} into dataframe with columns {native_dataframe.columns}"
         raise ValueError(msg)
-    for i, name in enumerate(native_series_or_frame.index.names):
-        native_series_or_frame[name] = native_series_or_frame.index.get_level_values(i)
-    native_series_or_frame.index = native_namespace.RangeIndex(
-        len(native_series_or_frame)
-    )
+    for i, name in enumerate(native_dataframe.index.names):
+        native_dataframe[name] = native_dataframe.index.get_level_values(i)
+    native_dataframe.index = native_namespace.RangeIndex(len(native_dataframe))

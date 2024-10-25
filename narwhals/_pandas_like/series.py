@@ -14,7 +14,6 @@ from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
-from narwhals._pandas_like.utils import reset_index_no_copy
 from narwhals._pandas_like.utils import set_axis
 from narwhals._pandas_like.utils import to_datetime
 from narwhals._pandas_like.utils import validate_column_comparand
@@ -599,8 +598,7 @@ class PandasLikeSeries:
             dropna=False,
             sort=False,
             normalize=normalize,
-        )
-        reset_index_no_copy(val_count, self.__native_namespace__())
+        ).reset_index()
 
         val_count.columns = [index_name_, value_name_]
 
