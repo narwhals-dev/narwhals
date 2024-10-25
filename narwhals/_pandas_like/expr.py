@@ -8,6 +8,7 @@ from typing import Literal
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals.dependencies import is_numpy_array
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -16,7 +17,6 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.typing import DTypes
     from narwhals.utils import Implementation
-    from narwhals.dtypes import DType
 
 
 class PandasLikeExpr:
@@ -387,17 +387,30 @@ class PandasLikeExpr:
 
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
-    
-    def map_batches(self, function: Callable[[Any], Self], return_dtype: DType | None = None, *args: Any, **kwargs: Any) -> Self:
-        breakpoint()
+
+    def map_batches(self: Self, function: Callable[[Any], Any]) -> Self:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            result = [function(series) for series in self._call(df)]
+            if is_numpy_array(result[0]):
+                output_names = (
+                    self._output_names if self._output_names is not None else []
+                )
+                result = [
+                    df.__narwhals_namespace__()
+                    ._create_compliant_series(array)
+                    .alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            return result
+
         return self.__class__(
-            lambda df: [function(series) for series in self._call(df)],
-            depth=self._depth + 1,
+            func,
+            depth=self._depth + 1,  # correct depth or self.depth?
             function_name=self._function_name + "->map_batches",
             root_names=self._root_names,
             output_names=self._output_names,
             implementation=self._implementation,
-            backend_version=self._backend_version, 
+            backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
 

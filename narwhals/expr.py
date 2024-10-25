@@ -494,13 +494,15 @@ class Expr:
 
         """
         return self.__class__(lambda plx: self._call(plx).std(ddof=ddof))
-    
 
-
-
-    def map_batches(self, function: Callable[[Any], Self], return_dtype: DType | None = None, *args: Any, **kwargs: Any) -> Self:
+    def map_batches(
+        self,
+        function: Callable[[Any], Self],
+        return_dtype: DType | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Self:
         return self.__class__(lambda plx: self._call(plx).map_batches(function))
-
 
     def sum(self) -> Expr:
         """
