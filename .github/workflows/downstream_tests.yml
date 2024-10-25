@@ -258,7 +258,7 @@ jobs:
             args: --release -m vegafusion/vegafusion-python/Cargo.toml --features=protobuf-src --strip
         
         - name: Install wheels
-          working-directory: vegafusion/vegafusion-python/target/wheels/
+          working-directory: vegafusion/target/wheels/
           run: |
             ls -la
             python -m pip install vegafusion-*manylinux*.whl
