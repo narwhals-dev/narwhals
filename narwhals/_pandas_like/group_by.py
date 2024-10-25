@@ -11,7 +11,6 @@ from typing import Iterator
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
-from narwhals._pandas_like.utils import reset_index_no_copy
 from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
 
@@ -189,13 +188,17 @@ def agg_pandas(  # noqa: PLR0915
             result_simple_aggs = result_simple_aggs.rename(
                 columns=name_mapping, copy=False
             )
-            reset_index_no_copy(result_simple_aggs, native_namespace)
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_simple_aggs.reset_index(inplace=True)  # noqa: PD002
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                 dropna=False
             )
             result_nunique_aggs.columns = list(nunique_aggs.keys())
-            reset_index_no_copy(result_nunique_aggs, native_namespace)
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_nunique_aggs.reset_index(inplace=True)  # noqa: PD002
         if simple_aggs and nunique_aggs:
             if (
                 set(result_simple_aggs.columns)
@@ -261,6 +264,8 @@ def agg_pandas(  # noqa: PLR0915
     else:  # pragma: no cover
         result_complex = grouped.apply(func)
 
-    reset_index_no_copy(result_complex, native_namespace)
+    # Keep inplace=True to avoid making a redundant copy.
+    # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+    result_complex.reset_index(inplace=True)  # noqa: PD002
 
     return from_dataframe(result_complex.loc[:, output_names])

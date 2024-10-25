@@ -8,7 +8,6 @@ from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
-from narwhals._pandas_like.utils import reset_index_no_copy
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
@@ -148,14 +147,3 @@ def test_maybe_convert_dtypes_polars() -> None:
 def test_get_trivial_version_with_uninstalled_module() -> None:
     result = get_module_version_as_tuple("non_existent_module")
     assert result == (0, 0, 0)
-
-
-def test_reset_index_no_copy() -> None:
-    df = pd.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}).set_index("a")
-    reset_index_no_copy(df, pd)
-    pd.testing.assert_frame_equal(
-        df, pd.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
-    )
-    df.index.name = "b"
-    with pytest.raises(ValueError, match="Cannot insert column"):
-        reset_index_no_copy(df, pd)
