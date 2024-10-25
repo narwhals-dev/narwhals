@@ -2060,10 +2060,8 @@ class Series:
             pandas and Polars may have implementation differences for a given interpolation method.
 
         Arguments:
-            quantile : float
-                Quantile between 0.0 and 1.0.
-            interpolation : {'nearest', 'higher', 'lower', 'midpoint', 'linear'}
-                Interpolation method.
+            quantile: Quantile between 0.0 and 1.0.
+            interpolation: Interpolation method.
 
         Examples:
             >>> import narwhals as nw

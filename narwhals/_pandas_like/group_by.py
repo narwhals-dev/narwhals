@@ -31,7 +31,7 @@ class PandasLikeGroupBy:
         self._keys = keys
         if (
             self._df._implementation is Implementation.PANDAS
-            and self._df._backend_version < (1, 0)
+            and self._df._backend_version < (1, 1)
         ):  # pragma: no cover
             if self._df._native_frame.loc[:, self._keys].isna().any().any():
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
@@ -186,14 +186,19 @@ def agg_pandas(  # noqa: PLR0915
                 f"{a}_{b}" for a, b in result_simple_aggs.columns
             ]
             result_simple_aggs = result_simple_aggs.rename(
-                columns=name_mapping
-            ).reset_index()
+                columns=name_mapping, copy=False
+            )
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_simple_aggs.reset_index(inplace=True)  # noqa: PD002
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                 dropna=False
             )
             result_nunique_aggs.columns = list(nunique_aggs.keys())
-            result_nunique_aggs = result_nunique_aggs.reset_index()
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_nunique_aggs.reset_index(inplace=True)  # noqa: PD002
         if simple_aggs and nunique_aggs:
             if (
                 set(result_simple_aggs.columns)
@@ -259,6 +264,8 @@ def agg_pandas(  # noqa: PLR0915
     else:  # pragma: no cover
         result_complex = grouped.apply(func)
 
-    result = result_complex.reset_index()
+    # Keep inplace=True to avoid making a redundant copy.
+    # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+    result_complex.reset_index(inplace=True)  # noqa: PD002
 
-    return from_dataframe(result.loc[:, output_names])
+    return from_dataframe(result_complex.loc[:, output_names])
