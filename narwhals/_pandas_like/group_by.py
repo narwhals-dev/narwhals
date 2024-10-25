@@ -187,13 +187,18 @@ def agg_pandas(  # noqa: PLR0915
             ]
             result_simple_aggs = result_simple_aggs.rename(
                 columns=name_mapping, copy=False
-            ).reset_index()
+            )
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_simple_aggs.reset_index(inplace=True)  # noqa: PD002
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                 dropna=False
             )
             result_nunique_aggs.columns = list(nunique_aggs.keys())
-            result_nunique_aggs = result_nunique_aggs.reset_index()
+            # Keep inplace=True to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_nunique_aggs.reset_index(inplace=True)  # noqa: PD002
         if simple_aggs and nunique_aggs:
             if (
                 set(result_simple_aggs.columns)
@@ -259,6 +264,8 @@ def agg_pandas(  # noqa: PLR0915
     else:  # pragma: no cover
         result_complex = grouped.apply(func)
 
-    result = result_complex.reset_index()
+    # Keep inplace=True to avoid making a redundant copy.
+    # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+    result_complex.reset_index(inplace=True)  # noqa: PD002
 
-    return from_dataframe(result.loc[:, output_names])
+    return from_dataframe(result_complex.loc[:, output_names])
