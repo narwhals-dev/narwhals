@@ -16,12 +16,14 @@ import duckdb
 import polars as pl
 import pandas as pd
 
-df_polars = pl.DataFrame( {
+df_polars = pl.DataFrame(
+    {
         "A": [1, 2, 3, 4, 5],
         "fruits": ["banana", "banana", "apple", "apple", "banana"],
         "B": [5, 4, 3, 2, 1],
         "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
-} )
+    }
+)
 df_pandas = df_polars.to_pandas()
 df_duckdb = duckdb.sql("SELECT * FROM df")
 ```
@@ -34,6 +36,7 @@ def df_to_pandas(df: IntoDataFrame) -> pd.DataFrame:
     out = out.to_pandas()
     return out
 
+
 df_to_pandas(df_duckdb)
 ```
 
@@ -44,6 +47,7 @@ def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
     out = nw.from_native(df)
     out = out.to_arrow()
     return pl.DataFrame(out)
+
 
 df_to_polars(df_pandas)
 ```
