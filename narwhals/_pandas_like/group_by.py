@@ -31,7 +31,7 @@ class PandasLikeGroupBy:
         self._keys = keys
         if (
             self._df._implementation is Implementation.PANDAS
-            and self._df._backend_version < (1, 0)
+            and self._df._backend_version < (1, 1)
         ):  # pragma: no cover
             if self._df._native_frame.loc[:, self._keys].isna().any().any():
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
