@@ -11,6 +11,7 @@ from typing import Iterator
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
+from narwhals._pandas_like.utils import reset_index_no_copy
 from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
 
@@ -187,13 +188,14 @@ def agg_pandas(  # noqa: PLR0915
             ]
             result_simple_aggs = result_simple_aggs.rename(
                 columns=name_mapping, copy=False
-            ).reset_index()
+            )
+            reset_index_no_copy(result_simple_aggs, native_namespace)
         if nunique_aggs:
             result_nunique_aggs = grouped[list(nunique_aggs.values())].nunique(
                 dropna=False
             )
             result_nunique_aggs.columns = list(nunique_aggs.keys())
-            result_nunique_aggs = result_nunique_aggs.reset_index()
+            reset_index_no_copy(result_nunique_aggs, native_namespace)
         if simple_aggs and nunique_aggs:
             if (
                 set(result_simple_aggs.columns)
@@ -259,6 +261,6 @@ def agg_pandas(  # noqa: PLR0915
     else:  # pragma: no cover
         result_complex = grouped.apply(func)
 
-    result = result_complex.reset_index()
+    reset_index_no_copy(result_complex, native_namespace)
 
-    return from_dataframe(result.loc[:, output_names])
+    return from_dataframe(result_complex.loc[:, output_names])

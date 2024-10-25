@@ -590,3 +590,16 @@ def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
     else:
         result = s * 1_000
     return result
+
+
+def reset_index_no_copy(native_series_or_frame: Any, native_namespace: Any) -> None:
+    if set(native_series_or_frame.index.names).intersection(
+        native_series_or_frame.columns
+    ):
+        msg = f"Cannot insert column with name {native_series_or_frame.index.name} into dataframe with columns {native_series_or_frame.columns}"
+        raise ValueError(msg)
+    for i, name in enumerate(native_series_or_frame.index.names):
+        native_series_or_frame[name] = native_series_or_frame.index.get_level_values(i)
+    native_series_or_frame.index = native_namespace.RangeIndex(
+        len(native_series_or_frame)
+    )
