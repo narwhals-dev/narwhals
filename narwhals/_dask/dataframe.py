@@ -149,7 +149,9 @@ class DaskLazyFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: native_to_narwhals_dtype(self._native_frame.loc[:, col], self._dtypes)
+            col: native_to_narwhals_dtype(
+                self._native_frame.loc[:, col], self._dtypes, self._implementation
+            )
             for col in self._native_frame.columns
         }
 

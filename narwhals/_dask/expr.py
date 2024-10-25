@@ -13,6 +13,7 @@ from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -943,7 +944,7 @@ class DaskExprDateTimeNamespace:
 
     def convert_time_zone(self, time_zone: str) -> DaskExpr:
         def func(s: dask_expr.Series, time_zone: str) -> dask_expr.Series:
-            dtype = native_to_narwhals_dtype(s, self._expr._dtypes)
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes, Implementation.DASK)
             if dtype.time_zone is None:  # type: ignore[attr-defined]
                 return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)
             else:
@@ -960,7 +961,7 @@ class DaskExprDateTimeNamespace:
         def func(
             s: dask_expr.Series, time_unit: Literal["ns", "us", "ms"] = "us"
         ) -> dask_expr.Series:
-            dtype = native_to_narwhals_dtype(s, self._expr._dtypes)
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes, Implementation.DASK)
             is_pyarrow_dtype = "pyarrow" in str(dtype)
             mask_na = s.isna()
             if dtype == self._expr._dtypes.Date:

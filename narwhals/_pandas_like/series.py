@@ -170,7 +170,9 @@ class PandasLikeSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series, self._dtypes)
+        return native_to_narwhals_dtype(
+            self._native_series, self._dtypes, self._implementation
+        )
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):

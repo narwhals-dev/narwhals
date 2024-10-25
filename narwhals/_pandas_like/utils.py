@@ -218,7 +218,9 @@ def set_axis(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
-def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(
+    native_column: Any, dtypes: DTypes, implementation: Implementation
+) -> DType:
     dtype = str(native_column.dtype)
 
     pd_datetime_rgx = (
@@ -283,17 +285,6 @@ def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
         return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
     if dtype == "object":
-        import pandas as pd
-        dtype = pd.api.types.infer_dtype(native_column, skipna=True)
-        if dtype == 'string':
-            return dtypes.String()
-        return dtypes.Object()
-        i = 0
-        # Try the first few values - 
-        while i < 5:
-            if isinstance(native_column[i], str):
-                return dtypes.String()
-            i += 1
         df = native_column.to_frame()
         if hasattr(df, "__dataframe__"):
             from narwhals._interchange.dataframe import (
@@ -304,9 +295,19 @@ def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
                 return map_interchange_dtype_to_narwhals_dtype(
                     df.__dataframe__().get_column(0).dtype, dtypes
                 )
-            except Exception:  # noqa: BLE001
-                return dtypes.Object()
-        else:  # pragma: no cover
+            except Exception:  # noqa: BLE001, S110
+                pass
+        if implementation is Implementation.DASK:
+            # Dask columns are lazy, so we can't inspect values.
+            # The most useful assumption is probably String
+            return dtypes.String()
+        if implementation is Implementation.PANDAS:
+            # Old versions of pandas pre-dataframe-interchange-protocol
+            import pandas as pd  # ignore-banned-import
+
+            dtype = pd.api.types.infer_dtype(native_column, skipna=True)
+            if dtype == "string":
+                return dtypes.String()
             return dtypes.Object()
     return dtypes.Unknown()
 
