@@ -528,6 +528,9 @@ class Series:
         """
         Reduce this Series to the median value.
 
+        Notes:
+            Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl

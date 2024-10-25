@@ -448,6 +448,9 @@ class Expr:
         """
         Get median value.
 
+        Notes:
+            Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
+
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -4670,8 +4673,9 @@ def median(*columns: str) -> Expr:
     """
     Get the median value.
 
-    Note:
-        Syntactic sugar for ``nw.col(columns).median()``
+    Notes:
+        - Syntactic sugar for ``nw.col(columns).median()``
+        - Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
