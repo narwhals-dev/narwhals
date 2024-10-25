@@ -255,8 +255,10 @@ def test_nested_dtypes() -> None:
     }
 
 
-def test_nested_dtypes_ibis() -> None:  # pragma: no cover
+def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
+    if PANDAS_VERSION < (1, 1):
+        request.applymarker(pytest.mark.xfail)
     df = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},

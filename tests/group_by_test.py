@@ -240,7 +240,7 @@ def test_key_with_nulls(
         request.applymarker(pytest.mark.skip)
     context = (
         pytest.raises(NotImplementedError, match="null values")
-        if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 0, 0))
+        if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 1, 0))
         else nullcontext()
     )
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
