@@ -607,5 +607,5 @@ def reset_index_no_copy(native_dataframe: pd.DataFrame, native_namespace: Any) -
         msg = f"Cannot insert column with name {native_dataframe.index.name} into dataframe with columns {native_dataframe.columns}"
         raise ValueError(msg)
     for i, name in enumerate(native_dataframe.index.names):
-        native_dataframe[name] = native_dataframe.index.get_level_values(i)
+        native_dataframe.insert(0, name, native_dataframe.index.get_level_values(i))
     native_dataframe.index = native_namespace.RangeIndex(len(native_dataframe))

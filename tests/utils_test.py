@@ -154,7 +154,7 @@ def test_reset_index_no_copy() -> None:
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}).set_index("a")
     reset_index_no_copy(df, pd)
     pd.testing.assert_frame_equal(
-        df, pd.DataFrame({"b": [4.0, 5.0, 6.0], "a": [1, 2, 3]})
+        df, pd.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
     )
     df.index.name = "b"
     with pytest.raises(ValueError, match="Cannot insert column"):
