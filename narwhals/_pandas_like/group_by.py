@@ -109,6 +109,8 @@ class PandasLikeGroupBy:
                 and self._df._backend_version < (2, 2)
             ):
                 key = tupleify(key)  # noqa: PLW2901
+            else:  # pragma: no cover
+                pass
             yield (key, self._from_native_frame(self._grouped.get_group(key)))
 
 
