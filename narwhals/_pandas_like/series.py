@@ -500,8 +500,10 @@ class PandasLikeSeries:
         )
 
     def alias(self, name: str) -> Self:
-        ser = self._native_series
-        return self._from_native_series(ser.rename(name, copy=False))
+        if name != self.name:
+            ser = self._native_series
+            return self._from_native_series(ser.rename(name, copy=False))
+        return self
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> Any:
         # pandas used to always return object dtype for nullable dtypes.

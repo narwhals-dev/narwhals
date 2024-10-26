@@ -285,31 +285,32 @@ def native_to_narwhals_dtype(
     if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
         return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
     if dtype == "object":
-        df = native_column.to_frame()
-        # "else" branch is not covered in the coverage CI job
-        if hasattr(df, "__dataframe__"):  # pragma: no cover
-            from narwhals._interchange.dataframe import (
-                map_interchange_dtype_to_narwhals_dtype,
-            )
-
-            try:
-                return map_interchange_dtype_to_narwhals_dtype(
-                    df.__dataframe__().get_column(0).dtype, dtypes
-                )
-            except Exception:  # noqa: BLE001, S110
-                pass
         if implementation is Implementation.DASK:
             # Dask columns are lazy, so we can't inspect values.
             # The most useful assumption is probably String
             return dtypes.String()
         if implementation is Implementation.PANDAS:  # pragma: no cover
-            # Old versions of pandas pre-dataframe-interchange-protocol
+            # This is the most efficient implementation for pandas,
+            # and doesn't require the interchange protocol
             import pandas as pd  # ignore-banned-import
 
             dtype = pd.api.types.infer_dtype(native_column, skipna=True)
             if dtype == "string":
                 return dtypes.String()
             return dtypes.Object()
+        else:  # pragma: no cover
+            df = native_column.to_frame()
+            if hasattr(df, "__dataframe__"):
+                from narwhals._interchange.dataframe import (
+                    map_interchange_dtype_to_narwhals_dtype,
+                )
+
+                try:
+                    return map_interchange_dtype_to_narwhals_dtype(
+                        df.__dataframe__().get_column(0).dtype, dtypes
+                    )
+                except Exception:  # noqa: BLE001, S110
+                    pass
     return dtypes.Unknown()
 
 
