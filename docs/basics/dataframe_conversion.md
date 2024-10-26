@@ -34,6 +34,7 @@ Now, we define a function that can ingest any data frame type supported by Narwh
 def df_to_pandas(df: IntoDataFrame) -> pd.DataFrame:
     return nw.from_native(df).to_pandas()
 
+
 df_to_pandas(df_polars)
 ```
 
@@ -43,6 +44,7 @@ Similarly, if your library uses Polars internally, you can convert any user-supp
 def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
     return nw.from_arrow(nw.from_native(df), native_namespace=pl).to_native()
 
+
 df_to_polars(df_duckdb)
 ```
 
@@ -51,6 +53,7 @@ Note that the `df_to_polars` function defined above uses PyCapsule. This strateg
 ```python exec="1" source="above"
 def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
     return pl.DataFrame(nw.from_native(df).to_arrow())
+
 
 df_duckdb = duckdb.sql("SELECT * FROM df_polars")
 df_to_polars(df_duckdb)
