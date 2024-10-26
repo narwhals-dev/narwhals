@@ -14,42 +14,33 @@ class PolarsGroupBy:
     def __init__(self, df: Any, keys: list[str], *, drop_null_keys: bool) -> None:
         self._compliant_frame = df
         self.keys = keys
-        self._grouped = df._native_frame.group_by(keys)
-        self._drop_null_keys = drop_null_keys
+        if drop_null_keys:
+            self._grouped = df.drop_nulls(keys)._native_frame.group_by(keys)
+        else:
+            self._grouped = df._native_frame.group_by(keys)
 
     def agg(self, *aggs: Any, **named_aggs: Any) -> PolarsDataFrame:
         aggs, named_aggs = extract_args_kwargs(aggs, named_aggs)  # type: ignore[assignment]
-        result = self._compliant_frame._from_native_frame(
+        return self._compliant_frame._from_native_frame(  # type: ignore[no-any-return]
             self._grouped.agg(*aggs, **named_aggs),
         )
-        if self._drop_null_keys:
-            return result.drop_nulls(self.keys)  # type: ignore[no-any-return]
-        return result  # type: ignore[no-any-return]
 
     def __iter__(self) -> Any:
-        if self._drop_null_keys:
-            for key, df in self._grouped:
-                key_tuple = tuple(key)
-                if all(x is not None for x in key_tuple):
-                    yield key_tuple, self._compliant_frame._from_native_frame(df)
-        else:
-            for key, df in self._grouped:
-                key_tuple = tuple(key)
-                yield key_tuple, self._compliant_frame._from_native_frame(df)
+        for key, df in self._grouped:
+            yield tuple(key), self._compliant_frame._from_native_frame(df)
 
 
 class PolarsLazyGroupBy:
     def __init__(self, df: Any, keys: list[str], *, drop_null_keys: bool) -> None:
         self._compliant_frame = df
         self.keys = keys
-        self._grouped = df._native_frame.group_by(keys)
-        self._drop_null_keys = drop_null_keys
+        if drop_null_keys:
+            self._grouped = df.drop_nulls(keys)._native_frame.group_by(keys)
+        else:
+            self._grouped = df._native_frame.group_by(keys)
 
     def agg(self, *aggs: Any, **named_aggs: Any) -> PolarsLazyFrame:
         aggs, named_aggs = extract_args_kwargs(aggs, named_aggs)  # type: ignore[assignment]
-        result = self._compliant_frame._from_native_frame(
+        return self._compliant_frame._from_native_frame(  # type: ignore[no-any-return]
             self._grouped.agg(*aggs, **named_aggs),
         )
-        if self._drop_null_keys:
-            return result.drop_nulls(self.keys)  # type: ignore[no-any-return]
-        return result  # type: ignore[no-any-return]
