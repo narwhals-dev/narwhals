@@ -37,12 +37,15 @@ def get_function_name_option(function_name: str) -> Any | None:
 
 
 class ArrowGroupBy:
-    def __init__(self, df: ArrowDataFrame, keys: list[str]) -> None:
+    def __init__(
+        self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
+    ) -> None:
         import pyarrow as pa  # ignore-banned-import()
 
         self._df = df
         self._keys = list(keys)
         self._grouped = pa.TableGroupBy(self._df._native_frame, list(self._keys))
+        self._drop_null_keys = drop_null_keys
 
     def agg(
         self,
@@ -65,20 +68,21 @@ class ArrowGroupBy:
                 raise ValueError(msg)
             output_names.extend(expr._output_names)
 
-        return agg_arrow(
+        result = agg_arrow(
             self._grouped,
             exprs,
             self._keys,
             output_names,
             self._df._from_native_frame,
         )
+        if self._drop_null_keys:
+            return result.drop_nulls(self._keys)
+        return result
 
     def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
-        key_values = (
-            self._df.select(*self._keys)
-            .unique(subset=self._keys, keep="first")
-            .iter_rows()
-        )
+        key_values = self._df.select(*self._keys).unique(subset=self._keys, keep="first")
+        if self._drop_null_keys:
+            key_values = key_values.drop_nulls(self._keys)
         nw_namespace = self._df.__narwhals_namespace__()
         yield from (
             (
@@ -87,7 +91,7 @@ class ArrowGroupBy:
                     *[nw_namespace.col(k) == v for k, v in zip(self._keys, key_value)]
                 ),
             )
-            for key_value in key_values
+            for key_value in key_values.iter_rows()
         )
 
 

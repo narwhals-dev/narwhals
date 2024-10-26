@@ -670,7 +670,7 @@ class DaskExpr:
                 raise ValueError(msg)
 
             if df._native_frame.npartitions == 1:  # pragma: no cover
-                tmp = df.group_by(*keys).agg(self)
+                tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
                 tmp_native = (
                     df.select(*keys)
                     .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")

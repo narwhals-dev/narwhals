@@ -335,10 +335,10 @@ class ArrowDataFrame:
         df = self._native_frame.__class__.from_arrays(to_concat, names=output_names)
         return self._from_native_frame(df)
 
-    def group_by(self, *keys: str) -> ArrowGroupBy:
+    def group_by(self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
-        return ArrowGroupBy(self, list(keys))
+        return ArrowGroupBy(self, list(keys), drop_null_keys=drop_null_keys)
 
     def join(
         self,

@@ -26,14 +26,19 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
 
 
 class PandasLikeGroupBy:
-    def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
+    def __init__(
+        self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
+    ) -> None:
         self._df = df
         self._keys = keys
         if (
             self._df._implementation is Implementation.PANDAS
             and self._df._backend_version < (1, 1)
         ):  # pragma: no cover
-            if self._df._native_frame.loc[:, self._keys].isna().any().any():
+            if (
+                not drop_null_keys
+                and self._df._native_frame.loc[:, self._keys].isna().any().any()
+            ):
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
             self._grouped = self._df._native_frame.groupby(
@@ -47,7 +52,7 @@ class PandasLikeGroupBy:
                 list(self._keys),
                 sort=False,
                 as_index=True,
-                dropna=False,
+                dropna=drop_null_keys,
                 observed=True,
             )
 
