@@ -101,16 +101,19 @@ class PandasLikeGroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
+        indices = self._grouped.indices
         with warnings.catch_warnings():
             # we already use `tupleify` above, so we're already opting in to
             # the new behaviour
             warnings.filterwarnings(
                 "ignore",
-                message="In a future version of pandas, a length 1 tuple will be returned",
+                message="When grouping with a length-1",
                 category=FutureWarning,
             )
-            iterator = self._grouped.__iter__()
-        yield from ((key, self._from_native_frame(sub_df)) for (key, sub_df) in iterator)
+            yield from (
+                (key, self._from_native_frame(self._grouped.get_group(key)))
+                for key in indices
+            )
 
 
 def agg_pandas(  # noqa: PLR0915
