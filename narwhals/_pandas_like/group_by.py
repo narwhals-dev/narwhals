@@ -13,6 +13,7 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
+from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -102,18 +103,13 @@ class PandasLikeGroupBy:
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         indices = self._grouped.indices
-        with warnings.catch_warnings():
-            # we already use `tupleify` above, so we're already opting in to
-            # the new behaviour
-            warnings.filterwarnings(
-                "ignore",
-                message="When grouping with a length-1",
-                category=FutureWarning,
-            )
-            yield from (
-                (key, self._from_native_frame(self._grouped.get_group(key)))
-                for key in indices
-            )
+        for key in indices:
+            if not (
+                self._df._implementation is Implementation.PANDAS
+                and self._df._backend_version < (2, 2)
+            ):
+                key = tupleify(key)  # noqa: PLW2901
+            yield (key, self._from_native_frame(self._grouped.get_group(key)))
 
 
 def agg_pandas(  # noqa: PLR0915
