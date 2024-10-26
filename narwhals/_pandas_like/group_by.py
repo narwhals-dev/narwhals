@@ -104,13 +104,13 @@ class PandasLikeGroupBy:
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         indices = self._grouped.indices
         for key in indices:
-            if not (
+            if (
                 self._df._implementation is Implementation.PANDAS
                 and self._df._backend_version < (2, 2)
-            ):
-                key = tupleify(key)  # noqa: PLW2901
-            else:  # pragma: no cover
+            ):  # pragma: no cover
                 pass
+            else:  # pragma: no cover
+                key = tupleify(key)  # noqa: PLW2901
             yield (key, self._from_native_frame(self._grouped.get_group(key)))
 
 
