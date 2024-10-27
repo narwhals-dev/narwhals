@@ -22,7 +22,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.utils import parse_version
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
@@ -78,7 +78,7 @@ def test_with_columns_order(pyspark_constructor: Constructor) -> None:
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
     expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8, 9], "d": [0, 2, 1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.filterwarnings("ignore:If `index_col` is not specified for `to_spark`")
@@ -86,7 +86,7 @@ def test_with_columns_empty(pyspark_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.select().with_columns()
-    compare_dicts(result, {})
+    assert_equal_data(result, {})
 
 
 def test_with_columns_order_single_row(pyspark_constructor: Constructor) -> None:
@@ -95,7 +95,7 @@ def test_with_columns_order_single_row(pyspark_constructor: Constructor) -> None
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
     expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/frame/select_test.py
@@ -104,7 +104,7 @@ def test_select(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.select("a")
     expected = {"a": [1, 3, 2]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.filterwarnings("ignore:If `index_col` is not specified for `to_spark`")
@@ -119,7 +119,7 @@ def test_filter(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.filter(nw.col("a") > 1)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.filterwarnings("ignore:If `index_col` is not specified for `to_spark`")
@@ -209,14 +209,14 @@ def test_head(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(df_raw)
 
     result = df.head(2)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     result = df.head(2)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
     # negative indices not allowed for lazyframes
     result = df.lazy().collect().head(-1)
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/frame/sort_test.py
@@ -229,14 +229,14 @@ def test_sort(pyspark_constructor: Constructor) -> None:
         "b": [4, 6, 4],
         "z": [7.0, 9.0, 8.0],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = df.sort("a", "b", descending=[True, False]).lazy().collect()
     expected = {
         "a": [3, 2, 1],
         "b": [4, 6, 4],
         "z": [8.0, 9.0, 7.0],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -252,7 +252,7 @@ def test_sort_nulls(
     data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
     df = nw.from_native(pyspark_constructor(data))
     result = df.sort("b", descending=True, nulls_last=nulls_last).lazy().collect()
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/frame/add_test.py
@@ -272,7 +272,7 @@ def test_add(pyspark_constructor: Constructor) -> None:
         "d": [-1.0, 1.0, 0.0],
         "e": [0.0, 2.0, 1.0],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/expr_and_series/all_horizontal_test.py
@@ -287,7 +287,7 @@ def test_allh(pyspark_constructor: Constructor, expr1: Any, expr2: Any) -> None:
     result = df.select(all=nw.all_horizontal(expr1, expr2))
 
     expected = {"all": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_allh_all(pyspark_constructor: Constructor) -> None:
@@ -298,10 +298,10 @@ def test_allh_all(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(all=nw.all_horizontal(nw.all()))
     expected = {"all": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     result = df.select(nw.all_horizontal(nw.all()))
     expected = {"a": [False, False, True]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/expr_and_series/count_test.py
@@ -310,7 +310,7 @@ def test_count(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.col("a", "b", "z").count())
     expected = {"a": [3], "b": [2], "z": [1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/expr_and_series/double_test.py
@@ -319,7 +319,7 @@ def test_double(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.with_columns(nw.all() * 2)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_double_alias(pyspark_constructor: Constructor) -> None:
@@ -332,7 +332,7 @@ def test_double_alias(pyspark_constructor: Constructor) -> None:
         "b": [8, 8, 12],
         "z": [14.0, 16.0, 18.0],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/expr_and_series/max_test.py
@@ -342,7 +342,7 @@ def test_expr_max_expr(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.col("a", "b", "z").max())
     expected = {"a": [3], "b": [6], "z": [9.0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/expr_and_series/min_test.py
@@ -351,7 +351,7 @@ def test_expr_min_expr(pyspark_constructor: Constructor) -> None:
     df = nw.from_native(pyspark_constructor(data))
     result = df.select(nw.col("a", "b", "z").min())
     expected = {"a": [1], "b": [4], "z": [7.0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/expr_and_series/std_test.py
@@ -384,7 +384,7 @@ def test_std(pyspark_constructor: Constructor) -> None:
             "b_ddof_2": [1.632993],
             "z_ddof_0": [0.816497],
         }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 # copied from tests/group_by_test.py
@@ -397,7 +397,7 @@ def test_group_by_std(pyspark_constructor: Constructor) -> None:
         .sort("a")
     )
     expected = {"a": [1, 2], "b": [0.707107] * 2}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_simple_named(pyspark_constructor: Constructor) -> None:
@@ -417,7 +417,7 @@ def test_group_by_simple_named(pyspark_constructor: Constructor) -> None:
         "b_min": [4, 6],
         "b_max": [5, 6],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_simple_unnamed(pyspark_constructor: Constructor) -> None:
@@ -437,7 +437,7 @@ def test_group_by_simple_unnamed(pyspark_constructor: Constructor) -> None:
         "b": [4, 6],
         "c": [7, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_group_by_multiple_keys(pyspark_constructor: Constructor) -> None:
@@ -458,4 +458,4 @@ def test_group_by_multiple_keys(pyspark_constructor: Constructor) -> None:
         "c_min": [2, 1],
         "c_max": [7, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
