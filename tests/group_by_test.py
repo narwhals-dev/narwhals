@@ -74,7 +74,12 @@ def test_invalid_group_by() -> None:
         )
 
 
-def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
+def test_group_by_iter(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/17187
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
