@@ -9,8 +9,8 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
     from pyspark.sql import types as pyspark_types
 
-    from narwhals._pyspark.dataframe import PySparkLazyFrame
-    from narwhals._pyspark.typing import IntoPySparkExpr
+    from narwhals._spark.dataframe import PySparkLazyFrame
+    from narwhals._spark.typing import IntoPySparkExpr
 
 
 def translate_sql_api_dtype(
@@ -96,7 +96,7 @@ def parse_exprs_and_named_exprs(
 
 
 def maybe_evaluate(df: PySparkLazyFrame, obj: Any) -> Any:
-    from narwhals._pyspark.expr import PySparkExpr
+    from narwhals._spark.expr import PySparkExpr
 
     if isinstance(obj, PySparkExpr):
         column_results = obj._call(df)

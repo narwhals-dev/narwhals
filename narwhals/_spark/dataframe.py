@@ -5,8 +5,8 @@ from typing import Any
 from typing import Iterable
 from typing import Sequence
 
-from narwhals._pyspark.utils import parse_exprs_and_named_exprs
-from narwhals._pyspark.utils import translate_sql_api_dtype
+from narwhals._spark.utils import parse_exprs_and_named_exprs
+from narwhals._spark.utils import translate_sql_api_dtype
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
 from narwhals.utils import parse_columns_to_drop
@@ -16,10 +16,10 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame
     from typing_extensions import Self
 
-    from narwhals._pyspark.expr import PySparkExpr
-    from narwhals._pyspark.group_by import PySparkLazyGroupBy
-    from narwhals._pyspark.namespace import PySparkNamespace
-    from narwhals._pyspark.typing import IntoPySparkExpr
+    from narwhals._spark.expr import PySparkExpr
+    from narwhals._spark.group_by import PySparkLazyGroupBy
+    from narwhals._spark.namespace import PySparkNamespace
+    from narwhals._spark.typing import IntoPySparkExpr
     from narwhals.dtypes import DType
     from narwhals.typing import DTypes
 
@@ -45,7 +45,7 @@ class PySparkLazyFrame:
         raise AssertionError(msg)
 
     def __narwhals_namespace__(self) -> PySparkNamespace:
-        from narwhals._pyspark.namespace import PySparkNamespace
+        from narwhals._spark.namespace import PySparkNamespace
 
         return PySparkNamespace(
             backend_version=self._backend_version, dtypes=self._dtypes
@@ -99,7 +99,7 @@ class PySparkLazyFrame:
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def filter(self, *predicates: PySparkExpr) -> Self:
-        from narwhals._pyspark.namespace import PySparkNamespace
+        from narwhals._spark.namespace import PySparkNamespace
 
         if (
             len(predicates) == 1
@@ -147,7 +147,7 @@ class PySparkLazyFrame:
         )
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PySparkLazyGroupBy:
-        from narwhals._pyspark.group_by import PySparkLazyGroupBy
+        from narwhals._spark.group_by import PySparkLazyGroupBy
 
         return PySparkLazyGroupBy(df=self, keys=list(keys), drop_null_keys=drop_null_keys)
 

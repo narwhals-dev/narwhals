@@ -373,7 +373,7 @@ def _from_native_impl(  # noqa: PLR0915
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.series import PolarsSeries
-    from narwhals._pyspark.dataframe import PySparkLazyFrame
+    from narwhals._spark.dataframe import PySparkLazyFrame
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
