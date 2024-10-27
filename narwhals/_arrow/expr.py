@@ -7,6 +7,7 @@ from typing import Literal
 
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._expression_parsing import reuse_series_namespace_implementation
+from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -371,6 +372,38 @@ class ArrowExpr:
 
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
+    
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | None = None,
+    ) -> Self:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            result = [function(series) for series in self._call(df)]
+            if is_numpy_array(result[0]):
+                output_names = (
+                    self._output_names if self._output_names is not None else []
+                )
+                result = [
+                    df.__narwhals_namespace__()
+                    ._create_compliant_series(array)
+                    .alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            if return_dtype:
+                result = [series.cast(return_dtype) for series in result]
+            return result
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,  # correct depth or self.depth?
+            function_name=self._function_name + "->map_batches",
+            root_names=self._root_names,
+            output_names=self._output_names,
+            #implementation=self._implementation,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
+        )
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
