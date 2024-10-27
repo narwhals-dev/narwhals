@@ -372,7 +372,7 @@ class ArrowExpr:
 
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
-    
+
     def map_batches(
         self: Self,
         function: Callable[[Any], Any],
@@ -396,11 +396,10 @@ class ArrowExpr:
 
         return self.__class__(
             func,
-            depth=self._depth + 1,  # correct depth or self.depth?
+            depth=self._depth + 1,
             function_name=self._function_name + "->map_batches",
             root_names=self._root_names,
             output_names=self._output_names,
-            #implementation=self._implementation,
             backend_version=self._backend_version,
             dtypes=self._dtypes,
         )
