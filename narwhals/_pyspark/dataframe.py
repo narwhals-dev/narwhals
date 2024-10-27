@@ -90,13 +90,7 @@ class PySparkLazyFrame:
             # return empty dataframe, like Polars does
             from pyspark.sql.types import StructType
 
-            if self._backend_version >= (3, 3, 0):
-                spark_session = self._native_frame.sparkSession
-            else:  # pragma: no cover
-                from pyspark.sql import SparkSession
-
-                spark_session = SparkSession.builder.getOrCreate()
-
+            spark_session = self._native_frame.sparkSession
             spark_df = spark_session.createDataFrame([], StructType([]))
 
             return self._from_native_frame(spark_df)
