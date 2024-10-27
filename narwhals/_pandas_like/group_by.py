@@ -13,6 +13,7 @@ from narwhals._expression_parsing import parse_into_exprs
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals.utils import Implementation
 from narwhals.utils import remove_prefix
+from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -26,14 +27,19 @@ POLARS_TO_PANDAS_AGGREGATIONS = {
 
 
 class PandasLikeGroupBy:
-    def __init__(self, df: PandasLikeDataFrame, keys: list[str]) -> None:
+    def __init__(
+        self, df: PandasLikeDataFrame, keys: list[str], *, drop_null_keys: bool
+    ) -> None:
         self._df = df
         self._keys = keys
         if (
             self._df._implementation is Implementation.PANDAS
             and self._df._backend_version < (1, 1)
         ):  # pragma: no cover
-            if self._df._native_frame.loc[:, self._keys].isna().any().any():
+            if (
+                not drop_null_keys
+                and self._df._native_frame.loc[:, self._keys].isna().any().any()
+            ):
                 msg = "Grouping by null values is not supported in pandas < 1.0.0"
                 raise NotImplementedError(msg)
             self._grouped = self._df._native_frame.groupby(
@@ -47,7 +53,7 @@ class PandasLikeGroupBy:
                 list(self._keys),
                 sort=False,
                 as_index=True,
-                dropna=False,
+                dropna=drop_null_keys,
                 observed=True,
             )
 
@@ -96,16 +102,16 @@ class PandasLikeGroupBy:
         )
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
-        with warnings.catch_warnings():
-            # we already use `tupleify` above, so we're already opting in to
-            # the new behaviour
-            warnings.filterwarnings(
-                "ignore",
-                message="In a future version of pandas, a length 1 tuple will be returned",
-                category=FutureWarning,
-            )
-            iterator = self._grouped.__iter__()
-        yield from ((key, self._from_native_frame(sub_df)) for (key, sub_df) in iterator)
+        indices = self._grouped.indices
+        for key in indices:
+            if (
+                self._df._implementation is Implementation.PANDAS
+                and self._df._backend_version < (2, 2)
+            ):  # pragma: no cover
+                pass
+            else:  # pragma: no cover
+                key = tupleify(key)  # noqa: PLW2901
+            yield (key, self._from_native_frame(self._grouped.get_group(key)))
 
 
 def agg_pandas(  # noqa: PLR0915

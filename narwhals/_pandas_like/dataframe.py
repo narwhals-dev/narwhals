@@ -470,12 +470,13 @@ class PandasLikeDataFrame:
         )
 
     # --- actions ---
-    def group_by(self, *keys: str) -> PandasLikeGroupBy:
+    def group_by(self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         return PandasLikeGroupBy(
             self,
             list(keys),
+            drop_null_keys=drop_null_keys,
         )
 
     def join(

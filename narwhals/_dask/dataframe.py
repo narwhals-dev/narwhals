@@ -345,10 +345,10 @@ class DaskLazyFrame:
             ),
         )
 
-    def group_by(self, *by: str) -> DaskLazyGroupBy:
+    def group_by(self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
-        return DaskLazyGroupBy(self, list(by))
+        return DaskLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
     def tail(self: Self, n: int) -> Self:
         native_frame = self._native_frame

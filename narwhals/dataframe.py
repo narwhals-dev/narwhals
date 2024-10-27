@@ -1867,12 +1867,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy[Self]:
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+    ) -> GroupBy[Self]:
         r"""
         Start a group by operation.
 
         Arguments:
             *keys: Column(s) to group by. Accepts multiple columns names as a list.
+            drop_null_keys: if True, then groups where any key is null won't be included
+                in the result.
 
         Returns:
             GroupBy: Object which can be used to perform aggregations.
@@ -1941,7 +1945,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         from narwhals.group_by import GroupBy
 
-        return GroupBy(self, *flatten(keys))
+        return GroupBy(self, *flatten(keys), drop_null_keys=drop_null_keys)
 
     def sort(
         self,
@@ -3758,7 +3762,9 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy[Self]:
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+    ) -> LazyGroupBy[Self]:
         r"""
         Start a group by operation.
 
@@ -3766,6 +3772,8 @@ class LazyFrame(BaseFrame[FrameT]):
             *keys:
                 Column(s) to group by. Accepts expression input. Strings are
                 parsed as column names.
+            drop_null_keys: if True, then groups where any key is null won't be
+                included in the result.
 
         Examples:
             Group by one column and call `agg` to compute the grouped sum of
@@ -3858,7 +3866,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import LazyGroupBy
 
-        return LazyGroupBy(self, *flatten(keys))
+        return LazyGroupBy(self, *flatten(keys), drop_null_keys=drop_null_keys)
 
     def sort(
         self,
