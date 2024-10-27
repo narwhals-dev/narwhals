@@ -24,10 +24,20 @@ POLARS_TO_PYSPARK_AGGREGATIONS = {
 
 
 class PySparkLazyGroupBy:
-    def __init__(self, df: PySparkLazyFrame, keys: list[str]) -> None:
+    def __init__(
+        self,
+        df: PySparkLazyFrame,
+        keys: list[str],
+        drop_null_keys: bool,  # noqa: FBT001
+    ) -> None:
         self._df = df
         self._keys = keys
-        self._grouped = self._df._native_frame.groupBy(*self._keys)
+        if drop_null_keys:
+            self._grouped = self._df._native_frame.dropna(subset=self._keys).groupBy(
+                *self._keys
+            )
+        else:
+            self._grouped = self._df._native_frame.groupBy(*self._keys)
 
     def agg(
         self,

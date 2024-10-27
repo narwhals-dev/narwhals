@@ -146,10 +146,10 @@ class PySparkLazyFrame:
             spark_session.createDataFrame(self._native_frame.take(num=n))
         )
 
-    def group_by(self: Self, *by: str) -> PySparkLazyGroupBy:
+    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PySparkLazyGroupBy:
         from narwhals._pyspark.group_by import PySparkLazyGroupBy
 
-        return PySparkLazyGroupBy(df=self, keys=list(by))
+        return PySparkLazyGroupBy(df=self, keys=list(keys), drop_null_keys=drop_null_keys)
 
     def sort(
         self: Self,
