@@ -17,7 +17,7 @@ from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
@@ -358,7 +358,7 @@ class ArrowDataFrame:
 
         if how == "cross":
             plx = self.__narwhals_namespace__()
-            key_token = generate_unique_token(
+            key_token = generate_temporary_column_name(
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
@@ -579,7 +579,7 @@ class ArrowDataFrame:
         df = self._native_frame
 
         columns = self.columns
-        col_token = generate_unique_token(n_bytes=8, columns=columns)
+        col_token = generate_temporary_column_name(n_bytes=8, columns=columns)
         row_count = (
             df.append_column(col_token, pa.array(np.arange(len(self))))
             .group_by(columns)
@@ -638,7 +638,7 @@ class ArrowDataFrame:
             agg_func_map = {"any": "min", "first": "min", "last": "max"}
 
             agg_func = agg_func_map[keep]
-            col_token = generate_unique_token(n_bytes=8, columns=self.columns)
+            col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
             keep_idx = (
                 df.append_column(col_token, pa.array(np.arange(len(self))))
                 .group_by(subset)

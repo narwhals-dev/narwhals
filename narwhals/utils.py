@@ -10,6 +10,7 @@ from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
 from typing import cast
+from warnings import warn
 
 from narwhals._exceptions import ColumnNotFoundError
 from narwhals.dependencies import get_cudf
@@ -481,17 +482,37 @@ def is_ordered_categorical(series: Series) -> bool:
 
 
 def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
-    """Generates a unique token of specified n_bytes that is not present in the given list of columns.
+    warn(
+        "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
+        "deprecated and it will be removed in future versions",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
+
+
+def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
+    """Generates a unique token of specified `n_bytes` that is not present in the given
+    list of columns.
+
+    It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
+    function to return a string nbytes random bytes.
 
     Arguments:
-        n_bytes : The number of bytes to generate for the token.
-        columns : The list of columns to check for uniqueness.
+        n_bytes: The number of bytes to generate for the token.
+        columns: The list of columns to check for uniqueness.
 
     Returns:
         A unique token that is not present in the given list of columns.
 
     Raises:
         AssertionError: If a unique token cannot be generated after 100 attempts.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> columns = ["abc", "xyz"]
+        >>> nw.generate_temporary_column_name(n_bytes=8, columns=columns) not in columns
+        True
     """
     counter = 0
     while True:
@@ -502,8 +523,8 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
         counter += 1
         if counter > 100:
             msg = (
-                "Internal Error: Narwhals was not able to generate a column name to perform given "
-                "join operation"
+                "Internal Error: Narwhals was not able to generate a column name with "
+                f"{n_bytes=} and not in {columns}"
             )
             raise AssertionError(msg)
 

@@ -14,7 +14,7 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.utils import Implementation
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -604,7 +604,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         row_number = pa.array(np.arange(len(self)))
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         first_distinct_index = (
             pa.Table.from_arrays([self._native_series], names=[self.name])
             .append_column(col_token, row_number)
@@ -621,7 +621,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         row_number = pa.array(np.arange(len(self)))
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         last_distinct_index = (
             pa.Table.from_arrays([self._native_series], names=[self.name])
             .append_column(col_token, row_number)
@@ -715,7 +715,7 @@ class ArrowSeries:
 
     def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         return self.value_counts(name=col_token, normalize=False).filter(
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
