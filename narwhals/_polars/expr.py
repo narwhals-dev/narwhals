@@ -49,10 +49,13 @@ class PolarsExpr:
         *args: Any,
         **kwargs: Any,
     ) -> Self:
-        return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
-        return self._from_native_expr(
-            self._native_expr.map_batches(function=function).cast(return_dtype)
-        )
+        if return_dtype:
+            return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+            return self._from_native_expr(
+                self._native_expr.map_batches(function).cast(return_dtype)
+            )
+        else:
+            return self._from_native_expr(self._native_expr.map_batches(function))
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._from_native_expr(self._native_expr.__eq__(extract_native(other)))
