@@ -870,7 +870,7 @@ class PandasLikeSeriesDateTimeNamespace:
     def _get_total_seconds(self) -> Any:
         if hasattr(self._pandas_series._native_series.dt, "total_seconds"):
             return self._pandas_series._native_series.dt.total_seconds()
-        else:
+        else:  # pragma: no cover
             return (
                 self._pandas_series._native_series.dt.days * 86400
                 + self._pandas_series._native_series.dt.seconds
