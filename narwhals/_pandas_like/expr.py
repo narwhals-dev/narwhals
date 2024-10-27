@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals.dtypes import DType
     from narwhals.typing import DTypes
     from narwhals.utils import Implementation
 
@@ -388,7 +389,11 @@ class PandasLikeExpr:
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
 
-    def map_batches(self: Self, function: Callable[[Any], Any]) -> Self:
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | None = None,
+    ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             result = [function(series) for series in self._call(df)]
             if is_numpy_array(result[0]):
@@ -401,6 +406,8 @@ class PandasLikeExpr:
                     .alias(output_name)
                     for array, output_name in zip(result, output_names)
                 ]
+            if return_dtype:
+                result = [series.cast(return_dtype) for series in result]
             return result
 
         return self.__class__(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
@@ -40,6 +41,18 @@ class PolarsExpr:
         expr = self._native_expr
         dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_expr(expr.cast(dtype))
+
+    def map_batches(
+        self,
+        function: Callable[[Any], Self],
+        return_dtype: DType | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Self:
+        return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
+        return self._from_native_expr(
+            self._native_expr.map_batches(function=function).cast(return_dtype)
+        )
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._from_native_expr(self._native_expr.__eq__(extract_native(other)))

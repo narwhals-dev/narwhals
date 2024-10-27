@@ -502,7 +502,11 @@ class Expr:
         *args: Any,
         **kwargs: Any,
     ) -> Self:
-        return self.__class__(lambda plx: self._call(plx).map_batches(function))
+        return self.__class__(
+            lambda plx: self._call(plx).map_batches(
+                function=function, return_dtype=return_dtype
+            )
+        )
 
     def sum(self) -> Expr:
         """
