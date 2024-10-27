@@ -103,15 +103,16 @@ class PandasLikeGroupBy:
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         indices = self._grouped.indices
-        for key in indices:
-            if (
-                self._df._implementation is Implementation.PANDAS
-                and self._df._backend_version < (2, 2)
-            ):  # pragma: no cover
-                pass
-            else:  # pragma: no cover
+        if (
+            self._df._implementation is Implementation.PANDAS
+            and self._df._backend_version < (2, 2)
+        ) or (self._df._implementation is Implementation.CUDF):  # pragma: no cover
+            for key in indices:
+                yield (key, self._from_native_frame(self._grouped.get_group(key)))
+        else:
+            for key in indices:
                 key = tupleify(key)  # noqa: PLW2901
-            yield (key, self._from_native_frame(self._grouped.get_group(key)))
+                yield (key, self._from_native_frame(self._grouped.get_group(key)))
 
 
 def agg_pandas(  # noqa: PLR0915
