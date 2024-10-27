@@ -89,6 +89,8 @@ class PandasLikeSeries:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
+        self._dtype_cache: DType | None = None
+
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary
         # copies by using `copy=False` sometimes.
@@ -170,7 +172,11 @@ class PandasLikeSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series, self._dtypes)
+        if self._dtype_cache is None:
+            self._dtype_cache = native_to_narwhals_dtype(
+                self._native_series, self._dtypes, self._implementation
+            )
+        return self._dtype_cache
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
@@ -494,8 +500,10 @@ class PandasLikeSeries:
         )
 
     def alias(self, name: str) -> Self:
-        ser = self._native_series
-        return self._from_native_series(ser.rename(name, copy=False))
+        if name != self.name:
+            ser = self._native_series
+            return self._from_native_series(ser.rename(name, copy=False))
+        return self
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> Any:
         # pandas used to always return object dtype for nullable dtypes.

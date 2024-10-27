@@ -3326,11 +3326,6 @@ class LazyFrame(BaseFrame[FrameT]):
                       function that takes the old name as input and returns the
                       new name.
 
-        Notes:
-            If existing names are swapped (e.g. 'A' points to 'B' and 'B'
-             points to 'A'), polars will block projection and predicate
-             pushdowns at this node.
-
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
