@@ -172,7 +172,7 @@ class ArrowDataFrame:
         ),
     ) -> ArrowSeries | ArrowDataFrame:
         if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
 
         if isinstance(item, str):
             from narwhals._arrow.series import ArrowSeries
