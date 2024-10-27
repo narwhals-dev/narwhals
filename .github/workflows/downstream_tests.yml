@@ -1,9 +1,8 @@
 name: Test Downstream Libraries
 
-on:
-  pull_request:
-  push:
-    branches: [main]
+on: 
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   altair:
