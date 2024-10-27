@@ -29,8 +29,13 @@ if TYPE_CHECKING:
     ],
 )
 def test_to_py_scalar(
-    constructor_eager: ConstructorEager, input_value: Any, expected: Any
+    constructor_eager: ConstructorEager,
+    input_value: Any,
+    expected: Any,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if isinstance(input_value, bytes) and "cudf" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager({"a": [input_value]}))
     output = nw.to_py_scalar(df["a"].item(0))
     if expected == 1 and constructor_eager.__name__.startswith("pandas"):

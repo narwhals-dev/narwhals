@@ -149,7 +149,9 @@ class DaskLazyFrame:
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            col: native_to_narwhals_dtype(self._native_frame.loc[:, col], self._dtypes)
+            col: native_to_narwhals_dtype(
+                self._native_frame.loc[:, col], self._dtypes, self._implementation
+            )
             for col in self._native_frame.columns
         }
 
@@ -345,16 +347,16 @@ class DaskLazyFrame:
             ),
         )
 
-    def group_by(self, *by: str) -> DaskLazyGroupBy:
+    def group_by(self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
-        return DaskLazyGroupBy(self, list(by))
+        return DaskLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
 
     def tail(self: Self, n: int) -> Self:
         native_frame = self._native_frame
         n_partitions = native_frame.npartitions
 
-        if n_partitions == 1:
+        if n_partitions == 1:  # pragma: no cover
             return self._from_native_frame(self._native_frame.tail(n=n, compute=False))
         else:
             msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."

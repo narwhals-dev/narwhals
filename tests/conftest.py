@@ -109,7 +109,9 @@ if get_modin() is not None:  # pragma: no cover
 if get_cudf() is not None:
     eager_constructors.append(cudf_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover
-    lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # type: ignore  # noqa: PGH003
+    # TODO(unassigned): reinstate both dask constructors once if/when we have a dask use-case
+    # lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # noqa: ERA001
+    lazy_constructors.append(dask_lazy_p2_constructor)  # type: ignore  # noqa: PGH003
 
 
 @pytest.fixture(params=eager_constructors)

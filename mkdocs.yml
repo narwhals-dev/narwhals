@@ -46,6 +46,7 @@ nav:
     - api-reference/dtypes.md
     - api-reference/selectors.md
     - api-reference/typing.md
+  - This: this.md
 theme:
   name: material
   font: false
@@ -93,6 +94,7 @@ plugins:
 
 hooks:
 - utils/generate_backend_completeness.py
+- utils/generate_zen_content.py
 
 
 markdown_extensions:

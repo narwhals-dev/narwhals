@@ -1203,6 +1203,25 @@ class Series:
         """
         Rename the Series.
 
+        Notes:
+            This method is very cheap, but does not guarantee that data
+            will be copied. For example:
+
+            ```python
+            s1: nw.Series
+            s2 = s1.alias("foo")
+            arr = s2.to_numpy()
+            arr[0] = 999
+            ```
+
+            may (depending on the backend, and on the version) result in
+            `s1`'s data being modified. We recommend:
+
+                - if you need to alias an object and don't need the original
+                  one around any more, just use `alias` without worrying about it.
+                - if you were expecting `alias` to copy data, then explicily call
+                  `.clone` before calling `alias`.
+
         Arguments:
             name: The new name.
 
@@ -1254,6 +1273,25 @@ class Series:
         Rename the Series.
 
         Alias for `Series.alias()`.
+
+        Notes:
+            This method is very cheap, but does not guarantee that data
+            will be copied. For example:
+
+            ```python
+            s1: nw.Series
+            s2 = s1.rename("foo")
+            arr = s2.to_numpy()
+            arr[0] = 999
+            ```
+
+            may (depending on the backend, and on the version) result in
+            `s1`'s data being modified. We recommend:
+
+                - if you need to rename an object and don't need the original
+                  one around any more, just use `rename` without worrying about it.
+                - if you were expecting `rename` to copy data, then explicily call
+                  `.clone` before calling `rename`.
 
         Arguments:
             name: The new name.
@@ -2060,10 +2098,8 @@ class Series:
             pandas and Polars may have implementation differences for a given interpolation method.
 
         Arguments:
-            quantile : float
-                Quantile between 0.0 and 1.0.
-            interpolation : {'nearest', 'higher', 'lower', 'midpoint', 'linear'}
-                Interpolation method.
+            quantile: Quantile between 0.0 and 1.0.
+            interpolation: Interpolation method.
 
         Examples:
             >>> import narwhals as nw

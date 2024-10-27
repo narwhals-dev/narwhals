@@ -240,7 +240,7 @@ def test_key_with_nulls(
         request.applymarker(pytest.mark.skip)
     context = (
         pytest.raises(NotImplementedError, match="null values")
-        if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 0, 0))
+        if ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (1, 1, 0))
         else nullcontext()
     )
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
@@ -254,6 +254,48 @@ def test_key_with_nulls(
         )
         expected = {"b": [4.0, 5, float("nan")], "len": [1, 1, 1], "a": [1, 2, 3]}
         assert_equal_data(result, expected)
+
+
+def test_key_with_nulls_ignored(
+    constructor: Constructor,
+) -> None:
+    data = {"b": [4, 5, None], "a": [1, 2, 3]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("b", drop_null_keys=True)
+        .agg(nw.len(), nw.col("a").min())
+        .sort("a")
+        .with_columns(nw.col("b").cast(nw.Float64))
+    )
+    expected = {"b": [4.0, 5], "len": [1, 1], "a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_key_with_nulls_iter(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+) -> None:
+    if PANDAS_VERSION < (1, 3) and "pandas_constructor" in str(constructor_eager):
+        # bug in old pandas
+        request.applymarker(pytest.mark.xfail)
+    data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
+    result = dict(
+        nw.from_native(constructor_eager(data), eager_only=True)
+        .group_by("b", "c", drop_null_keys=True)
+        .__iter__()
+    )
+    assert len(result) == 2
+    assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
+    assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
+
+    result = dict(
+        nw.from_native(constructor_eager(data), eager_only=True)
+        .group_by("b", "c", drop_null_keys=False)
+        .__iter__()
+    )
+    assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
+    assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
+    assert len(result) == 4
 
 
 def test_no_agg(constructor: Constructor) -> None:
