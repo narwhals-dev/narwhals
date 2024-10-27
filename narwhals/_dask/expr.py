@@ -10,7 +10,10 @@ from typing import NoReturn
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._pandas_like.utils import calculate_timestamp_date
+from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals.utils import Implementation
 from narwhals.utils import generate_unique_token
 
 if TYPE_CHECKING:
@@ -562,7 +565,7 @@ class DaskExpr:
                 if _input.npartitions > 1:
                     msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
                     raise NotImplementedError(msg)
-                return _input.quantile(q=_quantile, method="dask")
+                return _input.quantile(q=_quantile, method="dask")  # pragma: no cover
 
             return self._from_call(
                 func,
@@ -667,17 +670,18 @@ class DaskExpr:
                 )
                 raise ValueError(msg)
 
-            if df._native_frame.npartitions > 1:
-                msg = "`Expr.over` is not supported for Dask backend with multiple partitions."
-                raise NotImplementedError(msg)
-
-            tmp = df.group_by(*keys).agg(self)
-            tmp_native = (
-                df.select(*keys)
-                .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
-                ._native_frame
+            if df._native_frame.npartitions == 1:  # pragma: no cover
+                tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
+                tmp_native = (
+                    df.select(*keys)
+                    .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
+                    ._native_frame
+                )
+                return [tmp_native[name] for name in self._output_names]
+            msg = (
+                "`Expr.over` is not supported for Dask backend with multiple partitions."
             )
-            return [tmp_native[name] for name in self._output_names]
+            raise NotImplementedError(msg)
 
         return self.__class__(
             func,
@@ -940,7 +944,7 @@ class DaskExprDateTimeNamespace:
 
     def convert_time_zone(self, time_zone: str) -> DaskExpr:
         def func(s: dask_expr.Series, time_zone: str) -> dask_expr.Series:
-            dtype = native_to_narwhals_dtype(s, self._expr._dtypes)
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes, Implementation.DASK)
             if dtype.time_zone is None:  # type: ignore[attr-defined]
                 return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)
             else:
@@ -950,6 +954,37 @@ class DaskExprDateTimeNamespace:
             func,
             "tz_convert",
             time_zone,
+            returns_scalar=False,
+        )
+
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> DaskExpr:
+        def func(
+            s: dask_expr.Series, time_unit: Literal["ns", "us", "ms"] = "us"
+        ) -> dask_expr.Series:
+            dtype = native_to_narwhals_dtype(s, self._expr._dtypes, Implementation.DASK)
+            is_pyarrow_dtype = "pyarrow" in str(dtype)
+            mask_na = s.isna()
+            if dtype == self._expr._dtypes.Date:
+                # Date is only supported in pandas dtypes if pyarrow-backed
+                s_cast = s.astype("Int32[pyarrow]")
+                result = calculate_timestamp_date(s_cast, time_unit)
+            elif dtype == self._expr._dtypes.Datetime:
+                original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+                s_cast = (
+                    s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
+                )
+                result = calculate_timestamp_datetime(
+                    s_cast, original_time_unit, time_unit
+                )
+            else:
+                msg = "Input should be either of Date or Datetime type"
+                raise TypeError(msg)
+            return result.where(~mask_na)
+
+        return self._expr._from_call(
+            func,
+            "datetime",
+            time_unit,
             returns_scalar=False,
         )
 

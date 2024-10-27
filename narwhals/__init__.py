@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from narwhals import dependencies
 from narwhals import selectors
 from narwhals import stable
@@ -10,6 +12,7 @@ from narwhals.dtypes import Date
 from narwhals.dtypes import Datetime
 from narwhals.dtypes import Duration
 from narwhals.dtypes import Enum
+from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
 from narwhals.dtypes import Int8
@@ -44,6 +47,7 @@ from narwhals.expr import sum
 from narwhals.expr import sum_horizontal
 from narwhals.expr import when
 from narwhals.functions import concat
+from narwhals.functions import from_arrow
 from narwhals.functions import from_dict
 from narwhals.functions import get_level
 from narwhals.functions import new_series
@@ -54,6 +58,7 @@ from narwhals.translate import from_native
 from narwhals.translate import get_native_namespace
 from narwhals.translate import narwhalify
 from narwhals.translate import to_native
+from narwhals.translate import to_py_scalar
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
@@ -61,13 +66,14 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.9.3"
+__version__ = "1.10.0"
 
 __all__ = [
     "dependencies",
     "selectors",
     "concat",
     "from_dict",
+    "from_arrow",
     "get_level",
     "new_series",
     "to_native",
@@ -79,6 +85,7 @@ __all__ = [
     "maybe_reset_index",
     "maybe_set_index",
     "get_native_namespace",
+    "to_py_scalar",
     "all",
     "all_horizontal",
     "any_horizontal",
@@ -118,6 +125,7 @@ __all__ = [
     "String",
     "Datetime",
     "Duration",
+    "Field",
     "Struct",
     "Array",
     "List",

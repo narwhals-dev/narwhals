@@ -10,11 +10,9 @@ from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
-from tests.utils import compare_dicts
-
-pl_version = parse_version(pl.__version__)
-pd_version = parse_version(pd.__version__)
+from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
+from tests.utils import assert_equal_data
 
 
 @given(
@@ -40,8 +38,8 @@ pd_version = parse_version(pd.__version__)
         unique=True,
     ),
 )  # type: ignore[misc]
-@pytest.mark.skipif(pl_version < parse_version("0.20.13"), reason="0.0 == -0.0")
-@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
+@pytest.mark.skipif(POLARS_VERSION < (0, 20, 13), reason="0.0 == -0.0")
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
 def test_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
@@ -88,8 +86,8 @@ def test_join(  # pragma: no cover
         max_size=3,
     ),
 )  # type: ignore[misc]
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
-@pytest.mark.skipif(pd_version < parse_version("2.0.0"), reason="requires pyarrow")
 def test_cross_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
@@ -164,7 +162,9 @@ def test_left_join(  # pragma: no cover
             right_on=right_key,
         )
     ).select(pl.all().fill_null(float("nan")))
-    compare_dicts(result_pd.to_dict(as_series=False), result_pl.to_dict(as_series=False))
+    assert_equal_data(
+        result_pd.to_dict(as_series=False), result_pl.to_dict(as_series=False)
+    )
     # For PyArrow, insert an extra sort, as the order of rows isn't guaranteed
     result_pa = (
         nw.from_native(pa.table(data_left), eager_only=True)
@@ -177,7 +177,7 @@ def test_left_join(  # pragma: no cover
         .select(nw.all().cast(nw.Float64).fill_null(float("nan")))
         .pipe(lambda df: df.sort(df.columns))
     )
-    compare_dicts(
+    assert_equal_data(
         result_pa,
         result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False),
     )

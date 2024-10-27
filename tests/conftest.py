@@ -14,7 +14,7 @@ import pytest
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_modin
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 
 with contextlib.suppress(ImportError):
     import modin.pandas  # noqa: F401
@@ -119,7 +119,7 @@ def spark_session() -> Generator[SparkSession, None, None]:
     session.stop()
 
 
-if parse_version(pd.__version__) >= parse_version("2.0.0"):
+if PANDAS_VERSION >= (2, 0, 0):
     eager_constructors = [
         pandas_constructor,
         pandas_nullable_constructor,
@@ -136,11 +136,15 @@ if get_modin() is not None:  # pragma: no cover
 if get_cudf() is not None:
     eager_constructors.append(cudf_constructor)  # pragma: no cover
 if get_dask_dataframe() is not None:  # pragma: no cover
-    lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # type: ignore  # noqa: PGH003
+    # TODO(unassigned): reinstate both dask constructors once if/when we have a dask use-case
+    # lazy_constructors.extend([dask_lazy_p1_constructor, dask_lazy_p2_constructor])  # noqa: ERA001
+    lazy_constructors.append(dask_lazy_p2_constructor)  # type: ignore  # noqa: PGH003
 
 
 @pytest.fixture(params=eager_constructors)
-def constructor_eager(request: pytest.FixtureRequest) -> Callable[[Any], IntoDataFrame]:
+def constructor_eager(
+    request: pytest.FixtureRequest,
+) -> Callable[[Any], IntoDataFrame]:
     return request.param  # type: ignore[no-any-return]
 
 

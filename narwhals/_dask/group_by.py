@@ -41,12 +41,14 @@ POLARS_TO_DASK_AGGREGATIONS = {
 
 
 class DaskLazyGroupBy:
-    def __init__(self, df: DaskLazyFrame, keys: list[str]) -> None:
+    def __init__(
+        self, df: DaskLazyFrame, keys: list[str], *, drop_null_keys: bool
+    ) -> None:
         self._df = df
         self._keys = keys
         self._grouped = self._df._native_frame.groupby(
             list(self._keys),
-            dropna=False,
+            dropna=drop_null_keys,
             observed=True,
         )
 

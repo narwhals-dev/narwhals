@@ -14,6 +14,7 @@ Here are the top-level functions available in Narwhals.
         - concat_str
         - from_dict
         - from_native
+        - from_arrow
         - get_level
         - get_native_namespace
         - is_ordered_categorical
@@ -38,4 +39,5 @@ Here are the top-level functions available in Narwhals.
         - when
         - show_versions
         - to_native
+        - to_py_scalar
       show_source: false

@@ -54,6 +54,8 @@ class PandasLikeDataFrame:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
+        self._schema_cache: dict[str, DType] | None = None
+
     def __narwhals_dataframe__(self) -> Self:
         return self
 
@@ -141,14 +143,16 @@ class PandasLikeDataFrame:
 
     def __getitem__(
         self,
-        item: str
-        | int
-        | slice
-        | Sequence[int]
-        | Sequence[str]
-        | tuple[Sequence[int], str | int]
-        | tuple[slice | Sequence[int], Sequence[int] | slice]
-        | tuple[slice, slice],
+        item: (
+            str
+            | int
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[Sequence[int], str | int]
+            | tuple[slice | Sequence[int], Sequence[int] | slice]
+            | tuple[slice, slice]
+        ),
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, tuple):
             item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
@@ -245,10 +249,36 @@ class PandasLikeDataFrame:
     def columns(self) -> list[str]:
         return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
 
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[True],
+    ) -> list[dict[str, Any]]: ...
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: Literal[False] = False,
+    ) -> list[tuple[Any, ...]]: ...
+
+    @overload
+    def rows(
+        self,
+        *,
+        named: bool,
+    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+
     def rows(
         self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
+            # cuDF does not support itertuples. But it does support to_dict!
+            if self._implementation is Implementation.CUDF:  # pragma: no cover
+                # Extract the row values from the named rows
+                return [tuple(row.values()) for row in self.rows(named=True)]
+
             return list(self._native_frame.itertuples(index=False, name=None))
 
         return self._native_frame.to_dict(orient="records")  # type: ignore[no-any-return]
@@ -275,10 +305,14 @@ class PandasLikeDataFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
-        return {
-            col: native_to_narwhals_dtype(self._native_frame[col], self._dtypes)
-            for col in self._native_frame.columns
-        }
+        if self._schema_cache is None:
+            self._schema_cache = {
+                col: native_to_narwhals_dtype(
+                    self._native_frame[col], self._dtypes, self._implementation
+                )
+                for col in self._native_frame.columns
+            }
+        return self._schema_cache
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
@@ -403,7 +437,9 @@ class PandasLikeDataFrame:
         return self._from_native_frame(df)
 
     def rename(self, mapping: dict[str, str]) -> Self:
-        return self._from_native_frame(self._native_frame.rename(columns=mapping))
+        return self._from_native_frame(
+            self._native_frame.rename(columns=mapping, copy=False)
+        )
 
     def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
         to_drop = parse_columns_to_drop(
@@ -440,12 +476,13 @@ class PandasLikeDataFrame:
         )
 
     # --- actions ---
-    def group_by(self, *keys: str) -> PandasLikeGroupBy:
+    def group_by(self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         return PandasLikeGroupBy(
             self,
             list(keys),
+            drop_null_keys=drop_null_keys,
         )
 
     def join(
@@ -511,7 +548,8 @@ class PandasLikeDataFrame:
                 other_native = (
                     other._native_frame.loc[:, right_on]
                     .rename(  # rename to avoid creating extra columns in join
-                        columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                        columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
+                        copy=False,
                     )
                     .drop_duplicates()
                 )
@@ -531,7 +569,8 @@ class PandasLikeDataFrame:
             other_native = (
                 other._native_frame.loc[:, right_on]
                 .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                    columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
+                    copy=False,
                 )
                 .drop_duplicates()  # avoids potential rows duplication from inner join
             )

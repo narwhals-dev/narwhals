@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import duckdb
 import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0], "z": ["x", "y", "z"]}
 
 
 def test_interchange_to_pandas(request: pytest.FixtureRequest) -> None:
-    if parse_version(pd.__version__) < parse_version("1.5.0"):
+    if PANDAS_VERSION < (1, 5, 0):
         request.applymarker(pytest.mark.xfail)
     df_raw = pd.DataFrame(data)
     df = nw.from_native(df_raw.__dataframe__(), eager_or_interchange_only=True)
@@ -18,9 +20,10 @@ def test_interchange_to_pandas(request: pytest.FixtureRequest) -> None:
 
 
 def test_interchange_ibis_to_pandas(
-    tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
+    tmpdir: pytest.TempdirFactory,
+    request: pytest.FixtureRequest,
 ) -> None:  # pragma: no cover
-    if parse_version(pd.__version__) < parse_version("1.5.0"):
+    if PANDAS_VERSION < (1, 5, 0):
         request.applymarker(pytest.mark.xfail)
 
     ibis = pytest.importorskip("ibis")
@@ -36,7 +39,7 @@ def test_interchange_ibis_to_pandas(
 
 
 def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
-    if parse_version(pd.__version__) < parse_version("1.0.0"):
+    if PANDAS_VERSION < (1, 0, 0):
         request.applymarker(pytest.mark.xfail)
     df_raw = pd.DataFrame(data)
     rel = duckdb.sql("select * from df_raw")

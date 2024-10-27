@@ -546,12 +546,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We can pass any supported library such as pandas, Polars or PyArrow to `func`:
 
-            >>> func(df_pd)  # doctest: +SKIP
+            >>> func(df_pd)
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> func(df_pl)  # doctest: +SKIP
+            >>> func(df_pl)
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> func(df_pa)  # doctest: +SKIP
-            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+            >>> func(df_pa)
+            '"foo","bar","ham"\n1,6,"a"\n2,7,"b"\n3,8,"c"\n'
 
             If we had passed a file name to `write_csv`, it would have been
             written to that file.
@@ -742,14 +742,16 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def __getitem__(
         self,
-        item: str
-        | slice
-        | Sequence[int]
-        | Sequence[str]
-        | tuple[Sequence[int], str | int]
-        | tuple[slice, str | int]
-        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
-        | tuple[slice, slice],
+        item: (
+            str
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[Sequence[int], str | int]
+            | tuple[slice, str | int]
+            | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
+            | tuple[slice, slice]
+        ),
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -1116,12 +1118,12 @@ class DataFrame(BaseFrame[DataFrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pd_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pl_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().schema
 
@@ -1150,12 +1152,12 @@ class DataFrame(BaseFrame[DataFrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pd_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pl_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().collect_schema()
 
@@ -1195,16 +1197,14 @@ class DataFrame(BaseFrame[DataFrameT]):
     def rows(
         self,
         *,
-        named: Literal[False],
+        named: Literal[False] = False,
     ) -> list[tuple[Any, ...]]: ...
-
     @overload
     def rows(
         self,
         *,
         named: Literal[True],
     ) -> list[dict[str, Any]]: ...
-
     @overload
     def rows(
         self,
@@ -1867,12 +1867,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy[Self]:
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+    ) -> GroupBy[Self]:
         r"""
         Start a group by operation.
 
         Arguments:
             *keys: Column(s) to group by. Accepts multiple columns names as a list.
+            drop_null_keys: if True, then groups where any key is null won't be included
+                in the result.
 
         Returns:
             GroupBy: Object which can be used to perform aggregations.
@@ -1941,7 +1945,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         from narwhals.group_by import GroupBy
 
-        return GroupBy(self, *flatten(keys))
+        return GroupBy(self, *flatten(keys), drop_null_keys=drop_null_keys)
 
     def sort(
         self,
@@ -2478,8 +2482,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")  # doctest:+SKIP
-            (5, 6)
+            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")
+            (np.int64(5), np.int64(6))
 
             >>> func(df_pl, 1, 1), func(df_pl, 2, "b")
             (5, 6)
@@ -2581,7 +2585,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ... def func(df):
             ...     return df.to_arrow()
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)
             pyarrow.Table
             foo: int64
             bar: string
@@ -3010,7 +3014,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.schema  # doctest:+SKIP
+            >>> lf.schema  # doctest: +SKIP
             Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().schema
@@ -3030,8 +3034,8 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.collect_schema()  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> lf.collect_schema()
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().collect_schema()
 
@@ -3321,11 +3325,6 @@ class LazyFrame(BaseFrame[FrameT]):
             mapping: Key value pairs that map from old name to new name, or a
                       function that takes the old name as input and returns the
                       new name.
-
-        Notes:
-            If existing names are swapped (e.g. 'A' points to 'B' and 'B'
-             points to 'A'), polars will block projection and predicate
-             pushdowns at this node.
 
         Examples:
             >>> import pandas as pd
@@ -3758,7 +3757,9 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy[Self]:
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+    ) -> LazyGroupBy[Self]:
         r"""
         Start a group by operation.
 
@@ -3766,6 +3767,8 @@ class LazyFrame(BaseFrame[FrameT]):
             *keys:
                 Column(s) to group by. Accepts expression input. Strings are
                 parsed as column names.
+            drop_null_keys: if True, then groups where any key is null won't be
+                included in the result.
 
         Examples:
             Group by one column and call `agg` to compute the grouped sum of
@@ -3858,7 +3861,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import LazyGroupBy
 
-        return LazyGroupBy(self, *flatten(keys))
+        return LazyGroupBy(self, *flatten(keys), drop_null_keys=drop_null_keys)
 
     def sort(
         self,

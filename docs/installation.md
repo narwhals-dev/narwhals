@@ -2,20 +2,36 @@
 
 ## Installation
 
-First, make sure you have [created and activated](https://docs.python.org/3/library/venv.html) a Python3.8+ virtual environment.
+=== "UV"
 
-Then, run
-```console
-python -m pip install narwhals
-```
+    First, ensure you have installed [UV](https://github.com/astral-sh/uv), and make sure you have [created and activated](https://docs.astral.sh/uv/pip/environments/#python-environments) a Python 3.8+ virtual environment.
 
-Then, if you start the Python REPL and see the following:
+    If you haven't, you can follow our [_setting up your environment_](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md#option-1-use-uv-recommended) guide.
+    Then, run:
+
+    ```console
+    uv pip install narwhals
+    ```
+
+=== "Python's venv"
+
+    First, ensure you have [created and activated](https://docs.python.org/3/library/venv.html) a Python 3.8+ virtual environment.
+
+    Then, run:
+
+    ```console
+    python -m pip install narwhals
+    ```
+
+### Verifying the Installation
+
+To verify the installation, start the Python REPL and execute:
 ```python
 >>> import narwhals
 >>> narwhals.__version__
-'1.9.3'
+'1.10.0'
 ```
-then installation worked correctly!
+If you see the version number, then the installation was successful!
 
 ## Quick start
 
@@ -69,4 +85,4 @@ If you run `python t.py` then your output should look like the above. This is th
 function - as we'll soon see, we can do much more advanced things.
 Let's learn about what you just did, and what Narwhals can do for you!
 
-Note: these examples are only using pandas and Polars. Please see the following to find the [supported libraries](extending.md).
+Note: these examples are only using pandas, Polars and PyArrow. Please see the following to find the [supported libraries](extending.md).

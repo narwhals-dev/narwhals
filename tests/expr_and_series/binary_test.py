@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_expr_binary(constructor: Constructor) -> None:
@@ -41,4 +43,4 @@ def test_expr_binary(constructor: Constructor) -> None:
         "l": [0, 1, 1],
         "m": [1, 9, 4],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
