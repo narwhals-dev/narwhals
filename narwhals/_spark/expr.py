@@ -57,10 +57,9 @@ class SparkExpr:
         backend_version: tuple[int, ...],
         dtypes: DTypes,
     ) -> Self:
-        def func(df: SparkLazyFrame) -> list[Column]:
+        def func(_: SparkLazyFrame) -> list[Column]:
             from pyspark.sql import functions as F  # noqa: N812
 
-            _ = df
             return [F.col(col_name) for col_name in column_names]
 
         return cls(
