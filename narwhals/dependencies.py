@@ -115,7 +115,9 @@ def is_modin_series(ser: Any) -> TypeGuard[mpd.Series]:
 
 def is_modin_index(index: Any) -> TypeGuard[mpd.Index]:
     """Check whether `index` is a modin Index without importing modin."""
-    return (mpd := get_modin()) is not None and isinstance(index, mpd.Index)
+    return (mpd := get_modin()) is not None and isinstance(
+        index, mpd.Index
+    )  # pragma: no cover
 
 
 def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
@@ -130,7 +132,9 @@ def is_cudf_series(ser: Any) -> TypeGuard[cudf.Series[Any]]:
 
 def is_cudf_index(index: Any) -> TypeGuard[cudf.Index]:
     """Check whether `index` is a cudf Index without importing cudf."""
-    return (cudf := get_cudf()) is not None and isinstance(index, cudf.Index)
+    return (cudf := get_cudf()) is not None and isinstance(
+        index, cudf.Index
+    )  # pragma: no cover
 
 
 def is_dask_dataframe(df: Any) -> TypeGuard[dd.DataFrame]:
@@ -204,7 +208,9 @@ def is_pandas_like_index(index: Any) -> bool:
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
-    return is_pandas_index(index) or is_modin_index(index) or is_cudf_index(index)
+    return (
+        is_pandas_index(index) or is_modin_index(index) or is_cudf_index(index)
+    )  # pragma: no cover
 
 
 def is_into_series(native_series: IntoSeries) -> bool:
