@@ -13,15 +13,15 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self
 
-    from narwhals._spark.dataframe import PySparkLazyFrame
-    from narwhals._spark.namespace import PySparkNamespace
+    from narwhals._spark.dataframe import SparkLazyFrame
+    from narwhals._spark.namespace import SparkNamespace
     from narwhals.typing import DTypes
 
 
-class PySparkExpr:
+class SparkExpr:
     def __init__(
         self,
-        call: Callable[[PySparkLazyFrame], list[Column]],
+        call: Callable[[SparkLazyFrame], list[Column]],
         *,
         depth: int,
         function_name: str,
@@ -44,13 +44,11 @@ class PySparkExpr:
 
     def __narwhals_expr__(self) -> None: ...
 
-    def __narwhals_namespace__(self) -> PySparkNamespace:  # pragma: no cover
+    def __narwhals_namespace__(self) -> SparkNamespace:  # pragma: no cover
         # Unused, just for compatibility with PandasLikeExpr
-        from narwhals._spark.namespace import PySparkNamespace
+        from narwhals._spark.namespace import SparkNamespace
 
-        return PySparkNamespace(
-            backend_version=self._backend_version, dtypes=self._dtypes
-        )
+        return SparkNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     @classmethod
     def from_column_names(
@@ -59,7 +57,7 @@ class PySparkExpr:
         backend_version: tuple[int, ...],
         dtypes: DTypes,
     ) -> Self:
-        def func(df: PySparkLazyFrame) -> list[Column]:
+        def func(df: SparkLazyFrame) -> list[Column]:
             from pyspark.sql import functions as F  # noqa: N812
 
             _ = df
@@ -80,11 +78,11 @@ class PySparkExpr:
         self,
         call: Callable[..., Column],
         expr_name: str,
-        *args: PySparkExpr,
+        *args: SparkExpr,
         returns_scalar: bool,
-        **kwargs: PySparkExpr,
+        **kwargs: SparkExpr,
     ) -> Self:
-        def func(df: PySparkLazyFrame) -> list[Column]:
+        def func(df: SparkLazyFrame) -> list[Column]:
             results = []
             inputs = self._call(df)
             _args = [maybe_evaluate(df, arg) for arg in args]
@@ -133,23 +131,23 @@ class PySparkExpr:
             dtypes=self._dtypes,
         )
 
-    def __add__(self, other: PySparkExpr) -> Self:
+    def __add__(self, other: SparkExpr) -> Self:
         return self._from_call(operator.add, "__add__", other, returns_scalar=False)
 
-    def __sub__(self, other: PySparkExpr) -> Self:
+    def __sub__(self, other: SparkExpr) -> Self:
         return self._from_call(operator.sub, "__sub__", other, returns_scalar=False)
 
-    def __mul__(self, other: PySparkExpr) -> Self:
+    def __mul__(self, other: SparkExpr) -> Self:
         return self._from_call(operator.mul, "__mul__", other, returns_scalar=False)
 
-    def __lt__(self, other: PySparkExpr) -> Self:
+    def __lt__(self, other: SparkExpr) -> Self:
         return self._from_call(operator.lt, "__lt__", other, returns_scalar=False)
 
-    def __gt__(self, other: PySparkExpr) -> Self:
+    def __gt__(self, other: SparkExpr) -> Self:
         return self._from_call(operator.gt, "__gt__", other, returns_scalar=False)
 
     def alias(self, name: str) -> Self:
-        def _alias(df: PySparkLazyFrame) -> list[Column]:
+        def _alias(df: SparkLazyFrame) -> list[Column]:
             return [col.alias(name) for col in self._call(df)]
 
         # Define this one manually, so that we can

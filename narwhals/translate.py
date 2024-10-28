@@ -373,7 +373,7 @@ def _from_native_impl(  # noqa: PLR0915
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.series import PolarsSeries
-    from narwhals._spark.dataframe import PySparkLazyFrame
+    from narwhals._spark.dataframe import SparkLazyFrame
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -642,7 +642,7 @@ def _from_native_impl(  # noqa: PLR0915
             msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with pyspark DataFrame"
             raise TypeError(msg)
         return LazyFrame(
-            PySparkLazyFrame(
+            SparkLazyFrame(
                 native_object,
                 backend_version=parse_version(get_pyspark().__version__),
                 dtypes=dtypes,

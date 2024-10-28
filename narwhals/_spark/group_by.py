@@ -13,9 +13,9 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
     from pyspark.sql import GroupedData
 
-    from narwhals._spark.dataframe import PySparkLazyFrame
-    from narwhals._spark.expr import PySparkExpr
-    from narwhals._spark.typing import IntoPySparkExpr
+    from narwhals._spark.dataframe import SparkLazyFrame
+    from narwhals._spark.expr import SparkExpr
+    from narwhals._spark.typing import IntoSparkExpr
 
 POLARS_TO_PYSPARK_AGGREGATIONS = {
     "len": "count",
@@ -23,10 +23,10 @@ POLARS_TO_PYSPARK_AGGREGATIONS = {
 }
 
 
-class PySparkLazyGroupBy:
+class SparkLazyGroupBy:
     def __init__(
         self,
-        df: PySparkLazyFrame,
+        df: SparkLazyFrame,
         keys: list[str],
         drop_null_keys: bool,  # noqa: FBT001
     ) -> None:
@@ -41,9 +41,9 @@ class PySparkLazyGroupBy:
 
     def agg(
         self,
-        *aggs: IntoPySparkExpr,
-        **named_aggs: IntoPySparkExpr,
-    ) -> PySparkLazyFrame:
+        *aggs: IntoSparkExpr,
+        **named_aggs: IntoSparkExpr,
+    ) -> SparkLazyFrame:
         exprs = parse_into_exprs(
             *aggs,
             namespace=self._df.__narwhals_namespace__(),
@@ -68,10 +68,10 @@ class PySparkLazyGroupBy:
             self._from_native_frame,
         )
 
-    def _from_native_frame(self, df: PySparkLazyFrame) -> PySparkLazyFrame:
-        from narwhals._spark.dataframe import PySparkLazyFrame
+    def _from_native_frame(self, df: SparkLazyFrame) -> SparkLazyFrame:
+        from narwhals._spark.dataframe import SparkLazyFrame
 
-        return PySparkLazyFrame(
+        return SparkLazyFrame(
             df, backend_version=self._df._backend_version, dtypes=self._df._dtypes
         )
 
@@ -84,10 +84,10 @@ def get_spark_function(function_name: str) -> Column:
 
 def agg_pyspark(
     grouped: GroupedData,
-    exprs: list[PySparkExpr],
+    exprs: list[SparkExpr],
     keys: list[str],
-    from_dataframe: Callable[[Any], PySparkLazyFrame],
-) -> PySparkLazyFrame:
+    from_dataframe: Callable[[Any], SparkLazyFrame],
+) -> SparkLazyFrame:
     for expr in exprs:
         if not is_simple_aggregation(expr):  # pragma: no cover
             msg = (

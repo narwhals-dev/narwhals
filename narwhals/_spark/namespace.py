@@ -10,18 +10,18 @@ from typing import NoReturn
 from narwhals._expression_parsing import combine_root_names
 from narwhals._expression_parsing import parse_into_exprs
 from narwhals._expression_parsing import reduce_output_names
-from narwhals._spark.expr import PySparkExpr
+from narwhals._spark.expr import SparkExpr
 from narwhals._spark.utils import get_column_name
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
 
-    from narwhals._spark.dataframe import PySparkLazyFrame
-    from narwhals._spark.typing import IntoPySparkExpr
+    from narwhals._spark.dataframe import SparkLazyFrame
+    from narwhals._spark.typing import IntoSparkExpr
     from narwhals.typing import DTypes
 
 
-class PySparkNamespace:
+class SparkNamespace:
     def __init__(self, *, backend_version: tuple[int, ...], dtypes: DTypes) -> None:
         self._backend_version = backend_version
         self._dtypes = dtypes
@@ -40,23 +40,23 @@ class PySparkNamespace:
 
     def _create_expr_from_callable(  # pragma: no cover
         self,
-        func: Callable[[PySparkLazyFrame], list[PySparkExpr]],
+        func: Callable[[SparkLazyFrame], list[SparkExpr]],
         *,
         depth: int,
         function_name: str,
         root_names: list[str] | None,
         output_names: list[str] | None,
-    ) -> PySparkExpr:
+    ) -> SparkExpr:
         msg = "`_create_expr_from_callable` for PySparkNamespace exists only for compatibility"
         raise NotImplementedError(msg)
 
-    def all(self) -> PySparkExpr:
-        def _all(df: PySparkLazyFrame) -> list[Column]:
+    def all(self) -> SparkExpr:
+        def _all(df: SparkLazyFrame) -> list[Column]:
             import pyspark.sql.functions as F  # noqa: N812
 
             return [F.col(col_name) for col_name in df.columns]
 
-        return PySparkExpr(
+        return SparkExpr(
             call=_all,
             depth=0,
             function_name="all",
@@ -67,15 +67,15 @@ class PySparkNamespace:
             dtypes=self._dtypes,
         )
 
-    def all_horizontal(self, *exprs: IntoPySparkExpr) -> PySparkExpr:
+    def all_horizontal(self, *exprs: IntoSparkExpr) -> SparkExpr:
         parsed_exprs = parse_into_exprs(*exprs, namespace=self)
 
-        def func(df: PySparkLazyFrame) -> list[Column]:
+        def func(df: SparkLazyFrame) -> list[Column]:
             cols = [c for _expr in parsed_exprs for c in _expr._call(df)]
             col_name = get_column_name(df, cols[0])
             return [reduce(operator.and_, cols).alias(col_name)]
 
-        return PySparkExpr(
+        return SparkExpr(
             call=func,
             depth=max(x._depth for x in parsed_exprs) + 1,
             function_name="all_horizontal",
@@ -86,7 +86,7 @@ class PySparkNamespace:
             dtypes=self._dtypes,
         )
 
-    def col(self, *column_names: str) -> PySparkExpr:
-        return PySparkExpr.from_column_names(
+    def col(self, *column_names: str) -> SparkExpr:
+        return SparkExpr.from_column_names(
             *column_names, backend_version=self._backend_version, dtypes=self._dtypes
         )
