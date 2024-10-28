@@ -34,7 +34,7 @@ jobs:
   pytest-windows:
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.13"]
+        python-version: ["3.10", "3.12"]
         os: [windows-latest]
 
     runs-on: ${{ matrix.os }}
@@ -61,7 +61,7 @@ jobs:
   pytest-coverage:
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13.0"]
+        python-version: ["3.9", "3.11", "3.13"]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
