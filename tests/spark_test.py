@@ -6,22 +6,17 @@ Once we're a bit further along, we can integrate PySpark tests into the main tes
 
 from __future__ import annotations
 
-import contextlib
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
 
-import numpy as np
 import pandas as pd
-
-with contextlib.suppress(ImportError):
-    import pyspark
-
 import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals._exceptions import ColumnNotFoundError
-from narwhals.utils import parse_version
+from tests.utils import NUMPY_VERSION
+from tests.utils import PYSPARK_VERSION
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -366,9 +361,7 @@ def test_std(pyspark_constructor: Constructor) -> None:
         nw.col("b").std(ddof=2).alias("b_ddof_2"),
         nw.col("z").std(ddof=0).alias("z_ddof_0"),
     )
-    if parse_version(pyspark.__version__) < (3, 4) or (
-        parse_version(np.__version__) > (2, 0)
-    ):
+    if PYSPARK_VERSION < (3, 4) or NUMPY_VERSION > (2, 0):
         expected = {
             "a_ddof_default": [1.0],
             "a_ddof_1": [1.0],
