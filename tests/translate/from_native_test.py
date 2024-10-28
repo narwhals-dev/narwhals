@@ -228,7 +228,7 @@ def test_from_native_strict_false_typing() -> None:
 
 def test_from_mock_interchange_protocol_non_strict() -> None:
     class MockDf:
-        def __dataframe__(self) -> None:
+        def __dataframe__(self) -> None:  # pragma: no cover
             pass
 
     mockdf = MockDf()
