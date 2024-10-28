@@ -89,6 +89,8 @@ class PandasLikeSeries:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
+        self._dtype_cache: DType | None = None
+
         # In pandas, copy-on-write becomes the default in version 3.
         # So, before that, we need to explicitly avoid unnecessary
         # copies by using `copy=False` sometimes.
@@ -170,7 +172,11 @@ class PandasLikeSeries:
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series, self._dtypes)
+        if self._dtype_cache is None:
+            self._dtype_cache = native_to_narwhals_dtype(
+                self._native_series, self._dtypes, self._implementation
+            )
+        return self._dtype_cache
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
@@ -494,8 +500,10 @@ class PandasLikeSeries:
         )
 
     def alias(self, name: str) -> Self:
-        ser = self._native_series
-        return self._from_native_series(ser.rename(name, copy=False))
+        if name != self.name:
+            ser = self._native_series
+            return self._from_native_series(ser.rename(name, copy=False))
+        return self
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> Any:
         # pandas used to always return object dtype for nullable dtypes.
@@ -867,8 +875,19 @@ class PandasLikeSeriesDateTimeNamespace:
             )
         )
 
+    def _get_total_seconds(self) -> Any:
+        if hasattr(self._pandas_series._native_series.dt, "total_seconds"):
+            return self._pandas_series._native_series.dt.total_seconds()
+        else:  # pragma: no cover
+            return (
+                self._pandas_series._native_series.dt.days * 86400
+                + self._pandas_series._native_series.dt.seconds
+                + (self._pandas_series._native_series.dt.microseconds / 1e6)
+                + (self._pandas_series._native_series.dt.nanoseconds / 1e9)
+            )
+
     def total_minutes(self) -> PandasLikeSeries:
-        s = self._pandas_series._native_series.dt.total_seconds()
+        s = self._get_total_seconds()
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
@@ -878,7 +897,7 @@ class PandasLikeSeriesDateTimeNamespace:
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def total_seconds(self) -> PandasLikeSeries:
-        s = self._pandas_series._native_series.dt.total_seconds()
+        s = self._get_total_seconds()
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
@@ -888,7 +907,7 @@ class PandasLikeSeriesDateTimeNamespace:
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def total_milliseconds(self) -> PandasLikeSeries:
-        s = self._pandas_series._native_series.dt.total_seconds() * 1e3
+        s = self._get_total_seconds() * 1e3
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
@@ -898,7 +917,7 @@ class PandasLikeSeriesDateTimeNamespace:
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def total_microseconds(self) -> PandasLikeSeries:
-        s = self._pandas_series._native_series.dt.total_seconds() * 1e6
+        s = self._get_total_seconds() * 1e6
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element
@@ -908,7 +927,7 @@ class PandasLikeSeriesDateTimeNamespace:
         return self._pandas_series._from_native_series(s_abs * s_sign)
 
     def total_nanoseconds(self) -> PandasLikeSeries:
-        s = self._pandas_series._native_series.dt.total_seconds() * 1e9
+        s = self._get_total_seconds() * 1e9
         s_sign = (
             2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         )  # this calculates the sign of each series element

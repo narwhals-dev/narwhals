@@ -55,6 +55,9 @@ from narwhals.translate import to_py_scalar as nw_to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
+from narwhals.utils import (
+    generate_temporary_column_name as nw_generate_temporary_column_name,
+)
 from narwhals.utils import is_ordered_categorical as nw_is_ordered_categorical
 from narwhals.utils import maybe_align_index as nw_maybe_align_index
 from narwhals.utils import maybe_convert_dtypes as nw_maybe_convert_dtypes
@@ -2212,6 +2215,32 @@ def maybe_reset_index(obj: T) -> T:
     return nw_maybe_reset_index(obj)
 
 
+def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
+    """Generates a unique token of specified `n_bytes` that is not present in the given
+    list of columns.
+
+    It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
+    function to return a string nbytes random bytes.
+
+    Arguments:
+        n_bytes: The number of bytes to generate for the token.
+        columns: The list of columns to check for uniqueness.
+
+    Returns:
+        A unique token that is not present in the given list of columns.
+
+    Raises:
+        AssertionError: If a unique token cannot be generated after 100 attempts.
+
+    Examples:
+        >>> import narwhals.stable.v1 as nw
+        >>> columns = ["abc", "xyz"]
+        >>> nw.generate_temporary_column_name(n_bytes=8, columns=columns) not in columns
+        True
+    """
+    return nw_generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
+
+
 def get_native_namespace(obj: Any) -> Any:
     """
     Get native namespace from object.
@@ -2510,6 +2539,7 @@ __all__ = [
     "maybe_get_index",
     "maybe_reset_index",
     "maybe_set_index",
+    "generate_temporary_column_name",
     "get_native_namespace",
     "get_level",
     "all",

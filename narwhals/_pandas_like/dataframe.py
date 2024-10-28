@@ -19,7 +19,7 @@ from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
@@ -53,6 +53,8 @@ class PandasLikeDataFrame:
         self._implementation = implementation
         self._backend_version = backend_version
         self._dtypes = dtypes
+
+        self._schema_cache: dict[str, DType] | None = None
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -153,7 +155,7 @@ class PandasLikeDataFrame:
         ),
     ) -> PandasLikeSeries | PandasLikeDataFrame:
         if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # type: ignore[assignment]
 
         if isinstance(item, str):
             from narwhals._pandas_like.series import PandasLikeSeries
@@ -303,10 +305,14 @@ class PandasLikeDataFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
-        return {
-            col: native_to_narwhals_dtype(self._native_frame[col], self._dtypes)
-            for col in self._native_frame.columns
-        }
+        if self._schema_cache is None:
+            self._schema_cache = {
+                col: native_to_narwhals_dtype(
+                    self._native_frame[col], self._dtypes, self._implementation
+                )
+                for col in self._native_frame.columns
+            }
+        return self._schema_cache
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
@@ -470,12 +476,13 @@ class PandasLikeDataFrame:
         )
 
     # --- actions ---
-    def group_by(self, *keys: str) -> PandasLikeGroupBy:
+    def group_by(self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         return PandasLikeGroupBy(
             self,
             list(keys),
+            drop_null_keys=drop_null_keys,
         )
 
     def join(
@@ -499,7 +506,7 @@ class PandasLikeDataFrame:
                 self._implementation is Implementation.PANDAS
                 and self._backend_version < (1, 4)
             ):
-                key_token = generate_unique_token(
+                key_token = generate_temporary_column_name(
                     n_bytes=8, columns=[*self.columns, *other.columns]
                 )
 
@@ -534,7 +541,7 @@ class PandasLikeDataFrame:
                     )
                 )
             else:
-                indicator_token = generate_unique_token(
+                indicator_token = generate_temporary_column_name(
                     n_bytes=8, columns=[*self.columns, *other.columns]
                 )
 

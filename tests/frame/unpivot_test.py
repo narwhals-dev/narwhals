@@ -94,10 +94,8 @@ def test_unpivot_mixed_types(
     data: dict[str, Any],
     expected_dtypes: list[DType],
 ) -> None:
-    if (
-        "dask" in str(constructor)
-        or "cudf" in str(constructor)
-        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0))
+    if "cudf" in str(constructor) or (
+        "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0)
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

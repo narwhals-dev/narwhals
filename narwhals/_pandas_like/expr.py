@@ -333,7 +333,7 @@ class PandasLikeExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
-            tmp = df.group_by(*keys).agg(self)
+            tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
             tmp = df.select(*keys).join(
                 tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
             )

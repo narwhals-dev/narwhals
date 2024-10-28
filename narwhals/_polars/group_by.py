@@ -11,10 +11,13 @@ if TYPE_CHECKING:
 
 
 class PolarsGroupBy:
-    def __init__(self, df: Any, keys: list[str]) -> None:
+    def __init__(self, df: Any, keys: list[str], *, drop_null_keys: bool) -> None:
         self._compliant_frame = df
         self.keys = keys
-        self._grouped = df._native_frame.group_by(keys)
+        if drop_null_keys:
+            self._grouped = df.drop_nulls(keys)._native_frame.group_by(keys)
+        else:
+            self._grouped = df._native_frame.group_by(keys)
 
     def agg(self, *aggs: Any, **named_aggs: Any) -> PolarsDataFrame:
         aggs, named_aggs = extract_args_kwargs(aggs, named_aggs)  # type: ignore[assignment]
@@ -28,10 +31,13 @@ class PolarsGroupBy:
 
 
 class PolarsLazyGroupBy:
-    def __init__(self, df: Any, keys: list[str]) -> None:
+    def __init__(self, df: Any, keys: list[str], *, drop_null_keys: bool) -> None:
         self._compliant_frame = df
         self.keys = keys
-        self._grouped = df._native_frame.group_by(keys)
+        if drop_null_keys:
+            self._grouped = df.drop_nulls(keys)._native_frame.group_by(keys)
+        else:
+            self._grouped = df._native_frame.group_by(keys)
 
     def agg(self, *aggs: Any, **named_aggs: Any) -> PolarsLazyFrame:
         aggs, named_aggs = extract_args_kwargs(aggs, named_aggs)  # type: ignore[assignment]

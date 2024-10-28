@@ -11,6 +11,7 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -197,6 +198,7 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
     starting_time_unit=st.sampled_from(["us", "ns"]),
 )
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="bug in old pandas")
+@pytest.mark.skipif(POLARS_VERSION < (0, 20, 7), reason="bug in old Polars")
 def test_timestamp_hypothesis(
     inputs: datetime,
     time_unit: Literal["ms", "us", "ns"],
