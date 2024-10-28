@@ -46,6 +46,13 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
+NON_TEMPORAL_SCALAR_TYPES = (
+    bool,
+    bytes,
+    str,
+    numbers.Number,
+)
+
 
 @overload
 def to_native(
@@ -843,7 +850,8 @@ def to_py_scalar(scalar_like: Any) -> Any:
         >>> nw.to_py_scalar(1)
         1
     """
-
+    if isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES):
+        return scalar_like
     pa = get_pyarrow()
     if pa and isinstance(scalar_like, pa.Scalar):
         return scalar_like.as_py()
@@ -864,18 +872,11 @@ def to_py_scalar(scalar_like: Any) -> Any:
     if pd and isinstance(scalar_like, pd.Timedelta):
         return scalar_like.to_pytimedelta()
 
-    all_scalar_types = (
-        int,
-        float,
-        complex,
-        bool,
-        bytes,
-        str,
-        datetime,
-        timedelta,
-        numbers.Number,
-    )
-    if isinstance(scalar_like, all_scalar_types):
+    # SIM101 suggests merging the tuples, but that would create a new tuple,
+    # so doesn't seem ideal perf-wise?
+    if isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES) or isinstance(  # noqa: SIM101
+        scalar_like, (datetime, timedelta)
+    ):
         return scalar_like
 
     msg = (

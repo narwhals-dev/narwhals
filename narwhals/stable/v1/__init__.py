@@ -51,7 +51,7 @@ from narwhals.stable.v1.dtypes import Unknown
 from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace as nw_get_native_namespace
 from narwhals.translate import to_native
-from narwhals.translate import to_py_scalar as nw_to_py_scalar
+from narwhals.translate import to_py_scalar
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.typing import IntoSeriesT
@@ -954,28 +954,6 @@ def narwhalify(
     else:
         # If func is not None, it means the decorator is used without arguments
         return decorator(func)
-
-
-def to_py_scalar(scalar: Any) -> Any:
-    """If a scalar is not Python native, converts it to Python native.
-
-    Raises:
-        ValueError: If the object is not convertible to a scalar.
-
-    Examples:
-        >>> import narwhals.stable.v1 as nw
-        >>> import pandas as pd
-        >>> df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}))
-        >>> nw.to_py_scalar(df["a"].item(0))
-        1
-        >>> import pyarrow as pa
-        >>> df = nw.from_native(pa.table({"a": [1, 2, 3]}))
-        >>> nw.to_py_scalar(df["a"].item(0))
-        1
-        >>> nw.to_py_scalar(1)
-        1
-    """
-    return _stableify(nw_to_py_scalar(scalar))
 
 
 def all() -> Expr:
