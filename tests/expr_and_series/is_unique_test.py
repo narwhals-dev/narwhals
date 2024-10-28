@@ -1,8 +1,9 @@
-from typing import Any
+from __future__ import annotations
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1, 1, 2],
@@ -19,13 +20,13 @@ def test_is_unique_expr(constructor: Constructor) -> None:
         "b": [True, True, True],
         "index": [0, 1, 2],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
-def test_is_unique_series(constructor_eager: Any) -> None:
+def test_is_unique_series(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_unique()
     expected = {
         "a": [False, False, True],
     }
-    compare_dicts({"a": result}, expected)
+    assert_equal_data({"a": result}, expected)

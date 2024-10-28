@@ -14,7 +14,7 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import validate_column_comparand
 from narwhals.utils import Implementation
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowSeries:
@@ -34,11 +35,13 @@ class ArrowSeries:
         *,
         name: str,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._name = name
         self._native_series = native_series
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def _from_native_series(self, series: Any) -> Self:
         import pyarrow as pa  # ignore-banned-import()
@@ -49,6 +52,7 @@ class ArrowSeries:
             series,
             name=self._name,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @classmethod
@@ -58,6 +62,7 @@ class ArrowSeries:
         name: str,
         *,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         import pyarrow as pa  # ignore-banned-import()
 
@@ -65,12 +70,13 @@ class ArrowSeries:
             pa.chunked_array([data]),
             name=name,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version)
+        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __len__(self) -> int:
         return len(self._native_series)
@@ -361,11 +367,12 @@ class ArrowSeries:
             self._native_series,
             name=name,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     @property
     def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.type)
+        return native_to_narwhals_dtype(self._native_series.type, self._dtypes)
 
     def abs(self) -> Self:
         import pyarrow.compute as pc  # ignore-banned-import()
@@ -438,7 +445,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         ser = self._native_series
-        dtype = narwhals_to_native_dtype(dtype)
+        dtype = narwhals_to_native_dtype(dtype, self._dtypes)
         return self._from_native_series(pc.cast(ser, dtype))
 
     def null_count(self: Self) -> int:
@@ -474,7 +481,10 @@ class ArrowSeries:
         ser = self._native_series
         res = np.flatnonzero(ser)
         return self._from_iterable(
-            res, name=self.name, backend_version=self._backend_version
+            res,
+            name=self.name,
+            backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def item(self: Self, index: int | None = None) -> Any:
@@ -520,8 +530,7 @@ class ArrowSeries:
             val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
-            val_count,
-            backend_version=self._backend_version,
+            val_count, backend_version=self._backend_version, dtypes=self._dtypes
         )
 
     def zip_with(self: Self, mask: Self, other: Self) -> Self:
@@ -574,7 +583,9 @@ class ArrowSeries:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         df = pa.Table.from_arrays([self._native_series], names=[self.name])
-        return ArrowDataFrame(df, backend_version=self._backend_version)
+        return ArrowDataFrame(
+            df, backend_version=self._backend_version, dtypes=self._dtypes
+        )
 
     def to_pandas(self: Self) -> Any:
         import pandas as pd  # ignore-banned-import()
@@ -593,7 +604,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         row_number = pa.array(np.arange(len(self)))
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         first_distinct_index = (
             pa.Table.from_arrays([self._native_series], names=[self.name])
             .append_column(col_token, row_number)
@@ -610,7 +621,7 @@ class ArrowSeries:
         import pyarrow.compute as pc  # ignore-banned-import()
 
         row_number = pa.array(np.arange(len(self)))
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         last_distinct_index = (
             pa.Table.from_arrays([self._native_series], names=[self.name])
             .append_column(col_token, row_number)
@@ -670,6 +681,7 @@ class ArrowSeries:
         return ArrowDataFrame(
             pa.Table.from_arrays(columns, names=names),
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         ).select(*sorted(names)[int(drop_first) :])
 
     def quantile(
@@ -703,7 +715,7 @@ class ArrowSeries:
 
     def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
-        col_token = generate_unique_token(n_bytes=8, columns=[self.name])
+        col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         return self.value_counts(name=col_token, normalize=False).filter(
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
@@ -743,11 +755,89 @@ class ArrowSeriesDateTimeNamespace:
             pc.strftime(self._arrow_series._native_series, format)
         )
 
+    def replace_time_zone(self: Self, time_zone: str | None) -> ArrowSeries:
+        import pyarrow.compute as pc  # ignore-banned-import()
+
+        if time_zone is not None:
+            result = pc.assume_timezone(
+                pc.local_timestamp(self._arrow_series._native_series), time_zone
+            )
+        else:
+            result = pc.local_timestamp(self._arrow_series._native_series)
+        return self._arrow_series._from_native_series(result)
+
+    def convert_time_zone(self: Self, time_zone: str) -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+
+        if self._arrow_series.dtype.time_zone is None:  # type: ignore[attr-defined]
+            result = self.replace_time_zone("UTC")._native_series.cast(
+                pa.timestamp(self._arrow_series._native_series.type.unit, time_zone)
+            )
+        else:
+            result = self._arrow_series._native_series.cast(
+                pa.timestamp(self._arrow_series._native_series.type.unit, time_zone)
+            )
+
+        return self._arrow_series._from_native_series(result)
+
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowSeries:
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
+
+        s = self._arrow_series._native_series
+        dtype = self._arrow_series.dtype
+        if dtype == self._arrow_series._dtypes.Datetime:
+            unit = dtype.time_unit  # type: ignore[attr-defined]
+            s_cast = s.cast(pa.int64())
+            if unit == "ns":
+                if time_unit == "ns":
+                    result = s_cast
+                elif time_unit == "us":
+                    result = floordiv_compat(s_cast, 1_000)
+                else:
+                    result = floordiv_compat(s_cast, 1_000_000)
+            elif unit == "us":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000)
+                elif time_unit == "us":
+                    result = s_cast
+                else:
+                    result = floordiv_compat(s_cast, 1_000)
+            elif unit == "ms":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000)
+                elif time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000)
+                else:
+                    result = s_cast
+            elif unit == "s":
+                if time_unit == "ns":
+                    result = pc.multiply(s_cast, 1_000_000_000)
+                elif time_unit == "us":
+                    result = pc.multiply(s_cast, 1_000_000)
+                else:
+                    result = pc.multiply(s_cast, 1_000)
+            else:  # pragma: no cover
+                msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
+                raise AssertionError(msg)
+        elif dtype == self._arrow_series._dtypes.Date:
+            time_s = pc.multiply(s.cast(pa.int32()), 86400)
+            if time_unit == "ns":
+                result = pc.multiply(time_s, 1_000_000_000)
+            elif time_unit == "us":
+                result = pc.multiply(time_s, 1_000_000)
+            else:
+                result = pc.multiply(time_s, 1_000)
+        else:
+            msg = "Input should be either of Date or Datetime type"
+            raise TypeError(msg)
+        return self._arrow_series._from_native_series(result)
+
     def date(self: Self) -> ArrowSeries:
         import pyarrow as pa  # ignore-banned-import()
 
         return self._arrow_series._from_native_series(
-            self._arrow_series._native_series.cast(pa.date64())
+            self._arrow_series._native_series.cast(pa.date32())
         )
 
     def year(self: Self) -> ArrowSeries:
@@ -1021,8 +1111,12 @@ class ArrowSeriesStringNamespace:
             ),
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> ArrowSeries:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> ArrowSeries:  # noqa: A002
         import pyarrow.compute as pc  # ignore-banned-import()
+
+        if format is None:
+            msg = "`format` is required for pyarrow backend."
+            raise ValueError(msg)
 
         return self._arrow_series._from_native_series(
             pc.strptime(self._arrow_series._native_series, format=format, unit="us")

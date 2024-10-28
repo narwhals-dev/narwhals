@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_double(constructor: Constructor) -> None:
@@ -8,7 +10,7 @@ def test_double(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.all() * 2)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_double_alias(constructor: Constructor) -> None:
@@ -21,4 +23,4 @@ def test_double_alias(constructor: Constructor) -> None:
         "b": [8, 8, 12],
         "z": [14.0, 16.0, 18.0],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

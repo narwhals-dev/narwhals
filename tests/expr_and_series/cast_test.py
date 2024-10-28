@@ -1,10 +1,18 @@
+from __future__ import annotations
+
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
+
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
+from tests.utils import assert_equal_data
+from tests.utils import is_windows
 
 data = {
     "a": [1],
@@ -45,10 +53,13 @@ schema = {
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and parse_version(
-        pa.__version__
-    ) <= (15,):  # pragma: no cover
+def test_cast(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
+        15,
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
@@ -95,10 +106,13 @@ def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     assert dict(result.collect_schema()) == expected
 
 
-def test_cast_series(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and parse_version(
-        pa.__version__
-    ) <= (15,):  # pragma: no cover
+def test_cast_series(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
+        15,
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
@@ -149,10 +163,7 @@ def test_cast_series(constructor: Constructor, request: pytest.FixtureRequest) -
     assert result.schema == expected
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"),
-    reason="too old for convert_dtypes",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for convert_dtypes")
 def test_cast_string() -> None:
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
@@ -162,11 +173,12 @@ def test_cast_string() -> None:
 
 
 def test_cast_raises_for_unknown_dtype(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and parse_version(
-        pa.__version__
-    ) <= (15,):  # pragma: no cover
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
+        15,
+    ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -180,3 +192,33 @@ def test_cast_raises_for_unknown_dtype(
 
     with pytest.raises(AssertionError, match=r"Unknown dtype"):
         df.select(nw.col("a").cast(Banana))
+
+
+def test_cast_datetime_tz_aware(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if (
+        "dask" in str(constructor)
+        or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
+        or ("pyarrow_table" in str(constructor) and is_windows())
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {
+        "date": [
+            datetime(2024, 1, 1, tzinfo=timezone.utc) + timedelta(days=i)
+            for i in range(3)
+        ]
+    }
+    expected = {
+        "date": ["2024-01-01 01:00:00", "2024-01-02 01:00:00", "2024-01-03 01:00:00"]
+    }
+
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("date")
+        .cast(nw.Datetime("ms", time_zone="Europe/Rome"))
+        .cast(nw.String())
+        .str.slice(offset=0, length=19)
+    )
+    assert_equal_data(result, expected)

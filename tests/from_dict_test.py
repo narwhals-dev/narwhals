@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_from_dict(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -12,7 +15,7 @@ def test_from_dict(constructor: Constructor, request: pytest.FixtureRequest) -> 
     native_namespace = nw.get_native_namespace(df)
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, native_namespace=native_namespace)
     expected = {"c": [1, 2], "d": [5, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
     assert isinstance(result, nw.DataFrame)
 
 
@@ -21,10 +24,10 @@ def test_from_dict_schema(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    schema = {"c": nw.Int16(), "d": nw.Float32()}
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    native_namespace = nw.get_native_namespace(df)
-    result = nw.from_dict(
+    schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
+    df = nw_v1.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    native_namespace = nw_v1.get_native_namespace(df)
+    result = nw_v1.from_dict(
         {"c": [1, 2], "d": [5, 6]},
         native_namespace=native_namespace,
         schema=schema,  # type: ignore[arg-type]
@@ -35,7 +38,7 @@ def test_from_dict_schema(
 def test_from_dict_without_namespace(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": df["a"], "d": df["b"]})
-    compare_dicts(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
+    assert_equal_data(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
 
 def test_from_dict_without_namespace_invalid(
@@ -52,7 +55,18 @@ def test_from_dict_one_native_one_narwhals(
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     result = nw.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})
     expected = {"c": [1, 2, 3], "d": [4, 5, 6]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
+
+
+def test_from_dict_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    native_namespace = nw.get_native_namespace(df)
+    result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, native_namespace=native_namespace)
+    expected = {"c": [1, 2], "d": [5, 6]}
+    assert_equal_data(result, expected)
+    assert isinstance(result, nw.DataFrame)
 
 
 def test_from_dict_empty() -> None:

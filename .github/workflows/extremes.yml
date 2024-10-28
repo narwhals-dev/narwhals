@@ -59,8 +59,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
 
   not_so_old_versions:
     strategy:
@@ -88,13 +86,11 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow
-      - name: Run doctests
-        run: pytest narwhals --doctest-modules
 
   nightlies:
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         os: [ubuntu-latest]
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ matrix.os }}
@@ -119,6 +115,8 @@ jobs:
           kaggle kernels output "marcogorelli/variable-brink-glacier"
       - name: install-polars
         run: python -m pip install *.whl
+      - name: install-pandas-nightly
+        run: pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
       - name: install-reqs
         run: uv pip install --upgrade tox virtualenv setuptools pip -r requirements-dev.txt --system
       - name: uninstall pyarrow
@@ -127,8 +125,8 @@ jobs:
       #   run: uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow --system
       - name: uninstall pandas
         run: uv pip uninstall pandas --system
-      - name: install-pandas-nightly
-        run: uv pip install --prerelease=allow --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas --system
+      - name: show-deps
+        run: uv pip freeze
       - name: uninstall numpy
         run: uv pip uninstall numpy --system
       - name: install numpy nightly

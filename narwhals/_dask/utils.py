@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
@@ -83,9 +84,7 @@ def validate_comparand(lhs: dask_expr.Series, rhs: dask_expr.Series) -> None:
         raise RuntimeError(msg)
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType]) -> Any:
-    from narwhals import dtypes
-
+def narwhals_to_native_dtype(dtype: DType | type[DType], dtypes: DTypes) -> Any:
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):
@@ -134,3 +133,11 @@ def narwhals_to_native_dtype(dtype: DType | type[DType]) -> Any:
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def name_preserving_sum(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
+    return (s1 + s2).rename(s1.name)
+
+
+def name_preserving_div(s1: dask_expr.Series, s2: dask_expr.Series) -> dask_expr.Series:
+    return (s1 / s2).rename(s1.name)

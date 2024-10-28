@@ -7,6 +7,7 @@ from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import NoReturn
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
@@ -32,10 +33,12 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
+    from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
 
 FrameT = TypeVar("FrameT", bound="IntoFrame")
+DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 
 
 class BaseFrame(Generic[FrameT]):
@@ -168,9 +171,12 @@ class BaseFrame(Generic[FrameT]):
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         return self._from_compliant_dataframe(
-            self._compliant_frame.sort(by, *more_by, descending=descending)
+            self._compliant_frame.sort(
+                by, *more_by, descending=descending, nulls_last=nulls_last
+            )
         )
 
     def join(
@@ -302,7 +308,7 @@ class BaseFrame(Generic[FrameT]):
         )
 
 
-class DataFrame(BaseFrame[FrameT]):
+class DataFrame(BaseFrame[DataFrameT]):
     """
     Narwhals DataFrame, backed by a native dataframe.
 
@@ -424,7 +430,7 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return self._lazyframe(self._compliant_frame.lazy(), level=self._level)
 
-    def to_native(self) -> FrameT:
+    def to_native(self) -> DataFrameT:
         """
         Convert Narwhals DataFrame to native one.
 
@@ -540,12 +546,12 @@ class DataFrame(BaseFrame[FrameT]):
 
             We can pass any supported library such as pandas, Polars or PyArrow to `func`:
 
-            >>> func(df_pd)  # doctest: +SKIP
+            >>> func(df_pd)
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> func(df_pl)  # doctest: +SKIP
+            >>> func(df_pl)
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> func(df_pa)  # doctest: +SKIP
-            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
+            >>> func(df_pa)
+            '"foo","bar","ham"\n1,6,"a"\n2,7,"b"\n3,8,"c"\n'
 
             If we had passed a file name to `write_csv`, it would have been
             written to that file.
@@ -557,14 +563,16 @@ class DataFrame(BaseFrame[FrameT]):
         Write dataframe to parquet file.
 
         Examples:
-            Construct pandas and Polars DataFrames:
+            Construct pandas, Polars and PyArrow DataFrames:
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -572,10 +580,11 @@ class DataFrame(BaseFrame[FrameT]):
             ...     df = nw.from_native(df)
             ...     df.write_parquet("foo.parquet")
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)  # doctest:+SKIP
             >>> func(df_pl)  # doctest:+SKIP
+            >>> func(df_pa)  # doctest:+SKIP
         """
         self._compliant_frame.write_parquet(file)
 
@@ -588,10 +597,12 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3], "bar": [6.5, 7.0, 8.5], "ham": ["a", "b", "c"]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -599,13 +610,17 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_numpy()
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
             >>> func(df_pl)
+            array([[1, 6.5, 'a'],
+                   [2, 7.0, 'b'],
+                   [3, 8.5, 'c']], dtype=object)
+            >>> func(df_pa)
             array([[1, 6.5, 'a'],
                    [2, 7.0, 'b'],
                    [3, 8.5, 'c']], dtype=object)
@@ -622,10 +637,12 @@ class DataFrame(BaseFrame[FrameT]):
 
             >>> import pandas as pd
             >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df = {"foo": [1, 2, 3, 4, 5]}
             >>> df_pd = pd.DataFrame(df)
             >>> df_pl = pl.DataFrame(df)
+            >>> df_pa = pa.table(df)
 
             We define a library agnostic function:
 
@@ -633,11 +650,13 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.shape
 
-            We can then pass either pandas or Polars to `func`:
+            We can then pass either pandas, Polars or PyArrow to `func`:
 
             >>> func(df_pd)
             (5, 1)
             >>> func(df_pl)
+            (5, 1)
+            >>> func(df_pa)
             (5, 1)
         """
         return self._compliant_frame.shape  # type: ignore[no-any-return]
@@ -723,14 +742,16 @@ class DataFrame(BaseFrame[FrameT]):
 
     def __getitem__(
         self,
-        item: str
-        | slice
-        | Sequence[int]
-        | Sequence[str]
-        | tuple[Sequence[int], str | int]
-        | tuple[slice, str | int]
-        | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
-        | tuple[slice, slice],
+        item: (
+            str
+            | slice
+            | Sequence[int]
+            | Sequence[str]
+            | tuple[Sequence[int], str | int]
+            | tuple[slice, str | int]
+            | tuple[slice | Sequence[int], Sequence[int] | Sequence[str] | slice]
+            | tuple[slice, slice]
+        ),
     ) -> Series | Self:
         """
         Extract column or slice of DataFrame.
@@ -828,8 +849,6 @@ class DataFrame(BaseFrame[FrameT]):
         ):
             if item[1] == slice(None) and item[0] == slice(None):
                 return self
-            if item[1] == slice(None):
-                return self._from_compliant_dataframe(self._compliant_frame[item[0]])
             return self._from_compliant_dataframe(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
             return self._series(
@@ -1099,12 +1118,12 @@ class DataFrame(BaseFrame[FrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pd_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pl_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().schema
 
@@ -1133,12 +1152,12 @@ class DataFrame(BaseFrame[FrameT]):
             You can pass either pandas or Polars to `func`:
 
             >>> df_pd_schema = func(df_pd)
-            >>> df_pd_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pd_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
 
             >>> df_pl_schema = func(df_pl)
-            >>> df_pl_schema  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> df_pl_schema
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().collect_schema()
 
@@ -1178,16 +1197,14 @@ class DataFrame(BaseFrame[FrameT]):
     def rows(
         self,
         *,
-        named: Literal[False],
+        named: Literal[False] = False,
     ) -> list[tuple[Any, ...]]: ...
-
     @overload
     def rows(
         self,
         *,
         named: Literal[True],
     ) -> list[dict[str, Any]]: ...
-
     @overload
     def rows(
         self,
@@ -1850,12 +1867,16 @@ class DataFrame(BaseFrame[FrameT]):
         """
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> GroupBy[Self]:
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+    ) -> GroupBy[Self]:
         r"""
         Start a group by operation.
 
         Arguments:
             *keys: Column(s) to group by. Accepts multiple columns names as a list.
+            drop_null_keys: if True, then groups where any key is null won't be included
+                in the result.
 
         Returns:
             GroupBy: Object which can be used to perform aggregations.
@@ -1924,26 +1945,29 @@ class DataFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import GroupBy
 
-        return GroupBy(self, *flatten(keys))
+        return GroupBy(self, *flatten(keys), drop_null_keys=drop_null_keys)
 
     def sort(
         self,
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         r"""
         Sort the dataframe by the given columns.
 
         Arguments:
             by: Column(s) names to sort by.
+            *more_by: Additional columns to sort by, specified as positional arguments.
+            descending: Sort in descending order. When sorting by multiple columns, can be
+                specified per column by passing a sequence of booleans.
+            nulls_last: Place null values last.
 
-            *more_by: Additional columns to sort by, specified as positional
-                       arguments.
-
-            descending: Sort in descending order. When sorting by multiple
-                         columns, can be specified per column by passing a
-                         sequence of booleans.
+        Warning:
+            Unlike Polars, it is not possible to specify a sequence of booleans for
+            `nulls_last` in order to control per-column behaviour. Instead a single
+            boolean is applied for all `by` columns.
 
         Examples:
             >>> import narwhals as nw
@@ -1983,7 +2007,7 @@ class DataFrame(BaseFrame[FrameT]):
             │ 2    ┆ 5.0 ┆ c   │
             └──────┴─────┴─────┘
         """
-        return super().sort(by, *more_by, descending=descending)
+        return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
     def join(
         self,
@@ -2458,8 +2482,8 @@ class DataFrame(BaseFrame[FrameT]):
 
             We can then pass either pandas or Polars to `func`:
 
-            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")  # doctest:+SKIP
-            (5, 6)
+            >>> func(df_pd, 1, 1), func(df_pd, 2, "b")
+            (np.int64(5), np.int64(6))
 
             >>> func(df_pl, 1, 1), func(df_pl, 2, "b")
             (5, 6)
@@ -2561,7 +2585,7 @@ class DataFrame(BaseFrame[FrameT]):
             ... def func(df):
             ...     return df.to_arrow()
 
-            >>> func(df_pd)  # doctest:+SKIP
+            >>> func(df_pd)
             pyarrow.Table
             foo: int64
             bar: string
@@ -2768,7 +2792,7 @@ class LazyFrame(BaseFrame[FrameT]):
             + "┘"
         )
 
-    def __getitem__(self, item: str | slice) -> Series | Self:
+    def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
         raise TypeError(msg)
 
@@ -2990,7 +3014,7 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.schema  # doctest:+SKIP
+            >>> lf.schema  # doctest: +SKIP
             Schema({'foo': Int64, 'bar': Float64, 'ham', String})
         """
         return super().schema
@@ -3010,8 +3034,8 @@ class LazyFrame(BaseFrame[FrameT]):
             ...     }
             ... )
             >>> lf = nw.from_native(lf_pl)
-            >>> lf.collect_schema()  # doctest:+SKIP
-            Schema({'foo': Int64, 'bar': Float64, 'ham', String})
+            >>> lf.collect_schema()
+            Schema({'foo': Int64, 'bar': Float64, 'ham': String})
         """
         return super().collect_schema()
 
@@ -3301,11 +3325,6 @@ class LazyFrame(BaseFrame[FrameT]):
             mapping: Key value pairs that map from old name to new name, or a
                       function that takes the old name as input and returns the
                       new name.
-
-        Notes:
-            If existing names are swapped (e.g. 'A' points to 'B' and 'B'
-             points to 'A'), polars will block projection and predicate
-             pushdowns at this node.
 
         Examples:
             >>> import pandas as pd
@@ -3738,7 +3757,9 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().filter(*predicates)
 
-    def group_by(self, *keys: str | Iterable[str]) -> LazyGroupBy[Self]:
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+    ) -> LazyGroupBy[Self]:
         r"""
         Start a group by operation.
 
@@ -3746,6 +3767,8 @@ class LazyFrame(BaseFrame[FrameT]):
             *keys:
                 Column(s) to group by. Accepts expression input. Strings are
                 parsed as column names.
+            drop_null_keys: if True, then groups where any key is null won't be
+                included in the result.
 
         Examples:
             Group by one column and call `agg` to compute the grouped sum of
@@ -3838,27 +3861,30 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import LazyGroupBy
 
-        return LazyGroupBy(self, *flatten(keys))
+        return LazyGroupBy(self, *flatten(keys), drop_null_keys=drop_null_keys)
 
     def sort(
         self,
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
     ) -> Self:
         r"""
         Sort the LazyFrame by the given columns.
 
         Arguments:
-            by: Column(s) to sort by. Accepts expression input. Strings are
-                 parsed as column names.
+            by: Column(s) names to sort by.
+            *more_by: Additional columns to sort by, specified as positional arguments.
+            descending: Sort in descending order. When sorting by multiple columns, can be
+                specified per column by passing a sequence of booleans.
+            nulls_last: Place null values last; can specify a single boolean applying to
+                all columns or a sequence of booleans for per-column control.
 
-            *more_by: Additional columns to sort by, specified as positional
-                       arguments.
-
-            descending: Sort in descending order. When sorting by multiple
-                         columns, can be specified per column by passing a
-                         sequence of booleans.
+        Warning:
+            Unlike Polars, it is not possible to specify a sequence of booleans for
+            `nulls_last` in order to control per-column behaviour. Instead a single
+            boolean is applied for all `by` columns.
 
         Examples:
             >>> import narwhals as nw
@@ -3898,7 +3924,7 @@ class LazyFrame(BaseFrame[FrameT]):
             │ 2    ┆ 5.0 ┆ c   │
             └──────┴─────┴─────┘
         """
-        return super().sort(by, *more_by, descending=descending)
+        return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
     def join(
         self,

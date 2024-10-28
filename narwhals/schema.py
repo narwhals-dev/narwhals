@@ -35,7 +35,7 @@ class Schema(BaseSchema):
 
         >>> import narwhals as nw
         >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
-        >>> schema  # doctest:+SKIP
+        >>> schema
         Schema({'foo': Int8, 'bar': String})
 
         Access the data type associated with a specific column name.

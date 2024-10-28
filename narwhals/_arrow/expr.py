@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import DTypes
 
 
 class ArrowExpr:
@@ -29,6 +30,7 @@ class ArrowExpr:
         root_names: list[str] | None,
         output_names: list[str] | None,
         backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -38,6 +40,7 @@ class ArrowExpr:
         self._output_names = output_names
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
+        self._dtypes = dtypes
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -50,7 +53,10 @@ class ArrowExpr:
 
     @classmethod
     def from_column_names(
-        cls: type[Self], *column_names: str, backend_version: tuple[int, ...]
+        cls: type[Self],
+        *column_names: str,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
@@ -60,6 +66,7 @@ class ArrowExpr:
                     df._native_frame[column_name],
                     name=column_name,
                     backend_version=df._backend_version,
+                    dtypes=df._dtypes,
                 )
                 for column_name in column_names
             ]
@@ -71,11 +78,15 @@ class ArrowExpr:
             root_names=list(column_names),
             output_names=list(column_names),
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     @classmethod
     def from_column_indices(
-        cls: type[Self], *column_indices: int, backend_version: tuple[int, ...]
+        cls: type[Self],
+        *column_indices: int,
+        backend_version: tuple[int, ...],
+        dtypes: DTypes,
     ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
@@ -85,6 +96,7 @@ class ArrowExpr:
                     df._native_frame[column_index],
                     name=df._native_frame.column_names[column_index],
                     backend_version=df._backend_version,
+                    dtypes=df._dtypes,
                 )
                 for column_index in column_indices
             ]
@@ -96,12 +108,13 @@ class ArrowExpr:
             root_names=None,
             output_names=None,
             backend_version=backend_version,
+            dtypes=dtypes,
         )
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(backend_version=self._backend_version)
+        return ArrowNamespace(backend_version=self._backend_version, dtypes=self._dtypes)
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -246,6 +259,7 @@ class ArrowExpr:
             root_names=self._root_names,
             output_names=[name],
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def null_count(self) -> Self:
@@ -339,7 +353,7 @@ class ArrowExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
-            tmp = df.group_by(*keys).agg(self)
+            tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
             tmp = df.select(*keys).join(
                 tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
             )
@@ -352,6 +366,7 @@ class ArrowExpr:
             root_names=self._root_names,
             output_names=self._output_names,
             backend_version=self._backend_version,
+            dtypes=self._dtypes,
         )
 
     def mode(self: Self) -> Self:
@@ -393,6 +408,21 @@ class ArrowExprDateTimeNamespace:
     def to_string(self: Self, format: str) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr, "dt", "to_string", format
+        )
+
+    def replace_time_zone(self: Self, time_zone: str | None) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "replace_time_zone", time_zone
+        )
+
+    def convert_time_zone(self: Self, time_zone: str) -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "convert_time_zone", time_zone
+        )
+
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "timestamp", time_unit
         )
 
     def date(self: Self) -> ArrowExpr:
@@ -525,7 +555,7 @@ class ArrowExprStringNamespace:
             self._expr, "str", "slice", offset, length
         )
 
-    def to_datetime(self, format: str | None = None) -> ArrowExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> ArrowExpr:  # noqa: A002
         return reuse_series_namespace_implementation(
             self._expr,
             "str",
@@ -573,6 +603,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=root_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
@@ -598,6 +629,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def prefix(self: Self, prefix: str) -> ArrowExpr:
@@ -621,6 +653,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def suffix(self: Self, suffix: str) -> ArrowExpr:
@@ -645,6 +678,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
@@ -669,6 +703,7 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
@@ -693,4 +728,5 @@ class ArrowExprNameNamespace:
             root_names=root_names,
             output_names=output_names,
             backend_version=self._expr._backend_version,
+            dtypes=self._expr._dtypes,
         )
