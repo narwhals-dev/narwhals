@@ -54,8 +54,6 @@ class PandasLikeDataFrame:
         self._backend_version = backend_version
         self._dtypes = dtypes
 
-        self._schema_cache: dict[str, DType] | None = None
-
     def __narwhals_dataframe__(self) -> Self:
         return self
 
@@ -305,14 +303,12 @@ class PandasLikeDataFrame:
 
     @property
     def schema(self) -> dict[str, DType]:
-        if self._schema_cache is None:
-            self._schema_cache = {
-                col: native_to_narwhals_dtype(
-                    self._native_frame[col], self._dtypes, self._implementation
-                )
-                for col in self._native_frame.columns
-            }
-        return self._schema_cache
+        return {
+            col: native_to_narwhals_dtype(
+                self._native_frame[col], self._dtypes, self._implementation
+            )
+            for col in self._native_frame.columns
+        }
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
