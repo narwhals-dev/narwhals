@@ -65,7 +65,8 @@ also pass Ibis, DuckDB, Vaex, and any library which implements the protocol.
 #### Interchange-only support
 
 While libraries for which we have full support can benefit from the whole Narwhals API,
-libraries which have interchange support can only access the following methods:
+libraries which have interchange only support can access the following methods after 
+converting to Narwhals DataFrame:
 
 - `.schema`, hence column names via `.schema.names()` and column types via `.schema.dtypes()`
 - `.to_pandas()` and `.to_arrow()`, for converting to Pandas and Arrow, respectively.
