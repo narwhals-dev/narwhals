@@ -6,7 +6,7 @@ Extremely lightweight and extensible compatibility layer between dataframe libra
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
 - **Lazy-only support**: Dask
-- **Interchange-level support**: Ibis, Vaex, anything else which implements the DataFrame Interchange Protocol
+- **Interchange-level support**: Ibis, DuckDB, Vaex, anything else which implements the DataFrame Interchange Protocol
 
 Seamlessly support all, without depending on any!
 
