@@ -168,6 +168,9 @@ def test_pandas_inplace_modification_1267(request: pytest.FixtureRequest) -> Non
     if PANDAS_VERSION >= (3,):
         # pandas 3.0+ won't allow this kind of inplace modification
         request.applymarker(pytest.mark.xfail)
+    if PANDAS_VERSION < (1, 4):
+        # pandas pre 1.4 wouldn't change the type?
+        request.applymarker(pytest.mark.xfail)
     s = pd.Series([1, 2, 3])
     snw = nw.from_native(s, series_only=True)
     assert snw.dtype == nw.Int64
