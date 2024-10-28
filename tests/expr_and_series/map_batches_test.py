@@ -9,7 +9,6 @@ from tests.utils import assert_equal_data
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 
-input_list = {"a": [2, 4, 6, 8]}
 expected = [2, 3, 4]
 
 
