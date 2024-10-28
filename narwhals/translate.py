@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numbers
 from datetime import datetime
 from datetime import timedelta
 from functools import wraps
@@ -50,7 +49,9 @@ NON_TEMPORAL_SCALAR_TYPES = (
     bool,
     bytes,
     str,
-    numbers.Number,
+    int,
+    float,
+    complex,
 )
 
 
