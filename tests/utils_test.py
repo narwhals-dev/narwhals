@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import string
+
+import hypothesis.strategies as st
 import pandas as pd
 import polars as pl
 import pytest
+from hypothesis import given
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
@@ -147,3 +151,29 @@ def test_maybe_convert_dtypes_polars() -> None:
 def test_get_trivial_version_with_uninstalled_module() -> None:
     result = get_module_version_as_tuple("non_existent_module")
     assert result == (0, 0, 0)
+
+
+@given(n_bytes=st.integers(1, 100))  # type: ignore[misc]
+def test_generate_temporary_column_name(n_bytes: int) -> None:
+    columns = ["abc", "XYZ"]
+
+    temp_col_name = nw.generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
+    assert temp_col_name not in columns
+
+
+def test_generate_temporary_column_name_raise() -> None:
+    from itertools import product
+
+    columns = [
+        "".join(t)
+        for t in product(
+            string.ascii_lowercase + string.digits,
+            string.ascii_lowercase + string.digits,
+        )
+    ]
+
+    with pytest.raises(
+        AssertionError,
+        match="Internal Error: Narwhals was not able to generate a column name with ",
+    ):
+        nw.generate_temporary_column_name(n_bytes=1, columns=columns)

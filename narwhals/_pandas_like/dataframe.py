@@ -19,7 +19,7 @@ from narwhals._pandas_like.utils import validate_dataframe_comparand
 from narwhals.dependencies import is_numpy_array
 from narwhals.utils import Implementation
 from narwhals.utils import flatten
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 
@@ -506,7 +506,7 @@ class PandasLikeDataFrame:
                 self._implementation is Implementation.PANDAS
                 and self._backend_version < (1, 4)
             ):
-                key_token = generate_unique_token(
+                key_token = generate_temporary_column_name(
                     n_bytes=8, columns=[*self.columns, *other.columns]
                 )
 
@@ -541,7 +541,7 @@ class PandasLikeDataFrame:
                     )
                 )
             else:
-                indicator_token = generate_unique_token(
+                indicator_token = generate_temporary_column_name(
                     n_bytes=8, columns=[*self.columns, *other.columns]
                 )
 

@@ -14,7 +14,7 @@ from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
-from narwhals.utils import generate_unique_token
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     import dask_expr
@@ -580,7 +580,7 @@ class DaskExpr:
     def is_first_distinct(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
-            col_token = generate_unique_token(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
@@ -597,7 +597,7 @@ class DaskExpr:
     def is_last_distinct(self: Self) -> Self:
         def func(_input: dask_expr.Series) -> dask_expr.Series:
             _name = _input.name
-            col_token = generate_unique_token(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
             _input = add_row_index(_input.to_frame(), col_token)
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
 
