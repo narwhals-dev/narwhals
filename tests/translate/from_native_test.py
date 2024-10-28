@@ -151,7 +151,9 @@ def test_pandas_like_validate() -> None:
     df2 = pd.DataFrame({"b": [1, 2, 3]})
     df = pd.concat([df1, df2, df2], axis=1)
 
-    with pytest.raises(ValueError, match="Expected unique column names"):
+    with pytest.raises(
+        ValueError, match=r"Expected unique column names, got:\n- 'b' 2 times"
+    ):
         nw.from_native(df)
 
 

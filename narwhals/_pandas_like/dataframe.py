@@ -89,7 +89,14 @@ class PandasLikeDataFrame:
             raise ValueError(msg) from None
 
         if len(columns) != len_unique_columns:
-            msg = f"Expected unique column names, got: {columns}"
+            from collections import Counter
+
+            counter = Counter(columns)
+            msg = ""
+            for key, value in counter.items():
+                if value > 1:
+                    msg += f"\n- '{key}' {value} times"
+            msg = f"Expected unique column names, got:{msg}"
             raise ValueError(msg)
 
     def _from_native_frame(self, df: Any) -> Self:
