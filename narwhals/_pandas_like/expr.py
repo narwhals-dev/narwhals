@@ -406,13 +406,13 @@ class PandasLikeExpr:
                     .alias(output_name)
                     for array, output_name in zip(result, output_names)
                 ]
-            if return_dtype:
+            if return_dtype is not None:
                 result = [series.cast(return_dtype) for series in result]
             return result
 
         return self.__class__(
             func,
-            depth=self._depth + 1,  # correct depth or self.depth?
+            depth=self._depth + 1,
             function_name=self._function_name + "->map_batches",
             root_names=self._root_names,
             output_names=self._output_names,

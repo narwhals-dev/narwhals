@@ -390,7 +390,7 @@ class ArrowExpr:
                     .alias(output_name)
                     for array, output_name in zip(result, output_names)
                 ]
-            if return_dtype:
+            if return_dtype is not None:
                 result = [series.cast(return_dtype) for series in result]
             return result
 

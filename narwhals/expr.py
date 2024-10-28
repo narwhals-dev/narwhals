@@ -499,8 +499,6 @@ class Expr:
         self,
         function: Callable[[Any], Self],
         return_dtype: DType | None = None,
-        *args: Any,
-        **kwargs: Any,
     ) -> Self:
         """
         Apply a custom python function to a whole Series or sequence of Series.

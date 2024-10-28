@@ -46,13 +46,11 @@ class PolarsExpr:
         self,
         function: Callable[[Any], Self],
         return_dtype: DType | None = None,
-        *args: Any,
-        **kwargs: Any,
     ) -> Self:
-        if return_dtype:
+        if return_dtype is not None:
             return_dtype = narwhals_to_native_dtype(return_dtype, self._dtypes)
             return self._from_native_expr(
-                self._native_expr.map_batches(function).cast(return_dtype)
+                self._native_expr.map_batches(function, return_dtype)
             )
         else:
             return self._from_native_expr(self._native_expr.map_batches(function))
