@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
 
 
 def test_drop_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -30,13 +29,13 @@ def test_drop_nulls(constructor: Constructor, request: pytest.FixtureRequest) ->
     expected_c = {"C": []}  # type: ignore[var-annotated]
     expected_d = {"D": [9, 10, 11, 12]}
 
-    compare_dicts(result_a, expected_a)
-    compare_dicts(result_b, expected_b)
-    compare_dicts(result_c, expected_c)
-    compare_dicts(result_d, expected_d)
+    assert_equal_data(result_a, expected_a)
+    assert_equal_data(result_b, expected_b)
+    assert_equal_data(result_c, expected_c)
+    assert_equal_data(result_d, expected_d)
 
 
-def test_drop_nulls_series(constructor_eager: Any) -> None:
+def test_drop_nulls_series(constructor_eager: ConstructorEager) -> None:
     data = {
         "A": [1, 2, None, 4],
         "B": [5, 6, 7, 8],
@@ -55,7 +54,7 @@ def test_drop_nulls_series(constructor_eager: Any) -> None:
     expected_c = {"C": []}  # type: ignore[var-annotated]
     expected_d = {"D": [9, 10, 11, 12]}
 
-    compare_dicts(result_a, expected_a)
-    compare_dicts(result_b, expected_b)
-    compare_dicts(result_c, expected_c)
-    compare_dicts(result_d, expected_d)
+    assert_equal_data(result_a, expected_a)
+    assert_equal_data(result_b, expected_b)
+    assert_equal_data(result_c, expected_c)
+    assert_equal_data(result_d, expected_d)

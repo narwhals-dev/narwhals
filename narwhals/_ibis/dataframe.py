@@ -51,7 +51,15 @@ def map_ibis_dtype_to_narwhals_dtype(ibis_dtype: Any, dtypes: DTypes) -> DType:
             map_ibis_dtype_to_narwhals_dtype(ibis_dtype.value_type, dtypes)
         )
     if ibis_dtype.is_struct():
-        return dtypes.Struct()
+        return dtypes.Struct(
+            [
+                dtypes.Field(
+                    ibis_dtype_name,
+                    map_ibis_dtype_to_narwhals_dtype(ibis_dtype_field, dtypes),
+                )
+                for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
+            ]
+        )
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -77,6 +85,24 @@ class IbisInterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.to_pyarrow()
 
+    def select(
+        self: Self,
+        *exprs: Any,
+        **named_exprs: Any,
+    ) -> Self:
+        if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
+            msg = (
+                "`select`-ing not by name is not supported for Ibis backend.\n\n"
+                "If you would like to see this kind of object better supported in "
+                "Narwhals, please open a feature request "
+                "at https://github.com/narwhals-dev/narwhals/issues."
+            )
+            raise NotImplementedError(msg)
+
+        import ibis.selectors as s
+
+        return self._from_native_frame(self._native_frame.select(s.cols(*exprs)))
+
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
@@ -90,3 +116,6 @@ class IbisInterchangeFrame:
             "at https://github.com/narwhals-dev/narwhals/issues."
         )
         raise NotImplementedError(msg)
+
+    def _from_native_frame(self: Self, df: Any) -> Self:
+        return self.__class__(df, dtypes=self._dtypes)

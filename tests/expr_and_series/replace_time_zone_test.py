@@ -1,16 +1,20 @@
+from __future__ import annotations
+
 from datetime import datetime
 from datetime import timezone
-from typing import Any
+from typing import TYPE_CHECKING
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 from tests.utils import is_windows
+
+if TYPE_CHECKING:
+    from tests.utils import ConstructorEager
 
 
 def test_replace_time_zone(
@@ -18,8 +22,9 @@ def test_replace_time_zone(
 ) -> None:
     if (
         (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2,))
-        or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
+        or ("cudf" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -35,7 +40,7 @@ def test_replace_time_zone(
     assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T00:00+0545", "2020-01-02T00:00+0545"]}
-    compare_dicts(result_str, expected)
+    assert_equal_data(result_str, expected)
 
 
 def test_replace_time_zone_none(
@@ -43,8 +48,8 @@ def test_replace_time_zone_none(
 ) -> None:
     if (
         (any(x in str(constructor) for x in ("pyarrow", "modin")) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and parse_version(pd.__version__) < (2,))
-        or ("pyarrow_table" in str(constructor) and parse_version(pa.__version__) < (12,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -60,22 +65,17 @@ def test_replace_time_zone_none(
     assert result_dtype.time_zone is None  # type: ignore[attr-defined]
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M"))
     expected = {"a": ["2020-01-01T00:00", "2020-01-02T00:00"]}
-    compare_dicts(result_str, expected)
+    assert_equal_data(result_str, expected)
 
 
 def test_replace_time_zone_series(
-    constructor_eager: Any, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
-        or (
-            "pandas_pyarrow" in str(constructor_eager)
-            and parse_version(pd.__version__) < (2,)
-        )
-        or (
-            "pyarrow_table" in str(constructor_eager)
-            and parse_version(pa.__version__) < (12,)
-        )
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
+        or ("cudf" in str(constructor_eager))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -91,22 +91,16 @@ def test_replace_time_zone_series(
     assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T00:00+0545", "2020-01-02T00:00+0545"]}
-    compare_dicts(result_str, expected)
+    assert_equal_data(result_str, expected)
 
 
 def test_replace_time_zone_none_series(
-    constructor_eager: Any, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         (any(x in str(constructor_eager) for x in ("pyarrow", "modin")) and is_windows())
-        or (
-            "pandas_pyarrow" in str(constructor_eager)
-            and parse_version(pd.__version__) < (2,)
-        )
-        or (
-            "pyarrow_table" in str(constructor_eager)
-            and parse_version(pa.__version__) < (12,)
-        )
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
     ):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -122,4 +116,4 @@ def test_replace_time_zone_none_series(
     assert result_dtype.time_zone is None  # type: ignore[attr-defined]
     result_str = result.select(df["a"].dt.to_string("%Y-%m-%dT%H:%M"))
     expected = {"a": ["2020-01-01T00:00", "2020-01-02T00:00"]}
-    compare_dicts(result_str, expected)
+    assert_equal_data(result_str, expected)

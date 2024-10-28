@@ -32,9 +32,7 @@ PANDAS_LIKE_IMPLEMENTATION = {
 }
 
 
-def validate_column_comparand(
-    index: Any, other: Any, *, treat_length_one_as_scalar: bool = True
-) -> Any:
+def validate_column_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -55,9 +53,10 @@ def validate_column_comparand(
     if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
     if isinstance(other, PandasLikeSeries):
-        if other.len() == 1 and treat_length_one_as_scalar:
+        if other.len() == 1:
             # broadcast
-            return other.item()
+            s = other._native_series
+            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
         if other._native_series.index is not index:
             return set_axis(
                 other._native_series,
@@ -83,7 +82,8 @@ def validate_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeSeries):
         if other.len() == 1:
             # broadcast
-            return other._native_series.iloc[0]
+            s = other._native_series
+            return s.__class__(s.iloc[0], index=index, dtype=s.dtype)
         if other._native_series.index is not index:
             return set_axis(
                 other._native_series,
@@ -218,7 +218,9 @@ def set_axis(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
 
 
-def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
+def native_to_narwhals_dtype(
+    native_column: Any, dtypes: DTypes, implementation: Implementation
+) -> DType:
     dtype = str(native_column.dtype)
 
     pd_datetime_rgx = (
@@ -280,31 +282,23 @@ def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
         return dtypes.Duration(du_time_unit)
     if dtype == "date32[day][pyarrow]":
         return dtypes.Date()
-    if dtype.startswith(("large_list", "list")):
-        return dtypes.List(
-            arrow_native_to_narwhals_dtype(
-                native_column.dtype.pyarrow_dtype.value_type, dtypes
-            )
-        )
-    if dtype.startswith("fixed_size_list"):
-        return dtypes.Array(
-            arrow_native_to_narwhals_dtype(
-                native_column.dtype.pyarrow_dtype.value_type, dtypes
-            ),
-            native_column.dtype.pyarrow_dtype.list_size,
-        )
-    if dtype.startswith("struct"):
-        return dtypes.Struct()
+    if dtype.startswith(("large_list", "list", "struct", "fixed_size_list")):
+        return arrow_native_to_narwhals_dtype(native_column.dtype.pyarrow_dtype, dtypes)
     if dtype == "object":
-        if (  # pragma: no cover  TODO(unassigned): why does this show as uncovered?
-            idx := getattr(native_column, "first_valid_index", lambda: None)()
-        ) is not None and isinstance(native_column.loc[idx], str):
-            # Infer based on first non-missing value.
-            # For pandas pre 3.0, this isn't perfect.
-            # After pandas 3.0, pandas has a dedicated string dtype
-            # which is inferred by default.
+        if implementation is Implementation.DASK:
+            # Dask columns are lazy, so we can't inspect values.
+            # The most useful assumption is probably String
             return dtypes.String()
-        else:
+        if implementation is Implementation.PANDAS:  # pragma: no cover
+            # This is the most efficient implementation for pandas,
+            # and doesn't require the interchange protocol
+            import pandas as pd  # ignore-banned-import
+
+            dtype = pd.api.types.infer_dtype(native_column, skipna=True)
+            if dtype == "string":
+                return dtypes.String()
+            return dtypes.Object()
+        else:  # pragma: no cover
             df = native_column.to_frame()
             if hasattr(df, "__dataframe__"):
                 from narwhals._interchange.dataframe import (
@@ -315,10 +309,8 @@ def native_to_narwhals_dtype(native_column: Any, dtypes: DTypes) -> DType:
                     return map_interchange_dtype_to_narwhals_dtype(
                         df.__dataframe__().get_column(0).dtype, dtypes
                     )
-                except Exception:  # noqa: BLE001
-                    return dtypes.Object()
-            else:  # pragma: no cover
-                return dtypes.Object()
+                except Exception:  # noqa: BLE001, S110
+                    pass
     return dtypes.Unknown()
 
 
@@ -555,3 +547,51 @@ def convert_str_slice_to_int_slice(
     stop = columns.get_loc(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+def calculate_timestamp_datetime(
+    s: pd.Series, original_time_unit: str, time_unit: str
+) -> pd.Series:
+    if original_time_unit == "ns":
+        if time_unit == "ns":
+            result = s
+        elif time_unit == "us":
+            result = s // 1_000
+        else:
+            result = s // 1_000_000
+    elif original_time_unit == "us":
+        if time_unit == "ns":
+            result = s * 1_000
+        elif time_unit == "us":
+            result = s
+        else:
+            result = s // 1_000
+    elif original_time_unit == "ms":
+        if time_unit == "ns":
+            result = s * 1_000_000
+        elif time_unit == "us":
+            result = s * 1_000
+        else:
+            result = s
+    elif original_time_unit == "s":
+        if time_unit == "ns":
+            result = s * 1_000_000_000
+        elif time_unit == "us":
+            result = s * 1_000_000
+        else:
+            result = s * 1_000
+    else:  # pragma: no cover
+        msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
+        raise AssertionError(msg)
+    return result
+
+
+def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
+    s = s * 86_400  # number of seconds in a day
+    if time_unit == "ns":
+        result = s * 1_000_000_000
+    elif time_unit == "us":
+        result = s * 1_000_000
+    else:
+        result = s * 1_000
+    return result

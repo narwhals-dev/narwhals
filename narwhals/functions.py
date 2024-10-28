@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Protocol
 from typing import TypeVar
 from typing import Union
 
@@ -21,6 +22,7 @@ from narwhals.utils import validate_laziness
 # The rest of the annotations seem to work fine with this anyway
 FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
 
+
 if TYPE_CHECKING:
     from types import ModuleType
 
@@ -28,6 +30,11 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import DTypes
+
+    class ArrowStreamExportable(Protocol):
+        def __arrow_c_stream__(
+            self, requested_schema: object | None = None
+        ) -> object: ...
 
 
 def concat(
@@ -287,6 +294,7 @@ def from_dict(
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
+        >>> import pyarrow as pa
         >>> import narwhals as nw
         >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
@@ -298,7 +306,7 @@ def from_dict(
         ...     native_namespace = nw.get_native_namespace(df)
         ...     return nw.from_dict(new_data, native_namespace=native_namespace)
 
-        Let's see what happens when passing pandas / Polars input:
+        Let's see what happens when passing Pandas, Polars or PyArrow input:
 
         >>> func(pd.DataFrame(data))
            c  d
@@ -314,6 +322,13 @@ def from_dict(
         │ 5   ┆ 1   │
         │ 2   ┆ 4   │
         └─────┴─────┘
+        >>> func(pa.table(data))
+        pyarrow.Table
+        c: int64
+        d: int64
+        ----
+        c: [[5,2]]
+        d: [[1,4]]
     """
     from narwhals import dtypes
 
@@ -402,6 +417,100 @@ def _from_dict_impl(
             native_frame = native_namespace.from_dict(data)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
+            raise AttributeError(msg) from e
+    return from_native(native_frame, eager_only=True)
+
+
+def from_arrow(
+    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
+) -> DataFrame[Any]:
+    """
+    Construct a DataFrame from an object which supports the PyCapsule Interface.
+
+    Arguments:
+        native_frame: Object which implements `__arrow_c_stream__`.
+        native_namespace: The native library to use for DataFrame creation.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+
+        Let's define a dataframe-agnostic function which creates a PyArrow
+        Table.
+
+        >>> @nw.narwhalify
+        ... def func(df):
+        ...     return nw.from_arrow(df, native_namespace=pa)
+
+        Let's see what happens when passing pandas / Polars input:
+
+        >>> func(pd.DataFrame(data))  # doctest: +SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+        >>> func(pl.DataFrame(data))  # doctest: +SKIP
+        pyarrow.Table
+        a: int64
+        b: int64
+        ----
+        a: [[1,2,3]]
+        b: [[4,5,6]]
+    """
+    if not hasattr(native_frame, "__arrow_c_stream__"):
+        msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+        raise TypeError(msg)
+    implementation = Implementation.from_native_namespace(native_namespace)
+
+    if implementation is Implementation.POLARS and parse_version(
+        native_namespace.__version__
+    ) >= (1, 3):
+        native_frame = native_namespace.DataFrame(native_frame)
+    elif implementation in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+        Implementation.POLARS,
+    }:
+        # These don't (yet?) support the PyCapsule Interface for import
+        # so we go via PyArrow
+        try:
+            import pyarrow as pa  # ignore-banned-import
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
+            raise ModuleNotFoundError(msg) from exc
+        if parse_version(pa.__version__) < (14, 0):  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
+            raise ModuleNotFoundError(msg) from None
+
+        tbl = pa.table(native_frame)
+        if implementation is Implementation.PANDAS:
+            native_frame = tbl.to_pandas()
+        elif implementation is Implementation.MODIN:  # pragma: no cover
+            from modin.pandas.utils import from_arrow
+
+            native_frame = from_arrow(tbl)
+        elif implementation is Implementation.CUDF:  # pragma: no cover
+            native_frame = native_namespace.DataFrame.from_arrow(tbl)
+        elif implementation is Implementation.POLARS:  # pragma: no cover
+            native_frame = native_namespace.from_arrow(tbl)
+        else:  # pragma: no cover
+            msg = "congratulations, you entered unrecheable code - please report a bug"
+            raise AssertionError(msg)
+    elif implementation is Implementation.PYARROW:
+        native_frame = native_namespace.table(native_frame)
+    else:  # pragma: no cover
+        try:
+            # implementation is UNKNOWN, Narwhals extension using this feature should
+            # implement PyCapsule support
+            native_frame = native_namespace.DataFrame(native_frame)
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e
     return from_native(native_frame, eager_only=True)
 

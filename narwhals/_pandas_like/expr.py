@@ -331,7 +331,7 @@ class PandasLikeExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
-            tmp = df.group_by(*keys).agg(self)
+            tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
             tmp = df.select(*keys).join(
                 tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
             )
@@ -580,6 +580,11 @@ class PandasLikeExprDateTimeNamespace:
     def convert_time_zone(self, time_zone: str) -> PandasLikeExpr:
         return reuse_series_namespace_implementation(
             self._expr, "dt", "convert_time_zone", time_zone
+        )
+
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> PandasLikeExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "timestamp", time_unit
         )
 
 
