@@ -853,15 +853,6 @@ def to_py_scalar(scalar_like: Any) -> Any:
     """
     if isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES):
         return scalar_like
-    pa = get_pyarrow()
-    if pa and isinstance(scalar_like, pa.Scalar):
-        return scalar_like.as_py()
-
-    cupy = get_cupy()
-    if (  # pragma: no cover
-        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
-    ):
-        return scalar_like.item()
 
     np = get_numpy()
     if np and np.isscalar(scalar_like) and hasattr(scalar_like, "item"):
@@ -873,12 +864,20 @@ def to_py_scalar(scalar_like: Any) -> Any:
     if pd and isinstance(scalar_like, pd.Timedelta):
         return scalar_like.to_pytimedelta()
 
-    # SIM101 suggests merging the tuples, but that would create a new tuple,
-    # so doesn't seem ideal perf-wise?
-    if isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES) or isinstance(  # noqa: SIM101
-        scalar_like, (datetime, timedelta)
-    ):
+    # pd.Timestamp and pd.Timedelta subclass datetime and timedelta,
+    # so we need to check this separately
+    if isinstance(scalar_like, (datetime, timedelta)):
         return scalar_like
+
+    pa = get_pyarrow()
+    if pa and isinstance(scalar_like, pa.Scalar):
+        return scalar_like.as_py()
+
+    cupy = get_cupy()
+    if (  # pragma: no cover
+        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
+    ):
+        return scalar_like.item()
 
     msg = (
         f"Expected object convertible to a scalar, found {type(scalar_like)}. "
