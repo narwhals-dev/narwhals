@@ -58,7 +58,9 @@ def _to_comparable_list(column_values: Any) -> Any:
     return [nw.to_py_scalar(v) for v in column_values]
 
 
-def _sort_dict_by_key(data_dict: dict[str, list[Any]], key: str) -> dict[str, list[Any]]:
+def _sort_dict_by_key(
+    data_dict: dict[str, list[Any]], key: str
+) -> dict[str, list[Any]]:  # pragma: no cover
     sort_list = data_dict[key]
     sorted_indices = sorted(range(len(sort_list)), key=lambda i: sort_list[i])
     return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
@@ -75,7 +77,7 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
         for key in result.columns:
             assert key in expected
     result = {key: _to_comparable_list(result[key]) for key in expected}
-    if is_pyspark and expected:
+    if is_pyspark and expected:  # pragma: no cover
         sort_key = next(iter(expected.keys()))
         expected = _sort_dict_by_key(expected, sort_key)
         result = _sort_dict_by_key(result, sort_key)

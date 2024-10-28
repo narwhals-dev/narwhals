@@ -634,7 +634,7 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # PySpark
-    elif is_pyspark_dataframe(native_object):
+    elif is_pyspark_dataframe(native_object):  # pragma: no cover
         if series_only:
             msg = "Cannot only use `series_only` with pyspark DataFrame"
             raise TypeError(msg)

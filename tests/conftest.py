@@ -98,7 +98,7 @@ def pyarrow_table_constructor(obj: Any) -> IntoDataFrame:
 
 
 @pytest.fixture(scope="session")
-def spark_session() -> Generator[SparkSession, None, None]:
+def spark_session() -> Generator[SparkSession, None, None]:  # pragma: no cover
     try:
         from pyspark.sql import SparkSession
     except ImportError:  # pragma: no cover

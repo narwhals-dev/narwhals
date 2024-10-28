@@ -89,7 +89,7 @@ def get_ibis() -> Any:
     return sys.modules.get("ibis", None)
 
 
-def get_pyspark() -> Any:
+def get_pyspark() -> Any:  # pragma: no cover
     """Get pyspark module (if already imported - else return None)."""
     return sys.modules.get("pyspark", None)
 
