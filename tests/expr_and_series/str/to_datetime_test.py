@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pyarrow as pa
@@ -7,6 +8,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals._arrow.utils import parse_datetime_format
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -74,28 +76,23 @@ def test_to_datetime_series_infer_fmt(constructor_eager: ConstructorEager) -> No
 
 
 def test_to_datetime_infer_fmt_from_date(constructor: Constructor) -> None:
-    data = {"z": ["2020-01-01", "2020-01-02"]}
-    if "cudf" in str(constructor):  # pragma: no cover
-        expected = "2020-01-01T00:00:00.000000000"
-    else:
-        expected = "2020-01-01 00:00:00"
+    data = {"z": ["2020-01-01", "2020-01-02", None]}
+    expected = [datetime(2020, 1, 1), datetime(2020, 1, 2), None]
     result = (
         nw.from_native(constructor(data))
         .lazy()
-        .select(y=nw.col("z").str.to_datetime())
+        .select(nw.col("z").str.to_datetime())
         .collect()
-        .item(row=0, column="y")
     )
-    assert str(result) == expected
+    assert_equal_data(result, {"z": expected})
 
 
-@pytest.mark.parametrize("data", [["2024-01-01", "abc"], ["2024-01-01", None]])
-def test_pyarrow_infer_datetime_raise_invalid(data: list[str | None]) -> None:
+def test_pyarrow_infer_datetime_raise_invalid() -> None:
     with pytest.raises(
         NotImplementedError,
         match="Unable to infer datetime format, provided format is not supported.",
     ):
-        parse_datetime_format(pa.chunked_array([data]))
+        parse_datetime_format(pa.chunked_array([["2024-01-01", "abc"]]))
 
 
 @pytest.mark.parametrize(
