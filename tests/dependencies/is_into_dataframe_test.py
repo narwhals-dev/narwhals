@@ -22,7 +22,7 @@ class DictDataFrame:
     def __len__(self) -> int:  # pragma: no cover
         return len(next(iter(self._data.values())))
 
-    def __narwhals_series__(self) -> Self:  # pragma: no cover
+    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
 
 
