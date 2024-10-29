@@ -15,6 +15,7 @@
         - is_cudf_series
         - is_dask_dataframe
         - is_ibis_table
+        - is_into_dataframe
         - is_into_series
         - is_modin_dataframe
         - is_modin_index
