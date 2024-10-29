@@ -227,7 +227,7 @@ def test_invalid() -> None:
     with pytest.raises(
         NotImplementedError, match="is not supported for metadata-only dataframes"
     ):
-        nw.from_native(df, eager_or_interchange_only=True).select("a")
+        nw.from_native(df, eager_or_interchange_only=True).filter([True, False, True])
     with pytest.raises(TypeError, match="Cannot only use `series_only=True`"):
         nw.from_native(df, eager_only=True)
     with pytest.raises(ValueError, match="Invalid parameter combination"):
