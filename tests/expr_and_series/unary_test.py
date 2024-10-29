@@ -70,7 +70,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
         "z_min": [7.0],
         "z_max": [9.0],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_unary_two_elements(constructor: Constructor) -> None:
@@ -91,7 +91,7 @@ def test_unary_two_elements(constructor: Constructor) -> None:
         "c_nunique": [2],
         "c_skew": [float("nan")],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
@@ -113,7 +113,7 @@ def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
         "c_nunique": [2],
         "c_skew": [float("nan")],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_unary_one_element(constructor: Constructor) -> None:
@@ -137,7 +137,7 @@ def test_unary_one_element(constructor: Constructor) -> None:
             "c_nunique": [1],
             "c_skew": [float("nan")],
         }
-        compare_dicts(result, expected)
+        assert_equal_data(result, expected)
 
 
 def test_unary_one_element_series(constructor_eager: ConstructorEager) -> None:

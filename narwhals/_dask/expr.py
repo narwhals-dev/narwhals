@@ -404,7 +404,7 @@ class DaskExpr:
             returns_scalar=True,
         )
 
-    def skew(self) -> Any:
+    def skew(self: Self) -> Self:
         return self._from_call(
             lambda _input: _input.skew(),
             "skew",

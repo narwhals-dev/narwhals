@@ -221,7 +221,7 @@ class PandasLikeExpr:
     def std(self, *, ddof: int = 1) -> Self:
         return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
 
-    def skew(self) -> Self:
+    def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
 
     def any(self) -> Self:
