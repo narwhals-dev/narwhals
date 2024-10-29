@@ -15,7 +15,7 @@ class InterchangeDataFrame:
     def __init__(self, df: CustomDataFrame) -> None:
         self._df = df
 
-    def __dataframe__(self) -> InterchangeDataFrame:
+    def __dataframe__(self) -> InterchangeDataFrame:  # pragma: no cover
         return self
 
     def column_names(self) -> list[str]:
