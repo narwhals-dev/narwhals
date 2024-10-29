@@ -115,6 +115,9 @@ jobs:
         run: |
             cd marimo
             . .venv/bin/activate
+            # make sure that we use the .venv when running tests, so that
+            # the local narwhals install is picked up
+            sed -i '/^\[tool.hatch.envs.typecheck\]/a path = ".venv"' pyproject.toml
             hatch run typecheck:check
 
   scikit-lego:
