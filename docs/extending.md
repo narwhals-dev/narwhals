@@ -69,6 +69,7 @@ libraries which have interchange only support can access the following methods a
 converting to Narwhals DataFrame:
 
 - `.schema`, hence column names via `.schema.names()` and column types via `.schema.dtypes()`
+- `.columns`
 - `.to_pandas()` and `.to_arrow()`, for converting to Pandas and Arrow, respectively.
 - `.select(names)` (Ibis and DuckDB), where `names` is a list of (string) column names. This is useful for
   selecting columns before converting to another library.

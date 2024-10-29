@@ -109,6 +109,8 @@ class IbisInterchangeFrame:
                 column_name: map_ibis_dtype_to_narwhals_dtype(ibis_dtype, self._dtypes)
                 for column_name, ibis_dtype in self._native_frame.schema().items()
             }
+        elif attr == "columns":
+            return self._native_frame.columns
         msg = (
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "If you would like to see this kind of object better supported in "
