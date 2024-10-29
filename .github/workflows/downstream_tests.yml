@@ -99,10 +99,7 @@ jobs:
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
             cd marimo
-            uv pip install toml --system
-            echo -e "[envs.default]\npath = \"$(which python)\"" > hatch.toml
-            cat hatch.toml
-            hatch run test-optional:test-narwhals
+            HATCH_ENV_DEFAULT_PATH=$(which python) hatch run test-optional:test-narwhals
         timeout-minutes: 15
       - name: Run typechecks
         run: |
