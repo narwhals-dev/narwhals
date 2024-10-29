@@ -134,7 +134,12 @@ def test_series_only(obj: Any, context: Any) -> None:
     ("allow_series", "context"),
     [
         (True, does_not_raise()),
-        (False, pytest.raises(TypeError, match="Please set `allow_series=True`")),
+        (
+            False,
+            pytest.raises(
+                TypeError, match="Please set `allow_series=True` or `series_only=True`"
+            ),
+        ),
     ],
 )
 def test_allow_series(series: Any, allow_series: Any, context: Any) -> None:
