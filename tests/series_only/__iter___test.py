@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -22,4 +22,4 @@ def test_iter(
     s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
 
     assert isinstance(s, Iterable)
-    compare_dicts({"a": [x for x in s]}, {"a": [1, 2, 3]})  # noqa: C416
+    assert_equal_data({"a": [x for x in s]}, {"a": [1, 2, 3]})  # noqa: C416

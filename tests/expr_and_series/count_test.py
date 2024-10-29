@@ -3,7 +3,7 @@ from __future__ import annotations
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_count(constructor: Constructor) -> None:
@@ -11,7 +11,7 @@ def test_count(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a", "b", "z").count())
     expected = {"a": [3], "b": [2], "z": [1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_count_series(constructor_eager: ConstructorEager) -> None:
@@ -19,4 +19,4 @@ def test_count_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {"a": [df["a"].count()], "b": [df["b"].count()], "z": [df["z"].count()]}
     expected = {"a": [3], "b": [2], "z": [1]}
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Generic
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
+from typing import TypeVar
 from typing import overload
 
 from narwhals.utils import parse_version
@@ -40,7 +42,7 @@ class Series:
         return DataFrame
 
     def __init__(
-        self,
+        self: Self,
         series: Any,
         *,
         level: Literal["full", "interchange"],
@@ -52,16 +54,16 @@ class Series:
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
 
-    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
     @overload
-    def __getitem__(self, idx: int) -> Any: ...
+    def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
 
-    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
         if isinstance(idx, int):
             return self._compliant_series[idx]
         return self._from_compliant_series(self._compliant_series[idx])
@@ -1237,6 +1239,25 @@ class Series:
         """
         Rename the Series.
 
+        Notes:
+            This method is very cheap, but does not guarantee that data
+            will be copied. For example:
+
+            ```python
+            s1: nw.Series
+            s2 = s1.alias("foo")
+            arr = s2.to_numpy()
+            arr[0] = 999
+            ```
+
+            may (depending on the backend, and on the version) result in
+            `s1`'s data being modified. We recommend:
+
+                - if you need to alias an object and don't need the original
+                  one around any more, just use `alias` without worrying about it.
+                - if you were expecting `alias` to copy data, then explicily call
+                  `.clone` before calling `alias`.
+
         Arguments:
             name: The new name.
 
@@ -1288,6 +1309,25 @@ class Series:
         Rename the Series.
 
         Alias for `Series.alias()`.
+
+        Notes:
+            This method is very cheap, but does not guarantee that data
+            will be copied. For example:
+
+            ```python
+            s1: nw.Series
+            s2 = s1.rename("foo")
+            arr = s2.to_numpy()
+            arr[0] = 999
+            ```
+
+            may (depending on the backend, and on the version) result in
+            `s1`'s data being modified. We recommend:
+
+                - if you need to rename an object and don't need the original
+                  one around any more, just use `rename` without worrying about it.
+                - if you were expecting `rename` to copy data, then explicily call
+                  `.clone` before calling `rename`.
 
         Arguments:
             name: The new name.
@@ -2094,10 +2134,8 @@ class Series:
             pandas and Polars may have implementation differences for a given interpolation method.
 
         Arguments:
-            quantile : float
-                Quantile between 0.0 and 1.0.
-            interpolation : {'nearest', 'higher', 'lower', 'midpoint', 'linear'}
-                Interpolation method.
+            quantile: Quantile between 0.0 and 1.0.
+            interpolation: Interpolation method.
 
         Examples:
             >>> import narwhals as nw
@@ -2527,23 +2565,26 @@ class Series:
         yield from self._compliant_series.__iter__()
 
     @property
-    def str(self) -> SeriesStringNamespace:
+    def str(self: Self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)
 
     @property
-    def dt(self) -> SeriesDateTimeNamespace:
+    def dt(self: Self) -> SeriesDateTimeNamespace[Self]:
         return SeriesDateTimeNamespace(self)
 
     @property
-    def cat(self) -> SeriesCatNamespace:
+    def cat(self: Self) -> SeriesCatNamespace[Self]:
         return SeriesCatNamespace(self)
 
 
-class SeriesCatNamespace:
-    def __init__(self, series: Series) -> None:
+T = TypeVar("T", bound=Series)
+
+
+class SeriesCatNamespace(Generic[T]):
+    def __init__(self: Self, series: T) -> None:
         self._narwhals_series = series
 
-    def get_categories(self) -> Series:
+    def get_categories(self: Self) -> T:
         """
         Get unique categories from column.
 
@@ -2583,11 +2624,11 @@ class SeriesCatNamespace:
         )
 
 
-class SeriesStringNamespace:
-    def __init__(self, series: Series) -> None:
+class SeriesStringNamespace(Generic[T]):
+    def __init__(self: Self, series: T) -> None:
         self._narwhals_series = series
 
-    def len_chars(self) -> Series:
+    def len_chars(self: Self) -> T:
         r"""
         Return the length of each string as the number of characters.
 
@@ -2631,8 +2672,8 @@ class SeriesStringNamespace:
         )
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> Series:
+        self: Self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+    ) -> T:
         r"""
         Replace first matching regex/literal substring with a new string value.
 
@@ -2671,7 +2712,7 @@ class SeriesStringNamespace:
             )
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Series:
+    def replace_all(self: Self, pattern: str, value: str, *, literal: bool = False) -> T:
         r"""
         Replace all matching regex/literal substring with a new string value.
 
@@ -2709,7 +2750,7 @@ class SeriesStringNamespace:
             )
         )
 
-    def strip_chars(self, characters: str | None = None) -> Series:
+    def strip_chars(self: Self, characters: str | None = None) -> T:
         r"""
         Remove leading and trailing characters.
 
@@ -2743,7 +2784,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
-    def starts_with(self, prefix: str) -> Series:
+    def starts_with(self: Self, prefix: str) -> T:
         r"""
         Check if string values start with a substring.
 
@@ -2785,7 +2826,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.starts_with(prefix)
         )
 
-    def ends_with(self, suffix: str) -> Series:
+    def ends_with(self: Self, suffix: str) -> T:
         r"""
         Check if string values end with a substring.
 
@@ -2827,7 +2868,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.ends_with(suffix)
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> Series:
+    def contains(self: Self, pattern: str, *, literal: bool = False) -> T:
         r"""
         Check if string contains a substring that matches a pattern.
 
@@ -2875,7 +2916,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.contains(pattern, literal=literal)
         )
 
-    def slice(self, offset: int, length: int | None = None) -> Series:
+    def slice(self: Self, offset: int, length: int | None = None) -> T:
         r"""
         Create subslices of the string values of a Series.
 
@@ -2946,7 +2987,7 @@ class SeriesStringNamespace:
             )
         )
 
-    def head(self, n: int = 5) -> Series:
+    def head(self: Self, n: int = 5) -> T:
         r"""
         Take the first n elements of each string.
 
@@ -2994,7 +3035,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.slice(0, n)
         )
 
-    def tail(self, n: int = 5) -> Series:
+    def tail(self: Self, n: int = 5) -> T:
         r"""
         Take the last n elements of each string.
 
@@ -3042,7 +3083,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.slice(-n)
         )
 
-    def to_uppercase(self) -> Series:
+    def to_uppercase(self) -> T:
         r"""
         Transform string to uppercase variant.
 
@@ -3090,7 +3131,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.to_uppercase()
         )
 
-    def to_lowercase(self) -> Series:
+    def to_lowercase(self) -> T:
         r"""
         Transform string to lowercase variant.
 
@@ -3133,7 +3174,7 @@ class SeriesStringNamespace:
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> Series:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> T:  # noqa: A002
         """
         Parse Series with strings to a Series with Datetime dtype.
 
@@ -3194,11 +3235,11 @@ class SeriesStringNamespace:
         )
 
 
-class SeriesDateTimeNamespace:
-    def __init__(self, series: Series) -> None:
+class SeriesDateTimeNamespace(Generic[T]):
+    def __init__(self: Self, series: T) -> None:
         self._narwhals_series = series
 
-    def date(self) -> Series:
+    def date(self: Self) -> T:
         """
         Get the date in a datetime series.
 
@@ -3239,7 +3280,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.date()
         )
 
-    def year(self) -> Series:
+    def year(self: Self) -> T:
         """
         Get the year in a datetime series.
 
@@ -3276,7 +3317,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.year()
         )
 
-    def month(self) -> Series:
+    def month(self: Self) -> T:
         """
         Gets the month in a datetime series.
 
@@ -3313,7 +3354,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.month()
         )
 
-    def day(self) -> Series:
+    def day(self: Self) -> T:
         """
         Extracts the day in a datetime series.
 
@@ -3350,7 +3391,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.day()
         )
 
-    def hour(self) -> Series:
+    def hour(self: Self) -> T:
         """
          Extracts the hour in a datetime series.
 
@@ -3387,7 +3428,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.hour()
         )
 
-    def minute(self) -> Series:
+    def minute(self: Self) -> T:
         """
         Extracts the minute in a datetime series.
 
@@ -3424,7 +3465,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.minute()
         )
 
-    def second(self) -> Series:
+    def second(self: Self) -> T:
         """
         Extracts the second(s) in a datetime series.
 
@@ -3461,7 +3502,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.second()
         )
 
-    def millisecond(self) -> Series:
+    def millisecond(self: Self) -> T:
         """
         Extracts the milliseconds in a datetime series.
 
@@ -3511,7 +3552,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.millisecond()
         )
 
-    def microsecond(self) -> Series:
+    def microsecond(self: Self) -> T:
         """
         Extracts the microseconds in a datetime series.
 
@@ -3561,7 +3602,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.microsecond()
         )
 
-    def nanosecond(self) -> Series:
+    def nanosecond(self: Self) -> T:
         """
         Extracts the nanosecond(s) in a date series.
 
@@ -3601,7 +3642,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.nanosecond()
         )
 
-    def ordinal_day(self) -> Series:
+    def ordinal_day(self: Self) -> T:
         """
         Get ordinal day.
 
@@ -3638,7 +3679,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.ordinal_day()
         )
 
-    def total_minutes(self) -> Series:
+    def total_minutes(self: Self) -> T:
         """
         Get total minutes.
 
@@ -3680,7 +3721,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.total_minutes()
         )
 
-    def total_seconds(self) -> Series:
+    def total_seconds(self: Self) -> T:
         """
         Get total seconds.
 
@@ -3722,7 +3763,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.total_seconds()
         )
 
-    def total_milliseconds(self) -> Series:
+    def total_milliseconds(self: Self) -> T:
         """
         Get total milliseconds.
 
@@ -3767,7 +3808,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.total_milliseconds()
         )
 
-    def total_microseconds(self) -> Series:
+    def total_microseconds(self: Self) -> T:
         """
         Get total microseconds.
 
@@ -3812,7 +3853,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.total_microseconds()
         )
 
-    def total_nanoseconds(self) -> Series:
+    def total_nanoseconds(self: Self) -> T:
         """
         Get total nanoseconds.
 
@@ -3854,7 +3895,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.total_nanoseconds()
         )
 
-    def to_string(self, format: str) -> Series:  # noqa: A002
+    def to_string(self: Self, format: str) -> T:  # noqa: A002
         """
         Convert a Date/Time/Datetime series into a String series with the given format.
 
@@ -3929,7 +3970,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.to_string(format)
         )
 
-    def replace_time_zone(self, time_zone: str | None) -> Series:
+    def replace_time_zone(self: Self, time_zone: str | None) -> T:
         """
         Replace time zone.
 
@@ -3982,7 +4023,7 @@ class SeriesDateTimeNamespace:
             self._narwhals_series._compliant_series.dt.replace_time_zone(time_zone)
         )
 
-    def convert_time_zone(self, time_zone: str) -> Series:
+    def convert_time_zone(self: Self, time_zone: str) -> T:
         """
         Convert time zone.
 
@@ -4036,4 +4077,64 @@ class SeriesDateTimeNamespace:
             raise TypeError(msg)
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
+        )
+
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> T:
+        """
+        Return a timestamp in the given time unit.
+
+        Arguments:
+            time_unit: {'ns', 'us', 'ms'}
+                Time unit.
+
+        Examples:
+            >>> from datetime import date
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> data = [date(2001, 1, 1), None, date(2001, 1, 3)]
+            >>> s_pd = pd.Series(data, dtype="datetime64[ns]")
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            Let's define a dataframe-agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.dt.timestamp("ms")
+
+            We can then pass pandas / PyArrow / Polars / any other supported library:
+
+            >>> func(s_pd)
+            0    9.783072e+11
+            1             NaN
+            2    9.784800e+11
+            dtype: float64
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+                    978307200000
+                    null
+                    978480000000
+            ]
+            >>> func(s_pa)
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                978307200000,
+                null,
+                978480000000
+              ]
+            ]
+        """
+        if time_unit not in {"ns", "us", "ms"}:
+            msg = (
+                "invalid `time_unit`"
+                f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
+            )
+            raise ValueError(msg)
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.dt.timestamp(time_unit)
         )

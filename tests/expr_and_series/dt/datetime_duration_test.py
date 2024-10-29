@@ -3,16 +3,15 @@ from __future__ import annotations
 from datetime import timedelta
 
 import numpy as np
-import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [
@@ -45,21 +44,19 @@ def test_duration_attributes(
     expected_b: list[int],
     expected_c: list[int],
 ) -> None:
-    if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
 
     result_a = df.select(getattr(nw.col("a").dt, attribute)().fill_null(0))
-    compare_dicts(result_a, {"a": expected_a})
+    assert_equal_data(result_a, {"a": expected_a})
 
     result_b = df.select(getattr(nw.col("b").dt, attribute)().fill_null(0))
-    compare_dicts(result_b, {"b": expected_b})
+    assert_equal_data(result_b, {"b": expected_b})
 
     result_c = df.select(getattr(nw.col("c").dt, attribute)().fill_null(0))
-    compare_dicts(result_c, {"c": expected_c})
+    assert_equal_data(result_c, {"c": expected_c})
 
 
 @pytest.mark.parametrize(
@@ -80,23 +77,19 @@ def test_duration_attributes_series(
     expected_b: list[int],
     expected_c: list[int],
 ) -> None:
-    if parse_version(pd.__version__) < (2, 2) and "pandas_pyarrow" in str(
-        constructor_eager
-    ):
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_a = df.select(getattr(df["a"].dt, attribute)().fill_null(0))
-    compare_dicts(result_a, {"a": expected_a})
+    assert_equal_data(result_a, {"a": expected_a})
 
     result_b = df.select(getattr(df["b"].dt, attribute)().fill_null(0))
-    compare_dicts(result_b, {"b": expected_b})
+    assert_equal_data(result_b, {"b": expected_b})
 
     result_c = df.select(getattr(df["c"].dt, attribute)().fill_null(0))
-    compare_dicts(result_c, {"c": expected_c})
+    assert_equal_data(result_c, {"c": expected_c})
 
 
 @pytest.mark.parametrize("unit", ["s", "ms", "us", "ns"])
@@ -116,7 +109,7 @@ def test_pyarrow_units(unit: str, attribute: str, expected: int) -> None:
     df = nw.from_native(pa.table({"a": arr}), eager_only=True)
 
     result_expr = df.select(getattr(nw.col("a").dt, attribute)().fill_null(0))
-    compare_dicts(result_expr, {"a": [0, expected]})
+    assert_equal_data(result_expr, {"a": [0, expected]})
 
     result_series = df.select(getattr(df["a"].dt, attribute)().fill_null(0))
-    compare_dicts(result_series, {"a": [0, expected]})
+    assert_equal_data(result_series, {"a": [0, expected]})

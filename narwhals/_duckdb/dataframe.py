@@ -90,6 +90,22 @@ class DuckDBInterchangeFrame:
             self._native_frame.select(item), dtypes=self._dtypes
         )
 
+    def select(
+        self: Self,
+        *exprs: Any,
+        **named_exprs: Any,
+    ) -> Self:
+        if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
+            msg = (
+                "`select`-ing not by name is not supported for DuckDB backend.\n\n"
+                "If you would like to see this kind of object better supported in "
+                "Narwhals, please open a feature request "
+                "at https://github.com/narwhals-dev/narwhals/issues."
+            )
+            raise NotImplementedError(msg)
+
+        return self._from_native_frame(self._native_frame.select(*exprs))
+
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
             return {
@@ -120,3 +136,6 @@ class DuckDBInterchangeFrame:
 
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.arrow()
+
+    def _from_native_frame(self: Self, df: Any) -> Self:
+        return self.__class__(df, dtypes=self._dtypes)

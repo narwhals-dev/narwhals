@@ -5,7 +5,7 @@ import warnings
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_unary(constructor: Constructor) -> None:
@@ -37,7 +37,7 @@ def test_unary(constructor: Constructor) -> None:
         "z_min": [7],
         "z_max": [9],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_unary_series(constructor_eager: ConstructorEager) -> None:
@@ -159,4 +159,4 @@ def test_unary_one_element_series(constructor_eager: ConstructorEager) -> None:
         "c_nunique": [1],
         "c_skew": [float("nan")],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)

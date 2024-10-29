@@ -1,4 +1,5 @@
 jinja2
+duckdb
 markdown-exec[ansi]
 mkdocs
 mkdocs-autorefs

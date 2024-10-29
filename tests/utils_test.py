@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import string
+
+import hypothesis.strategies as st
 import pandas as pd
 import polars as pl
 import pytest
+from hypothesis import given
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PANDAS_VERSION
+from tests.utils import get_module_version_as_tuple
 
 
 def test_maybe_align_index_pandas() -> None:
@@ -93,12 +98,22 @@ def test_maybe_reset_index_pandas() -> None:
     result = nw.maybe_reset_index(pandas_df)
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=[0, 1, 2])
     assert_frame_equal(nw.to_native(result), expected)
+    pandas_df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw.maybe_reset_index(pandas_df)
+    expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    assert_frame_equal(nw.to_native(result), expected)
+    assert result.to_native() is pandas_df.to_native()
     pandas_series = nw.from_native(
         pd.Series([1, 2, 3], index=[7, 8, 9]), series_only=True
     )
     result_s = nw.maybe_reset_index(pandas_series)
     expected_s = pd.Series([1, 2, 3], index=[0, 1, 2])
     assert_series_equal(nw.to_native(result_s), expected_s)
+    pandas_series = nw.from_native(pd.Series([1, 2, 3]), series_only=True)
+    result_s = nw.maybe_reset_index(pandas_series)
+    expected_s = pd.Series([1, 2, 3])
+    assert_series_equal(nw.to_native(result_s), expected_s)
+    assert result_s.to_native() is pandas_series.to_native()
 
 
 def test_maybe_reset_index_polars() -> None:
@@ -110,10 +125,7 @@ def test_maybe_reset_index_polars() -> None:
     assert result_s is series
 
 
-@pytest.mark.skipif(
-    parse_version(pd.__version__) < parse_version("1.0.0"),
-    reason="too old for convert_dtypes",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for convert_dtypes")
 def test_maybe_convert_dtypes_pandas() -> None:
     import numpy as np
 
@@ -134,3 +146,34 @@ def test_maybe_convert_dtypes_polars() -> None:
     df = nw.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
     result = nw.maybe_convert_dtypes(df)
     assert result is df
+
+
+def test_get_trivial_version_with_uninstalled_module() -> None:
+    result = get_module_version_as_tuple("non_existent_module")
+    assert result == (0, 0, 0)
+
+
+@given(n_bytes=st.integers(1, 100))  # type: ignore[misc]
+def test_generate_temporary_column_name(n_bytes: int) -> None:
+    columns = ["abc", "XYZ"]
+
+    temp_col_name = nw.generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
+    assert temp_col_name not in columns
+
+
+def test_generate_temporary_column_name_raise() -> None:
+    from itertools import product
+
+    columns = [
+        "".join(t)
+        for t in product(
+            string.ascii_lowercase + string.digits,
+            string.ascii_lowercase + string.digits,
+        )
+    ]
+
+    with pytest.raises(
+        AssertionError,
+        match="Internal Error: Narwhals was not able to generate a column name with ",
+    ):
+        nw.generate_temporary_column_name(n_bytes=1, columns=columns)
