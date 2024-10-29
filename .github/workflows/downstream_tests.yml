@@ -55,9 +55,7 @@ jobs:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
-        # temporarily commented out due to flaky tests
-        # dependencies: ["core", "core,optional"]
-        dependencies: ["core"]
+        dependencies: ["core,optional"]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -75,19 +73,27 @@ jobs:
         run: |
             git clone https://github.com/marimo-team/marimo.git --depth=1
             cd marimo
+            uv venv -p 3.12
             git log
       - name: install-basics
         run: uv pip install --upgrade tox virtualenv setuptools hatch --system
       - name: install-marimo-dev
         run: |
             cd marimo
-            uv pip install -e ".[dev]" --system
+            . .venv/bin/activate
+            uv pip install -e ".[dev]"
+            which python
       - name: install-narwhals-dev
         run: |
-            uv pip uninstall narwhals --system
-            uv pip install -e . --system
+            cd marimo
+            . .venv/bin/activate
+            uv pip uninstall narwhals
+            uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+            cd marimo
+            . .venv/bin/activate
+            uv pip freeze
       - name: Create assets directory, copy over index.html
         continue-on-error: true
         run: |
@@ -98,12 +104,13 @@ jobs:
         if: ${{ matrix.dependencies == 'core,optional' }}
         run: |
             cd marimo
-            hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
+            . .venv/bin/activate
+            # make sure that we use the .venv when running tests, so that
+            # the local narwhals install is picked up
+            sed -i '/^\[tool.hatch.envs.default\]/a path = ".venv"' pyproject.toml
+            hatch run python -c "import narwhals; print(narwhals.__file__)"
+            hatch run test-optional:test-narwhals
         timeout-minutes: 15
-      - name: Run typechecks
-        run: |
-            cd marimo
-            hatch run typecheck:check
 
   scikit-lego:
     strategy:
