@@ -140,7 +140,7 @@ class InterchangeFrame:
     ) -> Self:
         if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
             msg = (
-                "`select`-ing not by name is not supported for DuckDB backend.\n\n"
+                "`select`-ing not by name is not supported for interchange-only level.\n\n"
                 "If you would like to see this kind of object better supported in "
                 "Narwhals, please open a feature request "
                 "at https://github.com/narwhals-dev/narwhals/issues."
