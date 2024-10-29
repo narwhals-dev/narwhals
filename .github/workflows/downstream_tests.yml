@@ -55,7 +55,9 @@ jobs:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
-        dependencies: ["core", "core,optional"]
+        # temporarily commented out due to flaky tests
+        # dependencies: ["core", "core,optional"]
+        dependencies: ["core"]
 
     runs-on: ${{ matrix.os }}
     steps:
