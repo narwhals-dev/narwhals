@@ -100,7 +100,7 @@ jobs:
         run: |
             cd marimo
             uv pip install toml --system
-            echo "[envs.default]\npath = ".venv"" > hatch.toml
+            echo -e "[envs.default]\npath = \"$(which python)\"" > hatch.toml
             cat hatch.toml
             hatch run test-optional:test-narwhals
         timeout-minutes: 15
