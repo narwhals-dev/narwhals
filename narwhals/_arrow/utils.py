@@ -338,11 +338,11 @@ def convert_str_slice_to_int_slice(
 
 
 # Regex for date, time, separator and timezone components
-DATE_RE = r"^(?P<date>\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})?"
-SEP_RE = r"(?P<sep>\s|T)?"
-TIME_RE = r"(?P<time>\d{2}:\d{2}:\d{2})?"  # \s*(?P<period>[AP]M)?)?
-TZ_RE = r"(?P<tz>Z|[+-]\d{2}:?\d{2})?$"  # Matches 'Z', '+02:00', '+0200', '+02', etc.
-FULL_RE = DATE_RE + SEP_RE + TIME_RE + TZ_RE
+DATE_RE = r"(?P<date>\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})"
+SEP_RE = r"(?P<sep>\s|T)"
+TIME_RE = r"(?P<time>\d{2}:\d{2}:\d{2})"  # \s*(?P<period>[AP]M)?)?
+TZ_RE = r"(?P<tz>Z|[+-]\d{2}:?\d{2})"  # Matches 'Z', '+02:00', '+0200', '+02', etc.
+FULL_RE = rf"{DATE_RE}{SEP_RE}?{TIME_RE}?{TZ_RE}?$"
 
 # Separate regexes for different date formats
 YMD_RE = r"^(?P<year>(?:[12][0-9])?[0-9]{2})(?P<sep1>[-/.])(?P<month>0[1-9]|1[0-2])(?P<sep2>[-/.])(?P<day>0[1-9]|[12][0-9]|3[01])$"

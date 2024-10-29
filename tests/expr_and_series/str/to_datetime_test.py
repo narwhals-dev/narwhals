@@ -73,6 +73,22 @@ def test_to_datetime_series_infer_fmt(constructor_eager: ConstructorEager) -> No
     assert str(result) == expected
 
 
+def test_to_datetime_infer_fmt_from_date(constructor: Constructor) -> None:
+    data = {"z": ["2020-01-01", "2020-01-02"]}
+    if "cudf" in str(constructor):  # pragma: no cover
+        expected = "2020-01-01T00:00:00.000000000"
+    else:
+        expected = "2020-01-01 00:00:00"
+    result = (
+        nw.from_native(constructor(data))
+        .lazy()
+        .select(y=nw.col("z").str.to_datetime())
+        .collect()
+        .item(row=0, column="y")
+    )
+    assert str(result) == expected
+
+
 @pytest.mark.parametrize("data", [["2024-01-01", "abc"], ["2024-01-01", None]])
 def test_pyarrow_infer_datetime_raise_invalid(data: list[str | None]) -> None:
     with pytest.raises(
