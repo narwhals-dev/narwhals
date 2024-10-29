@@ -81,6 +81,7 @@ jobs:
         run: |
             cd marimo
             uv pip install -e ".[dev]" --system
+            which python
       - name: install-narwhals-dev
         run: |
             uv pip uninstall narwhals --system
@@ -99,9 +100,9 @@ jobs:
         run: |
             cd marimo
             uv pip install toml --system
-            python ../utils/add_venv_path_to_hatch_env.py
-            cat pyproject.toml
-            hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
+            echo "[envs.default]\npath = ".venv"" > hatch.toml
+            cat hatch.toml
+            hatch run test-optional:test-narwhals
         timeout-minutes: 15
       - name: Run typechecks
         run: |
