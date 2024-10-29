@@ -290,7 +290,7 @@ class PandasLikeNamespace:
                         (s.to_frame() for s in series), how="horizontal"
                     )
                     ._native_frame.min(axis=1)
-                    .rename(series[0].name),
+                    .rename(series[0].name, copy=False),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     dtypes=self._dtypes,
@@ -317,7 +317,7 @@ class PandasLikeNamespace:
                         (s.to_frame() for s in series), how="horizontal"
                     )
                     ._native_frame.max(axis=1)
-                    .rename(series[0].name),
+                    .rename(series[0].name, copy=False),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     dtypes=self._dtypes,

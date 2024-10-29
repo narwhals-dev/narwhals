@@ -98,6 +98,11 @@ def is_pandas_series(ser: Any) -> TypeGuard[pd.Series[Any]]:
     return (pd := get_pandas()) is not None and isinstance(ser, pd.Series)
 
 
+def is_pandas_index(index: Any) -> TypeGuard[pd.Index]:
+    """Check whether `index` is a pandas Index without importing pandas."""
+    return (pd := get_pandas()) is not None and isinstance(index, pd.Index)
+
+
 def is_modin_dataframe(df: Any) -> TypeGuard[mpd.DataFrame]:
     """Check whether `df` is a modin DataFrame without importing modin."""
     return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
@@ -108,6 +113,13 @@ def is_modin_series(ser: Any) -> TypeGuard[mpd.Series]:
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
+def is_modin_index(index: Any) -> TypeGuard[mpd.Index]:
+    """Check whether `index` is a modin Index without importing modin."""
+    return (mpd := get_modin()) is not None and isinstance(
+        index, mpd.Index
+    )  # pragma: no cover
+
+
 def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
     """Check whether `df` is a cudf DataFrame without importing cudf."""
     return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
@@ -116,6 +128,13 @@ def is_cudf_dataframe(df: Any) -> TypeGuard[cudf.DataFrame]:
 def is_cudf_series(ser: Any) -> TypeGuard[cudf.Series[Any]]:
     """Check whether `ser` is a cudf Series without importing cudf."""
     return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
+
+
+def is_cudf_index(index: Any) -> TypeGuard[cudf.Index]:
+    """Check whether `index` is a cudf Index without importing cudf."""
+    return (cudf := get_cudf()) is not None and isinstance(
+        index, cudf.Index
+    )  # pragma: no cover
 
 
 def is_dask_dataframe(df: Any) -> TypeGuard[dd.DataFrame]:
@@ -174,13 +193,24 @@ def is_pandas_like_dataframe(df: Any) -> bool:
     return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df)
 
 
-def is_pandas_like_series(arr: Any) -> bool:
+def is_pandas_like_series(ser: Any) -> bool:
     """
-    Check whether `arr` is a pandas-like Series without doing any imports
+    Check whether `ser` is a pandas-like Series without doing any imports
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
-    return is_pandas_series(arr) or is_modin_series(arr) or is_cudf_series(arr)
+    return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser)
+
+
+def is_pandas_like_index(index: Any) -> bool:
+    """
+    Check whether `index` is a pandas-like Index without doing any imports
+
+    By "pandas-like", we mean: pandas, Modin, cuDF.
+    """
+    return (
+        is_pandas_index(index) or is_modin_index(index) or is_cudf_index(index)
+    )  # pragma: no cover
 
 
 def is_into_series(native_series: IntoSeries) -> bool:

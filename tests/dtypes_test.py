@@ -161,3 +161,18 @@ def test_second_time_unit() -> None:
     s = pa.chunked_array([pa.array([timedelta(1)], type=pa.duration("s"))])
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Duration("s")
+
+
+@pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
+def test_pandas_inplace_modification_1267(request: pytest.FixtureRequest) -> None:
+    if PANDAS_VERSION >= (3,):
+        # pandas 3.0+ won't allow this kind of inplace modification
+        request.applymarker(pytest.mark.xfail)
+    if PANDAS_VERSION < (1, 4):
+        # pandas pre 1.4 wouldn't change the type?
+        request.applymarker(pytest.mark.xfail)
+    s = pd.Series([1, 2, 3])
+    snw = nw.from_native(s, series_only=True)
+    assert snw.dtype == nw.Int64
+    s[0] = 999.5
+    assert snw.dtype == nw.Float64

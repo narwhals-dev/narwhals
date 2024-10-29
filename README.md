@@ -43,10 +43,11 @@ Join the party!
 
 - [Altair](https://github.com/vega/altair/)
 - [Hamilton](https://github.com/DAGWorks-Inc/hamilton/tree/main/examples/narwhals)
+- [marimo](https://github.com/marimo-team/marimo)
+- [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
-- [marimo](https://github.com/marimo-team/marimo)
 - [tubular](https://github.com/lvgig/tubular)
 - [wimsey](https://github.com/benrutter/wimsey)
 
