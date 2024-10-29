@@ -851,6 +851,8 @@ def to_py_scalar(scalar_like: Any) -> Any:
         >>> nw.to_py_scalar(1)
         1
     """
+    if scalar_like is None:
+        return None
     if isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES):
         return scalar_like
 
@@ -863,6 +865,14 @@ def to_py_scalar(scalar_like: Any) -> Any:
         return scalar_like.to_pydatetime()
     if pd and isinstance(scalar_like, pd.Timedelta):
         return scalar_like.to_pytimedelta()
+    if pd and pd.api.types.is_scalar(scalar_like):
+        try:
+            is_na = pd.isna(scalar_like)
+        except Exception:  # pragma: no cover  # noqa: BLE001, S110
+            pass
+        else:
+            if is_na:
+                return None
 
     # pd.Timestamp and pd.Timedelta subclass datetime and timedelta,
     # so we need to check this separately

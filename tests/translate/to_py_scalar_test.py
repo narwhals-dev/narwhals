@@ -20,7 +20,9 @@ if TYPE_CHECKING:
     ("input_value", "expected"),
     [
         (1, 1),
+        (np.int64(1), 1),
         (1.0, 1.0),
+        (None, None),
         ("a", "a"),
         (True, True),
         (b"a", b"a"),
