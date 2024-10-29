@@ -10,7 +10,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 
 def test_fill_null(constructor: Constructor) -> None:
@@ -27,7 +27,7 @@ def test_fill_null(constructor: Constructor) -> None:
         "b": [1.0, 99, 99, 5, 3],
         "c": [5.0, 99, 3, 2, 1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_fill_null_exceptions(constructor: Constructor) -> None:
@@ -70,13 +70,13 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
             result_forward = df.with_columns(
                 nw.col("a", "b").fill_null(strategy="forward", limit=None)
             )
-            compare_dicts(result_forward, expected_forward)
+            assert_equal_data(result_forward, expected_forward)
     else:
         result_forward = df.with_columns(
             nw.col("a", "b").fill_null(strategy="forward", limit=None)
         )
 
-        compare_dicts(result_forward, expected_forward)
+        assert_equal_data(result_forward, expected_forward)
 
     expected_backward = {
         "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
@@ -93,12 +93,12 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
             result_backward = df.with_columns(
                 nw.col("a", "b").fill_null(strategy="backward", limit=None)
             )
-            compare_dicts(result_backward, expected_backward)
+            assert_equal_data(result_backward, expected_backward)
     else:
         result_backward = df.with_columns(
             nw.col("a", "b").fill_null(strategy="backward", limit=None)
         )
-        compare_dicts(result_backward, expected_backward)
+        assert_equal_data(result_backward, expected_backward)
 
 
 def test_fill_null_limits(constructor: Constructor) -> None:
@@ -125,7 +125,7 @@ def test_fill_null_limits(constructor: Constructor) -> None:
             "a": [1, 1, 1, float("nan"), 5, 6, 6, 6, float("nan"), 10],
             "b": ["a", "a", "a", None, "b", "c", "c", "c", None, "d"],
         }
-        compare_dicts(result_forward, expected_forward)
+        assert_equal_data(result_forward, expected_forward)
 
         result_backward = df.with_columns(
             nw.col("a", "b").fill_null(strategy="backward", limit=2)
@@ -135,7 +135,7 @@ def test_fill_null_limits(constructor: Constructor) -> None:
             "a": [1, float("nan"), 5, 5, 5, 6, float("nan"), 10, 10, 10],
             "b": ["a", None, "b", "b", "b", "c", None, "d", "d", "d"],
         }
-        compare_dicts(result_backward, expected_backward)
+        assert_equal_data(result_backward, expected_backward)
 
 
 def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
@@ -151,7 +151,7 @@ def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
         a_zero_digit=df_float["a"].fill_null(value=0),
     )
 
-    compare_dicts(result_float, expected_float)
+    assert_equal_data(result_float, expected_float)
 
     data_series_str = {
         "a": ["a", None, "c", None, "e"],
@@ -166,7 +166,7 @@ def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
         a_z_str=df_str["a"].fill_null(value="z"),
     )
 
-    compare_dicts(result_str, expected_str)
+    assert_equal_data(result_str, expected_str)
 
 
 def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
@@ -195,7 +195,7 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
             b_forward=df["b"].fill_null(strategy="forward", limit=1),
         )
 
-        compare_dicts(result_forward, expected_forward)
+        assert_equal_data(result_forward, expected_forward)
 
         expected_backward = {
             "a_backward": [0.0, 1, float("nan"), 2, 2, float("nan"), 3, 3],
@@ -207,7 +207,7 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
             b_backward=df["b"].fill_null(strategy="backward", limit=1),
         )
 
-        compare_dicts(result_backward, expected_backward)
+        assert_equal_data(result_backward, expected_backward)
 
 
 def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> None:
@@ -232,14 +232,14 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
                 a_forward=df["a"].fill_null(strategy="forward", limit=None),
                 a_backward=df["a"].fill_null(strategy="backward", limit=None),
             )
-            compare_dicts(result_forward, expected_forward)
+            assert_equal_data(result_forward, expected_forward)
     else:
         result_forward = df.select(
             a_forward=df["a"].fill_null(strategy="forward", limit=None),
             a_backward=df["a"].fill_null(strategy="backward", limit=None),
         )
 
-        compare_dicts(result_forward, expected_forward)
+        assert_equal_data(result_forward, expected_forward)
 
     data_series_str = {
         "a": ["a", None, None, None, "b", "c", None, None, None, "d"],
@@ -264,13 +264,13 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
                 a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
                 a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
             )
-            compare_dicts(result_forward_str, expected_forward_str)
+            assert_equal_data(result_forward_str, expected_forward_str)
     else:
         result_forward_str = df_str.select(
             a_forward=df_str["a"].fill_null(strategy="forward", limit=None),
             a_backward=df_str["a"].fill_null(strategy="backward", limit=None),
         )
-        compare_dicts(result_forward_str, expected_forward_str)
+        assert_equal_data(result_forward_str, expected_forward_str)
 
 
 def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> None:

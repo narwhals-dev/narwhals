@@ -3,7 +3,7 @@ from __future__ import annotations
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 data = {
     "a": [1.0, None, None, 3.0],
@@ -18,7 +18,7 @@ def test_null_count_expr(constructor: Constructor) -> None:
         "a": [2],
         "b": [1],
     }
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_null_count_series(constructor_eager: ConstructorEager) -> None:

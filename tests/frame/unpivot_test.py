@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.utils import parse_version
+from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
-from tests.utils import compare_dicts
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.stable.v1.dtypes import DType
@@ -44,7 +43,7 @@ def test_unpivot_on(
 ) -> None:
     df = nw.from_native(constructor(data))
     result = df.unpivot(on=on, index=["a"]).sort("variable", "a")
-    compare_dicts(result, expected)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -95,13 +94,8 @@ def test_unpivot_mixed_types(
     data: dict[str, Any],
     expected_dtypes: list[DType],
 ) -> None:
-    if (
-        "dask" in str(constructor)
-        or "cudf" in str(constructor)
-        or (
-            "pyarrow_table" in str(constructor)
-            and parse_version(pa.__version__) < parse_version("14.0.0")
-        )
+    if "cudf" in str(constructor) or (
+        "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0)
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

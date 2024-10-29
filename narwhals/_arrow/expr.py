@@ -360,7 +360,7 @@ class ArrowExpr:
                     "`nw.col('a', 'b')`\n"
                 )
                 raise ValueError(msg)
-            tmp = df.group_by(*keys).agg(self)
+            tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
             tmp = df.select(*keys).join(
                 tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
             )
@@ -425,6 +425,11 @@ class ArrowExprDateTimeNamespace:
     def convert_time_zone(self: Self, time_zone: str) -> ArrowExpr:
         return reuse_series_namespace_implementation(
             self._expr, "dt", "convert_time_zone", time_zone
+        )
+
+    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ArrowExpr:
+        return reuse_series_namespace_implementation(
+            self._expr, "dt", "timestamp", time_unit
         )
 
     def date(self: Self) -> ArrowExpr:
