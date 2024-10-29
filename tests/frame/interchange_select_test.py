@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import duckdb
 import polars as pl
 import pytest
@@ -9,14 +11,36 @@ import narwhals.stable.v1 as nw
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
 
+class InterchangeDataFrame:
+    def __init__(self, df: CustomDataFrame) -> None:
+        self._df = df
+
+    def __dataframe__(self) -> InterchangeDataFrame:
+        return self
+
+    def column_names(self) -> list[str]:
+        return list(self._df._data.keys())
+
+    def select_columns_by_name(self, columns: list[str]) -> InterchangeDataFrame:
+        return InterchangeDataFrame(
+            CustomDataFrame(
+                {key: value for key, value in self._df._data.items() if key in columns}
+            )
+        )
+
+
+class CustomDataFrame:
+    def __init__(self, data: dict[str, Any]) -> None:
+        self._data = data
+
+    def __dataframe__(self, *, allow_copy: bool = True) -> InterchangeDataFrame:
+        return InterchangeDataFrame(self)
+
+
 def test_interchange() -> None:
-    df_pl = pl.DataFrame(data)
-    df = nw.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
-    with pytest.raises(
-        NotImplementedError,
-        match="Attribute select is not supported for metadata-only dataframes",
-    ):
-        df.select("a", "z")
+    df = CustomDataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "z": [1, 4, 2]})
+    result = nw.from_native(df, eager_or_interchange_only=True).select("a", "z")
+    assert result.columns == ["a", "z"]
 
 
 def test_interchange_ibis(

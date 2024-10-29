@@ -75,7 +75,6 @@ def map_interchange_dtype_to_narwhals_dtype(
 
 class InterchangeFrame:
     def __init__(self, df: Any, dtypes: DTypes) -> None:
-        self._native_frame = df
         self._interchange_frame = df.__dataframe__()
         self._dtypes = dtypes
 
@@ -101,7 +100,7 @@ class InterchangeFrame:
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd.__version__) >= parse_version("1.5.0"):
-            return pd.api.interchange.from_dataframe(self._native_frame)
+            return pd.api.interchange.from_dataframe(self._interchange_frame)
         else:  # pragma: no cover
             msg = (
                 "Conversion to pandas is achieved via interchange protocol which requires"
@@ -112,7 +111,7 @@ class InterchangeFrame:
     def to_arrow(self: Self) -> pa.Table:
         from pyarrow.interchange import from_dataframe  # ignore-banned-import()
 
-        return from_dataframe(self._native_frame)
+        return from_dataframe(self._interchange_frame)
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
@@ -149,7 +148,7 @@ class InterchangeFrame:
             raise NotImplementedError(msg)
 
         frame = self._interchange_frame.select_columns_by_name(exprs)
-        if not hasattr(frame, "_df"):
+        if not hasattr(frame, "_df"):  # pragma: no cover
             msg = (
                 "Expected interchange object to implement `_df` property to allow for recovering original object.\n"
                 "See https://github.com/data-apis/dataframe-api/issues/360."
