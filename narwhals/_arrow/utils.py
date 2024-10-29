@@ -362,7 +362,7 @@ def parse_datetime_format(arr: pa.StringArray) -> str:
     import pyarrow.compute as pc  # ignore-banned-import
 
     matches = pa.concat_arrays(  # converts from ChunkedArray to StructArray
-        pc.extract_regex(arr, pattern=FULL_RE).chunks
+        pc.extract_regex(pc.drop_null(arr).slice(0, 10), pattern=FULL_RE).chunks
     )
 
     if not pc.all(matches.is_valid()).as_py():
