@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numbers
 from datetime import datetime
 from datetime import timedelta
 from functools import wraps
@@ -45,6 +44,15 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
 
 T = TypeVar("T")
+
+NON_TEMPORAL_SCALAR_TYPES = (
+    bool,
+    bytes,
+    str,
+    int,
+    float,
+    complex,
+)
 
 
 @overload
@@ -843,16 +851,10 @@ def to_py_scalar(scalar_like: Any) -> Any:
         >>> nw.to_py_scalar(1)
         1
     """
-
-    pa = get_pyarrow()
-    if pa and isinstance(scalar_like, pa.Scalar):
-        return scalar_like.as_py()
-
-    cupy = get_cupy()
-    if (  # pragma: no cover
-        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
-    ):
-        return scalar_like.item()
+    if scalar_like is None:
+        return None
+    if isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES):
+        return scalar_like
 
     np = get_numpy()
     if np and np.isscalar(scalar_like) and hasattr(scalar_like, "item"):
@@ -863,20 +865,29 @@ def to_py_scalar(scalar_like: Any) -> Any:
         return scalar_like.to_pydatetime()
     if pd and isinstance(scalar_like, pd.Timedelta):
         return scalar_like.to_pytimedelta()
+    if pd and pd.api.types.is_scalar(scalar_like):
+        try:
+            is_na = pd.isna(scalar_like)
+        except Exception:  # pragma: no cover  # noqa: BLE001, S110
+            pass
+        else:
+            if is_na:
+                return None
 
-    all_scalar_types = (
-        int,
-        float,
-        complex,
-        bool,
-        bytes,
-        str,
-        datetime,
-        timedelta,
-        numbers.Number,
-    )
-    if isinstance(scalar_like, all_scalar_types):
+    # pd.Timestamp and pd.Timedelta subclass datetime and timedelta,
+    # so we need to check this separately
+    if isinstance(scalar_like, (datetime, timedelta)):
         return scalar_like
+
+    pa = get_pyarrow()
+    if pa and isinstance(scalar_like, pa.Scalar):
+        return scalar_like.as_py()
+
+    cupy = get_cupy()
+    if (  # pragma: no cover
+        cupy and isinstance(scalar_like, cupy.ndarray) and scalar_like.size == 1
+    ):
+        return scalar_like.item()
 
     msg = (
         f"Expected object convertible to a scalar, found {type(scalar_like)}. "

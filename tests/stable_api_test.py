@@ -87,6 +87,10 @@ def test_stable_api_docstrings() -> None:
         nw_doc = getattr(nw, item).__doc__
         if item == "from_native":
             v1_doc = v1_doc.replace("native_dataframe", "native_object")
+        if item in {"to_py_scalar"}:
+            # We don't overwrite the docstring for these
+            assert v1_doc == nw_doc
+            continue
         assert (
             v1_doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
             == nw_doc
