@@ -429,7 +429,7 @@ def _from_native_impl(  # noqa: PLR0915
     elif hasattr(native_object, "__narwhals_series__"):
         if not allow_series:
             if strict:
-                msg = "Please set `allow_series=True`"
+                msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
         return Series(
@@ -477,7 +477,7 @@ def _from_native_impl(  # noqa: PLR0915
         pl = get_polars()
         if not allow_series:
             if strict:
-                msg = "Please set `allow_series=True`"
+                msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
         return Series(
@@ -509,7 +509,7 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_pandas_series(native_object):
         if not allow_series:
             if strict:
-                msg = "Please set `allow_series=True`"
+                msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
         pd = get_pandas()
@@ -544,7 +544,7 @@ def _from_native_impl(  # noqa: PLR0915
         mpd = get_modin()
         if not allow_series:
             if strict:
-                msg = "Please set `allow_series=True`"
+                msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
         return Series(
@@ -578,7 +578,7 @@ def _from_native_impl(  # noqa: PLR0915
         cudf = get_cudf()
         if not allow_series:
             if strict:
-                msg = "Please set `allow_series=True`"
+                msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
         return Series(
@@ -611,7 +611,7 @@ def _from_native_impl(  # noqa: PLR0915
         pa = get_pyarrow()
         if not allow_series:
             if strict:
-                msg = "Please set `allow_series=True`"
+                msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
         return Series(
