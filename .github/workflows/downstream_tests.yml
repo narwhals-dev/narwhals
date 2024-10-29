@@ -88,7 +88,7 @@ jobs:
             cd marimo
             . .venv/bin/activate
             uv pip uninstall narwhals
-            uv pip install -e .
+            uv pip install -e ./..
       - name: show-deps
         run: |
             cd marimo
