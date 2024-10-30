@@ -36,6 +36,7 @@
         - over
         - pipe
         - quantile
+        - rolling_mean
         - round
         - sample
         - shift

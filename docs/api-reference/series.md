@@ -44,6 +44,7 @@
         - pipe
         - quantile
         - rename
+        - rolling_mean
         - round
         - sample
         - scatter
