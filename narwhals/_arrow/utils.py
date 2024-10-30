@@ -340,7 +340,9 @@ def convert_str_slice_to_int_slice(
 # Regex for date, time, separator and timezone components
 DATE_RE = r"(?P<date>\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})"
 SEP_RE = r"(?P<sep>\s|T)"
-TIME_RE = r"(?P<time>\d{2}:\d{2}:\d{2})"  # \s*(?P<period>[AP]M)?)?
+TIME_RE = r"(?P<time>\d{2}:\d{2}(?::\d{2})?)"  # \s*(?P<period>[AP]M)?)?
+HMS_RE = r"(?P<hms>\d{2}:\d{2}:\d{2})"
+HM_RE = r"(?P<hm>\d{2}:\d{2})"
 TZ_RE = r"(?P<tz>Z|[+-]\d{2}:?\d{2})"  # Matches 'Z', '+02:00', '+0200', '+02', etc.
 FULL_RE = rf"{DATE_RE}{SEP_RE}?{TIME_RE}?{TZ_RE}?$"
 
@@ -418,5 +420,12 @@ def _parse_date_format(arr: pa.Array) -> str:
 def _parse_time_format(arr: pa.Array) -> str:
     import pyarrow.compute as pc  # ignore-banned-import
 
-    matches = pc.extract_regex(arr, pattern=TIME_RE)
-    return "%H:%M:%S" if pc.all(matches.is_valid()).as_py() else ""
+    format = ""
+    matches = pc.extract_regex(arr, pattern=HMS_RE)
+    if pc.all(matches.is_valid()).as_py():
+        format = "%H:%M:%S"
+    else:
+        matches = pc.extract_regex(arr, pattern=HM_RE)
+        if pc.all(matches.is_valid()).as_py():
+            format = "%H:%M"
+    return format
