@@ -2313,6 +2313,87 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).mode())
 
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        weights: list[float] | None = None,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """
+        Apply a rolling mean (moving mean) over the values.
+
+        A window of length `window_size` will traverse the values. The values that fill
+        this window will (optionally) be multiplied with the weights given by the
+        `weight` vector. The resulting values will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements.
+            weights: An optional slice with the same length as the window that will be
+                multiplied elementwise with the values in the window.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`.
+            center: Set the labels at the center of the window.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+
+            >>> data = {"a": [100, 200, 300]}
+            >>> df_pd = pd.DataFrame(data)
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(df):
+            ...     return df.with_columns(b=nw.col("a").rolling_mean(window_size=2))
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(df_pd)
+                 a      b
+            0  100    NaN
+            1  200  150.0
+            2  300  250.0
+
+            >>> func(df_pl)
+            shape: (3, 2)
+            ┌─────┬───────┐
+            │ a   ┆ b     │
+            │ --- ┆ ---   │
+            │ i64 ┆ f64   │
+            ╞═════╪═══════╡
+            │ 100 ┆ null  │
+            │ 200 ┆ 150.0 │
+            │ 300 ┆ 250.0 │
+            └─────┴───────┘
+
+            >>> func(df_pa)  #  doctest:+ELLIPSIS
+            pyarrow.Table
+            a: int64
+            b: double
+            ----
+            a: [[100,200,300]]
+            b: [[null,150,250]]
+        """
+        return self.__class__(
+            lambda plx: self._call(plx).rolling_mean(
+                window_size=window_size,
+                weights=weights,
+                min_periods=min_periods,
+                center=center,
+            )
+        )
+
     @property
     def str(self: Self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

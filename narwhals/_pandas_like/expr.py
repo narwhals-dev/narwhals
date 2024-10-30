@@ -387,6 +387,23 @@ class PandasLikeExpr:
     def mode(self: Self) -> Self:
         return reuse_series_implementation(self, "mode")
 
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        weights: list[float] | None,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "rolling_mean",
+            window_size=window_size,
+            weights=weights,
+            min_periods=min_periods,
+            center=center,
+        )
+
     @property
     def str(self: Self) -> PandasLikeExprStringNamespace:
         return PandasLikeExprStringNamespace(self)
