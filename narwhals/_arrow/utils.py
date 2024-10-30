@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Generator
 from typing import Sequence
 
@@ -430,36 +431,38 @@ def _rolling(
     *,
     min_periods: int | None,
     center: bool,
+    aggregate_function: Callable[[pa.array, pa.array], pa.scalar],
 ) -> Generator[pa.array | None, None, None]:
-    import pyarrow as pa
-    import pyarrow.compute as pc
+    import numpy as np  # ignore-banned-import
+    import pyarrow as pa  # ignore-banned-import
+    import pyarrow.compute as pc  # ignore-banned-import
 
     # Default min_periods to window_size if not provided
     if min_periods is None:
         min_periods = window_size
 
     # Convert weights to a pyarrow array for elementwise operations if given
-    weights = pa.array(weights) if weights else pa.scalar(1)
+    weights_: pa.array = (
+        pa.array(weights) if weights else pa.array(np.full(window_size, 1.0))
+    )
 
     # Flatten the chunked array to work with it as a contiguous array
     flat_array = array.combine_chunks()
     size = len(flat_array)
     # Calculate rolling mean by slicing the flat array for each position
     split_points = (
-        (max(0, i - window_size // 2), min(size, i + window_size // 2 + 1))
+        (max(0, i - window_size // 2), min(size, i + window_size // 2))
         if center
         else (max(0, i - window_size + 1), i + 1)
         for i in range(size)
     )
 
     for start, end in split_points:
-        weighted_window = pc.drop_null(
-            pc.multiply(flat_array.slice(start, end - start), weights)
-        )
-
-        num_valid = len(weighted_window)
+        valid_window = pc.drop_null(flat_array.slice(start, end - start))
+        num_valid = len(valid_window)
 
         if num_valid >= min_periods:
-            yield weighted_window
+            valid_weights = weights_.slice(0, num_valid)
+            yield aggregate_function(valid_window, valid_weights)
         else:
             yield None

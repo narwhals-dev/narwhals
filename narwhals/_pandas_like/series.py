@@ -693,7 +693,7 @@ class PandasLikeSeries:
     ) -> Self:
         if weights is not None:
             msg = (
-                "`weights` argument is not supported in `rolling_meanr` for "
+                "`weights` argument is not supported in `rolling_mean` for "
                 f"{self._implementation} backend."
             )
             raise NotImplementedError(msg)

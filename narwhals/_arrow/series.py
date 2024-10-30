@@ -715,7 +715,7 @@ class ArrowSeries:
     def to_arrow(self: Self) -> pa.Array:
         return self._native_series.combine_chunks()
 
-    def mode(self: Self) -> Self:
+    def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         return self.value_counts(name=col_token, normalize=False).filter(
@@ -730,22 +730,26 @@ class ArrowSeries:
         min_periods: int | None,
         center: bool,
     ) -> Self:
-        import pyarrow as pa
-        import pyarrow.compute as pc
+        import pyarrow as pa  # ignore-banned-import
+        import pyarrow.compute as pc  # ignore-banned-import
 
         native_series = self._native_series
+
+        def weighted_mean(arr: pa.array, weights: pa.array) -> pa.scalar:
+            return pc.divide(pc.sum(pc.multiply(arr, weights)), pc.sum(weights))
+
         result = pa.chunked_array(
             [
-                [
-                    pc.mean(v) if v is not None else None
-                    for v in _rolling(
+                list(
+                    _rolling(
                         native_series,
                         window_size=window_size,
                         weights=weights,
                         min_periods=min_periods,
                         center=center,
+                        aggregate_function=weighted_mean,
                     )
-                ]
+                )
             ]
         )
         return self._from_native_series(result)
