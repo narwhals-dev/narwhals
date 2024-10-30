@@ -19,6 +19,7 @@
         - diff
         - drop_nulls
         - dtype
+        - ewm_mean
         - fill_null
         - filter
         - gather_every

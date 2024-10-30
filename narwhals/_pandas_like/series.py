@@ -174,6 +174,24 @@ class PandasLikeSeries:
             self._native_series, self._dtypes, self._implementation
         )
 
+    def ewm_mean(
+        self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> PandasLikeSeries:
+        ser = self._native_series
+        result = ser.ewm(
+            com, span, half_life, alpha, min_periods, adjust, ignore_na=ignore_nulls
+        ).mean()
+
+        return self._from_native_series(result)
+
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid

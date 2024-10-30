@@ -404,6 +404,29 @@ class Expr:
         """
         return self.__class__(lambda plx: self._call(plx).all())
 
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        return self.__class__(
+            lambda plx: self._call(plx).ewm_mean(
+                com=com,
+                span=span,
+                half_life=half_life,
+                alpha=alpha,
+                adjust=adjust,
+                min_periods=min_periods,
+                ignore_nulls=ignore_nulls,
+            )
+        )
+
     def mean(self) -> Self:
         """
         Get mean value.

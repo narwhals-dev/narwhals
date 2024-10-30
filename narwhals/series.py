@@ -383,6 +383,38 @@ class Series:
         """
         return self._compliant_series.name  # type: ignore[no-any-return]
 
+    def ewm_mean(
+        self: Self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        """
+        Compute exponentially-weighted moving average.
+
+        Arguments:
+            com: Specify decay in terms of center of mass, $\\gamma$, with $\\alpha = \\frac{1}{1+\\gamma}\\;\\forall\\;\\gamma\\geq0$
+            span: Specify decay in terms of span, $\\theta$, with $\\alpha = \\frac{2}{\\theta + 1} \\; \\forall \\; \\theta \\geq 1$
+
+        Examples
+        """
+        return self._from_compliant_series(
+            self._compliant_series.ewm_mean(
+                com=com,
+                span=span,
+                half_life=half_life,
+                alpha=alpha,
+                adjust=adjust,
+                min_periods=min_periods,
+                ignore_nulls=ignore_nulls,
+            )
+        )
+
     def cast(
         self,
         dtype: Any,
