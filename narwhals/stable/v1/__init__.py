@@ -1635,7 +1635,7 @@ def median(*columns: str) -> Expr:
         >>> import pandas as pd
         >>> import polars as pl
         >>> import pyarrow as pa
-        >>> import narwhals.stable.v1 as nw
+        >>> import narwhals as nw
         >>> df_pd = pd.DataFrame({"a": [4, 5, 2]})
         >>> df_pl = pl.DataFrame({"a": [4, 5, 2]})
         >>> df_pa = pa.table({"a": [4, 5, 2]})
