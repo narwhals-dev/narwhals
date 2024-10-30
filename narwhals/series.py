@@ -2525,6 +2525,86 @@ class Series:
         """
         return self._from_compliant_series(self._compliant_series.mode())
 
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        weights: list[float] | None = None,
+        *,
+        min_periods: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        """
+        Apply a rolling mean (moving mean) over the values of the series.
+
+        A window of length `window_size` will traverse the series. The values that fill
+        this window will (optionally) be multiplied with the weights given by the
+        `weight` vector. The resulting values will be aggregated to their mean.
+
+        The window at a given row will include the row itself and the `window_size - 1`
+        elements before it.
+
+        Arguments:
+            window_size: The length of the window in number of elements.
+            weights: An optional slice with the same length as the window that will be
+                multiplied elementwise with the values in the window.
+            min_periods: The number of values in the window that should be non-null before
+                computing a result. If set to `None` (default), it will be set equal to
+                `window_size`.
+            center: Set the labels at the center of the window.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+
+            >>> data = [100, 200, 300]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.rolling_mean(window_size=2)
+
+            We can then pass any supported library such as Pandas, Polars, or PyArrow to `func`:
+
+            >>> func(s_pd)
+            0      NaN
+            1    150.0
+            2    250.0
+            Name: a, dtype: float64
+
+            >>> func(s_pl)  # doctest:+NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'a' [f64]
+            [
+                null
+                150.0
+                250.0
+            ]
+
+            >>> func(s_pa)  #  doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                null,
+                150,
+                250
+              ]
+            ]
+        """
+        return self._from_compliant_series(
+            self._compliant_series.rolling_mean(
+                window_size=window_size,
+                weights=weights,
+                min_periods=min_periods,
+                center=center,
+            )
+        )
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._compliant_series.__iter__()
 

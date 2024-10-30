@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generator
 from typing import Sequence
 
 from narwhals.utils import isinstance_or_issubclass
@@ -420,3 +421,45 @@ def _parse_time_format(arr: pa.Array) -> str:
 
     matches = pc.extract_regex(arr, pattern=TIME_RE)
     return "%H:%M:%S" if pc.all(matches.is_valid()).as_py() else ""
+
+
+def _rolling(
+    array: pa.chunked_array,
+    window_size: int,
+    weights: list[float] | None,
+    *,
+    min_periods: int | None,
+    center: bool,
+) -> Generator[pa.array | None, None, None]:
+    import pyarrow as pa
+    import pyarrow.compute as pc
+
+    # Default min_periods to window_size if not provided
+    if min_periods is None:
+        min_periods = window_size
+
+    # Convert weights to a pyarrow array for elementwise operations if given
+    weights = pa.array(weights) if weights else pa.scalar(1)
+
+    # Flatten the chunked array to work with it as a contiguous array
+    flat_array = array.combine_chunks()
+    size = len(flat_array)
+    # Calculate rolling mean by slicing the flat array for each position
+    split_points = (
+        (max(0, i - window_size // 2), min(size, i + window_size // 2 + 1))
+        if center
+        else (max(0, i - window_size + 1), i + 1)
+        for i in range(size)
+    )
+
+    for start, end in split_points:
+        weighted_window = pc.drop_null(
+            pc.multiply(flat_array.slice(start, end - start), weights)
+        )
+
+        num_valid = len(weighted_window)
+
+        if num_valid >= min_periods:
+            yield weighted_window
+        else:
+            yield None

@@ -8,6 +8,7 @@ from typing import Literal
 from typing import Sequence
 from typing import overload
 
+from narwhals._arrow.utils import _rolling
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import narwhals_to_native_dtype
@@ -714,12 +715,40 @@ class ArrowSeries:
     def to_arrow(self: Self) -> pa.Array:
         return self._native_series.combine_chunks()
 
-    def mode(self: Self) -> ArrowSeries:
+    def mode(self: Self) -> Self:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         return self.value_counts(name=col_token, normalize=False).filter(
             plx.col(col_token) == plx.col(col_token).max()
         )[self.name]
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        weights: list[float] | None,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        import pyarrow as pa
+        import pyarrow.compute as pc
+
+        native_series = self._native_series
+        result = pa.chunked_array(
+            [
+                [
+                    pc.mean(v) if v is not None else None
+                    for v in _rolling(
+                        native_series,
+                        window_size=window_size,
+                        weights=weights,
+                        min_periods=min_periods,
+                        center=center,
+                    )
+                ]
+            ]
+        )
+        return self._from_native_series(result)
 
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()

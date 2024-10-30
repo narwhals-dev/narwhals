@@ -683,6 +683,25 @@ class PandasLikeSeries:
         result.name = native_series.name
         return self._from_native_series(result)
 
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        weights: list[float] | None,
+        *,
+        min_periods: int | None,
+        center: bool,
+    ) -> Self:
+        if weights is not None:
+            msg = (
+                f"`weights` argument is not supported for {self._implementation} backend"
+            )
+            raise NotImplementedError(msg)
+
+        result = self._native_series.rolling(
+            window=window_size, min_periods=min_periods, center=center
+        ).mean()
+        return self._from_native_series(result)
+
     def __iter__(self: Self) -> Iterator[Any]:
         yield from self._native_series.__iter__()
 
