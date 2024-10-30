@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals._exceptions import InvalidOperationError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -36,3 +37,32 @@ def test_median_series(
     series = nw.from_native(constructor_eager(data), eager_only=True)[col]
     result = series.median()
     assert_equal_data({col: [result]}, {col: [expected]})
+
+
+@pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
+def test_median_expr_raises_on_str(
+    constructor: Constructor,
+    expr: nw.Expr,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "polars" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+    with pytest.raises(
+        InvalidOperationError,
+        match="`median` operation not supported for non-numeric input type.",
+    ):
+        df.select(expr)
+
+
+@pytest.mark.parametrize(("col"), [("s")])
+def test_median_series_raises_on_str(
+    constructor_eager: ConstructorEager, col: str
+) -> None:
+    series = nw.from_native(constructor_eager(data), eager_only=True)[col]
+    with pytest.raises(
+        InvalidOperationError,
+        match="`median` operation not supported for non-numeric input type.",
+    ):
+        series.median()

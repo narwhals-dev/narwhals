@@ -145,9 +145,14 @@ class PolarsNamespace:
     def median(self, *column_names: str) -> PolarsExpr:
         import polars as pl  # ignore-banned-import()
 
+        from narwhals._exceptions import InvalidOperationError
         from narwhals._polars.expr import PolarsExpr
 
-        return PolarsExpr(pl.median([*column_names]), dtypes=self._dtypes)  # type: ignore[arg-type]
+        try:
+            return PolarsExpr(pl.median([*column_names]), dtypes=self._dtypes)  # type: ignore[arg-type]
+        except pl.exceptions.InvalidOperationError as e:
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg) from e
 
     def concat_str(
         self,

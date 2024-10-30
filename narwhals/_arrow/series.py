@@ -264,6 +264,12 @@ class ArrowSeries:
     def median(self) -> int:
         import pyarrow.compute as pc  # ignore-banned-import()
 
+        from narwhals._exceptions import InvalidOperationError
+
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+
         return pc.approximate_median(self._native_series)  # type: ignore[no-any-return]
 
     def min(self) -> int:
