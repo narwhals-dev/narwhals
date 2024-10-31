@@ -398,10 +398,10 @@ class Series:
         Compute exponentially-weighted moving average.
 
         Arguments:
-            com: Specify decay in terms of center of mass, $\\gamma$, with $\\alpha = \\frac{1}{1+\\gamma}\\;\\forall\\;\\gamma\\geq0$
-            span: Specify decay in terms of span, $\\theta$, with $\\alpha = \\frac{2}{\\theta + 1} \\; \\forall \\; \\theta \\geq 1$
-            half_life: Specify decay in terms of half-life, $\\tau$, with $\\alpha = 1 - \exp \left\{ \\frac{ -\ln(2) }{ \\tau } \\right\} \; \\forall \; \\tau > 0$
-            alpha: Specify smoothing factor alpha directly, $0 < \\alpha \leq 1$.
+            com: Specify decay in terms of center of mass, $\\gamma$, with <br> $\\alpha = \\frac{1}{1+\\gamma}\\forall\\gamma\\geq0$
+            span: Specify decay in terms of span, $\\theta$, with <br> $\\alpha = \\frac{2}{\\theta + 1} \\forall \\theta \\geq 1$
+            half_life: Specify decay in terms of half-life, $\\tau$, with <br> $\\alpha = 1 - \\exp \\left\\{ \\frac{ -\\ln(2) }{ \\tau } \\right\\} \\forall \\tau > 0$
+            alpha: Specify smoothing factor alpha directly, $0 < \\alpha \\leq 1$.
             adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
 
                 - When `adjust=True` (the default) the EW function is calculated
@@ -431,7 +431,37 @@ class Series:
                   $1-\\alpha$ and $1$ if `adjust=True`,
                   and $1-\\alpha$ and $\\alpha$ if `adjust=False`.
 
-        Examples
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = [1, 2, 3]
+            >>> s_pd = pd.Series(name="a", data=data)
+            >>> s_pl = pl.Series(name="a", values=data)
+
+            We define a library agnostic function:
+
+            >>> @nw.narwhalify
+            ... def func(s):
+            ...     return s.ewm_mean(com=1, ignore_nulls=False)
+
+            We can then pass either pandas or Polars to `func`:
+
+            >>> func(s_pd)
+            0    1.000000
+            1    1.666667
+            2    2.428571
+            Name: a, dtype: float64
+            
+            >>> func(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: 'a' [f64]
+            [
+               1.0
+               1.666667
+               2.428571
+            ]
+
         """
         return self._from_compliant_series(
             self._compliant_series.ewm_mean(
