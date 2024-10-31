@@ -263,6 +263,29 @@ class PandasLikeExpr:
     def arg_true(self) -> Self:
         return reuse_series_implementation(self, "arg_true")
 
+    def ewm_mean(
+        self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_periods: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        return reuse_series_implementation(
+            self,
+            "ewm_mean",
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_periods=min_periods,
+            ignore_nulls=ignore_nulls,
+        )
+
     def filter(self, *predicates: Any) -> Self:
         plx = self.__narwhals_namespace__()
         other = plx.all_horizontal(*predicates)

@@ -468,7 +468,7 @@ class Expr:
             We can then pass either pandas or Polars to `func`:
 
 
-
+            >>> func(df_pd)
 
 
             >>> func(df_pl)  # doctest: +NORMALIZE_WHITESPACE
