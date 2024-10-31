@@ -694,7 +694,7 @@ class PandasLikeSeries:
         if weights is not None:
             msg = (
                 "`weights` argument is not supported in `rolling_mean` for "
-                f"{self._implementation} backend."
+                "pandas-like backend."
             )
             raise NotImplementedError(msg)
 

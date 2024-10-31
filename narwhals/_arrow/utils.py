@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Generator
 from typing import Sequence
 
+from narwhals.translate import to_py_scalar
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -463,6 +464,6 @@ def _rolling(
 
         if num_valid >= min_periods:
             valid_weights = weights_.slice(0, num_valid)
-            yield aggregate_function(valid_window, valid_weights)
+            yield to_py_scalar(aggregate_function(valid_window, valid_weights))
         else:
             yield None

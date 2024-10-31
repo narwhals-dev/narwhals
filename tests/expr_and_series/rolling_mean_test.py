@@ -63,7 +63,7 @@ def test_weighted_rolling_mean_expr(constructor: Constructor) -> None:
             NotImplementedError,
             match=re.escape("`weights` argument is not supported in `rolling_mean`"),
         )
-        if "pandas" in str(constructor) or "dask" in str(constructor)
+        if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask"))
         else does_not_raise()
     )
     df = nw.from_native(constructor(data_weighted))
@@ -82,7 +82,7 @@ def test_weighted_rolling_mean_series(constructor_eager: ConstructorEager) -> No
             NotImplementedError,
             match=re.escape("`weights` argument is not supported in `rolling_mean`"),
         )
-        if "pandas" in str(constructor_eager)
+        if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf"))
         else does_not_raise()
     )
     df = nw.from_native(constructor_eager(data_weighted), eager_only=True)
