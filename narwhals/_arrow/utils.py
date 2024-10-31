@@ -356,6 +356,10 @@ DATE_FORMATS = (
     (DMY_RE, "%d-%m-%Y"),
     (MDY_RE, "%m-%d-%Y"),
 )
+TIME_FORMATS = (
+    (HMS_RE, "%H:%M:%S"),
+    (HM_RE, "%H:%M"),
+)
 
 
 def parse_datetime_format(arr: pa.StringArray) -> str:
@@ -420,12 +424,8 @@ def _parse_date_format(arr: pa.Array) -> str:
 def _parse_time_format(arr: pa.Array) -> str:
     import pyarrow.compute as pc  # ignore-banned-import
 
-    format = ""
-    matches = pc.extract_regex(arr, pattern=HMS_RE)
-    if pc.all(matches.is_valid()).as_py():
-        format = "%H:%M:%S"
-    else:
-        matches = pc.extract_regex(arr, pattern=HM_RE)
+    for time_rgx, time_fmt in TIME_FORMATS:
+        matches = pc.extract_regex(arr, pattern=time_rgx)
         if pc.all(matches.is_valid()).as_py():
-            format = "%H:%M"
-    return format
+            return time_fmt
+    return ""
